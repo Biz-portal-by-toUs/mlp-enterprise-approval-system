@@ -1,6 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.common.exception;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -13,15 +13,8 @@ import lombok.Getter;
 // 클라이언트에게 줄 응답 형태 통일
 
 @Getter
-@Builder
+@AllArgsConstructor
 public class ErrorResponse {
+    private final String code;
     private final String message;
-
-    public ErrorResponse(String message) {
-        this.message = message;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }

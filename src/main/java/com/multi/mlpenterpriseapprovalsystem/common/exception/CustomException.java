@@ -4,7 +4,9 @@ import lombok.Getter;
 
 /**
  * Please explain the class!!!
- *
+ * 사용예시:
+ * Document document = documentRepository.findById(id)
+ *      .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
  * @author : 이지헌
  * @filename : CustomException
  * @since : 25. 12. 15. 월요일
@@ -18,9 +20,5 @@ public class CustomException extends RuntimeException {
     public CustomException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
-    }
-
-    public ErrorCode getErrorCode() {
-        return errorCode;
     }
 }
