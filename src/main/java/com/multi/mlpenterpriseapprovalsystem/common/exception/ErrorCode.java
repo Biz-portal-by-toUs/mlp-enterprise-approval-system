@@ -5,14 +5,13 @@ import org.springframework.http.HttpStatus;
 
 /**
  * Please explain the class!!!
- * HTTP 상태 코드, 에러 코드(프론트에서 체킹 용도), 에러 메시지(사용자에게 화면에서 보여줄 용도)
+ * HTTP 상태 코드, 에러 코드(프론트에서 어떤 예외인지 체킹 용도), 에러 메시지(사용자에게 화면에서 보여줄 용도)
  *
  *
  * @author : 이지헌
  * @filename : ErrorCode
  * @since : 25. 12. 15. 월요일
  */
-// 예외 메시지, 상태코드 등을 분리해서 저장
 @Getter
 public enum ErrorCode {
 
