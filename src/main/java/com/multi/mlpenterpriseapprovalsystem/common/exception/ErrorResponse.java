@@ -3,6 +3,9 @@ package com.multi.mlpenterpriseapprovalsystem.common.exception;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Please explain the class!!!
  * 예외 발생 시 프론트로 전달할 객체.
@@ -19,10 +22,19 @@ public class ErrorResponse {
     private final int status;
     private final String code;
     private final String message;
+    private final Map<String, String> validation;
 
     public ErrorResponse(HttpStatus status, String code, String message) {
         this.status = status.value();
         this.code = code;
         this.message = message;
+        this.validation = new ConcurrentHashMap<>();
+    }
+
+    public ErrorResponse(HttpStatus status, String code, String message, Map<String, String> validation) {
+        this.status = status.value();
+        this.code = code;
+        this.message = message;
+        this.validation = validation;
     }
 }

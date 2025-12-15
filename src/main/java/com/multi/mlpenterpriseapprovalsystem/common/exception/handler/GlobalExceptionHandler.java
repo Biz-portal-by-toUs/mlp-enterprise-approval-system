@@ -5,8 +5,13 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Please explain the class!!!
@@ -37,12 +42,33 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(code.getStatus(), code.getCode(), code.getMessage()));
     }
 
+    // @Valid 예외 처리
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
+        ErrorCode code = ErrorCode.INVALID_INPUT_VALUE;
+
+        Map<String, String> errors = new ConcurrentHashMap<>();
+
+        for (FieldError error : e.getBindingResult().getFieldErrors()) {
+            // 필드명(title), 메시지("제목은 필수입니다")
+            errors.put(error.getField(), error.getDefaultMessage());
+        }
+
+        return ResponseEntity.status(code.getStatus())
+                .body(new ErrorResponse(
+                        code.getStatus(),
+                        code.getCode(),
+                        code.getMessage(),
+                        errors // 상세 에러 목록 전달
+                ));
+    }
+
     // 일반 예외 처리
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception e) {
-        log.error("[Unhandled Exception]", e);
-
         ErrorCode code = ErrorCode.INTERNAL_SERVER_ERROR;
+
+        log.error("[Unhandled Exception]", e);
 
         return ResponseEntity.status(code.getStatus())
                 .body(new ErrorResponse(code.getStatus(), code.getCode(), code.getMessage()));
