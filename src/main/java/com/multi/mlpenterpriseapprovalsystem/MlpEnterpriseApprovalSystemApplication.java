@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem;
 
-import com.multi.mlpenterpriseapprovalsystem.attendance.test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,8 +9,6 @@ public class MlpEnterpriseApprovalSystemApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(MlpEnterpriseApprovalSystemApplication.class, args);
-
-        test test = new test();
     }
 
 }
