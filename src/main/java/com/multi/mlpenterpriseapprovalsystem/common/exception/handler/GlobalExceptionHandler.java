@@ -15,12 +15,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Please explain the class!!!
- * 서비스계층에서 예외를 아래처럼 던지면,
+ * 서비스계층에서 CustomException을 아래처럼 던지면,
  * CustomException안의 ErrorCode를 꺼내서 ErrorResponse에 넣고 프론트로 전달
- *
  * 사용예시:
  * Document document = documentRepository.findById(id)
  *       .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+ *
+ * MethodArgumentNotValidException은 @Valid + @NotBlank같은 제약조건이 함께 있으면 발생.
+ * @Valid(방아쇠 역할) + @NotBlank(총알 역할)
  *
  * @author : 이지헌
  * @filename : GlobalExceptionHandler
@@ -42,7 +44,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(code.getStatus(), code.getCode(), code.getMessage()));
     }
 
-    // @Valid 예외 처리
+    // @Valid 예외 처리. @Valid(방아쇠 역할) + @NotBlank(총알 역할)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
         ErrorCode code = ErrorCode.INVALID_INPUT_VALUE;
