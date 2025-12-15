@@ -1,0 +1,46 @@
+package com.multi.mlpenterpriseapprovalsystem.common.exception;
+
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
+/**
+ * Please explain the class!!!
+ * HTTP 상태 코드, 에러 코드(프론트에서 체킹 용도), 에러 메시지(사용자에게 화면에서 보여줄 용도)
+ *
+ *
+ * @author : 이지헌
+ * @filename : ErrorCode
+ * @since : 25. 12. 15. 월요일
+ */
+// 예외 메시지, 상태코드 등을 분리해서 저장
+@Getter
+public enum ErrorCode {
+
+    // 인증 관련
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다"),
+    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다"),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "비밀번호가 일치하지 않습니다"),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다"),
+
+    // 문서 관련
+    DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "문서를 찾을 수 없습니다"),
+    DOCUMENT_ALREADY_APPROVED(HttpStatus.BAD_REQUEST, "DOCUMENT_ALREADY_APPROVED", "이미 승인된 문서입니다"),
+    INVALID_APPROVAL_STATUS(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_STATUS", "잘못된 결재 상태입니다"),
+
+    // 권한 관련
+    FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "권한이 없습니다"),
+    NOT_DOCUMENT_OWNER(HttpStatus.FORBIDDEN, "NOT_DOCUMENT_OWNER", "문서 작성자만 수정할 수 있습니다"),
+
+    // 서버 에러
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다");
+
+    private final HttpStatus status;
+    private final String code;
+    private final String message;
+
+    ErrorCode(HttpStatus status, String code, String message) {
+        this.status = status;
+        this.code = code;
+        this.message = message;
+    }
+}
