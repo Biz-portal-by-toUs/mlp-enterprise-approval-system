@@ -4,12 +4,19 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Please explain the class!!!
+ * 서비스계층에서 예외를 아래처럼 던지면,
+ * CustomException안의 ErrorCode를 꺼내서 ErrorResponse에 넣고 프론트로 전달
+ *
+ * 사용예시:
+ * Document document = documentRepository.findById(id)
+ *       .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
  *
  * @author : 이지헌
  * @filename : GlobalExceptionHandler
@@ -28,7 +35,7 @@ public class GlobalExceptionHandler {
         log.warn("[CustomException] {}: {}: {}", code.name(), code.getCode(), code.getMessage());
 
         return ResponseEntity.status(code.getStatus())
-                .body(new ErrorResponse(code.getCode(), code.getMessage()));
+                .body(new ErrorResponse(code.getStatus(), code.getCode(), code.getMessage()));
     }
 
     // 일반 예외 처리
@@ -36,7 +43,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception e) {
         log.error("[Unhandled Exception] {}", e);
 
-        return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
-                .body(new ErrorResponse("INTERNAL_SERVER_ERROR", "알 수 없는 서버 오류가 발생했습니다."));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,"INTERNAL_SERVER_ERROR", "알 수 없는 서버 오류가 발생했습니다."));
     }
 }

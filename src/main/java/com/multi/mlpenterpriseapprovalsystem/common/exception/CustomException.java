@@ -4,14 +4,16 @@ import lombok.Getter;
 
 /**
  * Please explain the class!!!
+ * 런타임예외를 상속한 공통 예외
+ *
  * 사용예시:
  * Document document = documentRepository.findById(id)
  *      .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+ *
  * @author : 이지헌
  * @filename : CustomException
  * @since : 25. 12. 15. 월요일
  */
-// 런타임예외를 상속한 공통 예외
 @Getter
 public class CustomException extends RuntimeException {
 
