@@ -22,19 +22,21 @@ public class ErrorResponse {
     private final int status;
     private final String code;
     private final String message;
-    private final Map<String, String> validation;
+    private final Map<String, String> validations;
 
+    // CustomException용. validation이 비어있음.
     public ErrorResponse(HttpStatus status, String code, String message) {
         this.status = status.value();
         this.code = code;
         this.message = message;
-        this.validation = new ConcurrentHashMap<>();
+        this.validations = new ConcurrentHashMap<>();
     }
 
-    public ErrorResponse(HttpStatus status, String code, String message, Map<String, String> validation) {
+    // @Valid 예외용
+    public ErrorResponse(HttpStatus status, String code, String message, Map<String, String> validations) {
         this.status = status.value();
         this.code = code;
         this.message = message;
-        this.validation = validation;
+        this.validations = validations;
     }
 }

@@ -55,12 +55,7 @@ public class GlobalExceptionHandler {
         }
 
         return ResponseEntity.status(code.getStatus())
-                .body(new ErrorResponse(
-                        code.getStatus(),
-                        code.getCode(),
-                        code.getMessage(),
-                        errors // 상세 에러 목록 전달
-                ));
+                .body(new ErrorResponse(code.getStatus(), code.getCode(), code.getMessage(), errors));
     }
 
     // 일반 예외 처리
