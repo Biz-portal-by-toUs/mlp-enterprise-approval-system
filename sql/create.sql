@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS todo_list (
 -- =========================
 
 -- [수정] docfo_id를 Global UK로 변경
-CREATE TABLE document_form (
+CREATE TABLE IF NOT EXISTS document_form (
                                docfo_no      BIGINT NOT NULL AUTO_INCREMENT COMMENT '문서양식 식별자',
                                com_id        VARCHAR(3) NOT NULL COMMENT '회사 코드',
                                writer_id     VARCHAR(7) NOT NULL COMMENT '작성자 사원번호',
@@ -174,7 +174,7 @@ CREATE TABLE document_form (
                                CONSTRAINT fk_docform_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE document_form_category (
+CREATE TABLE IF NOT EXISTS document_form_category (
                                         docfo_cat_no BIGINT NOT NULL AUTO_INCREMENT,
                                         com_id       VARCHAR(3) NOT NULL,
                                         docfo_cat_id VARCHAR(7) NOT NULL,
@@ -186,10 +186,10 @@ CREATE TABLE document_form_category (
                                         CONSTRAINT fk_docfocat_company FOREIGN KEY (com_id) REFERENCES company (com_id) ON UPDATE CASCADE ON DELETE CASCADE,
 
     -- 부모 테이블에 (com_id, docfo_id) 인덱스가 있어서 정상 작동함
-                                        CONSTRAINT fk_docfocat_docform FOREIGN KEY (com_id, docfo_id) REFERENCES document_form (com_id, docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
+                                        CONSTRAINT fk_docfocat_docform FOREIGN KEY (docfo_id) REFERENCES document_form (docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE attach_box (
+CREATE TABLE IF NOT EXISTS attach_box (
                             attach_no BIGINT NOT NULL AUTO_INCREMENT,
                             com_id    VARCHAR(3) NOT NULL,
                             uploader  VARCHAR(7) NOT NULL,
@@ -223,7 +223,7 @@ CREATE TABLE IF NOT EXISTS document (
                                         CONSTRAINT fk_document_employee FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON UPDATE CASCADE ON DELETE CASCADE,
 
     -- 부모 테이블에 (com_id, docfo_id) 인덱스가 있어서 정상 작동함
-                                        CONSTRAINT fk_document_form FOREIGN KEY (com_id, docfo_id) REFERENCES document_form(com_id, docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
+                                        CONSTRAINT fk_document_form FOREIGN KEY (docfo_id) REFERENCES document_form(docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS approval_line (
@@ -254,7 +254,7 @@ CREATE TABLE IF NOT EXISTS document_file (
                                              CONSTRAINT fk_document_file_document FOREIGN KEY (doc_no) REFERENCES document(doc_no) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE prov_document (
+CREATE TABLE IF NOT EXISTS prov_document (
                                prov_no     BIGINT NOT NULL AUTO_INCREMENT COMMENT '파일 식별자',
                                com_id      VARCHAR(3) NOT NULL COMMENT '회사 코드',
                                doc_title   VARCHAR(50) COMMENT '제목',
@@ -277,7 +277,7 @@ CREATE TABLE prov_document (
 -- 4. 커뮤니케이션 (Meeting & Chat)
 -- =========================
 
-CREATE TABLE meeting (
+CREATE TABLE IF NOT EXISTS meeting (
                          meet_no     BIGINT NOT NULL AUTO_INCREMENT COMMENT '회의록 식별자',
                          com_id      VARCHAR(3) NOT NULL COMMENT '회사 코드',
                          dep_no      BIGINT NOT NULL COMMENT '부서 식별자',
@@ -296,7 +296,7 @@ CREATE TABLE meeting (
                          CONSTRAINT fk_meeting_employee FOREIGN KEY (emp_id) REFERENCES employee (emp_id) ON DELETE CASCADE
 ) COMMENT = '회의';
 
-CREATE TABLE meeting_emp (
+CREATE TABLE IF NOT EXISTS meeting_emp (
                              meemp_no BIGINT NOT NULL AUTO_INCREMENT COMMENT '회의 참석자 식별자',
                              com_id   VARCHAR(3) NOT NULL COMMENT '회사 코드',
                              emp_id   VARCHAR(7) NOT NULL COMMENT '사원 번호',
@@ -308,7 +308,7 @@ CREATE TABLE meeting_emp (
                              CONSTRAINT fk_meeting_emp_meeting FOREIGN KEY (meet_no) REFERENCES meeting (meet_no) ON DELETE CASCADE
 ) COMMENT = '회의 참석자';
 
-CREATE TABLE chat_rooms (
+CREATE TABLE IF NOT EXISTS chat_rooms (
                             room_no    BIGINT NOT NULL AUTO_INCREMENT COMMENT '채팅방 식별자',
                             room_name  VARCHAR(30) COMMENT '채팅방 이름',
                             room_type  CHAR(1) NOT NULL COMMENT '채팅방 타입 (O:일대일, M:단톡)',
@@ -318,7 +318,7 @@ CREATE TABLE chat_rooms (
                             PRIMARY KEY (room_no)
 ) COMMENT = '채팅방';
 
-CREATE TABLE chat_room_members (
+CREATE TABLE IF NOT EXISTS chat_room_members (
                                    romem_no         BIGINT NOT NULL AUTO_INCREMENT COMMENT '채팅방 멤버 식별자',
                                    room_no          BIGINT NOT NULL COMMENT '채팅방 식별자',
                                    emp_id           VARCHAR(7) NOT NULL COMMENT '사원 번호',
@@ -330,7 +330,7 @@ CREATE TABLE chat_room_members (
                                    CONSTRAINT fk_chat_mem_employee FOREIGN KEY (emp_id) REFERENCES employee (emp_id) ON DELETE CASCADE
 ) COMMENT = '채팅방 멤버';
 
-CREATE TABLE system_logs (
+CREATE TABLE IF NOT EXISTS system_logs (
                              log_no    BIGINT NOT NULL AUTO_INCREMENT COMMENT '로그 식별자',
                              com_id    VARCHAR(3) NOT NULL COMMENT '회사 코드',
                              level     VARCHAR(10) NOT NULL COMMENT '로그 레벨',
@@ -345,7 +345,7 @@ CREATE TABLE system_logs (
 -- 5. 자원 예약 (Reservation)
 -- =========================
 
-CREATE TABLE meeting_room (
+CREATE TABLE IF NOT EXISTS meeting_room (
                               room_no    BIGINT NOT NULL AUTO_INCREMENT,
                               com_id     VARCHAR(3) NOT NULL,
                               room_name  VARCHAR(20) NOT NULL,
@@ -359,7 +359,7 @@ CREATE TABLE meeting_room (
                               CONSTRAINT fk_meeting_room_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE corporate_car (
+CREATE TABLE IF NOT EXISTS corporate_car (
                                car_no   BIGINT NOT NULL AUTO_INCREMENT,
                                com_id   VARCHAR(3) NOT NULL,
                                car_name VARCHAR(20) NOT NULL,
@@ -373,7 +373,7 @@ CREATE TABLE corporate_car (
                                CONSTRAINT fk_corporate_car_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE shared_equipment (
+CREATE TABLE IF NOT EXISTS shared_equipment (
                                   eq_no      BIGINT NOT NULL AUTO_INCREMENT,
                                   com_id     VARCHAR(3) NOT NULL,
                                   eq_name    VARCHAR(20) NOT NULL,
@@ -386,7 +386,7 @@ CREATE TABLE shared_equipment (
                                   CONSTRAINT fk_shared_equipment_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE meeting_room_reservation (
+CREATE TABLE IF NOT EXISTS meeting_room_reservation (
                                           meeting_resv_no BIGINT NOT NULL AUTO_INCREMENT,
                                           com_id          VARCHAR(3) NOT NULL,
                                           room_no         BIGINT NOT NULL,
@@ -403,7 +403,7 @@ CREATE TABLE meeting_room_reservation (
                                           CONSTRAINT ck_mrr_time CHECK (ended_at > started_at)
 ) ENGINE=InnoDB;
 
-CREATE TABLE meeting_room_attendee (
+CREATE TABLE IF NOT EXISTS meeting_room_attendee (
                                        atte_no         BIGINT NOT NULL AUTO_INCREMENT,
                                        com_id          VARCHAR(3) NOT NULL,
                                        meeting_resv_no BIGINT NOT NULL,
@@ -416,7 +416,7 @@ CREATE TABLE meeting_room_attendee (
                                        CONSTRAINT fk_mra_emp FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE corporate_car_reservation (
+CREATE TABLE IF NOT EXISTS corporate_car_reservation (
                                            car_resv_no BIGINT NOT NULL AUTO_INCREMENT,
                                            com_id      VARCHAR(3) NOT NULL,
                                            car_no      BIGINT NOT NULL,
@@ -433,7 +433,7 @@ CREATE TABLE corporate_car_reservation (
                                            CONSTRAINT ck_ccr_time CHECK (ended_at > started_at)
 ) ENGINE=InnoDB;
 
-CREATE TABLE shared_equipment_reservation (
+CREATE TABLE IF NOT EXISTS shared_equipment_reservation (
                                               eq_resv_no BIGINT NOT NULL AUTO_INCREMENT,
                                               com_id     VARCHAR(3) NOT NULL,
                                               eq_no      BIGINT NOT NULL,
@@ -454,7 +454,7 @@ CREATE TABLE shared_equipment_reservation (
 -- 6. 파일 드라이브 (File Drive)
 -- =========================
 
-CREATE TABLE folder (
+CREATE TABLE IF NOT EXISTS folder (
                         folder_no   BIGINT NOT NULL AUTO_INCREMENT,
                         com_id      VARCHAR(3) NOT NULL,
                         dep_no      BIGINT NULL,
@@ -474,7 +474,7 @@ CREATE TABLE folder (
                         CONSTRAINT ck_folder_scope CHECK (scope IN ('all','dept','prvt'))
 ) ENGINE=InnoDB;
 
-CREATE TABLE `file` (
+CREATE TABLE IF NOT EXISTS `file` (
                         file_no    BIGINT NOT NULL AUTO_INCREMENT,
                         com_id     VARCHAR(3) NOT NULL,
                         folder_no  BIGINT NOT NULL,
@@ -490,7 +490,7 @@ CREATE TABLE `file` (
                         CONSTRAINT fk_file_emp FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE folder_permission (
+CREATE TABLE IF NOT EXISTS folder_permission (
                                    perm_no   BIGINT NOT NULL AUTO_INCREMENT,
                                    com_id    VARCHAR(3) NOT NULL,
                                    folder_no BIGINT NOT NULL,
@@ -509,7 +509,7 @@ CREATE TABLE folder_permission (
 -- 7. 게시판 (Board & Notice)
 -- =========================
 
-CREATE TABLE board_cat (
+CREATE TABLE IF NOT EXISTS board_cat (
                            board_cat_no BIGINT NOT NULL AUTO_INCREMENT,
                            cat_code     CHAR(1) NOT NULL,
                            cat_descript VARCHAR(100) NOT NULL,
@@ -518,7 +518,7 @@ CREATE TABLE board_cat (
                            UNIQUE KEY uk_board_cat_code (cat_code)
 ) ENGINE=InnoDB;
 
-CREATE TABLE notice (
+CREATE TABLE IF NOT EXISTS notice (
                         notice_no   BIGINT NOT NULL AUTO_INCREMENT,
                         com_id      VARCHAR(3) NOT NULL,
                         is_deleted  BOOLEAN DEFAULT FALSE,
@@ -537,7 +537,7 @@ CREATE TABLE notice (
                         CONSTRAINT fk_notice_employee FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE notice_attach (
+CREATE TABLE IF NOT EXISTS notice_attach (
                                notice_attach_no BIGINT NOT NULL AUTO_INCREMENT,
                                com_id           VARCHAR(3) NOT NULL,
                                notice_no        BIGINT NOT NULL,
@@ -549,7 +549,7 @@ CREATE TABLE notice_attach (
                                CONSTRAINT fk_notice_attach_notice FOREIGN KEY (notice_no) REFERENCES notice(notice_no) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE board (
+CREATE TABLE IF NOT EXISTS board (
                        board_no    BIGINT NOT NULL AUTO_INCREMENT,
                        com_id      VARCHAR(3) NOT NULL,
                        is_deleted  BOOLEAN DEFAULT FALSE,
@@ -566,7 +566,7 @@ CREATE TABLE board (
                        CONSTRAINT fk_board_employee FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE comment (
+CREATE TABLE IF NOT EXISTS comment (
                          comment_no  BIGINT NOT NULL AUTO_INCREMENT,
                          com_id      VARCHAR(3) NOT NULL,
                          board_no    BIGINT NOT NULL,
@@ -580,7 +580,7 @@ CREATE TABLE comment (
                          CONSTRAINT fk_comment_employee FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE board_attach (
+CREATE TABLE IF NOT EXISTS board_attach (
                               board_attach_no BIGINT NOT NULL AUTO_INCREMENT,
                               com_id          VARCHAR(3) NOT NULL,
                               board_no        BIGINT NOT NULL,
@@ -647,7 +647,7 @@ CREATE TABLE IF NOT EXISTS attendance (
 -- 9. 메일 (Mail)
 -- =========================
 
-CREATE TABLE mail (
+CREATE TABLE IF NOT EXISTS mail (
                       mail_no    BIGINT NOT NULL AUTO_INCREMENT COMMENT '메일 식별자',
                       mail_id    VARCHAR(100) NOT NULL COMMENT '메일 코드(사번+작성날짜ms)',
                       sender_id  VARCHAR(7) NOT NULL COMMENT '발신자 사원번호',
@@ -660,7 +660,7 @@ CREATE TABLE mail (
                       KEY idx_mail_sender_id (sender_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE mail_user_state (
+CREATE TABLE IF NOT EXISTS mail_user_state (
                                  recipient_no BIGINT NOT NULL AUTO_INCREMENT COMMENT '사용자 상태 식별자',
                                  mail_id      VARCHAR(100) NOT NULL COMMENT '메일 번호',
                                  user_id      VARCHAR(7) NOT NULL COMMENT '사용자 사원번호',
@@ -679,7 +679,7 @@ CREATE TABLE mail_user_state (
                                  CONSTRAINT fk_mus_mail FOREIGN KEY (mail_id) REFERENCES mail (mail_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE mail_attach (
+CREATE TABLE IF NOT EXISTS mail_attach (
                              mail_attach_no BIGINT NOT NULL AUTO_INCREMENT COMMENT '메일 첨부파일 코드',
                              mail_id        VARCHAR(100) NOT NULL COMMENT '메일 번호',
                              path           VARCHAR(255) NOT NULL COMMENT '원본 저장 경로',
@@ -694,7 +694,7 @@ CREATE TABLE mail_attach (
 -- 10. 리프레쉬 토큰 (New)
 -- =========================
 
-CREATE TABLE refresh_token (
+CREATE TABLE IF NOT EXISTS refresh_token (
                                ref_no      BIGINT AUTO_INCREMENT NOT NULL COMMENT '리프레쉬토큰 식별자',
                                email       VARCHAR(50) NOT NULL COMMENT '회사 이메일',
                                emp_id      VARCHAR(7)  NOT NULL COMMENT '사원 번호',
