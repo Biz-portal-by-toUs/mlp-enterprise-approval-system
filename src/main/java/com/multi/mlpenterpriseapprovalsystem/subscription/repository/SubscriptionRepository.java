@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Please explain the class!!!
+ * 요금제 테이블 접근 repository
  *
  * @author : 이지헌
  * @filename : SubscriptionRepository

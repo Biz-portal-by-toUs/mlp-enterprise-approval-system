@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 요금제 관리 서비스
  *
  * @author : 이지헌
  * @filename : SubscriptionService

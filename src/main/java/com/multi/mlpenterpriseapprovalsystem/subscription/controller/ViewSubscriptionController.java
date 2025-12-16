@@ -5,7 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * Please explain the class!!!
+ * 요금제를 프론트에 표시하기 위한 화면 전환용 Controller
  *
  * @author : 이지헌
  * @filename : ViewSubscriptionController

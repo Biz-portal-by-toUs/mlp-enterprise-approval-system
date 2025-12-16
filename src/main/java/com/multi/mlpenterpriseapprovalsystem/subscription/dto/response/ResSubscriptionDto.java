@@ -6,7 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 /**
- * Please explain the class!!!
+ * 응답용 SubscriptionDto
  *
  * @author : 이지헌
  * @filename : SubscriptionDto

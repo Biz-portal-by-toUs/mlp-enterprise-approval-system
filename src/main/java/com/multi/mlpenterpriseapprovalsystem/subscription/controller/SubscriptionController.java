@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 요금제 정보를 RestApi를 통해 관리하는 RestController
  *
  * @author : 이지헌
  * @filename : SubscriptionController
