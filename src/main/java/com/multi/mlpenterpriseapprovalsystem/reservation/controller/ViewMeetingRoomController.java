@@ -1,6 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.controller;
 
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.MeetingRoomResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.dto.MeetingRoomResDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -35,25 +35,7 @@ public class ViewMeetingRoomController {
     private final MeetingRoomService meetingRoomService;
 
     @GetMapping
-    public String meetingRoomList(
-            @RequestParam String comId,   // JWT 인증 연동 전 임시 사용
-            Model model
-    ) {
-        List<MeetingRoomResponseDto> rooms =
-                meetingRoomService.getMeetingRooms(comId).stream()
-                        .map(room -> MeetingRoomResponseDto.builder()
-                                .roomNo(room.getRoomNo())
-                                .comId(room.getCompany().getComId())
-                                .roomName(room.getRoomName())
-                                .capacity(room.getCap())
-                                .location(room.getLoc())
-                                .imageUrl(room.getImgUrl())
-                                .equipList(room.getEquipList())
-                                .note(room.getNote())
-                                .build())
-                        .toList();
-
-        model.addAttribute("rooms", rooms);
+    public String meetingRoomList() {  // JWT 인증 연동 전 임시 사용
         return "meeting-room/list";
     }
 }

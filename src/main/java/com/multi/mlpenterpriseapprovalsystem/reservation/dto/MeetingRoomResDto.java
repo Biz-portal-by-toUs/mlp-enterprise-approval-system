@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
  * 회의실 정보를 클라이언트에 전달하기 위한 Response DTO.
  *
  * 회의실 조회 결과를 화면 또는 API 응답으로 제공하기 위해 사용된다.
@@ -19,7 +18,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MeetingRoomResponseDto {
+public class MeetingRoomResDto {
 
     private Long roomNo;          // 회의실 식별자
     private String comId;         // 회사 코드
