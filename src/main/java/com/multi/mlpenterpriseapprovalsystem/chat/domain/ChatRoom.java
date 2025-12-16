@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 채팅방 엔티티
  *
  * @author : 김승기
  * @filename : ChatRoom
