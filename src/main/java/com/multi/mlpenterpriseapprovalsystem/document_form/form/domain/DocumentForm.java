@@ -1,11 +1,15 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.domain;
 
-import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
 
 /**
  * Please explain the class!!!
@@ -17,35 +21,40 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-// 자식 테이블이 (com_id, docfo_id)로 FK를 걸기 때문에 인덱스가 필요할 수 있음
-// docfo_id 자체가 유니크하므로 uniqueConstraints는 docfo_id에만 걸림
+@EntityListeners(AuditingEntityListener.class) // created_at 자동 주입을 위해 필요
 @Table(name = "document_form")
-public class DocumentForm extends BaseEntity {
+public class DocumentForm {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long docfoNo;
 
-    // [수정] 전역 유니크 설정 (unique = true)
-    // [중요] name = "docfo_id"를 명시해야 다른 엔티티에서 referencedColumnName="docfo_id"로 찾을 수 있습니다.
-    @Column(name = "docfo_id", nullable = false, length = 6, unique = true)
-    private String docfoId;
-
+    // 회사 참조 (com_id -> company.com_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
     private Company company;
 
-    private String writerId; // 작성자 사원번호 (단순 매핑)
+    // 작성자 참조 (writer_id -> employee.emp_id)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "writer_id", referencedColumnName = "empId", nullable = false)
+    private Employee writer;
 
+    @Column(nullable = false, length = 100)
     private String docfoName;
 
-    @Column(columnDefinition = "json")
+    @Column(columnDefinition = "json", nullable = false)
     private String cnttJson;
 
     @Lob
+    @Column(nullable = false)
     private String cnttHtml;
 
-    @Column(length = 1)
-    private String docfoStat;
+    // 명세서에 created_at만 존재하므로 BaseEntity 상속 대신 직접 정의
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false, length = 1)
+    private String docfoStat; // T, P, R, A, D
 
     private String rejectReason;
 }
