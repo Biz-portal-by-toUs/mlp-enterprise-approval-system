@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.MeetingRoomResDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,8 +38,9 @@ public class MeetingRoomController {
     private final MeetingRoomService meetingRoomService;
 
     @GetMapping("/meeting-rooms")
-    public List<MeetingRoomResDto> getMeetingRooms(@RequestParam String comId) {  // 임시
-        return meetingRoomService.getMeetingRooms(comId);
-    }
+    public ResponseEntity<ResponseDto> getMeetingRooms(@RequestParam String comId) {  // 임시
 
+        List<ResMeetingRoomDto> resMeetingRoomDtos = meetingRoomService.getMeetingRooms(comId);
+        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK, "회의실 조회 성공", resMeetingRoomDtos));
+    }
 }

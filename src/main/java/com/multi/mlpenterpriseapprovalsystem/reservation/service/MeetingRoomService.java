@@ -1,7 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.service;
 
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.MeetingRoomResDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
+import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.repository.MeetingRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +27,9 @@ public class MeetingRoomService {
 
     private final MeetingRoomRepository meetingRoomRepository;
 
-    public List<MeetingRoomResDto> getMeetingRooms(String comId) {
+    public List<ResMeetingRoomDto> getMeetingRooms(String comId) {
         return meetingRoomRepository.findByCompany_ComId(comId).stream()
-                .map(room -> MeetingRoomResDto.builder()
+                .map(room -> ResMeetingRoomDto.builder()
                         .roomNo(room.getRoomNo())
                         .comId(room.getCompany().getComId())
                         .roomName(room.getRoomName())

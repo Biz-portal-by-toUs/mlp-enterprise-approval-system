@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MeetingRoomResDto {
+public class ResMeetingRoomDto {
 
     private Long roomNo;          // 회의실 식별자
     private String comId;         // 회사 코드
