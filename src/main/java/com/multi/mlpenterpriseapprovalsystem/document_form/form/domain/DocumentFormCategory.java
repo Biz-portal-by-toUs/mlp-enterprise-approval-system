@@ -18,21 +18,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "document_form_category")
 public class DocumentFormCategory {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long docfoCatNo;
 
-    @Column(nullable = false, length = 7)
-    private String docfoCatId;
-
+    // 회사 참조 (com_id -> company.com_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
     private Company company;
 
+    @Column(nullable = false, length = 100)
     private String name;
 
+    // 문서 양식 참조 (docfo_no -> document_form.docfo_no)
+    // *주의: 카테고리가 양식의 하위 개념으로 설계된 명세서를 따랐습니다.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-            @JoinColumn(name = "docfo_id", referencedColumnName = "docfo_id")
-    })
+    @JoinColumn(name = "docfo_no", nullable = false)
     private DocumentForm documentForm;
 }

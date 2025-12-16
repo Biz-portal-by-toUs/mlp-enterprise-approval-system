@@ -155,7 +155,6 @@ CREATE TABLE document_form (
                                com_id        VARCHAR(3) NOT NULL COMMENT '회사 코드',
                                writer_id     VARCHAR(7) NOT NULL COMMENT '작성자 사원번호',
                                docfo_name    VARCHAR(100) NOT NULL COMMENT '문서 양식 이름',
-                               docfo_id      VARCHAR(6) NOT NULL COMMENT '문서 양식 코드',
                                cntt_json     JSON NOT NULL COMMENT '내용(JSON)',
                                cntt_html     TEXT NOT NULL COMMENT '내용(HTML)',
                                created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -164,12 +163,6 @@ CREATE TABLE document_form (
 
                                PRIMARY KEY (docfo_no),
 
-    -- [요청 반영] docfo_id 자체를 유니크하게 설정 (전역 유니크)
-                               CONSTRAINT uk_docform_docfo_id UNIQUE (docfo_id),
-
-    -- [필수] 자식 테이블이 (com_id, docfo_id) 복합키로 참조하므로, 이를 지원하는 인덱스 추가
-                               INDEX idx_docform_composite (com_id, docfo_id),
-
                                CONSTRAINT ck_docform_stat CHECK (docfo_stat IN ('T','P','R','A','D')),
                                CONSTRAINT fk_docform_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -177,16 +170,14 @@ CREATE TABLE document_form (
 CREATE TABLE document_form_category (
                                         docfo_cat_no BIGINT NOT NULL AUTO_INCREMENT,
                                         com_id       VARCHAR(3) NOT NULL,
-                                        docfo_cat_id VARCHAR(7) NOT NULL,
                                         name         VARCHAR(100) NOT NULL,
-                                        docfo_id     VARCHAR(6) NOT NULL,
+                                        docfo_no     bigint NOT NULL,
 
                                         PRIMARY KEY (docfo_cat_no),
-                                        UNIQUE KEY uk_docfocat_com_catid (com_id, docfo_cat_id),
                                         CONSTRAINT fk_docfocat_company FOREIGN KEY (com_id) REFERENCES company (com_id) ON UPDATE CASCADE ON DELETE CASCADE,
 
     -- 부모 테이블에 (com_id, docfo_id) 인덱스가 있어서 정상 작동함
-                                        CONSTRAINT fk_docfocat_docform FOREIGN KEY (com_id, docfo_id) REFERENCES document_form (com_id, docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
+                                        CONSTRAINT fk_docfocat_docform FOREIGN KEY (docfo_no) REFERENCES document_form (docfo_no) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE attach_box (
@@ -206,8 +197,8 @@ CREATE TABLE IF NOT EXISTS document (
                                         doc_no        BIGINT        NOT NULL AUTO_INCREMENT,
                                         com_id        VARCHAR(3)    NOT NULL,
                                         doc_id        VARCHAR(14)   NOT NULL,
-                                        docfo_cat_id  VARCHAR(7)    NOT NULL,
-                                        docfo_id      VARCHAR(6)    NOT NULL,
+                                        docfo_cat_no  bigint    NOT NULL,
+                                        docfo_no      bigint    NOT NULL,
                                         title         VARCHAR(100)  NOT NULL,
                                         content       JSON          NOT NULL,
                                         cntt_html     TEXT          NOT NULL,
@@ -223,7 +214,9 @@ CREATE TABLE IF NOT EXISTS document (
                                         CONSTRAINT fk_document_employee FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON UPDATE CASCADE ON DELETE CASCADE,
 
     -- 부모 테이블에 (com_id, docfo_id) 인덱스가 있어서 정상 작동함
-                                        CONSTRAINT fk_document_form FOREIGN KEY (com_id, docfo_id) REFERENCES document_form(com_id, docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
+                                        CONSTRAINT fk_document_form FOREIGN KEY (docfo_no) REFERENCES document_form(docfo_no) ON UPDATE CASCADE ON DELETE CASCADE,
+                                        CONSTRAINT fk_document_form_cat FOREIGN KEY (docfo_cat_no) REFERENCES document_form_category(docfo_cat_no) ON UPDATE CASCADE ON DELETE CASCADE
+
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS approval_line (
