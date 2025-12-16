@@ -1,0 +1,34 @@
+package com.multi.mlpenterpriseapprovalsystem.board.domain;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * Please explain the class!!!
+ *
+ * @author : kim youngkwan
+ * @filename : BoardAttach
+ * @since : 2025-12-15 월요일
+ */
+// 게시판 첨부파일
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "board_attach")
+public class BoardAttach {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long boardAttachNo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "board_no")
+    private Board board;
+
+    private String orgName;
+    private String folderPath;
+}
