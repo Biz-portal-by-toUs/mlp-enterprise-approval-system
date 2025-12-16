@@ -1,8 +1,8 @@
-package com.multi.mlpenterpriseapprovalsystem.notice.domain;
+package com.multi.mlpenterpriseapprovalsystem.reservation.reserve.domain;
 
-import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.CorporateCar;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -14,22 +14,20 @@ import java.time.LocalDateTime;
  * Please explain the class!!!
  *
  * @author : 김승기
- * @filename : Notice
+ * @filename : CorporateCarReservation
  * @since : 2025. 12. 16. 화요일
  */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "notice")
-public class Notice extends BaseEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long noticeNo;
+@Table(name = "corporate_car_reservation")
+public class CorporateCarReservation {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long carResvNo;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
-    private Boolean isDeleted;
-    private String title;
-    @Column(columnDefinition = "json") private String contents;
-    private Boolean isPopup;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "car_no") private CorporateCar corporateCar;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "emp_id", referencedColumnName = "empId") private Employee writer;
-    private Integer rating;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "resv_emp", referencedColumnName = "empId") private Employee resvEmp;
+    private String purp;
+    private Boolean isDeleted;
 }

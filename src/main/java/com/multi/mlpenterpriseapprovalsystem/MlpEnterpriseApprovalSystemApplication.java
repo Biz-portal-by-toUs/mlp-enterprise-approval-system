@@ -10,5 +10,4 @@ public class MlpEnterpriseApprovalSystemApplication {
     public static void main(String[] args) {
         SpringApplication.run(MlpEnterpriseApprovalSystemApplication.class, args);
     }
-
 }
