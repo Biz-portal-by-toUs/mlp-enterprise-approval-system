@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.reserve.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

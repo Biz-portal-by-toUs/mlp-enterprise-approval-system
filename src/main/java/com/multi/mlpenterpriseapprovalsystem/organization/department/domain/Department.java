@@ -16,12 +16,15 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+// [중요] 부서 ID는 회사(com_id) 내에서만 유니크합니다. (전역 유니크 아님)
 @Table(name = "department", uniqueConstraints = @UniqueConstraint(columnNames = {"com_id", "dep_id"}))
 public class Department {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long depNo;
 
-    @Column(nullable = false, unique = true, length = 3)
+    // [주의] unique = true를 붙이지 않습니다.
+    @Column(nullable = false, length = 3)
     private String depId;
 
     @Column(nullable = false, length = 10)

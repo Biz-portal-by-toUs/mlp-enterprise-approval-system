@@ -1,8 +1,13 @@
 package com.multi.mlpenterpriseapprovalsystem.cloud.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * Please explain the class!!!
@@ -12,7 +17,8 @@ import jakarta.persistence.*;
  * @since : 2025. 12. 16. 화요일
  */
 @Entity
-@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "folder")
 public class Folder extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

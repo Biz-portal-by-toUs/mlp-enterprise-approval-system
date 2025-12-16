@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS subscription (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 2) 회사
--- 변경: email UK 추가, brn Varchar(10), img_url/path 추가
 CREATE TABLE IF NOT EXISTS company (
                                        com_no     BIGINT       NOT NULL AUTO_INCREMENT,
                                        com_id     VARCHAR(3)   NOT NULL,
@@ -44,12 +43,12 @@ CREATE TABLE IF NOT EXISTS company (
 
                                        CONSTRAINT pk_company PRIMARY KEY (com_no),
                                        CONSTRAINT uk_company_com_id UNIQUE (com_id),
-                                       CONSTRAINT uk_company_email UNIQUE (email), -- [요청] email UK 추가
+                                       CONSTRAINT uk_company_email UNIQUE (email), -- [확인] Email UK 적용됨
                                        CONSTRAINT fk_company_subscription FOREIGN KEY (sub_no) REFERENCES subscription(sub_no) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- 3) 부서
--- 변경: dep_id UK 확인 (참조는 dep_no로 변경됨)
+-- [수정] dep_no는 PK(유니크)지만 별도 UK 제약 없음. dep_id는 회사별로만 유니크.
 CREATE TABLE IF NOT EXISTS department (
                                           dep_no    BIGINT      NOT NULL AUTO_INCREMENT,
                                           dep_id    VARCHAR(3)  NOT NULL,
@@ -57,13 +56,11 @@ CREATE TABLE IF NOT EXISTS department (
                                           com_id    VARCHAR(3)  NOT NULL,
 
                                           CONSTRAINT pk_department PRIMARY KEY (dep_no),
-                                          CONSTRAINT uk_department_dep_id UNIQUE (dep_id), -- [요청] dep_id UK
-                                          CONSTRAINT uk_department_composite UNIQUE (com_id, dep_id),
+                                          CONSTRAINT uk_department_composite UNIQUE (com_id, dep_id), -- 회사 내에서 부서코드 중복 방지
                                           CONSTRAINT fk_department_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- 4) 직급
--- 변경: pos_id 컬럼 삭제
 CREATE TABLE IF NOT EXISTS positions (
                                          pos_no    BIGINT      NOT NULL AUTO_INCREMENT,
                                          pos_name  VARCHAR(10) NOT NULL,
@@ -74,12 +71,11 @@ CREATE TABLE IF NOT EXISTS positions (
 ) ENGINE=InnoDB;
 
 -- 5) 사원
--- 변경: ret_date NULL 허용, dep_id -> dep_no, pos_id -> pos_no
 CREATE TABLE IF NOT EXISTS employee (
                                         emp_no      BIGINT       NOT NULL AUTO_INCREMENT,
                                         com_id      VARCHAR(3)   NOT NULL,
-                                        dep_no      BIGINT       NOT NULL, -- [변경] 부서 번호 참조
-                                        pos_no      BIGINT       NOT NULL, -- [변경] 직급 번호 참조
+                                        dep_no      BIGINT       NOT NULL,
+                                        pos_no      BIGINT       NOT NULL,
                                         emp_id      VARCHAR(7)   NOT NULL,
                                         pwd         VARCHAR(255) NOT NULL,
                                         emp_name    VARCHAR(20)  NOT NULL,
@@ -88,7 +84,7 @@ CREATE TABLE IF NOT EXISTS employee (
                                         work_phone  VARCHAR(10)  NOT NULL,
                                         gen         VARCHAR(1)   NOT NULL,
                                         hire_date   DATETIME     NOT NULL,
-                                        ret_date    DATETIME     NULL,     -- [변경] NULL 허용
+                                        ret_date    DATETIME     NULL,
                                         addr        VARCHAR(100) NOT NULL,
                                         role_no     BIGINT       NOT NULL,
                                         is_deleted  BOOLEAN      NOT NULL DEFAULT FALSE,
@@ -100,19 +96,19 @@ CREATE TABLE IF NOT EXISTS employee (
                                         CONSTRAINT uk_employee_emp_id UNIQUE (emp_id),
 
                                         CONSTRAINT fk_employee_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON UPDATE CASCADE ON DELETE CASCADE,
-                                        CONSTRAINT fk_employee_department FOREIGN KEY (dep_no) REFERENCES department(dep_no) ON UPDATE CASCADE ON DELETE CASCADE, -- [변경] dep_no 참조
-                                        CONSTRAINT fk_employee_positions FOREIGN KEY (pos_no) REFERENCES positions(pos_no) ON UPDATE CASCADE ON DELETE CASCADE,   -- [변경] pos_no 참조
+                                        CONSTRAINT fk_employee_department FOREIGN KEY (dep_no) REFERENCES department(dep_no) ON UPDATE CASCADE ON DELETE CASCADE,
+                                        CONSTRAINT fk_employee_positions FOREIGN KEY (pos_no) REFERENCES positions(pos_no) ON UPDATE CASCADE ON DELETE CASCADE,
                                         CONSTRAINT fk_employee_delegate FOREIGN KEY (delegate) REFERENCES employee(emp_id) ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- =========================
--- 2. 일정 및 할일 (Schedule & Todo)
+-- 2. 일정 및 할일
 -- =========================
 
 CREATE TABLE IF NOT EXISTS schedule (
                                         sch_no    BIGINT       NOT NULL AUTO_INCREMENT,
                                         com_id    VARCHAR(3)   NOT NULL,
-                                        dep_no    BIGINT       NOT NULL, -- [변경] 부서 번호 참조
+                                        dep_no    BIGINT       NOT NULL,
                                         title     VARCHAR(100) NOT NULL,
                                         content   VARCHAR(200) NOT NULL,
                                         start_at  DATETIME     NOT NULL,
@@ -122,7 +118,7 @@ CREATE TABLE IF NOT EXISTS schedule (
 
                                         CONSTRAINT pk_schedule PRIMARY KEY (sch_no),
                                         CONSTRAINT fk_schedule_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON UPDATE CASCADE ON DELETE CASCADE,
-                                        CONSTRAINT fk_schedule_department FOREIGN KEY (dep_no) REFERENCES department(dep_no) ON UPDATE CASCADE ON DELETE CASCADE, -- [변경] dep_no 참조
+                                        CONSTRAINT fk_schedule_department FOREIGN KEY (dep_no) REFERENCES department(dep_no) ON UPDATE CASCADE ON DELETE CASCADE,
                                         CONSTRAINT fk_schedule_reg_emp FOREIGN KEY (reg_emp) REFERENCES employee(emp_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -150,9 +146,10 @@ CREATE TABLE IF NOT EXISTS todo_list (
 ) ENGINE=InnoDB;
 
 -- =========================
--- 3. 전자결재 및 문서 (E-Approval)
+-- 3. 전자결재 및 문서
 -- =========================
 
+-- [수정] docfo_id를 Global UK로 변경
 CREATE TABLE document_form (
                                docfo_no      BIGINT NOT NULL AUTO_INCREMENT COMMENT '문서양식 식별자',
                                com_id        VARCHAR(3) NOT NULL COMMENT '회사 코드',
@@ -166,7 +163,13 @@ CREATE TABLE document_form (
                                reject_reason VARCHAR(255) NULL COMMENT '반려 이유',
 
                                PRIMARY KEY (docfo_no),
-                               UNIQUE KEY uk_docform_com_docfoid (com_id, docfo_id),
+
+    -- [요청 반영] docfo_id 자체를 유니크하게 설정 (전역 유니크)
+                               CONSTRAINT uk_docform_docfo_id UNIQUE (docfo_id),
+
+    -- [필수] 자식 테이블이 (com_id, docfo_id) 복합키로 참조하므로, 이를 지원하는 인덱스 추가
+                               INDEX idx_docform_composite (com_id, docfo_id),
+
                                CONSTRAINT ck_docform_stat CHECK (docfo_stat IN ('T','P','R','A','D')),
                                CONSTRAINT fk_docform_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -181,6 +184,8 @@ CREATE TABLE document_form_category (
                                         PRIMARY KEY (docfo_cat_no),
                                         UNIQUE KEY uk_docfocat_com_catid (com_id, docfo_cat_id),
                                         CONSTRAINT fk_docfocat_company FOREIGN KEY (com_id) REFERENCES company (com_id) ON UPDATE CASCADE ON DELETE CASCADE,
+
+    -- 부모 테이블에 (com_id, docfo_id) 인덱스가 있어서 정상 작동함
                                         CONSTRAINT fk_docfocat_docform FOREIGN KEY (com_id, docfo_id) REFERENCES document_form (com_id, docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -216,6 +221,8 @@ CREATE TABLE IF NOT EXISTS document (
                                         CONSTRAINT uk_document_doc_id UNIQUE (doc_id),
                                         CONSTRAINT fk_document_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON UPDATE CASCADE ON DELETE CASCADE,
                                         CONSTRAINT fk_document_employee FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON UPDATE CASCADE ON DELETE CASCADE,
+
+    -- 부모 테이블에 (com_id, docfo_id) 인덱스가 있어서 정상 작동함
                                         CONSTRAINT fk_document_form FOREIGN KEY (com_id, docfo_id) REFERENCES document_form(com_id, docfo_id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -273,7 +280,7 @@ CREATE TABLE prov_document (
 CREATE TABLE meeting (
                          meet_no     BIGINT NOT NULL AUTO_INCREMENT COMMENT '회의록 식별자',
                          com_id      VARCHAR(3) NOT NULL COMMENT '회사 코드',
-                         dep_no      BIGINT NOT NULL COMMENT '부서 식별자', -- [확인] 이미 dep_no 참조 중
+                         dep_no      BIGINT NOT NULL COMMENT '부서 식별자',
                          emp_id      VARCHAR(7) NOT NULL COMMENT '사원 번호 (작성자)',
                          title       VARCHAR(100) NOT NULL COMMENT '제목',
                          stt_text    MEDIUMTEXT COMMENT 'stt 변환 텍스트',
@@ -285,7 +292,7 @@ CREATE TABLE meeting (
 
                          PRIMARY KEY (meet_no),
                          CONSTRAINT fk_meeting_company FOREIGN KEY (com_id) REFERENCES company (com_id) ON DELETE CASCADE,
-                         CONSTRAINT fk_meeting_department FOREIGN KEY (dep_no) REFERENCES department (dep_no) ON DELETE CASCADE, -- [확인] dep_no 참조
+                         CONSTRAINT fk_meeting_department FOREIGN KEY (dep_no) REFERENCES department (dep_no) ON DELETE CASCADE,
                          CONSTRAINT fk_meeting_employee FOREIGN KEY (emp_id) REFERENCES employee (emp_id) ON DELETE CASCADE
 ) COMMENT = '회의';
 
@@ -450,7 +457,7 @@ CREATE TABLE shared_equipment_reservation (
 CREATE TABLE folder (
                         folder_no   BIGINT NOT NULL AUTO_INCREMENT,
                         com_id      VARCHAR(3) NOT NULL,
-                        dep_no      BIGINT NULL, -- [변경] dep_id -> dep_no
+                        dep_no      BIGINT NULL,
                         parent_id   BIGINT NULL,
                         folder_name VARCHAR(255) NOT NULL,
                         owner_id    VARCHAR(7) NOT NULL,
@@ -461,7 +468,7 @@ CREATE TABLE folder (
 
                         PRIMARY KEY (folder_no),
                         CONSTRAINT fk_folder_company FOREIGN KEY (com_id) REFERENCES company(com_id) ON DELETE CASCADE,
-                        CONSTRAINT fk_folder_department FOREIGN KEY (dep_no) REFERENCES department(dep_no) ON DELETE CASCADE, -- [변경] dep_no 참조
+                        CONSTRAINT fk_folder_department FOREIGN KEY (dep_no) REFERENCES department(dep_no) ON DELETE CASCADE,
                         CONSTRAINT fk_folder_owner FOREIGN KEY (owner_id) REFERENCES employee(emp_id) ON DELETE CASCADE,
                         CONSTRAINT fk_folder_parent FOREIGN KEY (parent_id) REFERENCES folder(folder_no) ON DELETE CASCADE,
                         CONSTRAINT ck_folder_scope CHECK (scope IN ('all','dept','prvt'))
@@ -707,10 +714,10 @@ CREATE TABLE refresh_token (
 CREATE INDEX idx_department_com ON department(com_id);
 CREATE INDEX idx_positions_com   ON positions(com_id);
 CREATE INDEX idx_employee_com   ON employee(com_id);
-CREATE INDEX idx_employee_dep   ON employee(dep_no); -- [변경] dep_no 인덱스
-CREATE INDEX idx_employee_pos   ON employee(pos_no); -- [변경] pos_no 인덱스
+CREATE INDEX idx_employee_dep   ON employee(dep_no);
+CREATE INDEX idx_employee_pos   ON employee(pos_no);
 CREATE INDEX idx_schedule_com   ON schedule(com_id);
-CREATE INDEX idx_schedule_dep   ON schedule(dep_no); -- [변경] dep_no 인덱스
+CREATE INDEX idx_schedule_dep   ON schedule(dep_no);
 CREATE INDEX idx_schedule_reg   ON schedule(reg_emp);
 CREATE INDEX idx_emp_schedule_emp ON emp_schedule(emp_id);
 CREATE INDEX idx_todo_emp       ON todo_list(emp_id);

@@ -32,7 +32,6 @@ public class DocumentFormCategory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
-            @JoinColumn(name = "com_id", referencedColumnName = "com_id", insertable = false, updatable = false),
             @JoinColumn(name = "docfo_id", referencedColumnName = "docfo_id")
     })
     private DocumentForm documentForm;
