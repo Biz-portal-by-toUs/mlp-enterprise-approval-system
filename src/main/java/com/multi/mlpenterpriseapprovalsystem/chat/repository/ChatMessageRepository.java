@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 채팅 컬렉션 접근 repository
  *
  * @author : 김승기
  * @filename : ChatMessageRepository

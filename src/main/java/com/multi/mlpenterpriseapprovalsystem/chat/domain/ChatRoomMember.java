@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 채팅방 멤버 엔티티
  *
  * @author : 김승기
  * @filename : ChatRoomMember
