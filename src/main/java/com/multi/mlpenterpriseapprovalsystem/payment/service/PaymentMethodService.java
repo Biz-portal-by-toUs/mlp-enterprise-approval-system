@@ -6,7 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.payment.domain.PaymentMethod;
 import com.multi.mlpenterpriseapprovalsystem.payment.dto.ResPortonePaymentInfoDto;
 import com.multi.mlpenterpriseapprovalsystem.payment.dto.ReqVerifyDto;
-import com.multi.mlpenterpriseapprovalsystem.payment.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.payment.repository.PaymentCompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.payment.repository.PaymentMethodRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class PaymentMethodService {
 
     private final PortoneService portoneService;
     private final PaymentMethodRepository paymentMethodRepository;
-    private final CompanyRepository companyRepository;
+    private final PaymentCompanyRepository companyRepository;
 
     // 카드 등록(프론트에서 받은 빌링키의 유효성 검증 후 카드 등록)
     public void registerCard(String comId, ReqVerifyDto reqVerifyDto) {

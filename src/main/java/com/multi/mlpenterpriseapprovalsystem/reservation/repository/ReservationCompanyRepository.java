@@ -15,7 +15,7 @@ import java.util.Optional;
  */
 
 @Repository
-public interface CompanyRepository extends JpaRepository<Company, Long> {
+public interface ReservationCompanyRepository extends JpaRepository<Company, Long> {
 
     Optional<Company> findByComId(String comId);
 
