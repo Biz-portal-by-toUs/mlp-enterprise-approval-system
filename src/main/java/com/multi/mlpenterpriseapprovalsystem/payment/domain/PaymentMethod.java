@@ -2,15 +2,14 @@ package com.multi.mlpenterpriseapprovalsystem.payment.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.payment.enums.PaymType;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
- * Please explain the class!!!
+ * 결제 수단 엔티티
  *
- * @author : 김승기
+ * @author : 이지헌
  * @filename : PaymentMethod
  * @since : 2025. 12. 16. 화요일
  */
@@ -18,10 +17,19 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "payment_method")
+@Builder
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentMethod extends BaseEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long paymNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
-    private String paymType;
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long paymNo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    private Company company;
+
+    @Enumerated(EnumType.STRING)
+    private PaymType paymType;
+
     private String cardType;
     private String billingKey;
     private String mask;
