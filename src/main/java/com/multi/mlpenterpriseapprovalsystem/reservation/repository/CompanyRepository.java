@@ -17,7 +17,7 @@ import java.util.Optional;
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long> {
 
-    Optional<Object> findByComId(String comId);
+    Optional<Company> findByComId(String comId);
 
     boolean existsByComId(String comId);
 }

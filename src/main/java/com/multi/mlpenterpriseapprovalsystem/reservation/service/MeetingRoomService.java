@@ -48,6 +48,7 @@ public class MeetingRoomService {
     @Value("${image.image-url}")  // 브라우저에서 접근하는 주소
     private String IMAGE_URL;
 
+    @Transactional(readOnly = true)
     public Page<ResMeetingRoomDto> selectMeetingRoomsWithPaging(String comId, Pageable pageable) {
     // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
         Page<MeetingRoom> meetingRooms = meetingRoomRepository.findByCompany_ComId(comId, pageable);
@@ -64,10 +65,9 @@ public class MeetingRoomService {
                         .build());
     }
 
-    @Transactional
     public Long registerMeetingRoom(String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) throws IOException {
 
-        Company company = (Company) companyRepository.findByComId(comId)
+        Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
         String savedUrl = null;

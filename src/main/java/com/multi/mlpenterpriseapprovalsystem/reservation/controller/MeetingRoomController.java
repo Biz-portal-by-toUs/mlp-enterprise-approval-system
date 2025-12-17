@@ -56,7 +56,7 @@ public class MeetingRoomController {
     }
 
     @PostMapping(value ="/meeting-rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@RequestParam String comId,  //임시로 @RequestAttribute("comId")
+    public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@RequestParam String comId,  // todo 임시로 @RequestAttribute("comId")
                                                                  @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                  @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) throws IOException {
 
