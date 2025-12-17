@@ -1,9 +1,13 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.repository;
 
+import com.multi.mlpenterpriseapprovalsystem.common.paging.SelectCriteria;
 import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +23,6 @@ import java.util.Optional;
 public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> {
 
     // 회사별 회의실 목록
-    List<MeetingRoom> findByCompany_ComId(String comId);
+    Page<MeetingRoom> findByCompany_ComId(String comId, Pageable pageable);
 
 }

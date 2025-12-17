@@ -1,10 +1,17 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.common.paging.Pagenation;
+import com.multi.mlpenterpriseapprovalsystem.common.paging.ResponseDtoWithPaging;
+import com.multi.mlpenterpriseapprovalsystem.common.paging.SelectCriteria;
 import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,9 +45,14 @@ public class MeetingRoomController {
     private final MeetingRoomService meetingRoomService;
 
     @GetMapping("/meeting-rooms")
-    public ResponseEntity<ResponseDto> getMeetingRooms(@RequestParam String comId) {  // 임시
+    public ResponseEntity<ResponseDto> getMeetingRoomsWithPaging(@RequestParam String comId,
+                                                                 @RequestParam(name = "page", defaultValue = "0") int page,
+                                                                 @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
 
-        List<ResMeetingRoomDto> resMeetingRoomDtos = meetingRoomService.getMeetingRooms(comId);
-        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto(HttpStatus.OK, "회의실 조회 성공", resMeetingRoomDtos));
+        Pageable pageable = PageRequest.of(page, size, Sort.by("roomNo").descending());
+
+        Page<ResMeetingRoomDto> meetingRooms = meetingRoomService.selectMeetingRoomsWithPaging(comId, pageable);
+
+        return ResponseEntity.ok(new ResponseDto(HttpStatus.OK, "회의실 조회 성공", meetingRooms));
     }
 }
