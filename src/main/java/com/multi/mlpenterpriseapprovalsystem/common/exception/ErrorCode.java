@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
  * Please explain the class!!!
  * HTTP 상태 코드, 에러 코드(프론트에서 어떤 예외인지 체킹 용도), 에러 메시지(사용자에게 화면에서 보여줄 용도)
  *
+ * 에러 추가하기 전에 이미 있는 에러인지 확인부탁!!
  * @author : 이지헌
  * @filename : ErrorCode
  * @since : 25. 12. 15. 월요일
@@ -49,9 +50,6 @@ public enum ErrorCode {
 
     // 서버 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다"),
-
-    // 예약 에러
-    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUND", "회사를 찾을 수 없습니다"),
 
     // @Valid 에러
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "INVALID_INPUT_VALUE", "입력값이 잘못되었습니다.");
