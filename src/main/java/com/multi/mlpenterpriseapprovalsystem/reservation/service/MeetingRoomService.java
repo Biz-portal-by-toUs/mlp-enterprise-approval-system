@@ -1,7 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.service;
 
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.paging.SelectCriteria;
 import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
 import com.multi.mlpenterpriseapprovalsystem.reservation.repository.MeetingRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +36,13 @@ public class MeetingRoomService {
 
     public Page<ResMeetingRoomDto> selectMeetingRoomsWithPaging(String comId, Pageable pageable) {
     // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
+        Page<MeetingRoom> meetingRooms = meetingRoomRepository.findByCompany_ComId(comId, pageable);
 
-        return meetingRoomRepository.findByCompany_ComId(comId, pageable)
-                .map(meetingRoom -> ResMeetingRoomDto.builder()
+        if (meetingRooms.isEmpty()) {
+            throw new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND);
+        }
+
+        return meetingRooms.map(meetingRoom -> ResMeetingRoomDto.builder()
                         .roomNo(meetingRoom.getRoomNo())
                         .comId(meetingRoom.getCompany().getComId())
                         .roomName(meetingRoom.getRoomName())

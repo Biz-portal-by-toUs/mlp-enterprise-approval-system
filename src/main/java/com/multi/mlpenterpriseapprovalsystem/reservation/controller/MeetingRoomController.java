@@ -49,10 +49,10 @@ public class MeetingRoomController {
                                                                  @RequestParam(name = "page", defaultValue = "0") int page,
                                                                  @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("roomNo").descending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("roomName").ascending());
 
         Page<ResMeetingRoomDto> meetingRooms = meetingRoomService.selectMeetingRoomsWithPaging(comId, pageable);
 
-        return ResponseEntity.ok(new ResponseDto(HttpStatus.OK, "회의실 조회 성공", meetingRooms));
+        return ResponseEntity.ok(new ResponseDto(HttpStatus.OK, "조회 성공", meetingRooms));
     }
 }
