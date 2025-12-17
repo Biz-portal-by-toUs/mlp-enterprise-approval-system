@@ -13,6 +13,6 @@ import java.util.Optional;
  * @filename : CompanyRepository
  * @since : 25. 12. 17. 수요일
  */
-public interface CompanyRepository extends JpaRepository<Company, Long> {
+public interface PaymentCompanyRepository extends JpaRepository<Company, Long> {
     Optional<Company> findByComId(String comId);
 }
