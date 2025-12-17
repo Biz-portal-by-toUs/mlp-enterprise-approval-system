@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
- * Please explain the class!!!
  * 회의실 관리(조회·등록·수정) 화면을 제공하는 View 전용 Controller
  *
  * - 회의실 관련 화면 요청을 처리하고,
@@ -33,4 +32,10 @@ public class ViewMeetingRoomController {
     public String meetingRoomList() {  // JWT 인증 연동 전 임시 사용
         return "meeting-room/list";
     }
+
+    @GetMapping("/regist")
+    public void addMeetingRoom() {
+
+    }
+
 }

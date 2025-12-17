@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 @Data
 @NoArgsConstructor
-public class ResponseDto<T>{
+public class ResponseDto<T> {
 
     private int status;
     private String message;
