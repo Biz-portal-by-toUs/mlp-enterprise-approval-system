@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 사원 엔티티
  *
  * @author : 김승기
  * @filename : Employee
