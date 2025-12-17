@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>카드 등록 테스트</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.iamport.kr/js/iamport.payment-1.2.0.js"></script>
+</head>
+<body>
+<h2>결제 수단(카드) 등록</h2>
+<button onclick="requestBillingKey()">카드 등록하기</button>
+
+<script>
+    var IMP = window.IMP;
+    IMP.init("imp17723588"); // [내 가맹점 식별코드 입력]
+
+    function requestBillingKey() {
+        // 고유한 customer_uid 생성 (중복되면 안됨)
+        var comId = "COM001"; // 현재 회사 ID
+        var customer_uid = comId + "_card_" + new Date().getTime();
+
+        IMP.request_pay({
+            pg: "tosspayments",     // PG사 (테스트는 html5_inicis)
+            pay_method: "card",     // 결제수단
+            merchant_uid: "reg_" + new Date().getTime(), // 주문번호
+            customer_uid: customer_uid, // [핵심] 이 값이 있어야 빌링키가 발급됨
+            name: "최초 카드 등록",
+            amount: 0,              // 0원 결제 (빌링키 발급용)
+            buyer_email: "test@company.com",
+            buyer_name: "테스트회사",
+            buyer_tel: "010-1234-5678"
+        }, function (rsp) {
+            if (rsp.success) {
+                // 1. 빌링키 발급 성공 시, 내 서버로 데이터 전송
+                console.log("빌링키 발급 성공", rsp);
+
+                $.ajax({
+                    url: "/api/v1/company/payment-method",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        impUid: rsp.imp_uid, // 포트원 결제 건 id
+                        customerUid: customer_uid, // 빌링키
+                        paidAmount: rsp.paid_amount // 결제 금액
+                    }),
+                    success: function(res) {
+                        alert(res.message); // "카드 등록 및 빌링키 저장이 완료되었습니다."
+                    },
+                    error: function(xhr) {
+                        var response = JSON.parse(xhr.responseText);
+                        alert(response.message);
+                    }
+                });
+            } else {
+                alert("카드 등록 실패: " + rsp.error_msg);
+            }
+        });
+    }
+</script>
+</body>
+</html>
