@@ -1,16 +1,17 @@
 package com.multi.mlpenterpriseapprovalsystem.auth.domain;
 
-import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
+import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * Refresh_token 엔티티
  *
  * @author : 김승기
  * @filename : RefreshToken
@@ -19,27 +20,51 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "refresh_token")
-public class RefreshToken {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Table(
+        name = "refresh_token",
+        indexes = @Index(
+                name = "idx_refresh_token_subject",
+                columnList = "subject_type, subject_id"
+        )
+)
+public class RefreshToken extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long refNo;
 
-    // Company의 email(UK) 참조
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "email", referencedColumnName = "email", nullable = false)
-    private Company company;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subject_type", nullable = false, length = 10)
+    private TokenSubjectType subjectType; // EMPLOYEE / COMPANY
 
-    // Employee의 empId(UK) 참조
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId", nullable = false)
-    private Employee employee;
+    @Column(name = "subject_id", nullable = false)
+    private Long subjectId; // EMPLOYEE.emp_no / COMPANY.com_no
 
     @Column(nullable = false, unique = true, length = 500)
     private String token;
 
-    @Column(nullable = false)
-    private LocalDateTime createdAt; // default current_timestamp
-
-    @Column(nullable = false)
+    @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "revoked", nullable = false)
+    private boolean revoked;
+
+
+    @Builder
+    public RefreshToken(TokenSubjectType subjectType, Long subjectId, String token,
+                        LocalDateTime expiredAt, LocalDateTime createdAt) {
+        this.subjectType = subjectType;
+        this.subjectId = subjectId;
+        this.token = token;
+        this.expiredAt = expiredAt;
+        this.createdAt = createdAt;
+        this.revoked = false;
+    }
+
+    public void revoke() {
+        this.revoked = true;
+    }
 }

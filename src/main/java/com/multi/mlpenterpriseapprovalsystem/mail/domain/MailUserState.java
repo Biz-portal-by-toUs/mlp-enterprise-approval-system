@@ -27,12 +27,12 @@ public class MailUserState extends BaseEntity {
 
     // Mail의 mailId(UK) 참조
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mail_id", referencedColumnName = "mailId", nullable = false)
+    @JoinColumn(name = "mail_id", referencedColumnName = "mail_id", nullable = false)
     private Mail mail;
 
     // Employee의 empId(UK) 참조
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "empId", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "emp_id", nullable = false)
     private Employee user;
 
     @Enumerated(EnumType.STRING)

@@ -1,0 +1,40 @@
+package com.multi.mlpenterpriseapprovalsystem.auth.controller;
+
+import com.multi.mlpenterpriseapprovalsystem.auth.service.AuthService;
+import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+
+/**
+ * AuthController
+ *
+ * @author : 권지영
+ * @filename : AuthController
+ * @since : 2025. 12. 17. 수요일
+ */
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+@Slf4j
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/companies/login") public ResponseEntity<ResponseDto<ResTokenDto>> login(@RequestBody ReqCompanyLoginDto reqCompanyLoginDto, HttpServletResponse response) {
+        ResTokenDto token = authService.loginCompany(reqCompanyLoginDto, response);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "로그인 성공", token));
+    }
+}

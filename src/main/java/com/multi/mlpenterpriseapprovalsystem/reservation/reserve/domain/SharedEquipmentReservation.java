@@ -23,11 +23,11 @@ import java.time.LocalDateTime;
 @Table(name = "shared_equipment_reservation")
 public class SharedEquipmentReservation {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long eqResvNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "eq_no") private SharedEquipment sharedEquipment;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "resv_emp", referencedColumnName = "empId") private Employee resvEmp;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "resv_emp", referencedColumnName = "emp_id") private Employee resvEmp;
     private String purp;
     private Boolean isDeleted;
 }

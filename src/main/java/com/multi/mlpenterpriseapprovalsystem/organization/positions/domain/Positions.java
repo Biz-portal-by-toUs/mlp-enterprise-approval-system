@@ -25,6 +25,6 @@ public class Positions {
     private String posName;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
 }

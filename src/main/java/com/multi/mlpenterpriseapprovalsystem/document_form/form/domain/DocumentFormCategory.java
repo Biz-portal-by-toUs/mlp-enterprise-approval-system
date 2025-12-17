@@ -24,7 +24,7 @@ public class DocumentFormCategory {
 
     // 회사 참조 (com_id -> company.com_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
 
     @Column(nullable = false, length = 100)

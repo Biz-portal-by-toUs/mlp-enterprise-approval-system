@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "payment_method")
 public class PaymentMethod extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long paymNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private String paymType;
     private String cardType;
     private String billingKey;
