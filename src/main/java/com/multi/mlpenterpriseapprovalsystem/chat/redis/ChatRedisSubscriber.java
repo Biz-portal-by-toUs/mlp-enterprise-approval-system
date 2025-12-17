@@ -8,7 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Please explain the class!!!
+ * Redis에서 발행된 메시지를 수신하여 클라이언트에게 전달
  *
  * @author : 김승기
  * @filename : ChatRedisSubscriber

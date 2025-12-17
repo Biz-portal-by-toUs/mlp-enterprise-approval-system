@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * Redis를 통해 전달되는 채팅 메시지 데이터 객체(DTO)
  *
  * @author : 김승기
  * @filename : RedisChatMessage

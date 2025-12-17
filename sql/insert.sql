@@ -1,7 +1,7 @@
 -- ========================================================
 -- 더미 데이터 (FK 순서 고려)
 -- ========================================================
-
+use bizportal;
 -- 1) subscription (최대 3개만 가능)
 INSERT INTO subscription (sub_name, sub_desc, sub_price) VALUES
                                                              ('basic',    'Basic plan',    10000),

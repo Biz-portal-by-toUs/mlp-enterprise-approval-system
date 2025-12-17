@@ -1,8 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.redis;
 
 /**
- * Please explain the class!!!
- *
+ * 채팅 메시지를 Redis 토픽으로 발행
  * @author : 김승기
  * @filename : ChatRedisPublisher
  * @since : 2025. 12. 17. 수요일

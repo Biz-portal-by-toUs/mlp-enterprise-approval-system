@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 채팅 메세지 resDto
  *
  * @author : 김승기
  * @filename : ResChatMessage

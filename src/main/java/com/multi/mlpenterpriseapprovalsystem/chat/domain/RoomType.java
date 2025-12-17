@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.domain;
 
 /**
- * Please explain the class!!!
+ * 채팅방 타입 ENUM (ONE, GROUP)
  *
  * @author : 김승기
  * @filename : RoomType

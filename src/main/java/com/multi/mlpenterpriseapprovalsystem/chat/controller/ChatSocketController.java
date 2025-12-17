@@ -15,7 +15,7 @@ import org.springframework.stereotype.Controller;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 채팅 웹소켓 컨트롤러 (레디스 Pub/sub)
  *
  * @author : 김승기
  * @filename : WebSocketController

@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.redis;
 
 /**
- * Please explain the class!!!
+ * JSON 처리를 위한 Jackson 라이브러리 설정
  *
  * @author : 김승기
  * @filename : JacksonConfig

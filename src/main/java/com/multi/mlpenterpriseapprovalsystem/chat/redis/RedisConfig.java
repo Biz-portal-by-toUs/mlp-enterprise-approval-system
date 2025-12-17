@@ -12,8 +12,8 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * Please explain the class!!!
- *
+ * Redis 서버와의 연결을 위한 ConnectionFactory를 설정
+ * Pub/Sub 메시지를 처리하기 위한 리스너 컨테이너 및 데이터 저장/전송을 위한 RedisTemplate을 빈(Bean)으로 등록
  * @author : 김승기
  * @filename : RedisConfig
  * @since : 2025. 12. 17. 수요일
