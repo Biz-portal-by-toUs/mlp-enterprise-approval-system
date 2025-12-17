@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 결제 내역 엔티티
  *
  * @author : 김승기
  * @filename : PaymentHistory
