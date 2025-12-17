@@ -26,7 +26,7 @@ public class ChatMessage {
     @Id
     private String id;
 
-    private String roomId;
+    private Long roomNo;
 
     private Long senderId;
     private String senderName;

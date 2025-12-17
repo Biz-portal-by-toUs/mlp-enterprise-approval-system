@@ -22,5 +22,6 @@ public class ChatRoom extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long roomNo;
     private String roomName;
-    private String roomType;
+    @Enumerated(EnumType.STRING)
+    private RoomType roomType;
 }
