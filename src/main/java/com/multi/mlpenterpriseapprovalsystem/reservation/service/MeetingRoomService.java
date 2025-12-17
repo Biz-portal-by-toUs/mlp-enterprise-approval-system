@@ -3,7 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.service;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.reservation.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.repository.ReservationCompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ReqMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
@@ -41,7 +41,7 @@ import java.util.UUID;
 public class MeetingRoomService {
 
     private final MeetingRoomRepository meetingRoomRepository;
-    private final CompanyRepository companyRepository;
+    private final ReservationCompanyRepository companyRepository;
 
     @Value("${image.image-dir}")  // 서버의 실제 저장 위치
     private String IMAGE_DIR;
