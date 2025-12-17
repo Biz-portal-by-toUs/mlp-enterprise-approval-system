@@ -2,9 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.register.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * Please explain the class!!!
@@ -16,7 +14,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 @Table(name = "meeting_room")
+@Builder
 public class MeetingRoom {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long roomNo;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
@@ -26,4 +26,5 @@ public class MeetingRoom {
     private String imgUrl;
     private String equipList;
     private String note;
+
 }

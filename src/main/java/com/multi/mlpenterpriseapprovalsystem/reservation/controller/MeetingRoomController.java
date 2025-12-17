@@ -1,9 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.common.paging.Pagenation;
-import com.multi.mlpenterpriseapprovalsystem.common.paging.ResponseDtoWithPaging;
-import com.multi.mlpenterpriseapprovalsystem.common.paging.SelectCriteria;
+import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ReqMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
@@ -13,13 +11,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
+import java.io.IOException;
 
 /**
  * 회의실 관리 기능에 대한 REST API 요청을 처리하는 Controller.
@@ -45,14 +42,28 @@ public class MeetingRoomController {
     private final MeetingRoomService meetingRoomService;
 
     @GetMapping("/meeting-rooms")
-    public ResponseEntity<ResponseDto> getMeetingRoomsWithPaging(@RequestParam String comId,
+    public ResponseEntity<ResponseDto<Page<ResMeetingRoomDto>>> getMeetingRoomsWithPaging(@RequestParam String comId,
                                                                  @RequestParam(name = "page", defaultValue = "0") int page,
                                                                  @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("roomName").ascending());
 
         Page<ResMeetingRoomDto> meetingRooms = meetingRoomService.selectMeetingRoomsWithPaging(comId, pageable);
+        String msg = meetingRooms.isEmpty() ? "등록된 회의실이 없습니다." : "회의실 조회 성공";
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, msg, meetingRooms));
+    }
 
-        return ResponseEntity.ok(new ResponseDto(HttpStatus.OK, "조회 성공", meetingRooms));
+    @PostMapping(value ="/meeting-rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@RequestParam String comId,  //임시로 @RequestAttribute("comId")
+                                                                 @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
+                                                                 @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) throws IOException {
+
+        Long roomNo = meetingRoomService.registerMeetingRoom(comId, meetingRoomDto, imageFile);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, "회의실 등록 성공", roomNo));
     }
 }
