@@ -39,6 +39,7 @@ public class TokenProvider {
     private static final String CLAIM_SUBJECT_TYPE = "subjectType"; // COMPANY / EMPLOYEE
     private static final String CLAIM_COM_ID = "comId";
     private static final String CLAIM_TOKEN_KIND = "tokenKind";     // "A" or "R"
+    private static final String CLAIM_USERNAME = "username";
 
     // ===== Expire =====
     private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 3;  // 3분
@@ -61,6 +62,7 @@ public class TokenProvider {
     public String createAccessToken(Long subjectId,
                                     TokenSubjectType subjectType,
                                     String comId,
+                                    String username,
                                     List<String> roles) {
 
         long now = System.currentTimeMillis();
@@ -72,6 +74,8 @@ public class TokenProvider {
 
         claims.put(CLAIM_SUBJECT_TYPE, subjectType.name());
         if (StringUtils.hasText(comId)) claims.put(CLAIM_COM_ID, comId);
+
+        claims.put(CLAIM_USERNAME, username);
 
         // roles -> "ROLE_A,ROLE_B"
         if (roles != null && !roles.isEmpty()) {
@@ -193,6 +197,7 @@ public class TokenProvider {
         String subjectTypeStr = (String) claims.get(CLAIM_SUBJECT_TYPE);
         String comId = (String) claims.get(CLAIM_COM_ID);
         String authStr = (String) claims.get(CLAIM_AUTH);
+        String userName = (String) claims.get(CLAIM_USERNAME);
 
         if (!StringUtils.hasText(subjectIdStr) || !StringUtils.hasText(subjectTypeStr)) {
             throw new TokenException("토큰 필수 클레임(subjectId/subjectType)이 없습니다.");
@@ -216,6 +221,7 @@ public class TokenProvider {
                 .subjectId(subjectId)
                 .subjectType(subjectType)
                 .comId(comId)
+                .username(userName)
                 .authorities(authorities)
                 .build();
 
@@ -244,6 +250,10 @@ public class TokenProvider {
 
     public String getComId(String token) {
         return (String) parseClaims(token).get(CLAIM_COM_ID);
+    }
+
+    public String getUsername(String token) {
+        return (String) parseClaims(token).get(CLAIM_USERNAME);
     }
 
     public List<String> getRoles(String token) {

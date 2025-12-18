@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bizportal - Company Login</title>
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --muted:#6b6b6b;
+            --border:#d7d7d7;
+            --btn-border:#cfcfcf;
+            --primary:#2f66d7;
+            --input-bg:#fff;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
+            "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{
+            min-height:100vh;
+            border:2px solid #222;
+            margin:12px;
+            background:var(--bg);
+        }
+        header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:26px 28px;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+        .brand{
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-weight:700;
+            font-size:40px;
+            letter-spacing:-0.5px;
+        }
+        .nav-right{ display:flex; gap:14px; align-items:center; }
+        .btn{
+            appearance:none;
+            border:1px solid var(--btn-border);
+            background:#f7f7f7;
+            padding:10px 18px;
+            border-radius:10px;
+            font-weight:700;
+            cursor:pointer;
+            color:#222;
+        }
+        main{
+            min-height:calc(100vh - 110px);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+        }
+        .card{
+            width:min(620px, 92vw);
+            text-align:center;
+        }
+        .title{
+            font-size:52px;
+            font-weight:900;
+            margin:0 0 18px;
+            letter-spacing:-0.5px;
+        }
+        .form{
+            width:min(560px, 92vw);
+            margin:0 auto;
+            display:flex;
+            flex-direction:column;
+            gap:16px;
+        }
+        .field{ text-align:left; }
+        .label{
+            font-size:13px;
+            font-weight:800;
+            color:#777;
+            margin:0 0 6px 10px;
+            letter-spacing:0.6px;
+        }
+        .input-wrap{
+            position:relative;
+            background:var(--input-bg);
+            border:1px solid var(--border);
+            border-radius:6px;
+            padding:14px 14px;
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        input{
+            border:0;
+            outline:none;
+            width:100%;
+            font-size:18px;
+            background:transparent;
+        }
+        .login-btn{
+            margin-top:6px;
+            border:0;
+            background:var(--primary);
+            color:#fff;
+            font-size:18px;
+            font-weight:800;
+            padding:16px 18px;
+            border-radius:4px;
+            cursor:pointer;
+        }
+        .error{
+            display:none;
+            color:#e74c3c;
+            border:1px solid #f5c6cb;
+            background-color:#f8d7da;
+            padding:10px;
+            margin:0 auto 14px;
+            border-radius:6px;
+            width:min(560px, 92vw);
+            text-align:left;
+            font-weight:700;
+        }
+        .hint{
+            margin-top:14px;
+            font-size:14px;
+            color:#555;
+        }
+        .hint a{color:#555;text-decoration:underline}
+        @media (max-width:768px){
+            .brand{font-size:32px}
+            .title{font-size:40px}
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <header>
+        <div class="brand">Bizportal</div>
+        <div class="nav-right">
+            <button class="btn" type="button" th:onclick="|location.href='@{/}'|">메인</button>
+            <button class="btn" type="button" th:onclick="|location.href='@{/auth/employee/login}'|">사원 로그인</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h1 class="title">Company Login</h1>
+
+            <div id="serverError" class="error"></div>
+
+            <!-- ✅ 화면용 form (JS fetch로만 처리) -->
+            <form id="company-login-form" class="form">
+                <div class="field">
+                    <div class="label">EMAIL</div>
+                    <div class="input-wrap">
+                        <input id="email" name="email" type="email" placeholder="name@company.com" autocomplete="username" required />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">PASSWORD</div>
+                    <div class="input-wrap">
+                        <input id="password" name="password" type="password" placeholder="••••" autocomplete="current-password" required />
+                    </div>
+                </div>
+
+                <button class="login-btn" type="submit">Login</button>
+            </form>
+
+            <div class="hint">
+                사원 계정이신가요? <a th:href="@{/auth/employee/login}">사원 로그인으로 이동</a>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    const form = document.getElementById('company-login-form');
+    const serverError = document.getElementById('serverError');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        serverError.style.display = 'none';
+        serverError.textContent = '';
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+            const res = await fetch('/auth/companies/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const result = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                const accessToken = result?.data?.accessToken;
+                if (accessToken) {
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('loginType', 'company'); // ✅ 회사 로그인 표시용
+                    localStorage.setItem('loginId', email);       // ✅ (선택) 표시용
+                }
+
+                // ✅ 메인으로 이동 -> main.html에서 로그인된 UI로 바뀜
+                window.location.href = '/';
+            } else {
+                serverError.textContent = result?.message || `로그인 실패 (${res.status})`;
+                serverError.style.display = 'block';
+            }
+        } catch (err) {
+            console.error(err);
+            serverError.textContent = '로그인 요청 중 오류가 발생했습니다.';
+            serverError.style.display = 'block';
+        }
+    });
+</script>
+</body>
+</html>

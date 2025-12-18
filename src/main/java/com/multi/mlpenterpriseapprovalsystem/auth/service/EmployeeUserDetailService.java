@@ -8,7 +8,6 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,7 @@ public class EmployeeUserDetailService implements UserDetailsService {
     private final EmployeeRepository employeeRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String empId) throws UsernameNotFoundException {
+    public CustomUser loadUserByUsername(String empId) throws UsernameNotFoundException {
         Employee emp = employeeRepository.findByEmpId(empId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
