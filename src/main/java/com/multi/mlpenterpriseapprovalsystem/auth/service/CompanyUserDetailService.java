@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * companyUserDetailService
+ * 로그인 시 회사 정보 가지고 오는 UserDetailService
  *
  * @author : 권지영
  * @filename : CustomUserDetailService

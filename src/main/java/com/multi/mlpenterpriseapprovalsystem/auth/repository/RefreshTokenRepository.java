@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 /**
- * refreshtoken repository
+ * refresh token db 접근 레포지토리
  *
  * @author : 권지영
  * @filename : RefreshTokenRepository

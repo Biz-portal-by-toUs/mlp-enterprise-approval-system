@@ -23,9 +23,12 @@ import java.util.stream.Collectors;
 
 /**
  * JWT 토큰 발급/검증/Authentication 생성 Provider
- *
  * - AccessToken: sub=subjectId, subjectType, comId, auth 포함
  * - RefreshToken: sub=subjectId, subjectType, comId 포함 (auth 없음)
+ *
+ * @author : 권지영
+ * @filename : JwtProvider
+ * @since : 2025. 12. 17. 수요일
  */
 @Component
 @Slf4j

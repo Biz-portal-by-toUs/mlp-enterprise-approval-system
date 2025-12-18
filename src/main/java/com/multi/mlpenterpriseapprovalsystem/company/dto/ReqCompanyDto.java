@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.company.dto;
 
 /**
- * Please explain the class!!!
+ * 회사 회원가입 요청 dto
  *
  * @author : 권지영
  * @filename : CompanyReqDto

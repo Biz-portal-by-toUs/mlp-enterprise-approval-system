@@ -14,7 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
- * authservice
+ * 회원가입, 로그인, 로그아웃 부분 서비스
  *
  * @author : 권지영
  * @filename : AuthService

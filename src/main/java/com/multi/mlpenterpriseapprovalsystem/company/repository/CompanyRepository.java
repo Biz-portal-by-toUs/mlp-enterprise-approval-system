@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 /**
- * company Repository
+ * Company db 접근 레포지토리
  * 
  * @filename    : CompanyRepository
  * @author      : 권지영
