@@ -30,7 +30,7 @@ public class ViewMeetingRoomController {
 
     @GetMapping
     public String meetingRoomList() {  // JWT 인증 연동 전 임시 사용
-        return "meeting-room/list";
+        return "meeting-rooms/list";
     }
 
     @GetMapping("/regist")

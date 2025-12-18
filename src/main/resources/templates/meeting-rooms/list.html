@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bizportal - 회의실 조회</title>
+    <style>
+        :root{
+            --blue:#1677ff;
+            --bg:#f4f6f8;
+            --sidebar:#ffffff;
+            --text:#1f2937;
+            --muted:#6b7280;
+            --card:#ffffff;
+            --border:#e5e7eb;
+            --shadow: 0 6px 18px rgba(0,0,0,.08);
+            --radius:14px;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Malgun Gothic,sans-serif;color:var(--text);background:var(--bg)}
+        .app{min-height:100vh;display:flex;flex-direction:column}
+        .topbar{
+            height:56px;background:var(--blue);color:#fff;display:flex;align-items:center;
+            padding:0 16px;gap:16px;
+        }
+        .logo{font-weight:800;letter-spacing:.2px}
+        .search{
+            flex:1;max-width:680px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);
+            border:1px solid rgba(255,255,255,.22);padding:8px 12px;border-radius:999px;
+        }
+        .search input{
+            border:none;outline:none;background:transparent;color:#fff;width:100%;
+        }
+        .search input::placeholder{color:rgba(255,255,255,.75)}
+        .top-actions{display:flex;align-items:center;gap:10px;font-size:13px;opacity:.95}
+        .layout{flex:1;display:flex}
+        .sidebar{
+            width:92px;background:var(--sidebar);border-right:1px solid var(--border);
+            padding:12px 8px;
+        }
+        .nav-item{
+            width:100%;border-radius:12px;padding:10px 6px;margin-bottom:6px;
+            display:flex;flex-direction:column;align-items:center;gap:6px;
+            color:var(--muted);font-size:12px;
+            cursor:default;
+        }
+        .nav-item.active{background:#eaf2ff;color:var(--blue);font-weight:700}
+        .nav-ico{
+            width:34px;height:34px;border-radius:10px;background:#f3f4f6;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:800;
+        }
+
+        .content{flex:1;padding:18px 20px;}
+        .page-title{font-size:20px;font-weight:800;margin:2px 0 14px}
+        .toolbar{
+            display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px;
+            flex-wrap:wrap;
+        }
+        .left-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .field{
+            display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--border);
+            padding:8px 10px;border-radius:12px;
+        }
+        .field label{font-size:12px;color:var(--muted)}
+        .field input{
+            border:none;outline:none;font-size:13px;width:110px;
+        }
+        .btn{
+            border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 12px;
+            cursor:pointer;font-size:13px;
+        }
+        .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+
+        .grid{
+            display:grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr)); /* 3개씩 */
+            gap:16px;
+        }
+        @media (max-width: 1100px){
+            .grid{grid-template-columns: repeat(2, minmax(0,1fr));}
+        }
+        @media (max-width: 720px){
+            .sidebar{display:none}
+            .grid{grid-template-columns: 1fr;}
+        }
+        .card{
+            background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+            overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;
+            min-height:320px;
+        }
+        .thumb{
+            height:160px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;
+        }
+        .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+        .thumb .ph{color:#6b7280;font-size:12px}
+        .card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+        .room-name{font-weight:800}
+        .meta{font-size:12px;color:var(--muted);line-height:1.45}
+        .meta b{color:var(--text);font-weight:700}
+        .divider{height:1px;background:var(--border);margin:2px 0}
+        .paging{
+            margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+        }
+        .page-btn{
+            min-width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:#fff;
+            cursor:pointer;font-size:13px;
+        }
+        .page-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+        .hint{margin-top:10px;text-align:center;color:var(--muted);font-size:12px}
+        .error{margin:12px 0;padding:10px 12px;border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;display:none}
+    </style>
+</head>
+
+<body>
+<div class="app">
+    <!-- 상단 바(배너) -->
+    <header class="topbar">
+        <div class="logo">B Bizportal</div>
+        <div class="search" title="검색은 UI만(조회 기능만 구현)">
+            <span style="opacity:.9">🔍</span>
+            <input placeholder="Search" disabled />
+        </div>
+        <div class="top-actions">
+            <span>근무중</span>
+            <span>🔔</span>
+            <span>🙂</span>
+            <span style="border:1px solid rgba(255,255,255,.35);padding:6px 10px;border-radius:999px;">로그아웃</span>
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- 사이드바 -->
+        <aside class="sidebar">
+            <div class="nav-item"><div class="nav-ico">📄</div>결재</div>
+            <div class="nav-item active"><div class="nav-ico">📅</div>예약</div>
+            <div class="nav-item"><div class="nav-ico">👥</div>조직</div>
+            <div class="nav-item"><div class="nav-ico">💬</div>채팅</div>
+        </aside>
+
+        <!-- 메인 -->
+        <main class="content">
+            <div class="page-title">회의실</div>
+
+            <div class="toolbar">
+                <div class="left-tools">
+                    <div class="field">
+                        <label>comId</label>
+                        <input id="comId" value="A03" />
+                    </div>
+
+                    <div class="field">
+                        <label>size</label>
+                        <input id="size" value="6" />
+                    </div>
+
+                    <button class="btn primary" id="btnLoad">조회</button>
+                </div>
+                <div style="font-size:12px;color:var(--muted)" id="pageInfo">-</div>
+            </div>
+
+            <div class="error" id="errBox"></div>
+
+            <section class="grid" id="grid"></section>
+
+            <div class="paging" id="paging"></div>
+            <div class="hint">※ 캐릭터/플로팅 버튼 없음. 조회(GET)만 구현.</div>
+        </main>
+    </div>
+</div>
+
+<script>
+    // ✅ 필요하면 여기만 바꿔
+    // 같은 서버(스프링)에서 정적 페이지를 서빙하면 "" 로 둬도 됨.
+    const API_BASE = "http://localhost:8090"; // 또는 ""
+
+    const grid = document.getElementById("grid");
+    const paging = document.getElementById("paging");
+    const pageInfo = document.getElementById("pageInfo");
+    const errBox = document.getElementById("errBox");
+
+    let state = {
+        page: 0,      // 0부터 시작 (Spring PageRequest)
+        size: 6,
+        totalPages: 0
+    };
+
+    function showError(msg){
+        errBox.style.display = "block";
+        errBox.textContent = msg;
+    }
+    function clearError(){
+        errBox.style.display = "none";
+        errBox.textContent = "";
+    }
+
+    function cardTemplate(room){
+        const img = room.imageUrl;
+        const safe = (v) => (v === null || v === undefined || v === "") ? "-" : v;
+
+        const thumb = img
+            ? `<img src="${img}" alt="${safe(room.roomName)}" />`
+            : `<div class="ph">이미지 없음</div>`;
+
+        return `
+      <article class="card">
+        <div class="thumb">${thumb}</div>
+        <div class="card-body">
+          <div class="room-name">회의실명: ${safe(room.roomName)}</div>
+          <div class="divider"></div>
+          <div class="meta"><b>위치:</b> ${safe(room.location)}</div>
+          <div class="meta"><b>수용인원:</b> ${safe(room.capacity)}명</div>
+          <div class="meta"><b>주요 장비:</b> ${safe(room.equipList)}</div>
+          <div class="meta"><b>특이사항:</b> ${safe(room.note)}</div>
+        </div>
+      </article>
+    `;
+    }
+
+    function renderGrid(content){
+        grid.innerHTML = content.map(cardTemplate).join("");
+    }
+
+    function renderPaging(current, total){
+        paging.innerHTML = "";
+        if (total <= 1) return;
+
+        const mkBtn = (label, onClick, disabled=false, active=false) => {
+            const b = document.createElement("button");
+            b.className = "page-btn" + (active ? " active" : "");
+            b.textContent = label;
+            b.disabled = disabled;
+            b.addEventListener("click", onClick);
+            return b;
+        };
+
+        paging.appendChild(mkBtn("‹", () => loadRooms(current - 1), current === 0));
+
+        // 페이지 버튼 너무 많으면 1~5개만 보여주는 간단 버전
+        const windowSize = 5;
+        const start = Math.max(0, current - Math.floor(windowSize/2));
+        const end = Math.min(total - 1, start + windowSize - 1);
+        const realStart = Math.max(0, end - windowSize + 1);
+
+        for(let p = realStart; p <= end; p++){
+            paging.appendChild(mkBtn(String(p+1), () => loadRooms(p), false, p === current));
+        }
+
+        paging.appendChild(mkBtn("›", () => loadRooms(current + 1), current >= total - 1));
+    }
+
+    async function loadRooms(page){
+        clearError();
+        const comId = document.getElementById("comId").value.trim();
+        const size = parseInt(document.getElementById("size").value, 10) || 6;
+
+        state.page = page;
+        state.size = size;
+
+        const url = `${API_BASE}/api/v1/meeting-rooms?comId=${encodeURIComponent(comId)}&page=${page}&size=${size}`;
+
+        try{
+            const res = await fetch(url, { method: "GET" });
+            const json = await res.json();
+
+            if(!res.ok){
+                showError(json?.message || `조회 실패 (${res.status})`);
+                grid.innerHTML = "";
+                paging.innerHTML = "";
+                pageInfo.textContent = "-";
+                return;
+            }
+
+            const pageData = json.data; // ResponseDto 구조: {status,message,data:{...Page...}}
+            const content = pageData.content || [];
+
+            renderGrid(content);
+
+            state.totalPages = pageData.totalPages || 0;
+            renderPaging(pageData.number ?? page, state.totalPages);
+
+            const currentPage = (pageData.number ?? page) + 1;
+            pageInfo.textContent = `총 ${pageData.totalElements}개 · ${currentPage}/${state.totalPages} 페이지`;
+
+        }catch(e){
+            showError("서버 연결 실패. API_BASE/포트/CORS 확인해줘.");
+            grid.innerHTML = "";
+            paging.innerHTML = "";
+            pageInfo.textContent = "-";
+        }
+    }
+
+    document.getElementById("btnLoad").addEventListener("click", () => loadRooms(0));
+
+    // 처음 로드
+    loadRooms(0);
+</script>
+</body>
+</html>
