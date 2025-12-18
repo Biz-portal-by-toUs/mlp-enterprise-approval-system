@@ -32,11 +32,11 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<void>> signUpCompany(
+    public ResponseEntity<ResponseDto<Void>> signUpCompany(
             @ModelAttribute ReqCompanySignupDto reqCompanySignupDto,
             @RequestPart(value = "logo", required = false) MultipartFile logo
     ) {
-        ResponseDto<void> response = authService.signUpCompany(reqCompanySignupDto, logo);
+        ResponseDto<Void> response = authService.signUpCompany(reqCompanySignupDto, logo);
 
         return ResponseEntity
                 .status(response.getStatus())
