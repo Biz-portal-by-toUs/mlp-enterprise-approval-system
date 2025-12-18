@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Please explain the class!!!
+ * 문서 처리 컨트롤러
  *
  * @author : 이지헌
  * @filename : A
