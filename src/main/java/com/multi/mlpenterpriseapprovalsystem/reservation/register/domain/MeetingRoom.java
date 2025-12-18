@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.register.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ReqMeetingRoomDto;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,4 +28,15 @@ public class MeetingRoom {
     private String equipList;
     private String note;
 
+    public void updateInfo(ReqMeetingRoomDto dto) {
+        this.roomName = dto.getRoomName();
+        this.cap = dto.getCapacity();
+        this.loc = dto.getLocation();
+        this.equipList = dto.getEquipList();
+        this.note = dto.getNote();
+    }
+
+    public void changeImageUrl(String imgUrl) {
+        this.imgUrl = imgUrl;
+    }
 }

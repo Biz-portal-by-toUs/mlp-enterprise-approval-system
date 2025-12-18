@@ -26,7 +26,7 @@ import java.util.UUID;
 
 /**
  * 회의실 관리 도메인의 비즈니스 로직을 담당하는 Service.
- *
+ * <p>
  * 회의실 정보의 조회, 등록, 수정, 삭제와 관련된 비즈니스 로직을 처리한다.
  * 데이터 접근은 Repository 계층에 위임하며, 도메인 규칙 및 처리 흐름을 관리한다.
  *
@@ -50,22 +50,22 @@ public class MeetingRoomService {
 
     @Transactional(readOnly = true)
     public Page<ResMeetingRoomDto> selectMeetingRoomsWithPaging(String comId, Pageable pageable) {
-    // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
+        // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
         Page<MeetingRoom> meetingRooms = meetingRoomRepository.findByCompany_ComId(comId, pageable);
 
         return meetingRooms.map(meetingRoom -> ResMeetingRoomDto.builder()
-                        .roomNo(meetingRoom.getRoomNo())
-                        .comId(meetingRoom.getCompany().getComId())
-                        .roomName(meetingRoom.getRoomName())
-                        .capacity(meetingRoom.getCap())
-                        .location(meetingRoom.getLoc())
-                        .imageUrl(meetingRoom.getImgUrl())
-                        .equipList(meetingRoom.getEquipList())
-                        .note(meetingRoom.getNote())
-                        .build());
+                .roomNo(meetingRoom.getRoomNo())
+                .comId(meetingRoom.getCompany().getComId())
+                .roomName(meetingRoom.getRoomName())
+                .capacity(meetingRoom.getCap())
+                .location(meetingRoom.getLoc())
+                .imageUrl(meetingRoom.getImgUrl())
+                .equipList(meetingRoom.getEquipList())
+                .note(meetingRoom.getNote())
+                .build());
     }
 
-    public Long registerMeetingRoom(String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) throws IOException {
+    public Long registerMeetingRoom(String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
 
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
@@ -73,21 +73,25 @@ public class MeetingRoomService {
         String savedUrl = null;
 
         if (imageFile != null && !imageFile.isEmpty()) {
-            // 1) 파일명 생성
-            String ext = Optional.ofNullable(imageFile.getOriginalFilename())
-                    .filter(f -> f.contains("."))
-                    .map(f -> f.substring(f.lastIndexOf(".")))
-                    .orElse("");
+            try {
+                // 1) 파일명 생성
+                String ext = Optional.ofNullable(imageFile.getOriginalFilename())
+                        .filter(f -> f.contains("."))
+                        .map(f -> f.substring(f.lastIndexOf(".")))
+                        .orElse("");
 
-            String fileName = UUID.randomUUID() + ext;
+                String fileName = UUID.randomUUID() + ext;
 
-            // 2) 저장 경로 (yml의 image.image-dir 사용)
-            Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);  // imageDir = C:/.../uploads
-            Files.createDirectories(savePath.getParent());
-            imageFile.transferTo(savePath.toFile());
+                // 2) 저장 경로 (yml의 image.image-dir 사용)
+                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);  // imageDir = C:/.../uploads
+                Files.createDirectories(savePath.getParent());
+                imageFile.transferTo(savePath.toFile());
 
-            // 3) 접근 URL (yml의 image.image-url 사용)
-            savedUrl = IMAGE_URL + "/" + fileName; // imageUrl = http://localhost:8090/uploads
+                // 3) 접근 URL (yml의 image.image-url 사용)
+                savedUrl = IMAGE_URL + "/" + fileName; // imageUrl = http://localhost:8090/uploads
+            } catch (IOException e) {
+                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
         }
 
 
@@ -103,5 +107,46 @@ public class MeetingRoomService {
 
         return meetingRoomRepository.save(meetingRoom).getRoomNo();
     }
+
+    public Long updateMeetingRoom(Long roomNo, String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
+
+        // 수정할 회의실 조회
+        MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
+
+        // 같은 회사 데이터인지 검증(보안)
+        if (!meetingRoom.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+
+            String ext = Optional.ofNullable(imageFile.getOriginalFilename())
+                    .filter(f -> f.contains("."))
+                    .map(f -> f.substring(f.lastIndexOf(".")))
+                    .orElse("");
+
+            String fileName = UUID.randomUUID() + ext;
+
+
+            try {
+                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);
+                Files.createDirectories(savePath.getParent());
+                imageFile.transferTo(savePath.toFile());
+
+                String savedUrl = IMAGE_URL + "/" + fileName;
+                meetingRoom.changeImageUrl(savedUrl);
+            } catch (IOException e) {
+                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
+        }
+
+        meetingRoom.updateInfo(meetingRoomDto);
+
+        return meetingRoom.getRoomNo();
+    }
+
+
 }
+
 
