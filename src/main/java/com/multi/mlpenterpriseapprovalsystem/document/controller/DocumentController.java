@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 문서 처리 컨트롤러
  *
  * @author : 이지헌
- * @filename : A
+ * @filename : DocumentController
  * @since : 25. 12. 15. 월요일
  */
 
