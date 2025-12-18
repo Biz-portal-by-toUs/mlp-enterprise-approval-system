@@ -148,11 +148,14 @@ VALUES
 
 -- approval_line (5)
 INSERT INTO approval_line (apprl_no, com_id, doc_no, emp_id, seq, appr_stat, ended_at) VALUES
-                                                                                           (1,'C01',1,'E000002',1,'1', NOW()),
-                                                                                           (2,'C01',2,'E000001',1,'0', NULL),
-                                                                                           (3,'C01',3,'E000001',1,'2', NOW()),
-                                                                                           (4,'C01',4,'E000003',1,'1', NOW()),
-                                                                                           (5,'C01',5,'E000002',1,'3', NOW());
+                                                                                           (1,'C01',1,'E000001',1,'A', NOW()),
+                                                                                           (2,'C01',1,'E000002',2,'A', NOW()),
+                                                                                           (3,'C01',1,'E000003',3,'A', NOW()),
+                                                                                           (4,'C01',1,'E000004',4,'A', NOW()),
+                                                                                           (5,'C01',2,'E000001',1,'I', NOW()),
+                                                                                           (6,'C01',2,'E000002',2,'W', NOW()),
+                                                                                           (7,'C01',2,'E000003',3,'W', NOW()),
+                                                                                           (8,'C01',2,'E000004',4,'W', NOW());
 
 -- document_file (5)
 INSERT INTO document_file (docfi_no, com_id, doc_no, docfi_name, folder_path) VALUES

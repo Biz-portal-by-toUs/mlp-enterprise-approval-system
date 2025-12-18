@@ -36,11 +36,25 @@ public class DocumentService {
 
     // 최종승인, 반려 등의 상태에 따른 문서들 반환
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getDocumentsByStatus(String comId, String status, Pageable pageable) {
+    public Page<ResDocumentDto> getDocumentsByStatus(String comId, String empId, String status, Pageable pageable) {
 
-        // status가 APPROVED일때 최종승인된것들만 반환
-        return getApprovedDocuments(comId, pageable);
+        if(status.equals("FINALIZED")){ // status가 FINALIZED일때 최종승인된것들만 반환
+            return getApprovedDocuments(comId, pageable);
+        }
+        else if(status.equals("ANY")){ // status가 ANY일때 내가 상신한 모든 문서 반환
+            return getMySubmittedDocuments(comId, empId, pageable);
+        }
 
+        return getMySubmittedDocuments(comId, empId, pageable);
+
+    }
+
+    // 내가 상신한 문서 반환
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String empId, Pageable pageable) {
+        Page<Document> documentPage = documentRepository.getMySubmittedDocuments(comId, empId, pageable);
+
+        return documentPage.map(ResDocumentDto::toDto);
     }
 
     // 최종승인 문서만 반환
