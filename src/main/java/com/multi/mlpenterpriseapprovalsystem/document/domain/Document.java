@@ -10,17 +10,18 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
- * Please explain the class!!!
+ * 문서 엔티티
  *
- * @author : 김승기
+ * @author : 이지헌
  * @filename : Document
  * @since : 2025. 12. 16. 화요일
  */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-// 명세서에 created_at, updated_at이 모두 있으므로 BaseEntity 상속
 @Table(name = "document")
 public class Document extends BaseEntity {
 
@@ -46,6 +47,10 @@ public class Document extends BaseEntity {
 
     @Column(columnDefinition = "json", nullable = false)
     private String content;
+
+
+    @OneToMany( mappedBy = "document", fetch = FetchType.LAZY)
+    private List<ApprovalLine> approvalLines;
 
     @Lob
     @Column(nullable = false)

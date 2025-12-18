@@ -1,10 +1,217 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - Main</title>
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --border:#d7d7d7;
+            --primary:#2f66d7;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
+            "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{
+            min-height:100vh;
+            border:2px solid #222;
+            margin:12px;
+            background:var(--bg);
+            display:flex;
+            flex-direction:column;
+        }
+        header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:26px 28px;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+        .brand{
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-weight:700;
+            font-size:40px;
+            letter-spacing:-0.5px;
+        }
+        .nav-right{
+            display:flex;
+            gap:14px;
+            align-items:center;
+        }
+        .btn{
+            appearance:none;
+            border:1px solid var(--border);
+            background:#fff;
+            padding:10px 18px;
+            border-radius:10px;
+            font-weight:800;
+            cursor:pointer;
+            color:#222;
+        }
+        .btn.primary{
+            border-color:var(--primary);
+            background:var(--primary);
+            color:#fff;
+        }
+        main{
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+        }
+        .card{
+            width:min(720px, 92vw);
+            text-align:center;
+            padding:40px 24px;
+        }
+        .title{
+            font-size:54px;
+            font-weight:900;
+            margin:0 0 12px;
+            letter-spacing:-0.5px;
+        }
+        .desc{
+            margin:0 0 28px;
+            color:#555;
+            font-weight:600;
+        }
+        .actions{
+            display:flex;
+            gap:12px;
+            justify-content:center;
+            flex-wrap:wrap;
+        }
+        .actions .btn{
+            min-width:220px;
+            padding:14px 18px;
+            border-radius:12px;
+        }
+
+        /* 로그인 후 표시 배지 */
+        .who{
+            font-weight:900;
+            color:#333;
+            padding:10px 14px;
+            border:1px solid var(--border);
+            background:#fff;
+            border-radius:10px;
+        }
+
+        @media (max-width:768px){
+            .brand{font-size:32px}
+            .title{font-size:40px}
+        }
+    </style>
 </head>
 <body>
-testestsetsteafds
+<div class="page">
+    <header>
+        <div class="brand">Bizportal</div>
+
+        <!-- ✅ JS가 여기 내용을 로그인 전/후로 바꿔치기 -->
+        <div class="nav-right" id="navRight"></div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h1 class="title" id="mainTitle">Welcome</h1>
+            <p class="desc" id="mainDesc">Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.</p>
+
+            <!-- ✅ JS가 여기 버튼들도 로그인 전/후로 바꿔치기 -->
+            <div class="actions" id="mainActions"></div>
+        </section>
+    </main>
+</div>
+
+<script>
+    const navRight = document.getElementById('navRight');
+    const mainActions = document.getElementById('mainActions');
+    const mainTitle = document.getElementById('mainTitle');
+    const mainDesc = document.getElementById('mainDesc');
+
+    function goCompanyLogin() { window.location.href = '/auth/companies/login'; }
+    function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
+
+    // 너희 실제 로그인 후 첫 화면 경로로 바꾸면 됨
+    function goDashboard(loginType) {
+        if (loginType === 'employee') window.location.href = '/employee';
+        else window.location.href = '/company';
+    }
+
+    function renderLoggedOut() {
+        navRight.innerHTML = `
+            <button class="btn primary" type="button" id="btnCompanyHeader">회사 로그인</button>
+            <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
+        `;
+        document.getElementById('btnCompanyHeader').addEventListener('click', goCompanyLogin);
+        document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
+
+        mainTitle.textContent = 'Welcome';
+        mainDesc.textContent = 'Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.';
+        mainActions.innerHTML = `
+            <button class="btn primary" type="button" id="btnCompanyMain">회사(기업) 로그인</button>
+            <button class="btn" type="button" id="btnEmployeeMain">사원 로그인</button>
+        `;
+        document.getElementById('btnCompanyMain').addEventListener('click', goCompanyLogin);
+        document.getElementById('btnEmployeeMain').addEventListener('click', goEmployeeLogin);
+    }
+
+    function renderLoggedIn(loginType, loginId) {
+        const whoText = (loginType === 'employee') ? '사원' : '회사';
+        const idText = loginId ? ` · ${loginId}` : '';
+
+        navRight.innerHTML = `
+            <span class="who">${whoText} 로그인됨${idText}</span>
+            <button class="btn primary" type="button" id="btnDashboard">대시보드</button>
+            <button class="btn" type="button" id="btnLogout">로그아웃</button>
+        `;
+        document.getElementById('btnDashboard').addEventListener('click', () => goDashboard(loginType));
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            // ✅ 로컬스토리지 기반 로그아웃
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('loginType');
+            localStorage.removeItem('loginId');
+
+            // (선택) 서버에 refresh 쿠키 삭제 API가 있으면 같이 호출
+            // fetch('/auth/logout', { method:'POST', credentials:'include' }).finally(() => location.href='/');
+            window.location.href = '/';
+        });
+
+        mainTitle.textContent = 'Hello';
+        mainDesc.textContent = `${whoText} 계정으로 로그인되어 있습니다. 계속 진행해 주세요.`;
+        mainActions.innerHTML = `
+            <button class="btn primary" type="button" id="btnDashboardMain">대시보드로 이동</button>
+            <button class="btn" type="button" id="btnLogoutMain">로그아웃</button>
+        `;
+        document.getElementById('btnDashboardMain').addEventListener('click', () => goDashboard(loginType));
+        document.getElementById('btnLogoutMain').addEventListener('click', () => {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('loginType');
+            localStorage.removeItem('loginId');
+            window.location.href = '/';
+        });
+    }
+
+    function boot() {
+        const accessToken = localStorage.getItem('accessToken');
+        const loginType = localStorage.getItem('loginType'); // 'company' | 'employee'
+        const loginId = localStorage.getItem('loginId');     // email or empId
+
+        if (accessToken && loginType) renderLoggedIn(loginType, loginId);
+        else renderLoggedOut();
+    }
+
+    document.addEventListener('DOMContentLoaded', boot);
+</script>
+
 </body>
 </html>
