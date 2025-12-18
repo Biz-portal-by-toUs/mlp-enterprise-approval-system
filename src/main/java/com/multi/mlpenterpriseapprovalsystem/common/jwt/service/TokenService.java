@@ -28,6 +28,7 @@ import java.util.List;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional
 public class TokenService {
 
     private final TokenProvider jwtTokenProvider;
@@ -37,7 +38,6 @@ public class TokenService {
      * 로그인 성공 시 호출: access + refresh 발급
      * - refresh는 DB에서 기존 토큰 재사용(만료/폐기면 재발급)
      */
-    @Transactional
     public ResTokenDto createToken(CustomUser user, HttpServletResponse response) {
 
         List<String> roles = user.getAuthorities().stream()
