@@ -6,9 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentF
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
@@ -22,7 +20,9 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 @Table(name = "document")
+@Builder
 public class Document extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,8 +67,10 @@ public class Document extends BaseEntity {
     @Column(nullable = false)
     private Boolean temp; // 임시 저장 여부
 
-    // 양식 참조 (docfo_no)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "docfo_no", nullable = false)
     private DocumentForm documentForm;
+
+    @Column(name = "fully_appr", nullable = false)
+    private Boolean fullyAppr = false;
 }
