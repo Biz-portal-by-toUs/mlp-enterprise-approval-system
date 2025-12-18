@@ -892,3 +892,8 @@ CREATE INDEX idx_file_folder_no      ON `file`(folder_no);
 -- [설정] 외래키 검사 재활성화
 -- ========================================================
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+use bizportal;
+ALTER TABLE payment_method
+    ADD CONSTRAINT uk_payment_method_card UNIQUE (com_id, mask);
