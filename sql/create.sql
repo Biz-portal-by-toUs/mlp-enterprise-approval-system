@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS approval_line (
                                              ended_at    TIMESTAMP     NULL,
 
                                              CONSTRAINT pk_approval_line PRIMARY KEY (apprl_no),
-                                             CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('0','1','2','3')),
+                                             CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('I', 'W', 'A', 'R')),
 
                                              CONSTRAINT fk_approval_line_company
                                                  FOREIGN KEY (com_id) REFERENCES company(com_id)
@@ -290,23 +290,6 @@ CREATE TABLE IF NOT EXISTS approval_line (
                                                  FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
                                                      ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-use bizportal;
--- 1. 기존 CHECK 제약 조건 삭제 (제약 조건 이름을 모를 경우 아래 쿼리로 확인 후 삭제)
--- SHOW CREATE TABLE approval_line; -- 여기서 제약 조건 이름을 확인하세요. 보통 ck_approval_line_stat
-ALTER TABLE approval_line DROP CONSTRAINT ck_approval_line_stat;
-
--- 2. 기존 데이터 변환 (예시: 0->I, 1->W, 2->A, 3->R 로 매핑할 경우)
-UPDATE approval_line SET appr_stat = 'I' WHERE appr_stat = '0';
-UPDATE approval_line SET appr_stat = 'W' WHERE appr_stat = '1';
-UPDATE approval_line SET appr_stat = 'A' WHERE appr_stat = '2';
-UPDATE approval_line SET appr_stat = 'R' WHERE appr_stat = '3';
-
--- 3. 새로운 CHECK 제약 조건 추가
-ALTER TABLE approval_line
-    ADD CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('I', 'W', 'A', 'R'));
-
-
 
 CREATE TABLE IF NOT EXISTS document_file (
                                              docfi_no    BIGINT        NOT NULL AUTO_INCREMENT,
