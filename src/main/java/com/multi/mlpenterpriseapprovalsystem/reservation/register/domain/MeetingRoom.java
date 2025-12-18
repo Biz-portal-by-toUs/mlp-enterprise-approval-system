@@ -6,9 +6,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * Please explain the class!!!
+ * 회의실 엔티티
  *
- * @author : 김승기
+ * @author : 고송현
  * @filename : MeetingRoom
  * @since : 2025. 12. 16. 화요일
  */
