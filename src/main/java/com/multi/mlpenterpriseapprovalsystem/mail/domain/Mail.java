@@ -22,10 +22,12 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "mail")
 public class Mail extends BaseEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "mail_no")
     private Long mailNo;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "mail_id", nullable = false, unique = true, length = 100)
     private String mailId; // UK
 
     @Column(nullable = false, length = 100)
@@ -35,7 +37,7 @@ public class Mail extends BaseEntity {
     private String cntt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id", referencedColumnName = "empId", nullable = false)
+    @JoinColumn(name = "sender_id", referencedColumnName = "emp_id", nullable = false)
     private Employee sender;
 
     // 1:N 관계 매핑

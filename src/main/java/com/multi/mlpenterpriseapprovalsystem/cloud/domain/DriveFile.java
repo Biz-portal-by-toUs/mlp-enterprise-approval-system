@@ -26,7 +26,7 @@ public class DriveFile { // Java Class Name
     private Long fileNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,7 +37,7 @@ public class DriveFile { // Java Class Name
     private Long size;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee uploader;
 
     private String path;

@@ -17,11 +17,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "mail_attach")
 public class MailAttach {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "mail_attach_no")
     private Long mailAttachNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mail_id", referencedColumnName = "mailId", nullable = false)
+    @JoinColumn(name = "mail_id", referencedColumnName = "mail_id", nullable = false)
     private Mail mail;
 
     @Column(nullable = false)

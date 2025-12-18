@@ -24,7 +24,7 @@ public class EmpSchedule {
     private Long schNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
 
     private String title;

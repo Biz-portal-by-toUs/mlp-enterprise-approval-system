@@ -30,12 +30,12 @@ public class DocumentForm {
 
     // 회사 참조 (com_id -> company.com_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
 
     // 작성자 참조 (writer_id -> employee.emp_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "writer_id", referencedColumnName = "empId", nullable = false)
+    @JoinColumn(name = "writer_id", referencedColumnName = "emp_id", nullable = false)
     private Employee writer;
 
     @Column(nullable = false, length = 100)

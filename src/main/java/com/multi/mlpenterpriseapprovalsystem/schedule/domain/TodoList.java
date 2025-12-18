@@ -23,7 +23,7 @@ public class TodoList extends BaseEntity {
     private Long todoNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
 
     private String title;

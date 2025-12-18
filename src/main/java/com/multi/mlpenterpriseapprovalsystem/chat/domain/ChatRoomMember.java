@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -23,14 +24,28 @@ public class ChatRoomMember {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long romemNo;
 
+    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_no")
     private ChatRoom chatRoom;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
 
     private LocalDateTime joinedAt;
     private String lastReadMsgId;
+
+    
+    
+
+    public static ChatRoomMember create(ChatRoom chatRoom, Employee employee) {
+        ChatRoomMember member = new ChatRoomMember();
+        member.chatRoom = chatRoom;
+        member.employee = employee;
+        member.joinedAt = LocalDateTime.now();
+        return member;
+    }
+
+
 }
