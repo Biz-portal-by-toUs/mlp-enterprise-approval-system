@@ -7,9 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 문서 첨부 파일 엔티티
  *
- * @author : 김승기
+ * @author : 이지헌
  * @filename : DocumentFile
  * @since : 2025. 12. 16. 화요일
  */
