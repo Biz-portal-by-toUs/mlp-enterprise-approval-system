@@ -1,6 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.document.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,4 +26,10 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "AND d.temp = false")
     List<Document> findAllWithApprovalLinesByComId(@Param("comId") String comId);
 
+    // 내가 상신한 문서 조회
+    @Query("SELECT d FROM Document d " +
+            "WHERE d.company.comId = :comId " +
+            "AND d.writer.empId = :empId " +
+            "AND d.temp = false")
+    Page<Document> getMySubmittedDocuments(@Param("comId") String comId, @Param("empId") String empId, Pageable pageable);
 }
