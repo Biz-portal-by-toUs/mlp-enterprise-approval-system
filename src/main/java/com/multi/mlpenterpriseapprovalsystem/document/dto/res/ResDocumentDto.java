@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -35,6 +36,8 @@ public class ResDocumentDto {
     private String writerId;
     private String aiSumm;
     private Boolean temp;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
 
     public static ResDocumentDto toDto(Document document) {
@@ -55,6 +58,8 @@ public class ResDocumentDto {
                 .temp(document.getTemp())
                 .docFormName(document.getDocumentForm().getDocfoName())
                 .docFormNo(document.getDocumentForm().getDocfoNo())
+                .createdAt(document.getCreatedAt())
+                .updatedAt(document.getUpdatedAt())
                 .build();
     }
 }
