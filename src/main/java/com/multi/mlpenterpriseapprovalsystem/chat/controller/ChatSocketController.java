@@ -39,7 +39,7 @@ public class ChatSocketController {
         ChatMessage saved = chatMessageRepository.save(
                 ChatMessage.builder()
                         .roomNo(request.getRoomNo())
-                        .senderId(1L)
+                        .senderEmpId("EMP0001")
                         .content(request.getContent())
                         .type(MessageType.TEXT)
                         .createdAt(LocalDateTime.now())
@@ -48,7 +48,7 @@ public class ChatSocketController {
 
         RedisChatMessage redisMessage = new RedisChatMessage(
                 saved.getRoomNo(),
-                saved.getSenderId(),
+                saved.getSenderEmpId(),
                 saved.getContent(),
                 saved.getType(),
                 saved.getCreatedAt()

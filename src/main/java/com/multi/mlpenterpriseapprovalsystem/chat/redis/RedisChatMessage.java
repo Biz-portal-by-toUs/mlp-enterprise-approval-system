@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class RedisChatMessage {
 
     private Long roomNo;
-    private Long senderId;
+    private String senderId;
     private String content;
     private MessageType type;
     private LocalDateTime createdAt;
