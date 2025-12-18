@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 문서 반환 Dto
  *
  * @author : 이지헌
  * @filename : ResDocumentDto
@@ -22,8 +22,10 @@ import java.util.List;
 @NoArgsConstructor
 public class ResDocumentDto {
     private Long docNo;
-    private String comId;
     private String docId;
+    private String comId;
+    private Long docFormNo;
+    private String docFormName;
     private String docFormCatName;
     private String title;
     private String content;
@@ -33,8 +35,6 @@ public class ResDocumentDto {
     private String writerId;
     private String aiSumm;
     private Boolean temp;
-    private String docFormName;
-    private Long docFormNo;
 
 
     public static ResDocumentDto toDto(Document document) {
