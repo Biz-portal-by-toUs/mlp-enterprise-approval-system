@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * token service
+ * 로그인 요청, token 재발급 요청 시 처리
  *
  * @author : 권지영
  * @filename : TokenService

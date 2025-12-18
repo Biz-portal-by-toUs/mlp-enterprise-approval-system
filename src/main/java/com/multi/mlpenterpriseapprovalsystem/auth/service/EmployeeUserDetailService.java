@@ -3,7 +3,6 @@ package com.multi.mlpenterpriseapprovalsystem.auth.service;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
-import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,7 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * employeeUserDetailSerivce
+ * 로그인 시 사원 정보 가지고 오는 UserDetailSerivce
  *
  * @author : 권지영
  * @filename : EmployeeUserDetailService

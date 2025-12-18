@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.common.jwt;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * JwtAuthenticationEntryPoint
+ * 인증 실패 시 날림
  *
  * @author : 권지영
  * @filename : JwtAuthenticationEntryPoint
@@ -21,7 +20,7 @@ import java.io.IOException;
 @Slf4j
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
         log.warn("인증 실패: 인증되지 않은 사용자가 {} 경로에 접근하려고 했습니다. 401 Unauthorized 반환.", request.getRequestURI());
 
         // 401 Unauthorized 상태 코드와 JSON 메시지 직접 작성

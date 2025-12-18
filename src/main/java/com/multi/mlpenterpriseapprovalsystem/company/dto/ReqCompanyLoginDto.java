@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * compnay login dto
+ * 회사 로그인 요청 dto
  *
  * @author : 권지영
  * @filename : ReqCompnayLoginDto

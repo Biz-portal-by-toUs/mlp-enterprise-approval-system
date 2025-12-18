@@ -11,7 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 /**
- * CustomUser dto
+ * 로그인 한 주체 dto
  *
  * @author : 권지영
  * @filename : CustomUser

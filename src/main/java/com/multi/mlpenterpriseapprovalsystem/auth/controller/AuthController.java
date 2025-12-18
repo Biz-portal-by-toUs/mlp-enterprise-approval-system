@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 /**
- * AuthController
+ * 회원가입, 로그인, 로그아웃 부분 컨트롤러
  *
  * @author : 권지영
  * @filename : AuthController
