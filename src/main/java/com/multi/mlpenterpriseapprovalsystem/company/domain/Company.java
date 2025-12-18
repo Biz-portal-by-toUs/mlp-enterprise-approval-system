@@ -52,7 +52,7 @@ public class Company extends BaseEntity {
     private String imgUrl;
     private String path;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sub_no")
     private Subscription subscription;
 
