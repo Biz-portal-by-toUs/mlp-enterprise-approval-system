@@ -26,7 +26,7 @@ import java.util.UUID;
 
 /**
  * 회의실 관리 도메인의 비즈니스 로직을 담당하는 Service.
- *
+ * <p>
  * 회의실 정보의 조회, 등록, 수정, 삭제와 관련된 비즈니스 로직을 처리한다.
  * 데이터 접근은 Repository 계층에 위임하며, 도메인 규칙 및 처리 흐름을 관리한다.
  *
@@ -50,47 +50,58 @@ public class MeetingRoomService {
 
     @Transactional(readOnly = true)
     public Page<ResMeetingRoomDto> selectMeetingRoomsWithPaging(String comId, Pageable pageable) {
-    // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
+        // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
         Page<MeetingRoom> meetingRooms = meetingRoomRepository.findByCompany_ComId(comId, pageable);
 
+        // Entity -> Response DTO로 변환 (Page.map()은 Page 형태 유지하면서 내부 요소만 변환)
         return meetingRooms.map(meetingRoom -> ResMeetingRoomDto.builder()
-                        .roomNo(meetingRoom.getRoomNo())
-                        .comId(meetingRoom.getCompany().getComId())
-                        .roomName(meetingRoom.getRoomName())
-                        .capacity(meetingRoom.getCap())
-                        .location(meetingRoom.getLoc())
-                        .imageUrl(meetingRoom.getImgUrl())
-                        .equipList(meetingRoom.getEquipList())
-                        .note(meetingRoom.getNote())
-                        .build());
+                .roomNo(meetingRoom.getRoomNo())
+                .comId(meetingRoom.getCompany().getComId())
+                .roomName(meetingRoom.getRoomName())
+                .capacity(meetingRoom.getCap())
+                .location(meetingRoom.getLoc())
+                .imageUrl(meetingRoom.getImgUrl())
+                .equipList(meetingRoom.getEquipList())
+                .note(meetingRoom.getNote())
+                .build());
     }
 
-    public Long registerMeetingRoom(String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) throws IOException {
+    public Long registerMeetingRoom(String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
 
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
         String savedUrl = null;
 
+        // 이미지 파일이 있을 때
         if (imageFile != null && !imageFile.isEmpty()) {
-            // 1) 파일명 생성
-            String ext = Optional.ofNullable(imageFile.getOriginalFilename())
-                    .filter(f -> f.contains("."))
-                    .map(f -> f.substring(f.lastIndexOf(".")))
-                    .orElse("");
+            try {
+                // 확장자 추출(.jpg, .png 등)
+                String ext = Optional.ofNullable(imageFile.getOriginalFilename())
+                        .filter(f -> f.contains("."))
+                        .map(f -> f.substring(f.lastIndexOf(".")))
+                        .orElse("");
 
-            String fileName = UUID.randomUUID() + ext;
+                // UUID로 파일명 생성(중복 방지)
+                String fileName = UUID.randomUUID() + ext;
 
-            // 2) 저장 경로 (yml의 image.image-dir 사용)
-            Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);  // imageDir = C:/.../uploads
-            Files.createDirectories(savePath.getParent());
-            imageFile.transferTo(savePath.toFile());
+                // 저장 경로 생성: IMAGE_DIR + fileName
+                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);  // imageDir = C:/.../uploads
 
-            // 3) 접근 URL (yml의 image.image-url 사용)
-            savedUrl = IMAGE_URL + "/" + fileName; // imageUrl = http://localhost:8090/uploads
+                // uploads 폴더 없으면 생성(있으면 그냥 통과)
+                Files.createDirectories(savePath.getParent());
+
+                // 실제 파일 저장(디스크에 write)
+                imageFile.transferTo(savePath.toFile());
+
+                // 브라우저에서 접근할 URL 생성(정적 리소스 매핑 필요)
+                savedUrl = IMAGE_URL + "/" + fileName; // imageUrl = http://localhost:8090/uploads
+            } catch (IOException e) {
+                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
         }
 
-
+        // 요청 DTO 값으로 MeetingRoom 엔티티 생성 (회사 FK 포함)
         MeetingRoom meetingRoom = MeetingRoom.builder()
                 .company(company)
                 .roomName(meetingRoomDto.getRoomName())
@@ -103,5 +114,54 @@ public class MeetingRoomService {
 
         return meetingRoomRepository.save(meetingRoom).getRoomNo();
     }
+
+    public Long updateMeetingRoom(Long roomNo, String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
+
+        // 수정할 회의실 조회
+        MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
+
+        // 같은 회사 데이터인지 검증(보안)
+        if (!meetingRoom.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 이미지 파일이 있으면 새로 저장하고 imgUrl만 교체
+        if (imageFile != null && !imageFile.isEmpty()) {
+
+            // 확장자 추출
+            String ext = Optional.ofNullable(imageFile.getOriginalFilename())
+                    .filter(f -> f.contains("."))
+                    .map(f -> f.substring(f.lastIndexOf(".")))
+                    .orElse("");
+
+            // UUID 파일명 생성
+            String fileName = UUID.randomUUID() + ext;
+
+
+            try {
+                // 저장 경로 생성 및 디렉토리 생성
+                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);
+                Files.createDirectories(savePath.getParent());
+
+                // 실제 파일 저장
+                imageFile.transferTo(savePath.toFile());
+
+                // 접근 URL 생성 후 엔티티에 반영
+                String savedUrl = IMAGE_URL + "/" + fileName;
+                meetingRoom.changeImageUrl(savedUrl);
+            } catch (IOException e) {
+                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
+        }
+
+        // 이미지 외의 필드(이름/인원/위치/장비/비고 등) 업데이트
+        meetingRoom.updateInfo(meetingRoomDto);
+
+        return meetingRoom.getRoomNo();
+    }
+
+
 }
+
 

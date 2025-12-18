@@ -58,12 +58,25 @@ public class MeetingRoomController {
     @PostMapping(value ="/meeting-rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@RequestParam String comId,  // todo 임시로 @RequestAttribute("comId")
                                                                  @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
-                                                                 @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) throws IOException {
+                                                                 @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
 
         Long roomNo = meetingRoomService.registerMeetingRoom(comId, meetingRoomDto, imageFile);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto<>(HttpStatus.CREATED, "회의실 등록 성공", roomNo));
+    }
+
+    @PutMapping(value="/meeting-rooms/{roomNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseDto<Long>> updateMeetingRoom(@PathVariable Long roomNo,
+                                                               @RequestParam String comId, // todo 임시: 나중에 @RequestAttribute("comId")
+                                                               @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
+                                                               @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
+
+        Long updatedRoomNo = meetingRoomService.updateMeetingRoom(roomNo, comId, meetingRoomDto, imageFile);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의실 수정 성공", updatedRoomNo));
     }
 }
