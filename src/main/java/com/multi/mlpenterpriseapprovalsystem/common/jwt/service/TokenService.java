@@ -58,6 +58,7 @@ public class TokenService {
                 user.getSubjectId(),
                 user.getSubjectType(),
                 user.getComId(),
+                user.getUsername(),
                 roles
         );
 
