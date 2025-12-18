@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 결제라인 반환 Dto
  *
  * @author : 이지헌
  * @filename : ResApprovalLineDto
