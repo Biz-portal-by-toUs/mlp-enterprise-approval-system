@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatRoomCreateDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomListDto;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,12 +33,13 @@ public class ChatRoomController {
 
     @PostMapping
     public ResponseEntity<ResponseDto<ResChatRoomDto>> createRoom(
-            @RequestBody ReqChatRoomCreateDto request
+            @RequestBody ReqChatRoomCreateDto request, @AuthenticationPrincipal CustomUser user
     ) {
-        ResChatRoomDto room = chatRoomService.createRoom(request);
+        String empId = "E000001";
+        ResChatRoomDto room = chatRoomService.createRoom(request, empId);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(HttpStatus.CREATED,"채팅방 생성 성공",room));
+                .body(new ResponseDto<>(HttpStatus.CREATED, "채팅방 생성 성공", room));
 
     }
 
@@ -44,22 +47,26 @@ public class ChatRoomController {
     @GetMapping("/my")
     public ResponseEntity<ResponseDto<List<ResChatRoomListDto>>> getMyRooms(
             @RequestParam(required = false) LocalDateTime cursor,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal CustomUser user
     ) {
-        List<ResChatRoomListDto> resChatRoomListDtos=chatRoomService.getMyRooms(cursor, size);
+        String empId = "E000001";
+        List<ResChatRoomListDto> resChatRoomListDtos = chatRoomService.getMyRooms(cursor, size, empId);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK,"채팅방 목록 조회 성공",resChatRoomListDtos));
+                .body(new ResponseDto<>(HttpStatus.OK, "채팅방 목록 조회 성공", resChatRoomListDtos));
     }
 
     // 채팅방 상세 정보
     @GetMapping("/{roomNo}")
     public ResponseEntity<ResponseDto<ResChatRoomDto>> getRoom(
-            @PathVariable Long roomNo
+            @PathVariable Long roomNo,
+            @AuthenticationPrincipal CustomUser user
     ) {
-        ResChatRoomDto resChatRoomDto=chatRoomService.getRoom(roomNo);
+        String empId = "E000001";
+        ResChatRoomDto resChatRoomDto = chatRoomService.getRoom(roomNo, empId);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK,"채팅방 상세 조회 성공",resChatRoomDto));
+                .body(new ResponseDto<>(HttpStatus.OK, "채팅방 상세 조회 성공", resChatRoomDto));
     }
 }

@@ -40,7 +40,11 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/**").permitAll()
+                        .requestMatchers("/api/v1/**").hasAnyRole(    "SYS_ADMIN",
+                                "COM_ADMIN",
+                                "SEC_ADMIN",
+                                "THR_ADMIN",
+                                "EMPLOYEE")
                         .anyRequest().authenticated()
                 );
         return http.build();
