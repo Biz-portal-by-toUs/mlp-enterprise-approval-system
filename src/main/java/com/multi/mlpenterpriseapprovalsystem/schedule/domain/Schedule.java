@@ -26,7 +26,7 @@ public class Schedule {
     private Long schNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
     // [변경 반영] dep_no 참조
@@ -41,6 +41,6 @@ public class Schedule {
     private String color;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reg_emp", referencedColumnName = "empId")
+    @JoinColumn(name = "reg_emp", referencedColumnName = "emp_id")
     private Employee register;
 }

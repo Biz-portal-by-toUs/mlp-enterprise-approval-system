@@ -23,13 +23,13 @@ import java.time.LocalDateTime;
 @Table(name = "notice")
 public class Notice extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long noticeNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private Boolean isDeleted;
     private String title;
     @Column(columnDefinition = "json") private String contents;
     private Boolean isPopup;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "emp_id", referencedColumnName = "empId") private Employee writer;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "emp_id", referencedColumnName = "emp_id") private Employee writer;
     private Integer rating;
 }

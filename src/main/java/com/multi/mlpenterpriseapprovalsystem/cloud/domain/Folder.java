@@ -25,7 +25,7 @@ public class Folder extends BaseEntity {
     private Long folderNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
     // [변경 반영] dep_no 참조
@@ -40,7 +40,7 @@ public class Folder extends BaseEntity {
     private String folderName;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", referencedColumnName = "empId")
+    @JoinColumn(name = "owner_id", referencedColumnName = "emp_id")
     private Employee owner;
 
     private String scope;

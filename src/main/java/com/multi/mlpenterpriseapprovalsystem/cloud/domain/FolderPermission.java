@@ -23,7 +23,7 @@ public class FolderPermission {
     private Long permNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -31,7 +31,7 @@ public class FolderPermission {
     private Folder folder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
 
     private String permType;

@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "corporate_car")
 public class CorporateCar {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long carNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private String carName;
     private String carType;
     private String plateNo;

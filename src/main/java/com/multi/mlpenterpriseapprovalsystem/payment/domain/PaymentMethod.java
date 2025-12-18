@@ -20,12 +20,14 @@ import lombok.*;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentMethod extends BaseEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id 
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
     private Long paymNo;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+  
+    @ManyToOne(fetch = FetchType.LAZY) 
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id") 
     private Company company;
+    
 
     @Enumerated(EnumType.STRING)
     private PaymType paymType;

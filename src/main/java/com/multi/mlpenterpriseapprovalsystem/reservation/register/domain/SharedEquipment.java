@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "shared_equipment")
 public class SharedEquipment {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long eqNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private String eqName;
     private String eqId;
     private String modelName;

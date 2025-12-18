@@ -23,7 +23,7 @@ public class ProvDocument extends BaseEntity {
     private Long provNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
     private String docTitle;

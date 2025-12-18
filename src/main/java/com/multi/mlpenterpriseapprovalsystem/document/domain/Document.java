@@ -29,11 +29,11 @@ public class Document extends BaseEntity {
 
     // 회사 참조 (com_id -> company.com_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
 
     // 문서 ID (UK 설정 권장)
-    @Column(length = 14, unique = true)
+    @Column(name = "doc_id", length = 14, unique = true)
     private String docId;
 
     // 카테고리 참조 (docfo_cat_no)
@@ -53,7 +53,7 @@ public class Document extends BaseEntity {
 
     // 작성자 참조 (emp_id -> employee.emp_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId", nullable = false)
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id", nullable = false)
     private Employee writer;
 
     @Lob

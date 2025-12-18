@@ -19,7 +19,7 @@ import lombok.*;
 @Builder
 public class MeetingRoom {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long roomNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private String roomName;
     private Integer cap;
     private String loc;
