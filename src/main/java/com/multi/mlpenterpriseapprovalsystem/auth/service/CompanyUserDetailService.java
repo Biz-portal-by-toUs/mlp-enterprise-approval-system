@@ -2,6 +2,8 @@ package com.multi.mlpenterpriseapprovalsystem.auth.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ public class CompanyUserDetailService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Company com = companyRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("회사 없음: " + email));
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
         return CustomUser.builder()
                 .subjectId(com.getComNo()) // 이메일로 쓰면 나중에 뭐 변환해야해서 pk로 사용

@@ -2,7 +2,10 @@ package com.multi.mlpenterpriseapprovalsystem.auth.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,7 +31,7 @@ public class EmployeeUserDetailService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String empId) throws UsernameNotFoundException {
         Employee emp = employeeRepository.findByEmpId(empId)
-                .orElseThrow(() -> new UsernameNotFoundException("사원 없음: " + empId));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         return CustomUser.builder()
                 .subjectId(emp.getEmpNo()) // 이메일로 쓰면 나중에 뭐 변환해야해서 pk로 사용
