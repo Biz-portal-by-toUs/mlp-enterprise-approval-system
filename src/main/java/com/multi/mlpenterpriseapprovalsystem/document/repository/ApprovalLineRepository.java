@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Please explain the class!!!
+ * 결재라인 테이블 관리 repository
  *
  * @author : 이지헌
  * @filename : ApprovalLineRepository
