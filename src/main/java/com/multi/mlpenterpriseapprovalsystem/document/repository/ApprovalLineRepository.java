@@ -11,7 +11,7 @@ import java.util.Optional;
  *
  * @author : 이지헌
  * @filename : ApprovalLineRepository
- * @since : 25. 12. 18. 목요일
+ * @since : 25. 12. 18. 목요일.
  */
 public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Long> {
 
