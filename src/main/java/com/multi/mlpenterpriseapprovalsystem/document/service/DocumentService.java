@@ -39,7 +39,7 @@ public class DocumentService {
         if(status.equals("FINALIZED")){ // status가 FINALIZED일때 최종승인된것들만 반환
             return getApprovedDocuments(comId, page);
         }
-        else if(status.equals("ANY")){ // status가 ANY일때 내가 상신한 모든 문서 반환
+        else if(status.equals("SUBMITTED")){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
             return getMySubmittedDocuments(comId, empId, page);
         }
         else if(status.equals("AWAITING")){ // status가 PENDING일때 내가 결재할 문서 반환
