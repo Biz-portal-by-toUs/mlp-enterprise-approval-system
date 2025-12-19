@@ -4,8 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.MessageType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-
-import java.time.LocalDateTime;
+import lombok.NoArgsConstructor;
 
 /**
  * 채팅 메세지 resDto
@@ -16,6 +15,7 @@ import java.time.LocalDateTime;
  */
 @Getter
 @AllArgsConstructor
+@NoArgsConstructor
 public class ResChatMessageDto {
 
     private String messageId;
@@ -24,7 +24,7 @@ public class ResChatMessageDto {
     private String senderName;
     private String content;
     private MessageType type;
-    private LocalDateTime createdAt;
+    private String createdAt;
 
     public static ResChatMessageDto from(ChatMessage msg) {
         return new ResChatMessageDto(
@@ -34,7 +34,7 @@ public class ResChatMessageDto {
                 msg.getSenderName(),
                 msg.getContent(),
                 msg.getType(),
-                msg.getCreatedAt()
+                msg.getCreatedAt() == null ? null : msg.getCreatedAt().toString()
         );
     }
 }

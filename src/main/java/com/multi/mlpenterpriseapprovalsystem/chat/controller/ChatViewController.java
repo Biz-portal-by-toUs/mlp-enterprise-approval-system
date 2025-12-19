@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
- * Please explain the class!!!
+ * 채팅 위젯 뷰 컨트롤러
  *
  * @author : 김승기
  * @filename : ChatViewController
@@ -15,18 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/chat")
 public class ChatViewController {
 
-    @GetMapping("/panel")
-    public String chatPanel() {
-        return "chat/panel";
+
+    @GetMapping("/chat")
+    public String chatPage() {
+        return "chat/chat";
     }
 
-    @GetMapping("/rooms")
-    public String chatRooms() {
-        return "chat/rooms";
-    }
-
-    @GetMapping("/employees")
-    public String employees() {
-        return "chat/employees";
-    }
 }

@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.chat.domain.MessageType;
 import lombok.Getter;
 
 /**
- * Please explain the class!!!
+ * 채팅 메세지 reqDto
  *
  * @author : 김승기
  * @filename : ReqChatMessageSendDto
