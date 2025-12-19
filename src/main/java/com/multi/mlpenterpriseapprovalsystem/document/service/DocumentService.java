@@ -45,8 +45,23 @@ public class DocumentService {
         else if(status.equals("AWAITING")){ // status가 PENDING일때 내가 결재할 문서 반환
             return getDocumentsAwaitingMyApproval(comId, empId, page);
         }
+        else if(status.equals("PROCESSED")){
+            return getMyProcessedDocuments(comId, empId, page);
+        }
 
         return getDocumentsAwaitingMyApproval(comId, empId, page);
+    }
+
+    // 내가 결재한 문서 반환(결재자, 대직자 둘 다에게 반환)
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getMyProcessedDocuments(String comId, String empId, int page) {
+        Pageable pageable = PageRequest.of(page, 10); // 최근 내가 결재한게 상위에 오도록
+
+        // 결재라인에 내가 있고 승인 or 반려한 문서들 반환
+        Page<Document> documentPage = documentRepository.getMyProcessedDocuments(comId, empId, pageable);
+
+        // 해당 문서에 대한 나의 결재상태(승인, 반려)설정하여 반환
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, empId));
     }
 
     // 내가 결재할 문서 반환
@@ -56,6 +71,7 @@ public class DocumentService {
 
         Page<Document> documentPage = documentRepository.getDocumentsAwaitingMyApproval(comId, empId, pageable);
 
+        // 해당 문서에 대한 나의 결재상태(결재중, 결재대기중)설정하여 반환
         return documentPage.map(doc -> ResDocumentDto.toDto(doc, empId));
     }
 
