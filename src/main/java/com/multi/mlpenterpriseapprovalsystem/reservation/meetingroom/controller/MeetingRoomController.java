@@ -1,6 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomService;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,12 +43,13 @@ public class MeetingRoomController {
     private final MeetingRoomService meetingRoomService;
 
     @GetMapping("/meeting-rooms")
-    public ResponseEntity<ResponseDto<Page<ResMeetingRoomDto>>> getMeetingRoomsWithPaging(@RequestParam String comId,
-                                                                 @RequestParam(name = "page", defaultValue = "0") int page,
-                                                                 @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
+    public ResponseEntity<ResponseDto<Page<ResMeetingRoomDto>>> getMeetingRoomsWithPaging(@AuthenticationPrincipal CustomUser user,
+                                                                                          @RequestParam(name = "page", defaultValue = "0") int page,
+                                                                                          @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("roomName").ascending());
 
+        String comId = user.getComId();
         Page<ResMeetingRoomDto> meetingRooms = meetingRoomService.selectMeetingRoomsWithPaging(comId, pageable);
         String msg = meetingRooms.isEmpty() ? "등록된 회의실이 없습니다." : "회의실 조회 성공";
         return ResponseEntity
@@ -54,10 +58,10 @@ public class MeetingRoomController {
     }
 
     @PostMapping(value ="/meeting-rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@RequestParam String comId,  // todo 임시로 @RequestAttribute("comId")
+    public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@AuthenticationPrincipal CustomUser user,
                                                                  @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                  @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
-
+        String comId = user.getComId();
         Long roomNo = meetingRoomService.registerMeetingRoom(comId, meetingRoomDto, imageFile);
 
         return ResponseEntity
@@ -67,10 +71,11 @@ public class MeetingRoomController {
 
     @PutMapping(value="/meeting-rooms/{roomNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Long>> updateMeetingRoom(@PathVariable Long roomNo,
-                                                               @RequestParam String comId, // todo 임시: 나중에 @RequestAttribute("comId")
+                                                               @AuthenticationPrincipal CustomUser user,
                                                                @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
 
+        String comId = user.getComId();
         Long updatedRoomNo = meetingRoomService.updateMeetingRoom(roomNo, comId, meetingRoomDto, imageFile);
 
         return ResponseEntity
