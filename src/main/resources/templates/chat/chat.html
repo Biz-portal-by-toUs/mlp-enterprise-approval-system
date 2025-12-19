@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Chat</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; }
+        .wrap { display: flex; height: 100vh; }
+        .left { width: 280px; border-right: 1px solid #ddd; overflow: auto; }
+        .room { padding: 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .room:hover { background: #fafafa; }
+        .room .name { font-weight: 700; }
+        .room .meta { font-size: 12px; color: #666; margin-top: 4px; display:flex; justify-content:space-between; gap:8px;}
+        .badge { background: #ff3b30; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+        .right { flex: 1; display: flex; flex-direction: column; }
+        .top { padding: 12px; border-bottom: 1px solid #ddd; font-weight: 700; }
+        .msgs { flex: 1; overflow: auto; padding: 12px; }
+        .msg { margin: 8px 0; }
+        .msg .t { font-size: 12px; color: #777; }
+        .bottom { display:flex; gap:8px; padding: 12px; border-top: 1px solid #ddd; }
+        input { flex:1; padding: 10px; }
+        button { padding: 10px 14px; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+    <div class="left">
+        <div style="padding:12px; font-weight:700;">채팅방</div>
+        <div id="roomList"></div>
+    </div>
+
+    <div class="right">
+        <div class="top" id="roomTitle">방을 선택하세요</div>
+        <div class="msgs" id="messages"></div>
+        <div class="bottom">
+            <input id="messageInput" placeholder="메시지 입력" />
+            <button onclick="sendMessage()">전송</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let currentRoomNo = null;
+
+    // ✅ 구독 핸들 관리
+    let roomSub = null;        // 현재 방 메시지 구독
+    let roomUpdatesSub = null; // 방 목록 업데이트(유저전용) 구독
+
+    function getAccessToken() {
+        return localStorage.getItem("accessToken");
+    }
+
+    function connectWs() {
+        const token = getAccessToken();
+        if (!token) {
+            alert("accessToken 없음. 로그인 후 token 저장 로직 확인해라.");
+            return;
+        }
+
+        const socket = new SockJS('/ws-chat');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = console.log;
+
+        stompClient.connect(
+            { Authorization: 'Bearer ' + token },
+            async function(frame) {
+                console.log("WS connected:", frame);
+
+                // ✅ 최초 방 목록 1회 로드
+                await loadRooms();
+
+                // ✅ 채팅탭(방 목록) 실시간 업데이트 구독
+                // 서버가 convertAndSendToUser(empId, "/sub/chat/room-updates", dto) 보내는 구조일 때 동작
+                if (roomUpdatesSub) roomUpdatesSub.unsubscribe();
+                roomUpdatesSub = stompClient.subscribe('/user/sub/chat/room-updates', function(message) {
+                    const upd = JSON.parse(message.body);
+                    // upd: { roomNo, lastMessage, lastMessageAt, unreadCount }
+                    updateRoomCard(upd);
+                });
+            },
+            function(error) {
+                console.error("WS connect error:", error);
+                alert("WS 연결 실패(토큰/인터셉터/엔드포인트 확인)");
+            }
+        );
+    }
+
+    // 방 목록 조회(REST) — 채팅탭 진입 시 1회 or 재동기화용
+    async function loadRooms() {
+        const token = getAccessToken();
+        const res = await fetch('/api/v1/chat/my?size=50', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        const data = await res.json();
+        const rooms = data.data || [];
+
+        const roomList = document.getElementById("roomList");
+        roomList.innerHTML = "";
+
+        rooms.forEach(r => {
+            const div = document.createElement("div");
+            div.className = "room";
+            div.id = "room-" + r.roomNo;
+            div.dataset.roomNo = String(r.roomNo);
+            div.dataset.roomName = r.roomName || "";
+
+            const badgeHtml = (r.unreadCount && r.unreadCount > 0)
+                ? `<span class="badge">${r.unreadCount}</span>` : "";
+
+            div.innerHTML = `
+        <div class="name">${escapeHtml(r.roomName)}</div>
+        <div class="meta">
+          <span class="last">${escapeHtml(r.lastMessage || "")}</span>
+          ${badgeHtml}
+        </div>
+      `;
+
+            div.onclick = () => enterRoom(r.roomNo, r.roomName);
+            roomList.appendChild(div);
+        });
+    }
+
+    async function enterRoom(roomNo, roomName) {
+        if (!stompClient || !stompClient.connected) {
+            alert("WS 아직 연결 안됨");
+            return;
+        }
+
+        // ✅ 이전 방 구독 해제
+        if (roomSub) {
+            roomSub.unsubscribe();
+            roomSub = null;
+        }
+
+        currentRoomNo = roomNo;
+        document.getElementById("roomTitle").innerText = roomName;
+
+        // ✅ 읽음 처리 + 메시지 로드
+        await markRead(roomNo);
+        await loadMessages(roomNo);
+
+        // ✅ 들어온 방은 뱃지 즉시 제거(UX)
+        updateRoomCard({ roomNo, lastMessage: null, lastMessageAt: null, unreadCount: 0 });
+
+        // ✅ 현재 방 메시지 실시간 수신
+        roomSub = stompClient.subscribe('/sub/chat/rooms/' + roomNo, function(message) {
+            const body = JSON.parse(message.body);
+            appendMessage(body);
+
+            // 이건 선택: “현재 방에서 새 메시지 올 때 목록 최신화” (room-updates가 완벽하면 필요없음)
+            // updateRoomCard({ roomNo: body.roomNo, lastMessage: body.content, lastMessageAt: body.createdAt, unreadCount: 0 });
+        });
+    }
+
+    async function loadMessages(roomNo) {
+        const token = getAccessToken();
+        const res = await fetch(`/api/v1/chat/messages/${roomNo}?size=30`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        const data = await res.json();
+        const msgs = data.data || [];
+
+        const box = document.getElementById("messages");
+        box.innerHTML = "";
+
+        msgs.slice().reverse().forEach(m => appendMessage(m));
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function markRead(roomNo) {
+        const token = getAccessToken();
+        await fetch(`/api/v1/chat/${roomNo}/read`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+    }
+
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const content = input.value.trim();
+        if (!content) return;
+        if (!currentRoomNo) {
+            alert("방부터 선택해라");
+            return;
+        }
+
+        stompClient.send("/pub/chat/message", {}, JSON.stringify({
+            roomNo: currentRoomNo,
+            content: content
+        }));
+
+        input.value = "";
+    }
+
+    function appendMessage(m) {
+        const box = document.getElementById("messages");
+        const div = document.createElement("div");
+        div.className = "msg";
+
+        const t = m.createdAt ? new Date(m.createdAt).toLocaleString() : "";
+        const sender = m.senderName || "";
+
+        div.innerHTML = `
+      <div><b>${escapeHtml(sender)}</b> : ${escapeHtml(m.content || "")}</div>
+      <div class="t">${escapeHtml(t)}</div>
+    `;
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // ✅ 방 목록 카드 1개만 실시간 갱신 + 맨 위로 올리기
+    function updateRoomCard(upd) {
+        const roomNo = upd.roomNo;
+        if (!roomNo) return;
+
+        const el = document.getElementById("room-" + roomNo);
+
+        // 목록에 없는 방이면 재동기화 (새로 생성된 방 등)
+        if (!el) {
+            loadRooms();
+            return;
+        }
+
+        // 마지막 메시지 업데이트(값이 있을 때만)
+        if (upd.lastMessage !== undefined && upd.lastMessage !== null) {
+            const lastEl = el.querySelector(".last");
+            if (lastEl) lastEl.textContent = upd.lastMessage;
+        }
+
+        // unread badge 업데이트
+        const meta = el.querySelector(".meta");
+        if (meta) {
+            const oldBadge = meta.querySelector(".badge");
+            const unread = Number(upd.unreadCount || 0);
+
+            if (unread > 0 && roomNo !== currentRoomNo) {
+                if (oldBadge) oldBadge.textContent = String(unread);
+                else meta.insertAdjacentHTML("beforeend", `<span class="badge">${unread}</span>`);
+            } else {
+                if (oldBadge) oldBadge.remove();
+            }
+        }
+
+        // 맨 위로 올리기(카톡처럼)
+        const parent = el.parentNode;
+        if (parent && parent.firstChild !== el) parent.prepend(el);
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>"']/g, s => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+        }[s]));
+    }
+
+    window.addEventListener("load", connectWs);
+</script>
+</body>
+</html>
