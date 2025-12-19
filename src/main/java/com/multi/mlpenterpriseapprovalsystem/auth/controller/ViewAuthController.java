@@ -11,18 +11,27 @@ package com.multi.mlpenterpriseapprovalsystem.auth.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
+@RequestMapping("/auth")
 public class ViewAuthController {
 
+    // 회사 회원가입 화면 (GET)
+    @GetMapping("/companies/signup")
+    public String companySignupPage() {
+        // templates/company/common/signup.html
+        return "company/common/signup";
+    }
+
     // 회사 로그인 화면 (GET)
-    @GetMapping("/auth/companies/login")
+    @GetMapping("/companies/login")
     public String companyLoginPage() {
         return "company/common/login"; // templates/company/common/login.html
     }
 
     // 사원 로그인 화면 (GET)
-    @GetMapping("/auth/employee/login")
+    @GetMapping("/employee/login")
     public String employeeLoginPage() {
         return "employee/common/login"; // templates/employee/common/login.html
     }

@@ -1,13 +1,16 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.config;
 
+import com.multi.mlpenterpriseapprovalsystem.chat.interceptor.StompAuthChannelInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 /**
- * 웹소켓 연결 및 메세지 브로커 config
+ * 통신망 구축 설정 (메세지가 다니는 길)
  * 
  * @filename    : WebSocketConfig
  * @author      : 김승기
@@ -15,11 +18,17 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    /**
-     * 클라이언트가 최초로 WebSocket 연결할 Endpoint
-     */
+    private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/sub");         // 구독
+        registry.setApplicationDestinationPrefixes("/pub"); // 발행(서버로 들어옴)
+    }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
@@ -27,16 +36,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS();
     }
 
-    /**
-     * 메시지 브로커 설정
-     */
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-
-        // 클라이언트 → 서버
-        registry.setApplicationDestinationPrefixes("/pub");
-
-        // 서버 → 클라이언트
-        registry.enableSimpleBroker("/sub");
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(stompAuthChannelInterceptor);
     }
 }

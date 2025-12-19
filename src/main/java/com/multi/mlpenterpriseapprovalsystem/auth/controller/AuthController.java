@@ -4,16 +4,16 @@ import com.multi.mlpenterpriseapprovalsystem.auth.service.AuthService;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
+import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 /**
@@ -30,6 +30,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseDto<Void>> signUpCompany(
+            @ModelAttribute ReqCompanySignupDto reqCompanySignupDto,
+            @RequestPart(value = "logo", required = false) MultipartFile logo
+    ) {
+        ResponseDto<Void> response = authService.signUpCompany(reqCompanySignupDto, logo);
+
+        return ResponseEntity
+                .status(response.getStatus())
+                .body(response);
+    }
 
     @PostMapping("/companies/login")
     public ResponseEntity<ResponseDto<ResTokenDto>> loginCompany(@RequestBody ReqCompanyLoginDto reqCompanyLoginDto, HttpServletResponse response) {

@@ -1,9 +1,9 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -16,6 +16,12 @@ import java.util.List;
 public interface ChatMessageRepository
         extends MongoRepository<ChatMessage, String> {
 
-    List<ChatMessage> findByRoomNoOrderByCreatedAtDesc(
-            Long roomNo, Pageable pageable);
+    // 최초 진입 (최근 메시지)
+    List<ChatMessage> findByRoomNoOrderByCreatedAtDesc(Long roomNo);
+
+    // 무한 스크롤 (cursor 기준)
+    List<ChatMessage> findByRoomNoAndCreatedAtLessThanOrderByCreatedAtDesc(
+            Long roomNo,
+            LocalDateTime cursor
+    );
 }

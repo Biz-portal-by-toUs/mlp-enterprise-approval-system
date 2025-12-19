@@ -29,7 +29,6 @@ public class ChatRoom extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private RoomType roomType;
 
-    // 🔥 추가
     private String lastMessage;
 
     private LocalDateTime lastMessageAt;
@@ -49,13 +48,11 @@ public class ChatRoom extends BaseEntity {
         return room;
     }
 
-    // 🔥 핵심
     public void addMember(ChatRoomMember member) {
         members.add(member);
         member.setChatRoom(this);
     }
 
-    // 메시지 도착 시 호출
     public void updateLastMessage(String message, LocalDateTime time) {
         this.lastMessage = message;
         this.lastMessageAt = time;

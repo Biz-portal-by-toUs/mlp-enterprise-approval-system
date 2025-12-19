@@ -17,8 +17,12 @@ public enum ErrorCode {
     // 인증 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다"),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다"),
+    DUPLICATE_COMID(HttpStatus.CONFLICT, "DUPLICATE_COMID", "이미 사용 중인 회사 코드입니다"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "비밀번호가 일치하지 않습니다"),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다"),
+
+    //요금제 관련
+    SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND", "요금제를 찾을 수 없습니다"),
 
     // 문서 관련
     DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "문서를 찾을 수 없습니다"),
@@ -61,6 +65,13 @@ public enum ErrorCode {
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
+
+    // 웹소켓 관련
+    SOCKET_AUTHENTICATION_ERROR(HttpStatus.UNAUTHORIZED, "SOCKET_AUTHENTICATION_ERROR", "웹소켓 인증 정보가 유효하지 않습니다"),
+
+    // 서버/기술적 에러
+    JSON_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "JSON_PARSING_ERROR", "메시지 데이터 변환 중 오류가 발생했습니다"),
+    REDIS_PUB_SUB_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "REDIS_PUB_SUB_ERROR", "메시지 전송 시스템에 오류가 발생했습니다"),
 
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),

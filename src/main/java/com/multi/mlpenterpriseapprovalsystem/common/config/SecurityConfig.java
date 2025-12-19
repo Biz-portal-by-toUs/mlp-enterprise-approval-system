@@ -43,12 +43,22 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 이렇게 하면 타임리프에서도 세션 사용안하고 jwt 사용하면 됨
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+
+                        .requestMatchers("/auth/**",
+                                "/meeting-rooms/**").permitAll()
+                        .requestMatchers(
+                                "/uploads/**",
+                                "/images/**",
+                                "/css/**",
+                                "/js/**",
+                                "/favicon.ico").permitAll()
                         .requestMatchers("/api/v1/**").hasAnyRole(    "SYS_ADMIN",
                                 "COM_ADMIN",
                                 "SEC_ADMIN",
                                 "THR_ADMIN",
                                 "EMPLOYEE")
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()
                 )
 

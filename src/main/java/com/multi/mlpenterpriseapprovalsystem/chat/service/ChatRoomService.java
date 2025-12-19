@@ -9,6 +9,7 @@ import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomListDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomMemberRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
@@ -43,10 +44,8 @@ public class ChatRoomService {
     /**
      * 채팅방 생성 (1:1 / 그룹)
      */
-    public ResChatRoomDto createRoom(ReqChatRoomCreateDto request) {
+    public ResChatRoomDto createRoom(ReqChatRoomCreateDto request, String empId) {
 
-        // TODO: 나중에 SecurityContext에서 로그인 사용자로 교체
-        String myEmpId = "EMP0001";
 
         int memberCount = request.getMemberIds().size();
         RoomType roomType;
@@ -72,7 +71,7 @@ public class ChatRoomService {
             Optional<ChatRoom> existingRoom =
                     chatRoomRepository.findOneToOneRoom(
                             RoomType.ONE,
-                            myEmpId,
+                            empId,
                             targetEmpId
                     );
 
@@ -97,13 +96,13 @@ public class ChatRoomService {
                 List<String> empNames = new ArrayList<>();
 
                 // 나 자신
-                Employee me = employeeRepository.findByEmpId(myEmpId)
+                Employee me = employeeRepository.findByEmpId(empId)
                         .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
                 empNames.add(me.getEmpName());
 
                 // 초대 멤버들
-                for (String empId : request.getMemberIds()) {
-                    Employee emp = employeeRepository.findByEmpId(empId)
+                for (String id : request.getMemberIds()) {
+                    Employee emp = employeeRepository.findByEmpId(id)
                             .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
                     empNames.add(emp.getEmpName());
                 }
@@ -120,10 +119,10 @@ public class ChatRoomService {
         );
 
         // 4️⃣ 멤버 등록
-        addMember(chatRoom, myEmpId);
+        addMember(chatRoom, empId);
 
-        for (String empId : request.getMemberIds()) {
-            addMember(chatRoom, empId);
+        for (String id : request.getMemberIds()) {
+            addMember(chatRoom, id);
         }
 
         return ResChatRoomDto.from(chatRoom);
@@ -133,14 +132,12 @@ public class ChatRoomService {
      * 내 채팅방 목록 조회 (무한 스크롤)
      */
     @Transactional(readOnly = true)
-    public List<ResChatRoomListDto> getMyRooms(LocalDateTime cursor, int size) {
+    public List<ResChatRoomListDto> getMyRooms(LocalDateTime cursor, int size, String empId) {
 
-        // TODO: 로그인 사용자 ID
-        String myEmpId = "EMP0001";
 
-        return chatRoomRepository.findMyRooms(myEmpId, cursor, size)
+        return chatRoomRepository.findMyRooms(empId, cursor, size)
                 .stream()
-                .map(room -> ResChatRoomListDto.from(room, myEmpId))
+                .map(room -> ResChatRoomListDto.from(room, empId))
                 .collect(Collectors.toList());
     }
 
@@ -148,10 +145,7 @@ public class ChatRoomService {
      * 채팅방 상세 조회
      */
     @Transactional(readOnly = true)
-    public ResChatRoomDto getRoom(Long roomNo) {
-
-        // TODO: 로그인 사용자 ID (나중에 SecurityContext)
-        String myEmpId = "EMP0001";
+    public ResChatRoomDto getRoom(Long roomNo,String empId) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomNo)
                 .orElseThrow(() ->
@@ -160,7 +154,7 @@ public class ChatRoomService {
 
         // 🔥 멤버 검증
         boolean isMember = chatRoomMemberRepository
-                .existsByChatRoom_RoomNoAndEmployee_EmpId(roomNo, myEmpId);
+                .existsByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId);
 
         if (!isMember) {
             throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
@@ -181,6 +175,16 @@ public class ChatRoomService {
         ChatRoomMember member = ChatRoomMember.create(chatRoom, employee);
         chatRoom.addMember(member);
         chatRoomMemberRepository.save(member);
+    }
+
+    // 채팅방 읽음 처리
+    @Transactional
+    public void markAsRead(Long roomNo, String empId) {
+        ChatRoomMember member = chatRoomMemberRepository
+                .findByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
+
+        member.markReadNow(); // lastReadAt=now, unreadCount=0
     }
 
 

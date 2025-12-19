@@ -1,7 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -13,7 +12,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @since : 2025-12-17 오후 4:12 수요일
  */
 
-@Configuration
+//@Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${image.image-dir}")
@@ -25,7 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
         if (!dir.endsWith("/")) dir += "/";
 
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:///" + dir);
+                .addResourceLocations("file:" + dir);
     }
 
 
