@@ -1,18 +1,13 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisSubscriber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * Redis 연결 및 청취자 설정
@@ -29,22 +24,22 @@ public class RedisConfig {
     private final RedisConnectionFactory redisConnectionFactory;
     private final ChatRedisSubscriber redisSubscriber;
 
-    @Bean
-    public ObjectMapper redisObjectMapper() {
-        ObjectMapper om = new ObjectMapper();
-        om.registerModule(new JavaTimeModule());
-        om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        return om;
-    }
+//    @Bean
+//    public ObjectMapper redisObjectMapper() {
+//        ObjectMapper om = new ObjectMapper();
+//        om.registerModule(new JavaTimeModule());
+//        om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+//        return om;
+//    }
 
-    @Bean
-    public RedisTemplate<String, String> redisTemplate() {
-        RedisTemplate<String, String> t = new RedisTemplate<>();
-        t.setConnectionFactory(redisConnectionFactory);
-        t.setKeySerializer(new StringRedisSerializer());
-        t.setValueSerializer(new StringRedisSerializer());
-        return t;
-    }
+//    @Bean
+//    public RedisTemplate<String, String> redisTemplate() {
+//        RedisTemplate<String, String> t = new RedisTemplate<>();
+//        t.setConnectionFactory(redisConnectionFactory);
+//        t.setKeySerializer(new StringRedisSerializer());
+//        t.setValueSerializer(new StringRedisSerializer());
+//        return t;
+//    }
 
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer() {

@@ -14,7 +14,6 @@ import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomUpdateDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class ChatRedisPublisher {
     private final RedisTemplate<String, String> redisTemplate;
 
-    @Qualifier("redisObjectMapper")
+//    @Qualifier("redisObjectMapper")
     private final ObjectMapper objectMapper;
 
     public ChatRedisPublisher(
