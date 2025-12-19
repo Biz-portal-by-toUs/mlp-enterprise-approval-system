@@ -7,9 +7,6 @@ import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -40,9 +37,7 @@ public class DocumentController {
                                                                                   @RequestParam(name = "status") String status,
                                                                                   @RequestParam(name = "page", defaultValue = "0") int page) {
 
-        Pageable pageable = PageRequest.of(page, 10);
-
-        Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, pageable);
+        Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page);
 
         String message = resDocumentDtos.isEmpty() ? "최종 승인된 문서가 없습니다" : "최종 승인된 문서 조회 성공";
 
@@ -51,21 +46,19 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, message, resDocumentDtos));
     }
 
-    // 내가 상신한 문서 조회(status = "ANY"), 내가 결재할 문서 조회(status = "PENDING"), 내가 결재한 문서 조회(status = "APPROVED")
+    // 내가 상신한 문서 조회(status = "ANY"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "APPROVED")
     @GetMapping("/documents/me")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getMySubmittedDocuments(@AuthenticationPrincipal CustomUser customUser,
                                                                                      @RequestParam(name = "status") String status,
                                                                                      @RequestParam(name = "page", defaultValue = "0") int page){
 
-        Pageable pageable = PageRequest.of(page, 10, Sort.by("createdAt").descending());
-
-        Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, pageable);
+        Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page);
 
         String message = "";
         if(status.equals("ANY")) {
             message = resDocumentDtos.isEmpty() ? "내가 상신한 문서가 없습니다" : "내가 상신한 문서 조회 성공";
         }
-        else if(status.equals("PENDING")) {
+        else if(status.equals("AWAITING")) {
             message = resDocumentDtos.isEmpty() ? "내가 결재할 문서가 없습니다" : "내가 결재할 문서 조회 성공";
         }
         else if(status.equals("APPROVED")) {

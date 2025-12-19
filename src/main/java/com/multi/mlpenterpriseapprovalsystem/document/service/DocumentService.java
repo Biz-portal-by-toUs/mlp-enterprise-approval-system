@@ -7,9 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,24 +32,38 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
 
 
-    // 최종승인, 반려 등의 상태에 따른 문서들 반환
+    // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getDocumentsByStatus(String comId, String empId, String status, Pageable pageable) {
+    public Page<ResDocumentDto> getDocumentsByStatus(String comId, String empId, String status, int page) {
 
         if(status.equals("FINALIZED")){ // status가 FINALIZED일때 최종승인된것들만 반환
-            return getApprovedDocuments(comId, pageable);
+            return getApprovedDocuments(comId, page);
         }
         else if(status.equals("ANY")){ // status가 ANY일때 내가 상신한 모든 문서 반환
-            return getMySubmittedDocuments(comId, empId, pageable);
+            return getMySubmittedDocuments(comId, empId, page);
+        }
+        else if(status.equals("AWAITING")){ // status가 PENDING일때 내가 결재할 문서 반환
+            return getDocumentsAwaitingMyApproval(comId, empId, page);
         }
 
-        return getMySubmittedDocuments(comId, empId, pageable);
+        return getDocumentsAwaitingMyApproval(comId, empId, page);
+    }
 
+    // 내가 결재할 문서 반환
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getDocumentsAwaitingMyApproval(String comId, String empId, int page) {
+        Pageable pageable = PageRequest.of(page, 10);
+
+        Page<Document> documentPage = documentRepository.getDocumentsAwaitingMyApproval(comId, empId, pageable);
+
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, empId));
     }
 
     // 내가 상신한 문서 반환
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String empId, Pageable pageable) {
+    public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String empId, int page) {
+        Pageable pageable = PageRequest.of(page, 10, Sort.by("createdAt").descending());
+
         Page<Document> documentPage = documentRepository.getMySubmittedDocuments(comId, empId, pageable);
 
         return documentPage.map(ResDocumentDto::toDto);
@@ -59,7 +71,9 @@ public class DocumentService {
 
     // 최종승인 문서만 반환
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getApprovedDocuments(String comId, Pageable pageable) {
+    public Page<ResDocumentDto> getApprovedDocuments(String comId, int page) {
+        Pageable pageable = PageRequest.of(page, 10, Sort.by("updatedAt").descending());
+
         List<Document> documents = documentRepository.findAllWithApprovalLinesByComId(comId);
 
         // 최종 승인된 문서만 필터링
