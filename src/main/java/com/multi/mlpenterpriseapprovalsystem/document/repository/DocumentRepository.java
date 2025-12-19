@@ -48,4 +48,18 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "              WHEN al.apprStat = com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat.W THEN 1 " +
             "              ELSE 2 END ASC, d.createdAt DESC")
     Page<Document> getDocumentsAwaitingMyApproval(@Param("comId") String comId, @Param("empId") String empId, Pageable pageable);
+
+
+    // 내가 결재한 문서 조회
+    // 결재라인에 내가 있고 결재상태가 승인 or 반려인 문서 조회
+    @EntityGraph(attributePaths = {"writer", "documentForm"})
+    @Query("SELECT d FROM Document d " +
+            "JOIN d.approvalLines al " +
+            "WHERE d.company.comId = :comId " +
+            "AND al.approver.empId = :empId " +
+            "AND al.apprStat IN (com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat.A, " +
+            "com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat.R) " +
+            "ORDER BY al.endedAt DESC")
+    Page<Document> getMyProcessedDocuments(@Param("comId") String comId, @Param("empId") String empId, Pageable pageable);
+
 }
