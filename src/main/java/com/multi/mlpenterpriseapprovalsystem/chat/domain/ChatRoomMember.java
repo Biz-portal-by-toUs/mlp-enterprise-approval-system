@@ -21,7 +21,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "chat_room_members")
 public class ChatRoomMember {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "romem_no") // 기존 컬럼명 유지하려면(선택)
     private Long romemNo;
 
     @Setter
@@ -33,18 +36,32 @@ public class ChatRoomMember {
     @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
 
+    @Column(name="joined_at")
     private LocalDateTime joinedAt;
-    private String lastReadMsgId;
 
-    
-    
+    @Column(name="last_read_at")
+    private LocalDateTime lastReadAt;
+
+    @Column(name = "unread_count")
+    private int unreadCount;
+
+    // 메시지 옆 '1' 같은 거 할 때 쓰는 필드인데, 지금은 안 써도 됨
+
+    private String lastReadMsgId;
 
     public static ChatRoomMember create(ChatRoom chatRoom, Employee employee) {
         ChatRoomMember member = new ChatRoomMember();
         member.chatRoom = chatRoom;
         member.employee = employee;
         member.joinedAt = LocalDateTime.now();
+        member.lastReadAt = null;
+        member.unreadCount = 0;
         return member;
+    }
+
+    public void markReadNow() {
+        this.lastReadAt = LocalDateTime.now();
+        this.unreadCount = 0;
     }
 
 
