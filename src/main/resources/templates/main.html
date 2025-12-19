@@ -45,6 +45,7 @@
             display:flex;
             gap:14px;
             align-items:center;
+            flex-wrap:wrap;
         }
         .btn{
             appearance:none;
@@ -95,8 +96,6 @@
             padding:14px 18px;
             border-radius:12px;
         }
-
-        /* 로그인 후 표시 배지 */
         .who{
             font-weight:900;
             color:#333;
@@ -105,7 +104,6 @@
             background:#fff;
             border-radius:10px;
         }
-
         @media (max-width:768px){
             .brand{font-size:32px}
             .title{font-size:40px}
@@ -117,7 +115,7 @@
     <header>
         <div class="brand">Bizportal</div>
 
-        <!-- ✅ JS가 여기 내용을 로그인 전/후로 바꿔치기 -->
+        <!-- ✅ JS가 로그인 전/후 버튼을 교체 -->
         <div class="nav-right" id="navRight"></div>
     </header>
 
@@ -126,7 +124,7 @@
             <h1 class="title" id="mainTitle">Welcome</h1>
             <p class="desc" id="mainDesc">Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.</p>
 
-            <!-- ✅ JS가 여기 버튼들도 로그인 전/후로 바꿔치기 -->
+            <!-- ✅ JS가 로그인 전/후 버튼을 교체 -->
             <div class="actions" id="mainActions"></div>
         </section>
     </main>
@@ -138,37 +136,47 @@
     const mainTitle = document.getElementById('mainTitle');
     const mainDesc = document.getElementById('mainDesc');
 
+    // ===== 이동 함수 =====
     function goCompanyLogin() { window.location.href = '/auth/companies/login'; }
     function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
+    function goCompanySignup() { window.location.href = '/auth/companies/signup'; } // ✅ 회사 회원가입
 
-    // 너희 실제 로그인 후 첫 화면 경로로 바꾸면 됨
+    // 너희 실제 로그인 후 첫 화면 경로로 변경하면 됨
     function goDashboard(loginType) {
         if (loginType === 'employee') window.location.href = '/employee';
         else window.location.href = '/company';
     }
 
+    // ===== 화면 렌더 =====
     function renderLoggedOut() {
+        // 헤더 우측 버튼 (로그아웃 상태)
         navRight.innerHTML = `
             <button class="btn primary" type="button" id="btnCompanyHeader">회사 로그인</button>
             <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
+            <button class="btn" type="button" id="btnCompanySignupHeader">회원가입</button>
         `;
         document.getElementById('btnCompanyHeader').addEventListener('click', goCompanyLogin);
         document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
+        document.getElementById('btnCompanySignupHeader').addEventListener('click', goCompanySignup);
 
+        // 메인 영역 버튼 (로그아웃 상태)
         mainTitle.textContent = 'Welcome';
         mainDesc.textContent = 'Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.';
         mainActions.innerHTML = `
             <button class="btn primary" type="button" id="btnCompanyMain">회사(기업) 로그인</button>
             <button class="btn" type="button" id="btnEmployeeMain">사원 로그인</button>
+            <button class="btn" type="button" id="btnCompanySignupMain">회사 회원가입</button>
         `;
         document.getElementById('btnCompanyMain').addEventListener('click', goCompanyLogin);
         document.getElementById('btnEmployeeMain').addEventListener('click', goEmployeeLogin);
+        document.getElementById('btnCompanySignupMain').addEventListener('click', goCompanySignup);
     }
 
     function renderLoggedIn(loginType, loginId) {
         const whoText = (loginType === 'employee') ? '사원' : '회사';
         const idText = loginId ? ` · ${loginId}` : '';
 
+        // 헤더 우측 (로그인 상태)
         navRight.innerHTML = `
             <span class="who">${whoText} 로그인됨${idText}</span>
             <button class="btn primary" type="button" id="btnDashboard">대시보드</button>
@@ -176,16 +184,13 @@
         `;
         document.getElementById('btnDashboard').addEventListener('click', () => goDashboard(loginType));
         document.getElementById('btnLogout').addEventListener('click', () => {
-            // ✅ 로컬스토리지 기반 로그아웃
             localStorage.removeItem('accessToken');
             localStorage.removeItem('loginType');
             localStorage.removeItem('loginId');
-
-            // (선택) 서버에 refresh 쿠키 삭제 API가 있으면 같이 호출
-            // fetch('/auth/logout', { method:'POST', credentials:'include' }).finally(() => location.href='/');
             window.location.href = '/';
         });
 
+        // 메인 영역 (로그인 상태)
         mainTitle.textContent = 'Hello';
         mainDesc.textContent = `${whoText} 계정으로 로그인되어 있습니다. 계속 진행해 주세요.`;
         mainActions.innerHTML = `
