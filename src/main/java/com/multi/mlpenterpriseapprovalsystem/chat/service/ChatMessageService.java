@@ -5,12 +5,17 @@ import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.MessageType;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatMessageSendDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomUpdateDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisPublisher;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatMessageRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomMemberRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomRepository;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +24,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Please explain the class!!!
+ * 채팅 메세지 서비스 (메세지 발신, 조회)
  *
  * @author : 김승기
  * @filename : ChatMessageService
  * @since : 2025. 12. 18. 목요일
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -34,36 +40,26 @@ public class ChatMessageService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final EmployeeRepository employeeRepository;
+    private final ChatRedisPublisher redisPublisher;
 
-    public ResChatMessageDto sendMessage(ReqChatMessageSendDto request) {
+    /**
+     * 메시지 전송
+     */
+    public ResChatMessageDto sendMessage(ReqChatMessageSendDto request, String empId) {
 
-        // TODO: SecurityContext로 교체
-        String myEmpId = "EMP0001";
-
-        // 1️⃣ 채팅방 존재 확인
         ChatRoom chatRoom = chatRoomRepository.findById(request.getRoomNo())
-                .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 채팅방입니다.")
-                );
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
-        // 2️⃣ 채팅방 멤버 검증 (중요)
         boolean isMember = chatRoomMemberRepository
-                .existsByChatRoom_RoomNoAndEmployee_EmpId(
-                        request.getRoomNo(),
-                        myEmpId
-                );
+                .existsByChatRoom_RoomNoAndEmployee_EmpId(request.getRoomNo(), empId);
 
         if (!isMember) {
-            throw new IllegalArgumentException("채팅방에 메시지를 보낼 권한이 없습니다.");
+            throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
         }
 
-        // 3️⃣ 발신자 정보 조회
-        Employee sender = employeeRepository.findByEmpId(myEmpId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("사원이 존재하지 않습니다.")
-                );
+        Employee sender = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        // 4️⃣ MongoDB 메시지 저장
         ChatMessage message = ChatMessage.builder()
                 .roomNo(request.getRoomNo())
                 .senderEmpId(sender.getEmpId())
@@ -75,47 +71,68 @@ public class ChatMessageService {
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
-        // 5️⃣ ChatRoom 마지막 메시지 갱신 (MySQL)
-        chatRoom.updateLastMessage(
-                savedMessage.getContent(),
-                savedMessage.getCreatedAt()
-        );
+        ResChatMessageDto responseDto = ResChatMessageDto.from(savedMessage);
 
-        return ResChatMessageDto.from(savedMessage);
+        redisPublisher.publish(request.getRoomNo(), responseDto);
+
+        chatRoom.updateLastMessage(savedMessage.getContent(), savedMessage.getCreatedAt());
+
+        chatRoomMemberRepository.increaseUnreadForOthers(request.getRoomNo(), empId);
+        List<String> memberEmpIds = chatRoomMemberRepository.findEmpIdsByRoomNo(request.getRoomNo());
+
+        for (String targetEmpId : memberEmpIds) {
+            int unread = targetEmpId.equals(empId)
+                    ? 0
+                    : chatRoomMemberRepository.findUnreadCount(request.getRoomNo(), targetEmpId);
+
+            ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
+                    request.getRoomNo(),
+                    savedMessage.getContent(),
+                    savedMessage.getCreatedAt().toString(),
+                    unread
+            );
+
+            redisPublisher.publishRoomUpdate(targetEmpId, updateDto);
+        }
+
+        return responseDto;
     }
 
     /**
      * 채팅 메시지 조회 (무한 스크롤)
      */
+    @Transactional(readOnly = true)
     public List<ResChatMessageDto> getMessages(
             Long roomNo,
             LocalDateTime cursor,
-            int size
+            int size,
+            String empId
     ) {
+        boolean isMember = chatRoomMemberRepository
+                .existsByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId);
 
-        List<?> messages;
+        if (!isMember) {
+            throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
+        }
+
+        List<ChatMessage> messages;
 
         if (cursor == null) {
-            // 최초 진입
             messages = chatMessageRepository
                     .findByRoomNoOrderByCreatedAtDesc(roomNo)
                     .stream()
                     .limit(size)
-                    .toList();
+                    .collect(Collectors.toList());
         } else {
-            // 무한 스크롤
             messages = chatMessageRepository
-                    .findByRoomNoAndCreatedAtLessThanOrderByCreatedAtDesc(
-                            roomNo,
-                            cursor
-                    )
+                    .findByRoomNoAndCreatedAtLessThanOrderByCreatedAtDesc(roomNo, cursor)
                     .stream()
                     .limit(size)
-                    .toList();
+                    .collect(Collectors.toList());
         }
 
         return messages.stream()
-                .map(m -> ResChatMessageDto.from((com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage) m))
+                .map(ResChatMessageDto::from)
                 .collect(Collectors.toList());
     }
 }
