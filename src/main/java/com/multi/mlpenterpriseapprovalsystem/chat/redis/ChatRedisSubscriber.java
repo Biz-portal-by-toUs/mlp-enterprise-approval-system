@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomUpdateDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -30,7 +31,7 @@ public class ChatRedisSubscriber implements MessageListener {
 
     public ChatRedisSubscriber(
             SimpMessagingTemplate messagingTemplate,
-            ObjectMapper objectMapper
+            @Qualifier("redisObjectMapper") ObjectMapper objectMapper
     ) {
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;

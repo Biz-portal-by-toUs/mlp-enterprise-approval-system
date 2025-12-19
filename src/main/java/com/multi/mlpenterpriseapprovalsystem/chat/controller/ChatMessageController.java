@@ -48,9 +48,9 @@ public class ChatMessageController {
 
     @GetMapping("/{roomNo}")
     public ResponseEntity<ResponseDto<List<ResChatMessageDto>>> getMessages(
-            @PathVariable Long roomNo,
-            @RequestParam(required = false) LocalDateTime cursor,
-            @RequestParam(defaultValue = "20") int size,
+            @PathVariable(name = "roomNo") Long roomNo,
+            @RequestParam(name = "lastMessagedAt", required = false) LocalDateTime cursor,
+            @RequestParam(name = "size", defaultValue = "20") int size,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
