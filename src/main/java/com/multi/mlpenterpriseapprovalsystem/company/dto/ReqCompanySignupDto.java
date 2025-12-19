@@ -1,5 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.company.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * 회사 회원가입 요청 dto
  *
@@ -7,6 +10,8 @@ package com.multi.mlpenterpriseapprovalsystem.company.dto;
  * @filename : CompanyReqDto
  * @since : 2025. 12. 17. 수요일
  */
+@Getter
+@Setter
 public class ReqCompanySignupDto {
 
     private String comId;
