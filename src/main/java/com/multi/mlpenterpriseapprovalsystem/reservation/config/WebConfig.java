@@ -25,7 +25,7 @@ public class WebConfig implements WebMvcConfigurer {
         if (!dir.endsWith("/")) dir += "/";
 
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:///" + dir);
+                .addResourceLocations("file:" + dir);
     }
 
 

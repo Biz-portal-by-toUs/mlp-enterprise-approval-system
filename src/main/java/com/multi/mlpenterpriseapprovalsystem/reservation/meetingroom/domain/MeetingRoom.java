@@ -1,7 +1,7 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.register.domain;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ReqMeetingRoomDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,15 +1,10 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.repository;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.common.paging.SelectCriteria;
-import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoom;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * 회의실(MeetingRoom) 엔티티에 대한 데이터 접근을 담당하는 Repository.

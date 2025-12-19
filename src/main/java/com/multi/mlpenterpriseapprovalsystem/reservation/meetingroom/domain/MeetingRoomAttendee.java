@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.reserve.domain;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;

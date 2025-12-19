@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.dto;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

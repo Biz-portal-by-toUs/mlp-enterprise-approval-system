@@ -1,13 +1,13 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.service;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.reservation.repository.ReservationCompanyRepository;
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ReqMeetingRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.register.domain.MeetingRoom;
-import com.multi.mlpenterpriseapprovalsystem.reservation.repository.MeetingRoomRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.ReservationCompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResMeetingRoomDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoom;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.MeetingRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

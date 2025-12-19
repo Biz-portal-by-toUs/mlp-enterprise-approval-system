@@ -53,15 +53,7 @@
 
         .content{flex:1;padding:18px 20px;}
         .page-title{font-size:20px;font-weight:800;margin:2px 0 14px}
-        .toolbar{
-            display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px;
-            flex-wrap:wrap;
-        }
-        .left-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-        .field{
-            display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--border);
-            padding:8px 10px;border-radius:12px;
-        }
+
         .field label{font-size:12px;color:var(--muted)}
         .field input{
             border:none;outline:none;font-size:13px;width:110px;
@@ -108,7 +100,6 @@
             cursor:pointer;font-size:13px;
         }
         .page-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
-        .hint{margin-top:10px;text-align:center;color:var(--muted);font-size:12px}
         .error{margin:12px 0;padding:10px 12px;border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;display:none}
     </style>
 </head>
@@ -143,41 +134,26 @@
         <main class="content">
             <div class="page-title">회의실</div>
 
-            <div class="toolbar">
-                <div class="left-tools">
-                    <div class="field">
-                        <label>comId</label>
-                        <input id="comId" value="A03" />
-                    </div>
-
-                    <div class="field">
-                        <label>size</label>
-                        <input id="size" value="6" />
-                    </div>
-
-                    <button class="btn primary" id="btnLoad">조회</button>
-                </div>
-                <div style="font-size:12px;color:var(--muted)" id="pageInfo">-</div>
-            </div>
-
             <div class="error" id="errBox"></div>
 
             <section class="grid" id="grid"></section>
 
             <div class="paging" id="paging"></div>
-            <div class="hint">※ 캐릭터/플로팅 버튼 없음. 조회(GET)만 구현.</div>
+
         </main>
     </div>
 </div>
 
 <script>
+
+    // 이미지 없을 때 띄워줄 이미지
+    const NO_IMAGE_URL = "/images/no-image.png";
     // ✅ 필요하면 여기만 바꿔
     // 같은 서버(스프링)에서 정적 페이지를 서빙하면 "" 로 둬도 됨.
     const API_BASE = "http://localhost:8090"; // 또는 ""
 
     const grid = document.getElementById("grid");
     const paging = document.getElementById("paging");
-    const pageInfo = document.getElementById("pageInfo");
     const errBox = document.getElementById("errBox");
 
     let state = {
@@ -196,16 +172,21 @@
     }
 
     function cardTemplate(room){
-        const img = room.imageUrl;
         const safe = (v) => (v === null || v === undefined || v === "") ? "-" : v;
 
-        const thumb = img
-            ? `<img src="${img}" alt="${safe(room.roomName)}" />`
-            : `<div class="ph">이미지 없음</div>`;
+        const thumb = `
+      <img
+        src="${room.imageUrl || NO_IMAGE_URL}"
+        onerror="this.src='${NO_IMAGE_URL}'"
+        alt="회의실 이미지"
+      />
+    `;
 
         return `
       <article class="card">
-        <div class="thumb">${thumb}</div>
+        <div class="thumb">
+          ${thumb}
+        </div>
         <div class="card-body">
           <div class="room-name">회의실명: ${safe(room.roomName)}</div>
           <div class="divider"></div>
@@ -252,27 +233,36 @@
 
     async function loadRooms(page){
         clearError();
-        const comId = document.getElementById("comId").value.trim();
-        const size = parseInt(document.getElementById("size").value, 10) || 6;
 
-        state.page = page;
-        state.size = size;
 
-        const url = `${API_BASE}/api/v1/meeting-rooms?comId=${encodeURIComponent(comId)}&page=${page}&size=${size}`;
+        // ⭐ 1. accessToken 여기서 꺼냄
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+            showError("로그인이 필요합니다.");
+            return;
+        }
+
+        // ⭐ 2. comId 제거 (JWT에서 서버가 꺼냄)
+        const url = `${API_BASE}/api/v1/meeting-rooms?page=${page}&size=${state.size}`;
 
         try{
-            const res = await fetch(url, { method: "GET" });
-            const json = await res.json();
+            // ⭐ 3. fetch에 Authorization 헤더 추가
+            const res = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + accessToken
+                }
+            });
 
+            const json = await res.json();
             if(!res.ok){
                 showError(json?.message || `조회 실패 (${res.status})`);
                 grid.innerHTML = "";
                 paging.innerHTML = "";
-                pageInfo.textContent = "-";
                 return;
             }
 
-            const pageData = json.data; // ResponseDto 구조: {status,message,data:{...Page...}}
+            const pageData = json.data;
             const content = pageData.content || [];
 
             renderGrid(content);
@@ -280,18 +270,11 @@
             state.totalPages = pageData.totalPages || 0;
             renderPaging(pageData.number ?? page, state.totalPages);
 
-            const currentPage = (pageData.number ?? page) + 1;
-            pageInfo.textContent = `총 ${pageData.totalElements}개 · ${currentPage}/${state.totalPages} 페이지`;
 
         }catch(e){
-            showError("서버 연결 실패. API_BASE/포트/CORS 확인해줘.");
-            grid.innerHTML = "";
-            paging.innerHTML = "";
-            pageInfo.textContent = "-";
+            showError("서버 연결 실패. 토큰/포트/CORS 확인");
         }
     }
-
-    document.getElementById("btnLoad").addEventListener("click", () => loadRooms(0));
 
     // 처음 로드
     loadRooms(0);

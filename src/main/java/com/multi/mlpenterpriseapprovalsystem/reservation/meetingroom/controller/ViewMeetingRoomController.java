@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.controller;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller;
 
-import com.multi.mlpenterpriseapprovalsystem.reservation.service.MeetingRoomService;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,9 +33,8 @@ public class ViewMeetingRoomController {
         return "meeting-rooms/list";
     }
 
-    @GetMapping("/regist")
+    @GetMapping("/register")
     public void addMeetingRoom() {
-
     }
 
 }
