@@ -9,6 +9,7 @@ import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomListDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomMemberRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
@@ -45,7 +46,6 @@ public class ChatRoomService {
      */
     public ResChatRoomDto createRoom(ReqChatRoomCreateDto request, String empId) {
 
-        // TODO: 나중에 SecurityContext에서 로그인 사용자로 교체
 
         int memberCount = request.getMemberIds().size();
         RoomType roomType;
@@ -134,7 +134,6 @@ public class ChatRoomService {
     @Transactional(readOnly = true)
     public List<ResChatRoomListDto> getMyRooms(LocalDateTime cursor, int size, String empId) {
 
-        // TODO: 로그인 사용자 ID
 
         return chatRoomRepository.findMyRooms(empId, cursor, size)
                 .stream()
@@ -147,8 +146,6 @@ public class ChatRoomService {
      */
     @Transactional(readOnly = true)
     public ResChatRoomDto getRoom(Long roomNo,String empId) {
-
-        // TODO: 로그인 사용자 ID (나중에 SecurityContext)
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomNo)
                 .orElseThrow(() ->
@@ -178,6 +175,16 @@ public class ChatRoomService {
         ChatRoomMember member = ChatRoomMember.create(chatRoom, employee);
         chatRoom.addMember(member);
         chatRoomMemberRepository.save(member);
+    }
+
+    // 채팅방 읽음 처리
+    @Transactional
+    public void markAsRead(Long roomNo, String empId) {
+        ChatRoomMember member = chatRoomMemberRepository
+                .findByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
+
+        member.markReadNow(); // lastReadAt=now, unreadCount=0
     }
 
 

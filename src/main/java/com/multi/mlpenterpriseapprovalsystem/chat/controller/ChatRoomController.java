@@ -35,7 +35,7 @@ public class ChatRoomController {
     public ResponseEntity<ResponseDto<ResChatRoomDto>> createRoom(
             @RequestBody ReqChatRoomCreateDto request, @AuthenticationPrincipal CustomUser user
     ) {
-        String empId = "E000001";
+        String empId = user.getUsername();
         ResChatRoomDto room = chatRoomService.createRoom(request, empId);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -43,30 +43,41 @@ public class ChatRoomController {
 
     }
 
-    // 내 채팅방 목록 (채팅 탭)
     @GetMapping("/my")
     public ResponseEntity<ResponseDto<List<ResChatRoomListDto>>> getMyRooms(
             @RequestParam(required = false) LocalDateTime cursor,
             @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal CustomUser user
     ) {
-        String empId = "E000001";
+        String empId = user.getUsername();
         List<ResChatRoomListDto> resChatRoomListDtos = chatRoomService.getMyRooms(cursor, size, empId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "채팅방 목록 조회 성공", resChatRoomListDtos));
     }
 
-    // 채팅방 상세 정보
     @GetMapping("/{roomNo}")
     public ResponseEntity<ResponseDto<ResChatRoomDto>> getRoom(
             @PathVariable Long roomNo,
             @AuthenticationPrincipal CustomUser user
     ) {
-        String empId = "E000001";
+        String empId = user.getUsername();
         ResChatRoomDto resChatRoomDto = chatRoomService.getRoom(roomNo, empId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "채팅방 상세 조회 성공", resChatRoomDto));
+    }
+
+    @PostMapping("/{roomNo}/read")
+    public ResponseEntity<ResponseDto<Void>> readRoom(
+            @PathVariable Long roomNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        chatRoomService.markAsRead(roomNo, empId);
+
+        return ResponseEntity.ok(new ResponseDto<>(
+                HttpStatus.OK, "읽음 처리 성공", null
+        ));
     }
 }
