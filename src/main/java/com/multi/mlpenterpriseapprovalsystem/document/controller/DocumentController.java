@@ -46,7 +46,7 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, message, resDocumentDtos));
     }
 
-    // 내가 상신한 문서 조회(status = "ANY"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
+    // 내가 상신한 문서 조회(status = "SUBMITTED"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
     @GetMapping("/documents/me")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getMySubmittedDocuments(@AuthenticationPrincipal CustomUser customUser,
                                                                                      @RequestParam(name = "status") String status,
@@ -55,7 +55,7 @@ public class DocumentController {
         Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page);
 
         String message = "";
-        if(status.equals("ANY")) {
+        if(status.equals("SUBMITTED")) {
             message = resDocumentDtos.isEmpty() ? "내가 상신한 문서가 없습니다" : "내가 상신한 문서 조회 성공";
         }
         else if(status.equals("AWAITING")) {
