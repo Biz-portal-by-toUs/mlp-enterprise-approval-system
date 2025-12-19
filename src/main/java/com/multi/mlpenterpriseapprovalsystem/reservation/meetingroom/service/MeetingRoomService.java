@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
@@ -48,6 +49,29 @@ public class MeetingRoomService {
     @Value("${image.image-url}")  // 브라우저에서 접근하는 주소
     private String IMAGE_URL;
 
+    public ResMeetingRoomDto getMeetingRoom(Long roomNo, CustomUser user) {
+
+        MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
+
+        // 같은 회사인지 체크
+        if (!meetingRoom.getCompany().getComId().equals(user.getComId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        return ResMeetingRoomDto.builder()
+                .roomNo(meetingRoom.getRoomNo())
+                .roomName(meetingRoom.getRoomName())
+                .capacity(meetingRoom.getCap())
+                .location(meetingRoom.getLoc())
+                .imageUrl(meetingRoom.getImgUrl())
+                .equipList(meetingRoom.getEquipList())
+                .note(meetingRoom.getNote())
+                .build();
+    }
+
+
+
     @Transactional(readOnly = true)
     public Page<ResMeetingRoomDto> selectMeetingRoomsWithPaging(String comId, Pageable pageable) {
         // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
@@ -66,8 +90,23 @@ public class MeetingRoomService {
                 .build());
     }
 
-    public Long registerMeetingRoom(String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
+    public Long registerMeetingRoom(CustomUser user, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
 
+        // 1. 권한 체크
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(a ->
+                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
+                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
+                                a.getAuthority().equals("ROLE_THR_ADMIN")
+                );
+
+        if (!isAdmin) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN
+            );
+        }
+
+        String comId = user.getComId();
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
@@ -115,13 +154,28 @@ public class MeetingRoomService {
         return meetingRoomRepository.save(meetingRoom).getRoomNo();
     }
 
-    public Long updateMeetingRoom(Long roomNo, String comId, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
+    public Long updateMeetingRoom(Long roomNo, CustomUser user, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
+
+        // 1. 권한 체크
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(a ->
+                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
+                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
+                                a.getAuthority().equals("ROLE_THR_ADMIN")
+                );
+
+        if (!isAdmin) {
+            throw new CustomException(
+                    ErrorCode.FORBIDDEN
+            );
+        }
 
         // 수정할 회의실 조회
         MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
 
         // 같은 회사 데이터인지 검증(보안)
+        String comId = user.getComId();
         if (!meetingRoom.getCompany().getComId().equals(comId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
@@ -160,6 +214,7 @@ public class MeetingRoomService {
 
         return meetingRoom.getRoomNo();
     }
+
 
 
 }
