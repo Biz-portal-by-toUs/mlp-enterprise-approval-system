@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - Company Sign Up</title>
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --border:#d7d7d7;
+            --primary:#2f66d7;
+            --input-bg:#fff;
+            --disabled:#9fb2e6;
+            --success:#27ae60;
+            --error:#e74c3c;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
+            "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{
+            min-height:100vh;
+            border:2px solid #222;
+            margin:12px;
+            background:var(--bg);
+        }
+        header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:26px 28px;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+        .brand{
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-weight:700;
+            font-size:40px;
+            letter-spacing:-0.5px;
+        }
+        .nav-right{ display:flex; gap:14px; align-items:center; }
+        .btn{
+            appearance:none;
+            border:1px solid #cfcfcf;
+            background:#f7f7f7;
+            padding:10px 18px;
+            border-radius:10px;
+            font-weight:700;
+            cursor:pointer;
+            color:#222;
+        }
+
+        main{
+            min-height:calc(100vh - 110px);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+        }
+        .card{
+            width:min(760px, 92vw);
+            text-align:center;
+        }
+        .title{
+            font-size:52px;
+            font-weight:900;
+            margin:0 0 18px;
+            letter-spacing:-0.5px;
+        }
+        .form{
+            width:min(680px, 92vw);
+            margin:0 auto;
+            display:flex;
+            flex-direction:column;
+            gap:14px;
+        }
+        .row{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:14px;
+        }
+        @media (max-width: 860px){
+            .row{ grid-template-columns: 1fr; }
+        }
+        .field{ text-align:left; }
+        .label{
+            font-size:13px;
+            font-weight:800;
+            color:#777;
+            margin:0 0 6px 10px;
+            letter-spacing:0.6px;
+        }
+        .input-wrap{
+            background:var(--input-bg);
+            border:1px solid var(--border);
+            border-radius:6px;
+            padding:14px;
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        input{
+            border:0;
+            outline:none;
+            width:100%;
+            font-size:16px;
+            background:transparent;
+        }
+        input[type="file"]{ font-size:14px; }
+
+        .inline-btn{
+            border:0;
+            background:var(--primary);
+            color:#fff;
+            font-weight:800;
+            padding:10px 14px;
+            border-radius:6px;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+        .inline-btn:disabled{
+            cursor:not-allowed;
+            opacity:0.7;
+        }
+
+        .primary-btn{
+            margin-top:6px;
+            border:0;
+            background:var(--primary);
+            color:#fff;
+            font-size:18px;
+            font-weight:800;
+            padding:16px 18px;
+            border-radius:6px;
+            cursor:pointer;
+            transition: opacity .15s ease;
+        }
+        .primary-btn:disabled{
+            background:var(--disabled);
+            cursor:not-allowed;
+            opacity:0.85;
+        }
+
+        .error{
+            display:none;
+            color:var(--error);
+            border:1px solid #f5c6cb;
+            background-color:#f8d7da;
+            padding:10px;
+            margin:0 auto 14px;
+            border-radius:6px;
+            width:min(680px, 92vw);
+            text-align:left;
+            font-weight:700;
+        }
+
+        /* ✅ 비밀번호 확인 메시지 스타일 */
+        #pwdMatchMsg {
+            font-size: 12px;
+            margin: 6px 0 0 10px;
+            font-weight: 700;
+            min-height: 15px;
+        }
+        .match-success { color: var(--success); }
+        .match-error { color: var(--error); }
+
+        .hint{
+            margin-top:14px;
+            font-size:14px;
+            color:#555;
+        }
+        .hint a{color:#555;text-decoration:underline}
+        .preview{
+            display:none;
+            margin-top:8px;
+            border:1px dashed #bbb;
+            border-radius:10px;
+            padding:10px;
+            background:#fff;
+            align-items:center;
+            gap:12px;
+        }
+        .preview img{
+            width:54px; height:54px; object-fit:cover; border-radius:12px; border:1px solid #ddd;
+        }
+        .preview .meta{ font-size:13px; color:#555; }
+
+        .note{
+            margin:10px auto 0;
+            width:min(680px, 92vw);
+            text-align:left;
+            font-size:13px;
+            color:#666;
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <header>
+        <div class="brand">Bizportal</div>
+        <div class="nav-right">
+            <button class="btn" type="button" th:onclick="|location.href='@{/}'|">메인</button>
+            <button class="btn" type="button" th:onclick="|location.href='@{/auth/companies/login}'|">로그인</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h1 class="title">Sign Up</h1>
+
+            <div id="serverError" class="error"></div>
+
+            <form id="company-signup-form" class="form" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="field">
+                        <div class="label">기업 이름</div>
+                        <div class="input-wrap">
+                            <input name="comName" id="comName" type="text" placeholder="예) Samsung" required />
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="label">기업 약어 (3글자)</div>
+                        <div class="input-wrap">
+                            <input name="comId" id="comId" type="text" placeholder="예) SAM" maxlength="3" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">사업자 등록번호</div>
+                    <div class="input-wrap">
+                        <input name="brn" id="brn" type="text" placeholder="예) 10120203030" maxlength="20" required />
+                        <button class="inline-btn" id="brnVerifyBtn" type="button">인증하기</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">회사 이메일</div>
+                    <div class="input-wrap">
+                        <input name="email" id="email" type="email" placeholder="예) admin@company.com" required />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="field">
+                        <div class="label">비밀번호</div>
+                        <div class="input-wrap">
+                            <input name="pwd" id="pwd" type="password" placeholder="••••••••" autocomplete="new-password" required />
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="label">비밀번호 확인</div>
+                        <div class="input-wrap">
+                            <input id="pwdConfirm" type="password" placeholder="••••••••" autocomplete="new-password" required />
+                        </div>
+                        <div id="pwdMatchMsg"></div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">주소</div>
+                    <div class="input-wrap">
+                        <input name="addr" id="addr" type="text" placeholder="예) 서울특별시 어쩌구" required />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="label">로고 파일 첨부</div>
+                    <div class="input-wrap">
+                        <input name="logo" id="logo" type="file" accept="image/*" />
+                    </div>
+
+                    <div id="logoPreview" class="preview">
+                        <img id="logoImg" alt="logo preview"/>
+                        <div class="meta" id="logoMeta"></div>
+                    </div>
+                </div>
+
+                <button class="primary-btn" id="signupBtn" type="submit" disabled>Create Account</button>
+
+                <div class="hint">
+                    Already have an account? <a th:href="@{/auth/companies/login}">Sign In</a>
+                </div>
+
+                <div class="note" id="brnNote">
+                    * 사업자등록번호 인증을 완료해야 회원가입 버튼이 활성화됩니다.
+                </div>
+            </form>
+        </section>
+    </main>
+</div>
+
+<script>
+    const form = document.getElementById('company-signup-form');
+    const serverError = document.getElementById('serverError');
+
+    const brnVerifyBtn = document.getElementById('brnVerifyBtn');
+    const signupBtn = document.getElementById('signupBtn');
+    const brnNote = document.getElementById('brnNote');
+
+    const pwdInput = document.getElementById('pwd');
+    const pwdConfirmInput = document.getElementById('pwdConfirm');
+    const pwdMatchMsg = document.getElementById('pwdMatchMsg');
+
+    const logoInput = document.getElementById('logo');
+    const logoPreview = document.getElementById('logoPreview');
+    const logoImg = document.getElementById('logoImg');
+    const logoMeta = document.getElementById('logoMeta');
+
+    let brnVerified = false;
+
+    // ✅ 실시간 비밀번호 일치 확인 함수
+    function checkPasswordMatch() {
+        const pwd = pwdInput.value;
+        const confirm = pwdConfirmInput.value;
+
+        if (!confirm) {
+            pwdMatchMsg.textContent = '';
+            pwdMatchMsg.className = '';
+            return;
+        }
+
+        if (pwd === confirm) {
+            pwdMatchMsg.textContent = '✓ 비밀번호가 일치합니다.';
+            pwdMatchMsg.className = 'match-success';
+        } else {
+            pwdMatchMsg.textContent = '✗ 비밀번호가 일치하지 않습니다.';
+            pwdMatchMsg.className = 'match-error';
+        }
+    }
+
+    // 입력할 때마다 함수 호출
+    pwdInput.addEventListener('input', checkPasswordMatch);
+    pwdConfirmInput.addEventListener('input', checkPasswordMatch);
+
+    function updateSignupButtonState() {
+        signupBtn.disabled = !brnVerified;
+        brnNote.style.display = brnVerified ? 'none' : 'block';
+    }
+    updateSignupButtonState();
+
+    brnVerifyBtn.addEventListener('click', async () => {
+        serverError.style.display = 'none';
+        serverError.textContent = '';
+
+        alert('사업자 인증은 추후 구현 예정입니다. (현재는 인증 완료 처리)');
+        brnVerified = true;
+
+        brnVerifyBtn.textContent = '인증완료';
+        brnVerifyBtn.disabled = true;
+
+        updateSignupButtonState();
+    });
+
+    logoInput.addEventListener('change', () => {
+        const file = logoInput.files?.[0];
+        if (!file) {
+            logoPreview.style.display = 'none';
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        logoImg.src = url;
+        logoMeta.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+        logoPreview.style.display = 'flex';
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        serverError.style.display = 'none';
+        serverError.textContent = '';
+
+        if (!brnVerified) {
+            serverError.textContent = '사업자 등록번호 인증을 먼저 진행해주세요.';
+            serverError.style.display = 'block';
+            return;
+        }
+
+        // 최종 제출 전 비밀번호 확인
+        if (pwdInput.value !== pwdConfirmInput.value) {
+            serverError.textContent = '비밀번호가 일치하지 않습니다.';
+            serverError.style.display = 'block';
+            pwdConfirmInput.focus();
+            return;
+        }
+
+        const fd = new FormData(form);
+        const comId = (document.getElementById('comId').value || '').trim().toUpperCase();
+        fd.set('comId', comId);
+
+        const brn = (document.getElementById('brn').value || '').replaceAll('-', '').trim();
+        fd.set('brn', brn);
+
+        try {
+            signupBtn.disabled = true;
+
+            const res = await fetch('/auth/companies/signup', {
+                method: 'POST',
+                body: fd
+            });
+
+            const result = await res.json();
+
+            if (res.ok) {
+                alert(result?.message || '회원가입 성공!');
+                window.location.href = '/auth/companies/login';
+            } else {
+                serverError.textContent = result?.message || '회원가입에 실패했습니다.';
+                serverError.style.display = 'block';
+                signupBtn.disabled = false;
+            }
+        } catch (err) {
+            console.error(err);
+            serverError.textContent = '회원가입 요청 중 오류가 발생했습니다.';
+            serverError.style.display = 'block';
+            signupBtn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
