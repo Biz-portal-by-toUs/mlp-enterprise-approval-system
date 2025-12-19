@@ -1,18 +1,13 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.controller;
 
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.MessageType;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisPublisher;
-import com.multi.mlpenterpriseapprovalsystem.chat.redis.RedisChatMessage;
-import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatMessageRepository;
-import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomMemberRepository;
+import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatMessageSendDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
-import java.time.LocalDateTime;
+import java.security.Principal;
 
 /**
  * 채팅 웹소켓 컨트롤러 (레디스 Pub/sub)
@@ -22,39 +17,16 @@ import java.time.LocalDateTime;
  * @since : 2025. 12. 17. 수요일
  */
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class ChatSocketController {
-    private final SimpMessagingTemplate messagingTemplate;
-    private final ChatMessageRepository chatMessageRepository;
-     private final ChatRoomMemberRepository chatRoomMemberRepository;
-     private final ChatRedisPublisher chatRedisPublisher;
+    private final ChatMessageService chatMessageService;
 
-
-    @MessageMapping("/chat/send")
-    public void send(ResChatMessageDto request) {
-
-        System.out.println("🔥 CONTROLLER RECEIVED: " + request.getContent());
-
-        ChatMessage saved = chatMessageRepository.save(
-                ChatMessage.builder()
-                        .roomNo(request.getRoomNo())
-                        .senderEmpId("EMP0001")
-                        .content(request.getContent())
-                        .type(MessageType.TEXT)
-                        .createdAt(LocalDateTime.now())
-                        .build()
-        );
-
-        RedisChatMessage redisMessage = new RedisChatMessage(
-                saved.getRoomNo(),
-                saved.getSenderEmpId(),
-                saved.getContent(),
-                saved.getType(),
-                saved.getCreatedAt()
-        );
-
-        chatRedisPublisher.publish(redisMessage);
+    @MessageMapping("/chat/message")
+    public void send(ReqChatMessageSendDto req, Principal principal) {
+        String empId = principal.getName();
+        chatMessageService.sendMessage(req, empId);
     }
 
 }
