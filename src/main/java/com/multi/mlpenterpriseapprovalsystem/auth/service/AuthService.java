@@ -46,6 +46,8 @@ public class AuthService {
 
     public ResponseDto<Void> signUpCompany(ReqCompanySignupDto reqCompanySignupDto, MultipartFile logo) {
 
+        // 사업자등록번호 검증 API 추가할 예정
+
         // 1) 이메일 중복 체크
         if (companyRepository.existsByEmail(reqCompanySignupDto.getEmail())) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
