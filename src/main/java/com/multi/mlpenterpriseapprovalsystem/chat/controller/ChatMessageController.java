@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatMessageSendDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.service.ChatMessageService;
@@ -7,13 +8,14 @@ import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 채팅 send 및 채팅 메세지 조회 컨트롤러
  *
  * @author : 김승기
  * @filename : ChatMessageController
@@ -28,9 +30,11 @@ public class ChatMessageController {
 
     @PostMapping
     public ResponseEntity<ResponseDto<ResChatMessageDto>> sendMessage(
-            @RequestBody ReqChatMessageSendDto request
+            @RequestBody ReqChatMessageSendDto request,
+            @AuthenticationPrincipal CustomUser user
     ) {
-        ResChatMessageDto result = chatMessageService.sendMessage(request);
+        String empId = user.getUsername();
+        ResChatMessageDto result = chatMessageService.sendMessage(request, empId);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -41,18 +45,17 @@ public class ChatMessageController {
                 ));
     }
 
-    /**
-     * 채팅 메시지 조회 (무한 스크롤)
-     */
+
     @GetMapping("/{roomNo}")
     public ResponseEntity<ResponseDto<List<ResChatMessageDto>>> getMessages(
             @PathVariable Long roomNo,
             @RequestParam(required = false) LocalDateTime cursor,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal CustomUser user
     ) {
-
+        String empId = user.getUsername();
         List<ResChatMessageDto> messages =
-                chatMessageService.getMessages(roomNo, cursor, size);
+                chatMessageService.getMessages(roomNo, cursor, size, empId);
 
         return ResponseEntity.ok(
                 new ResponseDto<>(
