@@ -11,6 +11,14 @@ import java.util.Optional;
  * @filename    : CompanyRepository
  * @author      : 권지영
  * @since       : 2025. 12. 17. 수요일
- */public interface CompanyRepository extends JpaRepository<Company, Long> {
+ */
+public interface CompanyRepository extends JpaRepository<Company, Long> {
+
     Optional<Company> findByEmail(String email);
+
+    boolean existsByEmail(String email);
+
+    Optional<Company> findByComId(String comId);
+
+    boolean existsByComId(String comId);
 }
