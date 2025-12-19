@@ -2,13 +2,12 @@ package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
@@ -22,7 +21,9 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 @Table(name = "document")
+@Builder
 public class Document extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,8 +68,12 @@ public class Document extends BaseEntity {
     @Column(nullable = false)
     private Boolean temp; // 임시 저장 여부
 
-    // 양식 참조 (docfo_no)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "docfo_no", nullable = false)
     private DocumentForm documentForm;
+
+    // 문서 상태(상신전, 결재중, 최종승인, 반려)
+    @Column(name = "doc_stat", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DocStat docStat = DocStat.AW;
 }
