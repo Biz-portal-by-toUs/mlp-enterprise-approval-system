@@ -78,7 +78,7 @@ public class AuthService {
                 reqCompanySignupDto.getComId(),
                 reqCompanySignupDto.getComName(),
                 reqCompanySignupDto.getEmail(),
-                passwordEncoder.encode(reqCompanySignupDto.getPwd()),
+                passwordEncoder.encode(encodedPwd),
                 reqCompanySignupDto.getBrn(),
                 reqCompanySignupDto.getAddr(),
                 imgUrl,
