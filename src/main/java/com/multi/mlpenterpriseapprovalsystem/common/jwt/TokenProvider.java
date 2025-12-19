@@ -42,8 +42,8 @@ public class TokenProvider {
     private static final String CLAIM_USERNAME = "username";
 
     // ===== Expire =====
-    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 3;  // 3분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 5; // 5분 (원하면 늘려)
+    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24;  // 3분
+    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24 * 7; // 5분 (원하면 늘려)
 
     private final Key SKEY;
     private final String ISSUER;
@@ -58,7 +58,9 @@ public class TokenProvider {
     // 토큰 발급
     // =========================
 
-    /** Access Token 생성 */
+    /**
+     * Access Token 생성
+     */
     public String createAccessToken(Long subjectId,
                                     TokenSubjectType subjectType,
                                     String comId,
@@ -93,7 +95,9 @@ public class TokenProvider {
                 .compact();
     }
 
-    /** Refresh Token 생성 (권한(auth)은 보통 안 넣음) */
+    /**
+     * Refresh Token 생성 (권한(auth)은 보통 안 넣음)
+     */
     public String createRefreshToken(Long subjectId,
                                      TokenSubjectType subjectType,
                                      String comId) {
@@ -130,7 +134,9 @@ public class TokenProvider {
         return REFRESH_TOKEN_EXPIRE_TIME_MS / 1000L;
     }
 
-    /** (예전 코드 호환) Refresh 만료 LocalDateTime */
+    /**
+     * (예전 코드 호환) Refresh 만료 LocalDateTime
+     */
     public LocalDateTime getRefreshTokenExpiry() {
         return LocalDateTime.now().plus(REFRESH_TOKEN_EXPIRE_TIME_MS, ChronoUnit.MILLIS);
     }
@@ -139,7 +145,9 @@ public class TokenProvider {
     // 검증/파싱
     // =========================
 
-    /** 유효성 검증(유효하면 true, 아니면 TokenException 던짐) */
+    /**
+     * 유효성 검증(유효하면 true, 아니면 TokenException 던짐)
+     */
     public boolean validateToken(String token) {
         try {
             if (!StringUtils.hasText(token)) {
@@ -168,7 +176,9 @@ public class TokenProvider {
         }
     }
 
-    /** Claims 파싱 (만료여도 Claims는 반환) */
+    /**
+     * Claims 파싱 (만료여도 Claims는 반환)
+     */
     public Claims parseClaims(String token) {
         try {
             return Jwts.parserBuilder()

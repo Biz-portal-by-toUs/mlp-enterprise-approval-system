@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ApiExceptionDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.TokenException;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -80,6 +81,12 @@ public class JwtFilter extends OncePerRequestFilter {
                 if (tokenProvider.validateToken(jwt)) {
 
                     log.info("[JwtFilter] JWT 토큰이 유효합니다.");
+
+                    Claims claims = tokenProvider.parseClaims(jwt);
+                    String comId = (String) claims.get("comId");
+                    request.setAttribute("comId", comId);
+
+                    log.info("[JwtFilter] request에 comId 세팅 완료: {}", comId);
 
                     Authentication authentication = tokenProvider.getAuthentication(jwt);
                     SecurityContextHolder.getContext().setAuthentication(authentication);

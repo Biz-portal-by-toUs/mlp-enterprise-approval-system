@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS approval_line (
                                              ended_at    TIMESTAMP     NULL,
 
                                              CONSTRAINT pk_approval_line PRIMARY KEY (apprl_no),
-                                             CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('0','1','2','3')),
+                                             CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('I', 'W', 'A', 'R')),
 
                                              CONSTRAINT fk_approval_line_company
                                                  FOREIGN KEY (com_id) REFERENCES company(com_id)

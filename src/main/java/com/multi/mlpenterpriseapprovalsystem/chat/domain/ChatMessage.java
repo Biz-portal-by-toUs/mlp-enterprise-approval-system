@@ -1,9 +1,12 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.domain;
 
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -16,7 +19,7 @@ import java.time.LocalDateTime;
  * @filename : ChatMessage
  * @since : 2025. 12. 16. 화요일
  */
-@Document(collection = "chat_message")
+@Document(collection = "chat_messages")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,11 +31,14 @@ public class ChatMessage {
 
     private Long roomNo;
 
-    private Long senderId;
+    private String senderEmpId;
     private String senderName;
 
     private String content;
+
+    @Enumerated(EnumType.STRING)
     private MessageType type; // TEXT, IMAGE, SYSTEM
 
+    @CreatedDate
     private LocalDateTime createdAt;
 }
