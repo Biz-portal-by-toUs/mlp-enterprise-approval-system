@@ -45,8 +45,8 @@ public class ChatRoomController {
 
     @GetMapping("/my")
     public ResponseEntity<ResponseDto<List<ResChatRoomListDto>>> getMyRooms(
-            @RequestParam(required = false) LocalDateTime cursor,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(name = "lastMessageAt", required = false) LocalDateTime cursor,
+            @RequestParam(name = "size", defaultValue = "20") int size,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -58,7 +58,7 @@ public class ChatRoomController {
 
     @GetMapping("/{roomNo}")
     public ResponseEntity<ResponseDto<ResChatRoomDto>> getRoom(
-            @PathVariable Long roomNo,
+            @PathVariable(name = "roomNo") Long roomNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -70,7 +70,7 @@ public class ChatRoomController {
 
     @PostMapping("/{roomNo}/read")
     public ResponseEntity<ResponseDto<Void>> readRoom(
-            @PathVariable Long roomNo,
+            @PathVariable(name = "roomNo") Long roomNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
