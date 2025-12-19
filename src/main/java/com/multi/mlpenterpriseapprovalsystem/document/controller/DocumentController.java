@@ -31,7 +31,7 @@ public class DocumentController {
 
     private final DocumentService documentService;
 
-    // 해당 회사의 문서의 결재라인 고려하여 반환
+    // 최종승인된 문서 조회
     @GetMapping("/documents")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getApprovedDocuments(@AuthenticationPrincipal CustomUser customUser,
                                                                                   @RequestParam(name = "status") String status,
@@ -46,7 +46,7 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, message, resDocumentDtos));
     }
 
-    // 내가 상신한 문서 조회(status = "ANY"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "APPROVED")
+    // 내가 상신한 문서 조회(status = "SUBMITTED"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
     @GetMapping("/documents/me")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getMySubmittedDocuments(@AuthenticationPrincipal CustomUser customUser,
                                                                                      @RequestParam(name = "status") String status,
@@ -55,13 +55,13 @@ public class DocumentController {
         Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page);
 
         String message = "";
-        if(status.equals("ANY")) {
+        if(status.equals("SUBMITTED")) {
             message = resDocumentDtos.isEmpty() ? "내가 상신한 문서가 없습니다" : "내가 상신한 문서 조회 성공";
         }
         else if(status.equals("AWAITING")) {
             message = resDocumentDtos.isEmpty() ? "내가 결재할 문서가 없습니다" : "내가 결재할 문서 조회 성공";
         }
-        else if(status.equals("APPROVED")) {
+        else if(status.equals("PROCESSED")) {
             message = resDocumentDtos.isEmpty() ? "내가 결재한 문서가 없습니다" : "내가 결재한 문서 조회 성공";
         }
 
