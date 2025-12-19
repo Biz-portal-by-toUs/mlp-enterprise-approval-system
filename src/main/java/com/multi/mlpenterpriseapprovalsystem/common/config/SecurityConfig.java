@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.common.config;
 
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.JwtFilter;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * SecurityConfig
@@ -22,6 +25,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 @EnableWebSecurity
 public class SecurityConfig {
+    private final TokenProvider tokenProvider;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -40,13 +44,11 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/v1/**").hasAnyRole(    "SYS_ADMIN",
-                                "COM_ADMIN",
-                                "SEC_ADMIN",
-                                "THR_ADMIN",
-                                "EMPLOYEE")
+                        .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()
-                );
+                )
+
+                .addFilterBefore(new JwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
         return http.build();
 
     }

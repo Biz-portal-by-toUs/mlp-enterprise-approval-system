@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.chat.redis;
+package com.multi.mlpenterpriseapprovalsystem.chat.config;
 
 /**
  * JSON 처리를 위한 Jackson 라이브러리 설정
