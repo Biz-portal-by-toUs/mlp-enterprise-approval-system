@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
@@ -71,6 +72,8 @@ public class Document extends BaseEntity {
     @JoinColumn(name = "docfo_no", nullable = false)
     private DocumentForm documentForm;
 
-    @Column(name = "fully_appr", nullable = false)
-    private Boolean fullyAppr = false;
+    // 문서 상태(상신전, 결재중, 최종승인, 반려)
+    @Column(name = "doc_stat", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DocStat docStat = DocStat.AW;
 }
