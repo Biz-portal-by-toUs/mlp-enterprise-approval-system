@@ -1,9 +1,9 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.controller;
+package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ReqMeetingRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.dto.ResMeetingRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.service.MeetingRoomService;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResMeetingRoomDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,8 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 /**
  * 회의실 관리 기능에 대한 REST API 요청을 처리하는 Controller.
