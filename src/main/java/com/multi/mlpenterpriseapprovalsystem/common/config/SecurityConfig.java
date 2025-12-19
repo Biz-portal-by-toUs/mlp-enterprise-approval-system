@@ -58,7 +58,7 @@ public class SecurityConfig {
                                 "THR_ADMIN",
                                 "EMPLOYEE")
 
-                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
