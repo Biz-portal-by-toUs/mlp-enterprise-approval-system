@@ -60,5 +60,22 @@ public class Company extends BaseEntity {
     @Column(name="role", nullable=false, length=20)
     private RoleType role; // SYS_ADMIN or COM_ADMIN
 
-
+    // Company 엔티티 안에 추가
+    public static Company createForSignup(
+            String comId, String comName, String email, String encodedPwd, String brn, String addr,
+            String imgUrl, String path, Subscription subscription, RoleType role
+    ) {
+        Company c = new Company();
+        c.comId = comId;
+        c.comName = comName;
+        c.email = email;
+        c.pwd = encodedPwd;
+        c.brn = brn;
+        c.addr = addr;
+        c.imgUrl = imgUrl;
+        c.path = path;
+        c.subscription = subscription;
+        c.role = role;
+        return c;
+    }
 }
