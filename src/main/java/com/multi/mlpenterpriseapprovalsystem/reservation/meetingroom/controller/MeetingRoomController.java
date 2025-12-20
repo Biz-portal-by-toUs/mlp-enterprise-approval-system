@@ -101,7 +101,7 @@ public class MeetingRoomController {
     @PutMapping(value="/meeting-rooms/{roomNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Long>> updateMeetingRoom(@PathVariable Long roomNo,
                                                                @AuthenticationPrincipal CustomUser user,
-                                                               @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
+                                                               @Valid @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
 
 

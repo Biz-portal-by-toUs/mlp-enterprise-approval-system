@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto;
 
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,6 +31,7 @@ public class ReqMeetingRoomDto {
     private Integer capacity;
 
     @NotBlank(message = "위치는 필수입니다.")
+    @Size(max = 20)
     private String location;
 
     private String imageUrl;
