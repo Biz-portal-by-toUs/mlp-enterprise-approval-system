@@ -1,13 +1,12 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.service;
 
+import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoomMember;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatRoomCreateDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatRoomInviteDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomListDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisPublisher;
+import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatMessageRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomMemberRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
@@ -39,6 +38,7 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final EmployeeRepository employeeRepository;
     private final ChatRedisPublisher redisPublisher;
 
@@ -55,7 +55,6 @@ public class ChatRoomService {
             throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
         }
 
-        // 대상 empId 정리 (중복/공백 제거 + 본인 제거)
         Set<String> targets = new LinkedHashSet<>();
         for (String id : request.getMemberIds()) {
             if (id == null || id.isBlank()) continue;
@@ -79,7 +78,7 @@ public class ChatRoomService {
         }
 
 
-        int memberCount = request.getMemberIds().size();
+        int memberCount = targets.size();
         RoomType roomType;
 
         if (memberCount == 1) {
@@ -134,9 +133,18 @@ public class ChatRoomService {
                 }
 
                 roomName = String.join(", ", empNames);
+                if (roomName.length() > 255) {
+                    roomName = roomName.substring(0, 250) + "...";
+                }
             } else {
                 roomName = request.getRoomName();
+                if (roomName.length() > 255) {
+                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+                }
             }
+        }
+        if (roomName != null && roomName.length() > 255) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(roomName, roomType));
@@ -154,8 +162,8 @@ public class ChatRoomService {
      *
      */
     @Transactional(readOnly = true)
-    public List<ResChatRoomListDto> getMyRooms(LocalDateTime cursor, Pageable pageable, String empId) {
-        return chatRoomRepository.findMyRooms(empId, cursor, pageable)
+    public List<ResChatRoomListDto> getMyRooms(String keyword, LocalDateTime cursor, Pageable pageable, String empId) {
+        return chatRoomRepository.findMyRooms(empId, keyword, cursor, pageable)
                 .stream()
                 .map(room -> ResChatRoomListDto.from(room, empId))
                 .collect(Collectors.toList());
@@ -202,6 +210,24 @@ public class ChatRoomService {
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
 
         member.markReadNow();
+
+        String roomName = member.getChatRoom().getRoomName();
+
+        ChatMessage latestMsg = chatMessageRepository.findTopByRoomNoOrderByCreatedAtDesc(roomNo)
+                .orElse(null);
+
+        String content = (latestMsg != null) ? latestMsg.getContent() : null;
+        String createdAt = (latestMsg != null) ? latestMsg.getCreatedAt().toString() : null;
+
+        ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
+                roomNo,
+                content,
+                createdAt,
+                0,
+                roomName
+        );
+
+        redisPublisher.publishRoomUpdate(empId, updateDto);
     }
 
     /**
@@ -264,7 +290,6 @@ public class ChatRoomService {
         List<String> invitedNames = new ArrayList<>();
         List<String> alreadyInRoomNames = new ArrayList<>();
 
-        // ✅ 중복 초대 방지 (요청에 같은 empId 여러번 들어오는 케이스)
         Set<String> uniqueTargetIds = new LinkedHashSet<>(request.getMemberIds());
 
         for (String targetEmpId : uniqueTargetIds) {
