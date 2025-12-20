@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -110,6 +111,13 @@ public class MeetingRoomService {
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
+        if (meetingRoomRepository.existsByCompany_ComIdAndRoomName(
+                comId,
+                meetingRoomDto.getRoomName()
+        )) {
+            throw new CustomException(ErrorCode.DUPLICATE_MEETING_ROOM_NAME);
+        }
+
         String savedUrl = null;
 
         // 이미지 파일이 있을 때
@@ -180,6 +188,27 @@ public class MeetingRoomService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
+        String newName = meetingRoomDto.getRoomName();
+
+        if (!meetingRoom.getRoomName().equals(newName)) {
+            // 이름 변경 시에만 중복 검사
+            if (meetingRoomRepository.existsByCompany_ComIdAndRoomNameAndRoomNoNot(
+                    comId,
+                    newName,
+                    roomNo
+            )) {
+                throw new CustomException(ErrorCode.DUPLICATE_MEETING_ROOM_NAME);
+            }
+        }
+
+        boolean isImageChanged = imageFile != null && !imageFile.isEmpty();
+        boolean isInfoChanged = !isSame(meetingRoom, meetingRoomDto);
+
+        if (!isImageChanged && !isInfoChanged) {
+            // 변경 없음 → 그냥 바로 리턴
+            return meetingRoom.getRoomNo();
+        }
+
         // 이미지 파일이 있으면 새로 저장하고 imgUrl만 교체
         if (imageFile != null && !imageFile.isEmpty()) {
 
@@ -213,6 +242,14 @@ public class MeetingRoomService {
         meetingRoom.updateInfo(meetingRoomDto);
 
         return meetingRoom.getRoomNo();
+    }
+
+    private boolean isSame(MeetingRoom meetingRoom, ReqMeetingRoomDto dto) {
+        return meetingRoom.getRoomName().equals(dto.getRoomName())
+                && meetingRoom.getCap().equals(dto.getCapacity())
+                && meetingRoom.getLoc().equals(dto.getLocation())
+                && Objects.equals(meetingRoom.getEquipList(), dto.getEquipList())
+                && Objects.equals(meetingRoom.getNote(), dto.getNote());
     }
 
 

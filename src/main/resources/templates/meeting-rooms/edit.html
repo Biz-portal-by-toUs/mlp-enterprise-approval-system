@@ -125,7 +125,7 @@
 <div class="card">
     <h2>회의실 수정</h2>
 
-    <form id="editForm" enctype="multipart/form-data" onsubmit="return validateRegisterForm(event)">
+    <form id="editForm" enctype="multipart/form-data">
 
         <div class="field">
             <label>회의실명</label>
@@ -134,7 +134,7 @@
 
         <div class="field">
             <label>수용 인원</label>
-            <input type="number" name="capacity" min="1" max="100" required>
+            <input type="number" name="capacity" id="capacity" min="1" max="100" required>
         </div>
 
         <div class="field">
@@ -178,6 +178,11 @@
         location.href = "/login";
     }
 
+    if (!roomNo) {
+        alert("잘못된 접근입니다.");
+        location.href = "/meeting-rooms";
+    }
+
     /* ================== 이미지 미리보기 ================== */
     function previewImage(input) {
         const preview = document.getElementById("imagePreview");
@@ -207,7 +212,7 @@
     /* ================== 유효성 검사 ================== */
     function validateEditForm() {
         const name = document.querySelector("[name=roomName]").value.trim();
-        const capacity = document.querySelector("[name=capacity]").value;
+        const capacity = Number(document.querySelector("[name=capacity]").value);
 
         if (!name) {
             alert("회의실명을 입력해주세요.");
@@ -293,6 +298,31 @@
             alert("서버 오류가 발생했습니다.");
         }
     });
+
+    const capacityInput = document.getElementById("capacity");
+
+    capacityInput.addEventListener("input", () => {
+        let value = capacityInput.value;
+
+        if (value === "") return;
+
+        value = Number(value);
+
+        if (isNaN(value)) {
+            capacityInput.value = "";
+            return;
+        }
+
+        if (value < 1) {
+            capacityInput.value = 1;
+            return;
+        }
+
+        if (value > 100) {
+            capacityInput.value = 100;
+        }
+    });
+
 </script>
 
 </body>

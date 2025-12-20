@@ -124,7 +124,7 @@
 <div class="card">
     <h2>회의실 등록</h2>
 
-    <form id="roomForm" enctype="multipart/form-data" onsubmit="return validateRegisterForm(event)">
+    <form id="roomForm" enctype="multipart/form-data">
 
         <div class="field">
             <label>회의실명</label>
@@ -133,7 +133,7 @@
 
         <div class="field">
             <label>수용 인원</label>
-            <input type="number" name="capacity" min="1" max="100" required>
+            <input type="number" name="capacity" id="capacity" min="1" max="100" required>
         </div>
 
         <div class="field">
@@ -173,29 +173,6 @@
     </form>
 </div>
 <script>
-    /* ---------- validation ---------- */
-    function validateRegisterForm() {
-        const name = document.querySelector("[name=roomName]").value.trim();
-        const capacity = document.querySelector("[name=capacity]").value;
-
-        if (!name) {
-            alert("회의실명을 입력해주세요.");
-            return false;
-        }
-
-        if (name.length > 20) {
-            alert("회의실명은 20자 이내로 입력해주세요.");
-            return false;
-        }
-
-        if (!capacity || capacity < 1 || capacity > 100) {
-            alert("수용 인원은 1~100명 사이여야 합니다.");
-            return false;
-        }
-
-        return true;
-    }
-
     /* ---------- image preview ---------- */
     function previewImage(input) {
         console.log("🔥 previewImage 실행");
@@ -231,9 +208,27 @@
         async function submitMeetingRoomForm(e) {
             e.preventDefault();
 
+            const name = document.querySelector("[name=roomName]").value.trim();
+            const capacity = Number(document.querySelector("[name=capacity]").value);
             const form = document.getElementById("roomForm");
             const formData = new FormData(form);
             const accessToken = localStorage.getItem("accessToken");
+
+
+            if (!name) {
+                alert("회의실명을 입력해주세요.");
+                return;
+            }
+
+            if (name.length > 20) {
+                alert("회의실명은 20자 이내여야 합니다.");
+                return;
+            }
+
+            if (!capacity || capacity < 1 || capacity > 100) {
+                alert("수용 인원은 1~100명 사이여야 합니다.");
+                return;
+            }
 
             if (!accessToken) {
                 alert("로그인이 필요합니다.");
@@ -266,6 +261,30 @@
                 alert("서버 오류가 발생했습니다.");
             }
         }
+
+    const capacityInput = document.getElementById("capacity");
+
+    capacityInput.addEventListener("input", () => {
+        let value = capacityInput.value;
+
+        if (value === "") return;
+
+        value = Number(value);
+
+        if (isNaN(value)) {
+            capacityInput.value = "";
+            return;
+        }
+
+        if (value < 1) {
+            capacityInput.value = 1;
+            return;
+        }
+
+        if (value > 100) {
+            capacityInput.value = 100;
+        }
+    });
 
         document
             .getElementById("roomForm")
