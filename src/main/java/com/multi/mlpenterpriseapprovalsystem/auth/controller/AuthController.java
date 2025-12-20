@@ -43,7 +43,7 @@ public class AuthController {
                 .body(response);
     }
 
-    @PostMapping("/companies/check-comId")
+    @PostMapping("/companies/check-comid")
     public ResponseEntity<ResponseDto<Boolean>> checkComId(@RequestParam(name = "comId") String comId) {
 
         return ResponseEntity
