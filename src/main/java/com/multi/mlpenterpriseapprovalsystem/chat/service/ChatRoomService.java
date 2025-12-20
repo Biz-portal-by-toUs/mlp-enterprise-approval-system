@@ -111,10 +111,8 @@ public class ChatRoomService {
                 return ResChatRoomDto.from(room);
             }
 
-            Employee target = employeeRepository.findByEmpId(targetEmpId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-            roomName = target.getEmpName();
+            roomName = null;
         }
 
         else {
@@ -205,26 +203,43 @@ public class ChatRoomService {
      */
     @Transactional
     public void markAsRead(Long roomNo, String empId) {
+        // 1. 해당 멤버 정보 조회
         ChatRoomMember member = chatRoomMemberRepository
                 .findByChatRoom_RoomNoAndEmployee_EmpIdAndIsActiveTrue(roomNo, empId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
 
+        // 읽음 처리 (unreadCount = 0)
         member.markReadNow();
 
-        String roomName = member.getChatRoom().getRoomName();
+        ChatRoom room = member.getChatRoom();
+        String roomName;
 
+        // ✅ [수정 포인트] 1:1 채팅방일 경우 상대방 이름을 실시간으로 추출
+        if (room.getRoomType() == RoomType.ONE) {
+            roomName = room.getMembers().stream()
+                    .filter(m -> !m.getEmployee().getEmpId().equals(empId)) // 내가 아닌 멤버 찾기
+                    .map(m -> m.getEmployee().getEmpName())
+                    .findFirst()
+                    .orElse("알 수 없는 사용자");
+        } else {
+            // 그룹 채팅은 DB에 저장된 방 이름을 사용 (없으면 기본값 처리 가능)
+            roomName = room.getRoomName() != null ? room.getRoomName() : "그룹 채팅";
+        }
+
+        // 2. DB에서 최신 메시지 조회 (목록 갱신용)
         ChatMessage latestMsg = chatMessageRepository.findTopByRoomNoOrderByCreatedAtDesc(roomNo)
                 .orElse(null);
 
         String content = (latestMsg != null) ? latestMsg.getContent() : null;
         String createdAt = (latestMsg != null) ? latestMsg.getCreatedAt().toString() : null;
 
+        // 3. 최신 데이터(상대방 이름 포함)로 목록 업데이트 알림 전송
         ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                 roomNo,
                 content,
                 createdAt,
-                0,
-                roomName
+                0, // 읽음 처리되었으므로 0
+                roomName // ✅ 이제 내가 아닌 상대방의 이름이 전달됨
         );
 
         redisPublisher.publishRoomUpdate(empId, updateDto);

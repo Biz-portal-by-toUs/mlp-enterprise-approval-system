@@ -41,12 +41,16 @@ public class ResChatRoomListDto {
                 .toList();
 
         String displayName;
-        if (room.getRoomType() == RoomType.GROUP
-                && room.getRoomName() != null
-                && !room.getRoomName().isBlank()) {
-            displayName = room.getRoomName();
+        if (room.getRoomType() == RoomType.ONE) {
+            // 1:1 채팅방: 나를 제외한 유일한 상대방의 이름을 사용
+            displayName = otherNames.isEmpty() ? "알 수 없는 사용자" : otherNames.get(0);
         } else {
-            displayName = buildDisplayName(otherNames);
+            // 그룹 채팅방: 저장된 방 이름이 있으면 사용, 없으면 참여자 이름을 합쳐서 생성
+            if (room.getRoomName() != null && !room.getRoomName().isBlank()) {
+                displayName = room.getRoomName();
+            } else {
+                displayName = buildDisplayName(otherNames);
+            }
         }
 
         return new ResChatRoomListDto(

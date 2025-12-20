@@ -113,12 +113,26 @@ public class ChatMessageService {
 
             int unread = unreadLong > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) unreadLong;
 
+            // ✅ [수정 포인트] 각 수신자(targetEmpId)의 시점에서 보여줄 방 이름 결정
+            String finalRoomName;
+            if (chatRoom.getRoomType() == RoomType.ONE) {
+                // 1:1 채팅방: 수신자(targetEmpId)가 아닌 '상대방'의 이름을 찾음
+                finalRoomName = chatRoom.getMembers().stream()
+                        .filter(m -> !m.getEmployee().getEmpId().equals(targetEmpId))
+                        .map(m -> m.getEmployee().getEmpName())
+                        .findFirst()
+                        .orElse("알 수 없는 사용자");
+            } else {
+                // 그룹 채팅방: 저장된 방 이름 사용 (없으면 기본값)
+                finalRoomName = chatRoom.getRoomName() != null ? chatRoom.getRoomName() : "그룹 채팅";
+            }
+
             ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                     request.getRoomNo(),
-                    preview,          // ✅ 여기! savedMessage.getContent() 말고
-                    previewAtIso,     // ✅ 여기!
+                    preview,
+                    previewAtIso,
                     unread,
-                    chatRoom.getRoomName()
+                    finalRoomName // ✅ 계산된 실시간 방 이름을 전달
             );
 
             redisPublisher.publishRoomUpdate(targetEmpId, updateDto);
