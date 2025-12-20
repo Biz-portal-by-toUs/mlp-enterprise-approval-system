@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.auth.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.common.api.nts.service.BusinessVerificationService;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
@@ -43,10 +44,17 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final StorageService storageService;
     private final SubscriptionRepository subscriptionRepository;
+    private final BusinessVerificationService businessVerificationService;
+
+    public boolean isRegisteredBusiness(String brn) {
+        if (!businessVerificationService.isRegisteredBusiness(brn)) {
+            throw new CustomException(ErrorCode.INVALID_BRN);
+        }
+        return true;
+    }
 
     public ResponseDto<Void> signUpCompany(ReqCompanySignupDto reqCompanySignupDto, MultipartFile logo) {
 
-        // 사업자등록번호 검증 API 추가할 예정
 
         // 1) 이메일 중복 체크
         if (companyRepository.existsByEmail(reqCompanySignupDto.getEmail())) {
@@ -78,7 +86,7 @@ public class AuthService {
                 reqCompanySignupDto.getComId(),
                 reqCompanySignupDto.getComName(),
                 reqCompanySignupDto.getEmail(),
-                passwordEncoder.encode(encodedPwd),
+                encodedPwd,
                 reqCompanySignupDto.getBrn(),
                 reqCompanySignupDto.getAddr(),
                 imgUrl,
