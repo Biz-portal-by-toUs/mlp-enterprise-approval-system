@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.auth.service.AuthService;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
@@ -14,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -253,7 +257,40 @@ public class MeetingRoomService {
     }
 
 
+    public void deleteMeetingRoom(Long roomNo) {
 
+        MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
+
+        // 권한 체크
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        CustomUser user = (CustomUser) authentication.getPrincipal();
+
+        boolean canDelete = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role ->
+                        role.equals("ROLE_COM_ADMIN") ||
+                                role.equals("ROLE_SEC_ADMIN") ||
+                                role.equals("ROLE_THR_ADMIN")
+                );
+
+        if (!canDelete) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 회사 체크
+        if (!meetingRoom.getCompany().getComId().equals(user.getComId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        meetingRoomRepository.delete(meetingRoom);
+    }
 }
 
 
