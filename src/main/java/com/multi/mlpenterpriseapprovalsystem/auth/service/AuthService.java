@@ -135,4 +135,7 @@ public class AuthService {
     }
 
 
+    public boolean checkComId(String comId) {
+        return companyRepository.existsByComId(comId);
+    }
 }
