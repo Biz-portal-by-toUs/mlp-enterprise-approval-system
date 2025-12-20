@@ -29,17 +29,16 @@ public class ChatRoom extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private RoomType roomType;
 
+
+    @Column(name = "last_message", columnDefinition = "text")
     private String lastMessage;
 
+    @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
     @OneToMany(mappedBy = "chatRoom", fetch = FetchType.LAZY)
     private List<ChatRoomMember> members = new ArrayList<>();
 
-    public void updateLastMessage(String message) {
-        this.lastMessage = message;
-        this.lastMessageAt = LocalDateTime.now();
-    }
 
     public static ChatRoom create(String roomName, RoomType roomType) {
         ChatRoom room = new ChatRoom();
