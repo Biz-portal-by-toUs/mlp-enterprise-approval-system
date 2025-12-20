@@ -16,12 +16,13 @@ import java.util.List;
 public interface ChatMessageRepository
         extends MongoRepository<ChatMessage, String> {
 
-    // 최초 진입 (최근 메시지)
-    List<ChatMessage> findByRoomNoOrderByCreatedAtDesc(Long roomNo);
-
-    // 무한 스크롤 (cursor 기준)
-    List<ChatMessage> findByRoomNoAndCreatedAtLessThanOrderByCreatedAtDesc(
+    List<ChatMessage> findByRoomNoAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
             Long roomNo,
-            LocalDateTime cursor
+            LocalDateTime joinedAt
+    );
+    List<ChatMessage> findByRoomNoAndCreatedAtLessThanAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+            Long roomNo,
+            LocalDateTime cursor,
+            LocalDateTime joinedAt
     );
 }
