@@ -34,6 +34,18 @@
         .bottom { display:flex; gap:8px; padding: 12px; border-top: 1px solid #ddd; }
         .bottom input { flex:1; padding: 10px; }
         .bottom button { padding: 10px 14px; cursor:pointer; }
+
+        /* ✅ bytes counter */
+        .bytebar {
+            padding: 0 12px 12px;
+            font-size: 12px;
+            color: #777;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:12px;
+        }
+        .bytebar .warn { color:#ff3b30; font-weight:700; }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
@@ -60,7 +72,13 @@
 
         <div class="bottom">
             <input id="messageInput" placeholder="메시지 입력" onkeydown="if(event.keyCode==13){sendMessage()}" />
-            <button onclick="sendMessage()">전송</button>
+            <button id="sendBtn" onclick="sendMessage()">전송</button>
+        </div>
+
+        <!-- ✅ bytes counter -->
+        <div class="bytebar">
+            <span id="byteInfo">0 / 61440 bytes</span>
+            <span id="byteWarn" style="display:none;" class="warn">너무 큼</span>
         </div>
     </div>
 </div>
@@ -80,6 +98,29 @@
 
     // ✅ 메시지 중복 방지(방어)
     const seenMsgIds = new Set();
+
+    // ✅ 메시지 크기 제한 (UTF-8 bytes 기준)
+    // 서버 STOMP 기본(64KB=65536)보다 여유를 두고 60KB로 제한
+    const MAX_BYTES = 60 * 1024; // 61440
+    function utf8Bytes(str) {
+        return new TextEncoder().encode(str).length;
+    }
+
+    function updateByteInfo() {
+        const input = document.getElementById("messageInput");
+        const info = document.getElementById("byteInfo");
+        const warn = document.getElementById("byteWarn");
+        const btn  = document.getElementById("sendBtn");
+        if (!input || !info) return;
+
+        const b = utf8Bytes(input.value || "");
+        info.textContent = `${b} / ${MAX_BYTES} bytes`;
+
+        const tooBig = b > MAX_BYTES;
+        info.style.color = tooBig ? "#ff3b30" : "#777";
+        if (warn) warn.style.display = tooBig ? "inline" : "none";
+        if (btn) btn.disabled = tooBig;
+    }
 
     function getAccessToken() {
         return localStorage.getItem("accessToken");
@@ -259,12 +300,20 @@
             return;
         }
 
+        // ✅ bytes 제한 체크 (UTF-8)
+        const b = utf8Bytes(content);
+        if (b > MAX_BYTES) {
+            alert(`메시지가 너무 큼: ${b} bytes (최대 ${MAX_BYTES} bytes)\n내용을 줄이거나, 긴 내용/첨부는 업로드 후 링크로 보내라.`);
+            return;
+        }
+
         stompClient.send("/pub/chat/message", {}, JSON.stringify({
             roomNo: currentRoomNo,
             content: content
         }));
 
         input.value = "";
+        updateByteInfo();
     }
 
     // ✅ 초대(여러명)
@@ -408,7 +457,12 @@
         }[s]));
     }
 
-    window.addEventListener("load", connectWs);
+    window.addEventListener("load", () => {
+        connectWs();
+        updateByteInfo();
+        const input = document.getElementById("messageInput");
+        if (input) input.addEventListener("input", updateByteInfo);
+    });
 </script>
 </body>
 </html>

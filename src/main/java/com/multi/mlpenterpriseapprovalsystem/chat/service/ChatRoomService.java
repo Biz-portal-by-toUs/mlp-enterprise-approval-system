@@ -21,9 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +46,38 @@ public class ChatRoomService {
      * 채팅방 생성 (1:1 / 그룹)
      */
     public ResChatRoomDto createRoom(ReqChatRoomCreateDto request, String empId) {
+        Employee creator = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        String creatorComId = creator.getCompany().getComId();
+
+        if (request.getMemberIds() == null) {
+            throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
+        }
+
+        // 대상 empId 정리 (중복/공백 제거 + 본인 제거)
+        Set<String> targets = new LinkedHashSet<>();
+        for (String id : request.getMemberIds()) {
+            if (id == null || id.isBlank()) continue;
+            if (id.equals(empId)) continue;
+            targets.add(id);
+        }
+
+        if (targets.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
+        }
+
+        // ✅ 회사 comId 검증
+        for (String targetEmpId : targets) {
+            Employee target = employeeRepository.findByEmpId(targetEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            String targetComId = target.getCompany().getComId();
+            if (!Objects.equals(creatorComId, targetComId)) {
+                throw new CustomException(ErrorCode.COMPANY_MISMATCH);
+            }
+        }
+
 
         int memberCount = request.getMemberIds().size();
         RoomType roomType;
@@ -224,17 +254,31 @@ public class ChatRoomService {
             throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
         }
 
+        Employee inviter = employeeRepository.findByEmpId(inviterEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        String inviterComId = inviter.getCompany().getComId();
+
         LocalDateTime now = LocalDateTime.now();
 
         List<String> invitedNames = new ArrayList<>();
+        List<String> alreadyInRoomNames = new ArrayList<>();
 
-        for (String targetEmpId : request.getMemberIds()) {
+        // ✅ 중복 초대 방지 (요청에 같은 empId 여러번 들어오는 케이스)
+        Set<String> uniqueTargetIds = new LinkedHashSet<>(request.getMemberIds());
+
+        for (String targetEmpId : uniqueTargetIds) {
 
             if (targetEmpId == null || targetEmpId.isBlank()) continue;
             if (targetEmpId.equals(inviterEmpId)) continue;
 
             Employee target = employeeRepository.findByEmpId(targetEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            String targetComId = target.getCompany().getComId();
+            if (!Objects.equals(inviterComId, targetComId)) {
+                throw new CustomException(ErrorCode.COMPANY_MISMATCH);
+            }
 
             ChatRoomMember existing = chatRoomMemberRepository
                     .findByChatRoom_RoomNoAndEmployee_EmpId(roomNo, targetEmpId)
@@ -246,21 +290,23 @@ public class ChatRoomService {
                 chatRoomMemberRepository.save(newMember);
                 invitedNames.add(target.getEmpName());
             } else {
-                if (!existing.isActive()) {
-                    existing.reactivateNow(now);
-                    invitedNames.add(target.getEmpName());
+                if (existing.isActive()) {
+                    alreadyInRoomNames.add(target.getEmpName());
+                    continue;
                 }
+
+                existing.reactivateNow(now);
+                invitedNames.add(target.getEmpName());
             }
         }
 
-        if (invitedNames.isEmpty()) return;
+        if (invitedNames.isEmpty()) {
+            return;
+        }
 
         String content = String.join(", ", invitedNames) + "님이 들어왔습니다.";
-
         redisPublisher.publishSystem(roomNo, content);
 
-
     }
-
 
 }
