@@ -168,6 +168,87 @@
             background-color: #ef4444;
         }
 
+        /* 모달 배경 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* 모달 박스 */
+        .modal-content {
+            background: #fff;
+            padding: 24px;
+            border-radius: 10px;
+            width: 360px;
+            text-align: center;
+        }
+
+        .modal-title {
+            margin-bottom: 12px;
+            color: #d32f2f;
+        }
+
+        .modal-text {
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* 버튼 영역 */
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        /* 공통 버튼 */
+        .btn {
+            flex: 1;
+            padding: 10px 0;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        /* 취소 버튼 */
+        .btn.cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn.cancel:hover {
+            background: #cfcfcf;
+        }
+
+        /* 삭제 버튼 (경고) */
+        .btn.delete {
+            background: #d32f2f;
+            color: #fff;
+        }
+
+        .btn.delete:hover {
+            background: #b71c1c;
+        }
+
+        /* 버튼 hover 시 살짝 떠오르는 느낌 */
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
     </style>
 </head>
 
@@ -218,6 +299,22 @@
     </div>
 </div>
 
+<!-- 삭제 확인 모달 -->
+<div id="deleteModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 class="modal-title">⚠️ 회의실 삭제</h3>
+        <p class="modal-text">
+            회의실을 삭제하면 <b>되돌릴 수 없습니다.</b><br>
+            정말 삭제하시겠습니까?
+        </p>
+
+        <div class="modal-actions">
+            <button id="confirmDeleteBtn" class="btn delete">삭제</button>
+            <button id="cancelDeleteBtn" class="btn cancel">취소</button>
+        </div>
+    </div>
+</div>
+
 <script>
 
     let selectedRoomNo = null;
@@ -231,6 +328,7 @@
     const grid = document.getElementById("grid");
     const paging = document.getElementById("paging");
     const errBox = document.getElementById("errBox");
+    const accessToken = localStorage.getItem("accessToken");
 
     let state = {
         page: 0,      // 0부터 시작 (Spring PageRequest)
@@ -327,7 +425,6 @@
         document.getElementById("btnDelete").disabled = true;
 
         // 1. accessToken 여기서 꺼냄
-        const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) {
             showError("로그인이 필요합니다.");
             return;
@@ -356,7 +453,7 @@
                 document.getElementById("actionBar").style.display = "none";
             }
             if(!res.ok){
-                showError(json?.message || `조회 실패 (${res.status})`);
+                showError(json?.message || `조회에 실패했습니다. (${res.status})`);
                 grid.innerHTML = "";
                 paging.innerHTML = "";
                 return;
@@ -373,7 +470,7 @@
 
 
         }catch(e){
-            showError("서버 연결 실패. 토큰/포트/CORS 확인");
+            showError("서버 연결에 실패했습니다. 토큰/포트/CORS 확인해주세요.");
         }
     }
     document.getElementById("btnCreate").onclick = () => {
@@ -385,13 +482,58 @@
         location.href = `/meeting-rooms/${selectedRoomNo}/edit`;
     };
 
+    const deleteModal = document.getElementById("deleteModal");
+    const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+
+
+    // 삭제 버튼 클릭 시 (조회 페이지의 삭제 버튼)
+    function openDeleteModal() {
+        deleteModal.classList.remove("hidden");
+    }
+
     document.getElementById("btnDelete").onclick = () => {
         if (!selectedRoomNo) return;
-
-        if (!confirm("선택한 회의실을 삭제하시겠습니까?")) return;
-
-        alert("삭제 기능은 아직 구현되지 않았습니다.");
+        openDeleteModal();
     };
+
+    // 취소
+    cancelDeleteBtn.addEventListener("click", () => {
+        deleteModal.classList.add("hidden");
+    });
+
+    // 삭제 확정
+    confirmDeleteBtn.addEventListener("click", async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/meeting-rooms/${selectedRoomNo}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: "Bearer " + accessToken
+                }
+            });
+
+            if (!res.ok) {
+                throw new Error("삭제에 실패했습니다.");
+            }
+
+            alert("회의실이 삭제되었습니다.");
+            deleteModal.classList.add("hidden");
+            // 선택 표시 초기화
+            selectedRoomNo = null;
+            document.getElementById("btnEdit").disabled = true;
+            document.getElementById("btnDelete").disabled = true;
+            loadRooms(state.page); // 현재 페이지 다시 조회
+
+        } catch (e) {
+            alert("삭제 중 오류가 발생했습니다.");
+        }
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            deleteModal.classList.add("hidden");
+        }
+    });
 
     // 처음 로드
     loadRooms(0);
