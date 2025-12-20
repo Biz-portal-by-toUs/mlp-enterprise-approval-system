@@ -1,8 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.service;
 
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.MessageType;
+import com.multi.mlpenterpriseapprovalsystem.chat.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatMessageSendDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomUpdateDto;
@@ -50,11 +48,18 @@ public class ChatMessageService {
         ChatRoom chatRoom = chatRoomRepository.findById(request.getRoomNo())
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
-        boolean isMember = chatRoomMemberRepository
-                .existsByChatRoom_RoomNoAndEmployee_EmpId(request.getRoomNo(), empId);
+        ChatRoomMember senderMember = chatRoomMemberRepository
+                .findByChatRoom_RoomNoAndEmployee_EmpId(request.getRoomNo(), empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
 
-        if (!isMember) {
-            throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
+        LocalDateTime now = LocalDateTime.now();
+
+        if (!senderMember.isActive()) {
+            if (chatRoom.getRoomType() == RoomType.ONE) {
+                chatRoomMemberRepository.reactivateMe(request.getRoomNo(), empId, now);
+            } else {
+                throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
+            }
         }
 
         Employee sender = employeeRepository.findByEmpId(empId)
@@ -66,29 +71,42 @@ public class ChatMessageService {
                 .senderName(sender.getEmpName())
                 .content(request.getContent())
                 .type(request.getType() == null ? MessageType.TEXT : request.getType())
-                .createdAt(LocalDateTime.now())
+                .createdAt(now)
                 .build();
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
-        ResChatMessageDto responseDto = ResChatMessageDto.from(savedMessage);
+        // 1:1이면 상대가 나가(active=false) 있어도 메시지 한 번 오면 다시 뜨게(자동 복귀)
+        //  joinedAt을 now로 바꿔서 "복귀 이후 메시지만" 보이게 한다.
+        if (chatRoom.getRoomType() == RoomType.ONE) {
+            chatRoomMemberRepository.reactivateOthersForOneToOne(request.getRoomNo(), empId, now);
+        }
 
+        ResChatMessageDto responseDto = ResChatMessageDto.from(savedMessage);
         redisPublisher.publish(request.getRoomNo(), responseDto);
 
         chatRoom.updateLastMessage(savedMessage.getContent(), savedMessage.getCreatedAt());
 
         chatRoomMemberRepository.increaseUnreadForOthers(request.getRoomNo(), empId);
+
         List<String> memberEmpIds = chatRoomMemberRepository.findEmpIdsByRoomNo(request.getRoomNo());
 
         for (String targetEmpId : memberEmpIds) {
-            int unread = targetEmpId.equals(empId)
-                    ? 0
-                    : chatRoomMemberRepository.findUnreadCount(request.getRoomNo(), targetEmpId);
+
+            long unreadLong;
+            if (targetEmpId.equals(empId)) {
+                unreadLong = 0L;
+            } else {
+                Long v = chatRoomMemberRepository.findUnreadCount(request.getRoomNo(), targetEmpId);
+                unreadLong = (v == null ? 0L : v);
+            }
+
+            int unread = unreadLong > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) unreadLong;
 
             ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                     request.getRoomNo(),
                     savedMessage.getContent(),
-                    savedMessage.getCreatedAt().toString(),
+                    savedMessage.getCreatedAt().toString(), // ISO
                     unread
             );
 
@@ -100,6 +118,8 @@ public class ChatMessageService {
 
     /**
      * 채팅 메시지 조회 (무한 스크롤)
+     * - active=true 멤버만 접근 가능
+     * - joinedAt 이후 메시지만 보여준다
      */
     @Transactional(readOnly = true)
     public List<ResChatMessageDto> getMessages(
@@ -108,24 +128,24 @@ public class ChatMessageService {
             int size,
             String empId
     ) {
-        boolean isMember = chatRoomMemberRepository
-                .existsByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId);
+        ChatRoomMember member = chatRoomMemberRepository
+                .findByChatRoom_RoomNoAndEmployee_EmpIdAndIsActiveTrue(roomNo, empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
 
-        if (!isMember) {
-            throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
-        }
+        LocalDateTime joinedAt = member.getJoinedAt();
 
         List<ChatMessage> messages;
-
         if (cursor == null) {
             messages = chatMessageRepository
-                    .findByRoomNoOrderByCreatedAtDesc(roomNo)
+                    .findByRoomNoAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(roomNo, joinedAt)
                     .stream()
                     .limit(size)
                     .collect(Collectors.toList());
         } else {
             messages = chatMessageRepository
-                    .findByRoomNoAndCreatedAtLessThanOrderByCreatedAtDesc(roomNo, cursor)
+                    .findByRoomNoAndCreatedAtLessThanAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
+                            roomNo, cursor, joinedAt
+                    )
                     .stream()
                     .limit(size)
                     .collect(Collectors.toList());

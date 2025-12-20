@@ -42,8 +42,11 @@ public class ChatRoomMember {
     @Column(name="last_read_at")
     private LocalDateTime lastReadAt;
 
-    @Column(name = "unread_count")
-    private int unreadCount;
+    @Column(name = "unread_count", columnDefinition = "bigint default 0")
+    private Long unreadCount = 0L; // 자바 객체 생성 시에도 0으로 초기화
+
+    @Column(name="is_active", columnDefinition = "boolean default false",nullable=false)
+    private boolean isActive;
 
     // 메시지 옆 '1' 같은 거 할 때 쓰는 필드인데, 지금은 안 써도 됨
 
@@ -55,13 +58,28 @@ public class ChatRoomMember {
         member.employee = employee;
         member.joinedAt = LocalDateTime.now();
         member.lastReadAt = null;
-        member.unreadCount = 0;
+        member.unreadCount = 0L;
+        member.isActive = true;
+
         return member;
     }
 
     public void markReadNow() {
         this.lastReadAt = LocalDateTime.now();
-        this.unreadCount = 0;
+        this.unreadCount = 0L;
+    }
+
+    public void deactivateNow() {
+        this.isActive = false;
+        this.unreadCount = 0L;
+        this.lastReadAt = LocalDateTime.now();
+    }
+
+    public void reactivateNow(LocalDateTime joinedAt) {
+        this.isActive = true;
+        this.joinedAt = joinedAt;     // ✅ 재입장 시점 이후 메시지만 보이게
+        this.unreadCount = 0L;
+        this.lastReadAt = null;
     }
 
 
