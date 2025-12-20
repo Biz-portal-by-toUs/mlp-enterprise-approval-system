@@ -182,9 +182,18 @@
         try {
             const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
             const result = await res.json();
-            if (result.data && result.data.roomName) {
-                document.getElementById("roomTitle").innerText = result.data.roomName;
+            const room = result.data;
+            if (!room) return;
+
+            let displayName = room.roomName;
+
+            // ✅ 1:1 채팅방이거나 방 이름이 없는 경우, 참여자 목록에서 상대방 이름을 찾음
+            if (room.roomType === 'ONE' || !displayName) {
+                const opponent = (room.members || []).find(m => m.empId !== MY_EMP_ID);
+                displayName = opponent ? opponent.empName : (displayName || "대화 상대 없음");
             }
+
+            document.getElementById("roomTitle").innerText = displayName;
         } catch (err) {
             console.error("방 정보 로드 실패:", err);
             document.getElementById("roomTitle").innerText = "채팅방";
