@@ -80,13 +80,18 @@ public class Employee {
     private Boolean isDeleted = false; // 퇴사여부 // default = false
 
     @Column(nullable = false, length = 1)
-    private String atte; // 근태(출장 = b , 휴가 = v, 근무 중 = c) // default = c
+    private String atte; // 근태(출장 = b , 휴가 = v, 출근 = c) // default = c
 
     @Column(name = "msg_stat", nullable = false, length = 1)
-    private String msgStat; // 메시지 상태 ( 근무 중 = c, 회의 중 = m, 업무 집중 = d, 자리 비움 = x) // default = c
+    private String msgStat ; // 메시지 상태 ( 근무 중 = c, 회의 중 = m, 업무 집중 = d, 자리 비움 = x, 출근 안함 = h) // default = h
 
     // Self Reference (대직자 - emp_id 참조 유지)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delegate", referencedColumnName = "emp_id")
     private Employee delegate;
+
+    @PrePersist
+    public void prePersist() {
+        if (msgStat == null) msgStat = "h";
+    } // 사원 상태 기본 출근 전으로 세팅
 }
