@@ -9,6 +9,13 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 채팅방 목록 리스트 조회 resDto
+ *
+ * @author : 김승기
+ * @filename : ResChatRoomMemberDto
+ * @since : 2025. 12. 17. 수요일
+ */
 @Getter
 @AllArgsConstructor
 public class ResChatRoomListDto {
@@ -17,15 +24,15 @@ public class ResChatRoomListDto {
     private String roomName;
     private String lastMessage;
     private LocalDateTime lastMessageAt;
-    private int unreadCount;
+    private Long unreadCount;
 
     public static ResChatRoomListDto from(ChatRoom room, String myEmpId) {
 
-        int unreadCount = room.getMembers().stream()
+        Long unreadCount = room.getMembers().stream()
                 .filter(m -> m.getEmployee().getEmpId().equals(myEmpId))
                 .findFirst()
                 .map(ChatRoomMember::getUnreadCount)
-                .orElse(0);
+                .orElse(0L);
 
         // 나 제외 멤버 이름 목록
         List<String> otherNames = room.getMembers().stream()
