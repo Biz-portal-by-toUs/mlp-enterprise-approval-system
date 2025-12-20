@@ -53,8 +53,9 @@ public class MeetingRoomController {
         ResMeetingRoomDto room =
                 meetingRoomService.getMeetingRoom(roomNo, user);
 
-        return ResponseEntity.ok(
-                new ResponseDto<>(HttpStatus.OK, "회의실 단건 조회 성공", room)
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의실 단건 조회 성공", room)
         );
     }
 
@@ -110,5 +111,13 @@ public class MeetingRoomController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "회의실 수정 성공", updatedRoomNo));
+    }
+
+    @DeleteMapping("/meeting-rooms/{roomNo}")
+    public ResponseEntity<ResponseDto> deleteMeetingRoom(@PathVariable Long roomNo) {
+        meetingRoomService.deleteMeetingRoom(roomNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의실 삭제 성공", null));
     }
 }
