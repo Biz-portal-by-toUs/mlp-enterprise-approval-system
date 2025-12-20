@@ -159,7 +159,6 @@
             font-weight:700;
         }
 
-        /* ✅ 비밀번호 확인 메시지 스타일 */
         #pwdMatchMsg {
             font-size: 12px;
             margin: 6px 0 0 10px;
@@ -196,6 +195,10 @@
             text-align:left;
             font-size:13px;
             color:#666;
+        }
+        .note-success{
+            color: var(--success);
+            font-weight: 800;
         }
     </style>
 </head>
@@ -317,7 +320,37 @@
 
     let brnVerified = false;
 
-    // ✅ 실시간 비밀번호 일치 확인 함수
+    function showError(msg) {
+        serverError.textContent = msg || '요청 처리 중 오류가 발생했습니다.';
+        serverError.style.display = 'block';
+    }
+
+    async function readJsonSafely(res) {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) return await res.json();
+        const text = await res.text();
+        try { return JSON.parse(text); } catch { return { message: text }; }
+    }
+
+    function normalizeComId() {
+        return (document.getElementById('comId').value || '').trim().toUpperCase();
+    }
+
+    function normalizeBrn() {
+        return (document.getElementById('brn').value || '').replaceAll('-', '').trim();
+    }
+
+    function updateSignupButtonState() {
+        signupBtn.disabled = !brnVerified;
+
+        if (!brnVerified) {
+            brnNote.classList.remove('note-success');
+            brnNote.textContent = '* 사업자등록번호 인증을 완료해야 회원가입 버튼이 활성화됩니다.';
+        }
+    }
+    updateSignupButtonState();
+
+    // ✅ 실시간 비밀번호 일치 확인
     function checkPasswordMatch() {
         const pwd = pwdInput.value;
         const confirm = pwdConfirmInput.value;
@@ -336,30 +369,96 @@
             pwdMatchMsg.className = 'match-error';
         }
     }
-
-    // 입력할 때마다 함수 호출
     pwdInput.addEventListener('input', checkPasswordMatch);
     pwdConfirmInput.addEventListener('input', checkPasswordMatch);
 
-    function updateSignupButtonState() {
-        signupBtn.disabled = !brnVerified;
-        brnNote.style.display = brnVerified ? 'none' : 'block';
-    }
-    updateSignupButtonState();
+    // ✅ BRN 값이 바뀌면 인증 다시 해야 함
+    document.getElementById('brn').addEventListener('input', () => {
+        if (!brnVerified) return;
+        brnVerified = false;
+        brnVerifyBtn.disabled = false;
+        brnVerifyBtn.textContent = '인증하기';
+        updateSignupButtonState();
+    });
 
+    // ✅ 사업자번호 인증: /auth/companies/verify-brn 호출
     brnVerifyBtn.addEventListener('click', async () => {
         serverError.style.display = 'none';
         serverError.textContent = '';
 
-        alert('사업자 인증은 추후 구현 예정입니다. (현재는 인증 완료 처리)');
-        brnVerified = true;
+        const brn = normalizeBrn();
+        if (!brn) {
+            showError('사업자등록번호를 입력해주세요.');
+            document.getElementById('brn').focus();
+            return;
+        }
 
-        brnVerifyBtn.textContent = '인증완료';
-        brnVerifyBtn.disabled = true;
+        // 필요하면 숫자만 검사도 가능
+        // if (!/^\d+$/.test(brn)) { showError('사업자등록번호는 숫자만 입력해주세요.'); return; }
 
-        updateSignupButtonState();
+        try {
+            brnVerifyBtn.disabled = true;
+            brnVerifyBtn.textContent = '인증중...';
+
+            // 백엔드가 @RequestParam으로 받기 편하게 FormData 사용
+            const fd = new FormData();
+            fd.set('brn', brn);
+
+            // 백엔드가 comId까지 필요하면 같이 전송 (선택)
+            const comId = normalizeComId();
+            if (comId) fd.set('comId', comId);
+
+            const res = await fetch('/auth/companies/verify-brn', {
+                method: 'POST',
+                body: fd
+            });
+
+            const result = await readJsonSafely(res);
+
+            if (!res.ok) {
+                brnVerified = false;
+                showError(result?.message || '사업자 인증에 실패했습니다.');
+                brnVerifyBtn.disabled = false;
+                brnVerifyBtn.textContent = '인증하기';
+                updateSignupButtonState();
+                return;
+            }
+
+            // 백엔드 응답 형식 예시:
+            // { "verified": true, "message": "인증 성공" }
+            // 또는 true/false만 내려줄 수도 있어서 둘 다 처리
+            const verified = (typeof result === 'boolean')
+                ? result
+                : (result?.verified !== undefined ? !!result.verified : true);
+
+            if (!verified) {
+                brnVerified = false;
+                showError(result?.message || '사업자 인증에 실패했습니다.');
+                brnVerifyBtn.disabled = false;
+                brnVerifyBtn.textContent = '인증하기';
+                updateSignupButtonState();
+                return;
+            }
+
+            brnVerified = true;
+            brnVerifyBtn.textContent = '인증완료';
+            brnVerifyBtn.disabled = true;
+
+            brnNote.classList.add('note-success');
+            brnNote.textContent = result?.message || '✓ 사업자등록번호 인증이 완료되었습니다.';
+
+            updateSignupButtonState();
+        } catch (err) {
+            console.error(err);
+            brnVerified = false;
+            showError('사업자 인증 요청 중 오류가 발생했습니다.');
+            brnVerifyBtn.disabled = false;
+            brnVerifyBtn.textContent = '인증하기';
+            updateSignupButtonState();
+        }
     });
 
+    // 로고 미리보기
     logoInput.addEventListener('change', () => {
         const file = logoInput.files?.[0];
         if (!file) {
@@ -372,31 +471,28 @@
         logoPreview.style.display = 'flex';
     });
 
+    // ✅ 실제 회원가입 제출: /auth/companies/signup
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         serverError.style.display = 'none';
         serverError.textContent = '';
 
         if (!brnVerified) {
-            serverError.textContent = '사업자 등록번호 인증을 먼저 진행해주세요.';
-            serverError.style.display = 'block';
+            showError('사업자 등록번호 인증을 먼저 진행해주세요.');
             return;
         }
 
-        // 최종 제출 전 비밀번호 확인
         if (pwdInput.value !== pwdConfirmInput.value) {
-            serverError.textContent = '비밀번호가 일치하지 않습니다.';
-            serverError.style.display = 'block';
+            showError('비밀번호가 일치하지 않습니다.');
             pwdConfirmInput.focus();
             return;
         }
 
         const fd = new FormData(form);
-        const comId = (document.getElementById('comId').value || '').trim().toUpperCase();
-        fd.set('comId', comId);
 
-        const brn = (document.getElementById('brn').value || '').replaceAll('-', '').trim();
-        fd.set('brn', brn);
+        // 정규화
+        fd.set('comId', normalizeComId());
+        fd.set('brn', normalizeBrn());
 
         try {
             signupBtn.disabled = true;
@@ -406,20 +502,18 @@
                 body: fd
             });
 
-            const result = await res.json();
+            const result = await readJsonSafely(res);
 
             if (res.ok) {
                 alert(result?.message || '회원가입 성공!');
                 window.location.href = '/auth/companies/login';
             } else {
-                serverError.textContent = result?.message || '회원가입에 실패했습니다.';
-                serverError.style.display = 'block';
+                showError(result?.message || '회원가입에 실패했습니다.');
                 signupBtn.disabled = false;
             }
         } catch (err) {
             console.error(err);
-            serverError.textContent = '회원가입 요청 중 오류가 발생했습니다.';
-            serverError.style.display = 'block';
+            showError('회원가입 요청 중 오류가 발생했습니다.');
             signupBtn.disabled = false;
         }
     });
