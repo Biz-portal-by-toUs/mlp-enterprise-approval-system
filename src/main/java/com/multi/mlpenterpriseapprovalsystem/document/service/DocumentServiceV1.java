@@ -6,7 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
-import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepositoryV1;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -28,8 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DocumentService {
-    private final DocumentRepository documentRepository;
+public class DocumentServiceV1 {
+    private final DocumentRepositoryV1 documentRepositoryV1;
 
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
@@ -72,27 +72,27 @@ public class DocumentService {
         if("OLDEST".equals(sort)){
             // 상신일 기준 오래된순
             pageable = PageRequest.of(page, 10, Sort.by("createdAt").ascending());
-            documentPage = documentRepository.getMySubmittedDocuments(comId, empId, pageable);
+            documentPage = documentRepositoryV1.getMySubmittedDocuments(comId, empId, pageable);
         }
         else if("AWAITING".equals(sort)){
             // 결재중인 문서가 상신일 기준 최신순으로 위에 오게. 나머지는 최신순
             pageable = PageRequest.of(page, 10);
-            documentPage = documentRepository.getMySubmittedDocumentsByDocStat(comId, empId, DocStat.AW, pageable);
+            documentPage = documentRepositoryV1.getMySubmittedDocumentsByDocStat(comId, empId, DocStat.AW, pageable);
         }
         else if("FINALIZED".equals(sort)){
             // 최종승인된 문서가 상신일 기준 최신순으로 위에 오게. 나머지는 최신순
             pageable = PageRequest.of(page, 10);
-            documentPage = documentRepository.getMySubmittedDocumentsByDocStat(comId, empId, DocStat.FI, pageable);
+            documentPage = documentRepositoryV1.getMySubmittedDocumentsByDocStat(comId, empId, DocStat.FI, pageable);
         }
         else if("REJECTED".equals(sort)){
             // 반려된 문서가 상신일 기준 최신순으로 위에 오게. 나머는 최신순
             pageable = PageRequest.of(page, 10);
-            documentPage = documentRepository.getMySubmittedDocumentsByDocStat(comId, empId, DocStat.RJ, pageable);
+            documentPage = documentRepositoryV1.getMySubmittedDocumentsByDocStat(comId, empId, DocStat.RJ, pageable);
         }
         else if("LATEST".equals(sort)){
             // 상신일 기준 최신순
             pageable = PageRequest.of(page, 10, Sort.by("createdAt").descending());
-            documentPage = documentRepository.getMySubmittedDocuments(comId, empId, pageable);
+            documentPage = documentRepositoryV1.getMySubmittedDocuments(comId, empId, pageable);
         }
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_SORT_REQUEST);
@@ -105,7 +105,7 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getAwaitingMyApprovalDocuments(String comId, String empId, int page) {
         Pageable pageable = PageRequest.of(page, 10);
-        Page<Document> documentPage = documentRepository.getAwaitingMyApprovalDocuments(comId, empId, ApprStat.I, ApprStat.W, DocStat.AW, pageable);
+        Page<Document> documentPage = documentRepositoryV1.getAwaitingMyApprovalDocuments(comId, empId, ApprStat.I, ApprStat.W, DocStat.AW, pageable);
 
         // 해당 문서에 대한 나의 결재상태(결재중, 결재대기중)설정하여 반환
         return documentPage.map(doc -> ResDocumentDto.toDto(doc, empId));
@@ -120,19 +120,19 @@ public class DocumentService {
 
         if("OLDEST".equals(sort)){
             // 내 결재일 기준 오래된순(남의 결재일은 반영안됨)
-            documentPage = documentRepository.getMyProcessedDocumentsOldest(comId, empId, ApprStat.A, ApprStat.R, pageable);
+            documentPage = documentRepositoryV1.getMyProcessedDocumentsOldest(comId, empId, ApprStat.A, ApprStat.R, pageable);
         }
         else if("APPROVED".equals(sort)){
             // 내가 승인한 문서가 내 결재일 기준 최신순으로 위에 오게. 나머지는 내 결재일 기준 최신순
-            documentPage = documentRepository.getMyProcessedDocumentsByMyApprStat(comId, empId, ApprStat.A, ApprStat.R, ApprStat.A, pageable);
+            documentPage = documentRepositoryV1.getMyProcessedDocumentsByMyApprStat(comId, empId, ApprStat.A, ApprStat.R, ApprStat.A, pageable);
         }
         else if("REJECTED".equals(sort)){
             // 내가 반려한 문서가 내 결재일 기준 최신순으로 위에 오게. 나머지는 내 결재일 기준 최신순
-            documentPage = documentRepository.getMyProcessedDocumentsByMyApprStat(comId, empId, ApprStat.A, ApprStat.R, ApprStat.R, pageable);
+            documentPage = documentRepositoryV1.getMyProcessedDocumentsByMyApprStat(comId, empId, ApprStat.A, ApprStat.R, ApprStat.R, pageable);
         }
         else if("LATEST".equals(sort)){
             // 내 결재일 기준 최신순(남의 결재일은 반영 안됨)
-            documentPage = documentRepository.getMyProcessedDocumentsLatest(comId, empId, ApprStat.A, ApprStat.R, pageable);
+            documentPage = documentRepositoryV1.getMyProcessedDocumentsLatest(comId, empId, ApprStat.A, ApprStat.R, pageable);
         }
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_SORT_REQUEST);
@@ -159,7 +159,7 @@ public class DocumentService {
         }
 
         Pageable pageable = PageRequest.of(page, 10, sorting);
-        Page<Document> documentPage = documentRepository.getFinalizedDocuments(comId, DocStat.FI, pageable);
+        Page<Document> documentPage = documentRepositoryV1.getFinalizedDocuments(comId, DocStat.FI, pageable);
 
         return documentPage.map(ResDocumentDto::toDto);
     }

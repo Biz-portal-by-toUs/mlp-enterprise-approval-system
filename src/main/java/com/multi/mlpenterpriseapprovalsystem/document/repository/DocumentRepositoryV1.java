@@ -18,7 +18,7 @@ import org.springframework.data.repository.query.Param;
  * @since : 25. 12. 17. 수요일
  */
 
-public interface DocumentRepository extends JpaRepository<Document, Long> {
+public interface DocumentRepositoryV1 extends JpaRepository<Document, Long> {
 
     // 내 회사의 문서 중 내가 상신한 문서 조회
     // 작성자가 나인 문서 반환

@@ -5,7 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
-import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
+import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentServiceV1;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,9 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-public class DocumentController {
+public class DocumentControllerV1 {
 
-    private final DocumentService documentService;
+    private final DocumentServiceV1 documentServiceV1;
 
     // 회사 전체의 문서를 문서상태 기준 조회
     @GetMapping("/documents")
@@ -40,7 +40,7 @@ public class DocumentController {
                                                                                   @RequestParam(name = "page", defaultValue = "0") int page,
                                                                                   @RequestParam(name = "sort", defaultValue = "LATEST") String sort) {
 
-        Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page, sort);
+        Page<ResDocumentDto> resDocumentDtos = documentServiceV1.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page, sort);
 
         String message = "";
         if("FINALIZED".equals(status)){
@@ -62,7 +62,7 @@ public class DocumentController {
                                                                                      @RequestParam(name = "page", defaultValue = "0") int page,
                                                                                      @RequestParam(name = "sort", defaultValue = "LATEST") String sort){
 
-        Page<ResDocumentDto> resDocumentDtos = documentService.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page, sort);
+        Page<ResDocumentDto> resDocumentDtos = documentServiceV1.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), status, page, sort);
 
         String message = "";
         if("SUBMITTED".equals(status)) {
