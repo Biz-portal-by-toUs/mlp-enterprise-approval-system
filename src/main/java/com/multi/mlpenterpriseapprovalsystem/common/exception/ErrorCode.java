@@ -65,6 +65,7 @@ public enum ErrorCode {
 
     // @Valid 에러
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "INVALID_INPUT_VALUE", "입력값이 잘못되었습니다."),
+    INVALID_CURSOR(HttpStatus.BAD_REQUEST,"INVALID_CURSOR","커서값이 잘못되었습니다"),
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
