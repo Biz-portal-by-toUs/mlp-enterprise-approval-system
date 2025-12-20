@@ -2,10 +2,10 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,6 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 회의실 관리 기능에 대한 REST API 요청을 처리하는 Controller.
@@ -42,27 +45,53 @@ public class MeetingRoomController {
 
     private final MeetingRoomService meetingRoomService;
 
+    @GetMapping("/meeting-rooms/{roomNo}")
+    public ResponseEntity<ResponseDto<ResMeetingRoomDto>> getMeetingRoom(
+            @PathVariable Long roomNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        ResMeetingRoomDto room =
+                meetingRoomService.getMeetingRoom(roomNo, user);
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK, "회의실 단건 조회 성공", room)
+        );
+    }
+
     @GetMapping("/meeting-rooms")
-    public ResponseEntity<ResponseDto<Page<ResMeetingRoomDto>>> getMeetingRoomsWithPaging(@AuthenticationPrincipal CustomUser user,
-                                                                                          @RequestParam(name = "page", defaultValue = "0") int page,
-                                                                                          @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
+    public ResponseEntity<ResponseDto<Map<String, Object>>> getMeetingRoomsWithPaging(@AuthenticationPrincipal CustomUser user,
+                                                                                      @RequestParam(name = "page", defaultValue = "0") int page,
+                                                                                      @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("roomName").ascending());
 
         String comId = user.getComId();
         Page<ResMeetingRoomDto> meetingRooms = meetingRoomService.selectMeetingRoomsWithPaging(comId, pageable);
+
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(a ->
+                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
+                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
+                                a.getAuthority().equals("ROLE_THR_ADMIN")
+                );
+
         String msg = meetingRooms.isEmpty() ? "등록된 회의실이 없습니다." : "회의실 조회 성공";
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", meetingRooms);
+        result.put("isAdmin", isAdmin);
+
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, msg, meetingRooms));
+                .body(new ResponseDto<>(HttpStatus.OK, msg, result));
     }
 
     @PostMapping(value ="/meeting-rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Long>> registerMeetingRoom(@AuthenticationPrincipal CustomUser user,
-                                                                 @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
+                                                                 @Valid @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                  @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
-        String comId = user.getComId();
-        Long roomNo = meetingRoomService.registerMeetingRoom(comId, meetingRoomDto, imageFile);
+
+        Long roomNo = meetingRoomService.registerMeetingRoom(user, meetingRoomDto, imageFile);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -72,11 +101,11 @@ public class MeetingRoomController {
     @PutMapping(value="/meeting-rooms/{roomNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Long>> updateMeetingRoom(@PathVariable Long roomNo,
                                                                @AuthenticationPrincipal CustomUser user,
-                                                               @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
+                                                               @Valid @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
 
-        String comId = user.getComId();
-        Long updatedRoomNo = meetingRoomService.updateMeetingRoom(roomNo, comId, meetingRoomDto, imageFile);
+
+        Long updatedRoomNo = meetingRoomService.updateMeetingRoom(roomNo, user, meetingRoomDto, imageFile);
 
         return ResponseEntity
                 .status(HttpStatus.OK)

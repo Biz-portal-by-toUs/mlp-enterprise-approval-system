@@ -36,6 +36,7 @@ public enum ErrorCode {
 
     // 예약 관련
     MEETING_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "MEETING_ROOM_NOT_FOUND", "회의실을 찾을 수 없습니다"),
+    DUPLICATE_MEETING_ROOM_NAME(HttpStatus.CONFLICT, "DUPLICATE_MEETING_ROOM_NAME", "이미 존재하는 회의실명입니다."),
 
     // 파일 업로드 실패
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다"),

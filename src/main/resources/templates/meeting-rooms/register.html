@@ -15,11 +15,39 @@
         }
 
         .card {
-            width: 420px;
+            width: 520px;
             background: #fff;
-            border-radius: 14px;
+            border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-            padding: 24px;
+            padding: 28px;
+        }
+
+        .form-inner {
+            max-width: 420px;          /* 입력칸 최대 폭 제한 */
+            margin: 0 auto;            /* 가운데 정렬 */
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            box-sizing: border-box;    /* 삐져나오는 거 방지 */
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 220px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
 
         h2 {
@@ -73,6 +101,22 @@
         .cancel {
             background: #e5e7eb;
         }
+
+        .preview-box {
+            width: 100%;
+            height: 220px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -82,37 +126,44 @@
 
     <form id="roomForm" enctype="multipart/form-data">
 
-        <!-- 🔥 임시 comId (JWT 전까지) -->
-        <input type="hidden" name="comId" value="A03"/>
-
         <div class="field">
             <label>회의실명</label>
-            <input type="text" name="roomName" required>
+            <input type="text" name="roomName" maxlength="20" required>
         </div>
 
         <div class="field">
             <label>수용 인원</label>
-            <input type="number" name="capacity" required>
+            <input type="number" name="capacity" id="capacity" min="1" max="100" required>
         </div>
 
         <div class="field">
             <label>위치</label>
-            <input type="text" name="location">
+            <input type="text" name="location" maxlength="20">
         </div>
 
         <div class="field">
             <label>주요 장비</label>
-            <input type="text" name="equipList">
+            <input type="text" name="equipList" maxlength="255">
         </div>
 
         <div class="field">
             <label>특이사항</label>
-            <textarea name="note" rows="3"></textarea>
+            <textarea name="note" rows="3" maxlength="255"></textarea>
         </div>
 
         <div class="field">
             <label>회의실 이미지</label>
-            <input type="file" name="imageFile" accept="image/*">
+            <input
+                    type="file"
+                    name="imageFile"
+                    id="imageFile"
+                    accept="image/*"
+                    onchange="previewImage(this)"
+            >
+        </div>
+
+        <div class="preview-box">
+            <img id="imagePreview" alt="미리보기 이미지" />
         </div>
 
         <div class="btns">
@@ -122,49 +173,122 @@
     </form>
 </div>
 <script>
-    async function submitMeetingRoomForm(e) {
-        e.preventDefault(); // 기본 form 제출 막기
+    /* ---------- image preview ---------- */
+    function previewImage(input) {
+        console.log("🔥 previewImage 실행");
 
-        const form = document.getElementById("roomForm");
-        const formData = new FormData(form);
+        const preview = document.getElementById("imagePreview");
 
-        const accessToken = localStorage.getItem("accessToken");
-
-        if (!accessToken) {
-            alert("로그인이 필요합니다.");
+        if (!input.files || !input.files[0]) {
+            preview.style.display = "none";
+            preview.src = "";
             return;
         }
 
-        try {
-            const res = await fetch("/api/v1/meeting-rooms", {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + accessToken
-                    // ⚠️ Content-Type 지정하면 안 됨
-                },
-                body: formData
-            });
+        const file = input.files[0];
 
-            const result = await res.json();
 
-            if (!res.ok) {
-                console.error(result);
-                alert(result.message || "등록 실패");
+        if (!file.type.startsWith("image/")) {
+            alert("이미지 파일만 업로드 가능합니다.");
+            input.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+        };
+
+        reader.readAsDataURL(file);
+
+        }
+
+        /* ---------- image preview ---------- */
+        async function submitMeetingRoomForm(e) {
+            e.preventDefault();
+
+            const name = document.querySelector("[name=roomName]").value.trim();
+            const capacity = Number(document.querySelector("[name=capacity]").value);
+            const form = document.getElementById("roomForm");
+            const formData = new FormData(form);
+            const accessToken = localStorage.getItem("accessToken");
+
+
+            if (!name) {
+                alert("회의실명을 입력해주세요.");
                 return;
             }
 
-            alert("회의실 등록 성공!");
-            location.href = "/meeting-rooms";
+            if (name.length > 20) {
+                alert("회의실명은 20자 이내여야 합니다.");
+                return;
+            }
 
-        } catch (err) {
-            console.error(err);
-            alert("서버 오류가 발생했습니다.");
+            if (!capacity || capacity < 1 || capacity > 100) {
+                alert("수용 인원은 1~100명 사이여야 합니다.");
+                return;
+            }
+
+            if (!accessToken) {
+                alert("로그인이 필요합니다.");
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/v1/meeting-rooms", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + accessToken
+                        // ⚠️ Content-Type 지정하면 안 됨
+                    },
+                    body: formData
+                });
+
+                const result = await res.json();
+
+                if (!res.ok) {
+                    console.error(result);
+                    alert(result.message || "등록 실패");
+                    return;
+                }
+
+                alert("회의실 등록 성공!");
+                location.href = "/meeting-rooms";
+
+            } catch (err) {
+                console.error(err);
+                alert("서버 오류가 발생했습니다.");
+            }
         }
-    }
 
-    document
-        .getElementById("roomForm")
-        .addEventListener("submit", submitMeetingRoomForm);
+    const capacityInput = document.getElementById("capacity");
+
+    capacityInput.addEventListener("input", () => {
+        let value = capacityInput.value;
+
+        if (value === "") return;
+
+        value = Number(value);
+
+        if (isNaN(value)) {
+            capacityInput.value = "";
+            return;
+        }
+
+        if (value < 1) {
+            capacityInput.value = 1;
+            return;
+        }
+
+        if (value > 100) {
+            capacityInput.value = 100;
+        }
+    });
+
+        document
+            .getElementById("roomForm")
+            .addEventListener("submit", submitMeetingRoomForm);
 </script>
 </body>
 </html>

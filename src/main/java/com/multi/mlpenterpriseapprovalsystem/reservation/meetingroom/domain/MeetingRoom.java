@@ -22,10 +22,20 @@ public class MeetingRoom {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long roomNo;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private String roomName;
+
+    @Column(nullable = false)
     private Integer cap;
+
+    @Column(length = 20, nullable = false)
     private String loc;
+
+    @Column(length = 255)
     private String imgUrl;
+
+    @Column(length = 255)
     private String equipList;
+
+    @Column(length = 255)
     private String note;
 
     /**
