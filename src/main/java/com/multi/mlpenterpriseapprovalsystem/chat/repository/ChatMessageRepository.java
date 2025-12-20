@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 채팅 컬렉션 접근 repository
@@ -15,6 +16,8 @@ import java.util.List;
  */
 public interface ChatMessageRepository
         extends MongoRepository<ChatMessage, String> {
+
+    Optional<ChatMessage> findTopByRoomNoOrderByCreatedAtDesc(Long roomNo);
 
     List<ChatMessage> findByRoomNoAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
             Long roomNo,
