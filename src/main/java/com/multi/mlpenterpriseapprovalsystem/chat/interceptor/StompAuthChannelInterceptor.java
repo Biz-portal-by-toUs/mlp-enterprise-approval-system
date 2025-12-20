@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -38,6 +39,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     private final TokenProvider tokenProvider;
     private final EmployeeUserDetailService userDetailsService;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final StringRedisTemplate redisTemplate;
 
     private static final Pattern ROOM_DEST =
             Pattern.compile("^/sub/chat/rooms/(\\d+)$");
@@ -53,7 +55,9 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             if (StompCommand.CONNECT.equals(acc.getCommand())) {
                 handleConnect(acc);
             } else if (StompCommand.SUBSCRIBE.equals(acc.getCommand())) {
-                handleSubscribe(acc);
+                handleSubscribe(acc); // 여기서 Redis에 "접속 중" 기록
+            } else if (StompCommand.DISCONNECT.equals(acc.getCommand())) {
+                handleDisconnect(acc); // 여기서 Redis에서 제거
             }
         } catch (Exception e) {
             log.error("STOMP {} failed. dest={}, user={}",
@@ -92,17 +96,27 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (destination == null) return;
 
         Matcher m = ROOM_DEST.matcher(destination);
-        if (!m.matches()) return;
+        if (m.matches()) {
+            Long roomNo = Long.parseLong(m.group(1));
+            String empId = extractEmpId(acc);
 
-        Long roomNo = Long.parseLong(m.group(1));
+            boolean isMember = chatRoomMemberRepository.existsByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId);
+            if (!isMember) throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
+
+            String key = "chat:room:" + roomNo + ":viewing";
+            redisTemplate.opsForSet().add(key, empId);
+
+            acc.getSessionAttributes().put("viewingRoomNo", String.valueOf(roomNo));
+        }
+    }
+
+    private void handleDisconnect(StompHeaderAccessor acc) {
         String empId = extractEmpId(acc);
+        String roomNo = (String) acc.getSessionAttributes().get("viewingRoomNo");
 
-        boolean isMember = chatRoomMemberRepository
-                .existsByChatRoom_RoomNoAndEmployee_EmpId(roomNo, empId);
-
-        if (!isMember) {
-            throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
-
+        if (roomNo != null) {
+            String key = "chat:room:" + roomNo + ":viewing";
+            redisTemplate.opsForSet().remove(key, empId);
         }
     }
 
