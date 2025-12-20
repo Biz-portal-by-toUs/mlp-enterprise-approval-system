@@ -39,17 +39,24 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      * 사용자가 속한 채팅방 목록을 마지막 메시지 시간 기준(커서 기반)으로 조회
      */
     @Query("""
-    SELECT r 
-      FROM ChatRoom r 
-      JOIN r.members m 
-     WHERE m.employee.empId = :empId 
-       AND m.isActive = true
-       AND (:cursor IS NULL OR r.lastMessageAt < :cursor) 
-     ORDER BY r.lastMessageAt DESC
-    """)
+    select distinct m.chatRoom from ChatRoomMember m
+    left join m.chatRoom.members otherM  
+    where m.employee.empId = :empId
+      and m.isActive = true
+      and (:cursor is null or m.chatRoom.lastMessageAt < :cursor)
+      and (:keyword is null or :keyword = '' 
+           or m.chatRoom.roomName like concat('%', :keyword, '%') 
+           or m.chatRoom.lastMessage like concat('%', :keyword, '%')
+           or (m.chatRoom.roomType = 'ONE' 
+               and otherM.employee.empId != :empId 
+               and otherM.employee.empName like concat('%', :keyword, '%'))
+          )
+    order by m.chatRoom.lastMessageAt desc
+""")
     List<ChatRoom> findMyRooms(
             @Param("empId") String empId,
+            @Param("keyword") String keyword,
             @Param("cursor") LocalDateTime cursor,
-            Pageable pageable // Limit 처리를 위해 Pageable 사용 권장
+            Pageable pageable
     );
 }

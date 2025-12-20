@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,16 +44,21 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
     """)
     Long findUnreadCount(@Param("roomNo") Long roomNo, @Param("empId") String empId);
 
+
     @Modifying
     @Query("""
-        update ChatRoomMember m
-           set m.unreadCount = m.unreadCount + 1
-         where m.chatRoom.roomNo = :roomNo
-           and m.employee.empId <> :senderEmpId
-           and m.isActive = true
-    """)
-    int increaseUnreadForOthers(@Param("roomNo") Long roomNo,
-                                @Param("senderEmpId") String senderEmpId);
+    update ChatRoomMember m
+       set m.unreadCount = m.unreadCount + 1
+     where m.chatRoom.roomNo = :roomNo
+       and m.employee.empId <> :senderEmpId
+       and m.employee.empId NOT IN :viewingEmpIds 
+       and m.isActive = true
+""")
+    int increaseUnreadExceptViewers(
+            @Param("roomNo") Long roomNo,
+            @Param("senderEmpId") String senderEmpId,
+            @Param("viewingEmpIds") Collection<String> viewingEmpIds
+    );
 
     @Modifying
     @Query("""

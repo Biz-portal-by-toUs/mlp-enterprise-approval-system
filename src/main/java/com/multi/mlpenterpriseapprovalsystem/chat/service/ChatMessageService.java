@@ -14,11 +14,13 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +41,7 @@ public class ChatMessageService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final EmployeeRepository employeeRepository;
     private final ChatRedisPublisher redisPublisher;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * 메시지 전송
@@ -87,7 +90,11 @@ public class ChatMessageService {
 
         chatRoom.updateLastMessage(savedMessage.getContent(), savedMessage.getCreatedAt());
 
-        chatRoomMemberRepository.increaseUnreadForOthers(request.getRoomNo(), empId);
+        String viewingKey = "chat:room:" + request.getRoomNo() + ":viewing";
+        Set<String> viewingEmpIds = redisTemplate.opsForSet().members(viewingKey);
+        if (viewingEmpIds == null) viewingEmpIds = Set.of();
+
+        chatRoomMemberRepository.increaseUnreadExceptViewers(request.getRoomNo(), empId, viewingEmpIds);
 
         String preview = chatRoom.getLastMessage();                 // ← trim 적용된 값
         String previewAtIso = chatRoom.getLastMessageAt().toString(); // ← updateLastMessage에서 세팅된 값
@@ -106,11 +113,26 @@ public class ChatMessageService {
 
             int unread = unreadLong > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) unreadLong;
 
+            // ✅ [수정 포인트] 각 수신자(targetEmpId)의 시점에서 보여줄 방 이름 결정
+            String finalRoomName;
+            if (chatRoom.getRoomType() == RoomType.ONE) {
+                // 1:1 채팅방: 수신자(targetEmpId)가 아닌 '상대방'의 이름을 찾음
+                finalRoomName = chatRoom.getMembers().stream()
+                        .filter(m -> !m.getEmployee().getEmpId().equals(targetEmpId))
+                        .map(m -> m.getEmployee().getEmpName())
+                        .findFirst()
+                        .orElse("알 수 없는 사용자");
+            } else {
+                // 그룹 채팅방: 저장된 방 이름 사용 (없으면 기본값)
+                finalRoomName = chatRoom.getRoomName() != null ? chatRoom.getRoomName() : "그룹 채팅";
+            }
+
             ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                     request.getRoomNo(),
-                    preview,          // ✅ 여기! savedMessage.getContent() 말고
-                    previewAtIso,     // ✅ 여기!
-                    unread
+                    preview,
+                    previewAtIso,
+                    unread,
+                    finalRoomName // ✅ 계산된 실시간 방 이름을 전달
             );
 
             redisPublisher.publishRoomUpdate(targetEmpId, updateDto);

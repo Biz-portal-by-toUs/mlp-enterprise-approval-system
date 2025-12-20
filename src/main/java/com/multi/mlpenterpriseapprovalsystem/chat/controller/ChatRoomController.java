@@ -58,14 +58,15 @@ public class ChatRoomController {
      */
     @GetMapping("/my")
     public ResponseEntity<ResponseDto<List<ResChatRoomListDto>>> getMyRooms(
+            @RequestParam(name = "keyword", required = false) String keyword, // ✅ 검색어 추가
             @RequestParam(name = "lastMessageAt", required = false) LocalDateTime cursor,
-            // @PageableDefault를 쓰면 기본 size와 정렬을 편하게 정할 수 있어요
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        // pageable을 그대로 서비스에 넘깁니다.
-        List<ResChatRoomListDto> rooms = chatRoomService.getMyRooms(cursor, pageable, empId);
+
+        // ✅ 서비스 호출 시 keyword도 같이 넘겨줍니다.
+        List<ResChatRoomListDto> rooms = chatRoomService.getMyRooms(keyword, cursor, pageable, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)

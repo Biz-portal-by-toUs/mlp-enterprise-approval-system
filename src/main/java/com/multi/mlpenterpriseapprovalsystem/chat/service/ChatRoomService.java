@@ -1,13 +1,12 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.service;
 
+import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoomMember;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatRoomCreateDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ReqChatRoomInviteDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomListDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisPublisher;
+import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatMessageRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomMemberRepository;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatRoomRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
@@ -21,9 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +38,7 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final EmployeeRepository employeeRepository;
     private final ChatRedisPublisher redisPublisher;
 
@@ -48,8 +46,39 @@ public class ChatRoomService {
      * 채팅방 생성 (1:1 / 그룹)
      */
     public ResChatRoomDto createRoom(ReqChatRoomCreateDto request, String empId) {
+        Employee creator = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        int memberCount = request.getMemberIds().size();
+        String creatorComId = creator.getCompany().getComId();
+
+        if (request.getMemberIds() == null) {
+            throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
+        }
+
+        Set<String> targets = new LinkedHashSet<>();
+        for (String id : request.getMemberIds()) {
+            if (id == null || id.isBlank()) continue;
+            if (id.equals(empId)) continue;
+            targets.add(id);
+        }
+
+        if (targets.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
+        }
+
+        // ✅ 회사 comId 검증
+        for (String targetEmpId : targets) {
+            Employee target = employeeRepository.findByEmpId(targetEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            String targetComId = target.getCompany().getComId();
+            if (!Objects.equals(creatorComId, targetComId)) {
+                throw new CustomException(ErrorCode.COMPANY_MISMATCH);
+            }
+        }
+
+
+        int memberCount = targets.size();
         RoomType roomType;
 
         if (memberCount == 1) {
@@ -82,10 +111,8 @@ public class ChatRoomService {
                 return ResChatRoomDto.from(room);
             }
 
-            Employee target = employeeRepository.findByEmpId(targetEmpId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-            roomName = target.getEmpName();
+            roomName = null;
         }
 
         else {
@@ -104,9 +131,18 @@ public class ChatRoomService {
                 }
 
                 roomName = String.join(", ", empNames);
+                if (roomName.length() > 255) {
+                    roomName = roomName.substring(0, 250) + "...";
+                }
             } else {
                 roomName = request.getRoomName();
+                if (roomName.length() > 255) {
+                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+                }
             }
+        }
+        if (roomName != null && roomName.length() > 255) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(roomName, roomType));
@@ -124,8 +160,8 @@ public class ChatRoomService {
      *
      */
     @Transactional(readOnly = true)
-    public List<ResChatRoomListDto> getMyRooms(LocalDateTime cursor, Pageable pageable, String empId) {
-        return chatRoomRepository.findMyRooms(empId, cursor, pageable)
+    public List<ResChatRoomListDto> getMyRooms(String keyword, LocalDateTime cursor, Pageable pageable, String empId) {
+        return chatRoomRepository.findMyRooms(empId, keyword, cursor, pageable)
                 .stream()
                 .map(room -> ResChatRoomListDto.from(room, empId))
                 .collect(Collectors.toList());
@@ -167,11 +203,46 @@ public class ChatRoomService {
      */
     @Transactional
     public void markAsRead(Long roomNo, String empId) {
+        // 1. 해당 멤버 정보 조회
         ChatRoomMember member = chatRoomMemberRepository
                 .findByChatRoom_RoomNoAndEmployee_EmpIdAndIsActiveTrue(roomNo, empId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
 
+        // 읽음 처리 (unreadCount = 0)
         member.markReadNow();
+
+        ChatRoom room = member.getChatRoom();
+        String roomName;
+
+        // ✅ [수정 포인트] 1:1 채팅방일 경우 상대방 이름을 실시간으로 추출
+        if (room.getRoomType() == RoomType.ONE) {
+            roomName = room.getMembers().stream()
+                    .filter(m -> !m.getEmployee().getEmpId().equals(empId)) // 내가 아닌 멤버 찾기
+                    .map(m -> m.getEmployee().getEmpName())
+                    .findFirst()
+                    .orElse("알 수 없는 사용자");
+        } else {
+            // 그룹 채팅은 DB에 저장된 방 이름을 사용 (없으면 기본값 처리 가능)
+            roomName = room.getRoomName() != null ? room.getRoomName() : "그룹 채팅";
+        }
+
+        // 2. DB에서 최신 메시지 조회 (목록 갱신용)
+        ChatMessage latestMsg = chatMessageRepository.findTopByRoomNoOrderByCreatedAtDesc(roomNo)
+                .orElse(null);
+
+        String content = (latestMsg != null) ? latestMsg.getContent() : null;
+        String createdAt = (latestMsg != null) ? latestMsg.getCreatedAt().toString() : null;
+
+        // 3. 최신 데이터(상대방 이름 포함)로 목록 업데이트 알림 전송
+        ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
+                roomNo,
+                content,
+                createdAt,
+                0, // 읽음 처리되었으므로 0
+                roomName // ✅ 이제 내가 아닌 상대방의 이름이 전달됨
+        );
+
+        redisPublisher.publishRoomUpdate(empId, updateDto);
     }
 
     /**
@@ -224,17 +295,30 @@ public class ChatRoomService {
             throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
         }
 
+        Employee inviter = employeeRepository.findByEmpId(inviterEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        String inviterComId = inviter.getCompany().getComId();
+
         LocalDateTime now = LocalDateTime.now();
 
         List<String> invitedNames = new ArrayList<>();
+        List<String> alreadyInRoomNames = new ArrayList<>();
 
-        for (String targetEmpId : request.getMemberIds()) {
+        Set<String> uniqueTargetIds = new LinkedHashSet<>(request.getMemberIds());
+
+        for (String targetEmpId : uniqueTargetIds) {
 
             if (targetEmpId == null || targetEmpId.isBlank()) continue;
             if (targetEmpId.equals(inviterEmpId)) continue;
 
             Employee target = employeeRepository.findByEmpId(targetEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            String targetComId = target.getCompany().getComId();
+            if (!Objects.equals(inviterComId, targetComId)) {
+                throw new CustomException(ErrorCode.COMPANY_MISMATCH);
+            }
 
             ChatRoomMember existing = chatRoomMemberRepository
                     .findByChatRoom_RoomNoAndEmployee_EmpId(roomNo, targetEmpId)
@@ -246,21 +330,23 @@ public class ChatRoomService {
                 chatRoomMemberRepository.save(newMember);
                 invitedNames.add(target.getEmpName());
             } else {
-                if (!existing.isActive()) {
-                    existing.reactivateNow(now);
-                    invitedNames.add(target.getEmpName());
+                if (existing.isActive()) {
+                    alreadyInRoomNames.add(target.getEmpName());
+                    continue;
                 }
+
+                existing.reactivateNow(now);
+                invitedNames.add(target.getEmpName());
             }
         }
 
-        if (invitedNames.isEmpty()) return;
+        if (invitedNames.isEmpty()) {
+            return;
+        }
 
         String content = String.join(", ", invitedNames) + "님이 들어왔습니다.";
-
         redisPublisher.publishSystem(roomNo, content);
 
-
     }
-
 
 }

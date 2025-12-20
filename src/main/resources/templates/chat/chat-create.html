@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Create Chat Room</title>
+    <style>
+        :root { --primary-color: #007bff; --bg-color: #f8f9fa; --border-color: #eee; }
+        body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
+        .wrap { height: 100vh; display: flex; flex-direction: column; background: white; }
+
+        /* 상단 바 */
+        .top { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; gap: 12px; align-items: center; background: white; }
+        .top input { flex: 1; padding: 12px 18px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; }
+        .top input:focus { border-color: var(--primary-color); }
+        .top button { padding: 10px 16px; cursor: pointer; background: white; border: 1px solid #ddd; border-radius: 8px; font-weight: 600; }
+
+        .main { flex: 1; display: flex; min-height: 0; border-bottom: 1px solid var(--border-color); }
+        .left, .right { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .left { border-right: 1px solid var(--border-color); }
+
+        .sectionTitle { padding: 12px 18px; font-size: 12px; font-weight: 700; color: #999; background: #fafafa; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
+        .list { flex: 1; overflow: auto; }
+
+        /* 사원 행 스타일 */
+        .row { padding: 15px 20px; border-bottom: 1px solid #f8f8f8; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+        .row:hover { background: #fcfcfc; }
+        .info .name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+        .info .sub { font-size: 12px; color: #888; }
+        .btn-add { background: #f0f7ff; color: var(--primary-color); border: none; border-radius: 6px; padding: 6px 12px; font-weight: 800; cursor: pointer; }
+
+        /* 선택된 인원 필 스타일 */
+        .pill { display: inline-flex; gap: 8px; align-items: center; background: #f0f7ff; border-radius: 8px; padding: 8px 12px; margin: 8px; font-size: 13px; border: 1px solid #d0e5ff; }
+        .pill b { color: #333; }
+        .pill button { cursor: pointer; border: none; background: none; color: #ff3b30; font-weight: bold; font-size: 14px; }
+
+        /* 하단 생성 바 */
+        .footer { padding: 15px 20px; display: flex; gap: 10px; align-items: center; background: white; }
+        .input-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .footer input { width: 100%; padding: 14px 18px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; box-sizing: border-box; }
+        .footer button { padding: 14px 28px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,123,255,0.2); }
+        .footer button:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+        /* ✅ 추가된 카운트 정보 스타일 */
+        .count-info { font-size: 12px; color: #777; align-self: flex-end; }
+        .count-info.warn { color: #ff3b30; font-weight: 700; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="top">
+        <input id="keyword" placeholder="사원 검색 (이름, 부서, 사번...)" />
+        <button onclick="closeWindow()">닫기</button>
+    </div>
+
+    <div class="main">
+        <div class="left">
+            <div class="sectionTitle">사원 목록</div>
+            <div class="list" id="empList"></div>
+        </div>
+        <div class="right">
+            <div class="sectionTitle">선택된 인원</div>
+            <div class="list" id="selectedBox"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="input-group">
+            <input id="roomName" placeholder="채팅방 이름을 입력하세요 (미입력 시 멤버 이름으로 설정)" />
+            <span id="nameCount" class="count-info">0 / 250 자</span>
+        </div>
+        <button id="createBtn" onclick="createRoom()">채팅방 생성</button>
+    </div>
+</div>
+
+<script>
+    function getAccessToken() { return localStorage.getItem("accessToken"); }
+    function authHeaders() { return { 'Authorization': 'Bearer ' + getAccessToken() }; }
+    function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>"']/g, s => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+        }[s]));
+    }
+
+    const selected = new Map();
+
+    function renderSelected() {
+        const box = document.getElementById("selectedBox");
+        box.innerHTML = "";
+        if (selected.size === 0) {
+            box.innerHTML = `<div style="padding:12px; color:#777; font-size:12px;">+ 버튼으로 사람을 추가하세요</div>`;
+            return;
+        }
+        [...selected.values()].forEach(e => {
+            const pill = document.createElement("div");
+            pill.className = "pill";
+            pill.innerHTML = `
+                <span><b>${escapeHtml(e.empName)}</b> (${escapeHtml(e.empId)})</span>
+                <button onclick="removeSelected('${escapeHtml(e.empId)}')">x</button>
+            `;
+            box.appendChild(pill);
+        });
+    }
+
+    function addSelected(empId, empName) {
+        if (!empId || selected.has(empId)) return;
+        selected.set(empId, { empId, empName });
+        renderSelected();
+    }
+
+    function removeSelected(empId) {
+        selected.delete(empId);
+        renderSelected();
+    }
+
+    let cursor = null;
+    let hasNext = true;
+    let loading = false;
+    let kwTimer = null;
+
+    async function resetAndLoad() {
+        cursor = null;
+        hasNext = true;
+        document.getElementById("empList").innerHTML = "";
+        await loadMore();
+    }
+
+    async function loadMore() {
+        if (loading || !hasNext) return;
+        loading = true;
+        const keyword = document.getElementById("keyword").value.trim();
+        const qs = new URLSearchParams({ size: "30", excludeMe: "true" });
+        if (keyword) qs.set("keyword", keyword);
+        if (cursor) qs.set("cursor", cursor);
+
+        const res = await fetch("/api/v1/employees?" + qs.toString(), { headers: authHeaders() });
+        const result = await res.json();
+        const payload = result.data || result;
+
+        cursor = payload.nextCursor;
+        hasNext = !!payload.hasNext;
+
+        const box = document.getElementById("empList");
+        (payload.items || []).forEach(e => {
+            const row = document.createElement("div");
+            row.className = "row";
+            row.innerHTML = `
+                <div class="info">
+                    <div class="name">${escapeHtml(e.empName)} (${escapeHtml(e.empId)})</div>
+                    <div class="sub">${escapeHtml(e.depName ?? "")} · ${escapeHtml(e.posName ?? "")}</div>
+                </div>
+                <button class="btn-add" onclick="addSelected('${escapeHtml(e.empId)}', '${escapeHtml(e.empName)}')">+</button>
+            `;
+            box.appendChild(row);
+        });
+        loading = false;
+    }
+
+    // ✅ [추가] 채팅방 이름 250자 제한 로직
+    const MAX_CHARS = 250;
+    function updateNameCount() {
+        const input = document.getElementById("roomName");
+        const countInfo = document.getElementById("nameCount");
+        const btn = document.getElementById("createBtn");
+        const len = input.value.length;
+
+        countInfo.textContent = `${len} / ${MAX_CHARS} 자`;
+
+        if (len > MAX_CHARS) {
+            countInfo.classList.add("warn");
+            btn.disabled = true;
+        } else {
+            countInfo.classList.remove("warn");
+            btn.disabled = false;
+        }
+    }
+
+    document.getElementById("roomName").addEventListener("input", updateNameCount);
+
+    document.getElementById("keyword").addEventListener("input", () => {
+        clearTimeout(kwTimer);
+        kwTimer = setTimeout(resetAndLoad, 250);
+    });
+
+    document.getElementById("empList").addEventListener("scroll", (e) => {
+        if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 120) loadMore();
+    });
+
+    async function createRoom() {
+        if (selected.size === 0) return alert("한 명 이상 선택해라");
+        const roomName = document.getElementById("roomName").value.trim();
+
+        // 전송 전 최종 체크
+        if (roomName.length > MAX_CHARS) {
+            alert(`방 이름은 최대 ${MAX_CHARS}자까지 가능합니다.`);
+            return;
+        }
+
+        const res = await fetch("/api/v1/chat", {
+            method: "POST",
+            headers: { "Content-Type":"application/json", ...authHeaders() },
+            body: JSON.stringify({
+                roomType: "GROUP",
+                roomName: roomName || null,
+                memberIds: [...selected.keys()]
+            })
+        });
+
+        if (res.ok) {
+            const result = await res.json();
+            window.open(`/chat/room/${result.data.roomNo}`, "_blank", "width=420,height=740");
+            window.close();
+        } else {
+            alert("채팅방 생성 실패");
+        }
+    }
+
+    window.addEventListener("load", () => { renderSelected(); resetAndLoad(); updateNameCount(); });
+    function closeWindow() { window.close(); }
+</script>
+</body>
+</html>
