@@ -24,7 +24,7 @@ public class ViewDocumentController {
     @GetMapping("/documents")
     public String viewFinalizedDocuments(@RequestParam(name = "status") String status) {
         if(status.equals("FINALIZED")){
-            return "document/finalized-list";
+            return "document/finalized-list-v2";
         }
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
@@ -34,13 +34,13 @@ public class ViewDocumentController {
     @GetMapping("/documents/me")
     public String viewDocumentsByStatus(@RequestParam(name = "status") String status) {
         if(status.equals("SUBMITTED")) {
-            return "/document/submitted-list";
+            return "/document/submitted-list-v2";
         }
         else if(status.equals("AWAITING")){
-            return "/document/awaiting-list";
+            return "/document/awaiting-list-v2";
         }
         else if(status.equals("PROCESSED")){
-            return "/document/processed-list";
+            return "/document/processed-list-v2";
         }
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
