@@ -89,6 +89,9 @@ public class ChatMessageService {
 
         chatRoomMemberRepository.increaseUnreadForOthers(request.getRoomNo(), empId);
 
+        String preview = chatRoom.getLastMessage();                 // ← trim 적용된 값
+        String previewAtIso = chatRoom.getLastMessageAt().toString(); // ← updateLastMessage에서 세팅된 값
+
         List<String> memberEmpIds = chatRoomMemberRepository.findEmpIdsByRoomNo(request.getRoomNo());
 
         for (String targetEmpId : memberEmpIds) {
@@ -105,8 +108,8 @@ public class ChatMessageService {
 
             ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                     request.getRoomNo(),
-                    savedMessage.getContent(),
-                    savedMessage.getCreatedAt().toString(), // ISO
+                    preview,          // ✅ 여기! savedMessage.getContent() 말고
+                    previewAtIso,     // ✅ 여기!
                     unread
             );
 
