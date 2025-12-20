@@ -51,6 +51,14 @@ public class AuthController {
                 .body(new ResponseDto<>(HttpStatus.OK, "사용 가능한 회사 코드 입니다.", authService.checkComId(comId)));
     }
 
+    @PostMapping("/companies/check-email")
+    public ResponseEntity<ResponseDto<Boolean>> checkEmail(@RequestParam(name = "email") String email) {
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "사용 가능한 이메일 입니다.", authService.checkEmail(email)));
+    }
+
     @PostMapping("/companies/verify-brn")
     public ResponseEntity<ResponseDto<Boolean>> verifyBrn(@RequestParam(name = "brn") String brn) {
 

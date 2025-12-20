@@ -61,9 +61,7 @@ public class AuthService {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
         // 2) 회사 코드 중복 체크
-        if (companyRepository.existsByComId(reqCompanySignupDto.getComId())) {
-            throw new CustomException(ErrorCode.DUPLICATE_COMID);
-        }
+        String comId = reqCompanySignupDto.getComId().trim().toUpperCase();
 
         // 3) 비밀번호 암호화
         String encodedPwd = passwordEncoder.encode(reqCompanySignupDto.getPwd());
@@ -83,7 +81,7 @@ public class AuthService {
 
         // 4) Company 생성 + 저장
         Company company = Company.createForSignup(
-                reqCompanySignupDto.getComId(),
+                comId,
                 reqCompanySignupDto.getComName(),
                 reqCompanySignupDto.getEmail(),
                 encodedPwd,
@@ -136,6 +134,22 @@ public class AuthService {
 
 
     public boolean checkComId(String comId) {
-        return companyRepository.existsByComId(comId);
+
+        // comId 무조건 대문자 처리
+        comId = comId.trim().toUpperCase();
+
+        if(companyRepository.existsByComId(comId)) {
+            throw new CustomException(ErrorCode.DUPLICATE_COMID);
+        }
+        return true;
+    }
+
+    public boolean checkEmail(String email) {
+
+        if (companyRepository.existsByEmail(email)) {
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        return true;
     }
 }
