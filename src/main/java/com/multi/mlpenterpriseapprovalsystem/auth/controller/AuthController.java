@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.auth.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.service.AuthService;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
@@ -30,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class AuthController {
 
     private final AuthService authService;
+    private final TokenService tokenService;
 
     @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Void>> signUpCompany(
@@ -83,5 +85,13 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "로그인 성공", token));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ResponseDto<Void>> logout(@RequestHeader("Authorization") String accessToken, HttpServletResponse response) {
+
+        tokenService.deleteRefreshToken(accessToken, response);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto<>(HttpStatus.OK, "로그아웃 성공 및 Refresh Token 삭제 완료", null));
     }
 }
