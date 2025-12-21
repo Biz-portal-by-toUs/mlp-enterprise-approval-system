@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>법인 차량 수정</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            width: 520px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+            padding: 28px;
+        }
+
+        .form-inner {
+            max-width: 420px;          /* 입력칸 최대 폭 제한 */
+            margin: 0 auto;            /* 가운데 정렬 */
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            box-sizing: border-box;    /* 삐져나오는 거 방지 */
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 220px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        textarea {
+            resize: none;
+        }
+
+        .btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .submit {
+            background: #1677ff;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .submit.disabled {
+            background: #a5c8ff;   /* 연한 파랑 */
+            cursor: not-allowed;
+        }
+
+        .cancel {
+            background: #e5e7eb;
+        }
+
+        .preview-box {
+            width: 100%;
+            height: 220px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>법인 차량 수정</h2>
+
+    <form id="editForm" enctype="multipart/form-data">
+        <div class="field">
+            <label>차량명</label>
+            <input type="text" name="carName" maxlength="20" required>
+        </div>
+
+        <div class="field">
+            <label>차량번호</label>
+            <input type="text" name="plateNo" maxlength="20" required>
+        </div>
+
+        <div class="field">
+            <label>차종</label>
+            <input type="text" name="carType" maxlength="20">
+        </div>
+
+        <div class="field">
+            <label>연료</label>
+            <input type="text" name="fuel" maxlength="10">
+        </div>
+
+        <div class="field">
+            <label>수용 인원</label>
+            <input type="number" name="capacity" id="capacity" min="1" max="8" required>
+        </div>
+
+        <div class="field">
+            <label>법인 차량 이미지</label>
+            <input
+                    type="file"
+                    name="imageFile"
+                    id="imageFile"
+                    accept="image/*"
+                    onchange="previewImage(this)"
+            >
+        </div>
+
+        <div class="preview-box">
+            <img id="imagePreview" alt="미리보기 이미지" />
+        </div>
+
+        <div class="btns">
+            <button type="submit" class="submit disabled" disabled>수정</button>
+            <button type="button" class="cancel" onclick="history.back()">취소</button>
+        </div>
+    </form>
+</div>
+
+<script th:inline="javascript">
+    /* ================== 공통 변수 ================== */
+    const carNo = /*[[${carNo}]]*/ null;
+    const accessToken = localStorage.getItem("accessToken");
+
+    if (!accessToken) {
+        alert("로그인이 필요합니다.");
+        location.href = "/login";
+    }
+
+    if (!carNo) {
+        alert("잘못된 접근입니다.");
+        location.href = "/corporate-cars";
+    }
+
+    /* ================== 이미지 미리보기 ================== */
+    function previewImage(input) {
+        const preview = document.getElementById("imagePreview");
+
+        if (!input.files || !input.files[0]) {
+            preview.style.display = "none";
+            preview.src = "";
+            return;
+        }
+
+        const file = input.files[0];
+
+        if (!file.type.startsWith("image/")) {
+            alert("이미지 파일만 업로드 가능합니다.");
+            input.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* ================== 유효성 검사 ================== */
+    function validateEditForm() {
+        const name = document.querySelector("[name=carName]").value.trim();
+        const capacity = Number(document.querySelector("[name=capacity]").value);
+
+        if (!name) {
+            alert("차량명을 입력해주세요.");
+            return false;
+        }
+
+        if (name.length > 20) {
+            alert("차량명은 20자 이내입니다.");
+            return false;
+        }
+
+        if (!capacity || capacity < 1 || capacity > 8) {
+            alert("수용 인원은 1~8명 사이여야 합니다.");
+            return false;
+        }
+
+        return true;
+    }
+
+    /* ================== 페이지 로드시 데이터 조회 ================== */
+    let originalData = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            const res = await fetch(`/api/v1/corporate-cars/${carNo}`, {
+                headers: {
+                    Authorization: "Bearer " + accessToken
+                }
+            });
+
+            if (!res.ok) {
+                alert("법인 차량 정보를 불러오지 못했습니다.");
+                return;
+            }
+
+            const car = (await res.json()).data;
+
+            document.querySelector("[name=carName]").value = car.carName;
+            document.querySelector("[name=plateNo]").value = car.plateNo;
+            document.querySelector("[name=carType]").value = car.carType ?? "";
+            document.querySelector("[name=fuel]").value = car.fuel ?? "";
+            document.querySelector("[name=capacity]").value = car.capacity ?? "";
+
+            originalData = {
+                carName: car.carName,
+                plateNo: car.plateNo,
+                carType: car.carType ?? "",
+                fuel: car.fuel ?? "",
+                capacity: car.capacity ?? "",
+                imageChanged: false};
+
+            if (car.imageUrl) {
+                const preview = document.getElementById("imagePreview");
+                preview.src = car.imageUrl;
+                preview.style.display = "block";
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("서버 오류가 발생했습니다.");
+        }
+    });
+
+    /* ================== 수정 submit ================== */
+    document.getElementById("editForm").addEventListener("submit", async e => {
+        e.preventDefault();
+
+        if (!validateEditForm()) return;
+
+        const formData = new FormData(e.target);
+
+        try {
+            const res = await fetch(`/api/v1/corporate-cars/${carNo}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: "Bearer " + accessToken
+                },
+                body: formData
+            });
+
+            const result = await res.json();
+
+            if (!res.ok) {
+                alert(result.message || "법인 차량 수정 실패했습니다.");
+                return;
+            }
+
+            alert("법인 차량 수정 성공했습니다!");
+            location.href = "/reservation/corporate-cars";
+
+        } catch (e) {
+            console.error(e);
+            alert("서버 오류가 발생했습니다.");
+        }
+    });
+
+    const capacityInput = document.getElementById("capacity");
+
+    capacityInput.addEventListener("input", () => {
+        let value = capacityInput.value;
+
+        if (value === "") return;
+
+        value = Number(value);
+
+        if (isNaN(value)) {
+            capacityInput.value = "";
+            return;
+        }
+
+        if (value < 1) {
+            capacityInput.value = 1;
+            return;
+        }
+
+        if (value > 8) {
+            capacityInput.value = 8;
+        }
+    });
+
+    function hasChanged() {
+        if (!originalData) return false;
+
+        const current = {
+            carName: document.querySelector("[name=carName]").value.trim(),
+            plateNo: document.querySelector("[name=plateNo]").value.trim(),
+            carType: document.querySelector("[name=carType]").value.trim(),
+            fuel: document.querySelector("[name=fuel]").value.trim(),
+            capacity: Number(document.querySelector("[name=capacity]").value),
+            imageChanged: document.querySelector("[name=imageFile]").files.length > 0
+        };
+
+        return (
+            current.carName !== originalData.carName ||
+            current.plateNo !== originalData.plateNo ||
+            current.carType !== originalData.carType ||
+            current.fuel !== originalData.fuel ||
+            current.capacity !== originalData.capacity ||
+            current.imageChanged
+        );
+    }
+
+    const submitBtn = document.querySelector(".submit");
+
+    function updateSubmitButton() {
+        if (hasChanged()) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove("disabled");
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.classList.add("disabled");
+        }
+    }
+
+    document.querySelectorAll(
+        "input[name=carName], input[name=plateNo], input[name=carType], input[name=fuel], input[name=capacity]"
+    ).forEach(el => {
+        el.addEventListener("input", updateSubmitButton);
+    });
+
+    document.querySelector("[name=imageFile]")
+        .addEventListener("change", updateSubmitButton);
+
+</script>
+
+</body>
+</html>
