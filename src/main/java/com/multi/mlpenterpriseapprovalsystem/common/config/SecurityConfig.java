@@ -51,7 +51,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/auth/**",
-                                "/meeting-rooms/**").permitAll()
+                                "/meeting-rooms/**",
+                                "/admin/**").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
                                 "/images/**",
