@@ -49,6 +49,8 @@ public class AuthService {
     public boolean isRegisteredBusiness(String brn) {
         if (!businessVerificationService.isRegisteredBusiness(brn)) {
             throw new CustomException(ErrorCode.INVALID_BRN);
+        } else if(companyRepository.existsByBrn(brn)) {
+            throw new CustomException(ErrorCode.BRN_DUPLICATE);
         }
         return true;
     }
@@ -64,11 +66,13 @@ public class AuthService {
         if (companyRepository.existsByComId(reqCompanySignupDto.getComId())) {
             throw new CustomException(ErrorCode.DUPLICATE_COMID);
         }
+        // 회사 코드 ToUpperCase
+        String comId = reqCompanySignupDto.getComId().trim().toUpperCase();
 
         // 3) 비밀번호 암호화
         String encodedPwd = passwordEncoder.encode(reqCompanySignupDto.getPwd());
 
-        // 2) 로고 저장(있으면 저장하고 imgUrl/path 세팅)
+        // 4) 로고 저장(있으면 저장하고 imgUrl/path 세팅)
         String imgUrl = null;
         String path = null;
         if (logo != null && !logo.isEmpty()) {
@@ -77,13 +81,13 @@ public class AuthService {
             path = stored.getPath();   // /Users/.../bizportal/uploads/company-logo/xxx.png
         }
 
-        // 3) sub_no=1 연결 (회원가입 시 기본 요금제)
+        // 5) sub_no=1 연결 (회원가입 시 기본 요금제)
         Subscription basic = subscriptionRepository.findById((long)1)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        // 4) Company 생성 + 저장
+        // 6) Company 생성 + 저장
         Company company = Company.createForSignup(
-                reqCompanySignupDto.getComId(),
+                comId,
                 reqCompanySignupDto.getComName(),
                 reqCompanySignupDto.getEmail(),
                 encodedPwd,
@@ -135,4 +139,23 @@ public class AuthService {
     }
 
 
+    public boolean checkComId(String comId) {
+
+        // comId 무조건 대문자 처리
+        comId = comId.trim().toUpperCase();
+
+        if(companyRepository.existsByComId(comId)) {
+            throw new CustomException(ErrorCode.DUPLICATE_COMID);
+        }
+        return true;
+    }
+
+    public boolean checkEmail(String email) {
+
+        if (companyRepository.existsByEmail(email)) {
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        return true;
+    }
 }
