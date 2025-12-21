@@ -29,6 +29,28 @@
         .row .sub { margin-top:6px; font-size:12px; color:#666; display:flex; justify-content:space-between; align-items: center; gap:8px; }
         .badge { background:#ff3b30; color:#fff; border-radius:999px; padding:2px 8px; font-size:11px; font-weight: bold; }
         .hint { padding:10px 12px; font-size:12px; color:#777; border-bottom:1px solid #f7f7f7; background: #fafafa; }
+
+        /* ✅ 상태 표시 점 스타일 */
+        .status-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        /* 출근/근무 중 (c) : 초록색 채움 */
+        .status-online {
+            background-color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        /* 그 외 상태 : 비어있는 원 (테두리만) */
+        .status-offline {
+            background-color: transparent;
+            border: 1px solid #ccc;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
@@ -43,6 +65,15 @@
 
     <div class="content">
         <div class="panel" id="employeesPanel">
+            <div id="myProfile" style="padding: 14px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; background: #007bff; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">👤</div>
+                <div style="flex: 1;">
+                    <div id="myName" style="font-weight: 700; font-size: 15px; color: #333;">로딩 중...</div>
+                    <div id="myDept" style="font-size: 12px; color: #777;">부서 정보 로딩 중</div>
+                </div>
+                <div style="font-size: 11px; color: #007bff; border: 1px solid #007bff; padding: 2px 6px; border-radius: 4px;">나</div>
+            </div>
+
             <div class="toolbar">
                 <input id="empKeyword" placeholder="이름/ID/부서 검색..." oninput="onEmpSearchInput()" />
             </div>
@@ -135,7 +166,17 @@
         payload.items.forEach(e => {
             const div = document.createElement("div");
             div.className = "row";
-            div.innerHTML = `<div class="title">${escapeHtml(e.empName)}</div><div class="sub">${escapeHtml(e.depName)} · ${escapeHtml(e.posName)}</div>`;
+
+            // 상태값에 따른 클래스 결정 (c이면 online, 아니면 offline)
+            const statusClass = (e.msgStat === 'C') ? 'status-online' : 'status-offline';
+
+            div.innerHTML = `
+            <div class="title">
+                <span class="status-dot ${statusClass}"></span>${escapeHtml(e.empName)}
+            </div>
+            <div class="sub">${escapeHtml(e.depName)} · ${escapeHtml(e.posName)}</div>
+        `;
+
             div.ondblclick = () => openOneToOneChat(e.empId, e.empName);
             box.appendChild(div);
         });
@@ -145,6 +186,25 @@
     function onEmpSearchInput() {
         clearTimeout(empKwTimer);
         empKwTimer = setTimeout(initEmployees, 300);
+    }
+
+    async function loadMyInfo() {
+        try {
+            const res = await fetch("/api/v1/employees/me", { headers: authHeaders() });
+            const result = await res.json();
+            const me = result.data;
+
+            // 상태값에 따른 클래스 결정 (C이면 online, 아니면 offline)
+            const statusClass = (me.msgStat === 'C') ? 'status-online' : 'status-offline';
+
+            // innerText 대신 innerHTML을 사용하여 상태 점(span)을 추가
+            document.getElementById("myName").innerHTML = `
+                <span class="status-dot ${statusClass}"></span>${escapeHtml(me.empName)}
+            `;
+            document.getElementById("myDept").innerText = `${me.depName} · ${me.posName}`;
+        } catch (err) {
+            console.error("내 정보 로드 실패", err);
+        }
     }
 
     // ---------------- ✅ 채팅방 목록 (서버 검색 + 무한 스크롤) ----------------
@@ -212,6 +272,11 @@
 
     // ---------------- 실시간 업데이트 & 핸들러 ----------------
     function handleRealtimeUpdate(upd) {
+        if (upd && (upd.removed === true)) {
+            const row = document.getElementById("room-row-" + upd.roomNo);
+            if (row) row.remove();
+            return; // ✅ REMOVE는 여기서 끝
+        }
         const row = document.getElementById("room-row-" + upd.roomNo);
         if (row) {
             // 이미 목록에 있는 방이면 UI 갱신 후 맨 위로 이동
@@ -260,7 +325,11 @@
     function openRoomWindow(no, name) { window.open(`/chat/room/${no}`, "_blank", "width=420,height=740"); }
     function openCreateRoom() { window.open("/chat/new", "_blank", "width=520,height=740"); }
 
-    window.addEventListener("load", () => { initEmployees(); connectWs(); });
+    window.addEventListener("load", () => {
+        initEmployees();
+        connectWs();
+        loadMyInfo(); // ✅ 추가
+    });
 </script>
 </body>
 </html>
