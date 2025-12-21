@@ -33,6 +33,7 @@ public class TokenService {
 
     private final TokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenProvider tokenProvider;
 
     /**
      * 로그인 성공 시 호출: access + refresh 발급
@@ -145,14 +146,30 @@ public class TokenService {
         response.addHeader("Set-Cookie", cookie.toString());
     }
 
+    private String resolveToken(String token) {
+        // Bearer 접두어가 있는 경우 제거하고 순수한 토큰 반환
+        if (token != null && token.startsWith("Bearer")) {
+            return token.substring(7);
+        }
+        return token; // Bearer 접두어가 없는 경우 그대로 반환
+    }
+
     /**
      * 로그아웃: refresh token 폐기
      * - accessToken에서 subject 추출해서 해당 유저의 refresh들을 revoke 처리하고 싶으면 여기도 확장 가능
      */
     @Transactional
-    public void logoutByRefreshToken(String refreshToken) {
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
-        stored.revoke();
+    public void deleteRefreshToken(String accessToken) {
+
+        String token = resolveToken(accessToken);
+        Long subjectId = tokenProvider.getSubjectId(token);
+        TokenSubjectType subjectType = tokenProvider.getSubjectType(token);
+        var stored = refreshTokenRepository.findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
+
+        if (stored.isEmpty()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        stored.forEach(RefreshToken::revoke);
     }
 }
