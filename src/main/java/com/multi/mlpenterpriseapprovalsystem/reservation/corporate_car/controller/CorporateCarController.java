@@ -2,10 +2,10 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.controll
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ReqCorporateCarDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ResCorporateCarDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.service.CorporateCarService;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResMeetingRoomDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,9 +13,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -56,8 +58,8 @@ public class CorporateCarController {
 
     @GetMapping("/corporate-cars")
     public ResponseEntity<ResponseDto<Map<String, Object>>> getCorporateCarsWithPaging(@AuthenticationPrincipal CustomUser user,
-                                                                                      @RequestParam(name = "page", defaultValue = "0") int page,
-                                                                                      @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
+                                                                                       @RequestParam(name = "page", defaultValue = "0") int page,
+                                                                                       @RequestParam(name = "size", defaultValue = "6") int size) {  // 한 페이지에서 보여줄 데이터 개수
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("carName").ascending());
 
@@ -81,4 +83,17 @@ public class CorporateCarController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, msg, result));
     }
+
+    @PostMapping(value = "/corporate-cars", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseDto<Long>> registerCorporateCar(@AuthenticationPrincipal CustomUser user,
+                                                                  @Valid @ModelAttribute ReqCorporateCarDto corporateCarDto,
+                                                                  @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
+
+        Long carNo = corporateCarService.registerCorporateCar(user, corporateCarDto, imageFile);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, "법인 차량 등록 성공", carNo));
+    }
+
 }
