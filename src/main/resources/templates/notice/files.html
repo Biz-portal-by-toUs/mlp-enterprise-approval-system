@@ -39,6 +39,7 @@
             <th>사이즈</th>
             <th>업로드 시각</th>
             <th>다운로드</th>
+            <th>삭제</th>
         </tr>
         </thead>
         <tbody id="filesTbody"></tbody>
@@ -54,6 +55,27 @@
         let i = 0, v = bytes;
         while (v >= 1024 && i < units.length-1) { v /= 1024; i++; }
         return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    async function deleteFile(encodedId, filename) {
+        const ok = confirm(`정말 삭제할까요?\n${filename}`);
+        if (!ok) return;
+
+        const res = await fetch(`${API_BASE}/${encodedId}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 204) {
+            alert(`삭제 실패: HTTP ${res.status}`);
+            return;
+        }
+        await loadFiles();
     }
 
     async function upload() {
@@ -105,7 +127,7 @@
         <td>${formatBytes(f.size)}</td>
         <td>${f.createdAt ?? "-"}</td>
         <td><a href="${API_BASE}/${encodeURIComponent(f.id)}/download">다운로드</a></td>
-
+        <td><button onclick="deleteFile('${encodeURIComponent(f.id)}','${escapeHtml(f.originalFilename)}')">삭제</button></td>
 
       `;
             tbody.appendChild(tr);

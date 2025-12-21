@@ -18,10 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -131,5 +128,20 @@ public class LocalFileStorageService {
     }
 
     public record DownloadTarget(String originalFilename, Resource resource) {}
+
+    public void deleteByStoredName(String storedName) throws IOException {
+        String safe = sanitizeStoredName(storedName);
+
+        Path filePath = rootDir.resolve(safe).normalize();
+        if (!filePath.startsWith(rootDir)) {
+            throw new IllegalArgumentException("허용되지 않은 경로입니다.");
+        }
+
+        try {
+            Files.delete(filePath); // 실제 파일 삭제
+        } catch (NoSuchFileException e) {
+            throw new NoSuchElementException("파일이 존재하지 않습니다.");
+        }
+    }
 }
 

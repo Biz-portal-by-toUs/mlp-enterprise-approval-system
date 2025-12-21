@@ -62,4 +62,10 @@ public class FileApiController {
                 .contentType(mediaType)
                 .body(target.resource());
     }
+
+    @DeleteMapping("/{storedName}")
+    public ResponseEntity<Void> delete(@PathVariable("storedName") String storedName) throws IOException {
+        storageService.deleteByStoredName(storedName);
+        return ResponseEntity.noContent().build(); // 204
+    }
 }
