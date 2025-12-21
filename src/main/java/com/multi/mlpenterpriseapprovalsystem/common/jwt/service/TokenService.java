@@ -145,7 +145,7 @@ public class TokenService {
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .sameSite("Lax")
-                .path("/auth")
+                .path("/")
                 .maxAge(jwtTokenProvider.getRefreshExpSeconds())
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
@@ -153,7 +153,7 @@ public class TokenService {
 
     private String resolveToken(String token) {
         // Bearer 접두어가 있는 경우 제거하고 순수한 토큰 반환
-        if (token != null && token.startsWith("Bearer")) {
+        if (token != null && token.startsWith("Bearer ")) {
             return token.substring(7);
         }
         return token; // Bearer 접두어가 없는 경우 그대로 반환
