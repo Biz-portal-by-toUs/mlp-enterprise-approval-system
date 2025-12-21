@@ -59,4 +59,14 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             @Param("cursor") LocalDateTime cursor,
             Pageable pageable
     );
+
+    @Query("""
+        select distinct r
+        from ChatRoom r
+        join fetch r.members m
+        join fetch m.employee e
+        where r.roomNo = :roomNo
+          and m.isActive = true
+    """)
+    Optional<ChatRoom> findByIdWithActiveMembers(@Param("roomNo") Long roomNo);
 }

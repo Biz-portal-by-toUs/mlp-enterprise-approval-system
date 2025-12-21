@@ -133,7 +133,11 @@ public class ChatMessageService {
                     previewAtIso,
                     unread,
                     finalRoomName // ✅ 계산된 실시간 방 이름을 전달
+                    ,false
             );
+            if (message.getType() == MessageType.SYSTEM) {
+                continue;
+            }
 
             redisPublisher.publishRoomUpdate(targetEmpId, updateDto);
         }
