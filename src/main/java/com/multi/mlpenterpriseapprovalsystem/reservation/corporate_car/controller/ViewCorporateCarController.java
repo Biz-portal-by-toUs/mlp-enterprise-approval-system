@@ -2,7 +2,9 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.controll
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -30,12 +32,14 @@ public class ViewCorporateCarController {
     }
 
     @GetMapping("/corporate-car-register")
-    public String addMeetingRoom() {
+    public String addCorporateCar() {
         return "reservation/corporate-cars/corporate-car-register";
     }
 
-
-
-
+    @GetMapping("/{carNo}/corporate-car-edit")
+    public String editCorporateCar(@PathVariable Long carNo, Model model) {
+        model.addAttribute("carNo", carNo);
+        return "reservation/corporate-cars/corporate-car-edit";
+    }
 
 }

@@ -96,4 +96,26 @@ public class CorporateCarController {
                 .body(new ResponseDto<>(HttpStatus.CREATED, "법인 차량 등록 성공", carNo));
     }
 
+    @PutMapping(value="/corporate-cars/{carNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseDto<Long>> updateCorporateCar(@PathVariable Long carNo,
+                                                               @AuthenticationPrincipal CustomUser user,
+                                                               @Valid @ModelAttribute ReqCorporateCarDto corporateCarDto,
+                                                               @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
+
+
+        Long updatedCarNo = corporateCarService.updateCorporateCar(carNo, user, corporateCarDto, imageFile);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "법인 차량 수정 성공", updatedCarNo));
+    }
+
+    @DeleteMapping("/corporate-cars/{carNo}")
+    public ResponseEntity<ResponseDto> deleteCorporateCar(@PathVariable Long carNo) {
+        corporateCarService.deleteCorporateCar(carNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "법인 차량 삭제 성공", null));
+    }
+
 }
