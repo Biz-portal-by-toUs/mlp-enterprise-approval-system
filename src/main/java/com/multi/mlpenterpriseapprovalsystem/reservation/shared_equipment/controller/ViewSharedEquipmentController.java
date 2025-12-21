@@ -28,4 +28,9 @@ public class ViewSharedEquipmentController {
     public String sharedEquipmentList() {
         return "reservation/shared-equipment/shared-equipment-list";
     }
+
+    @GetMapping("/shared-equipment-register")
+    public String addSharedEquipment() {
+        return "reservation/shared-equipment/shared-equipment-register";
+    }
 }
