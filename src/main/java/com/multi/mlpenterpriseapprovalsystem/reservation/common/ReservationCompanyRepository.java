@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository;
+package com.multi.mlpenterpriseapprovalsystem.reservation.common;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import org.springframework.data.jpa.repository.JpaRepository;
