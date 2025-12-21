@@ -29,9 +29,6 @@ import java.util.Map;
  * Service 계층을 통해 비즈니스 로직을 수행한다.
  * 처리 결과를 JSON 형태의 회의실 DTO 목록으로 반환한다.
  *
- * ※ 현재 comId는 임시로 RequestParam에서 전달받으며,
- * JWT 인증 연동 후 Access Token에서 추출하도록 변경 예정이다.
- *
  * @author : 송현님
  * @filename : MeetingRoomController
  * @since : 2025-12-16 오후 2:47 화요일

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Bizportal - 회의실 조회</title>
+    <title>Bizportal - 법인 차량 조회</title>
     <style>
         :root{
             --blue:#1677ff;
@@ -88,7 +88,7 @@
         .thumb img{width:100%;height:100%;object-fit:cover;display:block}
         .thumb .ph{color:#6b7280;font-size:12px}
         .card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-        .room-name{font-weight:800}
+        .car-name{font-weight:800}
         .meta{font-size:12px;color:var(--muted);line-height:1.45}
         .meta b{color:var(--text);font-weight:700}
         .divider{height:1px;background:var(--border);margin:2px 0}
@@ -280,7 +280,7 @@
 
         <!-- 메인 -->
         <main class="content">
-            <div class="page-title">회의실</div>
+            <div class="page-title">법인 차량</div>
 
             <div class="error" id="errBox"></div>
 
@@ -302,9 +302,9 @@
 <!-- 삭제 확인 모달 -->
 <div id="deleteModal" class="modal hidden">
     <div class="modal-content">
-        <h3 class="modal-title">⚠️ 회의실 삭제</h3>
+        <h3 class="modal-title">⚠️ 법인 차량 삭제</h3>
         <p class="modal-text">
-            회의실을 삭제하면 <b>되돌릴 수 없습니다.</b><br>
+            법인 차량을 삭제하면 <b>되돌릴 수 없습니다.</b><br>
             정말 삭제하시겠습니까?
         </p>
 
@@ -317,7 +317,7 @@
 
 <script>
 
-    let selectedRoomNo = null;
+    let selectedCarNo = null;
     let isAdmin = false;
     // 이미지 없을 때 띄워줄 이미지
     const NO_IMAGE_URL = "/images/no-image.png";
@@ -345,25 +345,25 @@
         errBox.textContent = "";
     }
 
-    function cardTemplate(room){
+    function cardTemplate(car){
         const safe = (v) => (v === null || v === undefined || v === "") ? "-" : v;
 
         return `
-      <article class="card ${isAdmin ? "selectable" : ""}" data-room-no="${room.roomNo}">
+      <article class="card ${isAdmin ? "selectable" : ""}" data-car-no="${car.carNo}">
         <div class="thumb">
           <img
-            src="${room.imageUrl || NO_IMAGE_URL}"
+            src="${car.imageUrl || NO_IMAGE_URL}"
             onerror="this.src='${NO_IMAGE_URL}'"
-            alt="회의실 이미지"
+            alt="법인 차량 이미지"
           />
         </div>
         <div class="card-body">
-          <div class="room-name">회의실명: ${safe(room.roomName)}</div>
+          <div class="car-name">법인 차량명: ${safe(car.carName)}</div>
           <div class="divider"></div>
-          <div class="meta"><b>위치:</b> ${safe(room.location)}</div>
-          <div class="meta"><b>수용인원:</b> ${safe(room.capacity)}명</div>
-          <div class="meta"><b>주요 장비:</b> ${safe(room.equipList)}</div>
-          <div class="meta"><b>특이사항:</b> ${safe(room.note)}</div>
+          <div class="meta"><b>차량번호:</b> ${safe(car.plateNo)}</div>
+          <div class="meta"><b>차   종:</b> ${safe(car.carType)}</div>
+          <div class="meta"><b>연   료:</b> ${safe(car.fuel)}</div>
+          <div class="meta"><b>수용인원:</b> ${safe(car.capacity)}명</div>
         </div>
       </article>
     `;
@@ -381,7 +381,7 @@
                 document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
                 card.classList.add("selected");
 
-                selectedRoomNo = card.dataset.roomNo;
+                selectedCarNo = card.dataset.carNo;
 
                 document.getElementById("btnEdit").disabled = false;
                 document.getElementById("btnDelete").disabled = false;
@@ -402,7 +402,7 @@
             return b;
         };
 
-        paging.appendChild(mkBtn("‹", () => loadRooms(current - 1), current === 0));
+        paging.appendChild(mkBtn("‹", () => loadCars(current - 1), current === 0));
 
         // 페이지 버튼 너무 많으면 1~5개만 보여주는 간단 버전
         const windowSize = 5;
@@ -411,16 +411,16 @@
         const realStart = Math.max(0, end - windowSize + 1);
 
         for(let p = realStart; p <= end; p++){
-            paging.appendChild(mkBtn(String(p+1), () => loadRooms(p), false, p === current));
+            paging.appendChild(mkBtn(String(p+1), () => loadCars(p), false, p === current));
         }
 
-        paging.appendChild(mkBtn("›", () => loadRooms(current + 1), current >= total - 1));
+        paging.appendChild(mkBtn("›", () => loadRCars(current + 1), current >= total - 1));
     }
 
-    async function loadRooms(page){
+    async function loadCars(page){
         clearError();
 
-        selectedRoomNo = null;
+        selectedCarNo = null;
         document.getElementById("btnEdit").disabled = true;
         document.getElementById("btnDelete").disabled = true;
 
@@ -431,7 +431,7 @@
         }
 
         // 2. comId 제거 (JWT에서 서버가 꺼냄)
-        const url = `${API_BASE}/api/v1/meeting-rooms?page=${page}&size=${state.size}`;
+        const url = `${API_BASE}/api/v1/corporate-cars?page=${page}&size=${state.size}`;
 
         try{
             // ⭐ 3. fetch에 Authorization 헤더 추가
@@ -474,12 +474,12 @@
         }
     }
     document.getElementById("btnCreate").onclick = () => {
-        location.href = "/meeting-rooms/register";
+        location.href = "/reservation/corporate-cars/corporate-car-register";
     };
 
     document.getElementById("btnEdit").onclick = () => {
-        if (!selectedRoomNo) return;
-        location.href = `/meeting-rooms/${selectedRoomNo}/edit`;
+        if (!selectedCarNo) return;
+        location.href = `/reservation/corporate-cars/${selectedCarNo}/corporate-car-edit`;
     };
 
     const deleteModal = document.getElementById("deleteModal");
@@ -493,7 +493,7 @@
     }
 
     document.getElementById("btnDelete").onclick = () => {
-        if (!selectedRoomNo) return;
+        if (!selectedCarNo) return;
         openDeleteModal();
     };
 
@@ -505,7 +505,7 @@
     // 삭제 확정
     confirmDeleteBtn.addEventListener("click", async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/meeting-rooms/${selectedRoomNo}`, {
+            const res = await fetch(`${API_BASE}/api/v1/corporate-cars/${selectedCarNo}`, {
                 method: "DELETE",
                 headers: {
                     Authorization: "Bearer " + accessToken
@@ -519,10 +519,10 @@
             alert("회의실이 삭제되었습니다.");
             deleteModal.classList.add("hidden");
             // 선택 표시 초기화
-            selectedRoomNo = null;
+            selectedCarNo = null;
             document.getElementById("btnEdit").disabled = true;
             document.getElementById("btnDelete").disabled = true;
-            loadRooms(state.page); // 현재 페이지 다시 조회
+            loadCars(state.page); // 현재 페이지 다시 조회
 
         } catch (e) {
             alert("삭제 중 오류가 발생했습니다.");
@@ -536,7 +536,7 @@
     });
 
     // 처음 로드
-    loadRooms(0);
+    loadCars(0);
 </script>
 </body>
 </html>
