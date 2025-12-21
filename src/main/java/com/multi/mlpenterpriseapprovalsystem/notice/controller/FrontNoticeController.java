@@ -31,10 +31,10 @@ public class FrontNoticeController {
 
     }
 
-//    @GetMapping("/files")
-//    public String filesPage() {
-//        return "notice/files"; // templates/files.html
-//    }
+    @GetMapping("/files")
+    public String filesPage() {
+        return "notice/files"; // templates/files.html
+    }
 
 
 
