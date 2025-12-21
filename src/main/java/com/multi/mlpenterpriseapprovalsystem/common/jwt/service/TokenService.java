@@ -2,15 +2,16 @@ package com.multi.mlpenterpriseapprovalsystem.common.jwt.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.domain.RefreshToken;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
-import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import com.multi.mlpenterpriseapprovalsystem.auth.repository.RefreshTokenRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +32,13 @@ import java.util.List;
 @Transactional
 public class TokenService {
 
+    // 운영 https면 true, 로컬 http면 false
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
+
     private final TokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenProvider tokenProvider;
 
     /**
      * 로그인 성공 시 호출: access + refresh 발급
@@ -137,12 +143,20 @@ public class TokenService {
     private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true)          // 로컬 http면 false
+                .secure(cookieSecure)
                 .sameSite("Lax")
-                .path("/auth")
+                .path("/")
                 .maxAge(jwtTokenProvider.getRefreshExpSeconds())
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
+    }
+
+    private String resolveToken(String token) {
+        // Bearer 접두어가 있는 경우 제거하고 순수한 토큰 반환
+        if (token != null && token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return token; // Bearer 접두어가 없는 경우 그대로 반환
     }
 
     /**
@@ -150,9 +164,46 @@ public class TokenService {
      * - accessToken에서 subject 추출해서 해당 유저의 refresh들을 revoke 처리하고 싶으면 여기도 확장 가능
      */
     @Transactional
-    public void logoutByRefreshToken(String refreshToken) {
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
-        stored.revoke();
+    public void deleteRefreshToken(String accessToken, HttpServletResponse response) {
+
+        try {
+            String token = resolveToken(accessToken);
+            Long subjectId = tokenProvider.getSubjectId(token);
+            TokenSubjectType subjectType = tokenProvider.getSubjectType(token);
+
+            var stored = refreshTokenRepository
+                    .findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
+
+            if (stored.isEmpty()) {
+                // ✅ 너가 원한대로 UNAUTHORIZED 던짐
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+
+            stored.forEach(RefreshToken::revoke);
+
+        } finally {
+            // ✅ 성공/예외(UNAUTHORIZED 포함) 상관없이 쿠키 삭제 헤더는 내려감
+            clearAuthCookies(response);
+        }
     }
+
+    private void clearCookie(HttpServletResponse response, String cookieName) {
+        ResponseCookie cookie = ResponseCookie.from(cookieName, "")
+                .path("/")
+                .maxAge(0)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Lax")
+                .build();
+
+        // 여러 쿠키를 삭제할 수도 있으니 addHeader 사용
+        response.addHeader("Set-Cookie", cookie.toString());
+    }
+
+    public void clearAuthCookies(HttpServletResponse response) {
+        clearCookie(response, "refreshToken");
+        // accessToken을 쿠키로 쓰는 경우만
+        // clearCookie(response, "accessToken");
+    }
+
 }
