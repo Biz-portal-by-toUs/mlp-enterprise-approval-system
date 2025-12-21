@@ -88,9 +88,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ResponseDto<Void>> logout(@RequestHeader("Authorization") String accessToken) {
+    public ResponseEntity<ResponseDto<Void>> logout(@RequestHeader("Authorization") String accessToken, HttpServletResponse response) {
 
-        tokenService.deleteRefreshToken(accessToken);
+        tokenService.deleteRefreshToken(accessToken, response);
 
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto<>(HttpStatus.OK, "로그아웃 성공 및 Refresh Token 삭제 완료", null));
     }
