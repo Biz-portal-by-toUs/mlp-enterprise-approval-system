@@ -24,4 +24,6 @@ public interface CorporateCarRepository extends JpaRepository<CorporateCar, Long
     Page<CorporateCar> findByCompany_ComId(String comId, Pageable pageable);
 
     boolean existsByCompany_ComIdAndPlateNo(String comId, String plateNo);
+
+    boolean existsByCompany_ComIdAndPlateNoAndCarNoNot(String comId, String newPlateNo, Long carNo);
 }
