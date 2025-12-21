@@ -2,8 +2,10 @@ package com.multi.mlpenterpriseapprovalsystem.employee.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResChatEmployeeCursorDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -73,6 +75,13 @@ public class EmployeeService {
         }
 
         return new ResChatEmployeeCursorDto(rows, nextCursor, hasNext);
+    }
+
+    public ResEmployeeDetailDto getEmployeeDetailById(String myEmpId) {
+        Employee employee = employeeRepository.findByEmpId(myEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        return ResEmployeeDetailDto.from(employee);
     }
 
     private record CursorKey(String name, Long no) {}

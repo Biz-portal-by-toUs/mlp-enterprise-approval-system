@@ -1,9 +1,13 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResChatEmployeeCursorDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,7 +34,7 @@ public class EmployeeController {
      * - 다음 페이지: /api/v1/employees?cursor=xxxx&size=20
      */
     @GetMapping
-    public ResChatEmployeeCursorDto getEmployeesByCursor(
+    public ResponseEntity<ResponseDto<ResChatEmployeeCursorDto>> getEmployeesByCursor(
             @AuthenticationPrincipal CustomUser user,
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "cursor", required = false) String cursor,
@@ -38,6 +42,22 @@ public class EmployeeController {
             @RequestParam(name = "excludeMe", defaultValue = "true") boolean excludeMe
     ) {
         String requesterEmpId = user.getUsername();
-        return employeeService.getEmployeesByCursor(requesterEmpId, keyword, cursor, size, excludeMe);
+        ResChatEmployeeCursorDto employee = employeeService.getEmployeesByCursor(requesterEmpId, keyword, cursor, size, excludeMe);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK,"사람 이름 조회 성공",employee));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ResponseDto<ResEmployeeDetailDto>> getMyInfo(
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String myEmpId = user.getUsername();
+        // 서비스에서 사번으로 내 정보 하나만 가져오는 메서드 호출
+        ResEmployeeDetailDto myInfo = employeeService.getEmployeeDetailById(myEmpId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "내 정보 조회 성공", myInfo));
     }
 }
