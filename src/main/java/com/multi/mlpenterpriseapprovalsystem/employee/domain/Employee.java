@@ -83,7 +83,7 @@ public class Employee {
     private String atte; // 근태(출장 = b , 휴가 = v, 출근 = c) // default = c
 
     @Column(name = "msg_stat", nullable = false, length = 1)
-    private String msgStat ; // 메시지 상태 ( 근무 중 = c, 회의 중 = m, 업무 집중 = d, 자리 비움 = x, 출근 안함 = h) // default = h
+    private String msgStat ; // 메시지 상태 ( 근무 중(로그인) = c, 회의 중 = m, 업무 집중 = d, 자리 비움 = x, 로그인 안함 = h) // default = h
 
     // Self Reference (대직자 - emp_id 참조 유지)
     @ManyToOne(fetch = FetchType.LAZY)
