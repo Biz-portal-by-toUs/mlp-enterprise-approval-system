@@ -20,7 +20,7 @@ public class FrontNoticeController {
     @GetMapping("/list")
     public String noticeList() {
 
-        return "notice/list";
+        return "notice/notice_list";
     }
 
     // 상세 조회

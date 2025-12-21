@@ -1,15 +1,19 @@
 package com.multi.mlpenterpriseapprovalsystem.notice.service;
 
 import com.multi.mlpenterpriseapprovalsystem.notice.domain.Notice;
+import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import jakarta.persistence.criteria.JoinType;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -143,5 +147,69 @@ public class NoticeService {
         notice.update(dto);
     }
 
+    public Page<NoticeListItemResDto> searchNotices(
+            String comId,
+            String type,
+            String keyword,
+            LocalDate from,
+            LocalDate to,
+            Pageable pageable
+    ) {
+        Specification<Notice> spec = (root, query, cb) -> cb.conjunction();
+
+        // 회사조건 (Notice.company.comId)
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("company").get("comId"), comId)
+        );
+
+        // 삭제 제외 (isDeleted가 null일 수도 있으니 null OR false)
+        spec = spec.and((root, query, cb) ->
+                cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted")))
+        );
+
+        if (type != null && !type.isBlank()) {
+            switch (type) {
+                case "title" -> {
+                    if (keyword != null && !keyword.isBlank()) {
+                        spec = spec.and((root, query, cb) ->
+                                cb.like(root.get("title"), "%" + keyword + "%")
+                        );
+                    }
+                }
+                case "writer" -> {
+                    if (keyword != null && !keyword.isBlank()) {
+                        spec = spec.and((root, query, cb) ->
+                                cb.like(root.join("employee", JoinType.LEFT).get("empId"), "%" + keyword + "%")
+                        );
+                    }
+                }
+                case "date" -> {
+                    // BaseEntity에 createdAt이 있다고 가정 (필드명이 다르면 여기 수정)
+                    LocalDateTime fromDt = (from != null) ? from.atStartOfDay() : null;
+                    LocalDateTime toExclusive = (to != null) ? to.plusDays(1).atStartOfDay() : null;
+
+                    if (fromDt != null) {
+                        spec = spec.and((root, query, cb) ->
+                                cb.greaterThanOrEqualTo(root.get("createdAt"), fromDt)
+                        );
+                    }
+                    if (toExclusive != null) {
+                        spec = spec.and((root, query, cb) ->
+                                cb.lessThan(root.get("createdAt"), toExclusive)
+                        );
+                    }
+                }
+            }
+        }
+
+        Page<Notice> page = noticeRepository.findAll(spec, pageable);
+
+        return page.map(n -> new NoticeListItemResDto(
+                n.getNoticeNo(),
+                n.getTitle(),
+                (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null,
+                n.getCreatedAt() // BaseEntity
+        ));
+    }
 
 }

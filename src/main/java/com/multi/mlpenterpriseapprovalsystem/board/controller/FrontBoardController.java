@@ -20,7 +20,7 @@ public class FrontBoardController {
     @GetMapping("/list")
     public String boardList() {
 
-        return "board/list";
+        return "board/board_list";
     }
 
     // 상세 조회
