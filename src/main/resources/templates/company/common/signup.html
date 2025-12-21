@@ -81,7 +81,7 @@
         }
         .row{
             display:grid;
-            grid-template-columns: 1fr;  /* ✅ 한 줄에 하나 */
+            grid-template-columns: 1fr;
             gap:14px;
         }
 
@@ -211,6 +211,53 @@
             font-weight:900;
             color:#888;
         }
+
+        /* ===== Password rules pills ===== */
+        .pwd-rules{
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin:10px 0 0 6px;
+        }
+        .pwd-rule{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding:8px 12px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:800;
+            line-height:1;
+            background:#fdecec;
+            color:var(--error);
+        }
+        .pwd-rule.ok{
+            background:#eaf7ef;
+            color:var(--success);
+        }
+        .pwd-icon{
+            width:18px;
+            height:18px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:6px;
+            font-weight:900;
+        }
+
+        /* ===== eye toggle ===== */
+        .icon-btn{
+            border:0;
+            background:transparent;
+            cursor:pointer;
+            padding:6px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:8px;
+        }
+        .icon-btn:hover{ background:#f2f2f2; }
+        .icon-btn svg{ width:22px; height:22px; opacity:.55; }
     </style>
 </head>
 
@@ -234,7 +281,7 @@
                 <div class="row">
                     <div class="field">
                         <div class="field">
-                            <div class="label">기업 이름</div>
+                            <div class="label">기업 이름*</div>
                             <div class="input-wrap">
                                 <input name="comName" id="comName" type="text" placeholder="예) Samsung" maxlength="50" required />
                             </div>
@@ -243,7 +290,7 @@
                     </div>
 
                     <div class="field">
-                        <div class="label">회사코드 (3글자)</div>
+                        <div class="label">회사코드* (3글자)</div>
                         <div class="input-wrap">
                             <input name="comId" id="comId" type="text" placeholder="예) SAM" maxlength="3" required />
                             <button class="inline-btn" id="comIdCheckBtn" type="button">중복확인</button>
@@ -254,7 +301,7 @@
                 </div>
 
                 <div class="field">
-                    <div class="label">사업자 등록번호</div>
+                    <div class="label">사업자 등록번호*</div>
                     <div class="input-wrap brn-wrap">
                         <input id="brn1" type="text" inputmode="numeric" placeholder="101" maxlength="3" required />
                         <span class="brn-dash">-</span>
@@ -262,18 +309,15 @@
                         <span class="brn-dash">-</span>
                         <input id="brn3" type="text" inputmode="numeric" placeholder="20303" maxlength="5" required />
 
-                        <!-- ✅ 서버로 보낼 실제 brn 값(10자리) -->
                         <input name="brn" id="brn" type="hidden" />
 
                         <button class="inline-btn" id="brnVerifyBtn" type="button">인증하기</button>
                     </div>
-
-                    <!-- ✅ 인증 결과 메시지(여기에 초록/빨강으로 뜸) -->
                     <div id="brnMsg" class="note" style="margin-top:6px;"></div>
                 </div>
 
                 <div class="field">
-                    <div class="label">회사 이메일</div>
+                    <div class="label">회사 이메일*</div>
                     <div class="input-wrap">
                         <input name="email" id="email" type="email" placeholder="예) admin@company.com" maxlength="50" required />
                         <button class="inline-btn" id="emailCheckBtn" type="button">중복확인</button>
@@ -283,23 +327,45 @@
 
                 <div class="row">
                     <div class="field">
-                        <div class="label">비밀번호</div>
+                        <div class="label">비밀번호*</div>
                         <div class="input-wrap">
                             <input name="pwd" id="pwd" type="password" placeholder="••••••••" autocomplete="new-password" required />
+                            <button class="icon-btn" id="togglePwdBtn" type="button" aria-label="비밀번호 보기/숨기기">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="pwd-rules" id="pwdRules">
+                            <span class="pwd-rule" id="ruleUpper"><span class="pwd-icon">✗</span>영어 대문자</span>
+                            <span class="pwd-rule" id="ruleLower"><span class="pwd-icon">✗</span>영어 소문자</span>
+                            <span class="pwd-rule" id="ruleNumber"><span class="pwd-icon">✗</span>숫자</span>
+                            <span class="pwd-rule" id="ruleSpecial"><span class="pwd-icon">✗</span>특수문자</span>
+                            <span class="pwd-rule" id="ruleLen"><span class="pwd-icon">✗</span>8자 이상 20자 이내</span>
                         </div>
                     </div>
 
                     <div class="field">
-                        <div class="label">비밀번호 확인</div>
+                        <div class="label">비밀번호 확인*</div>
                         <div class="input-wrap">
                             <input id="pwdConfirm" type="password" placeholder="••••••••" autocomplete="new-password" required />
+                            <button class="icon-btn" id="togglePwdConfirmBtn" type="button" aria-label="비밀번호 확인 보기/숨기기">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
                         </div>
                         <div id="pwdMatchMsg"></div>
                     </div>
                 </div>
 
                 <div class="field">
-                    <div class="label">주소</div>
+                    <div class="label">주소*</div>
                     <div class="input-wrap">
                         <input name="addr" id="addr" type="text" placeholder="예) 서울특별시 어쩌구" required />
                     </div>
@@ -324,7 +390,7 @@
                 </div>
 
                 <div class="note" id="brnNote">
-                    * 사업자등록번호 인증 + 회사코드 중복확인 + 이메일 중복확인이 모두 완료되어야 회원가입 버튼이 활성화됩니다.
+                    * 기업 이름, 비밀번호 조건/일치, 주소 입력 + 사업자등록번호 인증 + 회사코드 중복확인 + 이메일 중복확인이 모두 완료되어야 회원가입 버튼이 활성화됩니다.
                 </div>
             </form>
         </section>
@@ -343,17 +409,24 @@
     const pwdConfirmInput = document.getElementById('pwdConfirm');
     const pwdMatchMsg = document.getElementById('pwdMatchMsg');
 
+    const togglePwdBtn = document.getElementById('togglePwdBtn');
+    const togglePwdConfirmBtn = document.getElementById('togglePwdConfirmBtn');
+
+    const ruleUpper = document.getElementById('ruleUpper');
+    const ruleLower = document.getElementById('ruleLower');
+    const ruleNumber = document.getElementById('ruleNumber');
+    const ruleSpecial = document.getElementById('ruleSpecial');
+    const ruleLen = document.getElementById('ruleLen');
+
     const logoInput = document.getElementById('logo');
     const logoPreview = document.getElementById('logoPreview');
     const logoImg = document.getElementById('logoImg');
     const logoMeta = document.getElementById('logoMeta');
 
-    // ✅ 추가: comId/email 중복확인 DOM
     const comIdInput = document.getElementById('comId');
     const comIdCheckBtn = document.getElementById('comIdCheckBtn');
     const comIdMsg = document.getElementById('comIdMsg');
     const comIdWarn = document.getElementById('comIdWarn');
-
 
     const emailInput = document.getElementById('email');
     const emailCheckBtn = document.getElementById('emailCheckBtn');
@@ -362,7 +435,8 @@
     const comNameInput = document.getElementById('comName');
     const comNameWarn = document.getElementById('comNameWarn');
 
-    // 상태 플래그
+    const addrInput = document.getElementById('addr');
+
     let brnVerified = false;
     let comIdChecked = false;
     let emailChecked = false;
@@ -388,16 +462,14 @@
         updateSignupButtonState();
     }
 
-    // 숫자만 입력되게 + 자동으로 다음 칸 이동
     function handleBrnInput(current, next, maxLen) {
         current.addEventListener('input', () => {
             current.value = (current.value || '').replace(/\D/g, '').slice(0, maxLen);
-            normalizeBrn();          // hidden 업데이트
-            resetBrnVerifyState();   // 값 바뀌면 인증 다시
+            normalizeBrn();
+            resetBrnVerifyState();
             if (current.value.length === maxLen && next) next.focus();
         });
 
-        // 붙여넣기 포함 비숫자 차단
         current.addEventListener('beforeinput', (e) => {
             if (!e.inputType || !e.inputType.startsWith('insert')) return;
             const data = e.data ?? '';
@@ -424,18 +496,18 @@
         try { return JSON.parse(text); } catch { return { message: text }; }
     }
 
+    function normalizeComId() {
+        return (document.getElementById('comId').value || '').trim().toUpperCase();
+    }
+
     function normalizeBrn() {
         const b1 = (document.getElementById('brn1').value || '').replace(/\D/g, '');
         const b2 = (document.getElementById('brn2').value || '').replace(/\D/g, '');
         const b3 = (document.getElementById('brn3').value || '').replace(/\D/g, '');
         const combined = (b1 + b2 + b3).trim();
-        document.getElementById('brn').value = combined; // hidden에 저장
+        brnHidden.value = combined;
         return combined;
     }
-
-    // function normalizeBrn() {
-    //     return (document.getElementById('brn').value || '').replaceAll('-', '').trim();
-    // }
 
     function isValidEmailFormat(v) {
         const email = (v || '').trim();
@@ -449,28 +521,110 @@
         if (ok) el.classList.add('note-success');
     }
 
+    function isFilled(v) {
+        return (v || '').trim().length > 0;
+    }
+
+    function setRule(el, ok){
+        el.classList.toggle('ok', ok);
+        const icon = el.querySelector('.pwd-icon');
+        if (icon) icon.textContent = ok ? '✓' : '✗';
+    }
+
+    function checkPwdRules(pwd){
+        const hasUpper = /[A-Z]/.test(pwd);
+        const hasLower = /[a-z]/.test(pwd);
+        const hasNumber = /[0-9]/.test(pwd);
+        const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+        const len = (pwd || '').length;
+        const hasLen = len >= 8 && len <= 20;
+
+        setRule(ruleUpper, hasUpper);
+        setRule(ruleLower, hasLower);
+        setRule(ruleNumber, hasNumber);
+        setRule(ruleSpecial, hasSpecial);
+        setRule(ruleLen, hasLen);
+
+        return hasUpper && hasLower && hasNumber && hasSpecial && hasLen;
+    }
+
+    function isBasicFieldsReady() {
+        const comNameOk = isFilled(comNameInput.value);
+        const addrOk = isFilled(addrInput.value);
+
+        const pwdOk = isFilled(pwdInput.value);
+        const pwdConfirmOk = isFilled(pwdConfirmInput.value);
+
+        const pwdMatch = pwdOk && pwdConfirmOk && (pwdInput.value === pwdConfirmInput.value);
+        const rulesOk = checkPwdRules(pwdInput.value);
+
+        return comNameOk && addrOk && pwdOk && pwdConfirmOk && pwdMatch && rulesOk;
+    }
+
     function updateSignupButtonState() {
-        const ready = brnVerified && comIdChecked && emailChecked;
+        const basicReady = isBasicFieldsReady();
+        const ready = basicReady && brnVerified && comIdChecked && emailChecked;
+
         signupBtn.disabled = !ready;
 
         if (!ready) {
             brnNote.classList.remove('note-success');
-            brnNote.textContent = '* 사업자등록번호 인증 + 회사코드 중복확인 + 이메일 중복확인이 모두 완료되어야 회원가입 버튼이 활성화됩니다.';
+
+            const missing = [];
+            if (!isFilled(comNameInput.value)) missing.push('기업 이름');
+            if (!isFilled(pwdInput.value)) missing.push('비밀번호');
+
+            const pwd = pwdInput.value || '';
+            if (pwd) {
+                if (!/[A-Z]/.test(pwd)) missing.push('영어 대문자');
+                if (!/[a-z]/.test(pwd)) missing.push('영어 소문자');
+                if (!/[0-9]/.test(pwd)) missing.push('숫자');
+                if (!/[^A-Za-z0-9]/.test(pwd)) missing.push('특수문자');
+                if (pwd.length < 8 || pwd.length > 20) missing.push('8자 이상 20자 이내');
+            } else {
+                missing.push('비밀번호 조건');
+            }
+
+            if (!isFilled(pwdConfirmInput.value)) missing.push('비밀번호 확인');
+            if (isFilled(pwdInput.value) && isFilled(pwdConfirmInput.value) && pwdInput.value !== pwdConfirmInput.value) {
+                missing.push('비밀번호 일치');
+            }
+            if (!isFilled(addrInput.value)) missing.push('주소');
+            if (!comIdChecked) missing.push('회사코드 중복확인');
+            if (!emailChecked) missing.push('이메일 중복확인');
+            if (!brnVerified) missing.push('사업자등록번호 인증');
+
+            brnNote.textContent = '* 다음 항목을 완료해야 회원가입 버튼이 활성화됩니다: ' + missing.join(', ');
         } else {
             brnNote.classList.add('note-success');
-            brnNote.textContent = '✓ 모든 검증이 완료되었습니다. 회원가입을 진행할 수 있습니다.';
+            brnNote.textContent = '✓ 모든 입력/검증이 완료되었습니다. 회원가입을 진행할 수 있습니다.';
         }
     }
+
+    // 초기 렌더
+    checkPwdRules(pwdInput.value || '');
     updateSignupButtonState();
 
-    // ✅ 실시간 비밀번호 일치 확인
+    // ✅ eye toggle (pwd)
+    togglePwdBtn.addEventListener('click', () => {
+        pwdInput.type = (pwdInput.type === 'password') ? 'text' : 'password';
+    });
+
+    // ✅ eye toggle (pwdConfirm)
+    togglePwdConfirmBtn.addEventListener('click', () => {
+        pwdConfirmInput.type = (pwdConfirmInput.type === 'password') ? 'text' : 'password';
+    });
+
     function checkPasswordMatch() {
         const pwd = pwdInput.value;
         const confirm = pwdConfirmInput.value;
 
+        checkPwdRules(pwd);
+
         if (!confirm) {
             pwdMatchMsg.textContent = '';
             pwdMatchMsg.className = '';
+            updateSignupButtonState();
             return;
         }
 
@@ -481,9 +635,48 @@
             pwdMatchMsg.textContent = '✗ 비밀번호가 일치하지 않습니다.';
             pwdMatchMsg.className = 'match-error';
         }
+        updateSignupButtonState();
     }
+
+    comNameInput.addEventListener('input', updateSignupButtonState);
+    addrInput.addEventListener('input', updateSignupButtonState);
     pwdInput.addEventListener('input', checkPasswordMatch);
     pwdConfirmInput.addEventListener('input', checkPasswordMatch);
+
+    // ===== 이메일 50자 초과 입력 자체 차단 + 경고 =====
+    let emailWarnTimer = null;
+
+    function showEmailWarn(msg) {
+        setNote(emailMsg, msg, false);
+        if (emailWarnTimer) clearTimeout(emailWarnTimer);
+        emailWarnTimer = setTimeout(() => {
+            if (emailMsg.textContent === msg) {
+                emailMsg.textContent = '';
+                emailMsg.style.color = '';
+                emailMsg.classList.remove('note-success');
+            }
+            emailWarnTimer = null;
+        }, 1500);
+    }
+
+    emailInput.addEventListener('beforeinput', (e) => {
+        if (!e.inputType || !e.inputType.startsWith('insert')) return;
+
+        const data = e.data ?? '';
+        if (!data) return;
+
+        const start = emailInput.selectionStart ?? emailInput.value.length;
+        const end = emailInput.selectionEnd ?? emailInput.value.length;
+
+        const currentLen = emailInput.value.length;
+        const replacingLen = end - start;
+        const nextLen = currentLen - replacingLen + data.length;
+
+        if (nextLen > 50) {
+            e.preventDefault();
+            showEmailWarn('이메일은 최대 50자까지 가능합니다.');
+        }
+    });
 
     let comNameWarnTimer = null;
 
@@ -508,7 +701,6 @@
         }
     }
 
-    // ✅ 50자 초과 입력 “시도”를 잡아서 막기
     comNameInput.addEventListener('beforeinput', (e) => {
         if (!e.inputType || !e.inputType.startsWith('insert')) return;
 
@@ -531,7 +723,6 @@
         clearComNameWarn();
     });
 
-    // 경고 출력 헬퍼
     let comIdWarnTimer = null;
 
     function showComIdWarn(msg) {
@@ -539,10 +730,8 @@
         comIdWarn.style.color = 'var(--error)';
         comIdWarn.classList.remove('note-success');
 
-        // ✅ 기존 타이머 있으면 초기화
         if (comIdWarnTimer) clearTimeout(comIdWarnTimer);
 
-        // ✅ 1.5초 후 자동 숨김
         comIdWarnTimer = setTimeout(() => {
             clearComIdWarn();
         }, 1500);
@@ -558,26 +747,22 @@
         }
     }
 
-    // ✅ 1) "입력 직전" 차단 + 경고 (maxlength 때문에 이게 필수)
     comIdInput.addEventListener('beforeinput', (e) => {
-        // 삭제/뒤로가기 등은 그냥 통과
         if (!e.inputType || !e.inputType.startsWith('insert')) return;
 
-        const data = e.data ?? ''; // 입력되는 문자(붙여넣기 포함)
+        const data = e.data ?? '';
         if (!data) return;
 
-        // 영문 아닌 문자가 섞여있으면 차단
         if (/[^a-zA-Z]/.test(data)) {
             e.preventDefault();
             showComIdWarn('영문(A-Z)만 입력 가능합니다.');
             return;
         }
 
-        // 3글자 초과 시도 차단
         const start = comIdInput.selectionStart ?? comIdInput.value.length;
         const end = comIdInput.selectionEnd ?? comIdInput.value.length;
         const currentLen = comIdInput.value.length;
-        const replacingLen = end - start; // 선택영역을 대체하는 길이
+        const replacingLen = end - start;
         const nextLen = currentLen - replacingLen + data.length;
 
         if (nextLen > 3) {
@@ -586,11 +771,9 @@
             return;
         }
 
-        // 입력 가능하면 경고 제거
         clearComIdWarn();
     });
 
-    // ✅ 2) 실제 값 정규화(대문자 + 영문만 + 3글자)
     comIdInput.addEventListener('input', () => {
         const normalized = (comIdInput.value || '')
             .replace(/[^a-zA-Z]/g, '')
@@ -601,7 +784,6 @@
             comIdInput.value = normalized;
         }
 
-        // 값 바뀌면 중복확인 초기화
         if (comIdChecked) {
             comIdChecked = false;
             comIdCheckBtn.disabled = false;
@@ -616,7 +798,6 @@
         updateSignupButtonState();
     });
 
-    // ✅ 회사코드 중복확인
     comIdCheckBtn.addEventListener('click', async () => {
         serverError.style.display = 'none';
         serverError.textContent = '';
@@ -665,11 +846,9 @@
         }
     });
 
-    // ✅ 이메일 입력 바뀌면: 형식검사 + 중복확인 초기화
     emailInput.addEventListener('input', () => {
         const value = (emailInput.value || '').trim();
 
-        // 값 바뀌면 중복확인 상태 초기화
         if (emailChecked) {
             emailChecked = false;
             emailCheckBtn.disabled = false;
@@ -699,14 +878,12 @@
             return;
         }
 
-        // 형식 OK면 메시지 지움
         emailMsg.textContent = '';
         emailMsg.style.color = '';
         emailMsg.classList.remove('note-success');
         updateSignupButtonState();
     });
 
-    // ✅ 이메일 중복확인
     emailCheckBtn.addEventListener('click', async () => {
         serverError.style.display = 'none';
         serverError.textContent = '';
@@ -766,16 +943,6 @@
         }
     });
 
-    // ✅ BRN 값이 바뀌면 인증 다시 해야 함
-    document.getElementById('brn').addEventListener('input', () => {
-        if (!brnVerified) return;
-        brnVerified = false;
-        brnVerifyBtn.disabled = false;
-        brnVerifyBtn.textContent = '인증하기';
-        updateSignupButtonState();
-    });
-
-    // ✅ 사업자번호 인증: /auth/companies/verify-brn 호출
     brnVerifyBtn.addEventListener('click', async () => {
         serverError.style.display = 'none';
         serverError.textContent = '';
@@ -784,7 +951,6 @@
 
         const brn = normalizeBrn();
 
-        // 3-2-5 다 채워야 10자리
         if (brn.length !== 10) {
             setBrnMsg('사업자등록번호를 3-2-5 자리로 모두 입력해주세요.', false);
             if (brn1Input.value.length < 3) brn1Input.focus();
@@ -848,7 +1014,6 @@
         }
     });
 
-    // 로고 미리보기
     logoInput.addEventListener('change', () => {
         const file = logoInput.files?.[0];
         if (!file) {
@@ -861,26 +1026,22 @@
         logoPreview.style.display = 'flex';
     });
 
-    // ✅ 실제 회원가입 제출: /auth/companies/signup
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         serverError.style.display = 'none';
         serverError.textContent = '';
+
+        if (!isBasicFieldsReady()) {
+            showError('기업 이름, 비밀번호 조건/일치, 주소를 모두 입력해주세요.');
+            return;
+        }
 
         if (!(brnVerified && comIdChecked && emailChecked)) {
             showError('사업자 인증, 회사코드 중복확인, 이메일 중복확인을 모두 완료해주세요.');
             return;
         }
 
-        if (pwdInput.value !== pwdConfirmInput.value) {
-            showError('비밀번호가 일치하지 않습니다.');
-            pwdConfirmInput.focus();
-            return;
-        }
-
         const fd = new FormData(form);
-
-        // 정규화
         fd.set('comId', normalizeComId());
         fd.set('brn', normalizeBrn());
 
