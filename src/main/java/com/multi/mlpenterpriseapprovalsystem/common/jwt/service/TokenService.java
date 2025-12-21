@@ -210,11 +210,9 @@ public class TokenService {
         // clearCookie(response, "accessToken");
     }
 
-
     // =========================================================
     // ✅ 여기부터: AccessToken 재발급 (RefreshToken 기반)
     // =========================================================
-
     /**
      * ✅ AccessToken 재발급 (새 AccessToken만 발급)
      * - 만료된 accessToken(Authorization 헤더)에서 subject 정보 추출
@@ -233,6 +231,7 @@ public class TokenService {
         // 2) 만료된 AT에서 Claims 추출 (만료여도 꺼내야 함)
         String accessJwt = resolveToken(expiredAccessTokenHeader);
 
+
         // ⚠️ TokenProvider에 이 메서드가 있어야 함
         Claims claims = tokenProvider.parseClaims(accessJwt);
 
@@ -243,6 +242,7 @@ public class TokenService {
         String username = tokenProvider.getUsername(claims.getSubject());
 
         List<String> roles = tokenProvider.getRoles(claims.getSubject());
+
 
         // 3) DB에서 현재 유효 RT(최신 revoked=false) 조회
         RefreshToken dbRT = refreshTokenRepository
