@@ -2,10 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.shared_equipment.domai
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * 공유 설비 엔티티
@@ -19,6 +16,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "shared_equipment")
+@Builder
 public class SharedEquipment {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long eqNo;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
