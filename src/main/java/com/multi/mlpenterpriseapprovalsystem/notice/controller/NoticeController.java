@@ -91,9 +91,9 @@ public class NoticeController {
     }
 
     //공지사항 상세조회  --- 일련번호(key로 조회)
-    @GetMapping("/notice/{id}")
-    public ResponseEntity<ResponseDto<NoticeResAllDto>> detail(@PathVariable("id") Long id) {
-        return ResponseEntity.ok().body(new ResponseDto<NoticeResAllDto>(HttpStatus.OK, "조회 성공", noticeService.detailNotice(id)));
+    @GetMapping("/notice/{noticeNo}")
+    public ResponseEntity<ResponseDto<NoticeResAllDto>> detail(@PathVariable("noticeNo") Long noticeNo) {
+        return ResponseEntity.ok().body(new ResponseDto<NoticeResAllDto>(HttpStatus.OK, "조회 성공", noticeService.detailNotice(noticeNo)));
     }
 
     //공지사항 수정  --- 일련번호(key로 수정)
