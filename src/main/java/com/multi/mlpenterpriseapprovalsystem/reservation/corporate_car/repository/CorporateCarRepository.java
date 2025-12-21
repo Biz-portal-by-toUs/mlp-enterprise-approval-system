@@ -2,6 +2,8 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.reposito
 
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.domain.CorporateCar;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoom;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +23,5 @@ public interface CorporateCarRepository extends JpaRepository<CorporateCar, Long
     // 회사별 법인 차량 목록
     Page<CorporateCar> findByCompany_ComId(String comId, Pageable pageable);
 
+    boolean existsByCompany_ComIdAndPlateNo(String comId, String plateNo);
 }

@@ -29,7 +29,10 @@ public class ViewCorporateCarController {
         return "reservation/corporate-cars/corporate-car-list";
     }
 
-
+    @GetMapping("/corporate-car-register")
+    public String addMeetingRoom() {
+        return "reservation/corporate-cars/corporate-car-register";
+    }
 
 
 
