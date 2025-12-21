@@ -9,9 +9,35 @@
         .wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
 
         /* 상단 바 */
-        .top { padding: 14px 18px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02); z-index: 10; }
-        .title { font-weight: 800; font-size: 16px; }
-        .actions { display: flex; gap: 8px; }
+        /* 상단 바 레이아웃 유지 */
+        .top {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            z-index: 10;
+            gap: 10px; /* 제목과 버튼 사이 최소 간격 */
+        }
+        /* ✅ 채팅방 이름 말줄임 처리 */
+        .title {
+            font-weight: 800;
+            font-size: 16px;
+            white-space: nowrap;      /* 줄바꿈 금지 */
+            overflow: hidden;         /* 넘치는 부분 숨김 */
+            text-overflow: ellipsis;  /* ... 표시 */
+            flex: 1;                  /* 남는 공간을 차지하게 함 */
+            min-width: 0;             /* flex 아이템이 넘칠 때 줄어들 수 있게 함 (중요) */
+            max-width: 200px;         /* 16px 기준 약 12~13자 정도의 너비 제한 */
+        }
+        /* 버튼 영역이 찌그러지지 않게 고정 */
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;           /* 공간이 부족해도 버튼 영역은 줄어들지 않음 */
+        }
         .actions button { padding: 8px 14px; cursor: pointer; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .actions button:hover { background: #f8f9fa; border-color: #bbb; }
         .btn-invite { background: var(--primary-color) !important; color: white !important; border: none !important; }
@@ -75,6 +101,18 @@
         .modal-footer button { flex: 1; padding: 14px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; font-size: 15px; }
         .btn-confirm { background: var(--primary-color); color: white; }
         .btn-cancel { background: #eee; color: #666; }
+
+        .msg.system {
+            align-self: center;
+            background: rgba(0, 0, 0, 0.05); /* 아주 연한 배경 */
+            color: #888;
+            font-size: 12px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 10px 0;
+            max-width: 90%;
+            text-align: center;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
@@ -310,7 +348,6 @@
         });
 
         if (res.ok) {
-            alert("초대가 완료되었습니다.");
             closeInviteModal();
             if (isMemberPanelOpen) toggleMembers();
         } else { alert("초대 실패"); }
@@ -340,7 +377,6 @@
             div.className = "member-item";
             const isMe = (m.empId === MY_EMP_ID);
             div.innerHTML = `
-                <span style="color:#4caf50">●</span>
                 <span style="flex:1">${escapeHtml(m.empName)} (${escapeHtml(m.empId)})</span>
                 ${isMe ? '<b style="color:#007bff; font-size:10px;">나</b>' : ''}
             `;
@@ -386,16 +422,24 @@
     function appendMessage(m) {
         const box = document.getElementById("messages");
         const div = document.createElement("div");
-        const isMe = (m.senderEmpId === MY_EMP_ID);
-        div.className = isMe ? "msg me" : "msg other";
 
-        // ✅ [수정] 내 메시지여도 이름을 표시함 (sender-info가 항상 출력되게 함)
-        let html = `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
-        html += `<div class="bubble">${escapeHtml(m.content)}</div>`;
+        if (m.type === 'SYSTEM') {
+            div.className = "msg system";
+            div.innerHTML = `<span>${escapeHtml(m.content)}</span>`;
+        }
+        // ✅ 2. 일반 메시지 처리 (기존 로직)
+        else {
+            const isMe = (m.senderEmpId === MY_EMP_ID);
+            div.className = isMe ? "msg me" : "msg other";
 
-        const t = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
-        html += `<div class="time-info">${t}</div>`;
-        div.innerHTML = html;
+            let html = `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
+            html += `<div class="bubble">${escapeHtml(m.content)}</div>`;
+
+            const t = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
+            html += `<div class="time-info">${t}</div>`;
+            div.innerHTML = html;
+        }
+
         box.appendChild(div);
         box.scrollTop = box.scrollHeight;
     }

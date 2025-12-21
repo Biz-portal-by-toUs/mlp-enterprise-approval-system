@@ -67,6 +67,10 @@ public class ChatRedisPublisher {
         }
     }
 
+    public void publishSystem(Long roomNo, ResChatMessageDto dto) {
+        publish(roomNo, dto);
+    }
+
     public void publishSystem(Long roomNo, String content) {
         try {
             ResChatMessageDto dto = new ResChatMessageDto(

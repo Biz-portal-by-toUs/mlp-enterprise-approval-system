@@ -43,6 +43,8 @@ public enum ErrorCode {
     CORPORATE_CAR_NOT_FOUND(HttpStatus.NOT_FOUND, "CORPORATE_CAR_NOT_FOUND", "법인 차량을 찾을 수 없습니다"),
     DUPLICATE_CAR_PLATE_NO(HttpStatus.CONFLICT, "DUPLICATE_CAR_PLATE_NO", "이미 존재하는 차량 번호입니다."),
 
+    SHARED_EQUIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "SHARED_EQUIPMENT_NOT_FOUND", "공유 설비를 찾을 수 없습니다"),
+
     // 파일 업로드 실패
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다"),
 

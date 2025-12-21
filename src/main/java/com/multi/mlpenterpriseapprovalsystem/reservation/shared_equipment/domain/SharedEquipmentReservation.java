@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.share_equipment.domain;
+package com.multi.mlpenterpriseapprovalsystem.reservation.shared_equipment.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;

@@ -20,4 +20,5 @@ public class ResChatRoomUpdateDto {
     private String lastMessageAt;
     private int unreadCount;
     private String roomName;
+    private boolean removed;
 }

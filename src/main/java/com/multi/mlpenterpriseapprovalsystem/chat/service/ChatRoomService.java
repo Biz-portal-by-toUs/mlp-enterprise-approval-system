@@ -1,9 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.service;
 
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatMessage;
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoomMember;
-import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
+import com.multi.mlpenterpriseapprovalsystem.chat.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisPublisher;
 import com.multi.mlpenterpriseapprovalsystem.chat.repository.ChatMessageRepository;
@@ -173,7 +170,7 @@ public class ChatRoomService {
     @Transactional(readOnly = true)
     public ResChatRoomDto getRoom(Long roomNo, String empId) {
 
-        ChatRoom chatRoom = chatRoomRepository.findById(roomNo)
+        ChatRoom chatRoom = chatRoomRepository.findByIdWithActiveMembers(roomNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
         boolean isMember = chatRoomMemberRepository
@@ -240,9 +237,29 @@ public class ChatRoomService {
                 createdAt,
                 0, // 읽음 처리되었으므로 0
                 roomName // ✅ 이제 내가 아닌 상대방의 이름이 전달됨
+                ,false
         );
 
         redisPublisher.publishRoomUpdate(empId, updateDto);
+    }
+
+
+    /**
+     * 시스템 메시지(입장/퇴장 등)를 DB에 저장하고, Redis(STOMP)로도 발행
+     */
+    private void saveAndPublishSystemMessage(Long roomNo, String content) {
+        // ✅ DB 저장
+        ChatMessage systemMessage = ChatMessage.builder()
+                .roomNo(roomNo)
+                .senderEmpId("SYSTEM")
+                .senderName("SYSTEM")
+                .content(content)
+                .type(MessageType.SYSTEM)   // ← ChatMessage 엔티티 필드명이 type가 아니면 너 필드명에 맞게만 바꿔
+                .createdAt(LocalDateTime.now())
+                .build();
+        chatMessageRepository.save(systemMessage);
+
+        redisPublisher.publishSystem(roomNo, content);
     }
 
     /**
@@ -268,8 +285,10 @@ public class ChatRoomService {
         member.deactivateNow();
 
         if (RoomType.GROUP.equals(member.getChatRoom().getRoomType())) {
-            redisPublisher.publishSystem(roomNo, leaver.getEmpName() + "님이 나갔습니다.");
+            saveAndPublishSystemMessage(roomNo, leaver.getEmpName() + "님이 나갔습니다.");
         }
+        ResChatRoomUpdateDto dto = new ResChatRoomUpdateDto(roomNo, null, null, 0, null,true);
+        redisPublisher.publishRoomUpdate(empId, dto);
 
         log.info("[LEAVE] roomNo={}, empId={}, type={}", roomNo, empId, room.getRoomType());
     }
@@ -343,9 +362,11 @@ public class ChatRoomService {
         if (invitedNames.isEmpty()) {
             return;
         }
+        chatRoomMemberRepository.flush();
 
         String content = String.join(", ", invitedNames) + "님이 들어왔습니다.";
-        redisPublisher.publishSystem(roomNo, content);
+        saveAndPublishSystemMessage(roomNo, content);
+
 
     }
 
