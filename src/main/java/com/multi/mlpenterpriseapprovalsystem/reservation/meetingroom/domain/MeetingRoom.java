@@ -21,6 +21,7 @@ import lombok.*;
 public class MeetingRoom {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long roomNo;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
+    @Column(length = 20, nullable = false)
     private String roomName;
 
     @Column(nullable = false)
