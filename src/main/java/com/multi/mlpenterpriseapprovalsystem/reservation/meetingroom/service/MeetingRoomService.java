@@ -1,11 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
-import com.multi.mlpenterpriseapprovalsystem.auth.service.AuthService;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.ReservationCompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.common.ReservationCompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResMeetingRoomDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoom;
