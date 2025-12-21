@@ -8,6 +8,9 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 로그인 요청, token 재발급 요청 시 처리
@@ -204,6 +209,78 @@ public class TokenService {
         clearCookie(response, "refreshToken");
         // accessToken을 쿠키로 쓰는 경우만
         // clearCookie(response, "accessToken");
+    }
+
+    /**
+     * ✅ AccessToken 재발급 (새 AccessToken만 발급)
+     * - 만료된 accessToken(Authorization 헤더)에서 subject 정보 추출
+     * - 쿠키의 refreshToken 검증 + DB의 최신 revoked=false 토큰과 일치 검증
+     */
+    public ResTokenDto refreshAccessToken(String expiredAccessTokenHeader, HttpServletRequest request) {
+
+        String refreshToken = extractCookie(request, "refreshToken")
+                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+
+        // 1) 클라이언트 RT 서명/만료 검증
+        if (!tokenProvider.validateToken(refreshToken)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 2) 만료된 AT에서 Claims 추출 (만료여도 꺼내야 함)
+        String accessJwt = resolveToken(expiredAccessTokenHeader);
+
+        // ⚠️ TokenProvider에 이 메서드가 있어야 함 (없으면 아래에 추가하라고 할게)
+        Claims claims = tokenProvider.parseClaims(accessJwt);
+
+        // claims에서 필요한 값들 추출 (TokenProvider에 helper 없으면 claims.get으로 뽑아도 됨)
+        Long subjectId = tokenProvider.getSubjectId(claims.getSubject());
+        TokenSubjectType subjectType = tokenProvider.getSubjectType(claims.getSubject());
+        String comId = tokenProvider.getComId(claims.getSubject());
+        String username = tokenProvider.getUsername(claims.getSubject());
+
+        List<String> roles = tokenProvider.getRoles(claims.getSubject());
+
+
+        // 3) DB에서 현재 유효 RT(최신 revoked=false) 조회
+        RefreshToken dbRT = refreshTokenRepository
+                .findTopBySubjectTypeAndSubjectIdAndRevokedFalseOrderByRefNoDesc(subjectType, subjectId)
+                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+
+        // 3-1) DB 만료/폐기 체크
+        if (dbRT.isRevoked() || LocalDateTime.now().isAfter(dbRT.getExpiredAt())) {
+            dbRT.revoke();
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 3-2) DB의 RT와 클라이언트 RT 일치 체크
+        if (!dbRT.getToken().equals(refreshToken)) {
+            // 보안 강화: 불일치면 폐기
+            dbRT.revoke();
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 4) 새 AccessToken 발급
+        String newAccessToken = tokenProvider.createAccessToken(
+                subjectId, subjectType, comId, username, roles
+        );
+
+        return ResTokenDto.builder()
+                .accessToken(newAccessToken)
+                .expiresInSeconds(tokenProvider.getAccessExpSeconds())
+                .subjectType(subjectType.name())
+                .role(roles.isEmpty() ? null : roles.get(0))
+                .build();
+    }
+
+    private Optional<String> extractCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return Optional.empty();
+
+        return Arrays.stream(cookies)
+                .filter(c -> name.equals(c.getName()))
+                .map(Cookie::getValue)
+                .filter(v -> v != null && !v.isBlank())
+                .findFirst();
     }
 
 }
