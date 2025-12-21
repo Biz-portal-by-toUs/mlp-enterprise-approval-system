@@ -49,6 +49,8 @@ public class AuthService {
     public boolean isRegisteredBusiness(String brn) {
         if (!businessVerificationService.isRegisteredBusiness(brn)) {
             throw new CustomException(ErrorCode.INVALID_BRN);
+        } else if(companyRepository.existsByBrn(brn)) {
+            throw new CustomException(ErrorCode.BRN_DUPLICATE);
         }
         return true;
     }

@@ -62,15 +62,9 @@ public class AuthController {
     @PostMapping("/companies/verify-brn")
     public ResponseEntity<ResponseDto<Boolean>> verifyBrn(@RequestParam(name = "brn") String brn) {
 
-        if (authService.isRegisteredBusiness(brn)) {
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(new ResponseDto<>(HttpStatus.OK, "인증에 성공하였습니다.", true));
-        } else {
-            // 200 OK를 보내되 결과값만 false로 주거나, 400 에러를 보낼 수 있습니다.
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ResponseDto<>(HttpStatus.BAD_REQUEST, "유효하지 않은 사업자번호입니다.", false));
-        }
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "인증에 성공하였습니다.", authService.isRegisteredBusiness(brn)));
     }
 
     @PostMapping("/companies/login")

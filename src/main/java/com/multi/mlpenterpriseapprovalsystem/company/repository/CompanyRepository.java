@@ -21,4 +21,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     Optional<Company> findByComId(String comId);
 
     boolean existsByComId(String comId);
+
+    boolean existsByBrn(String brn);
 }

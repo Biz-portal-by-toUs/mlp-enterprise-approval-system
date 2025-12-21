@@ -20,6 +20,7 @@ public enum ErrorCode {
     DUPLICATE_COMID(HttpStatus.CONFLICT, "DUPLICATE_COMID", "이미 사용 중인 회사 코드입니다"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "비밀번호가 일치하지 않습니다"),
     INVALID_BRN(HttpStatus.BAD_REQUEST, "INVALID_BRN", "유효하지 않은 사업자등록번호입니다"),
+    BRN_DUPLICATE(HttpStatus.CONFLICT, "BRN_DUPLICATE", "이미 존재하는 사업자등록번호입니다"),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다"),
 
     //요금제 관련
