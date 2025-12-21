@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -85,6 +86,16 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "로그인 성공", token));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ResponseDto<ResTokenDto>> refresh(
+            @RequestHeader("Authorization") String accessToken,
+            HttpServletRequest request
+    ) {
+        ResTokenDto token = tokenService.refreshAccessToken(accessToken, request);
+
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "AccessToken 재발급 성공", token));
     }
 
     @PostMapping("/logout")
