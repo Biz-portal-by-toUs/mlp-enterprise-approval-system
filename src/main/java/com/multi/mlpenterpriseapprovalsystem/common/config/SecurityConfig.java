@@ -5,6 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
     private final TokenProvider tokenProvider;
 
@@ -63,6 +65,7 @@ public class SecurityConfig {
                                 "EMPLOYEE")
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("COM_ADMIN")
                         .anyRequest().authenticated()
                 )
 
