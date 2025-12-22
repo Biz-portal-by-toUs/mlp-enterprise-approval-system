@@ -6,12 +6,14 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- DB 생성
 CREATE DATABASE IF NOT EXISTS bizportal
     DEFAULT CHARACTER SET utf8mb4
+
     DEFAULT COLLATE utf8mb4_0900_ai_ci;
 
 USE bizportal;
 
 -- ========================================================
 -- 1. 공통/조직 (Organization)
+
 -- ========================================================
 
 -- 1) 요금제
@@ -245,6 +247,7 @@ CREATE TABLE IF NOT EXISTS document (
                                         temp          BOOLEAN       NOT NULL DEFAULT FALSE,
                                         created_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
                                         updated_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                        doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
 
                                         CONSTRAINT pk_document PRIMARY KEY (doc_no),
                                         CONSTRAINT uk_document_doc_id UNIQUE (doc_id),

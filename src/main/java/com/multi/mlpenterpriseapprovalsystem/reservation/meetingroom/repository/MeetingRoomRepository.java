@@ -20,4 +20,7 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
     // 회사별 회의실 목록
     Page<MeetingRoom> findByCompany_ComId(String comId, Pageable pageable);
 
+    boolean existsByCompany_ComIdAndRoomName(String comId, String roomName);
+
+    boolean existsByCompany_ComIdAndRoomNameAndRoomNoNot(String comId, String roomName, Long roomNo);
 }

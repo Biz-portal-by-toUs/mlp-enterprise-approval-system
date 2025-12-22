@@ -22,6 +22,8 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "chat_rooms")
 public class ChatRoom extends BaseEntity {
+    private static final int LAST_MESSAGE_MAX_LEN = 40;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long roomNo;
@@ -29,17 +31,16 @@ public class ChatRoom extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private RoomType roomType;
 
+
+    @Column(name = "last_message", columnDefinition = "varchar(50)")
     private String lastMessage;
 
+    @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
     @OneToMany(mappedBy = "chatRoom", fetch = FetchType.LAZY)
     private List<ChatRoomMember> members = new ArrayList<>();
 
-    public void updateLastMessage(String message) {
-        this.lastMessage = message;
-        this.lastMessageAt = LocalDateTime.now();
-    }
 
     public static ChatRoom create(String roomName, RoomType roomType) {
         ChatRoom room = new ChatRoom();
@@ -54,7 +55,14 @@ public class ChatRoom extends BaseEntity {
     }
 
     public void updateLastMessage(String message, LocalDateTime time) {
-        this.lastMessage = message;
+        this.lastMessage = trimLastMessage(message);
         this.lastMessageAt = time;
+    }
+
+    private String trimLastMessage(String msg) {
+        if (msg == null) return null;
+        String s = msg.trim();
+        if (s.length() <= LAST_MESSAGE_MAX_LEN) return s;
+        return s.substring(0, LAST_MESSAGE_MAX_LEN) + "...";
     }
 }

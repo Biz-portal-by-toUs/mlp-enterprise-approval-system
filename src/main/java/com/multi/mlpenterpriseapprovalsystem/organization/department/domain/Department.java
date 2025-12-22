@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 부서 엔티티
  *
  * @author : 김승기
  * @filename : Department
@@ -24,13 +24,23 @@ public class Department {
     private Long depNo;
 
     // [주의] unique = true를 붙이지 않습니다.
-    @Column(nullable = false, length = 3)
+    @Column(name="dep_id", nullable = false, length = 3)
     private String depId;
 
-    @Column(nullable = false, length = 10)
+    @Column(name="dep_name", nullable = false, length = 10)
     private String depName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
+
+    private Department(Company company, String depId, String depName) {
+        this.company = company;
+        this.depId = depId;
+        this.depName = depName;
+    }
+
+    public static Department of(Company company, String depId, String depName) {
+        return new Department(company, depId, depName);
+    } // 이 형식으로 넣어야지만 생성이 가능하게
 }

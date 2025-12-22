@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>부서 편성</title>
+    <style>
+        :root{
+            --primary:#2f6fda;
+            --bg:#f3f5f9;
+            --card:#f1f3f6;
+            --text:#111;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --white:#fff;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+        .topbar{
+            height:64px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;
+            padding:0 20px; box-shadow:0 10px 25px rgba(0,0,0,.12);
+        }
+        .brand{font-weight:800;font-size:24px;letter-spacing:.3px}
+        .wrap{display:flex;min-height:calc(100vh - 64px)}
+        .sidenav{width:84px;background:#fff;border-right:1px solid var(--line);padding:14px 10px}
+        .sidenav .item{height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:8px 0;color:var(--muted);font-size:12px}
+        .sidenav .item.active{background:#eef4ff;color:var(--primary);font-weight:700}
+        .subnav{width:220px;background:#fbfcfe;border-right:1px solid var(--line);padding:18px}
+        .subnav .title{font-weight:800;margin:10px 0 18px 0}
+        .subnav a{display:block;padding:12px 10px;border-radius:10px;color:#2b5db8;text-decoration:none;margin:6px 0}
+        .subnav a.active{background:#eef4ff;font-weight:700}
+        .content{flex:1;padding:30px 32px}
+        .page-title{font-size:34px;font-weight:900;margin:10px 0 8px}
+        .page-sub{font-size:18px;font-weight:800;margin:0 0 20px;color:#111}
+        .actions{display:flex;justify-content:flex-end;margin:0 0 14px}
+        .btn{
+            border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;
+            background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(47,111,218,.25);
+        }
+        .card{
+            background:var(--card); border-radius:18px; padding:22px; min-height:520px;
+        }
+        .table{
+            width:100%; border-collapse:separate; border-spacing:0 14px;
+        }
+        .thead{
+            background:#fff;border-radius:14px;
+        }
+        .thead th{
+            text-align:left; padding:14px 18px; font-size:14px; color:#111;
+        }
+        .row{
+            background:#fff;border-radius:14px;
+        }
+        .row td{
+            padding:18px; font-size:14px; color:#111;
+        }
+        .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
+        .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+        .muted{color:var(--muted)}
+        .pill-btn{
+            padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px;
+        }
+        .pill-edit{background:#eaf2ff;color:#2b5db8}
+        .pill-del{background:#fdecec;color:#c62828;margin-left:10px}
+        .empty{
+            padding:40px 10px;text-align:center;color:var(--muted);font-weight:700
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">Bizportal</div>
+    <div class="muted" style="color:#eaf2ff;font-weight:700;">부서 편성</div>
+</header>
+
+<div class="wrap">
+    <aside class="sidenav">
+        <div class="item">결재</div>
+        <div class="item">회의</div>
+        <div class="item">메일</div>
+        <div class="item">문서함</div>
+        <div class="item">공유함</div>
+        <div class="item">캘린더</div>
+        <div class="item">게시판</div>
+        <div class="item">예약</div>
+        <div class="item">근태</div>
+        <div class="item">조직도</div>
+        <div class="item active">관리자</div>
+    </aside>
+
+    <aside class="subnav">
+        <div class="title">부서 편성</div>
+        <a class="active" href="/admin/departments">부서 편성</a>
+        <a href="/admin/positions">직급 편성</a>
+        <a href="/admin/employees">사원 관리</a>
+        <a href="/admin/rules">사내 규정 관리</a>
+    </aside>
+
+    <main class="content">
+        <div class="page-title">부서 편성</div>
+        <div class="page-sub">부서 조회</div>
+
+        <div class="actions">
+            <button class="btn" type="button" onclick="location.href='/admin/departments/create'">부서 등록</button>
+        </div>
+
+        <section class="card">
+            <table class="table">
+                <thead class="thead">
+                <tr>
+                    <th style="width:28%;">부서 코드</th>
+                    <th style="width:34%;">부서명</th>
+                    <th style="width:18%;">사원 수</th>
+                    <th style="width:20%;">관리</th>
+                </tr>
+                </thead>
+
+                <tbody id="deptTbody">
+                <!-- JS로 렌더링 -->
+                </tbody>
+            </table>
+
+            <div id="emptyBox" class="empty" style="display:none;">등록된 부서가 없습니다.</div>
+        </section>
+    </main>
+</div>
+
+<script>
+    // ✅ 너희 프로젝트에서 토큰 저장 키가 다를 수 있어서 최대한 유연하게 찾기
+    function getAccessToken() {
+        return (
+            localStorage.getItem("accessToken") ||
+            localStorage.getItem("jwt") ||
+            sessionStorage.getItem("accessToken") ||
+            sessionStorage.getItem("jwt")
+        );
+    }
+
+    async function loadDepartments() {
+        const token = getAccessToken();
+        const tbody = document.getElementById("deptTbody");
+        const emptyBox = document.getElementById("emptyBox");
+
+        tbody.innerHTML = "";
+        emptyBox.style.display = "none";
+
+        // 토큰이 없으면 API 호출해도 401/403 날 확률 99%
+        if (!token) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "로그인이 필요합니다. (토큰 없음)";
+            return;
+        }
+
+        const res = await fetch("/api/v1/admin/departments", {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Accept": "application/json"
+            }
+        });
+
+        // 권한/인증 처리
+        if (res.status === 401) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "인증이 만료되었습니다. 다시 로그인 해주세요.";
+            return;
+        }
+        if (res.status === 403) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "권한이 없습니다. (COM_ADMIN만 가능)";
+            return;
+        }
+        if (!res.ok) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "부서 조회 중 오류가 발생했습니다. (" + res.status + ")";
+            return;
+        }
+
+        const json = await res.json();
+
+        // ResponseDto<List<ResDepartmentDto>> 형태라면 json.data 가 리스트일 가능성이 큼
+        const list = json.data || [];
+
+        if (!list.length) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "등록된 부서가 없습니다.";
+            return;
+        }
+
+        list.forEach(d => {
+            const tr = document.createElement("tr");
+            tr.className = "row";
+            tr.innerHTML = `
+        <td>${escapeHtml(d.depId ?? "")}</td>
+        <td>${escapeHtml(d.depName ?? "")}</td>
+        <td>${Number(d.empCount ?? 0).toLocaleString()}</td>
+        <td>
+          <button class="pill-btn pill-edit" type="button" onclick="onEdit('${escapeJs(d.depId)}')">수정</button>
+          <button class="pill-btn pill-del" type="button" onclick="onDelete('${escapeJs(d.depId)}')">삭제</button>
+        </td>
+      `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function onEdit(depId) {
+        // TODO: 수정 페이지로 이동
+        alert("수정: " + depId);
+    }
+
+    function onDelete(depId) {
+        // TODO: 삭제 API 호출
+        alert("삭제: " + depId);
+    }
+
+    // XSS 방지용(간단)
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll("&","&amp;")
+            .replaceAll("<","&lt;")
+            .replaceAll(">","&gt;")
+            .replaceAll("\"","&quot;")
+            .replaceAll("'","&#039;");
+    }
+    function escapeJs(str) {
+        return String(str).replaceAll("\\","\\\\").replaceAll("'","\\'");
+    }
+
+    // 페이지 로드 시 호출
+    loadDepartments().catch(err => {
+        console.error(err);
+        const emptyBox = document.getElementById("emptyBox");
+        emptyBox.style.display = "block";
+        emptyBox.textContent = "부서 조회 중 예외가 발생했습니다.";
+    });
+</script>
+</body>
+</html>
