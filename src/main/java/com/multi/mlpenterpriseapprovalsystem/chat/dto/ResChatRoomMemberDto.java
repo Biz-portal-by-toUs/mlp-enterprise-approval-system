@@ -15,10 +15,11 @@ import lombok.Getter;
 @AllArgsConstructor
 public class ResChatRoomMemberDto {
     private String empId;
+    private String empName;
 
     public static ResChatRoomMemberDto from(ChatRoomMember member) {
         return new ResChatRoomMemberDto(
-                member.getEmployee().getEmpId()
+                member.getEmployee().getEmpId(),member.getEmployee().getEmpName()
         );
     }
 }

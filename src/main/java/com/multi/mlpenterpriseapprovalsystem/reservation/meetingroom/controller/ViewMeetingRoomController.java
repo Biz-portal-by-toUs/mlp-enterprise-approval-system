@@ -3,7 +3,9 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -14,27 +16,31 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * - Thymeleaf 템플릿을 통해 화면을 제공한다.
  *
  * ※ 실제 데이터 등록·수정·삭제 처리는 API Controller에서 수행한다.
- *
- * ※ 현재 comId는 임시로 RequestParam에서 전달받으며,
- *    JWT 인증 연동 후 SecurityContext에서 추출하도록 변경 예정이다.
+
  * @author : 송현님
  * @filename : ViewMeetingRoomController
  * @since : 2025-12-16 오후 4:07 화요일
  */
 
 @Controller
-@RequestMapping("/meeting-rooms")
+@RequestMapping("reservation/meeting-rooms")
 @RequiredArgsConstructor
 public class ViewMeetingRoomController {
-    private final MeetingRoomService meetingRoomService;
 
     @GetMapping
     public String meetingRoomList() {  // JWT 인증 연동 전 임시 사용
-        return "meeting-rooms/list";
+        return "reservation/meeting-rooms/meeting-room-list";
     }
 
-    @GetMapping("/register")
-    public void addMeetingRoom() {
+    @GetMapping("/meeting-room-register")
+    public String addMeetingRoom() {
+        return "reservation/meeting-rooms/meeting-room-register";
+    }
+
+    @GetMapping("/{roomNo}/meeting-room-edit")
+    public String editMeetingRoom(@PathVariable Long roomNo, Model model) {
+        model.addAttribute("roomNo", roomNo);
+        return "reservation/meeting-rooms/meeting-room-edit";
     }
 
 }
