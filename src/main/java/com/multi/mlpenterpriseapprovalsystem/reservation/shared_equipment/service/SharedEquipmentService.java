@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.reservation.common.ReservationCompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.shared_equipment.domain.SharedEquipment;
 import com.multi.mlpenterpriseapprovalsystem.reservation.shared_equipment.dto.ReqSharedEquipmentDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.shared_equipment.dto.ResSharedEquipmentDto;
@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,7 +45,7 @@ import java.util.UUID;
 @Transactional
 public class SharedEquipmentService {
     private final SharedEquipmentRepository sharedEquipmentRepository;
-    private final ReservationCompanyRepository companyRepository;
+    private final CompanyRepository companyRepository;
 
     @Value("${image.image-dir}")  // 서버의 실제 저장 위치
     private String IMAGE_DIR;

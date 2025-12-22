@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.reservation.common.ReservationCompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.domain.CorporateCar;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ReqCorporateCarDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ResCorporateCarDto;
@@ -46,7 +46,7 @@ import java.util.UUID;
 @Transactional
 public class CorporateCarService {
     private final CorporateCarRepository corporateCarRepository;
-    private final ReservationCompanyRepository companyRepository;
+    private final CompanyRepository companyRepository;
 
     @Value("${image.image-dir}")  // 서버의 실제 저장 위치
     private String IMAGE_DIR;
