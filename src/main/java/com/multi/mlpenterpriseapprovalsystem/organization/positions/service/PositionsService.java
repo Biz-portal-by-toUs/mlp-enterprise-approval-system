@@ -81,7 +81,7 @@ public class PositionsService {
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
         // 1) 내 회사 부서인지 확인 + 조회
-        Positions positions = positionsRepository.findByCompanyAndPosNo(company, posNo)
+        Positions positions = positionsRepository.findById(posNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
 
 
