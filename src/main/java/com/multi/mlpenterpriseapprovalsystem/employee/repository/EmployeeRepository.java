@@ -74,6 +74,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             Pageable pageable
     );
 
+    boolean existsByDepartment_DepNo(Long depNo);
+
     interface DepCount {
         String getDepId();
         long getCnt();
