@@ -61,5 +61,15 @@ public class DepartmentController {
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 수정에 성공했습니다.", null));
     }
 
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @DeleteMapping("/{depNo}")
+    public ResponseEntity<ResponseDto<Void>> deleteDepartment(@PathVariable(name="depNo") Long depNo, @AuthenticationPrincipal CustomUser user) {
+
+        departmentService.deleteDepartment(user.getComId(), depNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "부서 삭제에 성공했습니다.", null));
+    }
+
 
 }

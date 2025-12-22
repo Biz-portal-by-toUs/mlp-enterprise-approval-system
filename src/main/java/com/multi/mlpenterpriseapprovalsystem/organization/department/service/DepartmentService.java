@@ -103,4 +103,30 @@ public class DepartmentService {
         department.update(newDepId, reqDepartmentDto.getDepName());
         // JPA dirty checking으로 save() 없어도 됨
     }
+
+    public void deleteDepartment(String comId, Long depNo) {
+
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        // 부서 존재 체크
+        Department department = departmentRepository.findById(depNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+        // 다른 회사 부서 삭제 방지 (중요)
+        if (!department.getCompany().getComNo().equals(company.getComNo())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 부서에 사원 남아있으면 삭제 불가
+        boolean hasEmployees = employeeRepository.existsByDepartment_DepNo(depNo);
+        if (hasEmployees) {
+            throw new CustomException(ErrorCode.DEPARTMENT_DELETE_HAS_EMPLOYEES);
+        }
+
+        departmentRepository.delete(department);
+
+
+    }
 }

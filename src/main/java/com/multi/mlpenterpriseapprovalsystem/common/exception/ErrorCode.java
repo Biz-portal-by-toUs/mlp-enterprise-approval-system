@@ -78,6 +78,7 @@ public enum ErrorCode {
     DUPLICATE_DEPID(HttpStatus.CONFLICT, "DUPLICATE_DEPID", "이미 존재하는 부서 코드입니다"),
     DUPLICATE_DEPNAME(HttpStatus.CONFLICT, "DUPLICATE_DEPNAME", "이미 존재하는 부서 이름입니다"),
     DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DEPARTMENT_NOT_FOUND", "부서를 찾을 수 없습니다"),
+    DEPARTMENT_DELETE_HAS_EMPLOYEES(HttpStatus.BAD_REQUEST, "DEPARTMENT_DELETE_HAS_EMPLOYEES", "사원이 존재하므로 삭제할 수 없습니다"),
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
