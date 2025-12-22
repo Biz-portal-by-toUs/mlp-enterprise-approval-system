@@ -2,7 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.organization.department.controller
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ReqDepartmentAddDto;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ReqDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ResDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.service.DepartmentService;
 import jakarta.validation.Valid;
@@ -12,10 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -35,9 +32,9 @@ public class DepartmentController {
 
     @PreAuthorize("hasRole('COM_ADMIN')")
     @PostMapping
-    public ResponseEntity<ResponseDto<Void>> addDepartment(@Valid @RequestBody ReqDepartmentAddDto reqDepartmentAddDto, @AuthenticationPrincipal CustomUser user) {
+    public ResponseEntity<ResponseDto<Void>> addDepartment(@Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
 
-        departmentService.addDepartment(user.getComId(), reqDepartmentAddDto);
+        departmentService.addDepartment(user.getComId(), reqDepartmentDto);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 등록에 성공했습니다.", null));
@@ -52,6 +49,16 @@ public class DepartmentController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 조회에 성공했습니다.", list));
+    }
+
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PutMapping
+    public ResponseEntity<ResponseDto<Void>> updateDepartment(@PathVariable Long depNo, @Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
+
+        departmentService.updateDepartment(user.getComId(), depNo, reqDepartmentDto);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "부서 수정에 성공했습니다.", null));
     }
 
 
