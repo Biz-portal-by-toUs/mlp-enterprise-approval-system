@@ -210,7 +210,12 @@
 
     async function loadPlaceDetail() {
         try {
-            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`);
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+
             const result = await response.json();
 
             if (result.status === 200 && result.data) {
@@ -234,7 +239,11 @@
 
     async function initAttach() {
         try {
-            const response = await fetch(`http://localhost:8090/api/v1/notice/`);
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/notice/`,{
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
             const result = await response.json();
 
             const attachList = $('#attachList').empty();

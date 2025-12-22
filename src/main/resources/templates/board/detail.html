@@ -208,7 +208,12 @@
 
     async function loadPlaceDetail() {
         try {
-            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}`);
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+
             const result = await response.json();
 
             if (result.status === 200 && result.data) {
@@ -231,7 +236,11 @@
 
     async function initAttach() {
         try {
-            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`);
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
             const result = await response.json();
 
             const attachList = $('#attachList').empty();

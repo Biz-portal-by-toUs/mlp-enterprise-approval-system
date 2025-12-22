@@ -36,5 +36,9 @@ public class FrontNoticeController {
         return "notice/files"; // templates/files.html
     }
 
+    @GetMapping("/popup")
+    public String popup() {
 
+        return "notice/popup";
+    }
 }

@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.notice.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -42,8 +44,8 @@ public class NoticeController {
 
     //회사별 전체 조회 (페이징 처리 없음
     @GetMapping("/notices-popup")
-    public ResponseEntity<ResponseDto<List<NoticeResAllDto>>> getAll() {
-        String comId = "A05";
+    public ResponseEntity<ResponseDto<List<NoticeResAllDto>>> getAll(@AuthenticationPrincipal CustomUser customUser) {
+        String comId = customUser.getComId();
         return ResponseEntity.ok(new ResponseDto<List<NoticeResAllDto>>(HttpStatus.OK, "공지 사항 팝업 조회 성공", noticeService.getAllNotices(comId)));
     }
 
@@ -73,10 +75,11 @@ public class NoticeController {
 
 
     @GetMapping("/notices-all")
-    public ResponseEntity<ResponseDto<Page<NoticeResAllDto>>> getNoticesForAllByCompany(@RequestParam(name = "page", defaultValue = "0") int page,
+    public ResponseEntity<ResponseDto<Page<NoticeResAllDto>>> getNoticesForAllByCompany(@AuthenticationPrincipal CustomUser customUser,
+                                                                                        @RequestParam(name = "page", defaultValue = "0") int page,
                                                                                         @RequestParam(name = "size", defaultValue = "10") int size
                                                                                        ) {
-        String comId = "A005";
+        String comId = customUser.getComId();
         Pageable pageable = PageRequest.of(page, size, Sort.by("noticeNo").descending());
         Page<NoticeResAllDto> notices = noticeService.selectNoticeListWithPagingForAllByCompany(pageable,comId);
 
@@ -108,7 +111,7 @@ public class NoticeController {
     // 예) /api/v1/notices?type=date&from=2025-12-01&to=2025-12-21&page=0&size=10
     // 예) /api/v1/notices?page=0&size=10  (전체)
     @GetMapping("/notices")
-    public ResponseEntity<ResponseDto<Page<NoticeListItemResDto>>> search(
+    public ResponseEntity<ResponseDto<Page<NoticeListItemResDto>>> search(@AuthenticationPrincipal CustomUser customUser,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "type", required = false) String type,
@@ -116,7 +119,7 @@ public class NoticeController {
             @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
-        String comId = "A05"; // 너 프로젝트 기준으로 고정(원하면 로그인 사용자 회사로 변경)
+        String comId = customUser.getComId();
         System.out.println("====== Controller =====");
         System.out.println("type : " + type + ", keyword : " + keyword + ", from : " + from + ", to : " + to);
         System.out.println("page : " + page + ", size : " + size);

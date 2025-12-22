@@ -61,7 +61,17 @@
 <script>
     async function loadboards(page) {
         try {
-            const response = await fetch(`/api/v1/boards-all?page=${page}`);
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert("로그인이 필요합니다. 토큰이 없습니다.");
+                location.href = "/main"; // 너네 로그인 URL로
+                return;
+            }
+            const response = await fetch(`/api/v1/boards-all?page=${page}`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+
             const result = await response.json();
 
             const tbody = document.getElementById('boardTbody');
@@ -82,7 +92,9 @@
 
             boards.forEach((board, index) => {
 
-                const createdAt = board.createdAt.substring(0, 10);
+                //const createdAt = board.createdAt.substring(0, 10);
+
+                const createdAt = board.createdAt;
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
