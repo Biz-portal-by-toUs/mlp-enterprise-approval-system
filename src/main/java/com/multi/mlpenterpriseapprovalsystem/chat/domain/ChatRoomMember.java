@@ -24,7 +24,7 @@ public class ChatRoomMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "romem_no")
+    @Column(name = "romem_no") // 기존 컬럼명 유지하려면(선택)
     private Long romemNo;
 
     @Setter
@@ -42,12 +42,12 @@ public class ChatRoomMember {
     @Column(name="last_read_at")
     private LocalDateTime lastReadAt;
 
-    @Column(name = "unread_count", columnDefinition = "int default 0 ")
-    private int unreadCount = 0; // 자바 객체 생성 시에도 0으로 초기화
+    @Column(name = "unread_count")
+    private int unreadCount;
 
-    @Column(name="is_active", columnDefinition = "boolean default false",nullable=false)
-    private boolean isActive;
+    // 메시지 옆 '1' 같은 거 할 때 쓰는 필드인데, 지금은 안 써도 됨
 
+    private String lastReadMsgId;
 
     public static ChatRoomMember create(ChatRoom chatRoom, Employee employee) {
         ChatRoomMember member = new ChatRoomMember();
@@ -56,27 +56,12 @@ public class ChatRoomMember {
         member.joinedAt = LocalDateTime.now();
         member.lastReadAt = null;
         member.unreadCount = 0;
-        member.isActive = true;
-
         return member;
     }
 
     public void markReadNow() {
         this.lastReadAt = LocalDateTime.now();
         this.unreadCount = 0;
-    }
-
-    public void deactivateNow() {
-        this.isActive = false;
-        this.unreadCount = 0;
-        this.lastReadAt = LocalDateTime.now();
-    }
-
-    public void reactivateNow(LocalDateTime joinedAt) {
-        this.isActive = true;
-        this.joinedAt = joinedAt;
-        this.unreadCount = 0;
-        this.lastReadAt = null;
     }
 
 

@@ -5,11 +5,9 @@ import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,7 +24,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
     private final TokenProvider tokenProvider;
 
@@ -44,15 +41,11 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 이렇게 하면 타임리프에서도 세션 사용안하고 jwt 사용하면 됨
-                .headers(headers -> headers
-                .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable) // ✅ 이 줄이 추가되어야 합니다.
-                )
 
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/auth/**",
-                                "/meeting-rooms/**",
-                                "/admin/**").permitAll()
+                                "/meeting-rooms/**").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
                                 "/images/**",
@@ -66,7 +59,6 @@ public class SecurityConfig {
                                 "EMPLOYEE")
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("COM_ADMIN")
                         .anyRequest().authenticated()
                 )
 

@@ -2,7 +2,6 @@ package com.multi.mlpenterpriseapprovalsystem.chat.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -38,35 +37,14 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     /**
      * 사용자가 속한 채팅방 목록을 마지막 메시지 시간 기준(커서 기반)으로 조회
      */
-    @Query("""
-    select distinct m.chatRoom from ChatRoomMember m
-    left join m.chatRoom.members otherM  
-    where m.employee.empId = :empId
-      and m.isActive = true
-      and (:cursor is null or m.chatRoom.lastMessageAt < :cursor)
-      and (:keyword is null or :keyword = '' 
-           or m.chatRoom.roomName like concat('%', :keyword, '%') 
-           or m.chatRoom.lastMessage like concat('%', :keyword, '%')
-           or (m.chatRoom.roomType = 'ONE' 
-               and otherM.employee.empId != :empId 
-               and otherM.employee.empName like concat('%', :keyword, '%'))
-          )
-    order by m.chatRoom.lastMessageAt desc
-""")
+    @Query("SELECT r FROM ChatRoom r " +
+            "JOIN r.members m " +
+            "WHERE m.employee.empId = :empId " + // ChatRoomMember 엔티티의 필드 구조에 따라 수정 필요
+            "AND (:cursor IS NULL OR r.lastMessageAt < :cursor) " +
+            "ORDER BY r.lastMessageAt DESC")
     List<ChatRoom> findMyRooms(
             @Param("empId") String empId,
-            @Param("keyword") String keyword,
             @Param("cursor") LocalDateTime cursor,
-            Pageable pageable
+            @Param("size") int size // 참고: size는 @Query 내에서 직접 limit 처리가 안 되므로 Pageable 사용 권장
     );
-
-    @Query("""
-        select distinct r
-        from ChatRoom r
-        join fetch r.members m
-        join fetch m.employee e
-        where r.roomNo = :roomNo
-          and m.isActive = true
-    """)
-    Optional<ChatRoom> findByIdWithActiveMembers(@Param("roomNo") Long roomNo);
 }

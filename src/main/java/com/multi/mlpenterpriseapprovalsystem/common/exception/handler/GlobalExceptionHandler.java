@@ -1,14 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.common.exception.handler;
 
-import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -73,12 +69,5 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(code.getStatus())
                 .body(new ErrorResponse(code.getStatus(), code.getCode(), code.getMessage()));
-    }
-
-    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
-    public ResponseEntity<ResponseDto<Void>> handleAccessDenied(Exception e) {
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(new ResponseDto<>(HttpStatus.FORBIDDEN, "권한이 없습니다. (COM_ADMIN만 가능)", null));
     }
 }

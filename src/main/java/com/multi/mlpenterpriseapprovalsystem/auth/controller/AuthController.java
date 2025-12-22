@@ -3,11 +3,9 @@ package com.multi.mlpenterpriseapprovalsystem.auth.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.service.AuthService;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
-import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +30,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class AuthController {
 
     private final AuthService authService;
-    private final TokenService tokenService;
 
     @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Void>> signUpCompany(
@@ -44,30 +41,6 @@ public class AuthController {
         return ResponseEntity
                 .status(response.getStatus())
                 .body(response);
-    }
-
-    @PostMapping("/companies/check-comid")
-    public ResponseEntity<ResponseDto<Boolean>> checkComId(@RequestParam(name = "comId") String comId) {
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "사용 가능한 회사 코드 입니다.", authService.checkComId(comId)));
-    }
-
-    @PostMapping("/companies/check-email")
-    public ResponseEntity<ResponseDto<Boolean>> checkEmail(@RequestParam(name = "email") String email) {
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "사용 가능한 이메일 입니다.", authService.checkEmail(email)));
-    }
-
-    @PostMapping("/companies/verify-brn")
-    public ResponseEntity<ResponseDto<Boolean>> verifyBrn(@RequestParam(name = "brn") String brn) {
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "인증에 성공하였습니다.", authService.isRegisteredBusiness(brn)));
     }
 
     @PostMapping("/companies/login")
@@ -86,23 +59,5 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "로그인 성공", token));
-    }
-
-    @PostMapping("/refresh")
-    public ResponseEntity<ResponseDto<ResTokenDto>> refresh(
-            @RequestHeader("Authorization") String accessToken,
-            HttpServletRequest request
-    ) {
-        ResTokenDto token = tokenService.refreshAccessToken(accessToken, request);
-
-        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "AccessToken 재발급 성공", token));
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<ResponseDto<Void>> logout(@RequestHeader("Authorization") String accessToken, HttpServletResponse response) {
-
-        tokenService.deleteRefreshToken(accessToken, response);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto<>(HttpStatus.OK, "로그아웃 성공 및 Refresh Token 삭제 완료", null));
     }
 }

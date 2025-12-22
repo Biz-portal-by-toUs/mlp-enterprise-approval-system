@@ -247,7 +247,6 @@ CREATE TABLE IF NOT EXISTS document (
                                         temp          BOOLEAN       NOT NULL DEFAULT FALSE,
                                         created_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
                                         updated_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                        doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
 
                                         CONSTRAINT pk_document PRIMARY KEY (doc_no),
                                         CONSTRAINT uk_document_doc_id UNIQUE (doc_id),

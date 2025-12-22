@@ -138,13 +138,13 @@ INSERT INTO attach_box (attach_no, com_id, uploader, title, dscp, path, size) VA
 
 -- document (5)
 INSERT INTO document
-(doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, doc_stat)
+(doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp)
 VALUES
-    (1,'C01','DOC25121600001',1,1,'휴가 신청(홍관리)', JSON_OBJECT('기간','2025-12-20~2025-12-22','사유','개인사유'), '<p>휴가 신청</p>', 'E000001', '휴가 3일 신청', FALSE, 'AW'),
-    (2,'C01','DOC25121700002',2,2,'출장 신청(김보안)', JSON_OBJECT('장소','부산','목적','점검'), '<p>출장 신청</p>', 'E000002', '부산 출장 점검', FALSE, 'AW'),
-    (3,'C01','DOC25121800003',3,3,'지출 결의(박삼차)', JSON_OBJECT('금액',100000,'내역','회의비'), '<p>지출 결의</p>', 'E000003', '회의비 10만원', FALSE, 'AW'),
-    (4,'C01','DOC25121900004',4,4,'공지(이사원)',     JSON_OBJECT('제목','점검 안내','내용','금요일 점검'), '<p>공지</p>', 'E000004', '점검 공지', FALSE, 'AW'),
-    (5,'C01','DOC25122000005',5,5,'구매 요청(홍관리)',   JSON_OBJECT('품목','모니터','수량',2), '<p>구매 요청</p>', 'E000001', '모니터 2대 구매', TRUE, 'AW');
+    (1,'C01','DOC25121600001',1,1,'휴가 신청(홍관리)', JSON_OBJECT('기간','2025-12-20~2025-12-22','사유','개인사유'), '<p>휴가 신청</p>', 'E000001', '휴가 3일 신청', FALSE),
+    (2,'C01','DOC25121700002',2,2,'출장 신청(김보안)', JSON_OBJECT('장소','부산','목적','점검'), '<p>출장 신청</p>', 'E000002', '부산 출장 점검', FALSE),
+    (3,'C01','DOC25121800003',3,3,'지출 결의(박삼차)', JSON_OBJECT('금액',100000,'내역','회의비'), '<p>지출 결의</p>', 'E000003', '회의비 10만원', FALSE),
+    (4,'C01','DOC25121900004',4,4,'공지(이사원)',     JSON_OBJECT('제목','점검 안내','내용','금요일 점검'), '<p>공지</p>', 'E000004', '점검 공지', FALSE),
+    (5,'C01','DOC25122000005',5,5,'구매 요청(홍관리)',   JSON_OBJECT('품목','모니터','수량',2), '<p>구매 요청</p>', 'E000001', '모니터 2대 구매', TRUE);
 
 -- approval_line (5)
 INSERT INTO approval_line (apprl_no, com_id, doc_no, emp_id, seq, appr_stat, ended_at) VALUES

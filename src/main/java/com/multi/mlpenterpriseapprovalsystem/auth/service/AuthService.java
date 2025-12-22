@@ -2,7 +2,6 @@ package com.multi.mlpenterpriseapprovalsystem.auth.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.common.api.nts.service.BusinessVerificationService;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
@@ -44,19 +43,10 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final StorageService storageService;
     private final SubscriptionRepository subscriptionRepository;
-    private final BusinessVerificationService businessVerificationService;
-
-    public boolean isRegisteredBusiness(String brn) {
-        if (!businessVerificationService.isRegisteredBusiness(brn)) {
-            throw new CustomException(ErrorCode.INVALID_BRN);
-        } else if(companyRepository.existsByBrn(brn)) {
-            throw new CustomException(ErrorCode.BRN_DUPLICATE);
-        }
-        return true;
-    }
 
     public ResponseDto<Void> signUpCompany(ReqCompanySignupDto reqCompanySignupDto, MultipartFile logo) {
 
+        // 사업자등록번호 검증 API 추가할 예정
 
         // 1) 이메일 중복 체크
         if (companyRepository.existsByEmail(reqCompanySignupDto.getEmail())) {
@@ -66,13 +56,11 @@ public class AuthService {
         if (companyRepository.existsByComId(reqCompanySignupDto.getComId())) {
             throw new CustomException(ErrorCode.DUPLICATE_COMID);
         }
-        // 회사 코드 ToUpperCase
-        String comId = reqCompanySignupDto.getComId().trim().toUpperCase();
 
         // 3) 비밀번호 암호화
         String encodedPwd = passwordEncoder.encode(reqCompanySignupDto.getPwd());
 
-        // 4) 로고 저장(있으면 저장하고 imgUrl/path 세팅)
+        // 2) 로고 저장(있으면 저장하고 imgUrl/path 세팅)
         String imgUrl = null;
         String path = null;
         if (logo != null && !logo.isEmpty()) {
@@ -81,16 +69,16 @@ public class AuthService {
             path = stored.getPath();   // /Users/.../bizportal/uploads/company-logo/xxx.png
         }
 
-        // 5) sub_no=1 연결 (회원가입 시 기본 요금제)
+        // 3) sub_no=1 연결 (회원가입 시 기본 요금제)
         Subscription basic = subscriptionRepository.findById((long)1)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        // 6) Company 생성 + 저장
+        // 4) Company 생성 + 저장
         Company company = Company.createForSignup(
-                comId,
+                reqCompanySignupDto.getComId(),
                 reqCompanySignupDto.getComName(),
                 reqCompanySignupDto.getEmail(),
-                encodedPwd,
+                passwordEncoder.encode(reqCompanySignupDto.getPwd()),
                 reqCompanySignupDto.getBrn(),
                 reqCompanySignupDto.getAddr(),
                 imgUrl,
@@ -139,23 +127,4 @@ public class AuthService {
     }
 
 
-    public boolean checkComId(String comId) {
-
-        // comId 무조건 대문자 처리
-        comId = comId.trim().toUpperCase();
-
-        if(companyRepository.existsByComId(comId)) {
-            throw new CustomException(ErrorCode.DUPLICATE_COMID);
-        }
-        return true;
-    }
-
-    public boolean checkEmail(String email) {
-
-        if (companyRepository.existsByEmail(email)) {
-            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
-        }
-
-        return true;
-    }
 }

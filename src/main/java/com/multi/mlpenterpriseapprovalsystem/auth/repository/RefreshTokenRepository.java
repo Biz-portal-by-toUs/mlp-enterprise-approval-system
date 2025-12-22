@@ -4,7 +4,6 @@ import com.multi.mlpenterpriseapprovalsystem.auth.domain.RefreshToken;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -23,6 +22,4 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
             TokenSubjectType subjectType,
             Long subjectId
     );
-
-    List<RefreshToken> findAllBySubjectTypeAndSubjectIdAndRevokedFalse(TokenSubjectType subjectType, Long subjectId);
 }

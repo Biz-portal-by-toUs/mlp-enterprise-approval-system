@@ -17,9 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "board_cat")
 public class BoardCat {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long boardCatNo;
-    @Column(unique = true, length = 1)
-    private Character catCode;
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long boardCatNo;
+    @Column(unique = true, length = 1) private String catCode;
     private String catDescript;
 }
