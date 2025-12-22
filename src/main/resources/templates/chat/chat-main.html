@@ -1,22 +1,91 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
     <title>Chat Main</title>
     <style>
-        body { font-family: sans-serif; margin:0; }
-        .app { height:100vh; display:flex; flex-direction:column; }
-        .tabs { display:flex; border-bottom:1px solid #ddd; background: #fff; }
-        .tab { padding:12px 14px; cursor:pointer; flex: 1; text-align: center; }
-        .tab.active { font-weight:700; border-bottom:2px solid #007bff; color: #007bff; }
-        .content { flex:1; display:flex; min-height: 0; }
-        .panel { flex:1; display:flex; flex-direction:column; }
-        .toolbar { display:flex; gap:8px; padding:12px; border-bottom:1px solid #eee; align-items:center; }
-        .toolbar input { flex:1; padding:10px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
-        .toolbar button { padding:10px 12px; cursor:pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-        .list { flex:1; overflow:auto; }
-        .row { padding:12px; border-bottom:1px solid #f0f0f0; cursor:pointer; }
-        .row:hover { background:#fafafa; }
+        body {
+            font-family: sans-serif;
+            margin: 0;
+        }
+
+        .app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+
+        .tab {
+            padding: 12px 14px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab.active {
+            font-weight: 700;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+
+        .toolbar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .toolbar button {
+            padding: 10px 12px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        .list {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .row {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .row:hover {
+            background: #fafafa;
+        }
+
         .row .title {
             font-weight: 700;
             font-size: 15px;
@@ -27,9 +96,33 @@
             /* ✅ 추가: 약 12~15자 내외에서 말줄임이 발생하도록 너비 제한 */
             max-width: 400px;
         }
-        .row .sub { margin-top:6px; font-size:12px; color:#666; display:flex; justify-content:space-between; align-items: center; gap:8px; }
-        .badge { background:#ff3b30; color:#fff; border-radius:999px; padding:2px 8px; font-size:11px; font-weight: bold; }
-        .hint { padding:10px 12px; font-size:12px; color:#777; border-bottom:1px solid #f7f7f7; background: #fafafa; }
+
+        .row .sub {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            background: #ff3b30;
+            color: #fff;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .hint {
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #777;
+            border-bottom: 1px solid #f7f7f7;
+            background: #fafafa;
+        }
 
         /* ✅ 상태 표시 점 스타일 */
         .status-dot {
@@ -66,17 +159,22 @@
 
     <div class="content">
         <div class="panel" id="employeesPanel">
-            <div id="myProfile" style="padding: 14px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
-                <div style="width: 42px; height: 42px; background: #007bff; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">👤</div>
+            <div id="myProfile"
+                 style="padding: 14px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; background: #007bff; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    👤
+                </div>
                 <div style="flex: 1;">
                     <div id="myName" style="font-weight: 700; font-size: 15px; color: #333;">로딩 중...</div>
                     <div id="myDept" style="font-size: 12px; color: #777;">부서 정보 로딩 중</div>
                 </div>
-                <div style="font-size: 11px; color: #007bff; border: 1px solid #007bff; padding: 2px 6px; border-radius: 4px;">나</div>
+                <div style="font-size: 11px; color: #007bff; border: 1px solid #007bff; padding: 2px 6px; border-radius: 4px;">
+                    나
+                </div>
             </div>
 
             <div class="toolbar">
-                <input id="empKeyword" placeholder="이름/ID/부서 검색..." oninput="onEmpSearchInput()" />
+                <input id="empKeyword" placeholder="이름/ID/부서 검색..." oninput="onEmpSearchInput()"/>
             </div>
             <div class="hint">💡 사원 더블클릭: 1:1 채팅 시작</div>
             <div class="list" id="empList"></div>
@@ -84,7 +182,7 @@
 
         <div class="panel" id="chatsPanel" style="display:none;">
             <div class="toolbar">
-                <input id="roomKeyword" placeholder="방 이름 또는 메시지 검색..." oninput="onRoomSearchInput()" />
+                <input id="roomKeyword" placeholder="방 이름 또는 메시지 검색..." oninput="onRoomSearchInput()"/>
                 <button onclick="openCreateRoom()">방 만들기</button>
             </div>
             <div class="hint">💡 채팅방 클릭: 대화창 열기</div>
@@ -95,11 +193,17 @@
 
 <script>
     // ---------------- 공통 유틸 ----------------
-    function getAccessToken() { return localStorage.getItem("accessToken"); }
-    function authHeaders() { return { 'Authorization': 'Bearer ' + getAccessToken() }; }
+    function getAccessToken() {
+        return localStorage.getItem("accessToken");
+    }
+
+    function authHeaders() {
+        return {'Authorization': 'Bearer ' + getAccessToken()};
+    }
+
     function escapeHtml(str) {
         return String(str ?? "").replace(/[&<>"']/g, s => ({
-            "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
         }[s]));
     }
 
@@ -116,16 +220,16 @@
         stompClient = Stomp.over(socket);
         stompClient.debug = null;
 
-        stompClient.connect({ Authorization: 'Bearer ' + token }, function() {
+        stompClient.connect({Authorization: 'Bearer ' + token}, function () {
             wsInitialized = true;
             console.log('Main WS Connected');
 
             // 실시간 방 목록 업데이트 구독
-            stompClient.subscribe('/user/sub/chat/room-updates', function(message) {
+            stompClient.subscribe('/user/sub/chat/room-updates', function (message) {
                 const upd = JSON.parse(message.body);
                 handleRealtimeUpdate(upd);
             });
-        }, function(err) {
+        }, function (err) {
             wsInitialized = false;
             setTimeout(connectWs, 5000);
         });
@@ -145,18 +249,26 @@
     // ---------------- 사원 목록 (서버 검색 + 무한 스크롤) ----------------
     let empCursor = null, empHasNext = true, empLoading = false, empKwTimer = null;
 
-    async function initEmployees() { resetEmployees(); await loadMoreEmployees(); }
-    function resetEmployees() { empCursor = null; empHasNext = true; document.getElementById("empList").innerHTML = ""; }
+    async function initEmployees() {
+        resetEmployees();
+        await loadMoreEmployees();
+    }
+
+    function resetEmployees() {
+        empCursor = null;
+        empHasNext = true;
+        document.getElementById("empList").innerHTML = "";
+    }
 
     async function loadMoreEmployees() {
         if (empLoading || !empHasNext) return;
         empLoading = true;
         const keyword = document.getElementById("empKeyword").value.trim();
-        const qs = new URLSearchParams({ size: "30", excludeMe: "true" });
+        const qs = new URLSearchParams({size: "30", excludeMe: "true"});
         if (keyword) qs.set("keyword", keyword);
         if (empCursor) qs.set("cursor", empCursor);
 
-        const res = await fetch("/api/v1/employees?" + qs.toString(), { headers: authHeaders() });
+        const res = await fetch("/api/v1/employees?" + qs.toString(), {headers: authHeaders()});
         const result = await res.json();
         const payload = result.data || result;
 
@@ -191,7 +303,7 @@
 
     async function loadMyInfo() {
         try {
-            const res = await fetch("/api/v1/employees/me", { headers: authHeaders() });
+            const res = await fetch("/api/v1/employees/me", {headers: authHeaders()});
             const result = await res.json();
             const me = result.data;
 
@@ -211,20 +323,28 @@
     // ---------------- ✅ 채팅방 목록 (서버 검색 + 무한 스크롤) ----------------
     let roomCursor = null, roomHasNext = true, roomLoading = false, roomKwTimer = null;
 
-    async function initRooms() { resetRooms(); await loadMoreRooms(); }
-    function resetRooms() { roomCursor = null; roomHasNext = true; document.getElementById("roomList").innerHTML = ""; }
+    async function initRooms() {
+        resetRooms();
+        await loadMoreRooms();
+    }
+
+    function resetRooms() {
+        roomCursor = null;
+        roomHasNext = true;
+        document.getElementById("roomList").innerHTML = "";
+    }
 
     async function loadMoreRooms() {
         if (roomLoading || !roomHasNext) return;
         roomLoading = true;
 
         const keyword = document.getElementById("roomKeyword").value.trim();
-        const qs = new URLSearchParams({ size: "20" });
+        const qs = new URLSearchParams({size: "20"});
         if (keyword) qs.set("keyword", keyword); // ✅ 서버 검색 파라미터 전달
         if (roomCursor) qs.set("lastMessageAt", roomCursor); // ✅ 커서 기반 페이징
 
         try {
-            const res = await fetch("/api/v1/chat/my?" + qs.toString(), { headers: authHeaders() });
+            const res = await fetch("/api/v1/chat/my?" + qs.toString(), {headers: authHeaders()});
             const result = await res.json();
             const rooms = result.data || [];
 
@@ -238,7 +358,9 @@
 
             const box = document.getElementById("roomList");
             rooms.forEach(r => appendRoomRow(r));
-        } finally { roomLoading = false; }
+        } finally {
+            roomLoading = false;
+        }
     }
 
     function appendRoomRow(r) {
@@ -256,14 +378,14 @@
             ? `<span class="badge">${r.unreadCount > 99 ? "99+" : r.unreadCount}</span>` : "";
 
         div.innerHTML = `
-            <div class="title">${escapeHtml(r.roomName)}</div>
-            <div class="sub">
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">
-                    ${escapeHtml(r.lastMessage || "대화 내용이 없습니다.")}
-                </span>
-                ${badgeHtml}
-            </div>
-        `;
+        <div class="title">${escapeHtml(r.roomName)}</div>
+        <div class="sub">
+            <span class="last-msg-text" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">
+                ${escapeHtml(r.lastMessage || "대화 내용이 없습니다.")}
+            </span>
+            ${badgeHtml}
+        </div>
+    `;
     }
 
     function onRoomSearchInput() {
@@ -276,31 +398,32 @@
         if (upd && (upd.removed === true)) {
             const row = document.getElementById("room-row-" + upd.roomNo);
             if (row) row.remove();
-            return; // ✅ REMOVE는 여기서 끝
+            return;
         }
-        const row = document.getElementById("room-row-" + upd.roomNo);
-        if (row) {
-            // ✅ 기존 데이터와 비교하기 위해 현재 마지막 메시지 시간 등을 저장해둘 수 있습니다.
-            // 여기서는 간단하게 '메시지가 새로 온 경우'에만 위로 올리는 로직을 제안합니다.
 
-            // 1. UI 갱신 (뱃지 제거, 마지막 메시지 변경 등)
+        const box = document.getElementById("roomList");
+        const row = document.getElementById("room-row-" + upd.roomNo);
+
+        if (row) {
+            // ✅ 1. 현재 화면에 표시되고 있는 텍스트를 가져옴
+            const lastMsgSpan = row.querySelector(".last-msg-text");
+            const currentText = lastMsgSpan ? lastMsgSpan.innerText : "";
+            const newText = upd.lastMessage || "대화 내용이 없습니다.";
+
+            // ✅ 2. UI 갱신 (마지막 메시지, 뱃지 등)
             updateRoomUI(row, upd);
 
-            // 2. 순서 변경 로직
-            // 만약 서버에서 '이것은 읽음 처리 업데이트입니다'라는 플래그를 주지 않는다면,
-            // 안 읽은 메시지가 0보다 클 때(새 메시지 도착)만 위로 올리도록 설정할 수 있습니다.
-            if (upd.unreadCount > 0) {
-                const box = document.getElementById("roomList");
+            // ✅ 3. [핵심] 메시지 내용이 실제로 바뀌었을 때만 맨 위로 이동
+            // 단순히 클릭해서 '읽음' 처리가 된 거라면 텍스트는 같으므로 이동하지 않음
+            if (currentText !== newText) {
                 box.prepend(row);
             }
-            // unreadCount가 0이면(읽음 처리로 인한 업데이트) 위치는 그대로 둡니다.
         } else {
-            // 목록에 없는 새 방이면 새로고침하여 맨 위에 추가
             initRooms();
         }
     }
 
-    window.handleReadRoom = function(roomNo) {
+    window.handleReadRoom = function (roomNo) {
         const row = document.getElementById("room-row-" + roomNo);
         if (row) {
             const badge = row.querySelector(".badge");
@@ -308,7 +431,7 @@
         }
     };
 
-    window.handleLeaveRoom = function(roomNo) {
+    window.handleLeaveRoom = function (roomNo) {
         const row = document.getElementById("room-row-" + roomNo);
         if (row) row.remove();
     };
@@ -346,8 +469,8 @@
         try {
             const res = await fetch("/api/v1/chat", {
                 method: "POST",
-                headers: { "Content-Type":"application/json", ...authHeaders() },
-                body: JSON.stringify({ roomType: "ONE", memberIds: [targetId] })
+                headers: {"Content-Type": "application/json", ...authHeaders()},
+                body: JSON.stringify({roomType: "ONE", memberIds: [targetId]})
             });
             const result = await res.json();
             const room = result.data;
@@ -386,7 +509,10 @@
             activeChatWindows[roomId] = win;
         }
     }
-    function openCreateRoom() { window.open("/chat/new", "_blank", "width=520,height=740"); }
+
+    function openCreateRoom() {
+        window.open("/chat/new", "_blank", "width=520,height=740");
+    }
 
     window.addEventListener("load", () => {
         initEmployees();
