@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.organization.positions.repository;
 
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -15,4 +16,6 @@ import java.util.List;
 public interface PositionsRepository extends JpaRepository<Positions, Long> {
 
     List<Positions> findAllByCompany_ComId(String comId);
+
+    boolean existsByCompanyAndPosName(Company company, String posName);
 }
