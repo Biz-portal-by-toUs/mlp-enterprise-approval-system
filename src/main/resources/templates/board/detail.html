@@ -122,35 +122,23 @@
             overflow: hidden;
         }
 
-        #reviewList {
+        #attachList {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
             table-layout: fixed;
         }
 
-        #reviewList th, #reviewList td {
+        #attachList th, #attachList td {
             text-align: center;
             padding: 12px;
             border-bottom: 1px solid #e0e0e0;
             word-wrap: break-word;
         }
 
-        #reviewList th {
+        #attachList th {
             background-color: #f7f7f7;
             font-weight: 600;
-        }
-
-        /* 날씨 정보 스타일 */
-        .weather-info {
-            text-align: center;
-            font-size: 1.2em;
-            color: #555;
-        }
-        .weather-icon {
-            font-size: 48px; /* 이모지 크기 */
-            display: block;
-            margin-bottom: 10px;
         }
 
         a.home-link {
@@ -189,7 +177,7 @@
     <div id="placeFavorite" style="margin-top: 10px; text-align: left;"></div>
 
     <div class="tab-buttons">
-        <button class="tab-btn active" data-target="review">관련 댓글</button>
+        <button class="tab-btn active" data-target="attach">관련 댓글</button>
 
     </div>
 
@@ -219,11 +207,16 @@
             if (result.status === 200 && result.data) {
                 const board = result.data;
                 $('#boardTitle').text(board.title);
-                $('#boardDescription').text(board.contents);
+                const contentText = typeof board.contents === 'string'
+                    ? board.contents
+                    : (board.contents?.text ?? JSON.stringify(board.contents));
+                $('#boardDescription').text(contentText);
+               // $('#boardDescription').text(board.contents);
 
                 $('#boardRating').text(board.rating);
                 $('#boardWriter').text(board.empId);
-                const createdAt = board.createdAt.substring(0, 10);
+                //const createdAt = board.createdAt.substring(0, 10);
+                const createdAt = board.createdAt;
                 $('#boardCreated').text(createdAt);
 
 
@@ -239,8 +232,16 @@
             const token = localStorage.getItem('accessToken');
             const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
+            console.log("comments status:", response.status);
+            const text = await response.text();
+            console.log("comments raw body:", text);
+
+            let result1;
+            try { result1 = JSON.parse(text); } catch(e) { result = null; }
+            console.log("comments json:", result1);
+
             const result = await response.json();
 
             const attachList = $('#attachList').empty();
@@ -259,7 +260,8 @@
                 `);
 
                 comments.forEach(r => {
-                    const createdAt = r.createdAt.substring(0, 10);
+                    //const createdAt = r.createdAt.substring(0, 10);
+                    const createdAt = r.createdAt;
                     attachList.append(`
                         <tr>
                             <td>${r.contents}</td>
@@ -271,10 +273,10 @@
                 });
 
             } else {
-                reviewList.html('<tr><td colspan="4">관련 댓글이 없습니다.</td></tr>');
+                attachList.html('<tr><td colspan="4">관련 댓글이 없습니다.</td></tr>');
             }
         } catch (error) {
-            console.error('Failed to load reviews:', error);
+            console.error('Failed to load boards:', error);
         }
     }
 
