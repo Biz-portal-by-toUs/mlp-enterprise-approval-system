@@ -1,9 +1,15 @@
 package com.multi.mlpenterpriseapprovalsystem.organization.positions.service;
 
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.dto.ReqPositionsDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.dto.ResPositionsDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.repository.PositionsRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +27,14 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class PositionsService {
 
     private final PositionsRepository positionsRepository;
     private final EmployeeRepository employeeRepository;
+    private final CompanyRepository companyRepository;
 
+    @Transactional(readOnly = true)
     public List<ResPositionsDto> getPositions(String comId) {
 
         // 1) 직급 목록
@@ -50,5 +58,20 @@ public class PositionsService {
                         .empCount(countMap.getOrDefault(p.getPosNo(), 0L))
                         .build())
                 .toList();
+    }
+
+    public void addPositions(String comId, @Valid ReqPositionsDto reqPositionsDto) {
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        // 부서 이름이 이미 존재하는 경우
+        if(positionsRepository.existsByCompanyAndPosName(company, reqPositionsDto.getPosName())) {
+
+            throw new CustomException(ErrorCode.DUPLICATE_DEPNAME);
+        }
+
+        Positions positions = Positions.of(company, reqPositionsDto.getPosName().trim());
+        positionsRepository.save(positions);
     }
 }

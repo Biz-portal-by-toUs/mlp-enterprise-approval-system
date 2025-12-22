@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
@@ -56,6 +56,7 @@ public class DepartmentService {
         departmentRepository.save(department);
     }
 
+    @Transactional(readOnly = true)
     public List<ResDepartmentDto> getDepartmentsWithEmpCount(String comId) {
 
         // 1) 부서 목록

@@ -27,4 +27,13 @@ public class Positions {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
+
+    private Positions(Company company, String posName) {
+        this.company = company;
+        this.posName = posName;
+    }
+
+    public static Positions of(Company company, String posName) {
+        return new Positions(company, posName);
+    } // 이 형식으로 넣어야지만 생성이 가능하게
 }

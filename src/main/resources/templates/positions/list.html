@@ -37,12 +37,8 @@
             border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;
             background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(47,111,218,.25);
         }
-        .card{
-            background:var(--card); border-radius:18px; padding:22px; min-height:520px;
-        }
-        .table{
-            width:100%; border-collapse:separate; border-spacing:0 14px;
-        }
+        .card{ background:var(--card); border-radius:18px; padding:22px; min-height:520px; }
+        .table{ width:100%; border-collapse:separate; border-spacing:0 14px; }
         .thead{ background:#fff;border-radius:14px; }
         .thead th{ text-align:left; padding:14px 18px; font-size:14px; color:#111; }
         .row{ background:#fff;border-radius:14px; }
@@ -50,14 +46,10 @@
         .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
         .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
         .muted{color:var(--muted)}
-        .pill-btn{
-            padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px;
-        }
+        .pill-btn{ padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px; }
         .pill-edit{background:#eaf2ff;color:#2b5db8}
         .pill-del{background:#fdecec;color:#c62828;margin-left:10px}
-        .empty{
-            padding:40px 10px;text-align:center;color:var(--muted);font-weight:700
-        }
+        .empty{ padding:40px 10px;text-align:center;color:var(--muted);font-weight:700 }
     </style>
 </head>
 <body>
@@ -94,6 +86,7 @@
         <div class="page-sub">직급 조회</div>
 
         <div class="actions">
+            <!-- ✅ 클릭 시 등록 페이지로 이동 -->
             <button class="btn" type="button" onclick="location.href='/admin/positions/create'">직급 등록</button>
         </div>
 
@@ -108,9 +101,7 @@
                 </tr>
                 </thead>
 
-                <tbody id="posTbody">
-                <!-- JS로 렌더링 -->
-                </tbody>
+                <tbody id="posTbody"></tbody>
             </table>
 
             <div id="emptyBox" class="empty" style="display:none;">등록된 직급이 없습니다.</div>
@@ -119,7 +110,6 @@
 </div>
 
 <script>
-    // ✅ 프로젝트마다 키가 다를 수 있어서 최대한 유연하게 찾기
     function getAccessToken() {
         return (
             localStorage.getItem("accessToken") ||
@@ -176,11 +166,9 @@
             return;
         }
 
-        // ✅ 화면에는 No(1,2,3...)로 보여주고, 실제 수정/삭제는 posNo로 처리
         list.forEach((p, idx) => {
             const tr = document.createElement("tr");
             tr.className = "row";
-
             const displayNo = idx + 1;
 
             tr.innerHTML = `
@@ -197,16 +185,13 @@
     }
 
     function onEdit(posNo) {
-        // 수정 페이지로 이동 (컨트롤러: /admin/positions/{posNo}/edit 같은 형태로 맞추면 됨)
         location.href = "/admin/positions/" + posNo + "/edit";
     }
 
     function onDelete(posNo) {
-        // TODO: 삭제 API 호출로 연결
         alert("삭제: " + posNo);
     }
 
-    // XSS 방지용(간단)
     function escapeHtml(str) {
         return String(str)
             .replaceAll("&","&amp;")
@@ -216,7 +201,6 @@
             .replaceAll("'","&#039;");
     }
 
-    // 페이지 로드 시 호출
     loadPositions().catch(err => {
         console.error(err);
         const emptyBox = document.getElementById("emptyBox");
