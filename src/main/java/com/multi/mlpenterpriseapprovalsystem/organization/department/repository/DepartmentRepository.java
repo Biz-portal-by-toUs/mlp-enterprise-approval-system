@@ -22,5 +22,5 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     List<Department> findAllByCompany_ComId(String comId);
 
-    Optional<Department> findByDepNo(Long depNo);
+    Optional<Department> findByCompanyAndDepNo(Company company, Long depNo);
 }

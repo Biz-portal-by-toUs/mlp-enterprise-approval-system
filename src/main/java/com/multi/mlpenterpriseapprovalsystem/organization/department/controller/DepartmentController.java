@@ -52,8 +52,8 @@ public class DepartmentController {
     }
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @PutMapping
-    public ResponseEntity<ResponseDto<Void>> updateDepartment(@PathVariable Long depNo, @Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
+    @PutMapping("/{depNo}")
+    public ResponseEntity<ResponseDto<Void>> updateDepartment(@PathVariable(name="depNo") Long depNo, @Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
 
         departmentService.updateDepartment(user.getComId(), depNo, reqDepartmentDto);
         return ResponseEntity

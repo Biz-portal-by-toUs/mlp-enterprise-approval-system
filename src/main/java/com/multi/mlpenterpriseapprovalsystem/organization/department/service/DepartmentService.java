@@ -74,6 +74,7 @@ public class DepartmentService {
                 .map(d -> ResDepartmentDto.builder()
                         .depId(d.getDepId())
                         .depName(d.getDepName())
+                        .depNo(d.getDepNo())
                         .empCount(countMap.getOrDefault(d.getDepId(), 0L))
                         .build())
                 .toList();
@@ -84,8 +85,10 @@ public class DepartmentService {
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
         // 1) 내 회사 부서인지 확인 + 조회
-        Department department = departmentRepository.findByDepNo(depNo)
+        Department department = departmentRepository.findByCompanyAndDepNo(company, depNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+
 
         // 2) depId 변경 시 중복 체크 (같은 부서가 자기 depId 그대로면 OK)
         String newDepId = reqDepartmentDto.getDepId();
