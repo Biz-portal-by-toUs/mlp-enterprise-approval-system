@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - 부서 수정</title>
+
+    <style>
+        :root {
+            --primary: #2f6fdb;
+            --primary-dark: #2151a5;
+            --bg-light: #f7f9fc;
+            --border: #e6e6e6;
+            --text-main: #111;
+            --text-muted: #777;
+            --radius: 12px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+            background: #fff;
+            color: var(--text-main);
+        }
+
+        /* Topbar */
+        .topbar {
+            height: 72px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
+        .logo-box {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.2);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+        }
+        .search-container { flex: 1; display: flex; justify-content: center; }
+        .search-bar {
+            width: 100%; max-width: 500px; height: 40px; border-radius: 20px;
+            border: none; padding: 0 20px; background: rgba(255,255,255,0.95);
+        }
+        .user-actions { display: flex; align-items: center; gap: 15px; }
+        .icon-circle { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .btn-logout {
+            background: rgba(255,255,255,0.2); border: none; color: #fff;
+            padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer;
+        }
+
+        /* Layout */
+        .container { display: flex; min-height: calc(100vh - 72px); }
+
+        /* Icon Sidebar */
+        .icon-nav { width: 72px; border-right: 1px solid var(--border); padding: 15px 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .nav-icon { font-size: 24px; cursor: pointer; opacity: 0.6; transition: 0.2s; }
+        .nav-icon.active { opacity: 1; color: var(--primary); }
+
+        /* Text Sidebar */
+        .text-nav { width: 220px; background: var(--bg-light); border-right: 1px solid var(--border); padding: 20px; }
+        .menu-list { list-style: none; padding: 0; margin: 0; background: #fff; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+        .menu-item {
+            display: block; padding: 15px 20px; text-decoration: none; color: #444;
+            font-weight: 600; border-bottom: 1px solid var(--border);
+        }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item.active { background: #eef4ff; color: var(--primary); }
+
+        /* Main Content */
+        .content { flex: 1; padding: 40px 60px; }
+        .title-group { margin-bottom: 30px; }
+        .title-group h1 { font-size: 32px; margin: 0 0 10px; }
+        .title-group h2 { font-size: 24px; color: #555; margin: 0; }
+
+        .edit-card {
+            max-width: 800px; background: #f9fbff; border-radius: 24px;
+            padding: 50px; border: 1px solid #e1e8f5; box-shadow: var(--shadow);
+        }
+        .input-group { margin-bottom: 25px; }
+        .input-label { font-weight: 700; margin-bottom: 10px; display: block; }
+        .form-control {
+            width: 100%; height: 56px; border-radius: 12px; border: 1px solid #ddd;
+            padding: 0 18px; font-size: 16px; transition: 0.3s;
+        }
+        .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(47,111,219,0.1); }
+        .helper-text { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+
+        .form-actions { display: flex; justify-content: flex-end; margin-top: 40px; }
+        .btn-submit {
+            width: 180px; height: 56px; background: var(--primary); color: #fff;
+            border: none; border-radius: 14px; font-size: 18px; font-weight: 700;
+            cursor: pointer; transition: 0.3s;
+        }
+        .btn-submit:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+        /* Status Message */
+        .status-msg { margin-top: 15px; font-weight: 600; display: none; text-align: center; }
+        .status-msg.success { color: #28a745; }
+        .status-msg.error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="brand"><div class="logo-box">B</div> Bizportal</div>
+    <div class="search-container"><input type="text" class="search-bar" placeholder="Search..."/></div>
+    <div class="user-actions">
+        <div class="icon-circle">🔔</div>
+        <div class="icon-circle">👤</div>
+        <button class="btn-logout">로그아웃</button>
+    </div>
+</div>
+
+<div class="container">
+    <nav class="icon-nav">
+        <div class="nav-icon">📄</div><div class="nav-icon">💬</div><div class="nav-icon">✉️</div>
+        <div class="nav-icon">📁</div><div class="nav-icon">☁️</div><div class="nav-icon">📅</div>
+        <div class="nav-icon">👥</div><div class="nav-icon active">⚙️</div>
+    </nav>
+
+    <aside class="text-nav">
+        <div class="menu-list">
+            <a href="/admin/departments" class="menu-item active">부서 편성</a>
+            <a href="/admin/positions" class="menu-item">직급 편성</a>
+            <a href="/admin/employees" class="menu-item">사원 관리</a>
+            <a href="/admin/rules" class="menu-item">사내 규정 관리</a>
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="title-group">
+            <h1>부서 편성</h1>
+            <h2>부서 수정</h2>
+        </div>
+
+        <div class="edit-card">
+            <input type="hidden" id="depNo" th:value="${depNo}"/>
+
+            <div class="input-group">
+                <label class="input-label">부서 코드</label>
+                <input type="text" id="depId" class="form-control" placeholder="예: DEP001" maxlength="3" th:value="${depId}"/>
+                <p class="helper-text">최대 3자까지 입력 가능합니다.</p>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">부서 이름</label>
+                <input type="text" id="depName" class="form-control" placeholder="예: 인사팀" maxlength="10" th:value="${depName}"/>
+                <p class="helper-text">최대 10자까지 입력 가능합니다.</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" id="submitBtn" class="btn-submit">수정</button>
+            </div>
+            <div id="statusMsg" class="status-msg"></div>
+        </div>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const API_URL = "/api/v1/admin/departments";
+
+    function showStatus(msg, isSuccess) {
+        const el = document.getElementById("statusMsg");
+        el.textContent = msg;
+        el.className = `status-msg ${isSuccess ? 'success' : 'error'}`;
+        el.style.display = "block";
+        setTimeout(() => { el.style.display = "none"; }, 3000);
+    }
+
+    document.getElementById("submitBtn").addEventListener("click", async () => {
+        const depNo = document.getElementById("depNo").value;
+        const depId = document.getElementById("depId").value.trim();
+        const depName = document.getElementById("depName").value.trim();
+
+        // 1. 유효성 검사
+        if (!depId || !depName) {
+            showStatus("부서 코드와 이름을 모두 입력해주세요.", false);
+            return;
+        }
+
+        // 2. JWT 토큰 가져오기 (localStorage에 저장되어 있다고 가정)
+        // 로그인 시 'accessToken'이라는 이름으로 저장했어야 합니다.
+        const token = localStorage.getItem("accessToken");
+
+        if (!token) {
+            showStatus("인증 토큰이 없습니다. 다시 로그인해주세요.", false);
+            // 필요 시 로그인 페이지로 리다이렉트
+            // location.href = "/login";
+            return;
+        }
+
+        const payload = { depId, depName };
+
+        try {
+            const response = await fetch(`${API_URL}/${depNo}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` // ✅ 중요: 토큰을 헤더에 포함
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                showStatus("부서 정보가 성공적으로 수정되었습니다.", true);
+                setTimeout(() => {
+                    window.location.href = "/admin/departments/list";
+                }, 1000);
+            } else if (response.status === 403) {
+                showStatus("권한이 없습니다. 관리자 계정인지 확인해주세요.", false);
+            } else {
+                const errorData = await response.json();
+                showStatus(errorData.message || "수정 중 오류가 발생했습니다.", false);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            showStatus("서버와의 통신에 실패했습니다.", false);
+        }
+    });
+</script>
+
+</body>
+</html>
