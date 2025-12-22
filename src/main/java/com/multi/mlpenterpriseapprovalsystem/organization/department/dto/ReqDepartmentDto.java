@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 부서 등록 요청 dto
+ * 부서 등록, 수정 요청 dto
  *
  * @author : 권지영
  * @filename : ReqDepartmentAddDto
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @NoArgsConstructor
-public class ReqDepartmentAddDto {
+public class ReqDepartmentDto {
 
     @NotBlank
     @Size(max = 3)

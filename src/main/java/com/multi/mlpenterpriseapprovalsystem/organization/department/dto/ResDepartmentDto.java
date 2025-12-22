@@ -13,12 +13,14 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ResDepartmentDto {
 
+    private Long depNo;
     private String depId;
     private String depName;
-    private long empCount;
+    private Long empCount;
 
     @Builder
-    public ResDepartmentDto(String depId, String depName, long empCount) {
+    public ResDepartmentDto(Long depNo, String depId, String depName, long empCount) {
+        this.depNo = depNo;
         this.depId = depId;
         this.depName = depName;
         this.empCount = empCount;

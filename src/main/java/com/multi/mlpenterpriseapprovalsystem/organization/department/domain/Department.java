@@ -43,4 +43,9 @@ public class Department {
     public static Department of(Company company, String depId, String depName) {
         return new Department(company, depId, depName);
     } // 이 형식으로 넣어야지만 생성이 가능하게
+
+    public void update(String depId, String depName) {
+        this.depId = depId;
+        this.depName = depName;
+    }
 }
