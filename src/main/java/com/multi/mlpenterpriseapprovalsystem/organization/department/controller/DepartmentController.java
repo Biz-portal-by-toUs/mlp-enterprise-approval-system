@@ -2,7 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.organization.department.controller
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ReqDepartmentAddDto;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ReqDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ResDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.service.DepartmentService;
 import jakarta.validation.Valid;
@@ -32,9 +32,9 @@ public class DepartmentController {
 
     @PreAuthorize("hasRole('COM_ADMIN')")
     @PostMapping
-    public ResponseEntity<ResponseDto<Void>> addDepartment(@Valid @RequestBody ReqDepartmentAddDto reqDepartmentAddDto, @AuthenticationPrincipal CustomUser user) {
+    public ResponseEntity<ResponseDto<Void>> addDepartment(@Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
 
-        departmentService.addDepartment(user.getComId(), reqDepartmentAddDto);
+        departmentService.addDepartment(user.getComId(), reqDepartmentDto);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 등록에 성공했습니다.", null));

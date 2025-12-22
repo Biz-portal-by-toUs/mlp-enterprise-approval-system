@@ -6,7 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
-import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ReqDepartmentAddDto;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ReqDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ResDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import jakarta.validation.Valid;
@@ -35,24 +35,24 @@ public class DepartmentService {
     private final EmployeeRepository employeeRepository;
 
 
-    public void addDepartment(String comId, @Valid ReqDepartmentAddDto reqDepartmentAddDto) {
+    public void addDepartment(String comId, @Valid ReqDepartmentDto reqDepartmentDto) {
 
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
         // 부서 코드가 이미 존재하는 경우
-        if(departmentRepository.existsByCompanyAndDepId(company, reqDepartmentAddDto.getDepId())) {
+        if(departmentRepository.existsByCompanyAndDepId(company, reqDepartmentDto.getDepId())) {
 
             throw new CustomException(ErrorCode.DUPLICATE_DEPID);
         }
 
         // 부서 이름이 이미 존재하는 경우
-        if(departmentRepository.existsByCompanyAndDepName(company, reqDepartmentAddDto.getDepName())) {
+        if(departmentRepository.existsByCompanyAndDepName(company, reqDepartmentDto.getDepName())) {
 
             throw new CustomException(ErrorCode.DUPLICATE_DEPNAME);
         }
 
-        Department department = Department.of(company, reqDepartmentAddDto.getDepId().trim(), reqDepartmentAddDto.getDepName().trim());
+        Department department = Department.of(company, reqDepartmentDto.getDepId().trim(), reqDepartmentDto.getDepName().trim());
         departmentRepository.save(department);
     }
 
@@ -77,5 +77,29 @@ public class DepartmentService {
                         .empCount(countMap.getOrDefault(d.getDepId(), 0L))
                         .build())
                 .toList();
+    }
+
+    public void updateDepartment(String comId, Long depNo, @Valid ReqDepartmentDto reqDepartmentDto) {
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+        // 1) 내 회사 부서인지 확인 + 조회
+        Department department = departmentRepository.findByCompanyAndDepNo(company, depNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+
+
+        // 2) depId 변경 시 중복 체크 (같은 부서가 자기 depId 그대로면 OK)
+        String newDepId = reqDepartmentDto.getDepId();
+        if (!department.getDepId().equals(newDepId)) {
+            boolean exists = departmentRepository.existsByCompanyAndDepId(company, newDepId);
+            if (exists) {
+                throw new CustomException(ErrorCode.DUPLICATE_DEPID);
+            }
+        }
+
+        // 3) 반영
+        department.update(newDepId, reqDepartmentDto.getDepName());
+        // JPA dirty checking으로 save() 없어도 됨
     }
 }
