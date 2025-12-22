@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>결재문서 작성</title>
+
+    <link rel="stylesheet" href="/css/editor-preset-header.css" />
+
+    <style>
+        body{ margin:0; background:#f6f7f8;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR",
+            "Apple SD Gothic Neo", Arial, sans-serif; color:#222; }
+        .page{ max-width:1100px; margin:24px auto; padding:0 16px; }
+        .card{ background:#fff; border:1px solid #e6e6e6; border-radius:16px; padding:20px 22px; }
+
+        .row{ display:flex; align-items:center; gap:12px; }
+        .label{ min-width:80px; color:#555; font-size:14px; }
+        #docTitle{ flex:1; font-size:20px; padding:10px 12px; border:0; outline:none; background:#fff; }
+
+        hr{ border:0; border-top:1px solid #eee; margin:14px 0 16px; }
+
+        /* ===== Toolbar (create-docform 스타일) ===== */
+        .toolbar{
+            display:flex;
+            flex-wrap:wrap;
+            gap:6px;
+            margin: 12px 0 14px;
+        }
+        .toolbar button,
+        .toolbar select{
+            padding:6px 10px;
+            border:1px solid #e6e6e6;
+            background:#fff;
+            border-radius:10px;
+            cursor:pointer;
+        }
+        .toolbar select{ cursor:default; }
+        .toolbar button[aria-pressed="true"]{ border-color:#111; }
+
+
+        .actions{ display:flex; gap:8px; margin-bottom:12px; }
+        .actions button{ padding:6px 12px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+        .actions button:hover{ background:#f3f3f3; }
+
+        #editorWrap{
+            max-width:980px;
+            margin:0 auto;
+            overflow-x:auto;
+            padding:12px;
+            border:1px solid #e6e6e6;
+            border-radius:16px;
+            background:#fff;
+        }
+        #editor{ min-height:520px; }
+        .ProseMirror{ outline:none; }
+
+        #editorWrap table{ width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; }
+        #editorWrap td, #editorWrap th{ border:1px solid #e0e0e0; padding:10px; vertical-align:top; word-break:break-word; }
+
+        .input-field__input{ width:100%; border:0; outline:none; background:transparent; font:inherit; }
+
+        /* ===== Category radios ===== */
+        .catBox{
+            margin: 10px 0 14px;
+            padding: 14px 14px;
+            border: 1px solid #e6e6e6;
+            border-radius: 12px;
+            background: #fff;
+        }
+        .catLabel{
+            font-size: 13px;
+            color:#555;
+            margin-bottom: 10px;
+        }
+        .typeRadios{
+            display:flex;
+            gap:10px;
+            flex-wrap: wrap;
+        }
+        .typeRadios label{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 999px;
+            cursor:pointer;
+            user-select:none;
+            background:#fff;
+        }
+        .typeRadios input[type="radio"]{
+            transform: translateY(1px);
+        }
+
+        /* ===== Header preset tables ===== */
+        .presetHeaderBox{
+            margin: 10px 0 14px;
+            padding: 14px 14px;
+            border: 1px solid #e6e6e6;
+            border-radius: 12px;
+            background: #fff;
+        }
+        .presetHeaderBox:empty{ display:none; }
+        .presetHeaderBox .presetGrid{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items:start;
+        }
+        .presetHeaderBox table{ width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; }
+        .presetHeaderBox td, .presetHeaderBox th{ border:1px solid #e0e0e0; padding:10px; vertical-align:top; word-break:break-word; }
+        .presetHeaderBox .presetCell{ overflow-x:auto; }
+        .presetHeaderBox .presetCaption{ font-size:13px; color:#555; margin: 0 0 10px; }
+        .presetHeaderBox a{ color:inherit; text-decoration:none; pointer-events:none; }
+        .presetHeaderBox input, .presetHeaderBox textarea, .presetHeaderBox select, .presetHeaderBox button{ pointer-events:none; }
+
+        /* ===== Bottom actions ===== */
+        .bottom-actions{
+            position: static;
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top: 14px;
+            padding: 12px 0 6px;
+            background: #fff;
+        }
+        .bottom-actions button{
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background:#fff;
+            cursor:pointer;
+        }
+        .bottom-actions button:hover{ background:#f3f3f3; }
+
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <div class="card">
+        <div class="row">
+            <div class="label">문서 제목</div>
+            <input id="docTitle" placeholder="결재문서 제목을 입력하세요" />
+        </div>
+
+        <hr/>
+
+        <!-- 헤더 프리셋 표(템플릿에서 로드, 읽기전용) -->
+        <div id="presetHeaderBox" class="presetHeaderBox" aria-label="template header tables"></div>
+
+        <!-- 카테고리(템플릿에서 로드한 radio) -->
+        <div class="catBox">
+            <div class="catLabel">카테고리</div>
+            <div id="typeRadios" class="typeRadios"></div>
+        </div>
+
+
+        <!-- ===== 툴바(create-docform과 유사) ===== -->
+        <div class="toolbar" id="toolbar">
+            <select id="fontSizeSelect" title="폰트 크기">
+                <option value="">글자크기</option>
+                <option value="12">12px</option>
+                <option value="14">14px</option>
+                <option value="16">16px</option>
+                <option value="18">18px</option>
+                <option value="20">20px</option>
+                <option value="24">24px</option>
+            </select>
+
+            <button type="button" data-act="bold" title="굵게">B</button>
+            <button type="button" data-act="italic" title="기울임">/</button>
+            <button type="button" data-act="strike" title="취소선">S</button>
+
+            <button type="button" data-act="h1">H1</button>
+            <button type="button" data-act="h2">H2</button>
+            <button type="button" data-act="h3">H3</button>
+
+            <button type="button" data-act="bullet">•</button>
+            <button type="button" data-act="ordered">1.</button>
+
+            <button type="button" data-act="alignLeft">좌</button>
+            <button type="button" data-act="alignCenter">중</button>
+            <button type="button" data-act="alignRight">우</button>
+
+            <button type="button" data-act="table">표</button>
+            <button type="button" data-act="tableDelete">표 삭제</button>
+
+            <button type="button" data-act="addRowAfter">행 +</button>
+            <button type="button" data-act="deleteRow">행 -</button>
+
+            <button type="button" data-act="addColumnAfter">열 +</button>
+            <button type="button" data-act="deleteColumn">열 -</button>
+
+            <button type="button" data-act="undo">Undo</button>
+            <button type="button" data-act="redo">Redo</button>
+        </div>
+
+        <div id="editorWrap">
+            <div id="editor"></div>
+        </div>
+
+        <!-- 저장/닫기 버튼: 페이지 하단 -->
+        <div class="bottom-actions">
+            <button id="saveBtn">임시저장</button>
+            <button id="closeBtn">닫기</button>
+        </div>
+    </div>
+
+    <!-- 너 프로젝트 방식: create-docform.html과 동일하게 ../src 사용 -->
+    <script type="module" src="/js/web-editor/doc-write.js"></script>
+</div>
+</body>
+</html>
