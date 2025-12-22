@@ -76,6 +76,21 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     boolean existsByDepartment_DepNo(Long depNo);
 
+    interface PosCount {
+        Long getPosNo();
+        Long getCnt();
+    }
+
+    @Query("""
+        select p.posNo as posNo, count(e) as cnt
+        from Employee e
+        join e.company c
+        join e.position p
+        where c.comId = :comId
+        group by p.posNo
+    """)
+    List<PosCount> countGroupByPosNo(@Param("comId") String comId);
+
     interface DepCount {
         String getDepId();
         long getCnt();
