@@ -1,4 +1,4 @@
-// static/src/render.js
+// static/src/render-form.js
 
 const TIPTAP_V = '2.11.2'
 

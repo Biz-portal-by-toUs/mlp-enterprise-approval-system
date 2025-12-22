@@ -1,4 +1,4 @@
-// static/src/create-docform.js
+// static/src/make-form.js
 // TipTap/ProseMirror는 esm.sh로만 로드 + ProseMirror는 external로 고정(단일 인스턴스)
 // 저장: meta + uiState(상단표/라디오) + templateJson
 // 불러오기: make-form.html?id=... 로 들어오면 자동 복원
