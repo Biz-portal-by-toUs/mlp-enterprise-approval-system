@@ -73,4 +73,17 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("cursorNo") Long cursorNo,
             Pageable pageable
     );
+
+    interface DepCount {
+        String getDepId();
+        long getCnt();
+    }
+
+    @Query("""
+        select e.department.depId as depId, count(e) as cnt
+        from Employee e
+        where e.company.comId = :comId
+        group by e.department.depId
+    """)
+    List<DepCount> countGroupByDepId(@Param("comId") String comId);
 }
