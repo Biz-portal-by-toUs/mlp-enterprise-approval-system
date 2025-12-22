@@ -82,6 +82,8 @@ public enum ErrorCode {
 
     // 직급 관련
     DUPLICATE_POSNAME(HttpStatus.CONFLICT, "DUPLICATE_POSNAME", "이미 존재하는 직급 이름입니다"),
+    POSITIONS_NOT_FOUND(HttpStatus.NOT_FOUND, "POSITIONS_NOT_FOUND", "직급을 찾을 수 없습니다"),
+
 
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)

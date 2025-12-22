@@ -74,4 +74,29 @@ public class PositionsService {
         Positions positions = Positions.of(company, reqPositionsDto.getPosName().trim());
         positionsRepository.save(positions);
     }
+
+    public void updatePositions(String comId, Long posNo, @Valid ReqPositionsDto reqPositionsDto) {
+
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+        // 1) 내 회사 부서인지 확인 + 조회
+        Positions positions = positionsRepository.findById(posNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+
+
+        // 2) depId 변경 시 중복 체크 (같은 부서가 자기 depId 그대로면 OK)
+        String newPosName = reqPositionsDto.getPosName();
+        if (!positions.getPosName().equals(newPosName)) {
+            boolean exists = positionsRepository.existsByCompanyAndPosName(company, newPosName);
+            if (exists) {
+                throw new CustomException(ErrorCode.DUPLICATE_POSNAME);
+            }
+        }
+
+        // 3) 반영
+        positions.update(newPosName);
+        // JPA dirty checking으로 save() 없어도 됨
+    }
 }
