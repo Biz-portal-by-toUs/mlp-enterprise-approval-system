@@ -36,4 +36,8 @@ public class Positions {
     public static Positions of(Company company, String posName) {
         return new Positions(company, posName);
     } // 이 형식으로 넣어야지만 생성이 가능하게
+
+    public void update(String posName) {
+        this.posName = posName;
+    }
 }
