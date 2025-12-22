@@ -6,14 +6,12 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- DB 생성
 CREATE DATABASE IF NOT EXISTS bizportal
     DEFAULT CHARACTER SET utf8mb4
-
     DEFAULT COLLATE utf8mb4_0900_ai_ci;
 
 USE bizportal;
 
 -- ========================================================
 -- 1. 공통/조직 (Organization)
-
 -- ========================================================
 
 -- 1) 요금제
