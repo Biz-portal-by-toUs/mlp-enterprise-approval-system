@@ -74,6 +74,7 @@ public class DepartmentService {
                 .map(d -> ResDepartmentDto.builder()
                         .depId(d.getDepId())
                         .depName(d.getDepName())
+                        .depNo(d.getDepNo())
                         .empCount(countMap.getOrDefault(d.getDepId(), 0L))
                         .build())
                 .toList();
