@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공지 내용 상세</title>
+    <link rel="stylesheet" th:href="@{/css/styles1.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: "Noto Sans KR", sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 24px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            margin-bottom: 12px;
+            color: #1976d2;
+        }
+
+        .place-detail {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        .place-detail img {
+            width: 380px;
+            height: auto;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .place-info {
+            flex: 1;
+        }
+
+        .place-info p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .favorite-btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #ff6b6b, #ff8787);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            width: 120px;
+            height: 48px;
+            font-size: 18px;
+            font-weight: 600;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.25s ease-in-out;
+            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.25);
+        }
+
+        .favorite-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #ff4d4d, #ff6b6b);
+            box-shadow: 0 6px 14px rgba(255, 107, 107, 0.35);
+        }
+
+        .favorite-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 30px 0 10px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .tab-buttons button {
+            padding: 10px 18px;
+            border: none;
+            background: #f1f1f1;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .tab-buttons button.active {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            border-radius: 8px;
+            background: #fafafa;
+            min-height: 350px;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        #details {
+            width: 100%;
+            height: 350px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #reviewList {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+
+        #reviewList th, #reviewList td {
+            text-align: center;
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            word-wrap: break-word;
+        }
+
+        #reviewList th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+        }
+
+        /* 날씨 정보 스타일 */
+        .weather-info {
+            text-align: center;
+            font-size: 1.2em;
+            color: #555;
+        }
+        .weather-icon {
+            font-size: 48px; /* 이모지 크기 */
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        a.home-link {
+            display: inline-block;
+            margin-top: 24px;
+            text-decoration: none;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        a.home-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <!----
+    <th:block th:replace="~{common/header :: header}"/>
+    ---->
+</div>
+
+<div class="container">
+
+    <div class="board-detail">
+        <div class="board-info">
+            <p><strong>제 목:</strong> <span id="boardTitle"></span></p>
+            <p><strong>내용:</strong><p id="boardDescription"></p>
+            <br>
+
+            <p><strong>조회건수:</strong> <span id="boardRating"></span></p>
+            <p><strong>작성자:</strong> <span id="boardWriter"></span></p>
+            <p><strong>등록일:</strong> <span id="boardCreated"></span></p>
+
+        </div>
+    </div>
+
+    <div id="placeFavorite" style="margin-top: 10px; text-align: left;"></div>
+
+    <div class="tab-buttons">
+        <button class="tab-btn active" data-target="review">관련 댓글</button>
+
+    </div>
+
+    <div id="attach" class="tab-content active">
+        <table id="attachList"></table>
+        <div id="pagination"></div>
+    </div>
+
+
+    <a href="/main" class="home-link">← 홈으로 돌아가기</a>
+</div>
+
+
+<script>
+    const boardNo = [[${boardNo}]];
+
+    async function loadPlaceDetail() {
+        try {
+            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}`);
+            const result = await response.json();
+
+            if (result.status === 200 && result.data) {
+                const board = result.data;
+                $('#boardTitle').text(board.title);
+                $('#boardDescription').text(board.contents);
+
+                $('#boardRating').text(board.rating);
+                $('#boardWriter').text(board.empId);
+                const createdAt = board.createdAt.substring(0, 10);
+                $('#boardCreated').text(createdAt);
+
+
+                initAttach();
+            }
+        } catch (error) {
+            console.error('Error loading place detail:', error);
+        }
+    }
+
+    async function initAttach() {
+        try {
+            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`);
+            const result = await response.json();
+
+            const attachList = $('#attachList').empty();
+
+            if (result.data.length === 0) {
+                attachList.append(`
+                    등록된 댓글이 없습니다.
+                `);
+                return;
+            }
+            if (result.status === 200 && result.data) {
+                const comments = result.data;
+                console.log(comments);
+                attachList.append(`
+                    <tr><th>내용</th><th>작성자</th><th>등록일자</th></tr>
+                `);
+
+                comments.forEach(r => {
+                    const createdAt = r.createdAt.substring(0, 10);
+                    attachList.append(`
+                        <tr>
+                            <td>${r.contents}</td>
+                            <td>${r.empId}</td>
+                            <td>${createdAt}</td>
+
+                        </tr>
+                    `);
+                });
+
+            } else {
+                reviewList.html('<tr><td colspan="4">관련 댓글이 없습니다.</td></tr>');
+            }
+        } catch (error) {
+            console.error('Failed to load reviews:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPlaceDetail();
+
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - 부서 편성(등록)</title>
+
+<!--    &lt;!&ndash; (선택) CSRF 메타: CSRF 켜져있을 때만 사용 &ndash;&gt;-->
+<!--    <meta name="_csrf" th:content="${_csrf.token}"/>-->
+<!--    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>-->
+
+    <style>
+        :root{
+            --primary:#2f6fdf;
+            --bg:#f5f6f8;
+            --text:#111;
+            --muted:#6b7280;
+            --card:#ffffff;
+            --line:#e5e7eb;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);}
+        a{color:inherit;text-decoration:none}
+        .app{min-height:100vh;display:flex;flex-direction:column;}
+
+        /* Topbar */
+        .topbar{
+            height:64px;background:var(--primary);color:#fff;
+            display:flex;align-items:center;gap:18px;padding:0 18px;
+            box-shadow:0 10px 25px rgba(0,0,0,.12);
+        }
+        .menu-dot{
+            width:28px;height:28px;border-radius:8px;display:grid;place-items:center;cursor:pointer;
+        }
+        .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;letter-spacing:-.3px;}
+        .brand .logo{
+            width:34px;height:34px;border-radius:10px;background:#fff;color:var(--primary);
+            display:grid;place-items:center;font-weight:900;
+        }
+        .search{
+            flex:1;display:flex;align-items:center;gap:10px;
+            max-width:720px;background:#fff;border-radius:999px;padding:8px 12px;color:var(--text);
+        }
+        .search select{border:none;outline:none;background:transparent;font-size:14px;color:var(--muted);}
+        .search input{border:none;outline:none;flex:1;font-size:14px;}
+        .top-actions{display:flex;align-items:center;gap:14px;}
+        .icon-btn{
+            width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,.18);
+            display:grid;place-items:center;cursor:pointer;
+        }
+        .logout{
+            border:none;cursor:pointer;background:#dbeafe;color:#1e3a8a;
+            padding:10px 16px;border-radius:999px;font-weight:700;
+        }
+
+        /* Layout */
+        .main{flex:1;display:flex;}
+        .sidebar{
+            width:86px;background:#fff;border-right:1px solid var(--line);
+            padding:14px 10px;
+        }
+        .side-item{
+            height:56px;border-radius:14px;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;gap:6px;margin-bottom:10px;
+            color:#1f2937;font-size:12px;
+        }
+        .side-item.active{background:#eef5ff;color:var(--primary);font-weight:700;}
+        .side-ico{width:28px;height:28px;border-radius:10px;border:2px solid currentColor;display:grid;place-items:center;font-size:14px;}
+
+        .subnav{
+            width:200px;background:#f9fafb;border-right:1px solid var(--line);
+            padding:18px 14px;
+        }
+        .subnav .title{font-weight:800;color:#111;margin:8px 0 14px;}
+        .subnav a{
+            display:block;padding:12px 12px;border-radius:12px;color:#374151;margin-bottom:8px;
+        }
+        .subnav a.active{background:#eaf2ff;color:var(--primary);font-weight:800;}
+
+        .content{flex:1;padding:34px 42px;}
+        .page-title{font-size:34px;font-weight:900;margin:0 0 22px;}
+        .section-title{font-size:22px;font-weight:900;margin:0 0 14px;}
+
+        .card{
+            background:var(--card);border:1px solid var(--line);border-radius:18px;
+            padding:26px 26px;
+        }
+        .form-wrap{
+            background:#f3f4f6;border-radius:18px;padding:26px;
+        }
+        .field{margin:18px 0;}
+        .label{font-weight:800;margin-bottom:10px;}
+        .input{
+            width:100%;height:48px;border-radius:12px;border:1px solid var(--line);
+            padding:0 14px;font-size:14px;outline:none;background:#fff;
+        }
+        .hint{margin-top:8px;font-size:12px;color:var(--muted);}
+        .actions{display:flex;justify-content:flex-end;margin-top:22px;}
+        .btn{
+            width:160px;height:50px;border:none;border-radius:14px;
+            background:var(--primary);color:#fff;font-weight:900;cursor:pointer;
+        }
+        .msg{margin-top:14px;font-size:13px;}
+        .msg.ok{color:#0f766e;}
+        .msg.err{color:#b91c1c;}
+    </style>
+</head>
+
+<body>
+<div class="app">
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="menu-dot" title="메뉴">
+            <span style="font-size:20px;line-height:1;">⋮⋮</span>
+        </div>
+
+        <div class="brand">
+            <div class="logo">B</div>
+            <div>Bizportal</div>
+        </div>
+
+        <div class="search">
+            <span style="opacity:.7;">🔍</span>
+            <select>
+                <option>Label</option>
+                <option>Title</option>
+                <option>Content</option>
+            </select>
+            <input type="text" placeholder="Search"/>
+        </div>
+
+        <div class="top-actions">
+            <div class="icon-btn" title="알림">🔔</div>
+            <div class="icon-btn" title="프로필">👤</div>
+            <!-- 로그아웃: 프로젝트에 맞는 경로로 수정 -->
+            <button class="logout" type="button" onclick="location.href='/logout'">로그아웃</button>
+        </div>
+    </header>
+
+    <div class="main">
+        <!-- Left icon sidebar -->
+        <aside class="sidebar">
+            <div class="side-item"><div class="side-ico">✓</div><div>결재</div></div>
+            <div class="side-item"><div class="side-ico">💬</div><div>회의</div></div>
+            <div class="side-item"><div class="side-ico">✉</div><div>메일</div></div>
+            <div class="side-item"><div class="side-ico">📄</div><div>문서함</div></div>
+            <div class="side-item"><div class="side-ico">☁</div><div>공유함</div></div>
+            <div class="side-item"><div class="side-ico">📅</div><div>캘린더</div></div>
+            <div class="side-item"><div class="side-ico">📝</div><div>게시판</div></div>
+            <div class="side-item"><div class="side-ico">🕒</div><div>예약</div></div>
+            <div class="side-item"><div class="side-ico">💼</div><div>근태</div></div>
+            <div class="side-item"><div class="side-ico">👥</div><div>조직도</div></div>
+            <div class="side-item active"><div class="side-ico">⚙</div><div>관리자</div></div>
+        </aside>
+
+        <!-- Sub navigation -->
+        <nav class="subnav">
+            <div class="title">관리자</div>
+            <a class="active" href="/admin/departments/create">부서 편성</a>
+            <a href="/admin/positions/create">직급 편성</a>
+            <a href="/admin/employees">사원 관리</a>
+            <a href="/admin/policies">사내 규정 관리</a>
+        </nav>
+
+        <!-- Content -->
+        <section class="content">
+            <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">부서 편성(등록)</div>
+            <h1 class="page-title">부서 편성</h1>
+            <h2 class="section-title">부서 등록</h2>
+
+            <div class="card">
+                <div class="form-wrap">
+                    <div class="field">
+                        <div class="label">부서 코드</div>
+                        <input class="input" id="depId" maxlength="3" placeholder="예) DEP001" />
+                        <div class="hint">최대 3자</div>
+                    </div>
+
+                    <div class="field">
+                        <div class="label">부서 이름</div>
+                        <input class="input" id="depName" maxlength="10" placeholder="예) 인사팀" />
+                        <div class="hint">최대 10자</div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn" id="submitBtn" type="button">등록</button>
+                    </div>
+
+                    <div id="resultMsg" class="msg" style="display:none;"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+
+    function showMsg(text, ok) {
+        const el = $("resultMsg");
+        el.style.display = "block";
+        el.className = "msg " + (ok ? "ok" : "err");
+        el.textContent = text;
+    }
+
+    function getCsrf() {
+        const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+        return (token && header) ? { token, header } : null;
+    }
+
+    $("submitBtn").addEventListener("click", async () => {
+        const depId = $("depId").value.trim();
+        const depName = $("depName").value.trim();
+
+        if (!depId) return showMsg("부서 코드를 입력해주세요.", false);
+        if (!depName) return showMsg("부서 이름을 입력해주세요.", false);
+        if (depId.length > 3) return showMsg("부서 코드는 최대 3자입니다.", false);
+        if (depName.length > 10) return showMsg("부서 이름은 최대 10자입니다.", false);
+
+        const headers = { "Content-Type": "application/json" };
+
+        // (선택) JWT를 localStorage에 저장해 쓰는 구조라면 자동 포함
+        const token = localStorage.getItem("accessToken");
+        if (token) headers["Authorization"] = "Bearer " + token;
+
+        // (선택) CSRF 켜져있을 때만 자동 포함
+        const csrf = getCsrf();
+        if (csrf) headers[csrf.header] = csrf.token;
+
+        try {
+            const res = await fetch("/api/v1/admin/departments", {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ depId, depName })
+            });
+
+            // 성공
+            if (res.ok) {
+                // 너희 ResponseDto 구조면 메시지 꺼내서 표시 가능
+                let msg = "부서 등록에 성공했습니다.";
+                try {
+                    const data = await res.json();
+                    if (data?.message) msg = data.message;
+                } catch (e) {}
+                alert(msg);
+                // 필요하면 목록 페이지로 이동
+                // location.href = "/admin/departments";
+                $("depId").value = "";
+                $("depName").value = "";
+                showMsg(msg, true);
+                return;
+            }
+
+            // 실패(권한/검증 등)
+            let errMsg = "요청 처리에 실패했습니다.";
+            try {
+                const data = await res.json();
+                if (data?.message) errMsg = data.message;
+            } catch (e) {
+                errMsg = `요청 실패 (HTTP ${res.status})`;
+            }
+            showMsg(errMsg, false);
+
+        } catch (e) {
+            showMsg("서버 통신 오류가 발생했습니다.", false);
+        }
+    });
+</script>
+</body>
+</html>
