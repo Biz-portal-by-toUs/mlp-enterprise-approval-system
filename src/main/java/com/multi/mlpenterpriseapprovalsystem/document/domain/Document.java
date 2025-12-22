@@ -2,26 +2,28 @@ package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 문서 엔티티
  *
- * @author : 김승기
+ * @author : 이지헌
  * @filename : Document
  * @since : 2025. 12. 16. 화요일
  */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-// 명세서에 created_at, updated_at이 모두 있으므로 BaseEntity 상속
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 @Table(name = "document")
+@Builder
 public class Document extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,11 +31,11 @@ public class Document extends BaseEntity {
 
     // 회사 참조 (com_id -> company.com_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId", nullable = false)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
 
     // 문서 ID (UK 설정 권장)
-    @Column(length = 14, unique = true)
+    @Column(name = "doc_id", length = 14, unique = true)
     private String docId;
 
     // 카테고리 참조 (docfo_cat_no)
@@ -47,13 +49,17 @@ public class Document extends BaseEntity {
     @Column(columnDefinition = "json", nullable = false)
     private String content;
 
+
+    @OneToMany( mappedBy = "document", fetch = FetchType.LAZY)
+    private List<ApprovalLine> approvalLines;
+
     @Lob
     @Column(nullable = false)
     private String cnttHtml;
 
     // 작성자 참조 (emp_id -> employee.emp_id)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId", nullable = false)
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id", nullable = false)
     private Employee writer;
 
     @Lob
@@ -62,8 +68,12 @@ public class Document extends BaseEntity {
     @Column(nullable = false)
     private Boolean temp; // 임시 저장 여부
 
-    // 양식 참조 (docfo_no)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "docfo_no", nullable = false)
     private DocumentForm documentForm;
+
+    // 문서 상태(상신전, 결재중, 최종승인, 반려)
+    @Column(name = "doc_stat", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DocStat docStat = DocStat.AW;
 }

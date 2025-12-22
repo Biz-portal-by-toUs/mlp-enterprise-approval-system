@@ -3,7 +3,6 @@ package com.multi.mlpenterpriseapprovalsystem.common.exception;
 import lombok.Getter;
 
 /**
- * Please explain the class!!!
  * 런타임예외를 상속한 공통 예외
  *
  * 사용예시:

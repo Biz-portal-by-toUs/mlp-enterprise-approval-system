@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Chat Room</title>
+    <style>
+        :root { --primary-color: #007bff; --me-bubble: #ffeb33; --bg-color: #f8f9fa; --border-color: #eee; }
+        body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
+        .wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+        /* 상단 바 */
+        /* 상단 바 레이아웃 유지 */
+        .top {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            z-index: 10;
+            gap: 10px; /* 제목과 버튼 사이 최소 간격 */
+        }
+        /* ✅ 채팅방 이름 말줄임 처리 */
+        .title {
+            font-weight: 800;
+            font-size: 16px;
+            white-space: nowrap;      /* 줄바꿈 금지 */
+            overflow: hidden;         /* 넘치는 부분 숨김 */
+            text-overflow: ellipsis;  /* ... 표시 */
+            flex: 1;                  /* 남는 공간을 차지하게 함 */
+            min-width: 0;             /* flex 아이템이 넘칠 때 줄어들 수 있게 함 (중요) */
+            max-width: 200px;         /* 16px 기준 약 12~13자 정도의 너비 제한 */
+        }
+        /* 버튼 영역이 찌그러지지 않게 고정 */
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;           /* 공간이 부족해도 버튼 영역은 줄어들지 않음 */
+        }
+        .actions button { padding: 8px 14px; cursor: pointer; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+        .actions button:hover { background: #f8f9fa; border-color: #bbb; }
+        .btn-invite { background: var(--primary-color) !important; color: white !important; border: none !important; }
+
+        /* 참가자 목록 패널 */
+        .member-panel { display: none; position: absolute; top: 65px; right: 15px; width: 240px; max-height: 450px; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); }
+        .member-header { padding: 15px; font-weight: 800; border-bottom: 1px solid var(--border-color); background: #fafafa; font-size: 14px; }
+        .member-list { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .member-item { padding: 10px 18px; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: background 0.2s; }
+        .member-item:hover { background: #f5f5f5; }
+
+        /* 초대 모달 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-content { background: white; width: 720px; height: 540px; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal-header { padding: 20px; font-weight: 800; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 18px; }
+        .modal-main { flex: 1; display: flex; min-height: 0; }
+        .modal-left, .modal-right { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .modal-left { border-right: 1px solid var(--border-color); }
+        .modal-section-title { padding: 12px 18px; font-size: 12px; font-weight: 700; color: #999; background: #fafafa; text-transform: uppercase; }
+        .scroll-list { flex: 1; overflow-y: auto; }
+        .search-box { width: 100%; padding: 15px 20px; border: none; border-bottom: 1px solid var(--border-color); outline: none; font-size: 14px; }
+        .emp-row { padding: 12px 20px; border-bottom: 1px solid #f8f8f8; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .emp-row:hover { background: #fcfcfc; }
+        .emp-info .name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+        .emp-info .sub { font-size: 12px; color: #888; }
+        .btn-add { background: #f0f7ff; color: var(--primary-color); border: none; border-radius: 4px; padding: 4px 10px; font-weight: 800; cursor: pointer; }
+        .pill { display: inline-flex; gap: 8px; align-items: center; background: #f0f7ff; border-radius: 8px; padding: 8px 12px; margin: 6px 12px; font-size: 13px; border: 1px solid #d0e5ff; }
+        .pill button { cursor: pointer; border: none; background: none; color: #ff3b30; font-weight: bold; }
+
+        /* 메시지 영역 */
+        .msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .msg { display: flex; flex-direction: column; max-width: 80%; }
+        .msg.me { align-self: flex-end; align-items: flex-end; }
+        .msg.other { align-self: flex-start; align-items: flex-start; }
+        .bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .me .bubble { background-color: var(--me-bubble); border-top-right-radius: 2px; }
+        .other .bubble { background-color: white; border-top-left-radius: 2px; border: 1px solid #e2e2e2; }
+        .sender-info { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 4px; }
+        .time-info { font-size: 10px; color: #aaa; margin-top: 4px; }
+
+        /* 하단 바 */
+        .bottom { padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        .bottom input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; transition: border-color 0.2s; }
+        .bottom input:focus { border-color: var(--primary-color); }
+        .bottom button { padding: 0 20px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .bottom button:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* ✅ 추가된 바이트 바 스타일 */
+        .bytebar {
+            padding: 0 20px 12px;
+            font-size: 12px;
+            color: #777;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            background: white;
+        }
+        .bytebar .warn { color:#ff3b30; font-weight:700; }
+
+        .modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        .modal-footer button { flex: 1; padding: 14px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; font-size: 15px; }
+        .btn-confirm { background: var(--primary-color); color: white; }
+        .btn-cancel { background: #eee; color: #666; }
+
+        .msg.system {
+            align-self: center;
+            background: rgba(0, 0, 0, 0.05); /* 아주 연한 배경 */
+            color: #888;
+            font-size: 12px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 10px 0;
+            max-width: 90%;
+            text-align: center;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+    <div class="top">
+        <div class="title" id="roomTitle">로딩 중...</div>
+        <div class="actions">
+            <button onclick="openInviteModal()" class="btn-invite">초대</button>
+            <button id="memberToggleBtn" onclick="toggleMembers()">참가자</button>
+            <button onclick="leaveRoom()" style="color: #ff3b30; border-color: #ffcfcf;">나가기</button>
+        </div>
+    </div>
+
+    <div id="memberPanel" class="member-panel">
+        <div class="member-header">참가자 목록 (<span id="memberCount">0</span>)</div>
+        <div id="memberList" class="member-list"></div>
+    </div>
+
+    <div id="inviteModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>멤버 초대</span>
+                <span style="cursor:pointer; color: #999;" onclick="closeInviteModal()">✕</span>
+            </div>
+            <div class="modal-main">
+                <div class="modal-left">
+                    <input type="text" id="inviteKeyword" class="search-box" placeholder="이름, 부서, 사번으로 검색..." oninput="onInviteSearch()">
+                    <div class="modal-section-title">사원 목록</div>
+                    <div id="inviteEmpList" class="scroll-list"></div>
+                </div>
+                <div class="modal-right">
+                    <div class="modal-section-title">선택된 인원</div>
+                    <div id="selectedBox" class="scroll-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeInviteModal()">취소</button>
+                <button class="btn-confirm" onclick="submitInvite()">초대하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="msgs" id="messages"></div>
+
+    <div class="bottom">
+        <input id="messageInput" placeholder="메시지를 입력하세요..." onkeydown="if(event.keyCode==13){sendMessage()}" autocomplete="off" />
+        <button id="sendBtn" onclick="sendMessage()">전송</button>
+    </div>
+
+    <div class="bytebar">
+        <span id="byteInfo">0 / 61440 bytes</span>
+        <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+    </div>
+</div>
+
+<script>
+    // ---------------- 기초 설정 ----------------
+    function getAccessToken() { return localStorage.getItem("accessToken"); }
+    function authHeaders() { return { 'Authorization': 'Bearer ' + getAccessToken() }; }
+    function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>"']/g, s => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+        }[s]));
+    }
+
+    // ✅ [추가] 바이트 계산 유틸
+    const MAX_BYTES = 60 * 1024; // 61440 bytes
+    function utf8Bytes(str) {
+        return new TextEncoder().encode(str).length;
+    }
+
+    function updateByteInfo() {
+        const input = document.getElementById("messageInput");
+        const info = document.getElementById("byteInfo");
+        const warn = document.getElementById("byteWarn");
+        const btn  = document.getElementById("sendBtn");
+        if (!input || !info) return;
+
+        const b = utf8Bytes(input.value || "");
+        info.textContent = `${b} / ${MAX_BYTES} bytes`;
+
+        const tooBig = b > MAX_BYTES;
+        info.style.color = tooBig ? "#ff3b30" : "#777";
+        if (warn) warn.style.display = tooBig ? "inline" : "none";
+        if (btn) btn.disabled = tooBig;
+    }
+
+    function getMyEmpId() {
+        const token = getAccessToken();
+        if (!token) return null;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.username;
+        } catch (e) { return null; }
+    }
+
+    const MY_EMP_ID = getMyEmpId();
+    const pathSegments = location.pathname.split('/');
+    const roomNo = Number(pathSegments[pathSegments.length - 1]);
+
+    async function loadRoomInfo() {
+        try {
+            const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
+            const result = await res.json();
+            const room = result.data;
+            if (!room) return;
+
+            // ✅ [추가] 1:1 채팅방인 경우 초대 버튼 숨김 처리
+            const inviteBtn = document.querySelector(".btn-invite");
+            if (inviteBtn) {
+                // 방 타입이 'ONE'이면 숨기고(none), 아니면 보이게(inline-block) 설정함
+                inviteBtn.style.display = (room.roomType === 'ONE') ? 'none' : 'inline-block';
+            }
+
+            let displayName = room.roomName;
+
+            // ✅ 1:1 채팅방이거나 방 이름이 없는 경우, 참여자 목록에서 상대방 이름을 찾음
+            if (room.roomType === 'ONE' || !displayName) {
+                const opponent = (room.members || []).find(m => m.empId !== MY_EMP_ID);
+                displayName = opponent ? opponent.empName : (displayName || "대화 상대 없음");
+            }
+
+            document.getElementById("roomTitle").innerText = displayName;
+        } catch (err) {
+            console.error("방 정보 로드 실패:", err);
+            document.getElementById("roomTitle").innerText = "채팅방";
+        }
+    }
+
+    // ---------------- 초대 로직 ----------------
+    const selected = new Map();
+    let currentRoomMembers = new Set();
+    let inviteCursor = null;
+    let inviteHasNext = true;
+    let inviteLoading = false;
+    let inviteKwTimer = null;
+
+    async function openInviteModal() {
+        const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
+        const result = await res.json();
+        currentRoomMembers = new Set((result.data.members || []).map(m => m.empId));
+
+        selected.clear();
+        renderSelected();
+        resetAndLoadInvites();
+        document.getElementById("inviteModal").style.display = "flex";
+    }
+
+    function onInviteSearch() {
+        clearTimeout(inviteKwTimer);
+        inviteKwTimer = setTimeout(resetAndLoadInvites, 250);
+    }
+
+    async function resetAndLoadInvites() {
+        inviteCursor = null;
+        inviteHasNext = true;
+        document.getElementById("inviteEmpList").innerHTML = "";
+        await loadMoreInvites();
+    }
+
+    async function loadMoreInvites() {
+        if (inviteLoading || !inviteHasNext) return;
+        inviteLoading = true;
+
+        const keyword = document.getElementById("inviteKeyword").value.trim();
+        const qs = new URLSearchParams({ size: 30, excludeMe: "true" });
+        if (keyword) qs.set("keyword", keyword);
+        if (inviteCursor) qs.set("cursor", inviteCursor);
+
+        try {
+            const res = await fetch("/api/v1/employees?" + qs.toString(), { headers: authHeaders() });
+            const raw = await res.json();
+            const payload = raw?.data ?? raw;
+
+            const items = payload?.items ?? [];
+            inviteCursor = payload?.nextCursor ?? null;
+            inviteHasNext = !!payload?.hasNext;
+
+            const box = document.getElementById("inviteEmpList");
+            items.forEach(e => {
+                if (currentRoomMembers.has(e.empId)) return;
+
+                const row = document.createElement("div");
+                row.className = "emp-row";
+                row.innerHTML = `
+                    <div class="emp-info">
+                        <div class="name">${escapeHtml(e.empName)}</div>
+                        <div class="sub">${escapeHtml(e.depName ?? "")} · ${escapeHtml(e.posName ?? "")}</div>
+                    </div>
+                    <button class="btn-add" onclick="addSelected('${escapeHtml(e.empId)}', '${escapeHtml(e.empName)}')">+</button>
+                `;
+                box.appendChild(row);
+            });
+        } finally { inviteLoading = false; }
+    }
+
+    function addSelected(empId, empName) {
+        if (selected.has(empId)) return;
+        selected.set(empId, { empId, empName });
+        renderSelected();
+    }
+
+    function renderSelected() {
+        const box = document.getElementById("selectedBox");
+        box.innerHTML = "";
+        [...selected.values()].forEach(e => {
+            const pill = document.createElement("div");
+            pill.className = "pill";
+            pill.innerHTML = `
+                <span><b>${escapeHtml(e.empName)}</b></span>
+                <button onclick="removeSelected('${escapeHtml(e.empId)}')">x</button>
+            `;
+            box.appendChild(pill);
+        });
+    }
+
+    function removeSelected(empId) {
+        selected.delete(empId);
+        renderSelected();
+    }
+
+    async function submitInvite() {
+        if (selected.size === 0) return alert("초대할 인원을 선택하세요.");
+        const memberIds = [...selected.keys()];
+
+        const res = await fetch(`/api/v1/chat/${roomNo}/invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ memberIds })
+        });
+
+        if (res.ok) {
+            closeInviteModal();
+            if (isMemberPanelOpen) toggleMembers();
+        } else { alert("초대 실패"); }
+    }
+
+    function closeInviteModal() { document.getElementById("inviteModal").style.display = "none"; }
+
+    // ---------------- 참가자 목록 & 메시지 로직 ----------------
+    let stompClient = null;
+    let roomSub = null;
+    let isMemberPanelOpen = false;
+    const seenMsgIds = new Set();
+
+    async function toggleMembers() {
+        const panel = document.getElementById("memberPanel");
+        if (isMemberPanelOpen) { panel.style.display = "none"; isMemberPanelOpen = false; return; }
+
+        const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
+        const result = await res.json();
+        const members = result.data.members || [];
+
+        const list = document.getElementById("memberList");
+        document.getElementById("memberCount").innerText = members.length;
+        list.innerHTML = "";
+        members.forEach(m => {
+            const div = document.createElement("div");
+            div.className = "member-item";
+            const isMe = (m.empId === MY_EMP_ID);
+            div.innerHTML = `
+                <span style="flex:1">${escapeHtml(m.empName)} (${escapeHtml(m.empId)})</span>
+                ${isMe ? '<b style="color:#007bff; font-size:10px;">나</b>' : ''}
+            `;
+            list.appendChild(div);
+        });
+        panel.style.display = "flex";
+        isMemberPanelOpen = true;
+    }
+
+    function connectWs() {
+        const socket = new SockJS('/ws-chat');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({ Authorization: 'Bearer ' + getAccessToken() }, async () => {
+            await markRead();
+            await loadMessages();
+            roomSub = stompClient.subscribe('/sub/chat/rooms/' + roomNo, (msg) => {
+                const body = JSON.parse(msg.body);
+                if (body.messageId && seenMsgIds.has(body.messageId)) return;
+                seenMsgIds.add(body.messageId);
+                appendMessage(body);
+                markRead();
+                if (window.opener && !window.opener.closed && window.opener.handleReadRoom) window.opener.handleReadRoom(roomNo);
+            });
+        });
+    }
+
+    async function loadMessages() {
+        const res = await fetch(`/api/v1/chat/messages/${roomNo}?size=50`, { headers: authHeaders() });
+        const result = await res.json();
+        const msgs = result.data || [];
+        const box = document.getElementById("messages");
+        box.innerHTML = "";
+
+        // 기존 메시지 중복 set 처리
+        msgs.forEach(m => { if(m.messageId) seenMsgIds.add(m.messageId); });
+
+        msgs.slice().reverse().forEach(m => appendMessage(m));
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function markRead() { await fetch(`/api/v1/chat/${roomNo}/read`, { method:"POST", headers: authHeaders() }); }
+
+    function appendMessage(m) {
+        const box = document.getElementById("messages");
+        const div = document.createElement("div");
+
+        if (m.type === 'SYSTEM') {
+            div.className = "msg system";
+            div.innerHTML = `<span>${escapeHtml(m.content)}</span>`;
+        }
+        // ✅ 2. 일반 메시지 처리 (기존 로직)
+        else {
+            const isMe = (m.senderEmpId === MY_EMP_ID);
+            div.className = isMe ? "msg me" : "msg other";
+
+            let html = `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
+            html += `<div class="bubble">${escapeHtml(m.content)}</div>`;
+
+            const t = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
+            html += `<div class="time-info">${t}</div>`;
+            div.innerHTML = html;
+        }
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const content = input.value.trim();
+        if (!content || !stompClient?.connected) return;
+
+        // ✅ 전송 전 바이트 제한 최종 체크
+        if (utf8Bytes(content) > MAX_BYTES) {
+            alert("메시지 용량이 너무 큽니다.");
+            return;
+        }
+
+        stompClient.send("/pub/chat/message", { Authorization: 'Bearer ' + getAccessToken() },
+            JSON.stringify({ roomNo: roomNo, content: content })
+        );
+        input.value = "";
+        updateByteInfo();
+    }
+
+    async function leaveRoom() { if (confirm("방을 나가시겠습니까?")) { const res = await fetch(`/api/v1/chat/${roomNo}/leave`, { method: "POST", headers: authHeaders() }); if (res.ok) window.close(); } }
+
+    document.getElementById("inviteEmpList").addEventListener("scroll", (e) => {
+        if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreInvites();
+    });
+
+    window.addEventListener("load", () => {
+        loadRoomInfo();
+        connectWs();
+        updateByteInfo(); // 바이트 카운터 초기화
+        document.getElementById("messageInput").addEventListener("input", updateByteInfo);
+    });
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 결제 내역 엔티티
  *
  * @author : 김승기
  * @filename : PaymentHistory
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @Table(name = "payment_history")
 public class PaymentHistory {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long payhNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "comId") private Company company;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
     private BigDecimal amount;
     private Boolean payResult;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "paym_no") private PaymentMethod paymentMethod;

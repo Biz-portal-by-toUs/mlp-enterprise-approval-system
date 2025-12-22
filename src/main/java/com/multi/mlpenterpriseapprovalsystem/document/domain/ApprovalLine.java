@@ -1,25 +1,26 @@
 package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 결재 라인 엔티티
  *
- * @author : 김승기
+ * @author : 이지헌
  * @filename : ApprovalLine
  * @since : 2025. 12. 16. 화요일
  */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PUBLIC)
 @Table(name = "approval_line")
+@Builder
 public class ApprovalLine {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long apprlNo;
@@ -29,14 +30,18 @@ public class ApprovalLine {
     private Document document;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee approver;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
-    private Integer seq;
-    private String apprStat;
+    private int seq;
+
+    @Enumerated(EnumType.STRING)
+    private ApprStat apprStat;
+
+    // 결재 시간이므로 직접 시간을 넣어줘야함
     private LocalDateTime endedAt;
 }

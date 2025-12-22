@@ -7,9 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 문서 첨부 파일 엔티티
  *
- * @author : 김승기
+ * @author : 이지헌
  * @filename : DocumentFile
  * @since : 2025. 12. 16. 화요일
  */
@@ -26,7 +26,7 @@ public class DocumentFile {
     private Document document;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
     private String docfiName;
