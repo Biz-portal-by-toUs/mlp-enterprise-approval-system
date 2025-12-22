@@ -10,6 +10,10 @@
             --text:#111;
             --border:#d7d7d7;
             --primary:#2f66d7;
+
+            /* ✅ 성공 포인트 컬러 */
+            --success:#16a34a;
+            --successBorder: rgba(22,163,74,.35);
         }
         *{box-sizing:border-box}
         body{
@@ -104,6 +108,50 @@
             background:#fff;
             border-radius:10px;
         }
+
+        /* ✅ 토스트(기본은 모노톤) */
+        .toast{
+            position:fixed;
+            left:50%;
+            bottom:22px;
+            transform:translateX(-50%);
+            background:#fff;
+            border:1px solid var(--border);
+            color:#111;
+            padding:12px 14px 12px 12px;
+            border-radius:12px;
+            font-weight:900;
+            box-shadow: 0 10px 22px rgba(0,0,0,.10);
+            z-index:9999;
+            opacity:0;
+            pointer-events:none;
+            transition:opacity .15s ease, transform .15s ease;
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        .toast::before{
+            content:"";
+            width:4px;
+            height:18px;
+            border-radius:999px;
+            background:#bbb; /* 기본 */
+            flex:0 0 auto;
+        }
+        .toast.show{
+            opacity:1;
+            transform:translateX(-50%) translateY(-4px);
+        }
+
+        /* ✅ 성공(초록)만 살짝 */
+        .toast.success{
+            border-color: var(--successBorder);
+            color: var(--success);
+        }
+        .toast.success::before{
+            background: var(--success);
+        }
+
         @media (max-width:768px){
             .brand{font-size:32px}
             .title{font-size:40px}
@@ -114,8 +162,6 @@
 <div class="page">
     <header>
         <div class="brand">Bizportal</div>
-
-        <!-- ✅ JS가 로그인 전/후 버튼을 교체 -->
         <div class="nav-right" id="navRight"></div>
     </header>
 
@@ -123,33 +169,72 @@
         <section class="card">
             <h1 class="title" id="mainTitle">Welcome</h1>
             <p class="desc" id="mainDesc">Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.</p>
-
-            <!-- ✅ JS가 로그인 전/후 버튼을 교체 -->
             <div class="actions" id="mainActions"></div>
         </section>
     </main>
 </div>
+
+<!-- ✅ 토스트 컨테이너 -->
+<div class="toast" id="toast"></div>
 
 <script>
     const navRight = document.getElementById('navRight');
     const mainActions = document.getElementById('mainActions');
     const mainTitle = document.getElementById('mainTitle');
     const mainDesc = document.getElementById('mainDesc');
+    const toastEl = document.getElementById('toast');
 
-    // ===== 이동 함수 =====
     function goCompanyLogin() { window.location.href = '/auth/companies/login'; }
     function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
-    function goCompanySignup() { window.location.href = '/auth/companies/signup'; } // ✅ 회사 회원가입
+    function goCompanySignup() { window.location.href = '/auth/companies/signup'; }
 
-    // 너희 실제 로그인 후 첫 화면 경로로 변경하면 됨
     function goDashboard(loginType) {
         if (loginType === 'employee') window.location.href = '/employee';
         else window.location.href = '/company';
     }
 
-    // ===== 화면 렌더 =====
+    // ✅ 토스트
+    function showToast(message, type = 'success', ms = 1000) {
+        toastEl.textContent = message;
+        toastEl.classList.remove('success');
+        if (type) toastEl.classList.add(type);
+        toastEl.classList.add('show');
+        window.setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
+    function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+
+    // ✅ 로그아웃 (POST /auth/logout)
+    async function doLogout() {
+        const token = localStorage.getItem('accessToken');
+
+        try {
+            if (token) {
+                const res = await fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                    // 쿠키 기반이면 필요할 수 있음:
+                    // credentials: 'include'
+                });
+
+                // 401이어도 성공처럼 처리
+                if (!res.ok && res.status !== 401) {
+                    console.warn('logout response not ok:', res.status);
+                }
+            }
+        } catch (e) {
+            console.warn('logout request failed:', e);
+        } finally {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('loginType');
+            localStorage.removeItem('loginId');
+
+            showToast('로그아웃 성공', 'success', 1000);
+            await sleep(1000);
+            window.location.href = '/';
+        }
+    }
+
     function renderLoggedOut() {
-        // 헤더 우측 버튼 (로그아웃 상태)
         navRight.innerHTML = `
             <button class="btn primary" type="button" id="btnCompanyHeader">회사 로그인</button>
             <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
@@ -159,7 +244,6 @@
         document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
         document.getElementById('btnCompanySignupHeader').addEventListener('click', goCompanySignup);
 
-        // 메인 영역 버튼 (로그아웃 상태)
         mainTitle.textContent = 'Welcome';
         mainDesc.textContent = 'Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.';
         mainActions.innerHTML = `
@@ -176,21 +260,14 @@
         const whoText = (loginType === 'employee') ? '사원' : '회사';
         const idText = loginId ? ` · ${loginId}` : '';
 
-        // 헤더 우측 (로그인 상태)
         navRight.innerHTML = `
             <span class="who">${whoText} 로그인됨${idText}</span>
             <button class="btn primary" type="button" id="btnDashboard">대시보드</button>
             <button class="btn" type="button" id="btnLogout">로그아웃</button>
         `;
         document.getElementById('btnDashboard').addEventListener('click', () => goDashboard(loginType));
-        document.getElementById('btnLogout').addEventListener('click', () => {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('loginType');
-            localStorage.removeItem('loginId');
-            window.location.href = '/';
-        });
+        document.getElementById('btnLogout').addEventListener('click', doLogout);
 
-        // 메인 영역 (로그인 상태)
         mainTitle.textContent = 'Hello';
         mainDesc.textContent = `${whoText} 계정으로 로그인되어 있습니다. 계속 진행해 주세요.`;
         mainActions.innerHTML = `
@@ -198,18 +275,13 @@
             <button class="btn" type="button" id="btnLogoutMain">로그아웃</button>
         `;
         document.getElementById('btnDashboardMain').addEventListener('click', () => goDashboard(loginType));
-        document.getElementById('btnLogoutMain').addEventListener('click', () => {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('loginType');
-            localStorage.removeItem('loginId');
-            window.location.href = '/';
-        });
+        document.getElementById('btnLogoutMain').addEventListener('click', doLogout);
     }
 
     function boot() {
         const accessToken = localStorage.getItem('accessToken');
-        const loginType = localStorage.getItem('loginType'); // 'company' | 'employee'
-        const loginId = localStorage.getItem('loginId');     // email or empId
+        const loginType = localStorage.getItem('loginType');
+        const loginId = localStorage.getItem('loginId');
 
         if (accessToken && loginType) renderLoggedIn(loginType, loginId);
         else renderLoggedOut();
@@ -217,6 +289,5 @@
 
     document.addEventListener('DOMContentLoaded', boot);
 </script>
-
 </body>
 </html>

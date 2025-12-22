@@ -19,6 +19,8 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "이미 사용 중인 이메일입니다"),
     DUPLICATE_COMID(HttpStatus.CONFLICT, "DUPLICATE_COMID", "이미 사용 중인 회사 코드입니다"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "비밀번호가 일치하지 않습니다"),
+    INVALID_BRN(HttpStatus.BAD_REQUEST, "INVALID_BRN", "유효하지 않은 사업자등록번호입니다"),
+    BRN_DUPLICATE(HttpStatus.CONFLICT, "BRN_DUPLICATE", "이미 존재하는 사업자등록번호입니다"),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다"),
 
     //요금제 관련
@@ -28,12 +30,20 @@ public enum ErrorCode {
     DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "문서를 찾을 수 없습니다"),
     DOCUMENT_ALREADY_APPROVED(HttpStatus.BAD_REQUEST, "DOCUMENT_ALREADY_APPROVED", "이미 승인된 문서입니다"),
     INVALID_APPROVAL_STATUS(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_STATUS", "잘못된 결재 상태입니다"),
+    INVALID_DOCUMENT_STATUS_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_STATUS", "잘못된 문서 상태 파라미터 값이 전달되었습니다"),
+    INVALID_DOCUMENT_SORT_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_SORT_REQUEST", "잘못된 문서 정렬 파라미터 값이 전달되었습니다"),
 
     // 회사 관련
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUNT", "회사를 찾을 수 없습니다"),
 
     // 예약 관련
     MEETING_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "MEETING_ROOM_NOT_FOUND", "회의실을 찾을 수 없습니다"),
+    DUPLICATE_MEETING_ROOM_NAME(HttpStatus.CONFLICT, "DUPLICATE_MEETING_ROOM_NAME", "이미 존재하는 회의실명입니다."),
+
+    CORPORATE_CAR_NOT_FOUND(HttpStatus.NOT_FOUND, "CORPORATE_CAR_NOT_FOUND", "법인 차량을 찾을 수 없습니다"),
+    DUPLICATE_CAR_PLATE_NO(HttpStatus.CONFLICT, "DUPLICATE_CAR_PLATE_NO", "이미 존재하는 차량 번호입니다."),
+
+    SHARED_EQUIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "SHARED_EQUIPMENT_NOT_FOUND", "공유 설비를 찾을 수 없습니다"),
 
     // 파일 업로드 실패
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다"),
@@ -62,6 +72,11 @@ public enum ErrorCode {
 
     // @Valid 에러
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "INVALID_INPUT_VALUE", "입력값이 잘못되었습니다."),
+    INVALID_CURSOR(HttpStatus.BAD_REQUEST,"INVALID_CURSOR","커서값이 잘못되었습니다"),
+
+    // 부서 관련
+    DUPLICATE_DEPID(HttpStatus.CONFLICT, "DUPLICATE_DEPID", "이미 존재하는 부서 코드입니다"),
+    DUPLICATE_DEPNAME(HttpStatus.CONFLICT, "DUPLICATE_DEPNAME", "이미 존재하는 부서 이름입니다"),
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
@@ -75,9 +90,11 @@ public enum ErrorCode {
 
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),
+    COMPANY_MISMATCH(HttpStatus.BAD_REQUEST,"COMPANY_MISMATCH","맞지 않는 회사타입입니다"),
     CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CHAT_ACCESS_DENIED", "해당 채팅방에 접근할 권한이 없습니다"),
     INVALID_MEMBER_COUNT(HttpStatus.BAD_REQUEST, "INVALID_MEMBER_COUNT", "채팅방 멤버는 최소 1명 이상이어야 합니다"),
-    ALREADY_CHAT_MEMBER(HttpStatus.CONFLICT, "ALREADY_CHAT_MEMBER", "이미 채팅방에 참여 중인 멤버입니다");
+    ALREADY_CHAT_MEMBER(HttpStatus.CONFLICT, "ALREADY_CHAT_MEMBER", "이미 채팅방에 참여 중인 멤버입니다"),
+    INVALID_ROOM_TYPE(HttpStatus.BAD_REQUEST,"INVALID_ROOM_TYPE","맞지 않는 채팅방타입입니다");
 
 
 

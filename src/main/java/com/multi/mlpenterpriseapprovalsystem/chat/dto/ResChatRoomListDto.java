@@ -9,6 +9,13 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 채팅방 목록 리스트 조회 resDto
+ *
+ * @author : 김승기
+ * @filename : ResChatRoomMemberDto
+ * @since : 2025. 12. 17. 수요일
+ */
 @Getter
 @AllArgsConstructor
 public class ResChatRoomListDto {
@@ -27,21 +34,23 @@ public class ResChatRoomListDto {
                 .map(ChatRoomMember::getUnreadCount)
                 .orElse(0);
 
-        // 나 제외 멤버 이름 목록
         List<String> otherNames = room.getMembers().stream()
                 .map(ChatRoomMember::getEmployee)
                 .filter(emp -> !emp.getEmpId().equals(myEmpId))
                 .map(Employee::getEmpName)
                 .toList();
 
-        // 그룹방이고 roomName이 있으면 그걸 우선 사용 (사용자 지정 방이름 보호)
         String displayName;
-        if (room.getRoomType() == RoomType.GROUP
-                && room.getRoomName() != null
-                && !room.getRoomName().isBlank()) {
-            displayName = room.getRoomName();
+        if (room.getRoomType() == RoomType.ONE) {
+            // 1:1 채팅방: 나를 제외한 유일한 상대방의 이름을 사용
+            displayName = otherNames.isEmpty() ? "알 수 없는 사용자" : otherNames.get(0);
         } else {
-            displayName = buildDisplayName(otherNames);
+            // 그룹 채팅방: 저장된 방 이름이 있으면 사용, 없으면 참여자 이름을 합쳐서 생성
+            if (room.getRoomName() != null && !room.getRoomName().isBlank()) {
+                displayName = room.getRoomName();
+            } else {
+                displayName = buildDisplayName(otherNames);
+            }
         }
 
         return new ResChatRoomListDto(
