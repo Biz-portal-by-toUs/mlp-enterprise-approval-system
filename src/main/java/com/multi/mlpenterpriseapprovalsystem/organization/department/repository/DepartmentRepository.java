@@ -5,6 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Depa
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 부서 db 접근 레포지토리
@@ -20,4 +21,6 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     boolean existsByCompanyAndDepName(Company company, String depName);
 
     List<Department> findAllByCompany_ComId(String comId);
+
+    Optional<Department> findByCompanyAndDepNo(Company company, Long depNo);
 }

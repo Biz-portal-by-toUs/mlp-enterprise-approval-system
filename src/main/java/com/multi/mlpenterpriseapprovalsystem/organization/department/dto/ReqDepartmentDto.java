@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @NoArgsConstructor
-public class ReqDepartmentAddDto {
+public class ReqDepartmentDto {
 
     @NotBlank
     @Size(max = 3)
