@@ -95,4 +95,26 @@ public class SharedEquipmentController {
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto<>(HttpStatus.CREATED, "공유 설비 등록 성공", eqNo));
     }
+
+    @PutMapping(value="/shared-equipment/{eqNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseDto<Long>> updateSharedEquipment(@PathVariable Long eqNo,
+                                                               @AuthenticationPrincipal CustomUser user,
+                                                               @Valid @ModelAttribute ReqSharedEquipmentDto sharedEquipmentDto,
+                                                               @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
+
+
+        Long updatedEqNo = sharedEquipmentService.updateSharedEquipment(eqNo, user, sharedEquipmentDto, imageFile);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "공유 설비 수정 성공", updatedEqNo));
+    }
+
+    @DeleteMapping("/shared-equipment/{eqNo}")
+    public ResponseEntity<ResponseDto> deleteSharedEquipment(@PathVariable Long eqNo) {
+        sharedEquipmentService.deleteSharedEquipment(eqNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "공유 설비 삭제 성공", null));
+    }
 }
