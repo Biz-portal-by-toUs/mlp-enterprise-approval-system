@@ -26,7 +26,7 @@ import java.time.LocalDateTime;
 public class Notice extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long noticeNo;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
     private Boolean isDeleted;
     private String title;
@@ -35,7 +35,7 @@ public class Notice extends BaseEntity {
     private Boolean isPopup;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "emp_id", referencedColumnName = "empId") private Employee employee;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "emp_id", referencedColumnName = "emp_id") private Employee employee;
     private Integer rating;
 
     public void update(@Valid NoticeReqDto dto) {

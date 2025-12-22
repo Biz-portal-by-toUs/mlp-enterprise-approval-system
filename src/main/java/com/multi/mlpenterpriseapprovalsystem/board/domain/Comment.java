@@ -26,7 +26,7 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long commentNo;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "com_id", referencedColumnName = "comId")
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_no")
@@ -34,7 +34,7 @@ public class Comment {
     @Lob
     private String contents;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", referencedColumnName = "empId")
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
     @CreatedDate
     private LocalDateTime createdAt;
