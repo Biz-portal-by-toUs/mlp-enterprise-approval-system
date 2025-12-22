@@ -2,7 +2,9 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.shared_equipment.contr
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -32,5 +34,11 @@ public class ViewSharedEquipmentController {
     @GetMapping("/shared-equipment-register")
     public String addSharedEquipment() {
         return "reservation/shared-equipment/shared-equipment-register";
+    }
+
+    @GetMapping("/{eqNo}/shared-equipment-edit")
+    public String editSharedEquipment(@PathVariable Long eqNo, Model model) {
+        model.addAttribute("eqNo", eqNo);
+        return "reservation/shared-equipment/shared-equipment-edit";
     }
 }
