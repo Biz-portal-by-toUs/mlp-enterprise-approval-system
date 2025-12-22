@@ -1,0 +1,160 @@
+/* static/css/preset-header.css
+   공통: 상단(좌/우) 프리셋 표 및 에디터 preset 테이블 레이아웃/스타일
+*/
+
+/* ===============================
+   A) 상세보기(render.js) / doc-write 공통 상단 레이아웃
+   =============================== */
+
+.tpl-top,
+.topGrid {
+    display: grid;
+    grid-template-columns: 1fr 0.4fr 1.6fr; /* 우측 결재라인 더 넓게 */
+    gap: 28px;
+    align-items: flex-start;
+}
+
+.tpl-top [data-tpl-left],
+.tpl-top [data-tpl-right],
+.topGrid [data-left],
+.topGrid [data-right] {
+    min-width: 0;
+}
+
+/* ===============================
+   B) 헤더 테이블 기본 구조 (render.js 기준 통일)
+   =============================== */
+
+.tpl-top table,
+.topGrid table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.tpl-top th,
+.tpl-top td,
+.topGrid th,
+.topGrid td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    vertical-align: middle;
+    background: #fff;
+    font-size: 13px;
+}
+
+.tpl-top th,
+.topGrid th {
+    background: #fafafa;
+    font-weight: 600;
+}
+
+/* ===============================
+   C) 왼쪽 표: 왼쪽 열 강조 (공통 규칙)
+   =============================== */
+
+.tpl-top [data-tpl-left] th:first-child,
+.tpl-top [data-tpl-left] td:first-child,
+.topGrid [data-left] th:first-child,
+.topGrid [data-left] td:first-child {
+    background: #fafafa;
+    font-weight: 500;
+}
+
+/* ===============================
+   D) 유효한 텍스트가 있는 셀 강조
+   (중앙정렬 + 왼쪽 셀과 동일한 배경)
+   =============================== */
+
+.tpl-top [data-tpl-left] th[data-has-text="1"],
+.tpl-top [data-tpl-left] td[data-has-text="1"],
+.topGrid [data-left] th[data-has-text="1"],
+.topGrid [data-left] td[data-has-text="1"],
+#editor th[data-has-text="1"],
+#editor td[data-has-text="1"] {
+    text-align: center;
+    background: #fafafa;
+}
+
+.tpl-top [data-tpl-left] td:nth-child(1),
+.tpl-top [data-tpl-left] th:nth-child(1),
+.topGrid [data-left] td:nth-child(1),
+.topGrid [data-left] th:nth-child(1) {
+    text-align: center;
+}
+
+/* ===============================
+   E) 우측 결재라인(서명칸) 규칙
+   =============================== */
+
+.tpl-top [data-tpl-right] {
+    justify-self: end;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.tpl-top [data-tpl-right] table {
+    margin-left: auto;
+}
+
+.tpl-top [data-tpl-right] table tr:nth-child(2) th,
+.tpl-top [data-tpl-right] table tr:nth-child(2) td,
+.topGrid [data-right] table tr:nth-child(2) th,
+.topGrid [data-right] table tr:nth-child(2) td {
+    height: 100px;
+    min-height: 100px;
+    vertical-align: middle;
+}
+
+/* ===============================
+   F) ProseMirror preset 테이블 보정
+   =============================== */
+
+/* 컬럼 리사이즈 핸들 숨김 */
+.ProseMirror table.preset-no-col-resize .column-resize-handle {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* 왼쪽 프리셋 테이블 (내용 폭 기준) */
+#editor table.preset-left.preset-no-col-resize,
+.ProseMirror table.preset-left.preset-no-col-resize {
+    width: max-content;
+    margin: 0;
+}
+
+/* 오른쪽(결재선) 프리셋 테이블 */
+#editor table.preset-right.preset-no-col-resize,
+.ProseMirror table.preset-right.preset-no-col-resize {
+    width: 100%;
+    table-layout: fixed;
+    margin: 0;
+}
+
+.ProseMirror table.preset-right {
+    table-layout: fixed !important;
+}
+
+#templateMount .tpl-bodyBox table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* 모든 셀: 배경색 없음 + 기본 중앙정렬 + 기본 굵기 제거 */
+#templateMount .tpl-bodyBox th,
+#templateMount .tpl-bodyBox td {
+    background: transparent;
+    font-weight: 400;
+    text-align: center;
+    vertical-align: middle;
+}
+
+#templateMount .tpl-bodyBox th[data-has-text="1"],
+#templateMount .tpl-bodyBox td[data-has-text="1"] {
+    font-weight: 700;
+    color: #000000;
+    background: #fafafa !important;
+}
+
+/* 에디터가 만든 strong(굵게) 표시 유지 */
+#templateMount .tpl-bodyBox strong{ font-weight: 700; }
