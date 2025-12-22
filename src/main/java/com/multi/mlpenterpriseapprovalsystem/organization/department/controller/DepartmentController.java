@@ -12,10 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -52,6 +49,16 @@ public class DepartmentController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 조회에 성공했습니다.", list));
+    }
+
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PutMapping("/{depNo}")
+    public ResponseEntity<ResponseDto<Void>> updateDepartment(@PathVariable(name="depNo") Long depNo, @Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
+
+        departmentService.updateDepartment(user.getComId(), depNo, reqDepartmentDto);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "부서 수정에 성공했습니다.", null));
     }
 
 
