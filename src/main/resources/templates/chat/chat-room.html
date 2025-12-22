@@ -432,7 +432,12 @@
             const isMe = (m.senderEmpId === MY_EMP_ID);
             div.className = isMe ? "msg me" : "msg other";
 
-            let html = `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
+            let html = "";
+
+            // ✅ 내가 보낸 메시지가 아닐 때만(상대방일 때만) 이름을 표시합니다.
+            if (!isMe) {
+                html += `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
+            }
             html += `<div class="bubble">${escapeHtml(m.content)}</div>`;
 
             const t = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
