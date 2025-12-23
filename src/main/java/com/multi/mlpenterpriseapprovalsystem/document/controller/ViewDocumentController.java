@@ -21,30 +21,52 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class ViewDocumentController {
 
+    // 최종승인된 문서 조회 화면
     @GetMapping("/documents")
     public String viewFinalizedDocuments(@RequestParam(name = "status") String status) {
         if(status.equals("FINALIZED")){
-            return "document/finalized-list-v2";
+            return "document/finalized-list";
         }
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
     }
 
+    // 상신한 문서, 결재할 문서, 결재한 조회 문서 화면
     @GetMapping("/documents/me")
     public String viewDocumentsByStatus(@RequestParam(name = "status") String status) {
         if(status.equals("SUBMITTED")) {
-            return "/document/submitted-list-v2";
+            return "document/submitted-list";
         }
         else if(status.equals("AWAITING")){
-            return "/document/awaiting-list-v2";
+            return "document/awaiting-list";
         }
         else if(status.equals("PROCESSED")){
-            return "/document/processed-list-v2";
+            return "document/processed-list";
         }
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
     }
 
+    // 문서 상세 조회 화면
+    @GetMapping("/documents/{docNo}")
+    public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status)
+    {
+        if("SUBMITTED".equals(status)){
+            return "document/submitted-detail";
+        }
+        else if("AWAITING".equals(status)){
+            return "document/awaiting-detail";
+        }
+        else if("PROCESSED".equals(status)){
+            return "document/processed-detail";
+        }
+        else if("FINALIZED".equals(status)){
+            return "document/finalized-detail";
+        }
+        else{
+            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+        }
+    }
 }

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 문서 테이블 관리 repository
@@ -20,7 +21,7 @@ import java.util.List;
  * @since : 25. 12. 17. 수요일
  */
 
-public interface DocumentRepositoryV2 extends JpaRepository<Document, Long> {
+public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     // 내 회사의 문서 중 내가 상신한 문서 조회
     @EntityGraph(attributePaths = {"writer", "writer.department", "documentForm", "documentFormCategory"})
@@ -35,8 +36,8 @@ public interface DocumentRepositoryV2 extends JpaRepository<Document, Long> {
             "AND (:docId IS NULL OR d.docId LIKE %:docId%) " +
             "AND (:title IS NULL OR d.title LIKE %:title%) " +
             "ORDER BY " +
-            "CASE WHEN :sort = 'SUBMIT_LATEST' OR :sort IS NULL THEN d.createdAt END DESC, " +
-            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.createdAt END ASC")
+            "CASE WHEN :sort = 'SUBMIT_LATEST' OR :sort IS NULL THEN d.submittedAt END DESC, " +
+            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC")
     Page<Document> searchMySubmittedDocuments(@Param("comId") String comId,
                                               @Param("myEmpId") String myEmpId,
                                               @Param("docfoCatName") String docfoCatName,
@@ -71,10 +72,10 @@ public interface DocumentRepositoryV2 extends JpaRepository<Document, Long> {
             // 1. 정렬 조건 미선택 시: 내 결재 순서(I)가 먼저 오도록 함 (집계 함수 사용)
             "CASE WHEN :sort IS NULL OR :sort = '' THEN MIN(CASE WHEN al.apprStat = 'I' THEN 0 ELSE 1 END) END ASC, " +
             // 2. 상신일 기준 정렬
-            "CASE WHEN :sort = 'SUBMIT_LATEST' THEN d.createdAt END DESC, " +
-            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.createdAt END ASC, " +
+            "CASE WHEN :sort = 'SUBMIT_LATEST' THEN d.submittedAt END DESC, " +
+            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC, " +
             // 기본값: 상신일 최신순
-            "d.createdAt DESC",
+            "d.submittedAt DESC",
             countQuery = "SELECT COUNT(DISTINCT d) FROM Document d JOIN d.approvalLines al " +
                     "WHERE d.company.comId = :comId AND d.docStat = :docStat " +
                     "AND (al.approver.empId = :myEmpId OR al.approver.delegate.empId = :myEmpId) " +
@@ -116,8 +117,8 @@ public interface DocumentRepositoryV2 extends JpaRepository<Document, Long> {
             "ORDER BY " +
             "CASE WHEN :sort = 'APPR_LATEST' THEN MAX(al.endedAt) END DESC, " + // 집계 함수로 정렬 모호성 제거
             "CASE WHEN :sort = 'APPR_OLDEST' THEN MIN(al.endedAt) END ASC, " +
-            "CASE WHEN :sort = 'SUBMIT_LATEST' THEN d.createdAt END DESC, " +
-            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.createdAt END ASC",
+            "CASE WHEN :sort = 'SUBMIT_LATEST' THEN d.submittedAt END DESC, " +
+            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC",
             countQuery = "SELECT COUNT(DISTINCT d) FROM Document d JOIN d.approvalLines al " +
                     "WHERE d.company.comId = :comId " +
                     "AND (al.approver.empId = :myEmpId OR al.approver.delegate.empId = :myEmpId) " +
@@ -152,9 +153,9 @@ public interface DocumentRepositoryV2 extends JpaRepository<Document, Long> {
             // 1. 최종승인일(updatedAt) 기준 정렬
             "CASE WHEN :sort = 'FINALIZED_LATEST' OR :sort IS NULL THEN d.updatedAt END DESC, " +
             "CASE WHEN :sort = 'FINALIZED_OLDEST' THEN d.updatedAt END ASC, " +
-            // 2. 상신일(createdAt) 기준 정렬
-            "CASE WHEN :sort = 'SUBMIT_LATEST' THEN d.createdAt END DESC, " +
-            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.createdAt END ASC")
+            // 2. 상신일(submittedAt) 기준 정렬
+            "CASE WHEN :sort = 'SUBMIT_LATEST' THEN d.submittedAt END DESC, " +
+            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC")
     Page<Document> searchFinalizedDocuments(@Param("comId") String comId,
                                             @Param("docfoCatName") String docfoCatName,
                                             @Param("depName") String depName,
@@ -166,5 +167,56 @@ public interface DocumentRepositoryV2 extends JpaRepository<Document, Long> {
                                             Pageable pageable,
                                             @Param("docStatFilter1") DocStat docStatFilter1);
 
+//======================================================================================================================
 
+    // 문서코드로 문서 상세조회
+    // 상신한 문서 검증: 작성자가 나(myEmpId)이고 문서 상태가 AW(결재중)인 경우
+    @Query("""
+        SELECT d FROM Document d 
+        WHERE d.company.comId = :comId 
+          AND d.docNo = :docNo 
+          AND d.writer.empId = :myEmpId 
+          AND d.docStat = 'AW'
+    """)
+    Optional<Document> findSubmittedDoc(@Param("comId") String comId,
+                                        @Param("docNo") Long docNo,
+                                        @Param("myEmpId") String myEmpId);
+
+    // 결재할 문서 검증: 결재라인에 내가 있고, 내 결재 상태가 I(진행) 또는 W(대기)이며 문서가 AW 상태인 경우
+    @Query("""
+        SELECT DISTINCT d FROM Document d 
+        JOIN d.approvalLines al 
+        WHERE d.company.comId = :comId 
+          AND d.docNo = :docNo 
+          AND al.approver.empId = :myEmpId 
+          AND d.docStat = 'AW' 
+          AND al.apprStat IN ('I', 'W')
+    """)
+    Optional<Document> findAwaitingDoc(@Param("comId") String comId,
+                                       @Param("docNo") Long docNo,
+                                       @Param("myEmpId") String myEmpId);
+
+    // 결재한 문서 검증: 결재라인에 내가 있고, 내 결재 상태가 A(승인) 또는 R(반려)인 경우
+    @Query("""
+        SELECT DISTINCT d FROM Document d 
+        JOIN d.approvalLines al 
+        WHERE d.company.comId = :comId 
+          AND d.docNo = :docNo 
+          AND al.approver.empId = :myEmpId 
+          AND d.docStat IN ('AW', 'RJ', 'FI') 
+          AND al.apprStat IN ('A', 'R')
+    """)
+    Optional<Document> findProcessedDoc(@Param("comId") String comId,
+                                        @Param("docNo") Long docNo,
+                                        @Param("myEmpId") String myEmpId);
+
+    // 최종승인 문서 검증: 회사 식별자와 문서 번호가 일치하며 문서 상태가 FI(최종승인)인 경우
+    @Query("""
+        SELECT d FROM Document d 
+        WHERE d.company.comId = :comId 
+          AND d.docNo = :docNo 
+          AND d.docStat = 'FI'
+    """)
+    Optional<Document> findFinalizedDoc(@Param("comId") String comId,
+                                        @Param("docNo") Long docNo);
 }

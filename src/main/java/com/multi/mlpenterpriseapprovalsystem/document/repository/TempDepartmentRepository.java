@@ -14,4 +14,6 @@ import java.util.List;
  */
 public interface TempDepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> findAllByDepNameAndCompany_comId(String comId, String depName);
+    List<Department> findAllByCompany_comId(String comId);
+
 }

@@ -2,12 +2,17 @@ package com.multi.mlpenterpriseapprovalsystem.document.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
-import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepositoryV2;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormCategoryRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,8 +35,13 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DocumentServiceV2 {
-    private final DocumentRepositoryV2 documentRepositoryV2;
+public class DocumentService {
+    private final DocumentRepository documentRepository;
+    private final ApprovalLineRepository approvalLineRepository;
+    private final CompanyRepository companyRepository;
+    private final EmployeeRepository employeeRepository;
+    private final TempDocumentFormRepository tempDocumentFormRepository;
+    private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
@@ -66,7 +76,7 @@ public class DocumentServiceV2 {
     // 내 회사의 문서 중 내가 상신한 문서 조회
     // 문서상태는 검색창에서 미선택 기준(전체기준) 결재중(AW), 반려(RJ), 최종승인만(RI)조회
     // 내 결재상태는 내가 상신한 문서이기때문에 있을 수 없음. 내가 상신한 문서를 내가 결재하는건 불가능.
-    // 상신일 기준 최신순(createdAt기준 LATEST인 SUBMIT_LATEST), 오래된순(createdAt기준 OLDEST인 SUBMIT_OLDEST)
+    // 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST)
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
 
@@ -90,7 +100,7 @@ public class DocumentServiceV2 {
         String finalSort = (sort == null || sort.isEmpty()) ? "SUBMIT_LATEST" : sort;
 
         // 4. 리포지토리 호출
-        Page<Document> documentPage = documentRepositoryV2.searchMySubmittedDocuments(
+        Page<Document> documentPage = documentRepository.searchMySubmittedDocuments(
                 comId,
                 myEmpId,
                 docfoCatName,
@@ -106,7 +116,7 @@ public class DocumentServiceV2 {
     }
 
     // 내 회사의 문서 중 내가 결재할 문서 조회
-    // 상신일 기준 최신순(createdAt기준 LATEST인 SUBMIT_LATEST), 오래된순(createdAt기준 OLDEST인 SUBMIT_OLDEST)
+    // 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST)
     // 문서의 상태는 결재중(AW)여야만 함. 사용자는 검색창에서 문서상태를 선택할수없음(결재중인 AW고정)
     // 사용자가 검색창에서 내결재상태를 (내순서)ApprStat.I, (대기중)ApprStat.W만 선택가능
     // 사용자가 검색창에서 내결재상태를 미선택 시 내가 결재할 순서인ApprStat.I가 먼저 오고, 결재대기중인 ApprStat.W가 나중에 와야함.
@@ -135,7 +145,7 @@ public class DocumentServiceV2 {
         String writerName = (req.getWriterName() != null && !req.getWriterName().isEmpty()) ? req.getWriterName() : null;
 
         // 4. 리포지토리 호출
-        Page<Document> documentPage = documentRepositoryV2.searchAwaitingMyApprovalDocuments(
+        Page<Document> documentPage = documentRepository.searchAwaitingMyApprovalDocuments(
                 comId,
                 myEmpId,
                 docfoCatName,
@@ -156,7 +166,7 @@ public class DocumentServiceV2 {
 
     // 내 회사의 문서 중 내가 결재한 문서 조회. 결재자, 대직자 둘 다에게 보여야함
     // 문서상태는 검색창에서 미선택 기준(전체기준) 결재중(AW), 반려(RJ), 최종승인만(RI)조회.
-    // 내 결재일 기준 최신순(endedAt기준 LATEST인 APPR_LATEST), 오래된순(endedAt기준 OLDEST인 APPR_OLDEST). 상신일 기준 최신순(createdAt기준 LATEST인 SUBMIT_LATEST), 오래된순(createdAt기준 OLDEST인 SUBMIT_OLDEST). 총 2개의 최신순, 2개의 오래된순으로 4개의 시간기준 정렬 있음.
+    // 내 결재일 기준 최신순(endedAt기준 LATEST인 APPR_LATEST), 오래된순(endedAt기준 OLDEST인 APPR_OLDEST). 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST). 총 2개의 최신순, 2개의 오래된순으로 4개의 시간기준 정렬 있음.
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getMyProcessedDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
 
@@ -190,7 +200,7 @@ public class DocumentServiceV2 {
         String finalSort = (sort == null || sort.isEmpty()) ? "APPR_LATEST" : sort;
 
         // 5. 리포지토리 호출
-        Page<Document> documentPage = documentRepositoryV2.searchMyProcessedDocuments(
+        Page<Document> documentPage = documentRepository.searchMyProcessedDocuments(
                 comId,
                 myEmpId,
                 docfoCatName,
@@ -212,7 +222,7 @@ public class DocumentServiceV2 {
     // 내 회사의 최종승인문서 조회
     // 문서상태는 최종승인(FI)만 가능
     // 내 결재상태는 무관
-    // 최종승인 기준 최신순(updatedAt기준 LATEST인 FINALIZED_LATEST), 오래된순(updatedAt기준 OLDEST인 FINALIZED_OLDEST). 상신일 기준 최신순(createdAt기준 LATEST인 SUBMIT_LATEST), 오래된순(createdAt기준 OLDEST인 SUBMIT_OLDEST).
+    // 최종승인 기준 최신순(updatedAt기준 LATEST인 FINALIZED_LATEST), 오래된순(updatedAt기준 OLDEST인 FINALIZED_OLDEST). 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST).
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getFinalizedDocuments(String comId, ReqDocumentDto req, int page, String sort) {
 
@@ -231,7 +241,7 @@ public class DocumentServiceV2 {
         String finalSort = (sort == null || sort.isEmpty()) ? "FINALIZED_LATEST" : sort;
 
         // 3. 통합 필터 메서드 호출
-        Page<Document> documentPage = documentRepositoryV2.searchFinalizedDocuments(
+        Page<Document> documentPage = documentRepository.searchFinalizedDocuments(
                 comId,
                 docfoCatName,
                 writerDepName,
@@ -247,4 +257,45 @@ public class DocumentServiceV2 {
         return documentPage.map(ResDocumentDto::toDto);
     }
 
+    // 문서식별자로 문서 상세조회
+    @Transactional(readOnly = true)
+    public ResDocumentDto getDocumentByDocNoWithStatus(String comId, String myEmpId, Long docNo, String status) {
+
+        Document document;
+
+        if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
+            // 작성자가 나면서 문서상태가 AW인 문서 조회
+            document = documentRepository.findSubmittedDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("AWAITING".equals(status)) { // 결재할 문서 상세 조회
+            // 결재라인에 내가 있으면서 문서상태가 AW이면서 내 결재상태가 I or W인 문서 조회
+            document = documentRepository.findAwaitingDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("PROCESSED".equals(status)) { // 결재한 문서 상세 조회
+            // 결재라인에 내가 있으면서 문서상태가 AW or FI or RJ이면서 내 결재상태가 A or R인 문서 조회
+            document = documentRepository.findProcessedDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("FINALIZED".equals(status)) { // 최종승인 문서 상세 조회
+            // 문서상태가 FI인 문서 조회
+            document = documentRepository.findFinalizedDoc(comId, docNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else {
+            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+        }
+
+        return ResDocumentDto.toDto(document, myEmpId);
+    }
+
+
+    // 문서코드(docId) 생성
+    // 문서가 최종승인되어야 발급
+    // 회사약어 최대3자리(comId) + 부서코드 최대3자리(depId) + 년도4자리 + 일련번호 4자리 = 최대 총 14자리
+    // 현재는 가짜 데이터 넣어놔서 14자리 넘음
+//    private String generateDocId(String comId) {
+//        String newDocId = comId +
+//    }
 }
