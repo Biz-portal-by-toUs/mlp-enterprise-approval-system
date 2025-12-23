@@ -94,6 +94,13 @@ public enum ErrorCode {
     JSON_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "JSON_PARSING_ERROR", "메시지 데이터 변환 중 오류가 발생했습니다"),
     REDIS_PUB_SUB_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "REDIS_PUB_SUB_ERROR", "메시지 전송 시스템에 오류가 발생했습니다"),
 
+    // 회의 관련
+    MEETING_NOT_FOUND(HttpStatus.NOT_FOUND,"MEETING_NOT_FOUND","없거나 삭제된 회의입니다."),
+    MEETING_ACCESS_DENIED(HttpStatus.BAD_REQUEST,"MEETING_ACCESS_DENIED","회의에 접근할 권한이 없습니다"),
+    MEETING_EDIT_DELETE_DENIED(HttpStatus.BAD_REQUEST,"MEETING_EDIT_DELETE_DENIED","회의를 수정하거나 삭제할 권한이 없습니다"),
+    MEETING_DEPT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_DEPT_REQUIRED","부서는 한개 이상 선택해야 합니다"),
+    MEETING_PARTICIPANT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_PARTICIPANT_REQUIRED","참석자는 한명 이상 선택해야합니다"),
+
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),
     COMPANY_MISMATCH(HttpStatus.BAD_REQUEST,"COMPANY_MISMATCH","맞지 않는 회사타입입니다"),
