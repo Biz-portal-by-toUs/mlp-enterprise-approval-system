@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
@@ -9,6 +10,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -49,12 +51,11 @@ public class Document extends BaseEntity {
     @Column(columnDefinition = "json", nullable = false)
     private String content;
 
-
     @OneToMany( mappedBy = "document", fetch = FetchType.LAZY)
     private List<ApprovalLine> approvalLines;
 
     @Lob
-    @Column(nullable = false)
+    @Column(name = "cntt_html")
     private String cnttHtml;
 
     // 작성자 참조 (emp_id -> employee.emp_id)
@@ -76,4 +77,67 @@ public class Document extends BaseEntity {
     @Column(name = "doc_stat", nullable = false)
     @Enumerated(EnumType.STRING)
     private DocStat docStat = DocStat.AW;
+
+    // 상신일(
+    @Column(name = "submitted_at")
+    LocalDateTime submittedAt;
+
+    // Document 엔티티에 추가
+    public void submit() {
+        this.temp = false;
+        this.submittedAt = LocalDateTime.now();
+        this.docStat = DocStat.AW;
+    }
+
+    // 임시저장용
+    public void saveAsTemp() {
+        this.temp = true;
+        this.submittedAt = null;
+        this.docStat = DocStat.US; // 또는 별도 상태가 있다면 변경
+    }
+
+    // 최종승인 시 문서코드 발행
+    public void finalize(String docId) {
+        this.docId = docId;
+        this.docStat = DocStat.FI;
+    }
+
+    // 임시저장여부, 문서상태는 직접 넣기
+    public static Document toEntity(ReqDocumentDto dto,
+                                    Company company,
+                                    Employee writer,
+                                    DocumentFormCategory category,
+                                    DocumentForm form) {
+        return Document.builder()
+                .company(company)
+                .documentFormCategory(category)
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .cnttHtml(dto.getCnttHtml())
+                .writer(writer)
+                .aiSumm(dto.getAiSumm())
+                .documentForm(form)
+                .build();
+    }
+
+    // 임시저장여부, 문서상태는 직접 넣기
+    public static Document toEntity(ReqDocumentDto dto,
+                                    Company company,
+                                    Employee writer,
+                                    DocumentFormCategory category,
+                                    DocumentForm form,
+                                    String docId) {
+        return Document.builder()
+                .company(company)
+                .docId(docId)
+                .documentFormCategory(category)
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .cnttHtml(dto.getCnttHtml())
+                .writer(writer)
+                .aiSumm(dto.getAiSumm())
+                .documentForm(form)
+                .build();
+    }
+
 }
