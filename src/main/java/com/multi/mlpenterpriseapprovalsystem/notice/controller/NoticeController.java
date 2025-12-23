@@ -94,10 +94,12 @@ public class NoticeController {
     }
 
     //공지사항 삭제
-    @DeleteMapping("/notice/{id}")
-    public ResponseEntity<String> delete(@PathVariable(name="id") Long id) {
-        noticeService.deleteNotice(id);
-        return ResponseEntity.ok("공지사항이 삭제되었습니다.");
+    @DeleteMapping("/notice/{noticeNo}")
+    public ResponseEntity<ResponseDto> delete(@PathVariable(name="noticeNo") Long noticeNo) {
+        noticeService.deleteNotice(noticeNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(HttpStatus.OK, "공지사항 삭제 성공", null));
     }
 
     //공지사항 상세조회  --- 일련번호(key로 조회)

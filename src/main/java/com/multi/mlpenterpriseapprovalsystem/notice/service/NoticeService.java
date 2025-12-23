@@ -271,6 +271,7 @@ public class NoticeService {
                 n.getNoticeNo(),
                 n.getTitle(),
                 (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null,
+                n.getRating(),
                 n.getCreatedAt() // BaseEntity
         ));
     }
