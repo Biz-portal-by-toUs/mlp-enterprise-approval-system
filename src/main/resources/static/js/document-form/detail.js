@@ -1,4 +1,4 @@
-// static/src/render-form.js
+// static/src/detail.js
 
 const TIPTAP_V = '2.11.2'
 
@@ -30,148 +30,12 @@ if (!templateId) {
 }
 
 function escapeHtml(s) {
-    return String(s)
+    return String(s ?? '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;')
-}
-
-/**
- * View 전용 레이아웃 헬퍼 (HeaderRoot 내부만 건드리도록 격리)
- */
-const TemplateViewLayout = (() => {
-    function afterRender(headerRoot) {
-        if (!headerRoot || headerRoot.id !== 'tplHeaderRoot') return
-    }
-    return { afterRender }
-})()
-
-function ensurePresetHeaderCss() {
-    if (document.getElementById('presetHeaderCss')) return
-    const link = document.createElement('link')
-    link.id = 'presetHeaderCss'
-    link.rel = 'stylesheet'
-    link.href = '/css/preset-header.css'
-    document.head.appendChild(link)
-}
-
-function ensureStyles() {
-    if (document.getElementById('templateViewStyle')) return
-
-    ensurePresetHeaderCss()
-
-    const style = document.createElement('style')
-    style.id = 'templateViewStyle'
-    style.textContent = `
-    .tpl-header { max-width: 980px; margin: 0 auto 18px; }
-    .tpl-catRadio { pointer-events: none; }
-
-    .tpl-side{ background:transparent; border:0; padding:0; min-height:0; }
-
-    /* ===== 제목: 완전 단독 줄 ===== */
-    .tpl-titleLine{
-      display:flex;
-      justify-content:center;
-      margin: 6px 0 18px;
-    }
-    .tpl-title{
-      margin:0;
-      font-size:36px;
-      font-weight:900;
-      line-height:1.2;
-      text-align:center;
-      white-space:nowrap;
-    }
-
-    /* ===== 상단: 좌표 / (빈공간) / 우결재 ===== */
-    .tpl-top{
-      display:grid;
-      grid-template-columns: 1fr 0.4fr 1.6fr;
-      gap:28px;
-      align-items:flex-start;
-    }
-    .tpl-spacer{ }
-
-    .tpl-catsBox{
-      margin-top:12px;
-      border:1px solid #e6e6e6;
-      border-radius:14px;
-      background:#fff;
-      padding:10px 12px;
-    }
-    .tpl-cats{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-
-    .tpl-pill{ border:0; border-radius:0; padding:0; background:transparent; font-size:13px; }
-
-    .tpl-catItem{ display:inline-flex; align-items:center; gap:8px; padding:4px 2px; }
-    .tpl-catItem input[type="radio"]{ transform: translateY(1px); }
-
-    .tpl-muted{ color:#777; font-size:13px; }
-
-    #templateMount{ max-width:980px; margin:0 auto; }
-    #templateMount .tpl-bodyBox [data-ta="left"]   { text-align:left !important; }
-    #templateMount .tpl-bodyBox [data-ta="center"] { text-align:center !important; }
-    #templateMount .tpl-bodyBox [data-ta="right"]  { text-align:right !important; }
-    #templateMount .tpl-bodyBox [data-ta="justify"]{ text-align:justify !important; }
-
-    .tpl-bodyBox p,
-    .tpl-bodyBox h1,
-    .tpl-bodyBox h2,
-    .tpl-bodyBox h3 { margin:8px 0; }
-
-    .tpl-bodyBox table{ border-collapse:collapse; width:100%; table-layout:fixed; }
-
-    #templateMount .tpl-bodyBox{ overflow-x:auto; }
-
-    .tpl-bodyBox{ font-family: inherit; }
-
-    body{ padding-bottom:92px; }
-
-    .tpl-footer{
-      position:fixed;
-      left:0; right:0; bottom:0;
-      background:rgba(255,255,255,0.92);
-      backdrop-filter: blur(6px);
-      border-top:1px solid #e6e6e6;
-      padding:12px 0;
-      z-index:9999;
-    }
-
-    .tpl-footerInner{
-      max-width:980px;
-      margin:0 auto;
-      padding:0 16px;
-      display:flex;
-      justify-content:flex-end;
-      gap:10px;
-    }
-
-    .tpl-footerBtn{
-      padding:10px 16px;
-      border-radius:12px;
-      border:1px solid #e6e6e6;
-      background:#fff;
-      cursor:pointer;
-      font-size:14px;
-      font-weight:700;
-    }
-    .tpl-footerBtn:hover{ background:#f7f7f7; }
-    
-    #templateMount .tpl-bodyBox .input-field-outside-empty {
-      display: inline-block;
-      min-width: 90px;
-      padding: 6px 10px;
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      background: #fafafa;
-      vertical-align: baseline;
-    }
-    
-    
-  `
-    document.head.appendChild(style)
 }
 
 function normalizeTypes(types) {
@@ -187,76 +51,45 @@ function normalizeTypes(types) {
     return out
 }
 
-function ensureHeaderRoot() {
-    let root = document.getElementById('tplHeaderRoot')
-    if (root) return root
-    root = document.createElement('div')
-    root.id = 'tplHeaderRoot'
-    root.className = 'tpl-header'
-    mount.parentElement?.insertBefore(root, mount)
-    return root
-}
-
 function renderHeader(payload) {
-    ensureStyles()
-
-    const root = ensureHeaderRoot()
-
     const title = payload?.meta?.docTitle || payload?.docTitle || payload?.title || ''
     const preset = payload?.uiState?.presetTables || payload?.presetTables || {}
     const leftHtml = preset.leftHtml || ''
     const rightHtml = preset.rightHtml || ''
     const types = normalizeTypes(payload?.uiState?.templateTypes || [])
 
-    const catsInner =
-        types.length > 0
-            ? types
-                .map((v) => {
-                    const vv = String(v).trim()
-                    return `
-              <span class="tpl-catItem">
-                <input class="tpl-catRadio" type="radio" />
-                <span class="tpl-pill" data-type="${escapeHtml(vv)}">${escapeHtml(vv)}</span>
-              </span>
-            `
-                })
-                .join('')
-            : `<span class="tpl-muted">카테고리 없음</span>`
+    const elTitle = document.getElementById('tplTitle')
+    const elLeft = document.getElementById('tplLeftSide')
+    const elRight = document.getElementById('tplRightSide')
+    const elCats = document.getElementById('tplCats')
 
-    root.innerHTML = `
-      <div class="tpl-titleLine">
-        <h1 class="tpl-title">${escapeHtml(title)}</h1>
-      </div>
+    if (elTitle) elTitle.textContent = title || '-'
+    if (elLeft) elLeft.innerHTML = leftHtml || `<span class="tpl-muted">-</span>`
+    if (elRight) elRight.innerHTML = rightHtml || `<span class="tpl-muted">-</span>`
 
-      <div class="tpl-top">
-        <div class="tpl-side" data-tpl-left>
-          ${leftHtml || `<span class="tpl-muted">-</span>`}
-        </div>
-
-        <div class="tpl-spacer"></div>
-
-        <div class="tpl-side" data-tpl-right>
-          ${rightHtml || `<span class="tpl-muted">-</span>`}
-        </div>
-      </div>
-
-      <div class="tpl-catsBox">
-        <div class="tpl-cats">
-          ${catsInner}
-        </div>
-      </div>
-    `
-
-    TemplateViewLayout.afterRender(root)
+    if (elCats) {
+        elCats.innerHTML =
+            types.length > 0
+                ? types
+                    .map((v) => {
+                        const vv = String(v).trim()
+                        return `
+                <span class="tpl-catItem">
+                  <input class="tpl-catRadio" type="radio" />
+                  <span class="tpl-pill" data-type="${escapeHtml(vv)}">${escapeHtml(vv)}</span>
+                </span>
+              `
+                    })
+                    .join('')
+                : `<span class="tpl-muted">카테고리 없음</span>`
+    }
 }
 
 function extractFirstTableColWidthsFromJson(docJson) {
     const table = docJson?.content?.find((n) => n?.type === 'table')
     if (!table) return []
-
     const firstRow = table.content?.[0]
     if (!firstRow || !Array.isArray(firstRow.content)) return []
-
     return firstRow.content.map((cell) => {
         const cw = cell?.attrs?.colwidth
         const w = Array.isArray(cw) ? cw[0] : cw
@@ -266,7 +99,6 @@ function extractFirstTableColWidthsFromJson(docJson) {
 
 function applyColgroupToBodyTables(rootEl, widths) {
     if (!widths || widths.every((w) => w == null)) return
-
     const bodyTables = [...rootEl.querySelectorAll('.tpl-bodyBox table')]
     for (const table of bodyTables) {
         let colgroup = table.querySelector('colgroup')
@@ -275,7 +107,6 @@ function applyColgroupToBodyTables(rootEl, widths) {
             table.insertBefore(colgroup, table.firstChild)
         }
         colgroup.innerHTML = ''
-
         widths.forEach((w) => {
             const col = document.createElement('col')
             if (w != null) col.style.width = `${w}px`
@@ -287,6 +118,29 @@ function applyColgroupToBodyTables(rootEl, widths) {
         table.style.width = 'max-content'
         table.style.minWidth = `${sum}px`
     }
+}
+
+function decorateOutsideInputFields(rootEl) {
+    if (!rootEl) return
+    const spans = [...rootEl.querySelectorAll('span[data-input-field="1"], span[data-input-field]')]
+    for (const el of spans) {
+        if (el.closest('table')) continue
+        const txt = (el.textContent || '').trim()
+        if (txt.length === 0) {
+            el.classList.add('input-field-outside-empty')
+            el.innerHTML = '&nbsp;'
+        }
+    }
+}
+
+function enforceFontSizeFromDataFs(rootEl) {
+    if (!rootEl) return
+    const nodes = rootEl.querySelectorAll('[data-fs]')
+    nodes.forEach((el) => {
+        const fs = (el.getAttribute('data-fs') || '').trim()
+        if (!fs) return
+        el.style.fontSize = fs
+    })
 }
 
 function closeSafely() {
@@ -312,74 +166,20 @@ function openWriteDocPage(templateId) {
     )
 }
 
-function decorateOutsideInputFields(rootEl) {
-    if (!rootEl) return
+function bindFooterActions(templateId) {
+    document.getElementById('tplApproveBtn')?.addEventListener('click', () => openWriteDocPage(templateId))
 
-    const spans = [...rootEl.querySelectorAll('span[data-input-field="1"], span[data-input-field]')]
-    for (const el of spans) {
-        // 표 안이면 건드리지 않음
-        if (el.closest('table')) continue
-
-        // 내용이 비어있으면 박스 표시
-        const txt = (el.textContent || '').trim()
-        if (txt.length === 0) {
-            el.classList.add('input-field-outside-empty')
-
-            // 빈 span은 높이가 0이 되기 쉬워서 시각적으로 박스가 보이게 NBSP 주입
-            el.innerHTML = '&nbsp;'
-        }
-    }
-}
-
-function ensureFooterActions(templateId) {
-    ensureStyles()
-
-    let footer = document.getElementById('tplFooterRoot')
-    if (footer) return footer
-
-    footer = document.createElement('div')
-    footer.id = 'tplFooterRoot'
-    footer.className = 'tpl-footer'
-    footer.innerHTML = `
-    <div class="tpl-footerInner">
-      <!-- 결재하기: doc-write.html -->
-      <button type="button" class="tpl-footerBtn" id="tplApproveBtn">결재하기</button>
-
-      <!-- 수정하기: update-docform-->
-      <button type="button" class="tpl-footerBtn" id="tplEditBtn">수정하기</button>
-
-      <button type="button" class="tpl-footerBtn" id="tplCloseBtn">닫기</button>
-    </div>
-  `
-    document.body.appendChild(footer)
-
-    // 결재하기 → doc-write.html 열기
-    footer.querySelector('#tplApproveBtn')?.addEventListener('click', () => openWriteDocPage(templateId))
-
-    // 수정하기 → update-docform으로 연결
-    footer.querySelector('#tplEditBtn')?.addEventListener('click', () => {
-        alert('수정하기는 추후 양식 전체 수정(update-docform)으로 연결될 예정입니다.')
+    document.getElementById('tplEditBtn')?.addEventListener('click', () => {
+        const url = `/document-form/manager/form/update-form?docfoNo=${encodeURIComponent(templateId)}`
+        location.href = url
     })
 
-    footer.querySelector('#tplCloseBtn')?.addEventListener('click', closeSafely)
-
-    return footer
-}
-
-function enforceFontSizeFromDataFs(rootEl) {
-    if (!rootEl) return;
-
-    const nodes = rootEl.querySelectorAll('[data-fs]');
-    nodes.forEach((el) => {
-        const fs = (el.getAttribute('data-fs') || '').trim();
-        if (!fs) return;
-
-        // style 병합이 깨진 경우에도 font-size를 확실히 넣어줌
-        el.style.fontSize = fs;
-    });
+    document.getElementById('tplCloseBtn')?.addEventListener('click', closeSafely)
 }
 
 async function run() {
+    bindFooterActions(templateId)
+
     await Promise.all([
         import(`https://esm.sh/prosemirror-model?target=es2020`),
         import(`https://esm.sh/prosemirror-state?target=es2020`),
@@ -502,9 +302,6 @@ async function run() {
         },
     })
 
-    // View 전용 InputField: "표시하지 않기"
-    // - value가 있으면 value만 보여주고
-    // - value가 없으면 아무것도 표시하지 않음(placeholder 숨김)
     const InputField = Node.create({
         name: 'inputField',
         group: 'inline',
@@ -527,12 +324,11 @@ async function run() {
                     contenteditable: 'false',
                     tabindex: '-1',
                 }),
-                value, // 빈 값이면 그냥 빈 텍스트(표시 없음)
+                value,
             ]
         },
     })
 
-    // table 셀에 "텍스트 있음" 표시를 정식 attrs로 등록 (렌더링에 포함되게)
     const HasTextCellAttr = Extension.create({
         name: 'hasTextCellAttr',
         addGlobalAttributes() {
@@ -567,9 +363,7 @@ async function run() {
                         return Number.isFinite(n2) ? n2 : null
                     },
                     renderHTML: (attrs) =>
-                        attrs.height
-                            ? { 'data-row-h': String(attrs.height), style: `height:${attrs.height}px;` }
-                            : {},
+                        attrs.height ? { 'data-row-h': String(attrs.height), style: `height:${attrs.height}px;` } : {},
                 },
             }
         },
@@ -655,7 +449,6 @@ async function run() {
     const payload = await res.json()
 
     renderHeader(payload)
-    ensureFooterActions(templateId)
 
     const json = payload?.templateJson
     if (!json) {
@@ -664,15 +457,14 @@ async function run() {
     }
 
     const bodyHtml = generateHTML(json, extensions)
-    const dts = payload?.meta?.defaultTextStyle || {};
-    const ff = dts.fontFamily ? `font-family:${dts.fontFamily};` : '';
-    const fs = dts.fontSize ? `font-size:${dts.fontSize};` : '';
-    mount.innerHTML = `<div class="tpl-bodyBox" style="${ff}${fs}">${bodyHtml}</div>`;
+    const dts = payload?.meta?.defaultTextStyle || {}
+    const ff = dts.fontFamily ? `font-family:${dts.fontFamily};` : ''
+    const fs = dts.fontSize ? `font-size:${dts.fontSize};` : ''
+    mount.innerHTML = `<div class="tpl-bodyBox" style="${ff}${fs}">${bodyHtml}</div>`
 
     const widths = extractFirstTableColWidthsFromJson(json)
     applyColgroupToBodyTables(mount, widths)
     enforceFontSizeFromDataFs(mount)
-
     decorateOutsideInputFields(mount)
 }
 

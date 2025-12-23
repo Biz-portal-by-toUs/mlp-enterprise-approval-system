@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>문서양식 수정</title>
+
+    <!-- 서버 주입용(선택): th:content="${docfoNo}" -->
+    <meta name="docfo-no" content="" />
+
+    <link rel="stylesheet" href="/css/preset-header.css" />
+
+    <style>
+        body{
+            margin:0; background:#f6f7f8;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR","Apple SD Gothic Neo", Arial, sans-serif;
+            color:#222;
+        }
+        .page{ max-width:1100px; margin:24px auto; padding:0 16px; }
+        .card{ background:#fff; border:1px solid #e6e6e6; border-radius:16px; padding:20px 22px; }
+        .row{ display:flex; align-items:center; gap:12px; }
+        .label{ min-width:88px; color:#555; font-size:14px; }
+        .inputText{
+            flex:1; font-size:18px; padding:10px 12px;
+            border:1px solid #e6e6e6; border-radius:12px; outline:none; background:#fff;
+        }
+        hr{ border:0; border-top:1px solid #eee; margin:14px 0 16px; }
+
+        .toolbar{
+            display:flex; flex-wrap:wrap; gap:6px; margin: 12px 0 14px;
+        }
+        .toolbar button, .toolbar select{
+            padding:6px 10px; border:1px solid #e6e6e6; background:#fff;
+            border-radius:10px; cursor:pointer;
+        }
+        .toolbar button[aria-pressed="true"]{ border-color:#111; }
+
+        .topActions{ display:flex; gap:8px; justify-content:flex-end; margin-bottom:12px; }
+        .topActions button{
+            padding:8px 12px; border-radius:10px; border:1px solid #e6e6e6; background:#fff; cursor:pointer;
+            font-weight:700;
+        }
+        .topActions .primary{ background:#111827; color:#fff; border-color:#111827; }
+        .topActions .danger{ background:#fff; color:#b91c1c; border-color:#fecaca; }
+
+        .catBox{
+            margin: 10px 0 14px;
+            padding: 14px 14px;
+            border: 1px solid #e6e6e6;
+            border-radius: 12px;
+            background: #fff;
+        }
+        .catLabel{ font-size: 13px; color:#555; margin-bottom: 10px; }
+        .typeChecks{ display:flex; flex-wrap:wrap; gap:10px; }
+        .typeChecks label{
+            display:inline-flex; align-items:center; gap:8px;
+            padding:6px 10px; border:1px solid #e6e6e6; border-radius:999px; cursor:pointer;
+            background:#fff;
+        }
+
+        #editorWrap{
+            max-width:980px; margin:0 auto;
+            overflow-x:auto; padding:12px;
+            border:1px solid #e6e6e6; border-radius:16px;
+            background:#fff;
+        }
+        #editor{ min-height:520px; }
+        .ProseMirror{ outline:none; }
+
+        #editorWrap table{ width:100%; max-width:100%; table-layout:fixed; border-collapse:collapse; }
+        #editorWrap td, #editorWrap th{ border:1px solid #e0e0e0; padding:10px; vertical-align:top; word-break:break-word; }
+
+        .muted{ color:#6b7280; font-size:13px; }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <div class="card">
+        <div class="row">
+            <div class="label">양식명</div>
+            <input id="docfoName" class="inputText" placeholder="양식명을 입력하세요" />
+        </div>
+
+        <div class="muted" style="margin-top:8px;">
+            * 수정 저장 시 기존 양식은 D 처리되고, 새 양식이 생성됩니다(서비스 로직 기준).
+        </div>
+
+        <hr />
+
+        <div class="catBox">
+            <div class="catLabel">카테고리</div>
+            <div class="typeChecks" id="typeChecks">
+                <span class="muted">로딩 중...</span>
+            </div>
+        </div>
+
+        <div class="topActions">
+            <button type="button" id="btnCancel">취소</button>
+            <button type="button" id="btnSaveTemp">임시저장</button>
+            <button type="button" class="primary" id="btnSave">저장</button>
+        </div>
+
+        <div class="toolbar" id="toolbar">
+            <button type="button" data-cmd="bold"><b>B</b></button>
+            <button type="button" data-cmd="italic"><i>I</i></button>
+            <button type="button" data-cmd="strike"><s>S</s></button>
+
+            <button type="button" data-cmd="h1">H1</button>
+            <button type="button" data-cmd="h2">H2</button>
+            <button type="button" data-cmd="p">P</button>
+
+            <button type="button" data-cmd="ul">• List</button>
+            <button type="button" data-cmd="ol">1. List</button>
+
+            <button type="button" data-cmd="table">표</button>
+            <button type="button" data-cmd="undo">Undo</button>
+            <button type="button" data-cmd="redo">Redo</button>
+        </div>
+
+        <div id="editorWrap">
+            <div id="editor"></div>
+        </div>
+
+        <div class="muted" style="margin-top:10px;" id="statusLine">-</div>
+    </div>
+</div>
+
+<script type="module" src="/static/src/update-form.js"></script>
+</body>
+</html>

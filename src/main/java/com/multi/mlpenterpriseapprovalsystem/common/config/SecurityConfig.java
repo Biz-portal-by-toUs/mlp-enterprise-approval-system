@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 이렇게 하면 타임리프에서도 세션 사용안하고 jwt 사용하면 됨
                 .headers(headers -> headers
-                .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable) // ✅ 이 줄이 추가되어야 합니다.
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable) // ✅ 이 줄이 추가되어야 합니다.
                 )
 
                 .authorizeHttpRequests(auth -> auth
@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 "/css/**",
                                 "/js/**",
                                 "/favicon.ico").permitAll()
-                        .requestMatchers("/api/v1/**").hasAnyRole(    "SYS_ADMIN",
+                        .requestMatchers("/api/v1/**").hasAnyRole("SYS_ADMIN",
                                 "COM_ADMIN",
                                 "SEC_ADMIN",
                                 "THR_ADMIN",
