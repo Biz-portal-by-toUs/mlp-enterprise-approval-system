@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -101,5 +102,19 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, "문서 조회 성공", resDocumentDto));
     }
 
+    // 문서 상신 및 임시저장
+    @PostMapping("/documents")
+    public ResponseEntity<ResponseDto<Void>> createDocument(@AuthenticationPrincipal CustomUser customUser,
+                                                            @Valid @RequestBody ReqDocumentDto reqDocumentDto){
+        documentService.createDocument(customUser.getComId(), /*empId*/customUser.getUsername(), reqDocumentDto);
+
+        String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
+                ? "문서 임시저장 성공"
+                : "문서 상신 성공";
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, null));
+    }
 
 }
