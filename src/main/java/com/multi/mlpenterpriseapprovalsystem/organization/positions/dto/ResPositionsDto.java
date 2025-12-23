@@ -18,12 +18,14 @@ public class ResPositionsDto {
 
     private Long posNo;
     private String posName;
+    private Integer posOrder;
     private Long empCount;
 
     @Builder
-    public ResPositionsDto(Long posNo, String posName, long empCount) {
+    public ResPositionsDto(Long posNo, String posName, Long empCount, Integer posOrder) {
         this.posNo = posNo;
         this.posName = posName;
+        this.posOrder = posOrder;
         this.empCount = empCount;
     }
 }
