@@ -1,0 +1,26 @@
+package com.multi.mlpenterpriseapprovalsystem.document.dto.res;
+
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
+import lombok.Builder;
+import lombok.Data;
+
+/**
+ * Please explain the class!!!
+ *
+ * @author : 이지헌
+ * @filename : TempResDocumentFormCategoryDto
+ * @since : 25. 12. 22. 월요일
+ */
+@Data
+@Builder
+public class TempResDocumentFormCategoryDto {
+    private Long docfoCatNo;
+    private String docfoCatName;
+
+    public static TempResDocumentFormCategoryDto toDto(DocumentFormCategory documentFormCategory) {
+        return TempResDocumentFormCategoryDto.builder()
+                .docfoCatName(documentFormCategory.getName())
+                .docfoCatNo(documentFormCategory.getDocfoCatNo())
+                .build();
+    }
+}

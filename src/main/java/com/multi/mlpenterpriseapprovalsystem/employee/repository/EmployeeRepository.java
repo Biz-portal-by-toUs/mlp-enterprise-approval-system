@@ -47,7 +47,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         )
         from Employee e
         join e.department d
-        join e.position p
+        join e.positions p
         where e.company.comId = :comId
           and e.isDeleted = false
           and (:excludeEmpId is null or e.empId <> :excludeEmpId)
@@ -73,6 +73,25 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("cursorNo") Long cursorNo,
             Pageable pageable
     );
+
+    boolean existsByDepartment_DepNo(Long depNo);
+
+    boolean existsByPositions_posNo(Long posNo);
+
+    interface PosCount {
+        Long getPosNo();
+        Long getCnt();
+    }
+
+    @Query("""
+        select p.posNo as posNo, count(e) as cnt
+        from Employee e
+        join e.company c
+        join e.positions p
+        where c.comId = :comId
+        group by p.posNo
+    """)
+    List<PosCount> countGroupByPosNo(@Param("comId") String comId);
 
     interface DepCount {
         String getDepId();

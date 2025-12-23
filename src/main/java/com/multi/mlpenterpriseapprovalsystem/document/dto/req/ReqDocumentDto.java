@@ -1,12 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.document.dto.req;
 
-import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -21,12 +17,14 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 public class ReqDocumentDto {
     private String comId;
 
     private String writerId;
     private String writerName;
     private String writerDepName;
+    private String writerWorkPhone;
 
     private Long docNo;
     private String docId;
@@ -39,10 +37,12 @@ public class ReqDocumentDto {
     private String aiSumm;
     private Boolean temp;
 
-    private DocumentForm docfoNo;
+    private Long docfoNo;
 
     private Long docfoCatNo;
     private String docfoCatName;
 
-    private List<ApprovalLine> approvalLines;
+    private LocalDateTime submittedAt;
+
+    private List<ReqApprovalLineDto> approvalLines;
 }

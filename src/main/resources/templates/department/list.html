@@ -66,6 +66,17 @@
         .empty{
             padding:40px 10px;text-align:center;color:var(--muted);font-weight:700
         }
+        .toast{
+            display:none;
+            margin-top:14px;
+            padding:12px 14px;
+            border-radius:12px;
+            background:#fff;
+            border:1px solid var(--line);
+            font-weight:800;
+        }
+        .toast.ok{color:#1b7f3a;border-color:#bfe7c9;background:#f3fff6}
+        .toast.err{color:#b42318;border-color:#ffd0cc;background:#fff5f4}
     </style>
 </head>
 <body>
@@ -122,12 +133,13 @@
             </table>
 
             <div id="emptyBox" class="empty" style="display:none;">등록된 부서가 없습니다.</div>
+            <div id="toast" class="toast"></div>
         </section>
     </main>
 </div>
 
 <script>
-    // ✅ 너희 프로젝트에서 토큰 저장 키가 다를 수 있어서 최대한 유연하게 찾기
+    // ✅ 토큰 저장 키 유연하게 탐색
     function getAccessToken() {
         return (
             localStorage.getItem("accessToken") ||
@@ -135,6 +147,17 @@
             sessionStorage.getItem("accessToken") ||
             sessionStorage.getItem("jwt")
         );
+    }
+
+    function showToast(msg, type) {
+        const toast = document.getElementById("toast");
+        toast.className = "toast " + (type || "");
+        toast.textContent = msg;
+        toast.style.display = "block";
+        clearTimeout(window.__toastTimer);
+        window.__toastTimer = setTimeout(() => {
+            toast.style.display = "none";
+        }, 2500);
     }
 
     async function loadDepartments() {
@@ -145,7 +168,6 @@
         tbody.innerHTML = "";
         emptyBox.style.display = "none";
 
-        // 토큰이 없으면 API 호출해도 401/403 날 확률 99%
         if (!token) {
             emptyBox.style.display = "block";
             emptyBox.textContent = "로그인이 필요합니다. (토큰 없음)";
@@ -160,7 +182,6 @@
             }
         });
 
-        // 권한/인증 처리
         if (res.status === 401) {
             emptyBox.style.display = "block";
             emptyBox.textContent = "인증이 만료되었습니다. 다시 로그인 해주세요.";
@@ -178,8 +199,6 @@
         }
 
         const json = await res.json();
-
-        // ResponseDto<List<ResDepartmentDto>> 형태라면 json.data 가 리스트일 가능성이 큼
         const list = json.data || [];
 
         if (!list.length) {
@@ -189,44 +208,85 @@
         }
 
         list.forEach(d => {
-            // ✅ 수정 페이지가 /admin/departments/{depNo}/edit 이므로 depNo가 필요함
-            // ✅ API 응답에 depNo가 반드시 포함되어 있어야 함 (없으면 DTO에 추가!)
-            const depNo = Number(d.depNo);
+            // ✅ depNo가 있으면 그걸 쓰고, 없으면 depId를 fallback
+            const depNo = d.depNo;
+            const depId = d.depId ?? "";
+            const depName = d.depName ?? "";
+            const empCount = Number(d.empCount ?? 0).toLocaleString();
 
             const tr = document.createElement("tr");
             tr.className = "row";
             tr.innerHTML = `
-                <td>${escapeHtml(d.depId ?? "")}</td>
-                <td>${escapeHtml(d.depName ?? "")}</td>
-                <td>${Number(d.empCount ?? 0).toLocaleString()}</td>
+                <td>${escapeHtml(depId)}</td>
+                <td>${escapeHtml(depName)}</td>
+                <td>${empCount}</td>
                 <td>
-                  <button class="pill-btn pill-edit" type="button" onclick="onEdit(${isNaN(depNo) ? -1 : depNo})">수정</button>
-                  <button class="pill-btn pill-del" type="button" onclick="onDelete(${isNaN(depNo) ? -1 : depNo})">삭제</button>
+                    <button class="pill-btn pill-edit" type="button"
+                        onclick="onEdit(${depNo})">수정</button>
+                    <button class="pill-btn pill-del" type="button"
+                        onclick="onDelete(${depNo}, '${escapeJs(depName)}')">삭제</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // ✅ 수정 버튼 누르면 수정 페이지로 이동
+    // ✅ 수정 페이지 이동 (서버 컨트롤러가 /{depNo}/edit 형태라서 depNo 사용)
     function onEdit(depNo) {
-        if (!depNo || depNo < 0) {
-            alert("depNo가 없습니다. 부서 목록 API 응답에 depNo를 포함시켜 주세요.");
-            return;
-        }
         location.href = `/admin/departments/${depNo}/edit`;
     }
 
-    function onDelete(depNo) {
-        if (!depNo || depNo < 0) {
-            alert("depNo가 없습니다. 부서 목록 API 응답에 depNo를 포함시켜 주세요.");
+    // ✅ 삭제 기능 (DELETE API 호출)
+    async function onDelete(depNo, depName) {
+        const token = getAccessToken();
+        if (!token) {
+            showToast("로그인이 필요합니다. (토큰 없음)", "err");
             return;
         }
-        // TODO: 삭제 API 호출 로직 구현
-        alert("삭제: " + depNo);
+
+        const ok = confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`);
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/json"
+                }
+            });
+
+            if (res.status === 401) {
+                showToast("인증이 만료되었습니다. 다시 로그인 해주세요.", "err");
+                return;
+            }
+            if (res.status === 403) {
+                showToast("권한이 없습니다. (COM_ADMIN만 가능)", "err");
+                return;
+            }
+
+            if (!res.ok) {
+                // 서버가 에러 메시지를 내려주면 출력 시도
+                let msg = `삭제 실패 (${res.status})`;
+                try {
+                    const json = await res.json();
+                    if (json && (json.message || json.error)) {
+                        msg = json.message || json.error;
+                    }
+                } catch (_) {}
+                showToast(msg, "err");
+                return;
+            }
+
+            showToast("삭제되었습니다.", "ok");
+            await loadDepartments();
+        } catch (e) {
+            console.error(e);
+            showToast("삭제 중 예외가 발생했습니다.", "err");
+        }
     }
 
-    // XSS 방지용(간단)
+    // XSS 방지
     function escapeHtml(str) {
         return String(str)
             .replaceAll("&","&amp;")
@@ -235,8 +295,10 @@
             .replaceAll("\"","&quot;")
             .replaceAll("'","&#039;");
     }
+    function escapeJs(str) {
+        return String(str).replaceAll("\\","\\\\").replaceAll("'","\\'");
+    }
 
-    // 페이지 로드 시 호출
     loadDepartments().catch(err => {
         console.error(err);
         const emptyBox = document.getElementById("emptyBox");

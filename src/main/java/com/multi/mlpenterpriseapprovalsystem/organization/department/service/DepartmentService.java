@@ -41,13 +41,13 @@ public class DepartmentService {
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
         // 부서 코드가 이미 존재하는 경우
-        if (departmentRepository.existsByCompanyAndDepId(company, reqDepartmentDto.getDepId())) {
+        if(departmentRepository.existsByCompanyAndDepId(company, reqDepartmentDto.getDepId())) {
 
             throw new CustomException(ErrorCode.DUPLICATE_DEPID);
         }
 
         // 부서 이름이 이미 존재하는 경우
-        if (departmentRepository.existsByCompanyAndDepName(company, reqDepartmentDto.getDepName())) {
+        if(departmentRepository.existsByCompanyAndDepName(company, reqDepartmentDto.getDepName())) {
 
             throw new CustomException(ErrorCode.DUPLICATE_DEPNAME);
         }
@@ -56,6 +56,7 @@ public class DepartmentService {
         departmentRepository.save(department);
     }
 
+    @Transactional(readOnly = true)
     public List<ResDepartmentDto> getDepartmentsWithEmpCount(String comId) {
 
         // 1) 부서 목록
@@ -102,5 +103,31 @@ public class DepartmentService {
         // 3) 반영
         department.update(newDepId, reqDepartmentDto.getDepName());
         // JPA dirty checking으로 save() 없어도 됨
+    }
+
+    public void deleteDepartment(String comId, Long depNo) {
+
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        // 부서 존재 체크
+        Department department = departmentRepository.findById(depNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+        // 다른 회사 부서 삭제 방지 (중요)
+        if (!department.getCompany().getComNo().equals(company.getComNo())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 부서에 사원 남아있으면 삭제 불가
+        boolean hasEmployees = employeeRepository.existsByDepartment_DepNo(depNo);
+        if (hasEmployees) {
+            throw new CustomException(ErrorCode.DEPARTMENT_DELETE_HAS_EMPLOYEES);
+        }
+
+        departmentRepository.delete(department);
+
+
     }
 }

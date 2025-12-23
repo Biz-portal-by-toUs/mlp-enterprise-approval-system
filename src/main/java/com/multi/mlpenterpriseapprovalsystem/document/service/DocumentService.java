@@ -1,20 +1,27 @@
 package com.multi.mlpenterpriseapprovalsystem.document.service;
 
-import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
+import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormCategoryRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 문서 서비스 관리
@@ -30,148 +37,265 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DocumentService {
     private final DocumentRepository documentRepository;
-
+    private final ApprovalLineRepository approvalLineRepository;
+    private final CompanyRepository companyRepository;
+    private final EmployeeRepository employeeRepository;
+    private final TempDocumentFormRepository tempDocumentFormRepository;
+    private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getDocumentsByStatus(String comId, String empId, String status, int page) {
+    public Page<ResDocumentDto> getDocumentsByStatus(String comId, String empId, ReqDocumentDto reqDocumentDto, String status, int page, String sort) {
 
-        if(status.equals("FINALIZED")){ // status가 FINALIZED일때 최종승인된것들만 반환
-            return getApprovedDocuments(comId, page);
+        if("FINALIZED".equals(status)){ // status가 FINALIZED일때 최종승인된것들만 반환
+            return getFinalizedDocuments(comId, reqDocumentDto, page, sort);
         }
-        else if(status.equals("SUBMITTED")){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
-            return getMySubmittedDocuments(comId, empId, page);
+        else{
+            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
-        else if(status.equals("AWAITING")){ // status가 PENDING일때 내가 결재할 문서 반환
-            return getDocumentsAwaitingMyApproval(comId, empId, page);
-        }
-        else if(status.equals("PROCESSED")){
-            return getMyProcessedDocuments(comId, empId, page);
-        }
-
-        return getDocumentsAwaitingMyApproval(comId, empId, page);
     }
 
-    // 내가 결재한 문서 반환(결재자, 대직자 둘 다에게 반환)
+    // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getMyProcessedDocuments(String comId, String empId, int page) {
-        Pageable pageable = PageRequest.of(page, 10); // 최근 내가 결재한게 상위에 오도록
+    public Page<ResDocumentDto> getMyDocumentsByStatus(String comId, String empId, ReqDocumentDto reqDocumentDto, String status, int page, String sort) {
 
-        // 결재라인에 내가 있고 승인 or 반려한 문서들 반환
-        Page<Document> documentPage = documentRepository.getMyProcessedDocuments(comId, empId, pageable);
-
-        // 해당 문서에 대한 나의 결재상태(승인, 반려)설정하여 반환
-        return documentPage.map(doc -> ResDocumentDto.toDto(doc, empId));
+        if("SUBMITTED".equals(status)){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
+            return getMySubmittedDocuments(comId, empId, reqDocumentDto, page, sort);
+        }
+        else if("AWAITING".equals(status)){ // status가 PENDING일때 내가 결재할 문서 반환
+            return getAwaitingMyApprovalDocuments(comId, empId, reqDocumentDto, page, sort);
+        }
+        else if("PROCESSED".equals(status)){ // status가 PROCESSED일때 내가 결재한 문서 반환
+            return getMyProcessedDocuments(comId, empId, reqDocumentDto, page, sort);
+        }
+        else{
+            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+        }
     }
 
-    // 내가 결재할 문서 반환
+    // 내 회사의 문서 중 내가 상신한 문서 조회
+    // 문서상태는 검색창에서 미선택 기준(전체기준) 결재중(AW), 반려(RJ), 최종승인만(RI)조회
+    // 내 결재상태는 내가 상신한 문서이기때문에 있을 수 없음. 내가 상신한 문서를 내가 결재하는건 불가능.
+    // 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST)
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getDocumentsAwaitingMyApproval(String comId, String empId, int page) {
+    public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
+
         Pageable pageable = PageRequest.of(page, 10);
 
-        Page<Document> documentPage = documentRepository.getDocumentsAwaitingMyApproval(comId, empId, pageable);
+        // 1. 문서상태 필터 처리: 미선택 시 AW(결재중), RJ(반려), FI(최종승인) 조회
+        List<DocStat> docStats;
+        if (req.getDocStat() != null && !req.getDocStat().isEmpty()) {
+            docStats = List.of(DocStat.valueOf(req.getDocStat()));
+        } else {
+            docStats = List.of(DocStat.AW, DocStat.RJ, DocStat.FI);
+        }
 
-        // 해당 문서에 대한 나의 결재상태(결재중, 결재대기중)설정하여 반환
-        return documentPage.map(doc -> ResDocumentDto.toDto(doc, empId));
-    }
+        // 2. 상세 검색 파라미터 정리 (Null-Safe)
+        String docfoCatName = (req.getDocfoCatName() != null && !req.getDocfoCatName().isEmpty()) ? req.getDocfoCatName() : null;
+        String writerDepName = (req.getWriterDepName() != null && !req.getWriterDepName().isEmpty()) ? req.getWriterDepName() : null;
+        String docId = (req.getDocId() != null && !req.getDocId().isEmpty()) ? req.getDocId() : null;
+        String docTitle = (req.getTitle() != null && !req.getTitle().isEmpty()) ? req.getTitle() : null;
 
-    // 내가 상신한 문서 반환
-    @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String empId, int page) {
-        Pageable pageable = PageRequest.of(page, 10, Sort.by("createdAt").descending());
+        // 3. 정렬 기본값: 상신일 최신순 (SUBMIT_LATEST)
+        String finalSort = (sort == null || sort.isEmpty()) ? "SUBMIT_LATEST" : sort;
 
-        Page<Document> documentPage = documentRepository.getMySubmittedDocuments(comId, empId, pageable);
+        // 4. 리포지토리 호출
+        Page<Document> documentPage = documentRepository.searchMySubmittedDocuments(
+                comId,
+                myEmpId,
+                docfoCatName,
+                writerDepName,
+                docId,
+                docTitle,
+                finalSort,
+                docStats,
+                pageable
+        );
 
         return documentPage.map(ResDocumentDto::toDto);
     }
 
-    // 최종승인 문서만 반환
+    // 내 회사의 문서 중 내가 결재할 문서 조회
+    // 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST)
+    // 문서의 상태는 결재중(AW)여야만 함. 사용자는 검색창에서 문서상태를 선택할수없음(결재중인 AW고정)
+    // 사용자가 검색창에서 내결재상태를 (내순서)ApprStat.I, (대기중)ApprStat.W만 선택가능
+    // 사용자가 검색창에서 내결재상태를 미선택 시 내가 결재할 순서인ApprStat.I가 먼저 오고, 결재대기중인 ApprStat.W가 나중에 와야함.
     @Transactional(readOnly = true)
-    public Page<ResDocumentDto> getApprovedDocuments(String comId, int page) {
-        Pageable pageable = PageRequest.of(page, 10, Sort.by("updatedAt").descending());
+    public Page<ResDocumentDto> getAwaitingMyApprovalDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
 
-        List<Document> documents = documentRepository.findAllWithApprovalLinesByComId(comId);
+        Pageable pageable = PageRequest.of(page, 10);
 
-        // 최종 승인된 문서만 필터링
-        List<ResDocumentDto> approvedDocs = new ArrayList<>();
+        // 1. 문서 상태는 '결재중(AW)' 고정
+        DocStat docStatFilter = DocStat.AW;
 
-        for (Document document : documents) {
-            if (isFullyApproved(document)) {
-                approvedDocs.add(ResDocumentDto.toDto(document));
-            }
-        }
-
-        // 수동 페이징 처리
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), approvedDocs.size());
-
-        List<ResDocumentDto> pagedList;
-        if (start > approvedDocs.size()) {
-            pagedList = new ArrayList<>();
+        // 2. 내 결재 상태 필터 처리: 미선택 시 I, W 전체 조회
+        List<ApprStat> apprStats;
+        if (req.getMyApprStat() != null && !req.getMyApprStat().isEmpty()) {
+            apprStats = List.of(ApprStat.valueOf(req.getMyApprStat()));
         } else {
-            pagedList = approvedDocs.subList(start, end);
+            apprStats = List.of(ApprStat.I, ApprStat.W);
         }
 
-        return new PageImpl<>(pagedList, pageable, approvedDocs.size());
+        // 3. 상세 검색 파라미터 정리 (Null-Safe)
+        String docfoCatName = (req.getDocfoCatName() != null && !req.getDocfoCatName().isEmpty()) ? req.getDocfoCatName() : null;
+        String writerDepName = (req.getWriterDepName() != null && !req.getWriterDepName().isEmpty()) ? req.getWriterDepName() : null;
+        String docId = (req.getDocId() != null && !req.getDocId().isEmpty()) ? req.getDocId() : null;
+        String docTitle = (req.getTitle() != null && !req.getTitle().isEmpty()) ? req.getTitle() : null;
+        String writerId = (req.getWriterId() != null && !req.getWriterId().isEmpty()) ? req.getWriterId() : null;
+        String writerName = (req.getWriterName() != null && !req.getWriterName().isEmpty()) ? req.getWriterName() : null;
+
+        // 4. 리포지토리 호출
+        Page<Document> documentPage = documentRepository.searchAwaitingMyApprovalDocuments(
+                comId,
+                myEmpId,
+                docfoCatName,
+                writerDepName,
+                docId,
+                docTitle,
+                writerId,
+                writerName,
+                sort,
+                docStatFilter,
+                apprStats,
+                pageable
+        );
+
+        // 해당 문서에 대한 나의 결재상태(결재중, 결재대기중)를 DTO에 매핑하여 반환
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId));
+    }
+
+    // 내 회사의 문서 중 내가 결재한 문서 조회. 결재자, 대직자 둘 다에게 보여야함
+    // 문서상태는 검색창에서 미선택 기준(전체기준) 결재중(AW), 반려(RJ), 최종승인만(RI)조회.
+    // 내 결재일 기준 최신순(endedAt기준 LATEST인 APPR_LATEST), 오래된순(endedAt기준 OLDEST인 APPR_OLDEST). 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST). 총 2개의 최신순, 2개의 오래된순으로 4개의 시간기준 정렬 있음.
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getMyProcessedDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
+
+        Pageable pageable = PageRequest.of(page, 10);
+
+        // 1. 문서상태 필터 처리: 미선택 시 AW, RJ, FI 전체 조회
+        List<DocStat> docStats;
+        if (req.getDocStat() != null && !req.getDocStat().isEmpty()) {
+            docStats = List.of(DocStat.valueOf(req.getDocStat()));
+        } else {
+            docStats = List.of(DocStat.AW, DocStat.RJ, DocStat.FI);
+        }
+
+        // 2. 내 결재상태 필터 처리: 미선택 시 A, R 전체 조회
+        List<ApprStat> apprStats;
+        if (req.getMyApprStat() != null && !req.getMyApprStat().isEmpty()) {
+            apprStats = List.of(ApprStat.valueOf(req.getMyApprStat()));
+        } else {
+            apprStats = List.of(ApprStat.A, ApprStat.R);
+        }
+
+        // 3. 상세 검색 파라미터 정리
+        String docfoCatName = (req.getDocfoCatName() != null && !req.getDocfoCatName().isEmpty()) ? req.getDocfoCatName() : null;
+        String writerDepName = (req.getWriterDepName() != null && !req.getWriterDepName().isEmpty()) ? req.getWriterDepName() : null;
+        String docId = (req.getDocId() != null && !req.getDocId().isEmpty()) ? req.getDocId() : null;
+        String docTitle = (req.getTitle() != null && !req.getTitle().isEmpty()) ? req.getTitle() : null;
+        String writerId = (req.getWriterId() != null && !req.getWriterId().isEmpty()) ? req.getWriterId() : null;
+        String writerName = (req.getWriterName() != null && !req.getWriterName().isEmpty()) ? req.getWriterName() : null;
+
+        // 4. 정렬 기본값: 내 결재일 최신순(APPR_LATEST)
+        String finalSort = (sort == null || sort.isEmpty()) ? "APPR_LATEST" : sort;
+
+        // 5. 리포지토리 호출
+        Page<Document> documentPage = documentRepository.searchMyProcessedDocuments(
+                comId,
+                myEmpId,
+                docfoCatName,
+                writerDepName,
+                docId,
+                docTitle,
+                writerId,
+                writerName,
+                finalSort,
+                docStats,
+                apprStats,
+                pageable
+        );
+
+        // 해당 문서에 대한 나의 결재상태(승인, 반려)를 DTO에 매핑하여 반환
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId));
+    }
+
+    // 내 회사의 최종승인문서 조회
+    // 문서상태는 최종승인(FI)만 가능
+    // 내 결재상태는 무관
+    // 최종승인 기준 최신순(updatedAt기준 LATEST인 FINALIZED_LATEST), 오래된순(updatedAt기준 OLDEST인 FINALIZED_OLDEST). 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST).
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getFinalizedDocuments(String comId, ReqDocumentDto req, int page, String sort) {
+
+        Pageable pageable = PageRequest.of(page, 10);
+
+        // 1. 검색 필드 로컬 변수화 및 Null-Safe 처리
+        DocStat docStatFilter1 = DocStat.FI;
+        String docfoCatName = (req.getDocfoCatName() != null && !req.getDocfoCatName().isEmpty()) ? req.getDocfoCatName() : null;
+        String writerDepName = (req.getWriterDepName() != null && !req.getWriterDepName().isEmpty()) ? req.getWriterDepName() : null;
+        String docId = (req.getDocId() != null && !req.getDocId().isEmpty()) ? req.getDocId() : null;
+        String docTitle = (req.getTitle() != null && !req.getTitle().isEmpty()) ? req.getTitle() : null;
+        String writerId = (req.getWriterId() != null && !req.getWriterId().isEmpty()) ? req.getWriterId() : null;
+        String writerName = (req.getWriterName() != null && !req.getWriterName().isEmpty()) ? req.getWriterName() : null;
+
+        // 2. 정렬 기본값 처리: 최종승인일 최신순을 기본값으로 설정
+        String finalSort = (sort == null || sort.isEmpty()) ? "FINALIZED_LATEST" : sort;
+
+        // 3. 통합 필터 메서드 호출
+        Page<Document> documentPage = documentRepository.searchFinalizedDocuments(
+                comId,
+                docfoCatName,
+                writerDepName,
+                docId,
+                docTitle,
+                writerId,
+                writerName,
+                finalSort,
+                pageable,
+                docStatFilter1
+        );
+
+        return documentPage.map(ResDocumentDto::toDto);
+    }
+
+    // 문서식별자로 문서 상세조회
+    @Transactional(readOnly = true)
+    public ResDocumentDto getDocumentByDocNoWithStatus(String comId, String myEmpId, Long docNo, String status) {
+
+        Document document;
+
+        if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
+            // 작성자가 나면서 문서상태가 AW인 문서 조회
+            document = documentRepository.findSubmittedDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("AWAITING".equals(status)) { // 결재할 문서 상세 조회
+            // 결재라인에 내가 있으면서 문서상태가 AW이면서 내 결재상태가 I or W인 문서 조회
+            document = documentRepository.findAwaitingDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("PROCESSED".equals(status)) { // 결재한 문서 상세 조회
+            // 결재라인에 내가 있으면서 문서상태가 AW or FI or RJ이면서 내 결재상태가 A or R인 문서 조회
+            document = documentRepository.findProcessedDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("FINALIZED".equals(status)) { // 최종승인 문서 상세 조회
+            // 문서상태가 FI인 문서 조회
+            document = documentRepository.findFinalizedDoc(comId, docNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else {
+            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+        }
+
+        return ResDocumentDto.toDto(document, myEmpId);
     }
 
 
-    /**
-     * 문서가 최종 승인되었는지 체크
-     * 결재순서 1~5까지 돌면서 각 순서별로 승인 여부 확인
-     * 같은 순서에 대직자가 있으면 둘 중 하나라도 A면 승인
-     */
-    private boolean isFullyApproved(Document document) {
-        List<ApprovalLine> approvalLines = document.getApprovalLines();
-
-        if (approvalLines == null || approvalLines.isEmpty()) {
-            return false;
-        }
-
-        // 결재순서별로 그룹핑 (seq -> List<ApprovalLine>)
-        Map<Integer, List<ApprovalLine>> linesBySeq = new HashMap<>();
-        int maxSeq = 0;
-
-        for (ApprovalLine line : approvalLines) {
-            int seq = line.getSeq();
-
-            // 해당 seq 키가 없으면 새 리스트 생성
-            if (!linesBySeq.containsKey(seq)) {
-                linesBySeq.put(seq, new ArrayList<>());
-            }
-            linesBySeq.get(seq).add(line);
-
-            // 최대 순서 갱신
-            if (seq > maxSeq) {
-                maxSeq = seq;
-            }
-        }
-
-        // 1번부터 마지막 순서까지 체크
-        for (int seq = 1; seq <= maxSeq; seq++) {
-            List<ApprovalLine> linesAtSeq = linesBySeq.get(seq);
-
-            // 해당 순서에 결재라인이 없으면 false
-            if (linesAtSeq == null || linesAtSeq.isEmpty()) {
-                return false;
-            }
-
-            // 해당 순서에서 하나라도 승인(A)이 있는지 체크
-            boolean isApprovedAtSeq = false;
-            for (ApprovalLine line : linesAtSeq) {
-                if (line.getApprStat() == ApprStat.A) {
-                    isApprovedAtSeq = true;
-                    break;
-                }
-            }
-
-            // 해당 순서가 승인 안됐으면 최종 승인 아님
-            if (!isApprovedAtSeq) {
-                return false;
-            }
-        }
-
-        // 모든 순서가 승인됨 = 최종 승인
-        return true;
-    }
+    // 문서코드(docId) 생성
+    // 문서가 최종승인되어야 발급
+    // 회사약어 최대3자리(comId) + 부서코드 최대3자리(depId) + 년도4자리 + 일련번호 4자리 = 최대 총 14자리
+    // 현재는 가짜 데이터 넣어놔서 14자리 넘음
+//    private String generateDocId(String comId) {
+//        String newDocId = comId +
+//    }
 }

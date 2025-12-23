@@ -5,6 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.service.DepartmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;

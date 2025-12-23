@@ -9,6 +9,7 @@
         :root {
             --primary: #2f6fdb;
             --primary-dark: #2151a5;
+            --secondary: #6c757d;
             --bg-light: #f7f9fc;
             --border: #e6e6e6;
             --text-main: #111;
@@ -37,7 +38,7 @@
             top: 0;
             z-index: 100;
         }
-        .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; }
+        .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; cursor: pointer; }
         .logo-box {
             width: 36px; height: 36px; background: rgba(255,255,255,0.2);
             border-radius: 8px; display: flex; align-items: center; justify-content: center;
@@ -91,13 +92,17 @@
         .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(47,111,219,0.1); }
         .helper-text { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
 
-        .form-actions { display: flex; justify-content: flex-end; margin-top: 40px; }
-        .btn-submit {
-            width: 180px; height: 56px; background: var(--primary); color: #fff;
-            border: none; border-radius: 14px; font-size: 18px; font-weight: 700;
-            cursor: pointer; transition: 0.3s;
+        /* Buttons */
+        .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 40px; }
+        .btn {
+            height: 56px; min-width: 140px; border: none; border-radius: 14px;
+            font-size: 18px; font-weight: 700; cursor: pointer; transition: 0.3s;
         }
+        .btn-submit { background: var(--primary); color: #fff; box-shadow: 0 8px 16px rgba(47,111,219,0.2); }
         .btn-submit:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+        .btn-cancel { background: #e9ecef; color: #495057; }
+        .btn-cancel:hover { background: #dee2e6; }
 
         /* Status Message */
         .status-msg { margin-top: 15px; font-weight: 600; display: none; text-align: center; }
@@ -108,12 +113,12 @@
 <body>
 
 <div class="topbar">
-    <div class="brand"><div class="logo-box">B</div> Bizportal</div>
-    <div class="search-container"><input type="text" class="search-bar" placeholder="Search..."/></div>
+    <div class="brand" onclick="location.href='/'"><div class="logo-box">B</div> Bizportal</div>
+    <div class="search-container"><input type="text" class="search-bar" placeholder="부서, 사원 검색..."/></div>
     <div class="user-actions">
         <div class="icon-circle">🔔</div>
         <div class="icon-circle">👤</div>
-        <button class="btn-logout">로그아웃</button>
+        <button class="btn-logout" type="button">로그아웃</button>
     </div>
 </div>
 
@@ -143,20 +148,22 @@
             <input type="hidden" id="depNo" th:value="${depNo}"/>
 
             <div class="input-group">
-                <label class="input-label">부서 코드</label>
+                <label class="input-label" for="depId">부서 코드</label>
                 <input type="text" id="depId" class="form-control" placeholder="예: DEP001" maxlength="3" th:value="${depId}"/>
-                <p class="helper-text">최대 3자까지 입력 가능합니다.</p>
+                <p class="helper-text">최대 3자의 고유 코드를 입력하세요.</p>
             </div>
 
             <div class="input-group">
-                <label class="input-label">부서 이름</label>
+                <label class="input-label" for="depName">부서 이름</label>
                 <input type="text" id="depName" class="form-control" placeholder="예: 인사팀" maxlength="10" th:value="${depName}"/>
-                <p class="helper-text">최대 10자까지 입력 가능합니다.</p>
+                <p class="helper-text">최대 10자 이내의 부서명을 입력하세요.</p>
             </div>
 
             <div class="form-actions">
-                <button type="button" id="submitBtn" class="btn-submit">수정</button>
+                <button type="button" class="btn btn-cancel" onclick="location.href='/admin/departments'">취소</button>
+                <button type="button" id="submitBtn" class="btn btn-submit">수정 완료</button>
             </div>
+
             <div id="statusMsg" class="status-msg"></div>
         </div>
     </main>
@@ -165,6 +172,7 @@
 <script th:inline="javascript">
     const API_URL = "/api/v1/admin/departments";
 
+    // 알림 메시지 표시 함수
     function showStatus(msg, isSuccess) {
         const el = document.getElementById("statusMsg");
         el.textContent = msg;
@@ -173,25 +181,22 @@
         setTimeout(() => { el.style.display = "none"; }, 3000);
     }
 
+    // 수정 완료 버튼 클릭 이벤트
     document.getElementById("submitBtn").addEventListener("click", async () => {
         const depNo = document.getElementById("depNo").value;
         const depId = document.getElementById("depId").value.trim();
         const depName = document.getElementById("depName").value.trim();
 
-        // 1. 유효성 검사
         if (!depId || !depName) {
-            showStatus("부서 코드와 이름을 모두 입력해주세요.", false);
+            showStatus("모든 필드를 입력해야 수정할 수 있습니다.", false);
             return;
         }
 
-        // 2. JWT 토큰 가져오기 (localStorage에 저장되어 있다고 가정)
-        // 로그인 시 'accessToken'이라는 이름으로 저장했어야 합니다.
+        // 로컬 스토리지에서 JWT 토큰 획득
         const token = localStorage.getItem("accessToken");
 
         if (!token) {
-            showStatus("인증 토큰이 없습니다. 다시 로그인해주세요.", false);
-            // 필요 시 로그인 페이지로 리다이렉트
-            // location.href = "/login";
+            showStatus("세션이 만료되었습니다. 다시 로그인해주세요.", false);
             return;
         }
 
@@ -202,25 +207,26 @@
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` // ✅ 중요: 토큰을 헤더에 포함
+                    "Authorization": `Bearer ${token}` // JWT 인증 헤더 포함
                 },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                showStatus("부서 정보가 성공적으로 수정되었습니다.", true);
+                showStatus("부서 정보가 성공적으로 반영되었습니다.", true);
+                // 성공 시 1초 후 목록 페이지로 자동 이동
                 setTimeout(() => {
                     window.location.href = "/admin/departments/list";
                 }, 1000);
             } else if (response.status === 403) {
-                showStatus("권한이 없습니다. 관리자 계정인지 확인해주세요.", false);
+                showStatus("수정 권한이 없습니다 (관리자 전용).", false);
             } else {
                 const errorData = await response.json();
-                showStatus(errorData.message || "수정 중 오류가 발생했습니다.", false);
+                showStatus(errorData.message || "수정 처리 중 오류가 발생했습니다.", false);
             }
         } catch (error) {
-            console.error("Error:", error);
-            showStatus("서버와의 통신에 실패했습니다.", false);
+            console.error("Fetch Error:", error);
+            showStatus("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", false);
         }
     });
 </script>

@@ -43,7 +43,7 @@ public class Employee {
     // [변경 반영] pos_id -> pos_no (PK 참조)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pos_no", nullable = false)
-    private Positions position;
+    private Positions positions;
 
     @Column(nullable = false)
     private String pwd;

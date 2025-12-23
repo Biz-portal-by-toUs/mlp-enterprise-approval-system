@@ -33,6 +33,12 @@ public enum ErrorCode {
     INVALID_DOCUMENT_STATUS_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_STATUS", "잘못된 문서 상태 파라미터 값이 전달되었습니다"),
     INVALID_DOCUMENT_SORT_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_SORT_REQUEST", "잘못된 문서 정렬 파라미터 값이 전달되었습니다"),
 
+    // 문서 양식 관련
+    DOCUMENT_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_NOT_FOUND", "문서 양식을 찾을 수 없습니다"),
+
+    // 문서 양식 내 카테고리 관련
+    DOCUMENT_FORM_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_CATEGORY_NOT_FOUND", "문서 양식 카테고리를 찾을 수 없습니다"),
+
     // 회사 관련
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUNT", "회사를 찾을 수 없습니다"),
 
@@ -77,7 +83,15 @@ public enum ErrorCode {
     // 부서 관련
     DUPLICATE_DEPID(HttpStatus.CONFLICT, "DUPLICATE_DEPID", "이미 존재하는 부서 코드입니다"),
     DUPLICATE_DEPNAME(HttpStatus.CONFLICT, "DUPLICATE_DEPNAME", "이미 존재하는 부서 이름입니다"),
-    DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DEPARTMENT_NOT_FOUND", "해당 부서를 찾을 수 없습니다"),
+    DEPARTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DEPARTMENT_NOT_FOUND", "부서를 찾을 수 없습니다"),
+    DEPARTMENT_DELETE_HAS_EMPLOYEES(HttpStatus.BAD_REQUEST, "DEPARTMENT_DELETE_HAS_EMPLOYEES", "사원이 존재하므로 삭제할 수 없습니다"),
+
+    // 직급 관련
+    DUPLICATE_POSNAME(HttpStatus.CONFLICT, "DUPLICATE_POSNAME", "이미 존재하는 직급 이름입니다"),
+    POSITIONS_NOT_FOUND(HttpStatus.NOT_FOUND, "POSITIONS_NOT_FOUND", "직급을 찾을 수 없습니다"),
+    POSITIONS_DELETE_HAS_EMPLOYEES(HttpStatus.BAD_REQUEST, "POSITIONS_DELETE_HAS_EMPLOYEES", "사원이 존재하므로 삭제할 수 없습니다"),
+
+
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
