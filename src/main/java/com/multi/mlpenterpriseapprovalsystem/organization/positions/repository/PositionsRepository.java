@@ -22,4 +22,6 @@ public interface PositionsRepository extends JpaRepository<Positions, Long> {
 
     Optional<Positions> findByCompanyAndPosNo(Company company, Long posNo);
 
+    List<Positions> findAllByCompany_ComIdOrderByPosOrderAsc(String comId);
+
 }
