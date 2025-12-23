@@ -2,385 +2,287 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Template Editor</title>
 
-    <!-- ProseMirror bare import 해결용 importmap -->
-    <script type="importmap">
-        {
-          "imports": {
-            "prosemirror-model": "https://esm.sh/prosemirror-model?target=es2020",
-            "prosemirror-state": "https://esm.sh/prosemirror-state?target=es2020",
-            "prosemirror-view": "https://esm.sh/prosemirror-view?target=es2020",
-            "prosemirror-transform": "https://esm.sh/prosemirror-transform?target=es2020",
-            "prosemirror-commands": "https://esm.sh/prosemirror-commands?target=es2020",
-            "prosemirror-keymap": "https://esm.sh/prosemirror-keymap?target=es2020",
-            "prosemirror-history": "https://esm.sh/prosemirror-history?target=es2020",
-            "prosemirror-schema-list": "https://esm.sh/prosemirror-schema-list?target=es2020",
-            "prosemirror-dropcursor": "https://esm.sh/prosemirror-dropcursor?target=es2020",
-            "prosemirror-gapcursor": "https://esm.sh/prosemirror-gapcursor?target=es2020"
-          }
-        }
-    </script>
+    <!-- ProseMirror 기본 스타일 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prosemirror-view/style/prosemirror.css"/>
 
     <style>
-        :root {
-            --border: #e6e6e6;
-            --muted: #777;
-            --bg: #f7f7f7;
-        }
-
         body {
             margin: 0;
-            background: var(--bg);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+            background: #f4f6fb;
         }
 
         .wrap {
-            max-width: 1100px;
-            margin: 20px auto;
-            padding: 16px;
+            width: 1100px;
+            margin: 30px auto;
             background: #fff;
-            border-radius: 16px;
-            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
+            padding: 24px;
         }
 
-        /* ===== 상단 메타(제목 + 카테고리) ===== */
-        .meta-zone {
+        .topbar {
             display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .title-line {
-            display: flex;
-            align-items: center;
             gap: 12px;
-        }
-
-        .meta-label {
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--muted);
-            white-space: nowrap;
-            margin: 0;
-        }
-
-        /* 제목 입력: 박스 느낌 최소화(밑줄) */
-        .doc-title-input {
-            width: 520px;
-            max-width: 100%;
-            box-sizing: border-box;
-            border: 0;
-            border-bottom: 2px solid var(--border);
-            padding: 10px 6px;
-            font-size: 18px;
-            font-weight: 800;
-            outline: none;
-            background: transparent;
-        }
-
-        .doc-title-input:focus {
-            border-bottom-color: #111;
-        }
-
-        /* 카테고리 박스 */
-        .category-box {
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 12px;
-            background: #fff;
-        }
-
-        .radio-line {
-            display: flex;
-            gap: 10px;
             align-items: center;
-            flex-wrap: wrap;
-            margin-top: 8px;
+            justify-content: space-between;
+            margin-bottom: 18px;
         }
 
-        /* 카테고리(라디오) 가로 나열 */
+        .title-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #docTitle {
+            width: 420px;
+            padding: 10px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .type-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         #typeRadios {
             display: flex;
             gap: 10px;
-            align-items: center;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .radio-item {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
             padding: 6px 10px;
-            border: 1px solid var(--border);
+            border: 1px solid #e1e3ea;
             border-radius: 999px;
-            background: #fff;
+            background: #fafbff;
         }
 
-        .radio-value-input {
-            border: 0;
-            outline: none;
-            width: 90px;
+        .radio-item input[type="text"] {
+            width: 80px;
+            border: none;
             background: transparent;
+            outline: none;
+            font-size: 13px;
         }
 
         .radio-del {
-            border: 0;
+            border: none;
             background: transparent;
             cursor: pointer;
-            font-size: 12px;
-            padding: 2px 4px;
+            color: #ff4d4f;
+            font-weight: 700;
         }
 
-        .add-radio {
-            border: 1px dashed var(--border);
-            border-radius: 999px;
-            background: #fff;
-            cursor: pointer;
-            padding: 6px 12px;
-        }
-
-        /* ===== 툴바 ===== */
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin: 16px 0;
-        }
-
-        .toolbar button {
-            padding: 6px 10px;
-            border: 1px solid var(--border);
-            background: #fff;
+        #addRadioBtn {
+            border: 1px dashed #8aa3ff;
+            background: #f0f4ff;
+            color: #2c5cff;
+            padding: 8px 10px;
             border-radius: 10px;
             cursor: pointer;
+            font-weight: 700;
         }
 
-        /* ===== 에디터 ===== */
-        #editorWrap {
-            border: 1px solid var(--border);
-            border-radius: 14px;
+        /* 툴바 */
+        #toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
             padding: 12px;
+            border: 1px solid #e1e3ea;
+            border-radius: 10px;
+            background: #fafbff;
+            margin-bottom: 14px;
+        }
+
+        #toolbar button {
+            border: 1px solid #dcdfe6;
             background: #fff;
-            overflow-x: auto;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
         }
 
-        #editor {
-            min-height: 260px;
+        #toolbar button:hover {
+            background: #f0f4ff;
+        }
+
+        #fontSizeSelect {
+            border: 1px solid #dcdfe6;
+            background: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* 에디터 */
+        #editorWrap {
+            border: 1px solid #e1e3ea;
+            border-radius: 10px;
+            padding: 14px;
+            background: #fff;
+        }
+
+        #editor .ProseMirror {
+            min-height: 520px;
             outline: none;
-        }
-
-        /* 표가 보이게 하는 기본 테이블 스타일 */
-        #editor table {
-            border-collapse: collapse;
-            width: 100%;
-            table-layout: fixed;
-            margin: 0; /* 가운데 정렬 제거 */
-        }
-
-        #editor th, #editor td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            vertical-align: top;
-            text-align: center;
-        }
-
-        #editor th,
-        .ProseMirror th {
-            font-weight: 400;
-        }
-
-        #editorWrap:focus-within {
-            border-color: var(--border) !important;
-            box-shadow: none !important;
-        }
-
-        #editor .ProseMirror,
-        #editor .ProseMirror-focused {
-            outline: none !important;
-        }
-
-        .ProseMirror p {
-            margin: 8px 0;
-            min-height: 1.2em;
-        }
-
-        .ProseMirror table {
-            border-collapse: collapse;
-            table-layout: fixed;
-            width: 100%;
-            margin: 0;
-        }
-
-        .ProseMirror th,
-        .ProseMirror td {
-            position: relative;
-        }
-
-        .ProseMirror .column-resize-handle {
-            position: absolute;
-            right: -2px;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            pointer-events: all;
-            cursor: col-resize;
-        }
-
-        .ProseMirror .ProseMirror-dropcursor {
-            display: none !important;
-        }
-
-        .ProseMirror p:empty::before {
-            content: '\u200B';
-        }
-
-        .ProseMirror tr {
-            position: relative;
-        }
-
-        .ProseMirror tr::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: -2px;
-            height: 5px;
-            cursor: row-resize;
-            pointer-events: none;
+            font-size: 16px;
+            line-height: 1.6;
         }
 
         .bottom-actions {
             display: flex;
             justify-content: flex-end;
-            gap: 8px;
-            margin-top: 12px;
+            gap: 10px;
+            margin-top: 16px;
         }
 
-        .bottom-actions button {
-            padding: 8px 16px;
+        #saveBtn {
+            background: #2c5cff;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
             border-radius: 10px;
-            border: 1px solid var(--border);
-            background: #fff;
             cursor: pointer;
+            font-weight: 800;
         }
 
-        .input-field {
-            display: inline-block;
-            min-width: 60px;
-            padding: 4px 8px;
-            margin: 0 2px;
-
-            border: 1px solid;
-            border-radius: 6px;
-            border-color: #ededed;
-
-            background: #fff;
-            color: #111;
-            cursor: text;
+        #closeBtn {
+            background: #f1f2f5;
+            color: #222;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 800;
         }
 
-        .input-field:hover {
-            border-color: #ededed;
+        /* 작성 화면에서는 프리셋 헤더표(템플릿 테이블) 숨김 */
+        #editor .preset-no-col-resize { display:none !important; }
+
+        /* 표 전체 */
+        #editor .ProseMirror table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
         }
 
-        .ProseMirror-selectednode.input-field {
-            border-color: #e0e0e0;
-            background: #fafafa;
+        /* 셀 공통 */
+        #editor .ProseMirror td,
+        #editor .ProseMirror th {
+            border: 1px solid #c9cdd4;
+            padding: 8px 10px;
+            min-width: 40px;
+            vertical-align: top;
         }
 
-        template {
-            display: none;
+        /* 헤더 셀 */
+        #editor .ProseMirror th {
+            background: #f4f6fb;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        /* 선택된 셀(커서가 있는 셀) */
+        #editor .ProseMirror .selectedCell {
+            background: rgba(44, 92, 255, 0.08);
+        }
+
+        /* 컬럼 리사이즈 핸들(있다면) */
+        #editor .ProseMirror .column-resize-handle {
+            background-color: #2c5cff;
         }
     </style>
 </head>
-
 <body>
 
 <div class="wrap">
 
-    <!-- ===== 상단 메타 영역 ===== -->
-    <div class="meta-zone">
-
-        <!-- 문서 제목 -->
-        <div class="title-line">
-            <label class="meta-label" for="docTitle">문서 제목</label>
-            <input
-                    id="docTitle"
-                    class="doc-title-input"
-                    placeholder="문서 제목을 입력하세요"
-            />
+    <div class="topbar">
+        <div class="title-area">
+            <input id="docTitle" placeholder="양식 제목(docfo_name)을 입력하세요" />
         </div>
 
-        <!-- 카테고리 -->
-        <div class="category-box">
-            <p class="meta-label">카테고리</p>
-
-            <div class="radio-line">
-                <div id="typeRadios">
-                    <div class="radio-item">
-                        <input type="radio" class="radio-choice" name="templateType"/>
-                        <input type="text" class="radio-value-input" value="type1"/>
-                        <button type="button" class="radio-del" title="삭제">✕</button>
-                    </div>
+        <div class="type-area">
+            <div id="typeRadios">
+                <div class="radio-item">
+                    <input class="radio-choice" name="templateType" type="radio"/>
+                    <input class="radio-value-input" type="text" value="type1"/>
+                    <button class="radio-del" title="삭제" type="button">✕</button>
                 </div>
-
-                <button id="addRadioBtn" class="add-radio" title="카테고리 추가">+</button>
             </div>
+            <button id="addRadioBtn" type="button">+ 카테고리</button>
         </div>
-
     </div>
 
-    <!-- ===== 툴바(Full) ===== -->
-    <div class="toolbar" id="toolbar">
-        <select id="fontSizeSelect" title="폰트 크기">
-            <option value="">글자크기</option>
-            <option value="12">12px</option>
-            <option value="14">14px</option>
-            <option value="16">16px</option>
-            <option value="18">18px</option>
-            <option value="20">20px</option>
-            <option value="24">24px</option>
+    <div id="toolbar">
+        <!-- 글자크기: value는 숫자만(네 JS가 px를 붙임) -->
+        <select id="fontSizeSelect" title="글자 크기">
+            <option value="">Font</option>
+            <option value="12">12</option>
+            <option value="14">14</option>
+            <option value="16">16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="24">24</option>
+            <option value="28">28</option>
+            <option value="32">32</option>
         </select>
 
-        <button data-act="bold">B</button>
-        <button data-act="italic">/</button>
-        <button data-act="strike">S</button>
-
+        <!-- 제목/문단 -->
         <button data-act="h1">H1</button>
         <button data-act="h2">H2</button>
         <button data-act="h3">H3</button>
+        <button data-act="p">P</button>
 
-        <button data-act="bullet">•</button>
-        <button data-act="ordered">1.</button>
+        <!-- 기본 서식 -->
+        <button data-act="bold">Bold</button>
+        <button data-act="italic">Italic</button>
+        <button data-act="underline">Underline</button>
+        <button data-act="strike">Strike</button>
 
+        <!-- 정렬 -->
         <button data-act="alignLeft">좌</button>
         <button data-act="alignCenter">중</button>
         <button data-act="alignRight">우</button>
 
-        <button data-act="inputField">입력칸</button>
+        <!-- 리스트 -->
+        <button data-act="bullet">Bullet</button>
+        <button data-act="ordered">Ordered</button>
 
-        <button data-act="table">표</button>
+        <!-- 입력창 -->
+        <button data-act="inputField">입력창</button>
+
+        <!-- 테이블 -->
+        <button data-act="table">표 생성</button>
+        <button data-act="addColumnAfter">열 추가</button>
+        <button data-act="addRowAfter">행 추가</button>
+        <button data-act="deleteColumn">열 삭제</button>
+        <button data-act="deleteRow">행 삭제</button>
         <button data-act="tableDelete">표 삭제</button>
 
-        <button data-act="addRowAfter">행 +</button>
-        <button data-act="deleteRow">행 -</button>
-
-        <button data-act="addColumnAfter">열 +</button>
-        <button data-act="deleteColumn">열 -</button>
-
+        <!-- 히스토리 -->
         <button data-act="undo">Undo</button>
         <button data-act="redo">Redo</button>
     </div>
 
-    <!-- ===== 에디터 영역 ===== -->
     <div id="editorWrap">
         <div id="editor"></div>
     </div>
 
-    <!-- 저장/닫기 버튼 -->
     <div class="bottom-actions">
         <button id="saveBtn">저장하기</button>
         <button id="closeBtn">닫기</button>
@@ -388,26 +290,14 @@
 
 </div>
 
-<!-- ===== 숨김 preset table 템플릿 ===== -->
+<!-- ===== 프리셋 헤더표 템플릿(고정) ===== -->
 <template id="presetLeftTemplate">
-    <table class="preset-left preset-no-col-resize">
+    <table class="preset-no-col-resize preset-left">
         <tbody>
-        <tr>
-            <td>문서번호</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>작성자</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>부서</td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>작성일</td>
-            <td></td>
-        </tr>
+        <tr><td>부서명</td><td></td></tr>
+        <tr><td>작성자</td><td></td></tr>
+        <tr><td>제목</td><td></td></tr>
+        <tr><td>작성일</td><td></td></tr>
         </tbody>
     </table>
 </template>
@@ -424,16 +314,28 @@
         </tr>
         <tr>
             <th>서명</th>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td></td><td></td><td></td><td></td><td></td>
         </tr>
     </table>
 </template>
 
-<script type="module" src="/js/document-form/make-form.js"></script>
+<script type="importmap">
+    {
+      "imports": {
+        "prosemirror-model": "https://esm.sh/prosemirror-model?target=es2020",
+        "prosemirror-state": "https://esm.sh/prosemirror-state?target=es2020",
+        "prosemirror-view": "https://esm.sh/prosemirror-view?target=es2020",
+        "prosemirror-transform": "https://esm.sh/prosemirror-transform?target=es2020",
+        "prosemirror-commands": "https://esm.sh/prosemirror-commands?target=es2020",
+        "prosemirror-keymap": "https://esm.sh/prosemirror-keymap?target=es2020",
+        "prosemirror-history": "https://esm.sh/prosemirror-history?target=es2020",
+        "prosemirror-schema-list": "https://esm.sh/prosemirror-schema-list?target=es2020",
+        "prosemirror-dropcursor": "https://esm.sh/prosemirror-dropcursor?target=es2020",
+        "prosemirror-gapcursor": "https://esm.sh/prosemirror-gapcursor?target=es2020"
+      }
+    }
+</script>
 
+<script type="module" src="/js/document-form/make-form.js"></script>
 </body>
 </html>
