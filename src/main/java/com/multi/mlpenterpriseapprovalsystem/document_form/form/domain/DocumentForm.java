@@ -30,11 +30,11 @@ public class DocumentForm {
     private Long docfoNo;
 
     // 회사 참조 (com_id -> company.com_id)
-    @Column(name = "com_id", nullable = false)
+    @Column(name = "com_id", nullable = false, length = 3)
     private String comId;
 
     // 작성자 참조 (writer_id -> employee.emp_id)
-    @Column(name = "writer_id", nullable = false)
+    @Column(name = "writer_id", nullable = false, length = 7)
     private String writerId;
 
     @Column(nullable = false, length = 100)

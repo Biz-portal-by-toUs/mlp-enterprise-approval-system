@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @RestController
-@RequestMapping("/api/v1/forms")
+@RequestMapping("/forms")
 @RequiredArgsConstructor
 public class DocumentFormController {
 

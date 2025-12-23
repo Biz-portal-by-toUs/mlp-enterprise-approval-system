@@ -115,25 +115,28 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     public Long updateDocumentForm(Long docfoNo, DocumentFormCreateReqDto req) {
 
         // 1) 기존 양식 조회
-        DocumentForm origin = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음: " + docfoNo));
+        DocumentForm oldForm = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
 
-        // 2) 이미 삭제된 양식 방어
-        if (origin.getDocfoStat() == DocumentFormStats.D) {
-            throw new IllegalStateException("이미 삭제된 문서입니다.");
+        //2) 삭제 가능한 문서인지 조회
+        if(oldForm.getDocfoStat()==DocumentFormStats.D){
+            throw new RuntimeException("이미 삭제된 문서입니다.");
         }
 
-        // 4) 기존 양식 기반 + 요청 값으로 새 양식 생성
-        DocumentForm copied = DocumentForm.create(
-                origin.getComId(),
+        // 3) 기존 양식 상태 D로 변경
+        oldForm.delete();
+
+        // 4) 새 양식 생성 & 저장
+        DocumentForm newForm = DocumentForm.create(
+                oldForm.getComId(),
                 req.writerId(),
                 req.docfoName(),
                 req.cnttJson(),
                 req.cnttHtml()
         );
 
-        // 5) 저장
-        DocumentForm saved = documentFormRepository.save(copied);
+        DocumentForm saved = documentFormRepository.save(newForm);
+
         return saved.getDocfoNo();
     }
 }
