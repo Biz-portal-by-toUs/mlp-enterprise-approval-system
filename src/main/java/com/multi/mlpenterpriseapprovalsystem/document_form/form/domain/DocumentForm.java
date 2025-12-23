@@ -30,12 +30,14 @@ public class DocumentForm {
     private Long docfoNo;
 
     // 회사 참조 (com_id -> company.com_id)
-    @Column(name = "com_id", nullable = false, length = 3)
-    private String comId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
+    private Company company;
 
     // 작성자 참조 (writer_id -> employee.emp_id)
-    @Column(name = "writer_id", nullable = false, length = 7)
-    private String writerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "writer_id", referencedColumnName = "emp_id", nullable = false)
+    private Employee writer;
 
     @Column(nullable = false, length = 100)
     private String docfoName;
@@ -44,7 +46,7 @@ public class DocumentForm {
     private String cnttJson;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
+    @Column(nullable = false)
     private String cnttHtml;
 
     // 명세서에 created_at만 존재하므로 BaseEntity 상속 대신 직접 정의
@@ -52,28 +54,28 @@ public class DocumentForm {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 1)
+    @Enumerated(EnumType.STRING)
     private DocumentFormStats docfoStat; // T, P, R, A, D
 
     private String rejectReason;
 
-    public static DocumentForm create(
-            String comId,
-            String writerId,
-            String docfoName,
-            String cnttJson,
-            String cnttHtml
-    ) {
-        DocumentForm f = new DocumentForm();
-        f.comId = comId;
-        f.writerId = writerId;
-        f.docfoName = docfoName;
-        f.cnttJson = cnttJson;
-        f.cnttHtml = cnttHtml;
-        f.docfoStat = DocumentFormStats.A; // 승인 로직 개발 후 T로 수정
-        return f;
-    }
+//    public static DocumentForm create(
+//            String comId,
+//            String writerId,
+//            String docfoName,
+//            String cnttJson,
+//            String cnttHtml
+//    ) {
+//        DocumentForm f = new DocumentForm();
+//        f.comId = comId;
+//        f.writerId = writerId;
+//        f.docfoName = docfoName;
+//        f.cnttJson = cnttJson;
+//        f.cnttHtml = cnttHtml;
+//        f.docfoStat = DocumentFormStats.A; // 승인 로직 개발 후 T로 수정
+//        return f;
+//    }
 
     public void delete(){
         this.docfoStat=DocumentFormStats.D;
