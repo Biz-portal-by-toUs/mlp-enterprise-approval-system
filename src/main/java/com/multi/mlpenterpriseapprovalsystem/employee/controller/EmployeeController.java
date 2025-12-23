@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @since : 2025. 12. 20. 토요일
  */
 @RestController
-@RequestMapping("/api/v1/employees")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class EmployeeController {
     private final EmployeeService employeeService;
@@ -33,7 +33,7 @@ public class EmployeeController {
      * - 검색: /api/v1/employees?keyword=kim&size=20
      * - 다음 페이지: /api/v1/employees?cursor=xxxx&size=20
      */
-    @GetMapping
+    @GetMapping("/employees")
     public ResponseEntity<ResponseDto<ResChatEmployeeCursorDto>> getEmployeesByCursor(
             @AuthenticationPrincipal CustomUser user,
             @RequestParam(name = "keyword", required = false) String keyword,
@@ -48,7 +48,7 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK,"사람 이름 조회 성공",employee));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/employees/me")
     public ResponseEntity<ResponseDto<ResEmployeeDetailDto>> getMyInfo(
             @AuthenticationPrincipal CustomUser user
     ) {
