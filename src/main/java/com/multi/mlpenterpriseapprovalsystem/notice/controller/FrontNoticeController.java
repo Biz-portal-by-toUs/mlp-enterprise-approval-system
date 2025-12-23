@@ -20,7 +20,7 @@ public class FrontNoticeController {
     @GetMapping("/list")
     public String noticeList() {
 
-        return "notice/notice_list";
+        return "notice/notice-list";
     }
 
     // 상세 조회
@@ -28,7 +28,6 @@ public class FrontNoticeController {
     public String placeDetail(@PathVariable("noticeNo") int noticeNo, Model model) {
         model.addAttribute("noticeNo", noticeNo);
         return "notice/detail";
-
     }
 
     @GetMapping("/files")
@@ -46,5 +45,21 @@ public class FrontNoticeController {
     @GetMapping("/form")
     public String noticeFormPage(Model model) {
         return "notice/notice-form";
+    }
+
+    //공지사항 업데이트
+    @GetMapping("/update/{noticeNo}")
+    public String updateNotice(@PathVariable("noticeNo") Long noticeNo, Model model) {
+        model.addAttribute("noticeNo", noticeNo);
+        System.out.println("Received noticeNo: " + noticeNo);
+
+
+        return "notice/notice-update";
+    }
+
+    /** 공지 수정 페이지 이동 (단순 렌더링) */
+    @GetMapping("/edit/{noticeNo}")
+    public String noticeEditPage(@PathVariable("noticdNo") Long noticeNo) {
+        return "notice/notice-update";
     }
 }

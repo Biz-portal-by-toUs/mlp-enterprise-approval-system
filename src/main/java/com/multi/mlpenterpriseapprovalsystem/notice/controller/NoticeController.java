@@ -95,7 +95,7 @@ public class NoticeController {
     }
 
     //공지사항 삭제
-    @DeleteMapping("/notices/{id}")
+    @DeleteMapping("/notice/{id}")
     public ResponseEntity<String> delete(@PathVariable("id") Long id) {
         noticeService.deleteNotice(id);
         return ResponseEntity.ok("공지사항이 삭제되었습니다.");

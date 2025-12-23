@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>상품 수정</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+
+</head>
+<body>
+<div class="header">
+    <th:block th:replace="~{common/header :: header}"/>
+</div>
+<div class="container">
+    <h2>상품 수정</h2>
+    <form id="updateForm" enctype="multipart/form-data">
+        <!-- 상품 코드 -->
+        <input type="hidden" id="noticeNo" name="noticeNo" th:value="${noticeNo}">
+
+
+        <!-- 제목 -->
+        <div>
+            <label for="title">제목:</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="contents">내용</label>
+            <textarea id="contents" name="contents" placeholder="공지 내용을 입력하세요" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label>팝업여부</label><br>
+            <label>
+                <input type="radio" name="isPopup" value="true" required> Y
+            </label>
+            &nbsp;&nbsp;
+            <label>
+                <input type="radio" name="isPopup" value="false"> N
+            </label>
+        </div>
+
+        <div class="mb-3">
+            <label for="startedAt">팝업시작일</label>
+            <input type="datetime-local" id="startedAt" name="startedAt" min="1" max="5" value="5" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="endedAt">팝업종료일</label>
+            <input type="datetime-local" id="endedAt" name="endedAt" required>
+        </div>
+
+        <!-- 수정 버튼 -->
+        <button type="submit">수정</button>
+    </form>
+
+    <!-- 홈으로 돌아가기 -->
+    <a href="/main" style="display: inline-block; margin-top: 20px;">홈으로 돌아가기</a>
+</div>
+<div class="footer">
+    <!--
+    <th:block th:replace="~{common/footer :: footer}"/>
+    --->
+</div>
+
+<script>
+    // 수정 화면 초기 데이터 로드
+    async function loadNoticeDetails() {
+        const noticeNo = [[${noticeNo}]];
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.status === 200 && result.data) {
+                const notice = result.data;
+
+                // 필드에 초기값 설정
+                document.getElementById('title').value = notice.title;
+                document.getElementById('contents').value = notice.contents;
+                document.getElementById('isPopup').value = notice.isPopup;
+                document.getElementById('startedAt').value = notice.startedAt;
+                document.getElementById('endedAt').value = notice.endedAt;
+
+            } else {
+                alert('공지사항을 불러오는 데 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Error loading notice details:', error);
+            alert('공지사항을 불러오는 중 오류가 발생했습니다.');
+        }
+    }
+
+
+    // 폼 제출 처리
+    document.getElementById('updateForm').onsubmit = async function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(this);
+
+        // 디버깅용 FormData 출력
+        for (const [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`, {
+                method: 'PUT',
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                alert('공지사항이 수정되었습니다.');
+                location.href = '/notice/list';
+            } else {
+                alert('공지사항 수정에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Error updating notice:', error);
+            alert('공지사항 수정 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 페이지 로드 시 초기 데이터 로드
+    document.addEventListener('DOMContentLoaded', loadNoticeDetails);
+</script>
+</body>
+</html>
