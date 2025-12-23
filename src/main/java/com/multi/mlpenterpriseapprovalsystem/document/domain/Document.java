@@ -82,6 +82,12 @@ public class Document extends BaseEntity {
     @Column(name = "submitted_at")
     LocalDateTime submittedAt;
 
+    public void cancelSubmit() {
+        this.submittedAt = null;
+        this.temp = true;
+        this.docStat = DocStat.US;
+    }
+
     // Document 엔티티에 추가
     public void submit() {
         this.temp = false;
