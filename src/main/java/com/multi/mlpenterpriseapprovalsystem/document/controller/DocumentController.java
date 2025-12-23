@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,10 +43,10 @@ public class DocumentController {
         Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
 
         String message = "";
-        if("FINALIZED".equals(status)){
+        if ("FINALIZED".equals(status)) {
             message = resDocumentDtos.isEmpty() ? "최종 승인된 문서가 없습니다" : "최종 승인된 문서 조회 성공";
         }
-        else{
+        else {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
 
@@ -57,24 +58,24 @@ public class DocumentController {
     // 내가 상신한 문서 조회(status = "SUBMITTED"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
     @GetMapping("/documents/me")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getMyDocumentsByStatus(@AuthenticationPrincipal CustomUser customUser,
-                                                                                     @ModelAttribute ReqDocumentDto reqDocumentDto,
-                                                                                     @RequestParam(name = "status") String status,
-                                                                                     @RequestParam(name = "page", defaultValue = "0") int page,
-                                                                                     @RequestParam(name = "sort", defaultValue = "") String sort){
+                                                                                    @ModelAttribute ReqDocumentDto reqDocumentDto,
+                                                                                    @RequestParam(name = "status") String status,
+                                                                                    @RequestParam(name = "page", defaultValue = "0") int page,
+                                                                                    @RequestParam(name = "sort", defaultValue = "") String sort) {
 
         Page<ResDocumentDto> resDocumentDtos = documentService.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
 
         String message = "";
-        if("SUBMITTED".equals(status)) {
+        if ("SUBMITTED".equals(status)) {
             message = resDocumentDtos.isEmpty() ? "내가 상신한 문서가 없습니다" : "내가 상신한 문서 조회 성공";
         }
-        else if("AWAITING".equals(status)) {
+        else if ("AWAITING".equals(status)) {
             message = resDocumentDtos.isEmpty() ? "내가 결재할 문서가 없습니다" : "내가 결재할 문서 조회 성공";
         }
-        else if("PROCESSED".equals(status)) {
+        else if ("PROCESSED".equals(status)) {
             message = resDocumentDtos.isEmpty() ? "내가 결재한 문서가 없습니다" : "내가 결재한 문서 조회 성공";
         }
-        else{
+        else {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
 
@@ -86,11 +87,11 @@ public class DocumentController {
 
     // 문서식별자로 문서 상세조회
     @GetMapping("/documents/{docNo}")
-    public ResponseEntity<ResponseDto<ResDocumentDto>> getDocumentByDocNo(@PathVariable("docNo") Long docNo,
-                                                                          @RequestParam("status") String status,
+    public ResponseEntity<ResponseDto<ResDocumentDto>> getDocumentByDocNo(@PathVariable(name = "docNo") Long docNo,
+                                                                          @RequestParam(name = "status") String status,
                                                                           @AuthenticationPrincipal CustomUser customUser) {
 
-        if(!"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
+        if (!"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
 
@@ -101,5 +102,32 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, "문서 조회 성공", resDocumentDto));
     }
 
+    // 문서 상신 및 임시저장
+    @PostMapping("/documents")
+    public ResponseEntity<ResponseDto<Void>> createDocument(@AuthenticationPrincipal CustomUser customUser,
+                                                            @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
+        documentService.createDocument(customUser.getComId(), /*empId*/customUser.getUsername(), reqDocumentDto);
 
+        String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
+                ? "문서 임시저장 성공"
+                : "문서 상신 성공";
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, null));
+    }
+
+    // 결재자 없을 시 상신 취소. 상신일 null로 변경, 임시저장상태를 true로 변경, 문서상태를 상신전(US)로 변경.
+    @PatchMapping("/documents/{docNo}/cancel")
+    public ResponseEntity<ResponseDto<Void>> cancelSubmit(@PathVariable(name = "docNo") Long docNo,
+                                                          @AuthenticationPrincipal CustomUser user) {
+        String comId = user.getComId();
+        String myEmpId = user.getUsername();
+
+        documentService.cancelSubmit(comId, myEmpId, docNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "상신이 취소되었습니다.", null));
+    }
 }

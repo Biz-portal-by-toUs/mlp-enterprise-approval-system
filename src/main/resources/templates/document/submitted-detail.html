@@ -13,6 +13,15 @@
         /* 헤더 */
         .page-header { display: flex; justify-content: center; align-items: center; margin-bottom: 35px; position: relative; }
         .page-title { font-size: 28px; font-weight: bold; color: #333; }
+
+        /* ✅ 왼쪽 상신취소 버튼 */
+        .btn-cancel-submit {
+            position: absolute; left: 0; padding: 10px 24px; background: #fff; color: #fa5252;
+            border: 1px solid #ffc9c9; border-radius: 6px; cursor: pointer; font-size: 14px;
+            font-weight: 600; transition: all 0.2s;
+        }
+        .btn-cancel-submit:hover { background: #fff5f5; border-color: #fa5252; }
+
         .btn-close {
             position: absolute; right: 0; padding: 10px 24px; background: #fff; color: #495057;
             border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; font-size: 14px;
@@ -77,6 +86,7 @@
 
         .approval-seq { font-size: 10px; color: #adb5bd; margin-bottom: 6px; font-weight: 600; }
         .approval-name { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .approval-pos { font-size: 11px; color: #868e96; margin-bottom: 4px; }
         .approval-date { font-size: 10px; color: #868e96; line-height: 1.4; }
 
         .approval-arrow {
@@ -136,23 +146,88 @@
         }
         .ai-content { font-size: 14px; line-height: 1.8; color: #495057; }
 
-        /* 버튼 그룹 */
-        .btn-group { display: flex; justify-content: center; gap: 15px; margin-top: 35px; }
-        .btn-approve {
-            padding: 14px 50px; background: linear-gradient(135deg, #339af0 0%, #228be6 100%);
-            color: white; border: none; border-radius: 8px; cursor: pointer;
-            font-size: 15px; font-weight: bold; transition: all 0.2s;
-        }
-        .btn-approve:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(51,154,240,0.4); }
-        .btn-reject {
-            padding: 14px 50px; background: linear-gradient(135deg, #ff6b6b 0%, #fa5252 100%);
-            color: white; border: none; border-radius: 8px; cursor: pointer;
-            font-size: 15px; font-weight: bold; transition: all 0.2s;
-        }
-        .btn-reject:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(250,82,82,0.4); }
-
         /* 로딩 */
         .loading { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
+
+        /* ✅ 커스텀 확인 모달 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .modal-message {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .modal-btn {
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn-confirm {
+            background: #fa5252;
+            color: white;
+            border: none;
+        }
+        .modal-btn-confirm:hover {
+            background: #e03131;
+        }
+        .modal-btn-cancel {
+            background: white;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+        .modal-btn-cancel:hover {
+            background: #f8f9fa;
+        }
+
+        /* ✅ 토스트 알림 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #40c057; }
+        .toast.error { background: #fa5252; }
+        .toast.show { display: block; }
     </style>
 </head>
 <body>
@@ -163,6 +238,8 @@
     <div id="doc-detail" style="display: none;">
         <!-- 헤더 -->
         <div class="page-header">
+            <!-- ✅ 상신취소 버튼 (조건부 표시) -->
+            <button class="btn-cancel-submit" id="btn-cancel-submit" style="display: none;" onclick="showCancelModal()">상신취소</button>
             <div class="page-title" id="form-title">휴가 신청서</div>
             <button class="btn-close" onclick="history.back()">닫기</button>
         </div>
@@ -248,22 +325,35 @@
                 <div class="ai-content" id="ai-summary-content"></div>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- 결재 버튼 -->
-        <div class="btn-group" id="btn-group" style="display: none;">
-            <button class="btn-approve" onclick="handleApprove()">승인</button>
-            <button class="btn-reject" onclick="handleReject()">반려</button>
+<!-- ✅ 상신취소 확인 모달 -->
+<div class="modal-overlay" id="cancel-modal">
+    <div class="modal-content">
+        <div class="modal-title">⚠️ 상신 취소</div>
+        <div class="modal-message">
+            정말 상신을 취소하시겠습니까?<br>
+            취소 후 임시저장 상태로 변경됩니다.
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-confirm" onclick="confirmCancelSubmit()">확인</button>
+            <button class="modal-btn modal-btn-cancel" onclick="hideCancelModal()">취소</button>
         </div>
     </div>
 </div>
 
+<!-- ✅ 토스트 알림 -->
+<div class="toast" id="toast"></div>
+
 <script>
     let docData = null;
+    let currentDocNo = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         const pathParts = window.location.pathname.split('/');
-        const docNo = pathParts[pathParts.length - 1];
-        loadDocumentDetail(docNo);
+        currentDocNo = pathParts[pathParts.length - 1];
+        loadDocumentDetail(currentDocNo);
     });
 
     async function loadDocumentDetail(docNo) {
@@ -313,6 +403,9 @@
         // 결재라인 렌더링
         renderApprovalLine(doc.resApprovalLineDtos);
 
+        // ✅ 상신취소 버튼 표시 여부 결정
+        checkCancelButtonVisibility(doc.resApprovalLineDtos, doc.docStat);
+
         // 문서 내용
         document.getElementById('doc-title').textContent = doc.title || '-';
         document.getElementById('doc-category').textContent = doc.docFormCatName || '-';
@@ -329,10 +422,39 @@
             document.getElementById('ai-summary-section').style.display = 'block';
             document.getElementById('ai-summary-content').textContent = doc.aiSumm;
         }
+    }
 
-        // 결재 버튼 (내 순서일 때만)
-        if (doc.myApprStat === 'I') {
-            document.getElementById('btn-group').style.display = 'flex';
+    /**
+     * ✅ 상신취소 버튼 표시 조건 확인
+     * - 문서 상태가 AW(결재중)일 때만
+     * - 모든 결재자가 endedAt === null 이고
+     * - 모든 결재자가 apprStat !== 'A' && apprStat !== 'R'
+     */
+    function checkCancelButtonVisibility(lines, docStat) {
+        const cancelBtn = document.getElementById('btn-cancel-submit');
+
+        // 문서 상태가 결재중(AW)이 아니면 상신취소 불가
+        if (docStat !== 'AW') {
+            cancelBtn.style.display = 'none';
+            return;
+        }
+
+        if (!lines || lines.length === 0) {
+            // 결재라인이 없으면 상신취소 가능
+            cancelBtn.style.display = 'block';
+            return;
+        }
+
+        // 결재 완료된 사람이 있는지 확인 (A 또는 R 상태, 또는 endedAt이 있는 경우)
+        const hasProcessedApproval = lines.some(line =>
+            line.apprStat === 'A' || line.apprStat === 'R' || line.endedAt !== null
+        );
+
+        if (!hasProcessedApproval) {
+            // 아무도 결재 안 했으면 상신취소 버튼 표시
+            cancelBtn.style.display = 'block';
+        } else {
+            cancelBtn.style.display = 'none';
         }
     }
 
@@ -361,7 +483,8 @@
 
             card.innerHTML = `
                 <div class="approval-seq">결재자${line.seq}</div>
-                <div class="approval-name">${line.approverName}</div>
+                <div class="approval-name">${line.approverName || '-'}</div>
+                <div class="approval-pos">${line.approverPosName || ''}</div>
                 ${line.endedAt ? `<div class="approval-date">${formatDateTime(line.endedAt)}</div>` : '<div class="approval-date">-</div>'}
             `;
 
@@ -406,17 +529,56 @@
         return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
     }
 
-    function handleApprove() {
-        if (confirm('이 문서를 승인하시겠습니까?')) {
-            alert('승인 기능은 아직 구현되지 않았습니다.');
+    // ✅ 상신취소 모달 표시
+    function showCancelModal() {
+        document.getElementById('cancel-modal').classList.add('show');
+    }
+
+    // ✅ 상신취소 모달 숨김
+    function hideCancelModal() {
+        document.getElementById('cancel-modal').classList.remove('show');
+    }
+
+    // ✅ 상신취소 확인 (API 호출)
+    async function confirmCancelSubmit() {
+        hideCancelModal();
+
+        const token = localStorage.getItem('accessToken');
+
+        try {
+            const response = await fetch(`/api/v1/documents/${currentDocNo}/cancel`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showToast('상신이 취소되었습니다.', 'success');
+                // 1.5초 후 상신한 문서 목록으로 이동
+                setTimeout(() => {
+                    location.href = '/documents/me?status=SUBMITTED';
+                }, 1500);
+            } else {
+                showToast(result.message || '상신 취소에 실패했습니다.', 'error');
+            }
+        } catch (error) {
+            console.error('상신 취소 실패:', error);
+            showToast('서버 통신 오류가 발생했습니다.', 'error');
         }
     }
 
-    function handleReject() {
-        const reason = prompt('반려 사유를 입력해주세요:');
-        if (reason) {
-            alert('반려 기능은 아직 구현되지 않았습니다.');
-        }
+    // ✅ 토스트 알림 표시
+    function showToast(message, type) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
     }
 </script>
 </body>

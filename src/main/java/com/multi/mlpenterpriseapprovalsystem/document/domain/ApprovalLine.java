@@ -42,7 +42,7 @@ public class ApprovalLine {
     @Enumerated(EnumType.STRING)
     private ApprStat apprStat;
 
-    // 결재 시간이므로 직접 시간을 넣어줘야함
+    // 결재 시간
     private LocalDateTime endedAt;
 
     // 실제 결재자 여부

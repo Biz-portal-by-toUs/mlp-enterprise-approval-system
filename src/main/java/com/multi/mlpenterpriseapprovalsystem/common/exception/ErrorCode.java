@@ -32,6 +32,13 @@ public enum ErrorCode {
     INVALID_APPROVAL_STATUS(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_STATUS", "잘못된 결재 상태입니다"),
     INVALID_DOCUMENT_STATUS_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_STATUS", "잘못된 문서 상태 파라미터 값이 전달되었습니다"),
     INVALID_DOCUMENT_SORT_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_SORT_REQUEST", "잘못된 문서 정렬 파라미터 값이 전달되었습니다"),
+    DOCUMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "DOCUMENT_ACCESS_DENIED", "해당 문서에 접근 권한이 없습니다"),
+    DOCUMENT_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "DOCUMENT_ALREADY_PROCESSED", "이미 결재가 진행된 문서는 상신 취소할 수 없습니다"),
+
+    // 결재라인 관련
+    INVALID_APPROVAL_LINE_ORDER(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_LINE_ORDER", "잘못된 결재자 순서입니다"),
+    INVALID_APPROVAL_LINE_SELF(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_LINE_SELF", "본인은 결재라인에 포함될 수 없습니다"),
+
 
     // 문서 양식 관련
     DOCUMENT_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_NOT_FOUND", "문서 양식을 찾을 수 없습니다"),

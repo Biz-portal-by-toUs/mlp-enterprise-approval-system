@@ -69,4 +69,10 @@ public class ViewDocumentController {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
     }
+
+    // 문서 작성 화면
+    @GetMapping("/documents/new")
+    public String viewNewDocument() {
+        return "document/create";
+    }
 }

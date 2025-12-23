@@ -2,8 +2,11 @@ package com.multi.mlpenterpriseapprovalsystem.document.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqApprovalLineDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
@@ -12,6 +15,9 @@ import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRep
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -264,7 +271,7 @@ public class DocumentService {
         Document document;
 
         if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
-            // 작성자가 나면서 문서상태가 AW인 문서 조회
+            // 작성자가 나면서 문서상태가 AW or RJ or FI인 문서 조회
             document = documentRepository.findSubmittedDoc(comId, docNo, myEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
         }
@@ -290,6 +297,174 @@ public class DocumentService {
         return ResDocumentDto.toDto(document, myEmpId);
     }
 
+
+    // 문서 상신 및 임시저장
+    public void createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
+
+        // 1. 연관 엔티티 조회
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        Employee writer = employeeRepository.findByEmpId(myEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDocumentDto.getDocfoCatNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
+
+        DocumentForm form = tempDocumentFormRepository.findById(reqDocumentDto.getDocfoNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
+
+        // 2. Document 생성 (docId는 null - 최종승인 시 발행)
+        Document document = Document.toEntity(reqDocumentDto, company, writer, category, form);
+
+        boolean isTemp = Boolean.TRUE.equals(reqDocumentDto.getTemp());
+
+        if (isTemp) {
+            document.saveAsTemp();  // temp=true, submittedAt=null, docStat=US
+        } else {
+            document.submit();      // temp=false, submittedAt=now, docStat=AW
+        }
+
+        documentRepository.save(document);
+
+        // 4. 상신 or 임시저장 시 결재라인 검증 후 생성
+        if (reqDocumentDto.getApprovalLines() != null && !reqDocumentDto.getApprovalLines().isEmpty()) {
+            validateApproverNotSelf(myEmpId, reqDocumentDto.getApprovalLines());
+            validateApprovalLineOrder(reqDocumentDto.getApprovalLines());
+            createApprovalLines(document, company, reqDocumentDto.getApprovalLines(), isTemp);
+        }
+
+        log.info("문서 {} 완료: docNo={}, writer={}", isTemp ? "임시저장" : "상신", document.getDocNo(), myEmpId);
+    }
+
+    /**
+     * 결재라인에 본인(작성자)이 포함되어 있는지 검증
+     */
+    private void validateApproverNotSelf(String writerEmpId, List<ReqApprovalLineDto> lineDtos) {
+        boolean hasSelf = lineDtos.stream()
+                .anyMatch(line -> writerEmpId.equals(line.getApproverId()));
+
+        if (hasSelf) {
+            throw new CustomException(ErrorCode.INVALID_APPROVAL_LINE_SELF);
+        }
+    }
+
+    /**
+     * 결재라인 순서 검증
+     * - 결재 순서(seq)가 증가할수록 직급이 같거나 높아야 함 (posOrder가 같거나 작아야 함)
+     * - 같은 직급 허용: 5→5→4→3→3 (O)
+     * - 직급 역전 불가: 3→4→5 (X) - posOrder가 커지면 안 됨
+     */
+    private void validateApprovalLineOrder(List<ReqApprovalLineDto> lineDtos) {
+        if (lineDtos == null || lineDtos.size() < 2) {
+            return; // 결재자가 1명 이하면 검증 불필요
+        }
+
+        // seq 순서로 정렬
+        List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
+                .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
+                .toList();
+
+        Integer prevPosOrder = null;
+
+        for (ReqApprovalLineDto lineDto : sortedLines) {
+            Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            Integer currentPosOrder = approver.getPositions().getPosOrder();
+
+            // 이전 결재자보다 직급이 낮으면 에러 (posOrder가 커지면 에러)
+            // 같은 직급(posOrder 동일)은 허용
+            if (prevPosOrder != null && currentPosOrder > prevPosOrder) {
+                throw new CustomException(ErrorCode.INVALID_APPROVAL_LINE_ORDER);
+            }
+
+            prevPosOrder = currentPosOrder;
+        }
+    }
+
+    // 결재라인 생성 (대직자 포함)
+    private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
+
+        // ✅ seq 기준 정렬하여 순서 보장
+        List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
+                .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
+                .toList();
+
+        for (int i = 0; i < lineDtos.size(); i++) {
+            ReqApprovalLineDto lineDto = lineDtos.get(i);
+
+            Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            // 첫 번째 결재자는 I(결재중), 나머지는 W(대기)
+            ApprStat apprStat;
+            if (isTemp) {
+                apprStat = ApprStat.W;
+            } else {
+                apprStat = (i == 0) ? ApprStat.I : ApprStat.W;
+            }
+
+            // 결재자 추가
+            ApprovalLine approverLine = ApprovalLine.toEntity(
+                    document,
+                    approver,
+                    company,
+                    lineDto.getSeq(),
+                    apprStat,
+                    false  // isDelegate = false
+            );
+            approvalLineRepository.save(approverLine);
+
+            // 결재자가 휴가중(v)이고 대직자가 있으면 대직자도 추가
+            if ("V".equals(approver.getAtte()) && approver.getDelegate() != null) {
+                ApprovalLine delegateLine = ApprovalLine.toEntity(
+                        document,
+                        approver.getDelegate(),
+                        company,
+                        lineDto.getSeq(),  // 같은 seq
+                        apprStat,          // 같은 상태
+                        true               // isDelegate = true
+                );
+                approvalLineRepository.save(delegateLine);
+
+                log.info("대직자 추가: 결재자={}, 대직자={}, seq={}",
+                        approver.getEmpId(), approver.getDelegate().getEmpId(), lineDto.getSeq());
+            }
+        }
+    }
+
+    // 상신 취소
+    public void cancelSubmit(String comId, String myEmpId, Long docNo) {
+        // 문서 조회
+        Document document = documentRepository.findById(docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 본인이 작성한 문서인지 확인
+        if (!document.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 회사 일치 확인
+        if (!document.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 결재 진행 여부 확인 (A 또는 R 상태인 결재자가 있으면 취소 불가)
+        List<ApprovalLine> approvalLines = approvalLineRepository.findByDocument_docNo(docNo);
+
+        boolean hasProcessedApproval = approvalLines.stream()
+                .anyMatch(line -> line.getApprStat() == ApprStat.A || line.getApprStat() == ApprStat.R);
+
+        if (hasProcessedApproval) {
+            throw new CustomException(ErrorCode.DOCUMENT_ALREADY_PROCESSED);
+        }
+
+        // 6. 문서 상태만 변경 (결재라인 유지)
+        document.cancelSubmit();
+
+        log.info("상신 취소 완료: docNo={}, writer={}", docNo, myEmpId);
+    }
 
     // 문서코드(docId) 생성
     // 문서가 최종승인되어야 발급
