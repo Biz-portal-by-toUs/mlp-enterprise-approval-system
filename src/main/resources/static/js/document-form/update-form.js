@@ -1,5 +1,5 @@
 // static/src/update-form.js
-const API_BASE = '/forms'; // 너 프로젝트 REST 기준
+const API_BASE = '/api/forms'; // 너 프로젝트 REST 기준
 const VIEW_BASE = '/document-form/manager/form';
 
 const elName = document.getElementById('docfoName');

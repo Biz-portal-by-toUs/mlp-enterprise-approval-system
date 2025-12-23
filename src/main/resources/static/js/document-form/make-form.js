@@ -1116,7 +1116,7 @@ function wireSave(editor) {
 
         const isEdit = Boolean(new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id'))
         const targetId = new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id')
-        const url = isEdit ? `/forms/${encodeURIComponent(targetId)}` : '/forms'
+        const url = isEdit ? `/api/forms/${encodeURIComponent(targetId)}` : '/api/forms'
 
         const res = await fetch(url, {
             method: isEdit ? 'PUT' : 'POST',
@@ -1377,7 +1377,7 @@ async function restoreIfIdExists(editor) {
     const id = qs.get('docfoNo') || qs.get('id')
     if (!id) return
 
-    const res = await fetch(`/forms/${encodeURIComponent(id)}`, {
+    const res = await fetch(`/api/forms/${encodeURIComponent(id)}`, {
         headers: { Accept: 'application/json' },
     })
     if (!res.ok) {

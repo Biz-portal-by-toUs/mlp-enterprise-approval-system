@@ -22,48 +22,42 @@
         .btn.primary{background:var(--primary); color:#fff; border-color:transparent;}
         .btn.danger{background:var(--danger); color:#fff; border-color:transparent;}
         .btn:disabled{opacity:.5; cursor:not-allowed}
+
         .toolbar{display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 14px; align-items:center;}
-        .input, .select{
-            border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:10px; outline:none;
-        }
+        .input, .select{border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:10px; outline:none;}
         .input{min-width:260px;}
         .select{min-width:140px;}
         .rightHint{margin-left:auto; color:var(--muted); font-size:13px;}
         code.k{background:#1118270d; padding:2px 6px; border-radius:6px;}
+
         .table-wrap{padding:0 18px 18px;}
         table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--line); border-radius:12px;}
         thead th{background:#fafbff; text-align:left; font-size:13px; color:#374151; padding:12px 10px; border-bottom:1px solid var(--line);}
         tbody td{padding:12px 10px; border-bottom:1px solid #f0f1f6; font-size:14px; vertical-align:middle;}
         tbody tr:hover{background:#fbfcff;}
-        .badge{display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900; border:1px solid var(--line); background:#fff;}
-        .badge.P{color:#1d4ed8; border-color:#c7d2fe; background:#eef2ff;}
-        .badge.T{color:#b45309; border-color:#fde68a; background:#fffbeb;}
-        .badge.A{color:#047857; border-color:#a7f3d0; background:#ecfdf5;}
-        .badge.R{color:#b91c1c; border-color:#fecaca; background:#fef2f2;}
-        .badge.D{color:#6b7280; border-color:#e5e7eb; background:#f9fafb;}
         .muted{color:var(--muted); font-size:13px;}
-        .link{color:var(--primary); font-weight:900; cursor:pointer; text-decoration:none;}
-        .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; padding:10px 18px 18px;}
-        .pager .info{margin-right:auto; color:var(--muted); font-size:13px;}
-        .toast{position:fixed; right:18px; bottom:18px; background:#111827; color:#fff; padding:10px 12px; border-radius:10px; opacity:0; transform:translateY(8px); transition:.18s;}
-        .toast.show{opacity:1; transform:translateY(0);}
-        .pager-controls{ display:flex; gap:8px; align-items:center; }
-        .pager-controls .num{ min-width:42px; text-align:center; }
-        .pager-controls .num.active{
-            background: var(--primary);
-            color:#fff;
-            border-color: transparent;
-        }
+
+        /* 제목 hover: 파란색 + 밑줄 */
         .titleLink{
             color: inherit;
             text-decoration: none;
-            font-weight: 800;
+            font-weight: 900;
             cursor: pointer;
         }
         .titleLink:hover{
             color: var(--primary);
             text-decoration: underline;
         }
+
+        /* pager */
+        .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; padding:10px 18px 18px;}
+        .pager .info{margin-right:auto; color:var(--muted); font-size:13px;}
+        .pager-controls{display:flex; gap:8px; align-items:center;}
+        .pager-controls .num{min-width:42px; text-align:center;}
+        .pager-controls .num.active{background:var(--primary); color:#fff; border-color:transparent;}
+
+        .toast{position:fixed; right:18px; bottom:18px; background:#111827; color:#fff; padding:10px 12px; border-radius:10px; opacity:0; transform:translateY(8px); transition:.18s;}
+        .toast.show{opacity:1; transform:translateY(0);}
     </style>
 </head>
 
@@ -74,7 +68,8 @@
             <h1 class="title">문서양식 목록</h1>
             <p class="sub">
                 목록 조회는 REST API로 가져오고, 화면 이동은 ViewController로 이동해.<br/>
-                상세는 <code class="k">/document-form/manager/form/{docfoNo}</code>, 작성은 <code class="k">/document-form/manager/form/make-form</code>
+                상세는 <code class="k">/document-form/manager/form/{docfoNo}</code>, 생성은 <code class="k">/document-form/manager/form/make-form</code><br/>
+                * 이 목록은 승인(A) 양식만 보여주는 페이지로 사용
             </p>
         </div>
         <div class="actions">
@@ -90,10 +85,12 @@
             <option value="30">30개</option>
         </select>
         <button class="btn" id="btnSearch">검색</button>
+
+        <!-- 선택 삭제(체크 1개 이상이면 표시) -->
         <button class="btn danger" id="btnBulkDelete" style="display:none;">선택 삭제</button>
 
         <div class="rightHint">
-            API: <code class="k" id="apiLabel">/forms</code>
+            API: <code class="k" id="apiLabel">/api/forms</code>
         </div>
     </div>
 
@@ -113,8 +110,6 @@
 
     <div class="pager">
         <div class="info" id="pageInfo">-</div>
-
-        <!-- 페이지네이션 버튼/번호 들어갈 영역 -->
         <div class="pager-controls" id="pagerControls"></div>
     </div>
 </div>
@@ -122,68 +117,21 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    const API_BASE  = '/forms'; // 나중에 /api/v1/forms로 수정
+    const API_BASE  = '/api/forms';
     const VIEW_BASE = '/document-form/manager/form';
-
     document.getElementById('apiLabel').textContent = API_BASE;
 
     const elTbody   = document.getElementById('tbody');
     const elInfo    = document.getElementById('pageInfo');
-    const elPager = document.getElementById('pagerControls');
+    const elPager   = document.getElementById('pagerControls');
+
     const elQ       = document.getElementById('q');
     const elSize    = document.getElementById('size');
 
+    const elBulkDel = document.getElementById('btnBulkDelete');
     const elToast   = document.getElementById('toast');
 
-    const elBulkDel = document.getElementById('btnBulkDelete');
-    const selected = new Set(); // 선택된 docfoNo 저장
-
-    elTbody.addEventListener('change', (e) => {
-        const cb = e.target;
-        if (!(cb instanceof HTMLInputElement)) return;
-        if (cb.dataset.role !== 'rowCheck') return;
-
-        const id = cb.dataset.id;
-        if (!id) return;
-
-        if (cb.checked) selected.add(id);
-        else selected.delete(id);
-
-        updateBulkDeleteUI();
-    });
-
-    elBulkDel.addEventListener('click', async () => {
-        if (selected.size === 0) return;
-
-        const ids = Array.from(selected);
-        if (!confirm(`선택한 ${ids.length}개를 삭제 처리할까요?`)) return;
-
-        try {
-            elBulkDel.disabled = true;
-
-            for (const docfoNo of ids) {
-                const res = await fetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if(!res.ok){
-                    const t = await res.text().catch(() => '');
-                    throw new Error(`삭제 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
-                }
-            }
-
-            toast('선택 삭제 완료');
-            selected.clear();
-            updateBulkDeleteUI();
-            await load();
-
-        } catch (e) {
-            alert('선택 삭제 실패: ' + (e?.message || e));
-        } finally {
-            elBulkDel.disabled = false;
-        }
-    });
+    const selected = new Set(); // 체크된 docfoNo 저장
 
     let page = 0;
     let totalPages = 1;
@@ -205,17 +153,12 @@
             .replaceAll("'",'&#39;');
     }
 
-    function fmtDate(v){
-        if(!v) return '-';
-        // ISO / timestamp 모두 최대한 커버
-        const d = new Date(v);
-        if(Number.isNaN(d.getTime())) return esc(v);
-        const y = d.getFullYear();
-        const m = String(d.getMonth()+1).padStart(2,'0');
-        const da= String(d.getDate()).padStart(2,'0');
-        const hh= String(d.getHours()).padStart(2,'0');
-        const mm= String(d.getMinutes()).padStart(2,'0');
-        return `${y}-${m}-${da} ${hh}:${mm}`;
+    function openDetail(docfoNo){
+        if(docfoNo == null) return;
+        const id = String(docfoNo);
+        window.open(`${VIEW_BASE}/${encodeURIComponent(id)}`, '_blank',
+            'width=1100,height=820,resizable=yes,scrollbars=yes'
+        );
     }
 
     function updateBulkDeleteUI(){
@@ -228,21 +171,7 @@
         }
     }
 
-    function badge(stat){
-        const s = (stat ?? '').toString();
-        const cls = ['P','T','A','R','D'].includes(s) ? s : '';
-        return `<span class="badge ${cls}">${esc(s || '-')}</span>`;
-    }
-
-    function openDetail(docfoNo){
-        if(docfoNo == null) return;
-        window.open(`${VIEW_BASE}/${encodeURIComponent(String(docfoNo))}`, '_blank',
-            'width=1100,height=820,resizable=yes,scrollbars=yes'
-        );
-    }
-
     function normalizePage(data){
-        // Spring Page 형태: { content:[], totalPages, totalElements, number, size, ... }
         if(data && Array.isArray(data.content)){
             return {
                 items: data.content,
@@ -252,11 +181,9 @@
                 totalElements: data.totalElements ?? data.content.length
             };
         }
-        // 혹시 배열로 바로 올 경우
         if(Array.isArray(data)){
             return { items: data, page: 0, size: data.length, totalPages: 1, totalElements: data.length };
         }
-        // 혹시 { data: { content:[] } } 같은 래핑
         if(data && data.data && Array.isArray(data.data.content)){
             return {
                 items: data.data.content,
@@ -275,19 +202,13 @@
         params.set('size', String(Number(elSize.value) || 15));
 
         const q = elQ.value.trim();
-        const stat = 'A';
-
-        // 백엔드가 어떤 파라미터를 받는지 모르니, 가장 흔한 이름 2개를 같이 보냄:
-        // - name/docfoName
         if(q){
-            params.set('q', q);               // 네가 컨트롤러에서 q로 받으면 OK
-            params.set('docfoName', q);       // docfoName으로 받는 경우 대비
-        }
-        if(stat){
-            params.set('stat', stat);         // stat으로 받는 경우 대비
-            params.set('docfoStat', stat);    // docfoStat으로 받는 경우 대비
+            // 백엔드 파라미터가 q/docfoName 중 뭐든 받을 수 있게 둘 다
+            params.set('q', q);
+            params.set('docfoName', q);
         }
 
+        // 상태 파라미터(stat)는 보내지 않음 (A 고정 페이지)
         return `${API_BASE}?${params.toString()}`;
     }
 
@@ -297,88 +218,34 @@
             return;
         }
 
-        const startNo = page * Number(elSize.value); // 페이지 순번 반영(원치 않으면 0)
+        const startNo = page * (Number(elSize.value) || 15);
 
         elTbody.innerHTML = rows.map((r, idx) => {
             const docfoNo   = r.docfoNo ?? r.id ?? r.docfo_no;
             const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
 
-            const checked = selected.has(String(docfoNo)) ? 'checked' : '';
+            const idStr = String(docfoNo ?? '');
+            const checked = selected.has(idStr) ? 'checked' : '';
             const rowNo = startNo + idx + 1;
 
             return `
-      <tr>
-        <td>
-          <label style="display:flex; gap:10px; align-items:center;">
-            <input type="checkbox" data-role="rowCheck" data-id="${esc(docfoNo)}" ${checked}/>
-            <span>${rowNo}</span>
-          </label>
-        </td>
-        <td>
-          <a class="titleLink" href="javascript:void(0)" onclick="openDetail('${esc(docfoNo)}')">
-            ${esc(docfoName)}
-          </a>
-        </td>
-      </tr>
-    `;
+        <tr>
+          <td>
+            <label style="display:flex; gap:10px; align-items:center;">
+              <input type="checkbox" data-role="rowCheck" data-id="${esc(idStr)}" ${checked}/>
+              <span>${rowNo}</span>
+            </label>
+          </td>
+          <td>
+            <a class="titleLink" href="javascript:void(0)" onclick="openDetail('${esc(idStr)}')">
+              ${esc(docfoName)}
+            </a>
+          </td>
+        </tr>
+      `;
         }).join('');
 
         updateBulkDeleteUI();
-    }
-
-    function renderPager(){
-        if(!elPager) return;
-
-        const tp = Math.max(1, Number(totalPages) || 1);
-        const p = Math.min(Math.max(0, Number(page) || 0), tp - 1);
-
-        // 페이지가 1개면 번호/버튼 자체를 숨길 수도 있음(원하면 유지 가능)
-        // 여기선 깔끔하게 숨김
-        if(tp <= 1){
-            elPager.innerHTML = '';
-            return;
-        }
-
-        // 최대 5개(왼쪽 2개 + 현재 + 오른쪽 2개)
-        let start = p - 2;
-        let end   = p + 2;
-
-        if(start < 0){
-            end += (0 - start);
-            start = 0;
-        }
-        if(end > tp - 1){
-            start -= (end - (tp - 1));
-            end = tp - 1;
-        }
-        start = Math.max(0, start);
-
-        const nums = [];
-        for(let i = start; i <= end; i++) nums.push(i);
-
-        // 남는 페이지 번호는 생략(=tp가 작으면 nums가 2~4개만 나옴)
-
-        const disableFirstPrev = (p <= 0);
-        const disableNextLast  = (p >= tp - 1);
-
-        const btn = (label, disabled, onClick, extraClass='') => {
-            return `<button class="btn ${extraClass}" ${disabled ? 'disabled' : ''} data-go="${onClick}">${label}</button>`;
-        };
-
-        const numBtn = (i) => {
-            const active = i === p ? 'active' : '';
-            return `<button class="btn num ${active}" ${i===p?'disabled':''} data-page="${i}">${i+1}</button>`;
-        };
-
-        elPager.innerHTML = [
-            btn('&laquo;', disableFirstPrev, 'first'), // <<
-            btn('&lsaquo;', disableFirstPrev, 'prev'), // <
-            ...nums.map(numBtn),
-            btn('&rsaquo;', disableNextLast, 'next'),  // >
-            btn('&raquo;', disableNextLast, 'last')    // >>
-        ].join('');
-
-        // 이벤트 위임 (한 번만 걸리도록: innerHTML 바뀌니 elPager에 걸기)
     }
 
     async function load(){
@@ -400,35 +267,81 @@
             totalElements = pg.totalElements ?? 0;
             page = pg.page ?? page;
 
-            renderPager();
-
             elInfo.textContent = `page ${page + 1} / ${totalPages}  ·  total ${totalElements}`;
+
+            renderPager();
             render(pg.items);
 
         }catch(err){
             console.error(err);
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
+            renderPager();
         }
     }
 
-    // expose functions to inline onclick
-    window.openDetail = openDetail;
+    function renderPager(){
+        if(!elPager) return;
 
-    // events
-    document.getElementById('btnRefresh').addEventListener('click', () => load());
-    document.getElementById('btnCreate').addEventListener('click', () => {
-        // 새 양식 만들기(작성 화면)
-        window.open(`${VIEW_BASE}/make-form`, '_blank',
-            'width=1100,height=820,resizable=yes,scrollbars=yes'
-        );
+        const tp = Math.max(1, Number(totalPages) || 1);
+        const p = Math.min(Math.max(0, Number(page) || 0), tp - 1);
+
+        if(tp <= 1){
+            elPager.innerHTML = '';
+            return;
+        }
+
+        let start = p - 2;
+        let end   = p + 2;
+
+        if(start < 0){
+            end += (0 - start);
+            start = 0;
+        }
+        if(end > tp - 1){
+            start -= (end - (tp - 1));
+            end = tp - 1;
+        }
+        start = Math.max(0, start);
+
+        const nums = [];
+        for(let i = start; i <= end; i++) nums.push(i);
+
+        const disableFirstPrev = (p <= 0);
+        const disableNextLast  = (p >= tp - 1);
+
+        const btn = (label, disabled, go, extra='') =>
+            `<button class="btn ${extra}" ${disabled ? 'disabled' : ''} data-go="${go}">${label}</button>`;
+
+        const numBtn = (i) => {
+            const active = i === p ? 'active' : '';
+            return `<button class="btn num ${active}" ${i===p?'disabled':''} data-page="${i}">${i+1}</button>`;
+        };
+
+        elPager.innerHTML = [
+            btn('&laquo;', disableFirstPrev, 'first'),
+            btn('&lsaquo;', disableFirstPrev, 'prev'),
+            ...nums.map(numBtn),
+            btn('&rsaquo;', disableNextLast, 'next'),
+            btn('&raquo;', disableNextLast, 'last')
+        ].join('');
+    }
+
+    // 체크박스 change (tbody 이벤트 위임)
+    elTbody.addEventListener('change', (e) => {
+        const cb = e.target;
+        if(!(cb instanceof HTMLInputElement)) return;
+        if(cb.dataset.role !== 'rowCheck') return;
+
+        const id = cb.dataset.id;
+        if(!id) return;
+
+        if(cb.checked) selected.add(id);
+        else selected.delete(id);
+
+        updateBulkDeleteUI();
     });
 
-    document.getElementById('btnSearch').addEventListener('click', () => { page = 0; load(); });
-
-    elQ.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter'){ page = 0; load(); }
-    });
-
+    // ✅ 페이지네이션 클릭(이벤트 위임)
     elPager.addEventListener('click', (e) => {
         const t = e.target;
         if(!(t instanceof HTMLElement)) return;
@@ -454,7 +367,58 @@
         load();
     });
 
+    // 선택 삭제(B안: softDelete 없음)
+    elBulkDel.addEventListener('click', async () => {
+        if(selected.size === 0) return;
+
+        const ids = Array.from(selected);
+        if(!confirm(`선택한 ${ids.length}개를 삭제 처리할까요? (stat만 D로 변경)`)) return;
+
+        try{
+            elBulkDel.disabled = true;
+
+            for(const docfoNo of ids){
+                const res = await fetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
+                    method: 'DELETE',
+                    headers: {'Content-Type':'application/json'},
+                });
+                if(!res.ok){
+                    const t = await res.text().catch(()=> '');
+                    throw new Error(`삭제 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
+                }
+            }
+
+            toast('선택 삭제 완료');
+            selected.clear();
+            updateBulkDeleteUI();
+            await load();
+
+        }catch(err){
+            console.error(err);
+            alert('선택 삭제 실패: ' + (err?.message || err));
+        }finally{
+            elBulkDel.disabled = false;
+        }
+    });
+
+    // events
+    document.getElementById('btnCreate').addEventListener('click', () => {
+        window.open(`${VIEW_BASE}/make-form`, '_blank',
+            'width=1100,height=820,resizable=yes,scrollbars=yes'
+        );
+    });
+
+    document.getElementById('btnRefresh').addEventListener('click', () => load());
+    document.getElementById('btnSearch').addEventListener('click', () => { page = 0; load(); });
+
+    elQ.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter'){ page = 0; load(); }
+    });
+
     elSize.addEventListener('change', () => { page = 0; load(); });
+
+    // expose for inline onclick (제목 클릭)
+    window.openDetail = openDetail;
 
     // init
     load();

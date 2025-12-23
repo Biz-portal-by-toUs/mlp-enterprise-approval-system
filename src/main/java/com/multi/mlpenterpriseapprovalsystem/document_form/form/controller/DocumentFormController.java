@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @RestController
-@RequestMapping("/forms")
+@RequestMapping("/api/forms")
 @RequiredArgsConstructor
 public class DocumentFormController {
 
@@ -51,7 +51,7 @@ public class DocumentFormController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<DocumentFormListResDto>> getDocumentForms(
+    public ResponseEntity<Page<DocumentFormListResDto>> getApprovedForms(
             @PageableDefault(size = 15) Pageable pageable
     ) {
         return ResponseEntity.ok(
