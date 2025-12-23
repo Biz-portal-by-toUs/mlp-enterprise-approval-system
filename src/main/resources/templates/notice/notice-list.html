@@ -6,50 +6,278 @@
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
     <style>
-        .notice-container { padding: 16px; }
-        .notice-table { width: 100%; border-collapse: collapse; }
-        .notice-table th, .notice-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        .notice-table th { background-color: #f5f5f5; }
-        .notice-table td.title { text-align: left; }
-        .pagination { margin-top: 20px; text-align: center; }
-        .pagination button { margin: 0 3px; padding: 6px 12px; cursor: pointer; }
-        .pagination button.active { background-color: #333; color: #fff; }
+        :root{
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --line: rgba(17, 24, 39, 0.08);
+            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+            --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
 
-        .search-bar {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin: 12px 0 16px;
-            padding: 12px;
-            border: 1px solid #e5e5e5;
-            border-radius: 10px;
-            background: #fafafa;
+            --primary: #3b82f6;
+            --primary2: #2563eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warn: #f59e0b;
         }
-        .search-bar select,
-        .search-bar input {
-            padding: 8px;
-            border: 1px solid #d6d6d6;
-            border-radius: 8px;
-            outline: none;
+
+        *{ box-sizing: border-box; }
+
+        body{
+            margin: 0;
+            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
+            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
+            var(--bg);
+            font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            color: var(--text);
         }
-        .search-bar button {
-            padding: 8px 12px;
-            border: 1px solid #d6d6d6;
-            border-radius: 8px;
-            cursor: pointer;
-            background: #fff;
+
+        /* 전체 레이아웃 */
+        .notice-container{
+            max-width: 980px;
+            margin: 64px auto;
+            padding: 0;
         }
-        .search-hint { font-size: 12px; color: #666; }
-        .hidden { display: none !important; }
-        .top-bar {
+
+        /* 상단 헤더 카드 */
+        .notice-container > h2{
+            margin: 0 0 14px;
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -0.3px;
+            color: var(--text);
+        }
+
+        .notice-container{
+            position: relative;
+        }
+
+        /* 등록 버튼 영역 */
+        .top-bar{
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 40px;
+            margin-bottom: 12px;
         }
+
+        /* 공통 버튼(상세조회 톤과 동일) */
+        .btn{
+            appearance: none;
+            border: 1px solid rgba(17,24,39,.10);
+            background: var(--card);
+            padding: 11px 14px;
+            border-radius: 12px;
+            font-weight: 900;
+            color: var(--text);
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(17,24,39,.06);
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+        }
+
+        .btn:hover{
+            transform: translateY(-1px);
+            box-shadow: var(--shadow2);
+            border-color: rgba(59,130,246,.25);
+            background: rgba(59,130,246,.05);
+        }
+
+        .btn-create{
+            background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
+            border-color: rgba(59,130,246,.25);
+        }
+
+        /* 검색바: 카드형 */
+        .search-bar{
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .search-bar select,
+        .search-bar input[type="text"],
+        .search-bar input[type="date"]{
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid rgba(17,24,39,.10);
+            padding: 0 12px;
+            background: #fff;
+            color: var(--text);
+            font-weight: 700;
+            outline: none;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+
+        .search-bar select{
+            min-width: 120px;
+        }
+
+        .search-bar input[type="text"]{
+            min-width: 260px;
+            flex: 1 1 260px;
+        }
+
+        .search-bar input[type="date"]{
+            min-width: 160px;
+        }
+
+        .search-bar select:focus,
+        .search-bar input:focus{
+            border-color: rgba(59,130,246,.45);
+            box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+        }
+
+        .search-bar button{
+            height: 42px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(17,24,39,.10);
+            background: #fff;
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+
+        .search-bar button:hover{
+            transform: translateY(-1px);
+            border-color: rgba(59,130,246,.35);
+            background: rgba(59,130,246,.06);
+            box-shadow: 0 10px 20px rgba(17,24,39,.06);
+        }
+
+        .search-bar .search-hint{
+            flex: 1 1 100%;
+            color: var(--muted);
+            font-weight: 800;
+            font-size: .9rem;
+            padding: 2px 2px 0 2px;
+        }
+
+        .hidden{ display:none !important; }
+
+        /* 목록 테이블을 “리스트 카드”처럼 */
+        .notice-table{
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .notice-table thead th{
+            text-align: left;
+            font-size: .9rem;
+            color: var(--muted);
+            background: rgba(17,24,39,.03);
+            padding: 14px 14px;
+            border-bottom: 1px solid rgba(17,24,39,.08);
+            font-weight: 900;
+            letter-spacing: -0.2px;
+        }
+
+        .notice-table tbody td{
+            padding: 14px 14px;
+            border-bottom: 1px solid rgba(17,24,39,.06);
+            font-weight: 700;
+            color: var(--text);
+            vertical-align: middle;
+        }
+
+        .notice-table tbody tr:hover td{
+            background: rgba(59,130,246,.05);
+        }
+
+        /* 번호/날짜는 약간 톤 다운 */
+        .notice-table tbody td:first-child,
+        .notice-table tbody td:last-child{
+            color: rgba(31,41,55,.75);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        /* 제목 링크 강조 */
+        .notice-table td.title a{
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 900;
+            letter-spacing: -0.2px;
+        }
+
+        .notice-table td.title a:hover{
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 2px;
+        }
+
+        /* 반응형: 좁아지면 일부 컬럼 숨김 */
+        @media (max-width: 760px){
+            .notice-container{
+                padding: 0 14px;
+            }
+            .notice-table thead th:nth-child(1),
+            .notice-table tbody td:nth-child(1){
+                display: none; /* 번호 숨김 */
+            }
+            .notice-table thead th:nth-child(3),
+            .notice-table tbody td:nth-child(3){
+                display: none; /* 작성자 숨김 */
+            }
+        }
+
+        /* 페이지네이션: 상세조회와 동일 톤 */
+        .pagination{
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pagination button{
+            border: 1px solid rgba(17,24,39,.10);
+            background: #fff;
+            padding: 9px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 900;
+            color: var(--muted);
+            transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+
+        .pagination button:hover{
+            transform: translateY(-1px);
+            border-color: rgba(59,130,246,.35);
+            background: rgba(59,130,246,.06);
+            box-shadow: 0 10px 20px rgba(17,24,39,.06);
+        }
+
+        .pagination button.active{
+            background: rgba(59,130,246,.12);
+            border-color: rgba(59,130,246,.40);
+            color: var(--text);
+        }
+
+        /* 빈 데이터 메시지 */
+        .notice-table tbody td[colspan]{
+            text-align: center;
+            color: var(--muted);
+            font-weight: 900;
+            padding: 20px 14px;
+        }
+
     </style>
+
 </head>
 <body>
 
@@ -73,8 +301,9 @@
         <span id="dateTilde" class="hidden">~</span>
         <input id="toDate" type="date" class="hidden" />
 
-        <button type="button" onclick="applySearch()">검색</button>
-        <button type="button" onclick="resetSearch()">초기화</button>
+        <button type="button" class="btn" onclick="applySearch()">검색</button>
+        <button type="button" class="btn" onclick="resetSearch()">초기화</button>
+
 
         <span class="search-hint" id="searchHint"></span>
     </div>

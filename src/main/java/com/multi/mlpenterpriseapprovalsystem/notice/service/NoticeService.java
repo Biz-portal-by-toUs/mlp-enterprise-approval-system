@@ -202,6 +202,11 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("변경할 공지사항이 없습니다"));
 
+        //Contents 데이타를 string -> json 형태로 전환
+        String contents = dto.getContents();
+        dto.setContents(normalizeToJson(contents));
+        System.out.println("dto.getContents() : " + dto.getContents() + "");
+        System.out.println("dto : " + dto + "");
         notice.update(dto);
     }
 

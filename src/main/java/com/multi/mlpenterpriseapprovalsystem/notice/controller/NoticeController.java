@@ -6,7 +6,6 @@ import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.service.NoticeService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +36,7 @@ public class NoticeController {
 
     //공지사항 등록
     @PostMapping(value = "/notice", consumes = {"multipart/form-data"})
-    public ResponseEntity<ResponseDto> registNotice(@ModelAttribute NoticeReqDto dto,@AuthenticationPrincipal CustomUser customUser){
+    public ResponseEntity<ResponseDto> registNotice(@ModelAttribute NoticeReqDto dto, @AuthenticationPrincipal CustomUser customUser){
         dto.setComId(customUser.getComId());
         dto.setEmpId(customUser.getUsername());
         dto.setRating(0);
@@ -107,11 +106,19 @@ public class NoticeController {
         return ResponseEntity.ok().body(new ResponseDto<NoticeResAllDto>(HttpStatus.OK, "조회 성공", noticeService.detailNotice(noticeNo)));
     }
 
-    //공지사항 수정  --- 일련번호(key로 수정)
-    @PutMapping("/notice/{id}")
-    public ResponseEntity<String> update(@PathVariable(name="id") Long id, @RequestBody @Valid NoticeReqDto dto) {
+    //공지사항 수정  --- 일련번호(key로 수정)  consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    @PutMapping(value = "/notice/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<ResponseDto> update(@PathVariable(name="id") Long id,
+                                              @ModelAttribute NoticeReqDto dto,
+                                              @AuthenticationPrincipal CustomUser customUser  ) {
+        dto.setComId(customUser.getComId());
+        dto.setEmpId(customUser.getUsername());
+        dto.setIsDeleted(false);
         noticeService.updateNotice(id, dto);
-        return ResponseEntity.ok("공지사항이 수정되었습니다.");
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(HttpStatus.OK, "공지사항 수정 성공", null));
     }
 
     // 예) /api/v1/notices?type=title&keyword=공지&page=0&size=10

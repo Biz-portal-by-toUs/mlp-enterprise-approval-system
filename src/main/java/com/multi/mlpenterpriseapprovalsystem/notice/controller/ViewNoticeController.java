@@ -27,7 +27,7 @@ public class ViewNoticeController {
     @GetMapping("/{noticeNo}")
     public String placeDetail(@PathVariable("noticeNo") int noticeNo, Model model) {
         model.addAttribute("noticeNo", noticeNo);
-        return "notice/detail";
+        return "notice/notice-detail";
     }
 
     @GetMapping("/files")
