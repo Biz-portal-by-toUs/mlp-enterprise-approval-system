@@ -44,7 +44,7 @@ public class TempAllService {
         // 부서 세팅
         tempResEmployeeDto.setDepartment(TempResDepartmentDto.toDto(employee.getDepartment()));
         // 포지션 세팅
-        tempResEmployeeDto.setPosition(TempResPositionDto.toDto(employee.getPosition()));
+        tempResEmployeeDto.setPosition(TempResPositionDto.toDto(employee.getPositions()));
         // 대직자 세팅
         tempResEmployeeDto.setDelegate(TempResEmployeeDto.toDto(employee.getDelegate()));
 
