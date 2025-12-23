@@ -146,18 +146,20 @@ public class NoticeService {
     }
 
     @Transactional
-    public void deleteNotice(Long id) {
+    public void deleteNotice(Long noticeNo) {
 
-        Notice notice = noticeRepository.findById(id)
+        Notice notice = noticeRepository.findById(noticeNo)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항 정보가 없습니다")); // 내가 해봄
-        noticeRepository.deleteById(id);
+        noticeRepository.deleteById(noticeNo);
     }
 
     //공지사항 상세 조회
-    public NoticeResAllDto detailNotice(Long id) {
+    @Transactional
+    public NoticeResAllDto detailNotice(Long noticeNo) {
 
-        Notice notice = noticeRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("공지사항이 존재하지 않습니다"));
+        noticeRepository.incrementRating(noticeNo);
 
+        Notice notice = noticeRepository.findById(noticeNo).orElseThrow(() -> new IllegalArgumentException("공지사항이 존재하지 않습니다"));
 
         return NoticeResAllDto.builder()
                 .noticeNo(notice.getNoticeNo())
@@ -171,6 +173,7 @@ public class NoticeService {
                 .empId(notice.getEmployee().getEmpId())
                 .createdAt(notice.getCreatedAt())
                 .updatedAt(notice.getUpdatedAt())
+                .rating(notice.getRating())
                 .build();
 
     }
