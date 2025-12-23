@@ -60,4 +60,14 @@ public class PositionsController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 수정에 성공했습니다.", null));
     }
+
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @DeleteMapping("/{posNo}")
+    public ResponseEntity<ResponseDto<Void>> deletePositions(@PathVariable(name="posNo") Long posNo, @AuthenticationPrincipal CustomUser user) {
+
+        positionsService.deletePositions(user.getComId(), posNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "직급 삭제에 성공했습니다.", null));
+    }
 }

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문서 작성 - 기업용 전자결재시스템</title>
+    <style>
+        :root {
+            --primary-color: #339af0;
+            --border-color: #dee2e6;
+            --bg-light: #f8f9fa;
+            --text-dark: #333;
+            --text-muted: #868e96;
+        }
+
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background-color: #f1f3f5; margin: 0; padding: 20px; color: var(--text-dark); }
+        .main-container {
+            max-width: 1000px; margin: 0 auto; background: white; padding: 40px;
+            border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* 헤더 영역 */
+        .page-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 15px; margin-bottom: 25px; }
+        .page-title { font-size: 24px; font-weight: 700; color: var(--primary-color); }
+        .header-btns { display: flex; gap: 8px; }
+
+        /* 공용 버튼 */
+        .btn { padding: 10px 20px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-color); transition: 0.2s; }
+        .btn-primary { background: var(--primary-color); color: white; border: none; }
+        .btn-primary:hover { background: #228be6; }
+        .btn-temp { background: white; color: var(--text-dark); }
+        .btn-temp:hover { background: var(--bg-light); }
+        .btn-cancel { background: #adb5bd; color: white; border: none; }
+
+        /* 상단 레이아웃 (문서정보 / 결재선) */
+        .top-section { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; margin-bottom: 20px; }
+
+        .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .doc-table th { background: var(--bg-light); border: 1px solid var(--border-color); padding: 10px; width: 100px; text-align: center; }
+        .doc-table td { border: 1px solid var(--border-color); padding: 10px; }
+        .readonly-input { border: none; width: 100%; background: transparent; outline: none; color: #555; }
+
+        /* 결재자 검색 영역 */
+        .search-container { border: 1px solid var(--border-color); border-radius: 4px; display: flex; flex-direction: column; height: 250px; }
+        .search-header { padding: 10px; background: var(--bg-light); border-bottom: 1px solid var(--border-color); font-weight: bold; }
+        .search-input-wrap { padding: 8px; border-bottom: 1px solid #eee; }
+        #approver-search { width: calc(100% - 16px); padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; }
+
+        .search-results { flex: 1; overflow-y: auto; }
+        .result-item { padding: 8px 12px; display: flex; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #f8f9fa; }
+        .result-item:hover { background: #e7f5ff; }
+        .result-item .emp-info { font-size: 13px; }
+        .result-item .emp-meta { font-size: 11px; color: var(--text-muted); }
+
+        /* 선택된 결재자 태그 */
+        .selected-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; min-height: 40px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 20px; background: var(--bg-light); }
+        .approver-tag { background: white; border: 1px solid var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+        .remove-tag { cursor: pointer; color: #fa5252; font-weight: bold; }
+
+        /* 문서 내용 입력 */
+        .input-title { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 15px; margin-bottom: 15px; }
+        .input-content { width: 100%; min-height: 300px; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; resize: vertical; font-size: 14px; line-height: 1.6; }
+
+        /* 알림창 */
+        .alert { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 4px; color: white; z-index: 1000; display: none; }
+        .alert-success { background: #40c057; }
+        .alert-error { background: #fa5252; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="page-header">
+        <div class="page-title">새 결재 문서 작성</div>
+        <div class="header-btns">
+            <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
+            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서상신</button>
+            <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
+        </div>
+    </div>
+
+    <div class="top-section">
+        <div>
+            <table class="doc-table">
+                <tr><th>문서코드</th><td><input type="text" class="readonly-input" value="최종 승인 시 생성" readonly></td></tr>
+                <tr><th>작성부서</th><td><input type="text" id="writer-dept" class="readonly-input" placeholder="불러오는 중..." readonly></td></tr>
+                <tr><th>작성자</th><td><input type="text" id="writer-name" class="readonly-input" placeholder="불러오는 중..." readonly></td></tr>
+                <tr><th>상신일자</th><td><input type="text" id="write-date" class="readonly-input" readonly></td></tr>
+                <tr><th>전화번호</th><td><input type="text" id="writer-phone" class="readonly-input" placeholder="불러오는 중..." readonly></td></tr>
+            </table>
+        </div>
+
+        <div class="search-container">
+            <div class="search-header">결재선 지정</div>
+            <div class="search-input-wrap">
+                <input type="text" id="approver-search" placeholder="성명 또는 사번 입력" autocomplete="off">
+            </div>
+            <div class="search-results" id="search-results">
+                <div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">결재자를 검색해 주세요.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="selected-list" id="selected-list">
+        <span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>
+    </div>
+
+    <div class="content-section">
+        <input type="text" id="doc-title" class="input-title" placeholder="문서 제목을 입력하세요">
+        <textarea id="doc-content" class="input-content" placeholder="내용을 입력하세요."></textarea>
+
+        <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn btn-temp" style="padding: 5px 10px; font-size: 12px;" onclick="generateAiSummary()">AI 요약</button>
+            <label style="font-size: 13px; color: #666;">
+                <input type="checkbox" id="include-ai-summ"> 요약본 포함
+            </label>
+        </div>
+        <div id="ai-summary-box" style="display:none; margin-top:10px; padding:10px; background:#f1f3f5; border-radius:4px; font-size:13px;">
+            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
+        </div>
+    </div>
+</div>
+
+<div id="custom-alert" class="alert"></div>
+
+<script>
+    // 전역 변수: 내 정보 저장용
+    let myInfo = {
+        empId: null,
+        comId: null,
+        empName: null,
+        deptName: null,
+        workPhone: null
+    };
+
+    let selectedApprovers = [];
+    let searchTimeout = null;
+    const MAX_APPROVERS = 5;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. 날짜 초기화
+        document.getElementById('write-date').value = new Date().toLocaleDateString();
+
+        // 2. 내 정보 로드 (API 호출)
+        fetchMyEmployeeInfo();
+
+        // 3. 결재선 검색 관련 이벤트
+        const searchInput = document.getElementById('approver-search');
+        searchInput.addEventListener('focus', () => {
+            const keyword = searchInput.value.trim();
+            fetchEmployees(keyword);
+        });
+        searchInput.addEventListener('input', (e) => {
+            const keyword = e.target.value.trim();
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => fetchEmployees(keyword), 300);
+        });
+    });
+
+    // ✅ [핵심 기능] 내 정보 조회 API 호출 연동
+    async function fetchMyEmployeeInfo() {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch('/api/v1/temp/employees/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json(); // ResponseDto<TempResEmployeeDto>
+
+            if (response.ok && result.data) {
+                const data = result.data;
+                // 전역 변수에 정보 보관
+                myInfo = {
+                    empId: data.empId,
+                    comId: data.department ? data.department.comId : "C01", // 부서 정보 내 comId 추출
+                    empName: data.empName,
+                    deptName: data.department ? data.department.depName : "미소속",
+                    workPhone: data.workPhone || "전화번호 없음"
+                };
+
+                // 화면 UI에 반영
+                document.getElementById('writer-name').value = myInfo.empName;
+                document.getElementById('writer-dept').value = myInfo.deptName;
+                document.getElementById('writer-phone').value = myInfo.workPhone;
+            } else {
+                showAlert("작성자 정보를 불러오는데 실패했습니다.", "error");
+            }
+        } catch (error) {
+            console.error("Fetch My Info Failed:", error);
+            showAlert("서버 통신 중 오류가 발생했습니다.", "error");
+        }
+    }
+
+    // 사원 검색 API 호출 (ResChatEmployeeCursorDto 연동)
+    async function fetchEmployees(keyword) {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`/api/v1/employees?keyword=${encodeURIComponent(keyword)}&size=30&excludeMe=true`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            renderSearchResults(result.items || []);
+        } catch (error) {
+            console.error("Employee search failed", error);
+        }
+    }
+
+    function renderSearchResults(employees) {
+        const container = document.getElementById('search-results');
+        if (employees.length === 0) {
+            container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과가 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = employees.map(emp => {
+            const isSelected = selectedApprovers.some(a => a.approverId === emp.empId);
+            return `
+                <div class="result-item"
+                     onclick="${isSelected ? 'showAlert(\'이미 추가된 결재자입니다.\', \'error\')' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName}', '${emp.depName}')`}"
+                     style="${isSelected ? 'opacity:0.5; cursor:not-allowed;' : ''}">
+                    <div class="emp-info">
+                        <strong>${emp.empName}</strong> ${emp.posName}
+                        <div class="emp-meta">${emp.depName} | ${emp.empId}</div>
+                    </div>
+                    <div style="color:var(--primary-color); font-weight:bold;">${isSelected ? '추가됨' : '+'}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function addApprover(id, name, pos, dept) {
+        if (selectedApprovers.some(a => a.approverId === id)) {
+            showAlert("이미 추가된 결재자입니다.", "error");
+            return;
+        }
+
+        if (selectedApprovers.length >= MAX_APPROVERS) {
+            showAlert("결재자는 최대 5명까지입니다.", "error");
+            return;
+        }
+
+        selectedApprovers.push({
+            approverId: id,
+            approverName: name,
+            posName: pos || '사원',
+            depName: dept,
+            seq: selectedApprovers.length + 1
+        });
+
+        renderSelectedTags();
+        document.getElementById('approver-search').value = '';
+        document.getElementById('search-results').innerHTML =
+            '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">결재자를 검색해 주세요.</div>';
+    }
+
+    function renderSelectedTags() {
+        const container = document.getElementById('selected-list');
+        if (selectedApprovers.length === 0) {
+            container.innerHTML = '<span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>';
+            return;
+        }
+
+        container.innerHTML = selectedApprovers.map((a, i) => `
+            <span class="approver-tag">
+                <small style="color:var(--primary-color); font-weight:bold;">${i+1}</small>
+                ${a.approverName} ${a.posName}
+                <span class="remove-tag" onclick="removeApprover('${a.approverId}')">×</span>
+            </span>
+        `).join('');
+    }
+
+    function removeApprover(id) {
+        selectedApprovers = selectedApprovers.filter(a => a.approverId !== id);
+        selectedApprovers.forEach((a, i) => a.seq = i + 1);
+        renderSelectedTags();
+    }
+
+    // 문서 상신 (백엔드 ReqDocumentDto 구조 연동)
+    async function saveDocument(isTemp) {
+        const title = document.getElementById('doc-title').value.trim();
+        const content = document.getElementById('doc-content').value.trim();
+
+        if (!title || !content) return showAlert("제목과 내용을 입력하세요.", "error");
+        if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 지정하세요.", "error");
+
+        // ✅ API에서 가져온 정보(myInfo)를 payload에 동적으로 할당
+        const payload = {
+            comId: myInfo.comId,
+            writerId: myInfo.empId,
+            writerName: myInfo.empName,
+            writerDepName: myInfo.deptName,
+            writerWorkPhone: myInfo.workPhone,
+            title: title,
+            content: content,
+            cnttHtml: `<div>${content.replace(/\n/g, '<br>')}</div>`,
+            temp: isTemp,
+            aiSumm: document.getElementById('include-ai-summ').checked ? document.getElementById('ai-summary-text').innerText : null,
+            docfoNo: 1, // 필요 시 문서 양식 선택 기능 연동 가능
+            docfoCatNo: 1,
+            submittedAt: new Date().toISOString(),
+            approvalLines: selectedApprovers.map((a, i) => ({
+                approverId: a.approverId,
+                approverName: a.approverName,
+                seq: i + 1,
+                comId: myInfo.comId,
+                apprStat: isTemp ? "W" : (i === 0 ? "I" : "W")
+            }))
+        };
+
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch('/api/v1/documents', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                showAlert(isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.", "success");
+                setTimeout(() => location.href = "/documents/me", 1500);
+            } else {
+                const err = await response.json();
+                showAlert(err.message || "저장에 실패했습니다.", "error");
+            }
+        } catch (e) {
+            showAlert("서버 통신 오류가 발생했습니다.", "error");
+        }
+    }
+
+    function generateAiSummary() {
+        const text = document.getElementById('doc-content').value;
+        if (text.length < 5) return;
+        document.getElementById('ai-summary-box').style.display = 'block';
+        document.getElementById('ai-summary-text').innerText = text.substring(0, 30) + "... 승인 요청 건";
+    }
+
+    function showAlert(msg, type) {
+        const alert = document.getElementById('custom-alert');
+        alert.innerText = msg;
+        alert.className = `alert alert-${type}`;
+        alert.style.display = 'block';
+        setTimeout(() => alert.style.display = 'none', 3000);
+    }
+</script>
+
+</body>
+</html>

@@ -21,6 +21,7 @@ import lombok.NoArgsConstructor;
 public class Department {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "dep_no")
     private Long depNo;
 
     // [주의] unique = true를 붙이지 않습니다.

@@ -37,19 +37,152 @@
             border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;
             background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(47,111,218,.25);
         }
+
         .card{ background:var(--card); border-radius:18px; padding:22px; min-height:520px; }
-        .table{ width:100%; border-collapse:separate; border-spacing:0 14px; }
-        .thead{ background:#fff;border-radius:14px; }
-        .thead th{ text-align:left; padding:14px 18px; font-size:14px; color:#111; }
-        .row{ background:#fff;border-radius:14px; }
-        .row td{ padding:18px; font-size:14px; color:#111; }
+
+        /* ✅ 고정 레이아웃 + colgroup 폭 고정 */
+        .table{
+            width:100%;
+            border-collapse:separate;
+            border-spacing:0 14px;
+            table-layout:fixed;
+        }
+
+        .thead th{
+            background:#fff;
+            text-align:left;
+            padding:14px 18px;
+            font-size:14px;
+            color:#111;
+            white-space:nowrap;
+        }
+        .thead th:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
+        .thead th:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+
+        .row td{
+            background:#fff;
+            padding:18px;
+            font-size:14px;
+            color:#111;
+            vertical-align:middle;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
         .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
         .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+
         .muted{color:var(--muted)}
-        .pill-btn{ padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px; }
+
+        .pill-btn{
+            padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px;
+            white-space:nowrap;
+        }
         .pill-edit{background:#eaf2ff;color:#2b5db8}
-        .pill-del{background:#fdecec;color:#c62828;margin-left:10px}
+        .pill-del{background:#fdecec;color:#c62828}
+
         .empty{ padding:40px 10px;text-align:center;color:var(--muted);font-weight:700 }
+
+        .center{text-align:center}
+        .manage-wrap{
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            gap:10px;
+        }
+
+        /* ✅ Toast */
+        .toast{
+            position:fixed;
+            left:50%;
+            bottom:22px;
+            transform:translateX(-50%);
+            background:#111;
+            color:#fff;
+            padding:12px 14px;
+            border-radius:12px;
+            font-weight:800;
+            font-size:14px;
+            box-shadow:0 14px 28px rgba(0,0,0,.18);
+            opacity:0;
+            pointer-events:none;
+            transition:opacity .18s ease, transform .18s ease;
+            z-index:9999;
+        }
+        .toast.show{
+            opacity:1;
+            transform:translateX(-50%) translateY(-2px);
+        }
+        .toast.ok{ background:#0f6b2f; }
+        .toast.err{ background:#c62828; }
+
+        /* ✅ Confirm Modal */
+        .modal-backdrop{
+            position:fixed; inset:0;
+            background:rgba(17,24,39,.45);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            z-index:9998;
+            padding:18px;
+        }
+        .modal{
+            width:min(520px, 100%);
+            background:#fff;
+            border-radius:18px;
+            box-shadow:0 18px 45px rgba(0,0,0,.22);
+            border:1px solid var(--line);
+            overflow:hidden;
+        }
+        .modal-head{
+            padding:18px 20px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            background:#fff;
+        }
+        .modal-title{
+            font-size:16px;
+            font-weight:900;
+        }
+        .modal-body{
+            padding:0 20px 18px 20px;
+            color:#111;
+        }
+        .modal-warning{
+            margin-top:10px;
+            padding:12px 14px;
+            border-radius:12px;
+            background:#fff2f2;
+            color:#b91c1c;
+            font-weight:900;
+            font-size:13px;
+            line-height:1.35;
+            border:1px solid #ffd1d1;
+        }
+        .modal-actions{
+            padding:16px 20px;
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            background:#fbfbfd;
+            border-top:1px solid var(--line);
+        }
+        .btn2{
+            border:0;border-radius:12px;padding:12px 16px;font-weight:900;cursor:pointer;
+        }
+        .btn2.ghost{
+            background:#eef4ff;color:#2b5db8;border:1px solid #d9e6ff;
+        }
+        .btn2.danger{
+            background:#c62828;color:#fff;
+        }
+        .xbtn{
+            border:0;background:transparent;cursor:pointer;
+            font-size:20px;line-height:1;color:#6b7280;
+            padding:6px 10px;border-radius:10px;
+        }
+        .xbtn:hover{background:#f3f4f6}
     </style>
 </head>
 <body>
@@ -91,12 +224,21 @@
 
         <section class="card">
             <table class="table">
-                <thead class="thead">
-                <tr>
-                    <th style="width:18%;">No</th>
-                    <th style="width:42%;">직급명</th>
-                    <th style="width:18%;">사원 수</th>
-                    <th style="width:22%;">관리</th>
+                <colgroup>
+                    <col style="width:10%;">  <!-- No -->
+                    <col style="width:40%;">  <!-- 직급명 -->
+                    <col style="width:12%;">  <!-- 순서 -->
+                    <col style="width:13%;">  <!-- 사원 수 -->
+                    <col style="width:25%;">  <!-- 관리 -->
+                </colgroup>
+
+                <thead>
+                <tr class="thead">
+                    <th>No</th>
+                    <th>직급명</th>
+                    <th class="center">순서</th>
+                    <th class="center">사원 수</th>
+                    <th class="center">관리</th>
                 </tr>
                 </thead>
 
@@ -108,6 +250,30 @@
     </main>
 </div>
 
+<!-- ✅ Confirm Modal -->
+<div id="confirmBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="modal-title">직급 삭제</div>
+            <button class="xbtn" type="button" onclick="closeConfirm()">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="confirmText" style="font-weight:900; font-size:14px; line-height:1.4;"></div>
+            <div class="modal-warning">
+                ⚠️ 삭제 후에는 <b>복구가 불가능</b>합니다.<br/>
+                해당 직급을 사용하는 사원/데이터가 있다면 삭제가 실패할 수 있습니다.
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn2 ghost" type="button" onclick="closeConfirm()">취소</button>
+            <button class="btn2 danger" type="button" onclick="confirmDelete()">삭제하기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Toast -->
+<div id="toast" class="toast" aria-live="polite"></div>
+
 <script>
     function getAccessToken() {
         return (
@@ -117,6 +283,38 @@
             sessionStorage.getItem("jwt")
         );
     }
+
+    // ===== Toast =====
+    let toastTimer = null;
+    function showToast(type, text) {
+        const el = document.getElementById("toast");
+        el.className = "toast " + (type === "ok" ? "ok" : "err");
+        el.textContent = text;
+        el.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+    }
+
+    // ===== Confirm Modal =====
+    let pendingDelete = null; // { posNo, posName }
+    function openConfirm(posNo, posName) {
+        pendingDelete = { posNo, posName };
+        document.getElementById("confirmText").textContent =
+            `정말로 "${posName}" 직급을 삭제할까요?`;
+        const bd = document.getElementById("confirmBackdrop");
+        bd.style.display = "flex";
+        bd.setAttribute("aria-hidden", "false");
+    }
+    function closeConfirm() {
+        pendingDelete = null;
+        const bd = document.getElementById("confirmBackdrop");
+        bd.style.display = "none";
+        bd.setAttribute("aria-hidden", "true");
+    }
+    // 바깥 클릭 시 닫기
+    document.getElementById("confirmBackdrop").addEventListener("click", (e) => {
+        if (e.target.id === "confirmBackdrop") closeConfirm();
+    });
 
     async function loadPositions() {
         const token = getAccessToken();
@@ -170,26 +368,96 @@
             tr.className = "row";
             const displayNo = idx + 1;
 
+            const posName = escapeHtml(p.posName ?? "");
+
+            // 숫자 0도 표시되게 (null/undefined만 "-" 처리)
+            const posOrderVal = (p.posOrder === null || p.posOrder === undefined) ? "-" : String(p.posOrder);
+            const posOrder = escapeHtml(posOrderVal);
+
+            const empCount = Number(p.empCount ?? 0).toLocaleString();
+            const posNo = Number(p.posNo);
+
             tr.innerHTML = `
               <td>${displayNo}</td>
-              <td>${escapeHtml(p.posName ?? "")}</td>
-              <td>${Number(p.empCount ?? 0).toLocaleString()}</td>
-              <td>
-                <button class="pill-btn pill-edit" type="button" onclick="onEdit(${Number(p.posNo)})">수정</button>
-                <button class="pill-btn pill-del" type="button" onclick="onDelete(${Number(p.posNo)})">삭제</button>
+              <td>${posName}</td>
+              <td class="center">${posOrder}</td>
+              <td class="center">${empCount}</td>
+              <td class="center">
+                <div class="manage-wrap">
+                  <button class="pill-btn pill-edit" type="button" onclick="onEdit(${posNo})">수정</button>
+                  <button class="pill-btn pill-del" type="button" onclick="onDeleteClick(${posNo}, '${posName.replaceAll("'", "\\'")}')">삭제</button>
+                </div>
               </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // ✅ 수정 버튼 클릭 시 update.html로 이동 (viewController가 이 URL을 update.html로 렌더링하면 됨)
     function onEdit(posNo) {
         location.href = "/admin/positions/" + posNo + "/edit";
     }
 
-    function onDelete(posNo) {
-        alert("삭제: " + posNo);
+    // ✅ 삭제 버튼 클릭 -> 모달 오픈
+    function onDeleteClick(posNo, posName) {
+        const token = getAccessToken();
+        if (!token) {
+            showToast("err", "로그인이 필요합니다. (토큰 없음)");
+            return;
+        }
+        openConfirm(posNo, posName);
+    }
+
+    // ✅ 모달에서 "삭제하기" 눌렀을 때 실제 DELETE 호출
+    async function confirmDelete() {
+        if (!pendingDelete) return;
+
+        const { posNo, posName } = pendingDelete;
+        const token = getAccessToken();
+        if (!token) {
+            closeConfirm();
+            showToast("err", "로그인이 필요합니다. (토큰 없음)");
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/v1/admin/positions/${posNo}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/json"
+                }
+            });
+
+            if (res.status === 401) {
+                closeConfirm();
+                showToast("err", "인증이 만료되었습니다. 다시 로그인 해주세요.");
+                return;
+            }
+            if (res.status === 403) {
+                closeConfirm();
+                showToast("err", "권한이 없습니다. (COM_ADMIN만 가능)");
+                return;
+            }
+
+            if (!res.ok) {
+                let msg = `직급 삭제 중 오류가 발생했습니다. (${res.status})`;
+                try {
+                    const json = await res.json();
+                    if (json && (json.message || json.msg)) msg = json.message || json.msg;
+                } catch (e) {}
+                closeConfirm();
+                showToast("err", msg);
+                return;
+            }
+
+            closeConfirm();
+            showToast("ok", `"${posName}" 직급이 삭제되었습니다.`);
+            await loadPositions();
+        } catch (err) {
+            console.error(err);
+            closeConfirm();
+            showToast("err", "직급 삭제 중 예외가 발생했습니다.");
+        }
     }
 
     function escapeHtml(str) {

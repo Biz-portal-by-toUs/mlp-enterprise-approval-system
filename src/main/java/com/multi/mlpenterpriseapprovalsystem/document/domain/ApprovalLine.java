@@ -44,4 +44,33 @@ public class ApprovalLine {
 
     // 결재 시간이므로 직접 시간을 넣어줘야함
     private LocalDateTime endedAt;
+
+    // 실제 결재자 여부
+    @Column(name = "is_actual_appr", nullable = false)
+    private Boolean isActualAppr;
+
+    @Column(name = "rej_reason", columnDefinition = "text")
+    private String rejReason;
+
+    @Column(name = "is_delegate", nullable = false)
+    Boolean isDelegate = false;
+
+    public static ApprovalLine toEntity(Document document,
+                                        Employee approver,
+                                        Company company,
+                                        int seq,
+                                        ApprStat apprStat,
+                                        boolean isDelegate) {
+        return ApprovalLine.builder()
+                .document(document)
+                .approver(approver)
+                .company(company)
+                .seq(seq)
+                .apprStat(apprStat)
+                .endedAt(null)
+                .isActualAppr(false)
+                .isDelegate(isDelegate)
+                .rejReason(null)
+                .build();
+    }
 }
