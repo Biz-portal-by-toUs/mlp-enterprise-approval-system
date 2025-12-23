@@ -83,6 +83,7 @@ public enum ErrorCode {
     // 직급 관련
     DUPLICATE_POSNAME(HttpStatus.CONFLICT, "DUPLICATE_POSNAME", "이미 존재하는 직급 이름입니다"),
     POSITIONS_NOT_FOUND(HttpStatus.NOT_FOUND, "POSITIONS_NOT_FOUND", "직급을 찾을 수 없습니다"),
+    POSITIONS_DELETE_HAS_EMPLOYEES(HttpStatus.BAD_REQUEST, "POSITIONS_DELETE_HAS_EMPLOYEES", "사원이 존재하므로 삭제할 수 없습니다"),
 
 
 
