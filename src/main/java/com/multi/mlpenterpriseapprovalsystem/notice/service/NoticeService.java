@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.notice.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
@@ -157,12 +158,13 @@ public class NoticeService {
 
         Notice notice = noticeRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("공지사항이 존재하지 않습니다"));
 
+
         return NoticeResAllDto.builder()
                 .noticeNo(notice.getNoticeNo())
                 .compId(notice.getCompany().getComId())
                 .isDeleted(notice.getIsDeleted())
                 .title(notice.getTitle())
-                .contents(notice.getContents())
+                .contents(denormalizeFromJson(notice.getContents()))
                 .isPopup(notice.getIsPopup())
                 .startedAt(notice.getStartedAt())
                 .endedAt(notice.getEndedAt())
@@ -171,6 +173,28 @@ public class NoticeService {
                 .updatedAt(notice.getUpdatedAt())
                 .build();
 
+    }
+
+    private String denormalizeFromJson(String json) {
+        if (json == null || json.isBlank()) {
+            return json;
+        }
+
+        try {
+            JsonNode node = om.readTree(json);
+
+            // normalizeToJson에서 감싼 {"text": "..."} 인 경우
+            if (node.isObject() && node.size() == 1 && node.has("text")) {
+                return node.get("text").asText();
+            }
+
+            // 그 외(JSON Object/Array)는 그대로 문자열로 반환
+            return node.toString();
+
+        } catch (Exception e) {
+            // JSON 파싱 실패 = 이미 그냥 문자열일 가능성
+            return json;
+        }
     }
 
     @Transactional
