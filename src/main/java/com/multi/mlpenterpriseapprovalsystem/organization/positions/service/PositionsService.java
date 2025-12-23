@@ -38,7 +38,7 @@ public class PositionsService {
     public List<ResPositionsDto> getPositions(String comId) {
 
         // 1) 직급 목록
-        List<Positions> positions = positionsRepository.findAllByCompany_ComId(comId);
+        List<Positions> positions = positionsRepository.findAllByCompany_ComIdOrderByPosOrderAsc(comId);
         if (positions.isEmpty()) {
             return List.of();
         }
@@ -55,6 +55,7 @@ public class PositionsService {
                 .map(p -> ResPositionsDto.builder()
                         .posName(p.getPosName())
                         .posNo(p.getPosNo())
+                        .posOrder(p.getPosOrder())
                         .empCount(countMap.getOrDefault(p.getPosNo(), 0L))
                         .build())
                 .toList();
@@ -71,7 +72,7 @@ public class PositionsService {
             throw new CustomException(ErrorCode.DUPLICATE_DEPNAME);
         }
 
-        Positions positions = Positions.of(company, reqPositionsDto.getPosName().trim());
+        Positions positions = Positions.of(company, reqPositionsDto.getPosName().trim(), reqPositionsDto.getPosOrder());
         positionsRepository.save(positions);
     }
 
@@ -96,7 +97,7 @@ public class PositionsService {
         }
 
         // 3) 반영
-        positions.update(newPosName);
+        positions.update(newPosName, reqPositionsDto.getPosOrder());
         // JPA dirty checking으로 save() 없어도 됨
     }
 }

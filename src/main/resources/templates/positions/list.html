@@ -37,19 +37,59 @@
             border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;
             background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(47,111,218,.25);
         }
+
         .card{ background:var(--card); border-radius:18px; padding:22px; min-height:520px; }
-        .table{ width:100%; border-collapse:separate; border-spacing:0 14px; }
-        .thead{ background:#fff;border-radius:14px; }
-        .thead th{ text-align:left; padding:14px 18px; font-size:14px; color:#111; }
-        .row{ background:#fff;border-radius:14px; }
-        .row td{ padding:18px; font-size:14px; color:#111; }
+
+        /* ✅ 핵심: 고정 레이아웃 + colgroup 폭 고정 */
+        .table{
+            width:100%;
+            border-collapse:separate;
+            border-spacing:0 14px;
+            table-layout:fixed;
+        }
+
+        .thead th{
+            background:#fff;
+            text-align:left;
+            padding:14px 18px;
+            font-size:14px;
+            color:#111;
+            white-space:nowrap;
+        }
+        .thead th:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
+        .thead th:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+
+        .row td{
+            background:#fff;
+            padding:18px;
+            font-size:14px;
+            color:#111;
+            vertical-align:middle;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
         .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
         .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+
         .muted{color:var(--muted)}
-        .pill-btn{ padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px; }
+
+        .pill-btn{
+            padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px;
+            white-space:nowrap;
+        }
         .pill-edit{background:#eaf2ff;color:#2b5db8}
-        .pill-del{background:#fdecec;color:#c62828;margin-left:10px}
+        .pill-del{background:#fdecec;color:#c62828}
+
         .empty{ padding:40px 10px;text-align:center;color:var(--muted);font-weight:700 }
+
+        .center{text-align:center}
+        .manage-wrap{
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            gap:10px;
+        }
     </style>
 </head>
 <body>
@@ -91,12 +131,22 @@
 
         <section class="card">
             <table class="table">
-                <thead class="thead">
-                <tr>
-                    <th style="width:18%;">No</th>
-                    <th style="width:42%;">직급명</th>
-                    <th style="width:18%;">사원 수</th>
-                    <th style="width:22%;">관리</th>
+                <!-- ✅ 여기서 컬럼 폭을 “고정” -->
+                <colgroup>
+                    <col style="width:10%;">  <!-- No -->
+                    <col style="width:40%;">  <!-- 직급명 -->
+                    <col style="width:12%;">  <!-- 순서 -->
+                    <col style="width:13%;">  <!-- 사원 수 -->
+                    <col style="width:25%;">  <!-- 관리 -->
+                </colgroup>
+
+                <thead>
+                <tr class="thead">
+                    <th>No</th>
+                    <th>직급명</th>
+                    <th class="center">순서</th>
+                    <th class="center">사원 수</th>
+                    <th class="center">관리</th>
                 </tr>
                 </thead>
 
@@ -170,20 +220,27 @@
             tr.className = "row";
             const displayNo = idx + 1;
 
+            const posName = escapeHtml(p.posName ?? "");
+            const posOrder = (p.posOrder === null || p.posOrder === undefined) ? "-" : Number(p.posOrder);
+            const empCount = Number(p.empCount ?? 0).toLocaleString();
+            const posNo = Number(p.posNo);
+
             tr.innerHTML = `
               <td>${displayNo}</td>
-              <td>${escapeHtml(p.posName ?? "")}</td>
-              <td>${Number(p.empCount ?? 0).toLocaleString()}</td>
-              <td>
-                <button class="pill-btn pill-edit" type="button" onclick="onEdit(${Number(p.posNo)})">수정</button>
-                <button class="pill-btn pill-del" type="button" onclick="onDelete(${Number(p.posNo)})">삭제</button>
+              <td>${posName}</td>
+              <td class="center">${escapeHtml(posOrder)}</td>
+              <td class="center">${empCount}</td>
+              <td class="center">
+                <div class="manage-wrap">
+                  <button class="pill-btn pill-edit" type="button" onclick="onEdit(${posNo})">수정</button>
+                  <button class="pill-btn pill-del" type="button" onclick="onDelete(${posNo})">삭제</button>
+                </div>
               </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // ✅ 수정 버튼 클릭 시 update.html로 이동 (viewController가 이 URL을 update.html로 렌더링하면 됨)
     function onEdit(posNo) {
         location.href = "/admin/positions/" + posNo + "/edit";
     }

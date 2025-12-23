@@ -24,20 +24,25 @@ public class Positions {
     @Column(nullable = false, length = 10)
     private String posName;
 
+    @Column(name = "pos_order")
+    private Integer posOrder;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
     private Company company;
 
-    private Positions(Company company, String posName) {
+    private Positions(Company company, String posName, Integer posOrder) {
         this.company = company;
         this.posName = posName;
+        this.posOrder = posOrder;
     }
 
-    public static Positions of(Company company, String posName) {
-        return new Positions(company, posName);
-    } // 이 형식으로 넣어야지만 생성이 가능하게
+    public static Positions of(Company company, String posName, Integer posOrder) {
+        return new Positions(company, posName, posOrder);
+    }
 
-    public void update(String posName) {
+    public void update(String posName, Integer posOrder) {
         this.posName = posName;
+        this.posOrder = posOrder;
     }
 }

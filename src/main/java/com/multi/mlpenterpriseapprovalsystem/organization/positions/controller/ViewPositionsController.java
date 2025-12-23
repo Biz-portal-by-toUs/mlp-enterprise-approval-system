@@ -56,6 +56,7 @@ public class ViewPositionsController {
         // 2. 모델에 직급 정보 담기
         model.addAttribute("posName", positions.getPosName());
         model.addAttribute("posNo", posNo);
+        model.addAttribute("posOrder", positions.getPosOrder());
 
         // 3. 로그인한 유저 정보가 필요하다면?
         model.addAttribute("username", user != null ? user.getUsername() : "");

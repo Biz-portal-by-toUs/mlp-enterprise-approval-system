@@ -40,7 +40,7 @@
         .label{font-weight:900;margin-bottom:10px}
         .input{
             width:100%;height:46px;border-radius:12px;border:1px solid var(--line);
-            padding:0 14px;font-size:14px;outline:none;
+            padding:0 14px;font-size:14px;outline:none;background:#fff;
         }
         .help{margin-top:8px;font-size:13px;color:var(--muted);font-weight:700}
         .msg{margin-top:10px;font-size:13px;font-weight:900;display:none}
@@ -95,6 +95,15 @@
                     <div class="label">직급명</div>
                     <input id="posName" class="input" type="text" placeholder="예) 대리, 과장, 팀장" maxlength="30" />
                     <div class="help">직급명을 입력하세요. (최대 30자)</div>
+                </div>
+
+                <!-- ✅ 드롭다운으로 변경 (1~50) -->
+                <div class="field">
+                    <div class="label">직급 순서</div>
+                    <select id="posOrder" class="input" aria-label="직급 순서 선택">
+                        <!-- JS로 1~50 생성 -->
+                    </select>
+                    <div class="help">직급 순서를 선택하세요. (1 ~ 50)</div>
                     <div id="msg" class="msg"></div>
                 </div>
 
@@ -108,6 +117,18 @@
 </div>
 
 <script>
+    // ✅ 드롭다운 옵션(1~50) 생성
+    (function initPosOrder() {
+        const select = document.getElementById("posOrder");
+        for (let i = 1; i <= 50; i++) {
+            const opt = document.createElement("option");
+            opt.value = String(i);
+            opt.textContent = String(i);
+            select.appendChild(opt);
+        }
+        select.value = "1"; // 기본값
+    })();
+
     function getAccessToken() {
         return (
             localStorage.getItem("accessToken") ||
@@ -127,6 +148,7 @@
     async function submitCreate() {
         const token = getAccessToken();
         const posName = document.getElementById("posName").value.trim();
+        const posOrder = parseInt(document.getElementById("posOrder").value, 10);
 
         if (!token) {
             showMsg("err", "로그인이 필요합니다. (토큰 없음)");
@@ -136,8 +158,11 @@
             showMsg("err", "직급명을 입력하세요.");
             return;
         }
+        if (!Number.isInteger(posOrder) || posOrder < 1 || posOrder > 50) {
+            showMsg("err", "직급 순서를 올바르게 선택하세요. (1 ~ 50)");
+            return;
+        }
 
-        // ✅ 너희 API에 맞춰서 POST 경로/바디 구성
         const res = await fetch("/api/v1/admin/positions", {
             method: "POST",
             headers: {
@@ -145,7 +170,7 @@
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: JSON.stringify({ posName })
+            body: JSON.stringify({ posName, posOrder })
         });
 
         if (res.status === 401) {
@@ -157,12 +182,10 @@
             return;
         }
 
-        // 보통 ResponseDto 형태면 성공 여부가 res.ok로 잡힘
         if (!res.ok) {
             let msg = "직급 등록 중 오류가 발생했습니다. (" + res.status + ")";
             try {
                 const json = await res.json();
-                // 서버가 message 같은 걸 주면 보여주기
                 if (json && (json.message || json.msg)) msg = json.message || json.msg;
             } catch(e) {}
             showMsg("err", msg);
@@ -170,7 +193,6 @@
         }
 
         showMsg("ok", "직급이 등록되었습니다.");
-        // ✅ 등록 후 목록으로 이동
         setTimeout(() => location.href = "/admin/positions/list", 300);
     }
 </script>
