@@ -80,7 +80,7 @@ public class Employee {
     private Boolean isDeleted = false; // 퇴사여부 // default = false
 
     @Column(nullable = false, length = 1)
-    private String atte; // 근태(출장 = b , 휴가 = v, 출근 = c) // default = c
+    private String atte; // 근태(출장 = B , 휴가 = V, 출근 = C) // default = C
 
     @Column(name = "msg_stat", nullable = false, length = 1)
     private String msgStat ; // 메시지 상태 ( 근무 중 = c, 회의 중 = m, 업무 집중 = d, 자리 비움 = x, 출근 안함 = h) // default = h
