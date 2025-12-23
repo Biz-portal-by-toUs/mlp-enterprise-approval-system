@@ -52,14 +52,11 @@ public class DocumentFormController {
 
     @GetMapping
     public ResponseEntity<Page<DocumentFormListResDto>> getDocumentForms(
-            String stat,
-            @PageableDefault(size = 15)
-            Pageable pageable
+            @PageableDefault(size = 15) Pageable pageable
     ) {
-        Page<DocumentFormListResDto> result =
-                documentFormService.findListByStatus(DocumentFormStats.valueOf(stat), pageable);
-
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                documentFormService.findListByStatus(DocumentFormStats.A, pageable)
+        );
     }
 
     @GetMapping("/{docfoNo}")

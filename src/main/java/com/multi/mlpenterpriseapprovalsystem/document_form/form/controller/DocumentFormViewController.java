@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
 
 import org.springframework.stereotype.*;
+import org.springframework.ui.*;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -12,12 +13,24 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @Controller
-@RequestMapping("/document=form/manager")
+@RequestMapping("/document-form/manager")
 public class DocumentFormViewController {
 
     @GetMapping("/forms")
     public String formListPage() {
-        // templates/document-form/manager/form/form-list.html
         return "document-form/manager/form/form-list";
+    }
+
+    // 생성/편집 화면
+    @GetMapping("/make-form")
+    public String makeForm() {
+        return "document-form/manager/form/make-form";
+    }
+
+    // 상세 화면
+    @GetMapping("/{docfoNo}")
+    public String detail(@PathVariable Long docfoNo, Model model) {
+        model.addAttribute("docfoNo", docfoNo);
+        return "document-form/manager/form/detail";
     }
 }
