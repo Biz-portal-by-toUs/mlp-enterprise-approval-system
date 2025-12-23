@@ -23,24 +23,30 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ResApprovalLineDto {
     private Long apprlNo;
-    private String docNo;
+    private Long docNo;
+    private String docId;
     private String approverName; // 결재자 이름
     private String approverId; // 결재자 사원번호
     private String comId;
     private int seq;
     private ApprStat apprStat;
     private LocalDateTime endedAt;
+    private boolean isActualAppr;
+    private String rejReason;
 
     public static ResApprovalLineDto toDto(ApprovalLine approvalLine) {
         return ResApprovalLineDto.builder()
                 .apprlNo(approvalLine.getApprlNo())
-                .docNo(approvalLine.getDocument().getDocId())
+                .docNo(approvalLine.getDocument().getDocNo())
+                .docId(approvalLine.getDocument().getDocId())
                 .approverName(approvalLine.getApprover().getEmpName())
                 .approverId(approvalLine.getApprover().getEmpId())
                 .comId(approvalLine.getCompany().getComId())
                 .seq(approvalLine.getSeq())
                 .apprStat(approvalLine.getApprStat())
                 .endedAt(approvalLine.getEndedAt())
+                .isActualAppr(approvalLine.getIsActualAppr())
+                .rejReason(approvalLine.getRejReason())
                 .build();
     }
 
