@@ -46,6 +46,7 @@ public class ChatMessageService {
     /**
      * 메시지 전송
      */
+    @Transactional
     public ResChatMessageDto sendMessage(ReqChatMessageSendDto request, String empId) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(request.getRoomNo())
@@ -57,9 +58,11 @@ public class ChatMessageService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        // 1. 발신자 활성화 처리 (1:1 복귀 로직)
         if (!senderMember.isActive()) {
             if (chatRoom.getRoomType() == RoomType.ONE) {
                 chatRoomMemberRepository.reactivateMe(request.getRoomNo(), empId, now);
+                senderMember.reactivateNow(now);
             } else {
                 throw new CustomException(ErrorCode.CHAT_ACCESS_DENIED);
             }
@@ -79,30 +82,39 @@ public class ChatMessageService {
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
-        // 1:1이면 상대가 나가(active=false) 있어도 메시지 한 번 오면 다시 뜨게(자동 복귀)
-        //  joinedAt을 now로 바꿔서 "복귀 이후 메시지만" 보이게 한다.
+        // 2. 1:1인 경우 상대방도 자동으로 활성화(복귀) 처리
         if (chatRoom.getRoomType() == RoomType.ONE) {
             chatRoomMemberRepository.reactivateOthersForOneToOne(request.getRoomNo(), empId, now);
+            // ✅ 상대방 메모리 객체 상태도 활성화로 업데이트하여 카운트에 반영
+            chatRoom.getMembers().forEach(m -> {
+                if (!m.getEmployee().getEmpId().equals(empId)) m.reactivateNow(now);
+            });
         }
+
+        // 3. 현재 활성 상태인 멤버 수 계산
+        int activeMemberCount = (int) chatRoom.getMembers().stream()
+                .filter(ChatRoomMember::isActive)
+                .count();
 
         ResChatMessageDto responseDto = ResChatMessageDto.from(savedMessage);
         redisPublisher.publish(request.getRoomNo(), responseDto);
 
         chatRoom.updateLastMessage(savedMessage.getContent(), savedMessage.getCreatedAt());
 
+        // 안읽은 메시지 처리
         String viewingKey = "chat:room:" + request.getRoomNo() + ":viewing";
         Set<String> viewingEmpIds = redisTemplate.opsForSet().members(viewingKey);
         if (viewingEmpIds == null) viewingEmpIds = Set.of();
 
         chatRoomMemberRepository.increaseUnreadExceptViewers(request.getRoomNo(), empId, viewingEmpIds);
 
-        String preview = chatRoom.getLastMessage();                 // ← trim 적용된 값
-        String previewAtIso = chatRoom.getLastMessageAt().toString(); // ← updateLastMessage에서 세팅된 값
+        String preview = chatRoom.getLastMessage();
+        String previewAtIso = chatRoom.getLastMessageAt().toString();
 
+        // 모든 멤버 아이디 가져오기 (실시간 알림 대상)
         List<String> memberEmpIds = chatRoomMemberRepository.findEmpIdsByRoomNo(request.getRoomNo());
 
         for (String targetEmpId : memberEmpIds) {
-
             long unreadLong;
             if (targetEmpId.equals(empId)) {
                 unreadLong = 0L;
@@ -113,28 +125,33 @@ public class ChatMessageService {
 
             int unread = unreadLong > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) unreadLong;
 
-            // ✅ [수정 포인트] 각 수신자(targetEmpId)의 시점에서 보여줄 방 이름 결정
+            // 수신자 시점의 방 이름 결정
             String finalRoomName;
             if (chatRoom.getRoomType() == RoomType.ONE) {
-                // 1:1 채팅방: 수신자(targetEmpId)가 아닌 '상대방'의 이름을 찾음
                 finalRoomName = chatRoom.getMembers().stream()
                         .filter(m -> !m.getEmployee().getEmpId().equals(targetEmpId))
                         .map(m -> m.getEmployee().getEmpName())
                         .findFirst()
                         .orElse("알 수 없는 사용자");
             } else {
-                // 그룹 채팅방: 저장된 방 이름 사용 (없으면 기본값)
                 finalRoomName = chatRoom.getRoomName() != null ? chatRoom.getRoomName() : "그룹 채팅";
             }
+
+
 
             ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                     request.getRoomNo(),
                     preview,
                     previewAtIso,
                     unread,
-                    finalRoomName // ✅ 계산된 실시간 방 이름을 전달
-                    ,false
+                    finalRoomName,
+                    false,
+                    chatRoom.getRoomType(),
+                    activeMemberCount
             );
+
+            System.out.println("########### activeMemberCount "+ activeMemberCount);
+
             if (message.getType() == MessageType.SYSTEM) {
                 continue;
             }
