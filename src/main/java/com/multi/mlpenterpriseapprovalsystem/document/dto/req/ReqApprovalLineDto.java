@@ -1,6 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.dto.req;
 
-import lombok.Getter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
  */
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
 public class ReqApprovalLineDto {
     private Long apprlNo;
     private String docNo;
@@ -22,4 +26,6 @@ public class ReqApprovalLineDto {
     private int seq;
     private String apprStat;
     private LocalDateTime endedAt;
+    private Boolean isActualAppr;
+    private String rejReason;
 }
