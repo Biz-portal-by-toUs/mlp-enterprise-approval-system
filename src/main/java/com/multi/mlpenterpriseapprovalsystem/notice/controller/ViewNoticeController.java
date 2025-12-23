@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 @Controller
 @RequestMapping("/notice")
-public class FrontNoticeController {
+public class ViewNoticeController {
 
     @GetMapping("/list")
     public String noticeList() {

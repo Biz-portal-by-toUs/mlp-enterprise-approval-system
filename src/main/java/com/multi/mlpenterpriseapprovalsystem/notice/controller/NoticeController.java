@@ -96,20 +96,20 @@ public class NoticeController {
 
     //공지사항 삭제
     @DeleteMapping("/notice/{id}")
-    public ResponseEntity<String> delete(@PathVariable("id") Long id) {
+    public ResponseEntity<String> delete(@PathVariable(name="id") Long id) {
         noticeService.deleteNotice(id);
         return ResponseEntity.ok("공지사항이 삭제되었습니다.");
     }
 
     //공지사항 상세조회  --- 일련번호(key로 조회)
     @GetMapping("/notice/{noticeNo}")
-    public ResponseEntity<ResponseDto<NoticeResAllDto>> detail(@PathVariable("noticeNo") Long noticeNo) {
+    public ResponseEntity<ResponseDto<NoticeResAllDto>> detail(@PathVariable(name="noticeNo") Long noticeNo) {
         return ResponseEntity.ok().body(new ResponseDto<NoticeResAllDto>(HttpStatus.OK, "조회 성공", noticeService.detailNotice(noticeNo)));
     }
 
     //공지사항 수정  --- 일련번호(key로 수정)
     @PutMapping("/notice/{id}")
-    public ResponseEntity<String> update(@PathVariable("id") Long id, @RequestBody @Valid NoticeReqDto dto) {
+    public ResponseEntity<String> update(@PathVariable(name="id") Long id, @RequestBody @Valid NoticeReqDto dto) {
         noticeService.updateNotice(id, dto);
         return ResponseEntity.ok("공지사항이 수정되었습니다.");
     }

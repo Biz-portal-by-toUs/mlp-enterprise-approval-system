@@ -58,21 +58,21 @@ public class BoardController {
 
     //특정 게시판(Board)에 대한 댓글(Commnet) 목록을 조회
     @GetMapping("/boards/{boardNo}/comments")
-    public ResponseEntity<ResponseDto<List<CommentDto>>> getBoardById(@PathVariable Long boardNo) {
+    public ResponseEntity<ResponseDto<List<CommentDto>>> getBoardById(@PathVariable(name="boardNo") Long boardNo) {
 
         return ResponseEntity.ok().body(new ResponseDto<List<CommentDto>>(HttpStatus.OK, "댓글 조회 성공", boardService.getCommentByBoardNo(boardNo)));
     }
 
     //게시글 삭제
     @DeleteMapping("/boards/{boardNo}")
-    public ResponseEntity<String> delete(@PathVariable("boardNo") Long boardNo) {
+    public ResponseEntity<String> delete(@PathVariable(name="boardNo") Long boardNo) {
         boardService.deleteBoard(boardNo);
         return ResponseEntity.ok("게시판이 삭제되었습니다.");
     }
 
     //게시글 변경
     @PutMapping("/boards/{boardNo}")
-    public ResponseEntity<String> update(@PathVariable("boardNo") Long boardNo, @RequestBody @Valid BoardReqDto dto) {
+    public ResponseEntity<String> update(@PathVariable(name="boardNo") Long boardNo, @RequestBody @Valid BoardReqDto dto) {
 
         boardService.updateBoard(boardNo, dto);
         return ResponseEntity.ok("상품이 수정되었습니다.");
@@ -88,7 +88,7 @@ public class BoardController {
 
     //자유 게시글 상세조회  --- 일련번호(key로 조회)
     @GetMapping("/boards/{boardNo}")
-    public ResponseEntity<ResponseDto<BoardResAllDto>> detail(@PathVariable("boardNo") Long boardNo) {
+    public ResponseEntity<ResponseDto<BoardResAllDto>> detail(@PathVariable(name="boardNo") Long boardNo) {
         return ResponseEntity.ok().body(new ResponseDto<BoardResAllDto>(HttpStatus.OK, "조회 성공", boardService.detailBoard(boardNo)));
     }
 
