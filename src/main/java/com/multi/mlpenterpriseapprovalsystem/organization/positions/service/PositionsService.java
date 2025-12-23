@@ -100,4 +100,28 @@ public class PositionsService {
         positions.update(newPosName, reqPositionsDto.getPosOrder());
         // JPA dirty checking으로 save() 없어도 됨
     }
+
+    public void deletePositions(String comId, Long posNo) {
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        // 부서 존재 체크
+        Positions positions = positionsRepository.findById(posNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+        // 다른 회사 부서 삭제 방지 (중요)
+        if (!positions.getCompany().getComNo().equals(company.getComNo())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        // 부서에 사원 남아있으면 삭제 불가
+        boolean hasEmployees = employeeRepository.existsByPositions_posNo(posNo);
+        if (hasEmployees) {
+            throw new CustomException(ErrorCode.POSITIONS_DELETE_HAS_EMPLOYEES);
+        }
+
+        positionsRepository.delete(positions);
+
+    }
 }
