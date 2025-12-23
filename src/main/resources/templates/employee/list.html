@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bizportal - 사원 관리</title>
+
+    <!-- (선택) Spring Security CSRF -->
+    <meta th:if="${_csrf != null}" name="_csrf" th:content="${_csrf.token}" />
+    <meta th:if="${_csrf != null}" name="_csrf_header" th:content="${_csrf.headerName}" />
+
+    <style>
+        :root{
+            --bg:#f3f5f8;
+            --card:#ffffff;
+            --muted:#8b95a1;
+            --text:#111827;
+            --line:#e6e9ef;
+            --primary:#2f6fe4;
+            --primary-2:#1f5fd6;
+            --shadow: 0 10px 30px rgba(17,24,39,.08);
+            --radius:16px;
+        }
+        *{ box-sizing:border-box; }
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+            color:var(--text);
+            background:#fff;
+        }
+
+        /* 전체 캔버스 */
+        .frame{
+            width:min(1320px, 96vw);
+            margin:24px auto;
+            border:1px solid #d8dbe3;
+            background:#fff;
+            box-shadow: 0 8px 24px rgba(0,0,0,.06);
+        }
+
+        /* 상단 바 */
+        .topbar{
+            height:70px;
+            background:var(--primary);
+            display:flex;
+            align-items:center;
+            padding:0 18px;
+            gap:16px;
+        }
+        .brand{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            color:#fff;
+            font-weight:800;
+            letter-spacing:.2px;
+            user-select:none;
+        }
+        .brand .logo{
+            width:38px; height:38px;
+            border-radius:10px;
+            display:grid; place-items:center;
+            background: rgba(255,255,255,.16);
+            font-weight:900;
+        }
+        .global-search{
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .global-search .search-pill{
+            width:min(620px, 100%);
+            height:38px;
+            background:#fff;
+            border-radius:999px;
+            display:flex;
+            align-items:center;
+            padding:0 10px;
+            gap:10px;
+            box-shadow: 0 6px 18px rgba(0,0,0,.12);
+        }
+        .global-search select{
+            border:0;
+            outline:0;
+            background:transparent;
+            color:#374151;
+            font-weight:600;
+            padding:6px 8px;
+        }
+        .global-search input{
+            border:0;
+            outline:0;
+            flex:1;
+            font-size:14px;
+        }
+        .top-actions{
+            display:flex;
+            align-items:center;
+            gap:14px;
+            color:#fff;
+        }
+        .icon-btn{
+            width:36px; height:36px;
+            border-radius:999px;
+            display:grid; place-items:center;
+            background: rgba(255,255,255,.16);
+            border:1px solid rgba(255,255,255,.22);
+            cursor:pointer;
+            user-select:none;
+        }
+        .logout{
+            border:0;
+            cursor:pointer;
+            height:38px;
+            padding:0 14px;
+            border-radius:999px;
+            font-weight:700;
+            color:#1f2937;
+            background: rgba(255,255,255,.85);
+            box-shadow: 0 6px 18px rgba(0,0,0,.12);
+        }
+
+        /* 바디 */
+        .body{
+            display:flex;
+            min-height:720px;
+        }
+
+        /* 좌측 아이콘 바 */
+        .rail{
+            width:70px;
+            background:#fff;
+            border-right:1px solid var(--line);
+            padding:10px 0;
+        }
+        .rail .rail-item{
+            height:58px;
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+            align-items:center;
+            gap:6px;
+            color:#111827;
+            font-size:12px;
+            cursor:pointer;
+            user-select:none;
+        }
+        .rail .rail-item .dot{
+            width:28px; height:28px;
+            border-radius:10px;
+            display:grid; place-items:center;
+            background: #f2f6ff;
+            border:1px solid #e3ecff;
+            color:var(--primary);
+            font-weight:900;
+        }
+
+        /* 좌측 메뉴 + 메인 */
+        .content{
+            flex:1;
+            display:flex;
+            background: #fff;
+        }
+
+        .side{
+            width:260px;
+            border-right:1px solid var(--line);
+            padding:16px 14px;
+            background:#fff;
+        }
+        .side a{
+            display:block;
+            padding:12px 14px;
+            border-radius:12px;
+            color:#1f2937;
+            text-decoration:none;
+            font-weight:700;
+            margin-bottom:6px;
+        }
+        .side a:hover{ background:#f4f7ff; }
+        .side a.active{
+            background:#eef4ff;
+            color:#1e4fb8;
+        }
+        .side .spacer{ height:6px; }
+
+        .main{
+            flex:1;
+            padding:28px 28px 34px;
+            background:#fff;
+        }
+
+        .page-title{
+            font-size:28px;
+            font-weight:900;
+            margin:0 0 14px;
+        }
+        .section-title{
+            font-size:18px;
+            font-weight:900;
+            margin:0 0 14px;
+        }
+
+        /* 검색 카드 */
+        .filter-card{
+            background: var(--bg);
+            border-radius:20px;
+            padding:18px;
+            box-shadow: 0 1px 0 rgba(0,0,0,.03) inset;
+            margin-bottom:22px;
+        }
+        .filter-grid{
+            display:grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap:18px;
+            margin-bottom:10px;
+        }
+        .field label{
+            display:block;
+            font-size:13px;
+            color:#111827;
+            font-weight:800;
+            margin-bottom:8px;
+        }
+        .control{
+            width:100%;
+            height:42px;
+            border-radius:10px;
+            border:1px solid var(--line);
+            background:#fff;
+            padding:0 12px;
+            outline:none;
+            font-size:14px;
+        }
+        .control::placeholder{ color:#9aa3af; }
+
+        .filter-bottom{
+            display:flex;
+            align-items:flex-end;
+            gap:14px;
+        }
+        .filter-bottom .keyword{
+            flex:1;
+        }
+        .btn{
+            height:42px;
+            border-radius:10px;
+            border:1px solid transparent;
+            padding:0 18px;
+            font-weight:900;
+            cursor:pointer;
+            user-select:none;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+        }
+        .btn.primary{
+            background: var(--primary);
+            color:#fff;
+            box-shadow: 0 10px 20px rgba(47,111,228,.18);
+        }
+        .btn.primary:hover{ background: var(--primary-2); }
+        .btn.ghost{
+            background: var(--primary);
+            color:#fff;
+            opacity:.95;
+        }
+
+        /* 테이블 카드 */
+        .table-card{
+            background: var(--bg);
+            border-radius:20px;
+            padding:16px;
+            box-shadow: 0 1px 0 rgba(0,0,0,.03) inset;
+        }
+        .table-wrap{
+            background:#fff;
+            border-radius:16px;
+            border:1px solid var(--line);
+            overflow:hidden;
+        }
+        table{
+            width:100%;
+            border-collapse:separate;
+            border-spacing:0;
+            font-size:14px;
+        }
+        thead th{
+            text-align:left;
+            padding:14px 16px;
+            font-weight:900;
+            color:#111827;
+            background:#fff;
+            border-bottom:1px solid var(--line);
+        }
+        tbody td{
+            padding:14px 16px;
+            border-bottom:1px solid #f0f2f7;
+            color:#1f2937;
+            background:#fff;
+        }
+        tbody tr:last-child td{ border-bottom:0; }
+
+        .col-manage a{
+            color: var(--primary);
+            font-weight:900;
+            text-decoration:none;
+        }
+        .col-manage a:hover{ text-decoration:underline; }
+
+        .pagination{
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            gap:8px;
+            padding:14px 0 6px;
+            color:#64748b;
+            user-select:none;
+        }
+        .page-btn{
+            width:30px; height:30px;
+            border-radius:10px;
+            border:1px solid transparent;
+            display:grid; place-items:center;
+            cursor:pointer;
+            font-weight:900;
+        }
+        .page-btn:hover{ background:#eef2ff; }
+        .page-btn.active{
+            background:#e9f0ff;
+            border-color:#d6e3ff;
+            color:#1e4fb8;
+        }
+
+        .muted{ color:var(--muted); font-weight:700; }
+        .empty{
+            padding:18px;
+            text-align:center;
+            color:#6b7280;
+        }
+
+        /* 반응형 */
+        @media (max-width: 1100px){
+            .side{ display:none; }
+            .content{ flex:1; }
+            .main{ padding:20px; }
+            .filter-grid{ grid-template-columns: 1fr; }
+            .filter-bottom{ flex-direction:column; align-items:stretch; }
+            .btn{ width:100%; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="frame">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="brand">
+            <div class="logo">B</div>
+            <div style="font-size:18px;">Bizportal</div>
+        </div>
+
+        <div class="global-search">
+            <div class="search-pill">
+                <span class="muted" style="font-weight:900;">🔍</span>
+                <select aria-label="label">
+                    <option>Label</option>
+                </select>
+                <input type="text" placeholder="Search" />
+            </div>
+        </div>
+
+        <div class="top-actions">
+            <div class="icon-btn" title="알림">🔔</div>
+            <div class="icon-btn" title="프로필">👤</div>
+            <form th:action="@{/logout}" method="post" style="margin:0;">
+                <button type="submit" class="logout">로그아웃</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="body">
+        <!-- LEFT ICON RAIL -->
+        <aside class="rail" aria-label="quick menu">
+            <div class="rail-item"><div class="dot">📄</div><div>결재</div></div>
+            <div class="rail-item"><div class="dot">💬</div><div>회의</div></div>
+            <div class="rail-item"><div class="dot">✉️</div><div>메일</div></div>
+            <div class="rail-item"><div class="dot">📁</div><div>문서함</div></div>
+            <div class="rail-item"><div class="dot">☁️</div><div>공유함</div></div>
+            <div class="rail-item"><div class="dot">📅</div><div>캘린더</div></div>
+            <div class="rail-item"><div class="dot">📝</div><div>게시판</div></div>
+            <div class="rail-item"><div class="dot">🕒</div><div>예약</div></div>
+            <div class="rail-item"><div class="dot">💼</div><div>근태</div></div>
+            <div class="rail-item"><div class="dot">👥</div><div>조직도</div></div>
+            <div class="rail-item"><div class="dot">⚙️</div><div>관리자</div></div>
+        </aside>
+
+        <div class="content">
+            <!-- LEFT SIDE MENU -->
+            <nav class="side" aria-label="admin menu">
+                <a th:href="@{/admin/departments}" href="#" >부서 편성</a>
+                <a th:href="@{/admin/positions}" href="#" >직급 편성</a>
+                <a class="active" th:href="@{/admin/employees/list}" href="#" >사원 관리</a>
+                <a th:href="@{/admin/rules}" href="#" >사내 규정 관리</a>
+
+                <div class="spacer"></div>
+                <!-- 상단바 정보(필요시 사용) -->
+                <div style="padding:12px 14px; margin-top:8px;">
+                    <div class="muted" style="font-size:12px;">로그인</div>
+                    <div style="font-weight:900; margin-top:6px;" th:text="${username}">홍길동</div>
+                    <div class="muted" style="font-size:12px; margin-top:4px;">
+                        comId: <span th:text="${comId}">C01</span>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- MAIN -->
+            <main class="main">
+                <h1 class="page-title">사원 관리</h1>
+                <h2 class="section-title">사원 조회</h2>
+
+                <!-- FILTER CARD -->
+                <section class="filter-card">
+                    <div class="filter-grid">
+                        <div class="field">
+                            <label for="depNo">부서</label>
+                            <select id="depNo" class="control">
+                                <option value="">전체</option>
+                                <option th:each="d : ${departments}"
+                                        th:value="${d.depNo}"
+                                        th:text="${d.depName}">
+                                    개발팀
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="posNo">직급</label>
+                            <select id="posNo" class="control">
+                                <option value="">전체</option>
+                                <option th:each="p : ${positionsList}"
+                                        th:value="${p.posNo}"
+                                        th:text="${p.posName}">
+                                    사원
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="status">상태</label>
+                            <select id="status" class="control">
+                                <option value="">전체</option>
+                                <option value="active">재직</option>
+                                <option value="retired">퇴사</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-bottom">
+                        <div class="field keyword" style="margin:0;">
+                            <label for="keyword">검색</label>
+                            <input id="keyword" class="control" type="text" placeholder="이름/사번/이메일" />
+                        </div>
+
+                        <button type="button" class="btn primary" id="searchBtn">조회</button>
+
+                        <!-- 등록 페이지 URL은 프로젝트에 맞게 수정 -->
+                        <a class="btn ghost" id="registerBtn" th:href="@{/admin/employees/register}" href="#">
+                            사원 등록
+                        </a>
+                    </div>
+                </section>
+
+                <!-- TABLE -->
+                <section class="table-card">
+                    <div class="table-wrap">
+                        <table aria-label="employee table">
+                            <thead>
+                            <tr>
+                                <th style="width:110px;">사번</th>
+                                <th style="width:140px;">이름</th>
+                                <th style="width:160px;">부서</th>
+                                <th style="width:120px;">직급</th>
+                                <th style="width:110px;">상태</th>
+                                <th>이메일</th>
+                                <th style="width:90px;">관리</th>
+                            </tr>
+                            </thead>
+                            <tbody id="empTbody">
+                            <tr>
+                                <td colspan="7" class="empty">조회 조건을 선택한 뒤 ‘조회’를 눌러주세요.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination" id="pagination" style="display:none;"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ====== 설정 ======
+    const API_URL = '/admin/employees'; // 너가 만든 REST 컨트롤러(GET /admin/employees)
+    const PAGE_SIZE = 8; // 화면 느낌 맞추기(원하면 변경)
+
+    // ====== 상태 ======
+    let allRows = [];
+    let currentPage = 1;
+
+    // ====== 유틸 ======
+    function qs(id){ return document.getElementById(id); }
+
+    function buildQuery(){
+        const depNo = qs('depNo').value || '';
+        const posNo = qs('posNo').value || '';
+        const status = qs('status').value || '';
+        const keyword = (qs('keyword').value || '').trim();
+
+        const params = new URLSearchParams();
+        if (depNo) params.append('depNo', depNo);
+        if (posNo) params.append('posNo', posNo);
+        if (status) params.append('status', status);
+        if (keyword) params.append('keyword', keyword);
+
+        const q = params.toString();
+        return q ? `?${q}` : '';
+    }
+
+    function deletedToStatusText(deleted){
+        return deleted ? '퇴사' : '재직';
+    }
+
+    function escapeHtml(str){
+        return String(str ?? '')
+            .replaceAll('&','&amp;')
+            .replaceAll('<','&lt;')
+            .replaceAll('>','&gt;')
+            .replaceAll('"','&quot;')
+            .replaceAll("'","&#039;");
+    }
+
+    // ====== 렌더 ======
+    function renderTable(page){
+        const tbody = qs('empTbody');
+        tbody.innerHTML = '';
+
+        if (!allRows || allRows.length === 0){
+            tbody.innerHTML = `<tr><td colspan="7" class="empty">조회 결과가 없습니다.</td></tr>`;
+            qs('pagination').style.display = 'none';
+            return;
+        }
+
+        const start = (page - 1) * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        const slice = allRows.slice(start, end);
+
+        slice.forEach(emp => {
+            const tr = document.createElement('tr');
+
+            const empId = escapeHtml(emp.empId);
+            const empName = escapeHtml(emp.empName);
+            const depName = escapeHtml(emp.depName);
+            const posName = escapeHtml(emp.posName);
+            const email = escapeHtml(emp.email);
+            const statusText = deletedToStatusText(emp.deleted);
+
+            // 상세 페이지 URL은 프로젝트에 맞게 수정(예: /admin/employees/{empNo})
+            const detailUrl = `/admin/employees/${emp.empNo}`;
+
+            tr.innerHTML = `
+          <td>${empId}</td>
+          <td>${empName}</td>
+          <td>${depName}</td>
+          <td>${posName}</td>
+          <td>${statusText}</td>
+          <td>${email}</td>
+          <td class="col-manage"><a href="${detailUrl}">상세</a></td>
+        `;
+            tbody.appendChild(tr);
+        });
+
+        renderPagination(page);
+    }
+
+    function renderPagination(page){
+        const totalPages = Math.ceil(allRows.length / PAGE_SIZE);
+        const pagination = qs('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1){
+            pagination.style.display = 'none';
+            return;
+        }
+        pagination.style.display = 'flex';
+
+        // 숫자만 (사진처럼 1 2 3)
+        for (let p = 1; p <= totalPages; p++){
+            const btn = document.createElement('div');
+            btn.className = 'page-btn' + (p === page ? ' active' : '');
+            btn.textContent = p;
+            btn.addEventListener('click', () => {
+                currentPage = p;
+                renderTable(currentPage);
+            });
+            pagination.appendChild(btn);
+        }
+    }
+
+    // ====== API ======
+    async function fetchEmployees(){
+        const url = API_URL + buildQuery();
+        const res = await fetch(url, { method:'GET' });
+
+        if (!res.ok){
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        // ResponseDto<List<ResEmployeeListDto>> 형태라고 가정: { status, message, data }
+        const list = data?.data ?? [];
+
+        // 방어: deleted 필드가 boolean으로 내려온다고 가정
+        allRows = Array.isArray(list) ? list : [];
+        currentPage = 1;
+        renderTable(currentPage);
+    }
+
+    // ====== 이벤트 ======
+    qs('searchBtn').addEventListener('click', async () => {
+        try{
+            await fetchEmployees();
+        }catch(e){
+            console.error(e);
+            qs('empTbody').innerHTML = `<tr><td colspan="7" class="empty">조회 중 오류가 발생했습니다.</td></tr>`;
+            qs('pagination').style.display = 'none';
+        }
+    });
+
+    // Enter로 조회
+    qs('keyword').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter'){
+            e.preventDefault();
+            qs('searchBtn').click();
+        }
+    });
+
+    // 페이지 진입 시 자동 조회(원하면 주석 처리)
+    window.addEventListener('DOMContentLoaded', () => {
+        qs('status').value = 'active'; // 사진처럼 기본 재직
+        qs('searchBtn').click();
+    });
+</script>
+</body>
+</html>
