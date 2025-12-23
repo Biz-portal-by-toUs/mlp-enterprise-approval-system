@@ -271,7 +271,7 @@ public class DocumentService {
         Document document;
 
         if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
-            // 작성자가 나면서 문서상태가 AW인 문서 조회
+            // 작성자가 나면서 문서상태가 AW or RJ or FI인 문서 조회
             document = documentRepository.findSubmittedDoc(comId, docNo, myEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
         }
@@ -298,7 +298,7 @@ public class DocumentService {
     }
 
 
-    // 문서 생성
+    // 문서 상신 및 임시저장
     public void createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
 
         // 1. 연관 엔티티 조회
@@ -329,11 +329,24 @@ public class DocumentService {
 
         // 4. 상신 or 임시저장 시 결재라인 검증 후 생성
         if (reqDocumentDto.getApprovalLines() != null && !reqDocumentDto.getApprovalLines().isEmpty()) {
+            validateApproverNotSelf(myEmpId, reqDocumentDto.getApprovalLines());
             validateApprovalLineOrder(reqDocumentDto.getApprovalLines());
             createApprovalLines(document, company, reqDocumentDto.getApprovalLines(), isTemp);
         }
 
         log.info("문서 {} 완료: docNo={}, writer={}", isTemp ? "임시저장" : "상신", document.getDocNo(), myEmpId);
+    }
+
+    /**
+     * 결재라인에 본인(작성자)이 포함되어 있는지 검증
+     */
+    private void validateApproverNotSelf(String writerEmpId, List<ReqApprovalLineDto> lineDtos) {
+        boolean hasSelf = lineDtos.stream()
+                .anyMatch(line -> writerEmpId.equals(line.getApproverId()));
+
+        if (hasSelf) {
+            throw new CustomException(ErrorCode.INVALID_APPROVAL_LINE_SELF);
+        }
     }
 
     /**
@@ -421,7 +434,37 @@ public class DocumentService {
         }
     }
 
+    // 상신 취소
+    public void cancelSubmit(String comId, String myEmpId, Long docNo) {
+        // 문서 조회
+        Document document = documentRepository.findById(docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
 
+        // 본인이 작성한 문서인지 확인
+        if (!document.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 회사 일치 확인
+        if (!document.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 결재 진행 여부 확인 (A 또는 R 상태인 결재자가 있으면 취소 불가)
+        List<ApprovalLine> approvalLines = approvalLineRepository.findByDocument_docNo(docNo);
+
+        boolean hasProcessedApproval = approvalLines.stream()
+                .anyMatch(line -> line.getApprStat() == ApprStat.A || line.getApprStat() == ApprStat.R);
+
+        if (hasProcessedApproval) {
+            throw new CustomException(ErrorCode.DOCUMENT_ALREADY_PROCESSED);
+        }
+
+        // 6. 문서 상태만 변경 (결재라인 유지)
+        document.cancelSubmit();
+
+        log.info("상신 취소 완료: docNo={}, writer={}", docNo, myEmpId);
+    }
 
     // 문서코드(docId) 생성
     // 문서가 최종승인되어야 발급
