@@ -3,251 +3,308 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Bizportal - Positions</title>
+    <title>부서 편성</title>
     <style>
         :root{
-            --bg:#f3f3f3;
-            --card:#fff;
+            --primary:#2f6fda;
+            --bg:#f3f5f9;
+            --card:#f1f3f6;
             --text:#111;
-            --muted:#666;
-            --border:#d7d7d7;
-            --primary:#2563eb;
-            --danger:#ef4444;
-            --radius:14px;
-            --shadow:0 8px 24px rgba(0,0,0,.06);
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --white:#fff;
         }
         *{box-sizing:border-box}
-        body{
-            margin:0;
-            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif;
-            background:var(--bg);
-            color:var(--text);
-        }
-        .wrap{max-width:1100px;margin:32px auto;padding:0 16px;}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
         .topbar{
-            display:flex; align-items:flex-end; justify-content:space-between;
-            gap:16px; margin-bottom:16px;
+            height:64px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;
+            padding:0 20px; box-shadow:0 10px 25px rgba(0,0,0,.12);
         }
-        .title h1{margin:0;font-size:22px;letter-spacing:-.3px;}
-        .title p{margin:6px 0 0;color:var(--muted);font-size:13px}
-        .actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+        .brand{font-weight:800;font-size:24px;letter-spacing:.3px}
+        .wrap{display:flex;min-height:calc(100vh - 64px)}
+        .sidenav{width:84px;background:#fff;border-right:1px solid var(--line);padding:14px 10px}
+        .sidenav .item{height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:8px 0;color:var(--muted);font-size:12px}
+        .sidenav .item.active{background:#eef4ff;color:var(--primary);font-weight:700}
+        .subnav{width:220px;background:#fbfcfe;border-right:1px solid var(--line);padding:18px}
+        .subnav .title{font-weight:800;margin:10px 0 18px 0}
+        .subnav a{display:block;padding:12px 10px;border-radius:10px;color:#2b5db8;text-decoration:none;margin:6px 0}
+        .subnav a.active{background:#eef4ff;font-weight:700}
+        .content{flex:1;padding:30px 32px}
+        .page-title{font-size:34px;font-weight:900;margin:10px 0 8px}
+        .page-sub{font-size:18px;font-weight:800;margin:0 0 20px;color:#111}
+        .actions{display:flex;justify-content:flex-end;margin:0 0 14px}
         .btn{
-            border:1px solid var(--border);
-            background:#fff;
-            color:var(--text);
-            padding:10px 12px;
-            border-radius:12px;
-            cursor:pointer;
-            font-size:13px;
-            text-decoration:none;
-            display:inline-flex; align-items:center; gap:8px;
+            border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;
+            background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(47,111,218,.25);
         }
-        .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
-        .btn.danger{background:#fff;border-color:#fecaca;color:#b91c1c;}
-        .btn:hover{filter:brightness(.98)}
         .card{
-            background:var(--card);
-            border:1px solid var(--border);
-            border-radius:var(--radius);
-            box-shadow:var(--shadow);
-            overflow:hidden;
+            background:var(--card); border-radius:18px; padding:22px; min-height:520px;
         }
-        .toolbar{
-            padding:14px;
-            border-bottom:1px solid var(--border);
-            display:flex;
-            gap:12px;
-            align-items:center;
-            justify-content:space-between;
-            flex-wrap:wrap;
+        .table{
+            width:100%; border-collapse:separate; border-spacing:0 14px;
         }
-        .search{
-            display:flex; align-items:center; gap:10px;
-            min-width:260px; flex:1;
+        .thead{
+            background:#fff;border-radius:14px;
         }
-        .search input{
-            width:100%;
-            padding:10px 12px;
-            border:1px solid var(--border);
-            border-radius:12px;
-            outline:none;
-            font-size:13px;
-            background:#fff;
+        .thead th{
+            text-align:left; padding:14px 18px; font-size:14px; color:#111;
         }
-        .hint{color:var(--muted); font-size:12px;}
-        table{
-            width:100%;
-            border-collapse:separate;
-            border-spacing:0;
-            font-size:13px;
+        .row{
+            background:#fff;border-radius:14px;
         }
-        thead th{
-            text-align:left;
-            background:#fafafa;
-            padding:12px 14px;
-            border-bottom:1px solid var(--border);
-            color:#333;
-            font-weight:600;
+        .row td{
+            padding:18px; font-size:14px; color:#111;
         }
-        tbody td{
-            padding:12px 14px;
-            border-bottom:1px solid #eee;
-            vertical-align:middle;
+        .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
+        .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+        .muted{color:var(--muted)}
+        .pill-btn{
+            padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px;
         }
-        tbody tr:hover{background:#fcfcfc}
-        .badge{
-            display:inline-flex;
-            padding:4px 10px;
-            border-radius:999px;
-            border:1px solid var(--border);
-            background:#fff;
-            font-size:12px;
-            color:#333;
-        }
-        .row-actions{
-            display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:wrap;
-        }
-        .row-actions form{margin:0}
+        .pill-edit{background:#eaf2ff;color:#2b5db8}
+        .pill-del{background:#fdecec;color:#c62828;margin-left:10px}
         .empty{
-            padding:24px;
-            text-align:center;
-            color:var(--muted);
+            padding:40px 10px;text-align:center;color:var(--muted);font-weight:700
         }
-        .flash{
-            margin:0 0 14px;
+        .toast{
+            display:none;
+            margin-top:14px;
             padding:12px 14px;
             border-radius:12px;
-            border:1px solid var(--border);
             background:#fff;
-            font-size:13px;
+            border:1px solid var(--line);
+            font-weight:800;
         }
-        .flash.ok{border-color:#bbf7d0;background:#f0fdf4;color:#166534;}
-        .flash.err{border-color:#fecaca;background:#fef2f2;color:#991b1b;}
-        @media (max-width:720px){
-            thead{display:none;}
-            table, tbody, tr, td{display:block; width:100%;}
-            tbody td{border-bottom:none; padding:10px 14px;}
-            tbody tr{border-bottom:1px solid #eee;}
-            .row-actions{justify-content:flex-start;}
-            .cell-label{display:block; color:var(--muted); font-size:12px; margin-bottom:4px;}
-        }
+        .toast.ok{color:#1b7f3a;border-color:#bfe7c9;background:#f3fff6}
+        .toast.err{color:#b42318;border-color:#ffd0cc;background:#fff5f4}
     </style>
 </head>
-
 <body>
+<header class="topbar">
+    <div class="brand">Bizportal</div>
+    <div class="muted" style="color:#eaf2ff;font-weight:700;">부서 편성</div>
+</header>
+
 <div class="wrap">
-    <div class="topbar">
-        <div class="title">
-            <h1>직급 관리</h1>
-            <p>등록된 직급 목록을 확인하고 수정/삭제할 수 있어요.</p>
-        </div>
+    <aside class="sidenav">
+        <div class="item">결재</div>
+        <div class="item">회의</div>
+        <div class="item">메일</div>
+        <div class="item">문서함</div>
+        <div class="item">공유함</div>
+        <div class="item">캘린더</div>
+        <div class="item">게시판</div>
+        <div class="item">예약</div>
+        <div class="item">근태</div>
+        <div class="item">조직도</div>
+        <div class="item active">관리자</div>
+    </aside>
+
+    <aside class="subnav">
+        <div class="title">부서 편성</div>
+        <a class="active" href="/admin/departments">부서 편성</a>
+        <a href="/admin/positions">직급 편성</a>
+        <a href="/admin/employees">사원 관리</a>
+        <a href="/admin/rules">사내 규정 관리</a>
+    </aside>
+
+    <main class="content">
+        <div class="page-title">부서 편성</div>
+        <div class="page-sub">부서 조회</div>
 
         <div class="actions">
-            <!-- 필요하면 "등록" 페이지가 있을 때만 사용 -->
-            <a class="btn primary" th:href="@{/admin/positions/new}">
-                + 직급 등록
-            </a>
-            <a class="btn" th:href="@{/admin}">관리자 홈</a>
-        </div>
-    </div>
-
-    <!-- flash message (controller에서 redirectAttributes로 message 내려줄 때) -->
-    <div th:if="${message != null}"
-         class="flash ok"
-         th:text="${message}">
-    </div>
-    <div th:if="${error != null}"
-         class="flash err"
-         th:text="${error}">
-    </div>
-
-    <div class="card">
-        <div class="toolbar">
-            <div class="search">
-                <input id="q" type="text" placeholder="검색: 직급명/직급코드/회사코드" />
-            </div>
-            <div class="hint">
-                총 <b th:text="${#lists.size(positions)}">0</b>건
-            </div>
+            <button class="btn" type="button" onclick="location.href='/admin/departments/create'">부서 등록</button>
         </div>
 
-        <div th:if="${positions == null or #lists.isEmpty(positions)}" class="empty">
-            등록된 직급이 없습니다.
-        </div>
+        <section class="card">
+            <table class="table">
+                <thead class="thead">
+                <tr>
+                    <th style="width:28%;">부서 코드</th>
+                    <th style="width:34%;">부서명</th>
+                    <th style="width:18%;">사원 수</th>
+                    <th style="width:20%;">관리</th>
+                </tr>
+                </thead>
 
-        <table th:if="${positions != null and !#lists.isEmpty(positions)}">
-            <thead>
-            <tr>
-                <th style="width:90px;">No</th>
-                <th style="width:140px;">직급코드</th>
-                <th>직급명</th>
-                <th style="width:140px;">회사코드</th>
-                <th style="width:210px; text-align:right;">관리</th>
-            </tr>
-            </thead>
+                <tbody id="deptTbody">
+                <!-- JS로 렌더링 -->
+                </tbody>
+            </table>
 
-            <tbody id="posTbody">
-            <tr th:each="p : ${positions}">
-                <td>
-                    <span class="cell-label">No</span>
-                    <span th:text="${p.posNo}">1</span>
-                </td>
-                <td>
-                    <span class="cell-label">직급코드</span>
-                    <span class="badge" th:text="${p.posId}">P01</span>
-                </td>
-                <td>
-                    <span class="cell-label">직급명</span>
-                    <span th:text="${p.posName}">매니저</span>
-                </td>
-                <td>
-                    <span class="cell-label">회사코드</span>
-                    <span class="badge" th:text="${p.comId}">C01</span>
-                </td>
-
-                <td style="text-align:right;">
-                    <div class="row-actions">
-                        <a class="btn"
-                           th:href="@{|/admin/positions/${p.posNo}/edit|}">
-                            수정
-                        </a>
-
-                        <!-- DELETE (HiddenHttpMethodFilter 필요) -->
-                        <form th:action="@{|/admin/positions/${p.posNo}|}" method="post"
-                              onsubmit="return confirm('정말 삭제할까요?');">
-                            <input type="hidden" name="_method" value="DELETE"/>
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                            <button type="submit" class="btn danger">삭제</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+            <div id="emptyBox" class="empty" style="display:none;">등록된 부서가 없습니다.</div>
+            <div id="toast" class="toast"></div>
+        </section>
+    </main>
 </div>
 
 <script>
-    // 프론트에서만 간단 필터링(테이블 로우 숨김)
-    const q = document.getElementById('q');
-    const tbody = document.getElementById('posTbody');
-
-    function normalize(s){
-        return (s || '').toString().toLowerCase().replace(/\s+/g,'');
+    // ✅ 토큰 저장 키 유연하게 탐색
+    function getAccessToken() {
+        return (
+            localStorage.getItem("accessToken") ||
+            localStorage.getItem("jwt") ||
+            sessionStorage.getItem("accessToken") ||
+            sessionStorage.getItem("jwt")
+        );
     }
 
-    function filterRows(){
-        if(!tbody) return;
-        const keyword = normalize(q.value);
-        const rows = tbody.querySelectorAll('tr');
+    function showToast(msg, type) {
+        const toast = document.getElementById("toast");
+        toast.className = "toast " + (type || "");
+        toast.textContent = msg;
+        toast.style.display = "block";
+        clearTimeout(window.__toastTimer);
+        window.__toastTimer = setTimeout(() => {
+            toast.style.display = "none";
+        }, 2500);
+    }
 
-        rows.forEach(tr => {
-            const text = normalize(tr.innerText);
-            tr.style.display = text.includes(keyword) ? '' : 'none';
+    async function loadDepartments() {
+        const token = getAccessToken();
+        const tbody = document.getElementById("deptTbody");
+        const emptyBox = document.getElementById("emptyBox");
+
+        tbody.innerHTML = "";
+        emptyBox.style.display = "none";
+
+        if (!token) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "로그인이 필요합니다. (토큰 없음)";
+            return;
+        }
+
+        const res = await fetch("/api/v1/admin/departments", {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Accept": "application/json"
+            }
+        });
+
+        if (res.status === 401) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "인증이 만료되었습니다. 다시 로그인 해주세요.";
+            return;
+        }
+        if (res.status === 403) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "권한이 없습니다. (COM_ADMIN만 가능)";
+            return;
+        }
+        if (!res.ok) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "부서 조회 중 오류가 발생했습니다. (" + res.status + ")";
+            return;
+        }
+
+        const json = await res.json();
+        const list = json.data || [];
+
+        if (!list.length) {
+            emptyBox.style.display = "block";
+            emptyBox.textContent = "등록된 부서가 없습니다.";
+            return;
+        }
+
+        list.forEach(d => {
+            // ✅ depNo가 있으면 그걸 쓰고, 없으면 depId를 fallback
+            const depNo = d.depNo;
+            const depId = d.depId ?? "";
+            const depName = d.depName ?? "";
+            const empCount = Number(d.empCount ?? 0).toLocaleString();
+
+            const tr = document.createElement("tr");
+            tr.className = "row";
+            tr.innerHTML = `
+                <td>${escapeHtml(depId)}</td>
+                <td>${escapeHtml(depName)}</td>
+                <td>${empCount}</td>
+                <td>
+                    <button class="pill-btn pill-edit" type="button"
+                        onclick="onEdit(${depNo})">수정</button>
+                    <button class="pill-btn pill-del" type="button"
+                        onclick="onDelete(${depNo}, '${escapeJs(depName)}')">삭제</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
     }
 
-    q?.addEventListener('input', filterRows);
+    // ✅ 수정 페이지 이동 (서버 컨트롤러가 /{depNo}/edit 형태라서 depNo 사용)
+    function onEdit(depNo) {
+        location.href = `/admin/departments/${depNo}/edit`;
+    }
+
+    // ✅ 삭제 기능 (DELETE API 호출)
+    async function onDelete(depNo, depName) {
+        const token = getAccessToken();
+        if (!token) {
+            showToast("로그인이 필요합니다. (토큰 없음)", "err");
+            return;
+        }
+
+        const ok = confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`);
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/json"
+                }
+            });
+
+            if (res.status === 401) {
+                showToast("인증이 만료되었습니다. 다시 로그인 해주세요.", "err");
+                return;
+            }
+            if (res.status === 403) {
+                showToast("권한이 없습니다. (COM_ADMIN만 가능)", "err");
+                return;
+            }
+
+            if (!res.ok) {
+                // 서버가 에러 메시지를 내려주면 출력 시도
+                let msg = `삭제 실패 (${res.status})`;
+                try {
+                    const json = await res.json();
+                    if (json && (json.message || json.error)) {
+                        msg = json.message || json.error;
+                    }
+                } catch (_) {}
+                showToast(msg, "err");
+                return;
+            }
+
+            showToast("삭제되었습니다.", "ok");
+            await loadDepartments();
+        } catch (e) {
+            console.error(e);
+            showToast("삭제 중 예외가 발생했습니다.", "err");
+        }
+    }
+
+    // XSS 방지
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll("&","&amp;")
+            .replaceAll("<","&lt;")
+            .replaceAll(">","&gt;")
+            .replaceAll("\"","&quot;")
+            .replaceAll("'","&#039;");
+    }
+    function escapeJs(str) {
+        return String(str).replaceAll("\\","\\\\").replaceAll("'","\\'");
+    }
+
+    loadDepartments().catch(err => {
+        console.error(err);
+        const emptyBox = document.getElementById("emptyBox");
+        emptyBox.style.display = "block";
+        emptyBox.textContent = "부서 조회 중 예외가 발생했습니다.";
+    });
 </script>
 </body>
 </html>
