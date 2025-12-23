@@ -14,16 +14,16 @@ import org.springframework.data.domain.*;
  */
 
 public interface DocumentFormService {
-    Page<DocumentFormListResDto> findListByStatus(
+    Page<ResDocumentFormListDto> findListByStatus(
             DocumentFormStats stat,
             Pageable pageable
     );
 
-    DocumentFormDetailResDto findDetailById(Long docfoNo);
+    ResDocumentFormDetailDto findDetailById(Long docfoNo);
 
-    Long createDocumentForm(DocumentFormCreateReqDto req);
+    Long createDocumentForm(ReqDocumentFormCreateDto req);
 
     void deleteDocumentForm(Long docfoNo);
 
-    Long updateDocumentForm(Long docfoNo, DocumentFormCreateReqDto req);
+    Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req);
 }

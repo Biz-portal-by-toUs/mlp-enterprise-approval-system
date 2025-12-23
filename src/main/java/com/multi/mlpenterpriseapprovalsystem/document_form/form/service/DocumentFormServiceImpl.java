@@ -27,7 +27,6 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class DocumentFormServiceImpl implements DocumentFormService {
 
     private final DocumentFormRepository documentFormRepository;
@@ -37,7 +36,8 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     private final EmployeeRepository employeeRepository;
 
     @Override
-    public Page<DocumentFormListResDto> findListByStatus(
+    @Transactional(readOnly = true)
+    public Page<ResDocumentFormListDto> findListByStatus(
             DocumentFormStats stat,
             Pageable pageable
     ) {
@@ -45,7 +45,8 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     }
 
     @Override
-    public DocumentFormDetailResDto findDetailById(Long docfoNo) {
+    @Transactional(readOnly = true)
+    public ResDocumentFormDetailDto findDetailById(Long docfoNo) {
 
         DocumentForm form = documentFormRepository.findById(docfoNo)
                 .orElseThrow(() ->
@@ -60,7 +61,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 .map(DocumentFormCategory::getName)
                 .toList();
 
-        return new DocumentFormDetailResDto(
+        return new ResDocumentFormDetailDto(
                 form.getDocfoNo(),
                 form.getDocfoName(),
                 form.getDocfoStat(),
@@ -72,7 +73,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
     @Override
     @Transactional
-    public Long createDocumentForm(DocumentFormCreateReqDto req) {
+    public Long createDocumentForm(ReqDocumentFormCreateDto req) {
         Company company = companyRepository.findByComId(req.comId())
                 .orElseThrow(() -> new EntityNotFoundException("Company not found. comId=" + req.comId()));
         Employee writer = employeeRepository.findByEmpId(req.writerId())
@@ -112,7 +113,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
     @Override
     @Transactional
-    public Long updateDocumentForm(Long docfoNo, DocumentFormCreateReqDto req) {
+    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req) {
 
         // 1) 기존 양식 조회
         DocumentForm oldForm = documentFormRepository.findById(docfoNo)

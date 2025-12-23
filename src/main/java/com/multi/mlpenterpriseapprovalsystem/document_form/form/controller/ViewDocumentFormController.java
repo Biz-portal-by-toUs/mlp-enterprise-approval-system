@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 @Controller
 @RequestMapping("/document-form/manager/form")
-public class DocumentFormViewController {
+public class ViewDocumentFormController {
 
     // 목록 화면
     @GetMapping("/forms")

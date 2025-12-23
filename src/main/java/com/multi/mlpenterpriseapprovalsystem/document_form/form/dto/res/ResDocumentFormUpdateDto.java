@@ -8,6 +8,6 @@ package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
  * @since : 2025-12-22 월요일
  */
 
-public record DocumentFormUpdateResDto(
+public record ResDocumentFormUpdateDto(
         Long newDocfoNo
 ) {}

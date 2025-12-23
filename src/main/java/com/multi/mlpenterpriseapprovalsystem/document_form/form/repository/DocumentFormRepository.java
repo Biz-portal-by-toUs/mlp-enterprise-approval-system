@@ -2,13 +2,11 @@ package com.multi.mlpenterpriseapprovalsystem.document_form.form.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.DocumentFormListResDto;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-
-import java.util.*;
 
 /**
  * Please explain the class!!!
@@ -22,7 +20,7 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
     Page<DocumentForm> findByDocfoStatOrderByDocfoNoAsc(DocumentFormStats docfoStat, Pageable pageable);
 
     @Query("""
-        select new com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.DocumentFormListResDto(
+        select new com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto(
             d.docfoNo,
             d.docfoName,
             d.docfoStat
@@ -31,7 +29,7 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
          where d.docfoStat = :stat
          order by d.docfoNo asc
     """)
-    Page<DocumentFormListResDto> findListByDocfoStat(@Param("stat") DocumentFormStats stat,
+    Page<ResDocumentFormListDto> findListByDocfoStat(@Param("stat") DocumentFormStats stat,
                                                      Pageable pageable);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

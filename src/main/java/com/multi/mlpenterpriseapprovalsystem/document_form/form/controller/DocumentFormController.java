@@ -27,7 +27,7 @@ public class DocumentFormController {
 
     @PostMapping
     public ResponseEntity<Long> createDocumentForm(
-            @RequestBody DocumentFormCreateReqDto req
+            @RequestBody ReqDocumentFormCreateDto req
     ) {
         Long docfoNo = documentFormService.createDocumentForm(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
@@ -35,8 +35,8 @@ public class DocumentFormController {
 
     @PutMapping("/{docfoNo}")
     public ResponseEntity<Long> updateDocumentForm(
-            @PathVariable Long docfoNo,
-            @RequestBody DocumentFormCreateReqDto req
+            @PathVariable(name="docfoNo") Long docfoNo,
+            @RequestBody ReqDocumentFormCreateDto req
     ) {
         Long newDocfoNo = documentFormService.updateDocumentForm(docfoNo, req);
         return ResponseEntity.ok(newDocfoNo);
@@ -44,14 +44,14 @@ public class DocumentFormController {
 
     @DeleteMapping("/{docfoNo}")
     public ResponseEntity<Void> deleteDocumentForm(
-            @PathVariable Long docfoNo
+            @PathVariable(name="docfoNO") Long docfoNo
     ) {
         documentFormService.deleteDocumentForm(docfoNo);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping
-    public ResponseEntity<Page<DocumentFormListResDto>> getApprovedForms(
+    public ResponseEntity<Page<ResDocumentFormListDto>> getApprovedForms(
             @PageableDefault(size = 15) Pageable pageable
     ) {
         return ResponseEntity.ok(
@@ -60,10 +60,10 @@ public class DocumentFormController {
     }
 
     @GetMapping("/{docfoNo}")
-    public ResponseEntity<DocumentFormDetailResDto> getDocumentForm(
-            @PathVariable Long docfoNo
+    public ResponseEntity<ResDocumentFormDetailDto> getDocumentForm(
+            @PathVariable(name="docfoNo") Long docfoNo
     ) {
-        DocumentFormDetailResDto result =
+        ResDocumentFormDetailDto result =
                 documentFormService.findDetailById(docfoNo);
 
         return ResponseEntity.ok(result);

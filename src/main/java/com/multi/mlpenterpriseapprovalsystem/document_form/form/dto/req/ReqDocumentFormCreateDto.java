@@ -10,7 +10,7 @@ import java.util.*;
  * @since : 2025-12-22 월요일
  */
 
-public record DocumentFormCreateReqDto(
+public record ReqDocumentFormCreateDto(
         String comId,
         String writerId,
         String docfoName,
