@@ -6,7 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
-import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentServiceV2;
+import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,10 +26,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Slf4j
 @RequiredArgsConstructor
-@RequestMapping("/api/v2")
-public class DocumentControllerV2 {
+@RequestMapping("/api/v1")
+public class DocumentController {
 
-    private final DocumentServiceV2 documentServiceV2;
+    private final DocumentService documentService;
 
     // 회사 전체의 문서를 문서상태 기준 조회
     @GetMapping("/documents")
@@ -39,7 +39,7 @@ public class DocumentControllerV2 {
                                                                                   @RequestParam(name = "page", defaultValue = "0") int page,
                                                                                   @RequestParam(name = "sort", defaultValue = "") String sort) {
 
-        Page<ResDocumentDto> resDocumentDtos = documentServiceV2.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
+        Page<ResDocumentDto> resDocumentDtos = documentService.getDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
 
         String message = "";
         if("FINALIZED".equals(status)){
@@ -62,7 +62,7 @@ public class DocumentControllerV2 {
                                                                                      @RequestParam(name = "page", defaultValue = "0") int page,
                                                                                      @RequestParam(name = "sort", defaultValue = "") String sort){
 
-        Page<ResDocumentDto> resDocumentDtos = documentServiceV2.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
+        Page<ResDocumentDto> resDocumentDtos = documentService.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
 
         String message = "";
         if("SUBMITTED".equals(status)) {
@@ -84,6 +84,22 @@ public class DocumentControllerV2 {
     }
 
 
+    // 문서식별자로 문서 상세조회
+    @GetMapping("/documents/{docNo}")
+    public ResponseEntity<ResponseDto<ResDocumentDto>> getDocumentByDocNo(@PathVariable("docNo") Long docNo,
+                                                                          @RequestParam("status") String status,
+                                                                          @AuthenticationPrincipal CustomUser customUser) {
+
+        if(!"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
+            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+        }
+
+        ResDocumentDto resDocumentDto = documentService.getDocumentByDocNoWithStatus(customUser.getComId(), customUser.getUsername(), docNo, status);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "문서 조회 성공", resDocumentDto));
+    }
 
 
 }
