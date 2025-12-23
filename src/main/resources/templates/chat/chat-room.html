@@ -79,21 +79,62 @@
         .time-info { font-size: 10px; color: #aaa; margin-top: 4px; }
 
         /* 하단 바 */
-        .bottom { padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        /* .bottom 스타일 수정 및 추가 */
+        /* chat-room.html의 <style> 부분 수정 */
+        .bottom {
+            padding: 10px 15px 5px; /* 아래 간격 조정 */
+            background: white;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .bottom textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+            resize: none;
+            height: 40px;
+            max-height: 100px;
+
+            /* ✅ 핵심: 초기 스크롤바 숨김 */
+            overflow: hidden;
+
+            line-height: 1.4;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .bottom textarea:focus { border-color: var(--primary-color); }
         .bottom input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; transition: border-color 0.2s; }
         .bottom input:focus { border-color: var(--primary-color); }
         .bottom button { padding: 0 20px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
         .bottom button:disabled { background: #ccc; cursor: not-allowed; }
 
         /* ✅ 추가된 바이트 바 스타일 */
+        /* ✅ 바이트 바와 버튼 레이아웃 수정 */
         .bytebar {
-            padding: 0 20px 12px;
-            font-size: 12px;
-            color: #777;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
+            padding: 0 15px 12px;
             background: white;
+            display: flex;
+            justify-content: space-between; /* 양 끝으로 배치 */
+            align-items: center;
+        }
+
+        .bytebar button {
+            padding: 8px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .bytebar button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
         .bytebar .warn { color:#ff3b30; font-weight:700; }
 
@@ -161,13 +202,15 @@
     <div class="msgs" id="messages"></div>
 
     <div class="bottom">
-        <input id="messageInput" placeholder="메시지를 입력하세요..." onkeydown="if(event.keyCode==13){sendMessage()}" autocomplete="off" />
-        <button id="sendBtn" onclick="sendMessage()">전송</button>
+        <textarea id="messageInput" placeholder="메시지를 입력하세요..." rows="1" autocomplete="off"></textarea>
     </div>
 
     <div class="bytebar">
-        <span id="byteInfo">0 / 61440 bytes</span>
-        <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+        <div id="byteGroup">
+            <span id="byteInfo">0 / 61440 bytes</span>
+            <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+        </div>
+        <button id="sendBtn" onclick="sendMessage()">전송</button>
     </div>
 </div>
 
@@ -449,12 +492,12 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    // sendMessage 함수 내 input.value 초기화 후 높이 초기화 로직 추가
     function sendMessage() {
         const input = document.getElementById("messageInput");
         const content = input.value.trim();
         if (!content || !stompClient?.connected) return;
 
-        // ✅ 전송 전 바이트 제한 최종 체크
         if (utf8Bytes(content) > MAX_BYTES) {
             alert("메시지 용량이 너무 큽니다.");
             return;
@@ -463,7 +506,10 @@
         stompClient.send("/pub/chat/message", { Authorization: 'Bearer ' + getAccessToken() },
             JSON.stringify({ roomNo: roomNo, content: content })
         );
+
         input.value = "";
+        input.style.height = '40px'; // ✅ 전송 후 다시 한 줄 높이로 초기화
+        input.style.overflowY = 'hidden'; // ✅ 전송 후 스크롤바 다시 숨김
         updateByteInfo();
     }
 
@@ -474,10 +520,38 @@
     });
 
     window.addEventListener("load", () => {
+        const messageInput = document.getElementById("messageInput");
+
+        messageInput.addEventListener("input", function() {
+            // 높이 초기화 후 재계산
+            this.style.height = '40px';
+            const newHeight = this.scrollHeight;
+            this.style.height = newHeight + 'px';
+
+            // ✅ 최대 높이(100px)를 넘으면 스크롤바 표시, 아니면 숨김
+            if (newHeight >= 100) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+
+            updateByteInfo();
+        });
+
+// 엔터키 전송 로직 수정
+        messageInput.addEventListener("keydown", function(e) {
+            // ✅ [핵심] 한글 조합 중(IME)일 때는 엔터 처리를 무시함
+            if (e.isComposing) return;
+
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
         loadRoomInfo();
         connectWs();
-        updateByteInfo(); // 바이트 카운터 초기화
-        document.getElementById("messageInput").addEventListener("input", updateByteInfo);
+        updateByteInfo();
     });
 </script>
 </body>
