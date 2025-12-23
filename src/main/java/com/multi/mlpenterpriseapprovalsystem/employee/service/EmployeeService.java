@@ -2,10 +2,12 @@ package com.multi.mlpenterpriseapprovalsystem.employee.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResChatEmployeeCursorDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +31,7 @@ import java.util.List;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final CompanyRepository companyRepository;
 
     /**
      * ✅ 이름순 정렬 + 검색 + 커서 기반 무한스크롤
@@ -82,6 +85,11 @@ public class EmployeeService {
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
         return ResEmployeeDetailDto.from(employee);
+    }
+
+    public List<ResEmployeeListDto> searchEmployees(String comId, Long depNo, Long posNo, Boolean isDeleted, String keyword) {
+        String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return employeeRepository.searchEmployees(comId, depNo, posNo, isDeleted, searchKeyword);
     }
 
     private record CursorKey(String name, Long no) {}
