@@ -194,7 +194,7 @@
 <script>
     const boardNo = [[${boardNo}]];
 
-    async function loadPlaceDetail() {
+    async function loadBoardDetail() {
         try {
             const token = localStorage.getItem('accessToken');
             const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}`, {
@@ -235,12 +235,6 @@
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             console.log("comments status:", response.status);
-            const text = await response.text();
-            console.log("comments raw body:", text);
-
-            let result1;
-            try { result1 = JSON.parse(text); } catch(e) { result = null; }
-            console.log("comments json:", result1);
 
             const result = await response.json();
 
@@ -267,7 +261,6 @@
                             <td>${r.contents}</td>
                             <td>${r.empId}</td>
                             <td>${createdAt}</td>
-
                         </tr>
                     `);
                 });
@@ -281,7 +274,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        loadPlaceDetail();
+        loadBoardDetail();
 
     });
 </script>

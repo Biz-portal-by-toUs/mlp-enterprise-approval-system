@@ -41,4 +41,10 @@ public class FrontNoticeController {
 
         return "notice/popup";
     }
+
+    // 📍 리뷰 등록 폼 페이지
+    @GetMapping("/form")
+    public String noticeFormPage(Model model) {
+        return "notice/notice-form";
+    }
 }

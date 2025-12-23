@@ -1,17 +1,26 @@
 package com.multi.mlpenterpriseapprovalsystem.notice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notice.domain.Notice;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.repository.NoticeRepository;
+import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.criteria.JoinType;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,23 +38,48 @@ import java.util.stream.Collectors;
 public class NoticeService {
 
     private final NoticeRepository noticeRepository;
+    private final CompanyRepository companyRepository;
+    private final EmployeeRepository employeeRepository;
 
+    private static final ObjectMapper om = new ObjectMapper();
 
     @Transactional
     public void registNotice(NoticeReqDto dto){
 
+        Employee employee = employeeRepository.findByEmpId(dto.getEmpId())
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        Company company = companyRepository.findByComId(dto.getComId())
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
         Notice notice = Notice.builder()
-            //    .company(company)
+                .company(company)
                 .isDeleted(dto.getIsDeleted())
                 .title(dto.getTitle())
-                .contents(dto.getTitle())
+                .contents(normalizeToJson(dto.getContents()))
+               // .contents(dto.getContents())
                 .isPopup(dto.getIsPopup())
                 .startedAt(dto.getStartedAt())
                 .endedAt(dto.getEndedAt())
-             //   .employee(employee)
+                .employee(employee)
+                .rating(dto.getRating())
                 .build();
 
         noticeRepository.save(notice);
+    }
+
+    private String normalizeToJson(String raw) {
+        if (raw == null) return null;
+
+        try {
+            om.readTree(raw);     // 이미 JSON이면 그대로
+            return raw;
+        } catch (Exception ignore) {
+        }
+
+        ObjectNode node = om.createObjectNode();
+        node.put("text", raw);
+        return node.toString();
     }
 
     //공지사항 팝업 조회(startedAt , endedAt 사이 팝업 여부가 'Y'인거 검색
