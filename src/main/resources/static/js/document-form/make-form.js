@@ -118,6 +118,56 @@ function escapeHtml(s) {
 }
 
 
+// ---------- document_form 통합 저장용 helpers ----------
+function getCategoriesFromRadios() {
+    return [...elTypeRadios.querySelectorAll('.radio-item')]
+        .map((item) => item.querySelector('.radio-value-input')?.value?.trim())
+        .filter(Boolean)
+}
+
+function extractHeaderHtmlFromTemplates() {
+    // 헤더표는 make-form.html의 <template>에 고정되어 있음(사용자는 편집하지 않음)
+    const presetTables = getPresetTablesState()
+    return `
+      <div class="df-header">${presetTables.leftHtml || ''}</div>
+      <div class="df-header">${presetTables.rightHtml || ''}</div>
+    `.trim()
+}
+
+function buildFullHtml({ docfoName, categories, headerHtml, bodyHtml }) {
+    const catHtml = (categories || []).map(c => `<span class="df-cat">${escapeHtml(c)}</span>`).join('')
+    return `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${escapeHtml(docfoName || '')}</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;margin:0;padding:24px;background:#fff;color:#111;}
+  .df-wrap{max-width:980px;margin:0 auto;}
+  .df-title{font-size:22px;font-weight:800;margin:0 0 14px;}
+  .df-cats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;}
+  .df-cat{font-size:12px;padding:6px 10px;border-radius:999px;background:#f0f3ff;border:1px solid #d6ddff;}
+  .df-header-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px;}
+  .df-body{margin-top:10px;}
+  table{border-collapse:collapse;}
+</style>
+</head>
+<body>
+  <div class="df-wrap">
+    <h1 class="df-title">${escapeHtml(docfoName || '')}</h1>
+    <div class="df-cats">${catHtml}</div>
+    <div class="df-header-wrap" id="dfHeader">${headerHtml || ''}</div>
+    <div class="df-body" id="dfBody">${bodyHtml || ''}</div>
+  </div>
+</body>
+</html>`
+}
+
+// TODO: 로그인 연동 시 교체
+function getComId() { return window.__COM_ID__ || 'C01' }
+function getWriterId() { return window.__WRITER_ID__ || 'E000001' }
+
 // ASCII 0~32(공백/개행/탭/제어문자) + NBSP/ZWSP/BOM만 있으면 "의미없는 텍스트"로 간주
 function isMeaninglessWhitespace(s) {
     const str = (s ?? '').toString()
@@ -130,7 +180,6 @@ function isMeaninglessWhitespace(s) {
     }
     return true
 }
-
 
 // ---------- radio ui ----------
 function getSelectedTypeValue() {
@@ -477,7 +526,7 @@ async function bootEditor() {
             ]
         },
 
-        // ✅ 실제 편집 가능한 input 렌더링
+        // 실제 편집 가능한 input 렌더링
         addNodeView() {
             return ({ node, editor, getPos }) => {
                 const wrap = document.createElement('span')
@@ -892,9 +941,6 @@ function wireToolbar(editor) {
                 ch.deleteTable().run()
                 break
 
-            case 'addRowAfter':
-                ch.addRowAfter().run()
-                break
             case 'addRowBefore':
                 ch.addRowBefore().run()
                 break
@@ -904,9 +950,6 @@ function wireToolbar(editor) {
 
             case 'addColumnAfter':
                 ch.addColumnAfter().run()
-                break
-            case 'addColumnBefore':
-                ch.addColumnBefore().run()
                 break
             case 'deleteColumn':
                 ch.deleteColumn().run()
@@ -1037,8 +1080,8 @@ function wireSave(editor) {
         const rawJson = editor.getJSON()
 
         const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE)
-        // ✅ 템플릿 편집(create-docform)에서는 잠금(locked) 저장 금지
-        // ✅ 대신 '문서 작성 단계'에서 입력을 허용할 영역만 editable로 표시해 저장
+        // 템플릿 편집(create-docform)에서는 잠금(locked) 저장 금지
+        // 대신 '문서 작성 단계'에서 입력을 허용할 영역만 editable로 표시해 저장
         const templateJson = markEditablePolicyForTemplate(withTableFont)
 
         const templateTypes = [...elTypeRadios.querySelectorAll('.radio-item')]
@@ -1047,21 +1090,36 @@ function wireSave(editor) {
 
         const presetTables = getPresetTablesState()
 
+        const categories = getCategoriesFromRadios()
+
+        // TipTap JSON/HTML (본문)
+        const cnttJson = JSON.stringify(templateJson)
+        const bodyHtml = editor.getHTML()
+
+        // 헤더표(고정 템플릿) + 전체 HTML 조립
+        const headerHtml = extractHeaderHtmlFromTemplates()
+        const cnttHtml = buildFullHtml({
+            docfoName: docTitle,
+            categories,
+            headerHtml,
+            bodyHtml,
+        })
+
         const payload = {
-            meta: {
-                docTitle,
-                savedAt: new Date().toISOString(),
-                defaultTextStyle: getEditorDefaultTextStyle(),
-            },
-            uiState: {
-                templateTypes,
-                presetTables,
-            },
-            templateJson,
+            comId: getComId(),
+            writerId: getWriterId(),
+            docfoName: docTitle,
+            cnttHtml,
+            cnttJson,
+            categories,
         }
 
-        const res = await fetch('/api/tiptap/templates', {
-            method: 'POST',
+        const isEdit = Boolean(new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id'))
+        const targetId = new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id')
+        const url = isEdit ? `/forms/${encodeURIComponent(targetId)}` : '/forms'
+
+        const res = await fetch(url, {
+            method: isEdit ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         })
@@ -1315,10 +1373,11 @@ function focusEndParagraphAndAlignLeft(editor) {
 
 // ---------- restore ----------
 async function restoreIfIdExists(editor) {
-    const id = new URLSearchParams(location.search).get('id')
+    const qs = new URLSearchParams(location.search)
+    const id = qs.get('docfoNo') || qs.get('id')
     if (!id) return
 
-    const res = await fetch(`/api/tiptap/templates/${encodeURIComponent(id)}`, {
+    const res = await fetch(`/forms/${encodeURIComponent(id)}`, {
         headers: { Accept: 'application/json' },
     })
     if (!res.ok) {
@@ -1326,28 +1385,26 @@ async function restoreIfIdExists(editor) {
         return
     }
 
-    const payload = await res.json()
+    const dto = await res.json()
 
-    if (payload?.meta?.docTitle && elDocTitle) {
-        elDocTitle.value = payload.meta.docTitle
+    // 백엔드 Detail DTO 기준: docfoName, cnttJson, categories
+    const docfoName = dto?.docfoName || dto?.docfo_name || ''
+    const cnttJsonStr = dto?.cnttJson || dto?.cntt_json || ''
+    const categories = dto?.categories || []
+
+    if (docfoName) elDocTitle.value = docfoName
+    if (Array.isArray(categories) && categories.length) {
+        setRadioState({ templateTypes: categories, selectedType: categories[0] })
     }
 
-    if (payload?.uiState?.presetTables) {
-        setPresetTablesState(payload.uiState.presetTables)
+    if (cnttJsonStr) {
+        try {
+            const templateJson = JSON.parse(cnttJsonStr)
+            editor.commands.setContent(templateJson)
+        } catch (e) {
+            console.warn('cnttJson parse failed', e)
+        }
     }
-
-    if (payload?.uiState?.templateTypes || payload?.meta?.selectedType) {
-        setRadioState({
-            templateTypes: payload?.uiState?.templateTypes || [],
-            selectedType: payload?.meta?.selectedType || '',
-        })
-    }
-
-    if (payload?.templateJson) {
-        editor.commands.setContent(unlockAllInputFields(payload.templateJson))
-    }
-
-    ensureDocEndsWithParagraph(editor)
 }
 
 bootEditor().catch((e) => {
