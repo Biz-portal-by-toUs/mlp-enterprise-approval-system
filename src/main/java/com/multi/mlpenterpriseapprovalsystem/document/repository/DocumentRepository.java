@@ -170,13 +170,13 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 //======================================================================================================================
 
     // 문서코드로 문서 상세조회
-    // 상신한 문서 검증: 작성자가 나(myEmpId)이고 문서 상태가 AW(결재중)인 경우
+    // 상신한 문서 검증: 작성자가 나(myEmpId)이고 문서 상태가 AW(결재중), FI(최종승인), RJ(반려)인 경우
     @Query("""
         SELECT d FROM Document d 
         WHERE d.company.comId = :comId 
           AND d.docNo = :docNo 
           AND d.writer.empId = :myEmpId 
-          AND d.docStat = 'AW'
+          AND d.docStat IN ('AW', 'FI', 'RJ')
     """)
     Optional<Document> findSubmittedDoc(@Param("comId") String comId,
                                         @Param("docNo") Long docNo,
