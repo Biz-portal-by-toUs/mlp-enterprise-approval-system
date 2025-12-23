@@ -66,7 +66,12 @@
         .form-control {
             width: 100%; height: 56px; border-radius: 14px; border: 1px solid #ddd;
             padding: 0 20px; font-size: 16px; transition: all 0.2s ease;
-            background: #fff;
+            background: #fff; appearance: none; /* 브라우저 기본 화살표 제거 (필요시) */
+        }
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23777' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: calc(100% - 20px) center;
         }
         .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(47, 111, 219, 0.1); }
         .helper-text { font-size: 13px; color: var(--text-muted); margin-top: 8px; font-weight: 500; }
@@ -127,7 +132,18 @@
                 <label class="input-label" for="posName">직급명</label>
                 <input type="text" id="posName" class="form-control"
                        th:value="${posName}" placeholder="수정할 직급명을 입력하세요" maxlength="30" />
-                <p class="helper-text">사용자 조직도 및 프로필에 표시될 직급 이름입니다.</p>
+                <p class="helper-text">조직도에 표시될 직급의 이름입니다.</p>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" for="posOrder">직급 순서 (정렬)</label>
+                <select id="posOrder" class="form-control">
+                    <option th:each="i : ${#numbers.sequence(1, 20)}"
+                            th:value="${i}"
+                            th:text="${i} + '순위'"
+                            th:selected="${i == posOrder}"></option>
+                </select>
+                <p class="helper-text">낮은 숫자일수록 상위 직급으로 정렬됩니다.</p>
             </div>
 
             <div class="form-actions">
@@ -143,12 +159,10 @@
 <script th:inline="javascript">
     const API_BASE = "/api/v1/admin/positions";
 
-    // ✅ 토큰 획득 공통 함수
     function getAccessToken() {
         return localStorage.getItem("accessToken") || localStorage.getItem("token");
     }
 
-    // ✅ 알림 표시 함수
     function showStatus(isOk, text) {
         const el = document.getElementById("statusMsg");
         el.textContent = text;
@@ -156,34 +170,32 @@
         el.style.display = "block";
     }
 
-    // ✅ 수정 실행 함수
     async function submitUpdate() {
         const posNo = document.getElementById("posNo").value;
         const posName = document.getElementById("posName").value.trim();
+        const posOrder = document.getElementById("posOrder").value; // ✅ 드롭다운 값 읽기
         const token = getAccessToken();
 
-        // 1. 유효성 체크
-        if (!posNo) { showStatus(false, "직급 번호를 찾을 수 없습니다. 페이지를 새로고침 하세요."); return; }
+        if (!posNo) { showStatus(false, "직급 번호를 찾을 수 없습니다."); return; }
         if (!posName) { showStatus(false, "직급명을 입력해주세요."); return; }
-        if (!token) { showStatus(false, "인증 정보가 없습니다. 다시 로그인해주세요."); return; }
+        if (!token) { showStatus(false, "인증 정보가 없습니다."); return; }
 
-        // 2. 요청 바디 구성 (ReqPositionsDto 형태에 맞춤)
+        // ✅ 백엔드 DTO 필드명(posName, posOrder)에 맞춰 페이로드 구성
         const payload = {
-            posName: posName
+            posName: posName,
+            posOrder: parseInt(posOrder) // 숫자로 변환하여 전송
         };
 
         try {
-            // 3. API 호출 (중괄호 없이 깔끔하게 생성)
             const response = await fetch(`${API_BASE}/${posNo}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify(payload) // ✅ 데이터 상자(Body) 전송
+                body: JSON.stringify(payload)
             });
 
-            // 4. 응답 처리
             if (response.ok) {
                 showStatus(true, "성공적으로 반영되었습니다. 목록으로 이동합니다.");
                 setTimeout(() => {
@@ -191,15 +203,11 @@
                 }, 1000);
             } else {
                 const data = await response.json().catch(() => ({}));
-                if (response.status === 403) {
-                    showStatus(false, "수정 권한이 없습니다. (관리자 전용)");
-                } else {
-                    showStatus(false, data.message || "수정 처리 중 오류가 발생했습니다.");
-                }
+                showStatus(false, data.message || "수정 처리 중 오류가 발생했습니다.");
             }
         } catch (error) {
             console.error("Fetch Error:", error);
-            showStatus(false, "서버 연결에 실패했습니다. 네트워크 상태를 확인하세요.");
+            showStatus(false, "서버 연결 실패. 네트워크를 확인하세요.");
         }
     }
 </script>
