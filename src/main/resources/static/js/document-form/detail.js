@@ -1,32 +1,50 @@
-// static/src/detail.js
+// static/js/document-form/detail.js
+// ✅ Fixes
+// 1) 상세 조회 API: /api/v1/forms/{docfoNo}
+// 2) payload 전체를 JSON.parse 하지 않고, payload.cnttJson만 처리
+// 3) cnttJson이 JsonNode(객체)로 오든, String(JSON)으로 오든 모두 처리
+// 4) cnttJson이 실수로 HTML(<!doctype...)이면 JSON.parse 시도하지 않고 cnttHtml로 폴백
+// 5) type 누락 노드 방어(sanitize)로 'Unknown node type: undefined' 가능성 줄임
 
 const TIPTAP_V = '2.11.2'
-
-const PM_EXTERNAL = [
-    'prosemirror-model',
-    'prosemirror-state',
-    'prosemirror-view',
-    'prosemirror-transform',
-    'prosemirror-commands',
-    'prosemirror-keymap',
-    'prosemirror-history',
-    'prosemirror-schema-list',
-    'prosemirror-dropcursor',
-    'prosemirror-gapcursor',
-].join(',')
-
-const cdn = (pkg) =>
-    `https://esm.sh/${pkg}@${TIPTAP_V}?bundle&target=es2020&external=${encodeURIComponent(PM_EXTERNAL)}`
+const cdn = (pkg) => `https://esm.sh/${pkg}@${TIPTAP_V}?bundle&target=es2020`
 
 const meta = document.querySelector('meta[name="template-id"]')
-const templateId = meta?.content
+const docfoNo = meta?.content
 
 const mount = document.getElementById('templateMount')
 if (!mount) throw new Error('#templateMount not found')
 
-if (!templateId) {
+if (!docfoNo) {
     mount.textContent = 'template-id가 없습니다.'
     throw new Error('template-id is missing')
+}
+
+/** ✅ fetch 재귀 방지용: 원본 fetch 고정 */
+const _fetch = window.fetch.bind(window)
+
+/** ✅ A안: 토큰 키 고정 (네 로그 기준 accessToken) */
+function getAccessToken() {
+    return (localStorage.getItem('accessToken') || '').trim()
+}
+
+/** ✅ Authorization Bearer 자동 처리 */
+async function apiFetch(url, options = {}) {
+    const token = getAccessToken()
+
+    const headers = new Headers(options.headers || {})
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json')
+
+    if (options.body && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
+    }
+
+    if (token) {
+        const hasBearer = /^Bearer\s+/i.test(token)
+        headers.set('Authorization', hasBearer ? token : `Bearer ${token}`)
+    }
+
+    return _fetch(url, { ...options, headers })
 }
 
 function escapeHtml(s) {
@@ -51,12 +69,22 @@ function normalizeTypes(types) {
     return out
 }
 
-function renderHeader(payload) {
-    const title = payload?.meta?.docTitle || payload?.docTitle || payload?.title || ''
-    const preset = payload?.uiState?.presetTables || payload?.presetTables || {}
-    const leftHtml = preset.leftHtml || ''
-    const rightHtml = preset.rightHtml || ''
-    const types = normalizeTypes(payload?.uiState?.templateTypes || [])
+/**
+ * payload(백엔드 ResDocumentFormDetailDto) 기준
+ * - docfoName
+ * - cnttJson (JsonNode or String)
+ * - cnttHtml (String)
+ * - categories: [{name: "..."}] or ["..."] (혼용 대비)
+ */
+function renderHeaderFromFormDetail(payload) {
+    const title = payload?.docfoName || payload?.title || payload?.name || ''
+
+    const rawCats = payload?.categories || []
+    const types = normalizeTypes(
+        Array.isArray(rawCats)
+            ? rawCats.map((c) => (typeof c === 'string' ? c : c?.name))
+            : [],
+    )
 
     const elTitle = document.getElementById('tplTitle')
     const elLeft = document.getElementById('tplLeftSide')
@@ -64,8 +92,8 @@ function renderHeader(payload) {
     const elCats = document.getElementById('tplCats')
 
     if (elTitle) elTitle.textContent = title || '-'
-    if (elLeft) elLeft.innerHTML = leftHtml || `<span class="tpl-muted">-</span>`
-    if (elRight) elRight.innerHTML = rightHtml || `<span class="tpl-muted">-</span>`
+    if (elLeft) elLeft.innerHTML = `<span class="tpl-muted">-</span>`
+    if (elRight) elRight.innerHTML = `<span class="tpl-muted">-</span>`
 
     if (elCats) {
         elCats.innerHTML =
@@ -83,6 +111,93 @@ function renderHeader(payload) {
                     .join('')
                 : `<span class="tpl-muted">카테고리 없음</span>`
     }
+}
+
+/**
+ * cnttJson normalize
+ * - JsonNode(객체)면 그대로 사용
+ * - String이면 JSON.parse 시도
+ * - String이 '<!doctype' / '<html' 등 HTML이면 JSON 아님 → null 반환
+ * - { doc: {...} } 래핑 제거
+ * - content 배열만 온 케이스 → doc로 감싸기
+ */
+function normalizeTiptapJson(raw) {
+    if (raw == null) return null
+
+    // String
+    if (typeof raw === 'string') {
+        const s = raw.trim()
+        if (!s) return null
+
+        // HTML이 들어온 경우(JSON.parse 금지)
+        if (s.startsWith('<') || /^<!doctype/i.test(s)) {
+            console.warn('[cnttJson] looks like HTML string, skip JSON.parse')
+            return null
+        }
+
+        try {
+            raw = JSON.parse(s)
+        } catch (e) {
+            console.warn('[cnttJson] JSON.parse failed', e)
+            return null
+        }
+    }
+
+    // { doc: {...} } 래핑 제거
+    if (raw && typeof raw === 'object' && raw.doc && typeof raw.doc === 'object') {
+        raw = raw.doc
+    }
+
+    // content 배열만 오면 doc로 감싸기
+    if (Array.isArray(raw)) {
+        raw = { type: 'doc', content: raw }
+    }
+
+    if (!raw || typeof raw !== 'object' || !raw.type) return null
+
+    // 최종 sanitize
+    const sanitized = sanitizeTiptapNode(raw, 'doc')
+    if (!sanitized?.type) return null
+    return sanitized
+}
+
+// ✅ type 없는 노드가 섞여 들어오는 케이스 방어
+function sanitizeTiptapNode(node, path = 'root') {
+    if (node == null) return null
+
+    // 배열이면 각 요소 sanitize
+    if (Array.isArray(node)) {
+        const out = node
+            .map((n, i) => sanitizeTiptapNode(n, `${path}[${i}]`))
+            .filter(Boolean)
+        return out
+    }
+
+    if (typeof node !== 'object') return null
+
+    // type 누락 + text만 있으면 text 노드로 보정
+    if (!node.type) {
+        if (typeof node.text === 'string') {
+            node = { type: 'text', text: node.text, marks: node.marks }
+        } else {
+            console.warn('[sanitize] drop node (missing type):', path, node)
+            return null
+        }
+    }
+
+    // marks 정리
+    if (Array.isArray(node.marks)) {
+        node.marks = node.marks.filter((m) => m && m.type)
+    }
+
+    // content 재귀 정리
+    if (Array.isArray(node.content)) {
+        node.content = node.content
+            .map((c, i) => sanitizeTiptapNode(c, `${path}.content[${i}]`))
+            .filter(Boolean)
+    }
+
+    return node
 }
 
 function extractFirstTableColWidthsFromJson(docJson) {
@@ -150,27 +265,9 @@ function closeSafely() {
     }, 50)
 }
 
-function openWriteDocPage(templateId) {
-    const w = 1100
-    const h = 800
-    const l = Math.floor((window.screen.width - w) / 2)
-    const t = Math.floor((window.screen.height - h) / 2)
-
-    const url = new URL('/templates/doc-write.html', window.location.origin)
-    url.searchParams.set('id', templateId)
-
-    window.open(
-        url.toString(),
-        'docWrite',
-        `width=${w},height=${h},left=${l},top=${t},resizable=yes,scrollbars=yes`,
-    )
-}
-
-function bindFooterActions(templateId) {
-    document.getElementById('tplApproveBtn')?.addEventListener('click', () => openWriteDocPage(templateId))
-
+function bindFooterActions(docfoNo) {
     document.getElementById('tplEditBtn')?.addEventListener('click', () => {
-        const url = `/document-form/manager/form/update-form?docfoNo=${encodeURIComponent(templateId)}`
+        const url = `/document-form/manager/form/update-form?docfoNo=${encodeURIComponent(docfoNo)}`
         location.href = url
     })
 
@@ -178,20 +275,7 @@ function bindFooterActions(templateId) {
 }
 
 async function run() {
-    bindFooterActions(templateId)
-
-    await Promise.all([
-        import(`https://esm.sh/prosemirror-model?target=es2020`),
-        import(`https://esm.sh/prosemirror-state?target=es2020`),
-        import(`https://esm.sh/prosemirror-view?target=es2020`),
-        import(`https://esm.sh/prosemirror-transform?target=es2020`),
-        import(`https://esm.sh/prosemirror-commands?target=es2020`),
-        import(`https://esm.sh/prosemirror-keymap?target=es2020`),
-        import(`https://esm.sh/prosemirror-history?target=es2020`),
-        import(`https://esm.sh/prosemirror-schema-list?target=es2020`),
-        import(`https://esm.sh/prosemirror-dropcursor?target=es2020`),
-        import(`https://esm.sh/prosemirror-gapcursor?target=es2020`),
-    ])
+    bindFooterActions(docfoNo)
 
     const core = await import(cdn('@tiptap/core'))
     const { Node, Extension, mergeAttributes } = core
@@ -441,32 +525,42 @@ async function run() {
         HasTextCellAttr,
     ]
 
-    const res = await fetch(`/api/tiptap/templates/${encodeURIComponent(templateId)}`, {
-        headers: { Accept: 'application/json' },
-    })
-    if (!res.ok) throw new Error(`JSON fetch failed: ${res.status}`)
+    // ✅ 백엔드 상세 API
+    const res = await apiFetch(`/api/v1/forms/${encodeURIComponent(docfoNo)}`, { method: 'GET' })
+    if (!res.ok) {
+        const t = await res.text().catch(() => '')
+        throw new Error(`JSON fetch failed: ${res.status} ${t}`)
+    }
 
     const payload = await res.json()
 
-    renderHeader(payload)
+    // ✅ 헤더 렌더링
+    renderHeaderFromFormDetail(payload)
 
-    const json = payload?.templateJson
+    // ✅ cnttJson만 처리
+    const json = normalizeTiptapJson(payload?.cnttJson)
+
     if (!json) {
-        mount.textContent = 'templateJson이 없습니다.'
+        const html = (payload?.cnttHtml || '').trim()
+        if (html) {
+            mount.innerHTML = `<div class="tpl-bodyBox">${html}</div>`
+            return
+        }
+        mount.textContent = 'cnttJson/cnttHtml이 없습니다.'
         return
     }
 
     const bodyHtml = generateHTML(json, extensions)
-    const dts = payload?.meta?.defaultTextStyle || {}
-    const ff = dts.fontFamily ? `font-family:${dts.fontFamily};` : ''
-    const fs = dts.fontSize ? `font-size:${dts.fontSize};` : ''
-    mount.innerHTML = `<div class="tpl-bodyBox" style="${ff}${fs}">${bodyHtml}</div>`
+    mount.innerHTML = `<div class="tpl-bodyBox">${bodyHtml}</div>`
 
     const widths = extractFirstTableColWidthsFromJson(json)
     applyColgroupToBodyTables(mount, widths)
     enforceFontSizeFromDataFs(mount)
     decorateOutsideInputFields(mount)
 }
+
+// 디버그: 토큰 확인
+console.log('[accessToken]', getAccessToken())
 
 run().catch((e) => {
     console.error(e)

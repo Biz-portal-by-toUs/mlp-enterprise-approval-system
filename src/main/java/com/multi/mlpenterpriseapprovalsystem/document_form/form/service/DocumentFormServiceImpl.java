@@ -1,5 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
@@ -38,6 +41,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     private final DocumentFormCategoryRepository documentFormCategoryRepository;
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -61,10 +65,22 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                         .map(c -> new ResDocumentFormCategoryNameDto(c.getName()))
                         .toList();
 
+        JsonNode cnttJsonNode = null;
+        try {
+            // DB에는 String(JSON)로 저장되어 있으므로, 응답에서는 JsonNode로 변환해서 내려준다.
+            if (form.getCnttJson() != null && !form.getCnttJson().isBlank()) {
+                cnttJsonNode = objectMapper.readTree(form.getCnttJson());
+            }
+        } catch (Exception e) {
+            // JSON이 깨져있더라도 상세 조회가 500으로 터지지 않게 방어
+            cnttJsonNode = null;
+        }
+
         return new ResDocumentFormDetailDto(
                 form.getDocfoNo(),
                 form.getDocfoName(),
-                form.getCnttJson(),
+                null, // docfoId 사용 시 여기 채우기
+                cnttJsonNode,
                 form.getCnttHtml(),
                 categories
         );
@@ -88,17 +104,17 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         if (req.categories() != null) {
             categories =
                     req.categories().stream()
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .distinct()
-                    .map(name ->
-                            DocumentFormCategory.create(
-                                    company,
-                                    saved,
-                                    name
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .distinct()
+                            .map(name ->
+                                    DocumentFormCategory.create(
+                                            company,
+                                            saved,
+                                            name
+                                    )
                             )
-                    )
-                    .toList();
+                            .toList();
 
             documentFormCategoryRepository.saveAll(categories);
         }

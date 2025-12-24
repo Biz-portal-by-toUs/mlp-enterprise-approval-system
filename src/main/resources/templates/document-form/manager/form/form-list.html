@@ -37,7 +37,6 @@
         tbody tr:hover{background:#fbfcff;}
         .muted{color:var(--muted); font-size:13px;}
 
-        /* 제목 hover: 파란색 + 밑줄 */
         .titleLink{
             color: inherit;
             text-decoration: none;
@@ -49,7 +48,6 @@
             text-decoration: underline;
         }
 
-        /* pager */
         .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; padding:10px 18px 18px;}
         .pager .info{margin-right:auto; color:var(--muted); font-size:13px;}
         .pager-controls{display:flex; gap:8px; align-items:center;}
@@ -86,7 +84,6 @@
         </select>
         <button class="btn" id="btnSearch">검색</button>
 
-        <!-- 선택 삭제(체크 1개 이상이면 표시) -->
         <button class="btn danger" id="btnBulkDelete" style="display:none;">선택 삭제</button>
 
         <div class="rightHint">
@@ -131,7 +128,7 @@
     const elBulkDel = document.getElementById('btnBulkDelete');
     const elToast   = document.getElementById('toast');
 
-    const selected = new Set(); // 체크된 docfoNo 저장
+    const selected = new Set();
 
     let page = 0;
     let totalPages = 1;
@@ -151,6 +148,33 @@
             .replaceAll('>','&gt;')
             .replaceAll('"','&quot;')
             .replaceAll("'",'&#39;');
+    }
+
+    // ✅ fetch 재귀 방지용: 원본 fetch 고정
+    const _fetch = window.fetch.bind(window);
+
+    // ✅ A안: 토큰 키 고정 (네 콘솔 로그 기준)
+    function getAccessToken() {
+        return (localStorage.getItem('accessToken') || '').trim();
+    }
+
+    // ✅ Authorization: Bearer 자동 처리 (이미 Bearer로 저장된 케이스도 안전)
+    async function apiFetch(url, options = {}) {
+        const token = getAccessToken();
+
+        const headers = new Headers(options.headers || {});
+        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
+        if (options.body && !headers.has('Content-Type')) {
+            headers.set('Content-Type', 'application/json');
+        }
+
+        if (token) {
+            const hasBearer = /^Bearer\s+/i.test(token);
+            headers.set('Authorization', hasBearer ? token : `Bearer ${token}`);
+        }
+
+        return _fetch(url, { ...options, headers });
     }
 
     function openDetail(docfoNo){
@@ -203,12 +227,11 @@
 
         const q = elQ.value.trim();
         if(q){
-            // 백엔드 파라미터가 q/docfoName 중 뭐든 받을 수 있게 둘 다
             params.set('q', q);
             params.set('docfoName', q);
         }
 
-        // 상태 파라미터(stat)는 보내지 않음 (A 고정 페이지)
+        // stat은 백엔드 기본값 A라서 안 보내도 됨
         return `${API_BASE}?${params.toString()}`;
     }
 
@@ -253,7 +276,9 @@
 
         try{
             const url = buildUrl();
-            const res = await fetch(url, { headers: { 'Accept':'application/json' } });
+
+            // ✅ 반드시 apiFetch 사용
+            const res = await apiFetch(url, { method:'GET' });
 
             if(!res.ok){
                 const t = await res.text().catch(()=> '');
@@ -326,7 +351,6 @@
         ].join('');
     }
 
-    // 체크박스 change (tbody 이벤트 위임)
     elTbody.addEventListener('change', (e) => {
         const cb = e.target;
         if(!(cb instanceof HTMLInputElement)) return;
@@ -341,7 +365,6 @@
         updateBulkDeleteUI();
     });
 
-    // ✅ 페이지네이션 클릭(이벤트 위임)
     elPager.addEventListener('click', (e) => {
         const t = e.target;
         if(!(t instanceof HTMLElement)) return;
@@ -378,10 +401,7 @@
             elBulkDel.disabled = true;
 
             for(const docfoNo of ids){
-                const res = await fetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
-                    method: 'DELETE',
-                    headers: {'Content-Type':'application/json'},
-                });
+                const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method:'DELETE' });
                 if(!res.ok){
                     const t = await res.text().catch(()=> '');
                     throw new Error(`삭제 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
@@ -401,7 +421,6 @@
         }
     });
 
-    // events
     document.getElementById('btnCreate').addEventListener('click', () => {
         window.open(`${VIEW_BASE}/make-form`, '_blank',
             'width=1100,height=820,resizable=yes,scrollbars=yes'
@@ -417,10 +436,11 @@
 
     elSize.addEventListener('change', () => { page = 0; load(); });
 
-    // expose for inline onclick (제목 클릭)
     window.openDetail = openDetail;
 
-    // init
+    // 디버그: 토큰이 실제로 있는지 확인
+    console.log('[accessToken]', getAccessToken());
+
     load();
 </script>
 </body>
