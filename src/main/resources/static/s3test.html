@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>S3 Presigned Upload Test (with localStorage token)</title>
+    <style>
+        :root{
+            --bg:#f3f5f9;
+            --card:#ffffff;
+            --text:#111;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --primary:#2f6fda;
+            --danger:#dc2626;
+            --ok:#16a34a;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+        .wrap{max-width:980px;margin:32px auto;padding:0 16px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.05);padding:18px}
+        .row{display:flex;gap:12px;flex-wrap:wrap}
+        .field{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1}
+        label{font-size:12px;color:var(--muted)}
+        input,select{
+            height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;outline:none;
+            background:#fff;font-size:14px;
+        }
+        input:focus,select:focus{border-color:rgba(47,111,218,.55);box-shadow:0 0 0 3px rgba(47,111,218,.12)}
+        .actions{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+        button{
+            height:40px;border:0;border-radius:10px;padding:0 14px;background:var(--primary);color:#fff;
+            font-weight:600;cursor:pointer;
+        }
+        button:disabled{opacity:.55;cursor:not-allowed}
+        .ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+        .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45}
+        .preview{margin-top:14px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+        img{width:220px;max-width:100%;border-radius:12px;border:1px solid var(--line);display:none}
+        .log{
+            margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#0b1020;color:#e5e7eb;
+            padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;
+            white-space:pre-wrap;min-height:140px;
+        }
+        .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+        .ok{background:rgba(22,163,74,.15);color:var(--ok);border:1px solid rgba(22,163,74,.35)}
+        .bad{background:rgba(220,38,38,.15);color:var(--danger);border:1px solid rgba(220,38,38,.35)}
+        .progress-wrap{margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        progress{width:280px;max-width:100%}
+        .small{font-size:12px;color:var(--muted)}
+        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+        .tokenbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .tokenval{
+            padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;max-width:100%;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        }
+        .warn{color:#fbbf24}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h2 style="margin:0 0 8px 0;">S3 Presigned Upload 테스트 (localStorage 토큰 포함)</h2>
+        <div class="hint">
+            <b>흐름</b>: 파일 선택 → <span class="mono">/presign</span>(Authorization 포함) → S3 PUT(Authorization 없음) → <span class="mono">/complete</span>(Authorization 포함)<br>
+            • 같은 도메인에서 백엔드가 떠 있으면 <span class="mono">API_BASE=""</span> 그대로 사용<br>
+            • 토큰은 localStorage에서 자동으로 찾고(<span class="mono">accessToken/token/jwt/Authorization</span>), 안 맞으면 Token Key를 바꿔줘
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+            <div class="field" style="min-width:260px;">
+                <label>파일 선택 (이미지)</label>
+                <input id="file" type="file" accept="image/*" />
+            </div>
+
+            <div class="field">
+                <label>domain</label>
+                <select id="domain">
+                    <option value="NOTICE">NOTICE</option>
+                    <option value="MAIL">MAIL</option>
+                    <option value="BOARD">BOARD</option>
+                    <option value="APPROVAL">APPROVAL</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>entityId</label>
+                <input id="entityId" type="number" value="88" min="1" />
+            </div>
+
+            <div class="field">
+                <label>fileType</label>
+                <select id="fileType">
+                    <option value="IMAGE">IMAGE</option>
+                    <option value="DOC">DOC</option>
+                    <option value="AUDIO">AUDIO</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+            <div class="field" style="min-width:280px;">
+                <label>Token Key (localStorage)</label>
+                <div class="tokenbox">
+                    <input id="tokenKey" type="text" value="auto" placeholder="auto 또는 accessToken/token/jwt/Authorization" />
+                    <button id="refreshTokenBtn" class="ghost" type="button">토큰 다시 읽기</button>
+                </div>
+                <div class="small">
+                    • <span class="mono">auto</span>면 자동 탐색<br>
+                    • 값이 <span class="mono">Bearer xxx</span> 형태면 그대로 쓰고, 아니면 자동으로 <span class="mono">Bearer</span>를 붙임
+                </div>
+            </div>
+
+            <div class="field">
+                <label>현재 읽은 Authorization</label>
+                <div id="tokenPreview" class="tokenval mono">-</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="uploadBtn" type="button">업로드</button>
+            <button id="clearBtn" class="ghost" type="button">로그/미리보기 초기화</button>
+            <span id="status" class="badge" style="display:none;"></span>
+        </div>
+
+        <div class="progress-wrap">
+            <progress id="progress" value="0" max="100"></progress>
+            <span id="progressText" class="small">0%</span>
+        </div>
+
+        <div class="preview">
+            <img id="preview" alt="preview"/>
+        </div>
+
+        <div id="log" class="log"></div>
+    </div>
+</div>
+
+<script>
+    // 같은 도메인/포트에서 백엔드가 떠 있으면 "" 유지
+    // 예: 백엔드가 http://localhost:8080 이면 API_BASE = "http://localhost:8080"
+    const API_BASE = "";
+
+    const $file = document.getElementById("file");
+    const $domain = document.getElementById("domain");
+    const $entityId = document.getElementById("entityId");
+    const $fileType = document.getElementById("fileType");
+    const $uploadBtn = document.getElementById("uploadBtn");
+    const $clearBtn = document.getElementById("clearBtn");
+    const $preview = document.getElementById("preview");
+    const $log = document.getElementById("log");
+    const $status = document.getElementById("status");
+    const $progress = document.getElementById("progress");
+    const $progressText = document.getElementById("progressText");
+    const $tokenKey = document.getElementById("tokenKey");
+    const $refreshTokenBtn = document.getElementById("refreshTokenBtn");
+    const $tokenPreview = document.getElementById("tokenPreview");
+
+    function logLine(msg) {
+        const ts = new Date().toLocaleTimeString();
+        $log.textContent += `[${ts}] ${msg}\n`;
+        $log.scrollTop = $log.scrollHeight;
+    }
+
+    function setStatus(type, text) {
+        $status.style.display = "inline-block";
+        $status.className = "badge " + (type === "ok" ? "ok" : "bad");
+        $status.textContent = text;
+    }
+
+    function setProgress(pct) {
+        const v = Math.max(0, Math.min(100, pct));
+        $progress.value = v;
+        $progressText.textContent = `${v}%`;
+    }
+
+    function pickTokenFromLocalStorage(tokenKeyInput) {
+        const key = (tokenKeyInput || "").trim();
+
+        const candidates = ["accessToken", "token", "jwt", "Authorization"];
+        let raw = null;
+        let usedKey = null;
+
+        if (key && key !== "auto") {
+            raw = localStorage.getItem(key);
+            usedKey = key;
+        } else {
+            for (const k of candidates) {
+                const v = localStorage.getItem(k);
+                if (v && String(v).trim().length > 0) {
+                    raw = v;
+                    usedKey = k;
+                    break;
+                }
+            }
+        }
+
+        if (!raw) {
+            return { usedKey, authorization: null };
+        }
+
+        const trimmed = String(raw).trim();
+
+        // 이미 "Bearer xxx"면 그대로
+        if (/^Bearer\s+/i.test(trimmed)) {
+            return { usedKey, authorization: trimmed };
+        }
+
+        // 혹시 따옴표 포함 저장된 경우 제거
+        const unquoted = trimmed.replace(/^"+|"+$/g, "");
+
+        return { usedKey, authorization: `Bearer ${unquoted}` };
+    }
+
+    function refreshTokenPreview() {
+        const { usedKey, authorization } = pickTokenFromLocalStorage($tokenKey.value);
+        if (!authorization) {
+            $tokenPreview.textContent = "- (토큰 없음)";
+            $tokenPreview.style.borderColor = "#fbbf24";
+            logLine(`⚠️ localStorage에서 토큰을 못 찾았어. (tokenKey=${$tokenKey.value}, usedKey=${usedKey ?? "none"})`);
+            return null;
+        }
+        $tokenPreview.textContent = authorization;
+        $tokenPreview.style.borderColor = "#e5e7eb";
+        logLine(`토큰 로드 OK (usedKey=${usedKey})`);
+        return authorization;
+    }
+
+    function buildAuthHeaders() {
+        const auth = refreshTokenPreview(); // 최신값으로 갱신
+        const headers = { "Content-Type": "application/json" };
+        if (auth) headers["Authorization"] = auth;
+        return headers;
+    }
+
+    $refreshTokenBtn.addEventListener("click", () => {
+        refreshTokenPreview();
+    });
+
+    $clearBtn.addEventListener("click", () => {
+        $log.textContent = "";
+        $preview.style.display = "none";
+        $preview.src = "";
+        $status.style.display = "none";
+        setProgress(0);
+        logLine("초기화 완료");
+    });
+
+    $file.addEventListener("change", () => {
+        const f = $file.files?.[0];
+        if (!f) return;
+
+        if (f.type.startsWith("image/")) {
+            $preview.src = URL.createObjectURL(f);
+            $preview.style.display = "block";
+        } else {
+            $preview.style.display = "none";
+        }
+        logLine(`선택됨: name=${f.name}, type=${f.type}, size=${f.size} bytes`);
+    });
+
+    async function uploadImageToS3(file, { domain, entityId, fileType }) {
+        // 1) presign 요청
+        logLine("1) presign 요청...");
+        setProgress(10);
+
+        const presignRes = await fetch(`${API_BASE}/api/v1/attachments/presign`, {
+            method: "POST",
+            headers: buildAuthHeaders(),
+            credentials: "include", // 쿠키 기반이면 필요, JWT만이면 없어도 됨(있어도 무해)
+            body: JSON.stringify({
+                domain,
+                entityId,
+                fileType,
+                originalName: file.name,
+                contentType: file.type,
+                size: file.size
+            })
+        });
+
+        if (!presignRes.ok) throw new Error("presign 실패: " + (await presignRes.text()));
+        const { objectKey, uploadUrl } = await presignRes.json();
+        logLine(`presign OK: objectKey=${objectKey}`);
+        setProgress(30);
+
+        // 2) S3에 직접 PUT (여기엔 Authorization 절대 넣지 말기)
+        logLine("2) S3 PUT 업로드...");
+        const s3Res = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file
+        });
+        if (!s3Res.ok) throw new Error("S3 업로드 실패: " + s3Res.status);
+        logLine("S3 업로드 OK");
+        setProgress(70);
+
+        // 3) DB 저장 확정(complete)
+        logLine("3) complete(DB 저장) 요청...");
+        const completeRes = await fetch(`${API_BASE}/api/v1/attachments/complete`, {
+            method: "POST",
+            headers: buildAuthHeaders(),
+            credentials: "include",
+            body: JSON.stringify({
+                domain,
+                entityId,
+                fileType,
+                objectKey,
+                originalName: file.name,
+                contentType: file.type,
+                size: file.size
+            })
+        });
+
+        if (!completeRes.ok) throw new Error("complete 실패: " + (await completeRes.text()));
+        const result = await completeRes.json();
+        logLine(`complete OK: ${JSON.stringify(result)}`);
+        setProgress(100);
+
+        return result;
+    }
+
+    $uploadBtn.addEventListener("click", async () => {
+        try {
+            const f = $file.files?.[0];
+            if (!f) {
+                setStatus("bad", "파일을 선택해줘");
+                logLine("에러: 파일 미선택");
+                return;
+            }
+
+            if ($fileType.value === "IMAGE" && !f.type.startsWith("image/")) {
+                setStatus("bad", "이미지 파일만 업로드 가능");
+                logLine("에러: image/* 아님");
+                return;
+            }
+
+            $uploadBtn.disabled = true;
+            setStatus("ok", "진행 중...");
+            setProgress(0);
+
+            // 토큰 확인(없어도 요청은 보내되, 대부분 401 날 거라 로그로 안내)
+            const { authorization } = pickTokenFromLocalStorage($tokenKey.value);
+            if (!authorization) {
+                logLine("⚠️ Authorization 토큰이 없어서 presign/complete가 401 날 수 있어!");
+                setStatus("bad", "토큰 없음(로그 확인)");
+            } else {
+                setStatus("ok", "진행 중...");
+            }
+
+            const payload = {
+                domain: $domain.value,
+                entityId: Number($entityId.value),
+                fileType: $fileType.value
+            };
+
+            const saved = await uploadImageToS3(f, payload);
+            setStatus("ok", "업로드 완료 (attachmentId=" + (saved.attachmentId ?? "?") + ")");
+        } catch (e) {
+            console.error(e);
+            setStatus("bad", "실패");
+            logLine("에러: " + (e.message || e));
+            setProgress(0);
+        } finally {
+            $uploadBtn.disabled = false;
+        }
+    });
+
+    // 초기 표시
+    logLine("준비 완료");
+    refreshTokenPreview();
+</script>
+</body>
+</html>
