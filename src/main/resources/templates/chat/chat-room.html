@@ -593,8 +593,10 @@
 
     function sendMessage() {
         const input = document.getElementById("messageInput");
-        const content = input.value.trim();
-        if (!content || !stompClient?.connected) return;
+        const content = input.value; // .trim() 제거 (원본 데이터 유지)
+
+        // 메시지가 아예 비어있거나(엔터/스페이스만 있는 경우) 체크 로직은 별도로 진행
+        if (!content.trim() || !stompClient?.connected) return;
 
         if (utf8Bytes(content) > MAX_BYTES) {
             alert("메시지 용량이 너무 큽니다.");
