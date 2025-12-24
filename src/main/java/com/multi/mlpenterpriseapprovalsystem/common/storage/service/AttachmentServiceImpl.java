@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.domain.Attachment;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.AttachmentDto;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentFileType;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.repository.AttachmentRepository;
@@ -37,7 +38,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     @Override
     @Transactional
-    public CompleteResponse completeUpload(CompleteRequest req, CustomUser user) {
+    public AttachmentDto.CompleteResponse completeUpload(AttachmentDto.CompleteRequest req, CustomUser user) {
         if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
 
         // 1) 기본 검증
@@ -131,7 +132,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                         )
                 );
 
-                return new CompleteResponse(saved.getAttachmentId(), saved.getDisplayOrder());
+                return new AttachmentDto.CompleteResponse(saved.getAttachmentId(), saved.getDisplayOrder());
 
             } catch (DataIntegrityViolationException e) {
                 // 동시 업로드 타이밍으로 유니크 충돌이 난 케이스 → 몇 번 재시도
@@ -201,19 +202,5 @@ public class AttachmentServiceImpl implements AttachmentService {
         return attachment.getAttachmentId();
     }
 
-    public record CompleteRequest(
-            String domain,
-            Long entityId,
-            String fileType,
-            String objectKey,
-            String originalName,
-            String contentType,
-            Long size,
-            String etag // 선택: 프론트가 보내면 받고, 아니면 null
-    ) {}
 
-    public record CompleteResponse(
-            Long attachmentId,
-            Integer displayOrder
-    ) {}
 }

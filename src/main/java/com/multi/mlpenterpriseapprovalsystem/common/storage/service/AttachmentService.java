@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.AttachmentDto;
 
 /**
  * attachment 저장 인터페이스
@@ -10,7 +11,7 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
  * @since : 2025. 12. 24. 수요일
  */
 public interface AttachmentService {
-    AttachmentServiceImpl.CompleteResponse completeUpload(AttachmentServiceImpl.CompleteRequest req, CustomUser user);
+    AttachmentDto.CompleteResponse completeUpload(AttachmentDto.CompleteRequest req, CustomUser user);
 
     Long softDelete(Long attachmentId, CustomUser user);
 }
