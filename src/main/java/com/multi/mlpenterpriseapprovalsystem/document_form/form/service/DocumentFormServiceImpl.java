@@ -5,8 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepositor
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormRepository;
@@ -16,10 +15,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * Please explain the class!!!
@@ -31,44 +31,39 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class DocumentFormServiceImpl implements DocumentFormService {
 
     private final DocumentFormRepository documentFormRepository;
     private final DocumentFormCategoryRepository documentFormCategoryRepository;
-
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResDocumentFormListDto> findListByStatus(
-            DocumentFormStats stat,
-            Pageable pageable
-    ) {
-        return documentFormRepository.findListByDocfoStat(stat, pageable);
+    public Page<ResDocumentFormListDto> findListByStatus(DocumentFormStats stat, String comId, Pageable pageable) {
+        return documentFormRepository
+                .findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(stat, comId, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ResDocumentFormDetailDto findDetailById(Long docfoNo) {
-
+    public ResDocumentFormDetailDto findDetailById(Long docfoNo, String comId) {
         DocumentForm form = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() ->
-                        new EntityNotFoundException(
-                                "DocumentForm not found. docfoNo=" + docfoNo
-                        )
-                );
+                .orElseThrow();
 
-        List<String> categories = documentFormCategoryRepository
-                .findByDocumentForm_DocfoNo(docfoNo)
-                .stream()
-                .map(DocumentFormCategory::getName)
-                .toList();
+        if (!form.getCompany().getComId().equals(comId)) {
+            throw new AccessDeniedException("권한 없음");
+        }
+
+        List<ResDocumentFormCategoryNameDto> categories =
+                documentFormCategoryRepository.findByDocumentForm_DocfoNo(docfoNo).stream()
+                        .map(c -> new ResDocumentFormCategoryNameDto(c.getName()))
+                        .toList();
 
         return new ResDocumentFormDetailDto(
                 form.getDocfoNo(),
                 form.getDocfoName(),
-                form.getDocfoStat(),
                 form.getCnttJson(),
                 form.getCnttHtml(),
                 categories
@@ -76,72 +71,75 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     }
 
     @Override
-    @Transactional
-    public Long createDocumentForm(ReqDocumentFormCreateDto req) {
-        Company company = companyRepository.findByComId(req.company().getComId())
-                .orElseThrow(() -> new EntityNotFoundException("Company not found. comId=" + req.company().getComId()));
-        Employee writer = employeeRepository.findByEmpId(req.writer().getEmpId())
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found. writerId=" + req.writer().getEmpId()));
-
-        // 1) 문서양식 저장
+    public Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId) {
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new EntityNotFoundException("회사를 찾을 수 없습니다. comId=" + comId));
+        Employee employee = employeeRepository.findByEmpId(writerId)
+                .orElseThrow(() -> new EntityNotFoundException("직원을 찾을 수 없습니다. writerId=" + writerId));
+        List<DocumentFormCategory> categories = new ArrayList<>();
         DocumentForm form = DocumentForm.create(
-                req.company(),
-                req.writer(),
+                company,
+                employee,
                 req.docfoName(),
                 req.cnttJson(),
                 req.cnttHtml()
         );
         DocumentForm saved = documentFormRepository.save(form);
-
-        // 2) 카테고리 저장 (옵션: null/빈값 방어)
-        List<String> categories = req.categories();
-        if (categories != null && !categories.isEmpty()) {
-            List<DocumentFormCategory> catEntities = categories.stream()
-                    .filter(n -> n != null && !n.isBlank())
+        if (req.categories() != null) {
+            categories =
+                    req.categories().stream()
                     .map(String::trim)
+                    .filter(s -> !s.isEmpty())
                     .distinct()
-                    .map(n -> DocumentFormCategory.create(company, saved, n))
+                    .map(name ->
+                            DocumentFormCategory.create(
+                                    company,
+                                    saved,
+                                    name
+                            )
+                    )
                     .toList();
-            documentFormCategoryRepository.saveAll(catEntities);
+
+            documentFormCategoryRepository.saveAll(categories);
         }
         return saved.getDocfoNo();
     }
 
     @Override
-    @Transactional
-    public void deleteDocumentForm(Long docfoNo) {
-        DocumentForm form = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
-        form.delete();
-    }
+    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req, String comId, String writerId) {
+        DocumentForm old = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("DocumentForm not found: " + docfoNo));
 
-    @Override
-    @Transactional
-    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req) {
+        validateCompany(old, comId);
+        documentFormRepository.updateDocfoStat(old.getDocfoNo(), DocumentFormStats.D);
 
-        // 1) 기존 양식 조회
-        DocumentForm oldForm = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
-
-        //2) 삭제 가능한 문서인지 조회
-        if(oldForm.getDocfoStat()==DocumentFormStats.D){
-            throw new RuntimeException("이미 삭제된 문서입니다.");
-        }
-
-        // 3) 기존 양식 상태 D로 변경
-        oldForm.delete();
-
-        // 4) 새 양식 생성 & 저장
-        DocumentForm newForm = DocumentForm.create(
-                oldForm.getCompany(),
-                req.writer(),
+        DocumentForm form = DocumentForm.create(
+                old.getCompany(),
+                old.getWriter(),
                 req.docfoName(),
                 req.cnttJson(),
                 req.cnttHtml()
         );
+        DocumentForm created = documentFormRepository.save(form);
+        return created.getDocfoNo();
+    }
 
-        DocumentForm saved = documentFormRepository.save(newForm);
+    @Override
+    public void deleteDocumentForm(Long docfoNo, String comId) {
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("DocumentForm not found: " + docfoNo));
 
-        return saved.getDocfoNo();
+        validateCompany(form, comId);
+
+        documentFormRepository.updateDocfoStat(docfoNo, DocumentFormStats.D);
+    }
+
+    private void validateCompany(DocumentForm form, String comId) {
+        if (form.getCompany() == null || form.getCompany().getComId() == null) {
+            throw new IllegalStateException("DocumentForm.company is null");
+        }
+        if (!form.getCompany().getComId().equals(comId)) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
     }
 }

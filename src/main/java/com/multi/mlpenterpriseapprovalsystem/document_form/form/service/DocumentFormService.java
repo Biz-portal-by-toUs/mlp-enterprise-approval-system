@@ -16,16 +16,18 @@ import org.springframework.data.domain.Pageable;
  */
 
 public interface DocumentFormService {
+
     Page<ResDocumentFormListDto> findListByStatus(
             DocumentFormStats stat,
+            String comId,
             Pageable pageable
     );
 
-    ResDocumentFormDetailDto findDetailById(Long docfoNo);
+    ResDocumentFormDetailDto findDetailById(Long docfoNo, String comId);
 
-    Long createDocumentForm(ReqDocumentFormCreateDto req);
+    Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId);
 
-    void deleteDocumentForm(Long docfoNo);
+    Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req, String comId, String writerId);
 
-    Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req);
+    void deleteDocumentForm(Long docfoNo, String comId);
 }

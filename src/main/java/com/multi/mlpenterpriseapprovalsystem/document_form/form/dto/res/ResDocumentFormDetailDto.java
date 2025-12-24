@@ -1,7 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
-
 import java.util.*;
 
 /**
@@ -15,8 +13,7 @@ import java.util.*;
 public record ResDocumentFormDetailDto(
         Long docfoNo,
         String docfoName,
-        DocumentFormStats docfoStat,
-        String cnttHtml,
+        String docfoId,
         String cnttJson,
-        List<String> categories
+        List<ResDocumentFormCategoryNameDto> categories
 ) {}

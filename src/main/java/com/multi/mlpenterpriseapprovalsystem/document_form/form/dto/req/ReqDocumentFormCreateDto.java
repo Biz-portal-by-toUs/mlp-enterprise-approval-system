@@ -14,8 +14,6 @@ import java.util.*;
  */
 
 public record ReqDocumentFormCreateDto(
-        Company company,
-        Employee writer,
         String docfoName,
         String cnttHtml,
         String cnttJson,

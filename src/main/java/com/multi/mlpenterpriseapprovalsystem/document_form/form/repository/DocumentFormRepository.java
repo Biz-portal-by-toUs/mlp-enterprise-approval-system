@@ -17,20 +17,11 @@ import org.springframework.data.repository.query.Param;
  */
 public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long> {
 
-    Page<DocumentForm> findByDocfoStatOrderByDocfoNoAsc(DocumentFormStats docfoStat, Pageable pageable);
-
-    @Query("""
-        select new com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto(
-            d.docfoNo,
-            d.docfoName,
-            d.docfoStat
-        )
-          from DocumentForm d
-         where d.docfoStat = :stat
-         order by d.docfoNo asc
-    """)
-    Page<ResDocumentFormListDto> findListByDocfoStat(@Param("stat") DocumentFormStats stat,
-                                                     Pageable pageable);
+    Page<ResDocumentFormListDto> findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(
+            DocumentFormStats stat,
+            String comId,
+            Pageable pageable
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

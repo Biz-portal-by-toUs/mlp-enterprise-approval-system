@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * - 수정: /document-form/manager/form/update-form?docfoNo=...
  * - 상세: /document-form/manager/form/{docfoNo}
  */
+
 @Controller
 @RequestMapping("/document-form/manager/form")
 public class ViewDocumentFormController {
@@ -33,14 +34,14 @@ public class ViewDocumentFormController {
 
     // 수정 화면
     @GetMapping("/update-form")
-    public String updateForm(@RequestParam Long docfoNo, Model model) {
+    public String updateForm(@RequestParam("docfoNo") Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
         return "document-form/manager/form/update-form";
     }
 
     // 상세 화면
     @GetMapping("/{docfoNo}")
-    public String detail(@PathVariable Long docfoNo, Model model) {
+    public String detail(@PathVariable("docfoNo") Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
         return "document-form/manager/form/detail";
     }

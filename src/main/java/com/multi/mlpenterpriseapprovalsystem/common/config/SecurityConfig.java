@@ -52,7 +52,8 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
-                                "/admin/**").permitAll()
+                                "/admin/**",
+                                "/api/v1/forms/**").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
                                 "/images/**",

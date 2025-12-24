@@ -46,7 +46,7 @@ public class DocumentForm {
     private String cnttJson;
 
     @Lob
-    @Column(nullable = false)
+    @Column(columnDefinition ="MEDIUMTEXT", nullable = false)
     private String cnttHtml;
 
     // 명세서에 created_at만 존재하므로 BaseEntity 상속 대신 직접 정의

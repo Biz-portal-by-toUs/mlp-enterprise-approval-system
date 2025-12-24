@@ -1106,12 +1106,10 @@ function wireSave(editor) {
         })
 
         const payload = {
-            comId: getComId(),
-            writerId: getWriterId(),
-            docfoName: docTitle,
-            cnttHtml,
+            docfoName,
             cnttJson,
-            categories,
+            cnttHtml,
+            categories
         }
 
         const isEdit = Boolean(new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id'))
