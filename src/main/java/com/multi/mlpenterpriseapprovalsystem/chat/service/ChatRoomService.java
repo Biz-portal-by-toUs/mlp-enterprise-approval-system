@@ -230,6 +230,10 @@ public class ChatRoomService {
         String content = (latestMsg != null) ? latestMsg.getContent() : null;
         String createdAt = (latestMsg != null) ? latestMsg.getCreatedAt().toString() : null;
 
+        int activeMemberCount = (int) room.getMembers().stream()
+                .filter(ChatRoomMember::isActive)
+                .count();
+
         // 3. 최신 데이터(상대방 이름 포함)로 목록 업데이트 알림 전송
         ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                 roomNo,
@@ -238,6 +242,8 @@ public class ChatRoomService {
                 0, // 읽음 처리되었으므로 0
                 roomName // ✅ 이제 내가 아닌 상대방의 이름이 전달됨
                 ,false
+                ,room.getRoomType()
+                ,activeMemberCount
         );
 
         redisPublisher.publishRoomUpdate(empId, updateDto);
@@ -254,7 +260,7 @@ public class ChatRoomService {
                 .senderEmpId("SYSTEM")
                 .senderName("SYSTEM")
                 .content(content)
-                .type(MessageType.SYSTEM)   // ← ChatMessage 엔티티 필드명이 type가 아니면 너 필드명에 맞게만 바꿔
+                .type(MessageType.SYSTEM)
                 .createdAt(LocalDateTime.now())
                 .build();
         chatMessageRepository.save(systemMessage);
@@ -287,7 +293,7 @@ public class ChatRoomService {
         if (RoomType.GROUP.equals(member.getChatRoom().getRoomType())) {
             saveAndPublishSystemMessage(roomNo, leaver.getEmpName() + "님이 나갔습니다.");
         }
-        ResChatRoomUpdateDto dto = new ResChatRoomUpdateDto(roomNo, null, null, 0, null,true);
+        ResChatRoomUpdateDto dto = new ResChatRoomUpdateDto(roomNo, null, null, 0, null,true,RoomType.ONE,0);
         redisPublisher.publishRoomUpdate(empId, dto);
 
         log.info("[LEAVE] roomNo={}, empId={}, type={}", roomNo, empId, room.getRoomType());

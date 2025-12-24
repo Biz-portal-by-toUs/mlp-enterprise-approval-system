@@ -25,6 +25,8 @@ public class ResChatRoomListDto {
     private String lastMessage;
     private LocalDateTime lastMessageAt;
     private int unreadCount;
+    private RoomType roomType;
+    private int memberCount;
 
     public static ResChatRoomListDto from(ChatRoom room, String myEmpId) {
 
@@ -34,7 +36,12 @@ public class ResChatRoomListDto {
                 .map(ChatRoomMember::getUnreadCount)
                 .orElse(0);
 
-        List<String> otherNames = room.getMembers().stream()
+
+        List<ChatRoomMember> activeMembers = room.getMembers().stream()
+                .filter(ChatRoomMember::isActive) // ✅ 활성 상태인 멤버만 필터링
+                .toList();
+
+        List<String> otherNames = activeMembers.stream()
                 .map(ChatRoomMember::getEmployee)
                 .filter(emp -> !emp.getEmpId().equals(myEmpId))
                 .map(Employee::getEmpName)
@@ -42,10 +49,8 @@ public class ResChatRoomListDto {
 
         String displayName;
         if (room.getRoomType() == RoomType.ONE) {
-            // 1:1 채팅방: 나를 제외한 유일한 상대방의 이름을 사용
             displayName = otherNames.isEmpty() ? "알 수 없는 사용자" : otherNames.get(0);
         } else {
-            // 그룹 채팅방: 저장된 방 이름이 있으면 사용, 없으면 참여자 이름을 합쳐서 생성
             if (room.getRoomName() != null && !room.getRoomName().isBlank()) {
                 displayName = room.getRoomName();
             } else {
@@ -58,7 +63,9 @@ public class ResChatRoomListDto {
                 displayName,
                 room.getLastMessage(),
                 room.getLastMessageAt(),
-                unreadCount
+                unreadCount,
+                room.getRoomType(),
+                activeMembers.size()
         );
     }
 
