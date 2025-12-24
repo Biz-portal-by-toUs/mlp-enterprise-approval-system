@@ -60,22 +60,22 @@ public class DocumentForm {
 
     private String rejectReason;
 
-//    public static DocumentForm create(
-//            String comId,
-//            String writerId,
-//            String docfoName,
-//            String cnttJson,
-//            String cnttHtml
-//    ) {
-//        DocumentForm f = new DocumentForm();
-//        f.comId = comId;
-//        f.writerId = writerId;
-//        f.docfoName = docfoName;
-//        f.cnttJson = cnttJson;
-//        f.cnttHtml = cnttHtml;
-//        f.docfoStat = DocumentFormStats.A; // 승인 로직 개발 후 T로 수정
-//        return f;
-//    }
+    public static DocumentForm create(
+            Company company,
+            Employee writer,
+            String docfoName,
+            String cnttJson,
+            String cnttHtml
+    ) {
+        DocumentForm f = new DocumentForm();
+        f.company = company;
+        f.writer = writer;
+        f.docfoName = docfoName;
+        f.cnttJson = cnttJson;
+        f.cnttHtml = cnttHtml;
+        f.docfoStat = DocumentFormStats.A; // 승인 로직 개발 후 T로 수정
+        return f;
+    }
 
     public void delete(){
         this.docfoStat=DocumentFormStats.D;

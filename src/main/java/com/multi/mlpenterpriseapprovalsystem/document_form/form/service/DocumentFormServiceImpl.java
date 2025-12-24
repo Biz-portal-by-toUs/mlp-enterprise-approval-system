@@ -1,13 +1,16 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -72,38 +75,38 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         );
     }
 
-//    @Override
-//    @Transactional
-//    public Long createDocumentForm(ReqDocumentFormCreateDto req) {
-//        Company company = companyRepository.findByComId(req.comId())
-//                .orElseThrow(() -> new EntityNotFoundException("Company not found. comId=" + req.comId()));
-//        Employee writer = employeeRepository.findByEmpId(req.writerId())
-//                .orElseThrow(() -> new EntityNotFoundException("Employee not found. writerId=" + req.writerId()));
-//
-//        // 1) 문서양식 저장
-//        DocumentForm form = DocumentForm.create(
-//                req.comId(),
-//                req.writerId(),
-//                req.docfoName(),
-//                req.cnttJson(),
-//                req.cnttHtml()
-//        );
-//        DocumentForm saved = documentFormRepository.save(form);
-//
-//        // 2) 카테고리 저장 (옵션: null/빈값 방어)
-//        List<String> categories = req.categories();
-//        if (categories != null && !categories.isEmpty()) {
-//            List<DocumentFormCategory> catEntities = categories.stream()
-//                    .filter(n -> n != null && !n.isBlank())
-//                    .map(String::trim)
-//                    .distinct()
-//                    .map(n -> DocumentFormCategory.create(company, saved, n))
-//                    .toList();
-//            documentFormCategoryRepository.saveAll(catEntities);
-//        }
-//        return saved.getDocfoNo();
-//    }
-//
+    @Override
+    @Transactional
+    public Long createDocumentForm(ReqDocumentFormCreateDto req) {
+        Company company = companyRepository.findByComId(req.company().getComId())
+                .orElseThrow(() -> new EntityNotFoundException("Company not found. comId=" + req.company().getComId()));
+        Employee writer = employeeRepository.findByEmpId(req.writer().getEmpId())
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found. writerId=" + req.writer().getEmpId()));
+
+        // 1) 문서양식 저장
+        DocumentForm form = DocumentForm.create(
+                req.company(),
+                req.writer(),
+                req.docfoName(),
+                req.cnttJson(),
+                req.cnttHtml()
+        );
+        DocumentForm saved = documentFormRepository.save(form);
+
+        // 2) 카테고리 저장 (옵션: null/빈값 방어)
+        List<String> categories = req.categories();
+        if (categories != null && !categories.isEmpty()) {
+            List<DocumentFormCategory> catEntities = categories.stream()
+                    .filter(n -> n != null && !n.isBlank())
+                    .map(String::trim)
+                    .distinct()
+                    .map(n -> DocumentFormCategory.create(company, saved, n))
+                    .toList();
+            documentFormCategoryRepository.saveAll(catEntities);
+        }
+        return saved.getDocfoNo();
+    }
+
     @Override
     @Transactional
     public void deleteDocumentForm(Long docfoNo) {
@@ -111,34 +114,34 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
         form.delete();
     }
-//
-//    @Override
-//    @Transactional
-//    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req) {
-//
-//        // 1) 기존 양식 조회
-//        DocumentForm oldForm = documentFormRepository.findById(docfoNo)
-//                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
-//
-//        //2) 삭제 가능한 문서인지 조회
-//        if(oldForm.getDocfoStat()==DocumentFormStats.D){
-//            throw new RuntimeException("이미 삭제된 문서입니다.");
-//        }
-//
-//        // 3) 기존 양식 상태 D로 변경
-//        oldForm.delete();
-//
-//        // 4) 새 양식 생성 & 저장
-//        DocumentForm newForm = DocumentForm.create(
-//                oldForm.getComId(),
-//                req.writerId(),
-//                req.docfoName(),
-//                req.cnttJson(),
-//                req.cnttHtml()
-//        );
-//
-//        DocumentForm saved = documentFormRepository.save(newForm);
-//
-//        return saved.getDocfoNo();
-//    }
+
+    @Override
+    @Transactional
+    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req) {
+
+        // 1) 기존 양식 조회
+        DocumentForm oldForm = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
+
+        //2) 삭제 가능한 문서인지 조회
+        if(oldForm.getDocfoStat()==DocumentFormStats.D){
+            throw new RuntimeException("이미 삭제된 문서입니다.");
+        }
+
+        // 3) 기존 양식 상태 D로 변경
+        oldForm.delete();
+
+        // 4) 새 양식 생성 & 저장
+        DocumentForm newForm = DocumentForm.create(
+                oldForm.getCompany(),
+                req.writer(),
+                req.docfoName(),
+                req.cnttJson(),
+                req.cnttHtml()
+        );
+
+        DocumentForm saved = documentFormRepository.save(newForm);
+
+        return saved.getDocfoNo();
+    }
 }

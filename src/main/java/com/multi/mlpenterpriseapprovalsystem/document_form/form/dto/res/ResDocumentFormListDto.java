@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
 
+import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
 
 /**
@@ -12,6 +13,7 @@ import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
 
 public record ResDocumentFormListDto(
         Long docfoNo,
+        Company company,
         String docfoName,
         DocumentFormStats docfoStat
 ) {}

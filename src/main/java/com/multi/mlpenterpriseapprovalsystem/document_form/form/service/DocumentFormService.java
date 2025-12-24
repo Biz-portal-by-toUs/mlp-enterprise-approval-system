@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
@@ -22,9 +23,9 @@ public interface DocumentFormService {
 
     ResDocumentFormDetailDto findDetailById(Long docfoNo);
 
-    //Long createDocumentForm(ReqDocumentFormCreateDto req);
+    Long createDocumentForm(ReqDocumentFormCreateDto req);
 
     void deleteDocumentForm(Long docfoNo);
 
-    //Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req);
+    Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req);
 }
