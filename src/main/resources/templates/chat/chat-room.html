@@ -8,8 +8,7 @@
         body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
         .wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
 
-        /* 상단 바 */
-        /* 상단 바 레이아웃 유지 */
+
         .top {
             padding: 14px 18px;
             border-bottom: 1px solid var(--border-color);
@@ -19,18 +18,62 @@
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             z-index: 10;
-            gap: 10px; /* 제목과 버튼 사이 최소 간격 */
+            gap: 10px;
         }
-        /* ✅ 채팅방 이름 말줄임 처리 */
         .title {
+            flex: 1;
+            min-width: 0;
+            max-width: 200px;
+            position: relative;
+            cursor: pointer;
+            overflow: visible !important;
+        }
+
+        /* ✅ 실제 제목 텍스트 전용 스타일 (말줄임 유지) */
+        .title-text {
+            display: block;
             font-weight: 800;
             font-size: 16px;
-            white-space: nowrap;      /* 줄바꿈 금지 */
-            overflow: hidden;         /* 넘치는 부분 숨김 */
-            text-overflow: ellipsis;  /* ... 표시 */
-            flex: 1;                  /* 남는 공간을 차지하게 함 */
-            min-width: 0;             /* flex 아이템이 넘칠 때 줄어들 수 있게 함 (중요) */
-            max-width: 200px;         /* 16px 기준 약 12~13자 정도의 너비 제한 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* chat-room.html <style> 부분 수정 */
+
+        /* 1. 툴팁의 기본 상태 (숨김) */
+        .title::after {
+            content: attr(data-title);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 400;
+            z-index: 9999;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            white-space: normal;
+            width: max-content;
+            max-width: 250px;
+            word-break: break-all;
+            line-height: 1.5;
+
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .title:hover::after {
+            opacity: 1;
+            visibility: visible;
+
+            transition-delay: 0.4s;
         }
         /* 버튼 영역이 찌그러지지 않게 고정 */
         .actions {
@@ -275,13 +318,20 @@
 
             let displayName = room.roomName;
 
-            // ✅ 1:1 채팅방이거나 방 이름이 없는 경우, 참여자 목록에서 상대방 이름을 찾음
             if (room.roomType === 'ONE' || !displayName) {
                 const opponent = (room.members || []).find(m => m.empId !== MY_EMP_ID);
                 displayName = opponent ? opponent.empName : (displayName || "대화 상대 없음");
             }
 
-            document.getElementById("roomTitle").innerText = displayName;
+            const titleEl = document.getElementById("roomTitle");
+
+            // ✅ [수정] 텍스트 전용 span(title-text)을 만들어서 넣어줌
+            // 이렇게 해야 제목은 '...'으로 유지되면서 툴팁만 아래에 뜹니다.
+            titleEl.innerHTML = `<span class="title-text">${escapeHtml(displayName)}</span>`;
+
+            // ✅ 툴팁에 표시될 전체 이름 설정
+            titleEl.setAttribute('data-title', displayName);
+            titleEl.removeAttribute('title');
         } catch (err) {
             console.error("방 정보 로드 실패:", err);
             document.getElementById("roomTitle").innerText = "채팅방";
