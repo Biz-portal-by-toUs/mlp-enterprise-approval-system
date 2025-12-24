@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqApprovalLineDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
@@ -120,14 +121,40 @@ public class DocumentController {
     // 결재자 없을 시 상신 취소. 상신일 null로 변경, 임시저장상태를 true로 변경, 문서상태를 상신전(US)로 변경.
     @PatchMapping("/documents/{docNo}/cancel")
     public ResponseEntity<ResponseDto<Void>> cancelSubmit(@PathVariable(name = "docNo") Long docNo,
-                                                          @AuthenticationPrincipal CustomUser user) {
-        String comId = user.getComId();
-        String myEmpId = user.getUsername();
+                                                          @AuthenticationPrincipal CustomUser customUser) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
 
         documentService.cancelSubmit(comId, myEmpId, docNo);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "상신이 취소되었습니다.", null));
+                .body(new ResponseDto<>(HttpStatus.OK, "상신 취소 성공", null));
     }
+
+    // 결재 승인 및 반려
+    // 승인 시 결재시간(endedAt)에 현재시간 넣고 내 결재상태를 승인(A)로 변경, 결재순서를 다음사람한테 패스, 최종승인이면 문서코드 발행
+    // 반려 시 결재시간(endedAt)에 현재시간 넣고 내 결재상태를 반려(R)로 변경
+    // 문서상태를 내 결재까지 포함해서 갱신
+    @PatchMapping("/documents/{docNo}/process")
+    public ResponseEntity<ResponseDto<Void>> processApproval(@PathVariable(name = "docNo") Long docNo,
+                                                             @AuthenticationPrincipal CustomUser customUser,
+                                                             @RequestBody ReqApprovalLineDto reqApprovalLineDto) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        documentService.processApproval(comId, myEmpId, docNo, reqApprovalLineDto);
+
+        String message = "A".equals(reqApprovalLineDto.getApprStat()) ? "결재가 승인되었습니다." : "결재가 반려되었습니다.";
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, message, null));
+    }
+
+
+
+
+
+
 }
