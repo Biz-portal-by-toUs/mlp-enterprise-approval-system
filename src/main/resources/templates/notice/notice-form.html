@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>공지 내용 상세</title>
+    <title>공지 사항 등록</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         :root{
             --bg: #f6f7fb;
@@ -301,176 +301,162 @@
     </style>
 </head>
 <body>
-<div class="header">
-    <!----
-    <th:block th:replace="~{common/header :: header}"/>
-    ---->
-</div>
-
+<!----
+<div th:replace="~{common/header :: header}"></div>
+--->
 <div class="container">
-    <h2>공지 사항 상세</h2>
-    <div class="notice-detail">
-        <div class="notice-info">
-            <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
-            <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
-            <p><strong>팝업여부:</strong> <span id="noticePopup"></span></p>
-            <p><strong>팝업시작일:</strong> <span id="noticeStarted"></span></p>
-            <p><strong>팝업종료일:</strong> <span id="noticeEnded"></span></p>
-            <p><strong>조회건수:</strong> <span id="noticeRating"></span></p>
-            <p><strong>작성자:</strong> <span id="noticeWriter"></span></p>
-            <p><strong>등록일:</strong> <span id="noticeCreated"></span></p>
-            <p><strong>변경일:</strong> <span id="noticeUpdated"></span></p>
+    <h2>공지사항등록 </h2>
+
+    <div class="author-box">
+        작성자 : <span id="authorEmail">확인 중...</span>
+    </div>
+
+    <form id="noticeForm" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="title">제목</label>
+            <input type="text" id="title" name="title" placeholder="공지사항 제목을 입력하세요" required>
         </div>
-    </div>
 
-    <div id="placeFavorite" style="margin-top: 10px; text-align: left;"></div>
+        <div class="mb-3">
+            <label for="contents">내용</label>
+            <textarea id="contents" name="contents" placeholder="공지 내용을 입력하세요" required></textarea>
+        </div>
 
-    <div class="tab-buttons">
-        <button class="tab-btn active" data-target="review">첨부 파일</button>
-    </div>
+        <div class="mb-3">
+            <label >팝업여부</label><br>
+            <label>
+                <input type="radio"  name="isPopup" value="true" required> Y
+            </label>
+            &nbsp;&nbsp;
+            <label>
+                <input type="radio"  name="isPopup" value="false"> N
+            </label>
+        </div>
 
-    <div id="attach" class="tab-content active">
-        <table id="attachList"></table>
-        <div id="pagination"></div>
-    </div>
+        <div class="mb-3">
+            <label for="startedAt">팝업시작일</label>
+            <input type="datetime-local" id="startedAt" name="startedAt" min="1" max="5" value="5" required>
+        </div>
 
-    <div class="mt-4">
-        <a href="/notice/list" class="btn">목록으로</a>
-        <button id="update-btn" class="btn ms-2">수정하기</button>
+        <div class="mb-3">
+            <label for="endedAt">팝업종료일</label>
+            <input type="datetime-local" id="endedAt" name="endedAt" required>
+        </div>
 
-        <!-- 로그인 사용자 = 작성자일 때만 표시
-        <a id="edit-btn" th:href="@{|/notice/edit/${review.no}|}" class="btn ms-2">수정하기</a>
-        -->
-        <button id="delete-btn" class="btn ms-2" onclick="deleteNotice()">삭제하기</button>
-    </div>
-
-    <a href="/main" class="home-link">← 홈으로 돌아가기</a>
+        <button type="submit" class="btn-submit">공지 등록</button>
+        <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
+    </form>
 </div>
-
 
 <script>
-    const noticeNo = [[${noticeNo}]];
+    // ✅ 페이지 진입 시 accessToken 유효성 검증 및 사용자 정보 표시
+    window.addEventListener("DOMContentLoaded", async () => {
+        const token = localStorage.getItem("accessToken");
 
-    async function loadPlaceDetail() {
-        try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-            });
-
-            const result = await response.json();
-
-            if (result.status === 200 && result.data) {
-                const notice = result.data;
-                $('#noticeTitle').text(notice.title);
-                $('#noticeDescription').text(notice.contents);
-                $('#noticePopup').text(notice.isPopup);
-                $('#noticeStarted').text(notice.startedAt);
-                $('#noticeEnded').text(notice.endedAt);
-                $('#noticeRating').text(notice.rating);
-                $('#noticeWriter').text(notice.empId);
-                $('#noticeCreated').text(notice.createdAt);
-                $('#noticeUpdated').text(notice.updatedAt);
-
-                initAttach();
-            }
-        } catch (error) {
-            console.error('Error loading place detail:', error);
+        if (!token) {
+            // Spring Security에서 자동 리다이렉트 설정이 되어 있으면 여긴 안탐
+            alert("로그인 후 이용해주세요.");
+            window.location.href = "/auth/login";
+            return;
         }
+
+        // try {
+        //     const response = await fetch("/api/v1/members/me", {
+        //         method: "GET",
+        //         headers: {
+        //             "Authorization": `Bearer ${token}`
+        //         }
+        //     });
+        //
+        //     if (!response.ok) {
+        //         alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+        //         localStorage.removeItem("accessToken");
+        //         window.location.href = "/auth/login";
+        //         return;
+        //     }
+        //
+        //     const data = await response.json();
+        //     document.getElementById("authorEmail").innerText = data.email || "(알 수 없음)";
+        //
+        // } catch (err) {
+        //     console.error("사용자 정보 불러오기 실패:", err);
+        //     alert("로그인 정보 확인 중 오류가 발생했습니다.");
+        //     window.location.href = "/auth/login";
+        // }
+
+        setupPopupToggle();
+    });
+
+    function setupPopupToggle() {
+        const radios = document.querySelectorAll('input[name="isPopup"]');
+        const startAt = document.getElementById('startedAt');
+        const endAt = document.getElementById('endedAt');
+
+        function togglePopupDates(value) {
+            const enabled = value === 'true';
+
+            startAt.disabled = !enabled;
+            endAt.disabled = !enabled;
+
+            // Y일 때만 필수
+            startAt.required = enabled;
+            endAt.required = enabled;
+
+            // N이면 값 제거(전송 방지)
+            if (!enabled) {
+                startAt.value = '';
+                endAt.value = '';
+            }
+        }
+
+        radios.forEach(r => {
+            r.addEventListener('change', (e) => togglePopupDates(e.target.value));
+        });
+
+        // 현재 체크값 기준 반영
+        const checked = document.querySelector('input[name="idPopup"]:checked');
+        if (checked) togglePopupDates(checked.value);
     }
 
-    // 수정 버튼 클릭 시 화면 이동
-    document.getElementById('update-btn').onclick = () => {
-        location.href = `/notice/update/${noticeNo}`;
-    };
 
-    async function initAttach() {
-        try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/notice/`,{
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                });
-            const result = await response.json();
+    // ✅ 공지 등록 fetch
+    document.getElementById('noticeForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
 
-            const attachList = $('#attachList').empty();
-
-            if (result.status === 200 && result.data?.data?.length) {
-                const attachs = result.data.data;
-                const pageInfo = result.data.pageInfo;
-
-                attachList.append(`
-                    <tr><th>파일명</th><th>내용</th><th>작성자</th><th>첨부일자</th></tr>
-                `);
-
-                attachs.forEach(r => {
-
-                    attachList.append(`
-                        <tr>
-                            <td>${r.title}</td>
-                            <td>${r.content}</td>
-                            <td>${r.writerEmail}</td>
-
-                        </tr>
-                    `);
-                });
-
-                renderPagination(pageInfo);
-            } else {
-                reviewList.html('<tr><td colspan="4">관련 리뷰가 없습니다.</td></tr>');
-            }
-        } catch (error) {
-            console.error('Failed to load reviews:', error);
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            alert("로그인 후 이용해주세요.");
+            window.location.href = "/auth/login";
+            return;
         }
-    }
 
-    async function deleteNotice() {
-        if (!confirm("정말 삭제하시겠습니까?")) return;
-
-        const noticeNo = document.getElementById("noticeNo").value;
-        const accessToken = localStorage.getItem("accessToken");
+        const formData = new FormData(e.target);
 
         try {
-            const res = await fetch(`/api/v1/notice/${noticeNo}`, {
-                method: "DELETE",
+
+
+            const response = await fetch('/api/v1/notice', {
+                method: 'POST',
                 headers: {
-                    "Authorization": `Bearer ${accessToken}`
-                }
+                    "Authorization": `Bearer ${token}`
+                },
+                body: formData
             });
 
-            if (res.ok) {
-                alert("공지사항이 삭제되었습니다.");
-                window.location.href = "/notice/list";
+            const result = await response.json();
+
+            if (response.ok) {
+                alert('공지 등록 성공!');
+                window.location.href = '/notice/list';
             } else {
-                alert("삭제 실패했습니다.");
+                alert(result.message || '리뷰 등록 실패');
             }
-        } catch (e) {
-            console.error(e);
-            alert("삭제 중 오류 발생");
+
+        } catch (error) {
+            console.error('공지사항 등록 중 오류 발생:', error);
+            alert('공지사항 등록 중 오류가 발생했습니다.');
         }
-    }
-
-    function renderPagination(pageInfo) {
-        if (!pageInfo) return;
-        const pagination = $('#pagination').empty();
-
-        if (pageInfo.pageNo > 1)
-            pagination.append(`<button onclick="initReview(${pageInfo.pageNo - 1})">이전</button>`);
-
-        for (let i = pageInfo.startPage; i <= pageInfo.endPage; i++) {
-            pagination.append(`<button class="${i === pageInfo.pageNo ? 'active' : ''}" onclick="initReview(${i})">${i}</button>`);
-        }
-
-        if (pageInfo.pageNo < pageInfo.maxPage)
-            pagination.append(`<button onclick="initReview(${pageInfo.pageNo + 1})">다음</button>`);
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadPlaceDetail();
-
     });
 </script>
-
 </body>
 </html>

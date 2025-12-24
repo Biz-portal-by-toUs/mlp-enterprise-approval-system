@@ -66,11 +66,127 @@
             .replaceAll("'", "&#039;");
     }
 
+    function decodeRFC2047(str) {
+        // 예: =?UTF-8?Q?=EC=88=98=EA=B0... ?=
+        const m = String(str).match(/=\?([^?]+)\?([bBqQ])\?([^?]+)\?=/);
+        if (!m) return str;
+
+        const charset = m[1].toUpperCase();
+        const encoding = m[2].toUpperCase();
+        let text = m[3];
+
+        if (charset !== "UTF-8") return str; // 필요하면 확장
+
+        if (encoding === "B") {
+            // base64
+            try {
+                const bin = atob(text.replace(/\s/g, ""));
+                const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+                return new TextDecoder("utf-8").decode(bytes);
+            } catch {
+                return str;
+            }
+        }
+
+        if (encoding === "Q") {
+            // quoted-printable 변형: _ 는 공백, =XX 는 바이트
+            text = text.replace(/_/g, " ");
+            const bytes = [];
+            for (let i = 0; i < text.length; i++) {
+                if (text[i] === "=" && i + 2 < text.length) {
+                    const hex = text.slice(i + 1, i + 3);
+                    if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+                        bytes.push(parseInt(hex, 16));
+                        i += 2;
+                        continue;
+                    }
+                }
+                bytes.push(text.charCodeAt(i));
+            }
+            try {
+                return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+            } catch {
+                return str;
+            }
+        }
+
+        return str;
+    }
+
+    // ✅ 다운로드: <a href>로 바로 가면 헤더를 못 넣으니, fetch + blob 방식 사용
+    async function downloadFile(fileId) {
+        const token = localStorage.getItem('accessToken');
+        console.log(token);
+        if (!token) return;
+
+        const url = `${API_BASE}/${encodeURIComponent(fileId)}/download`;
+
+        const res = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!res.ok) {
+            alert(`다운로드 실패: HTTP ${res.status}`);
+            return;
+        }
+
+        const blob = await res.blob();
+
+        // 파일명 추출 (Content-Disposition 헤더가 있으면 그걸 사용)
+        // let fileName = "download";
+        // const disposition = res.headers.get("Content-Disposition");
+        // if (disposition) {
+        //     // 예: attachment; filename="abc.txt"
+        //     const match = disposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)"/i) || disposition.match(/filename\*?=(?:UTF-8''|)?([^;]+)/i);
+        //     if (match && match[1]) {
+        //         fileName = match[1].replace(/"/g, "");
+        //         try { fileName = decodeURIComponent(fileName); } catch (e) {}
+        //     }
+        // }
+
+        let fileName = "download";
+        const disposition = res.headers.get("Content-Disposition");
+        if (disposition) {
+            // filename* 우선
+            const star = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+            const plain = disposition.match(/filename\s*=\s*("?)([^";]+)\1/i);
+
+            if (star && star[1]) {
+                fileName = star[1].trim();
+                try { fileName = decodeURIComponent(fileName); } catch (e) {}
+            } else if (plain && plain[2]) {
+                fileName = plain[2].trim();
+                // RFC2047 형태면 디코딩
+                if (/=\?.+\?[bBqQ]\?.+\?=/.test(fileName)) {
+                    fileName = decodeRFC2047(fileName);
+                }
+            }
+        }
+
+
+
+
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
+    }
+
+
     async function deleteFile(encodedId, filename) {
         const ok = confirm(`정말 삭제할까요?\n${filename}`);
         if (!ok) return;
 
-        const res = await fetch(`${API_BASE}/${encodedId}`, { method: "DELETE" });
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`${API_BASE}/${encodedId}`, { method: "DELETE", headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok && res.status !== 204) {
             alert(`삭제 실패: HTTP ${res.status}`);
             return;
@@ -92,7 +208,9 @@
         const form = new FormData();
         form.append("file", file);
 
-        const res = await fetch(API_BASE, { method: "POST", body: form });
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(API_BASE, { method: "POST", headers: { 'Authorization': `Bearer ${token}` },
+            body: form });
         if (!res.ok) {
             resultEl.textContent = `업로드 실패: HTTP ${res.status}`;
             return;
@@ -107,7 +225,9 @@
         const tbody = document.getElementById("filesTbody");
         tbody.innerHTML = "";
 
-        const res = await fetch(API_BASE, { method: "GET" });
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(API_BASE, { method: "GET", headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) {
             tbody.innerHTML = `<tr><td colspan="5">목록 조회 실패 (HTTP ${res.status})</td></tr>`;
             return;
@@ -126,7 +246,10 @@
         <td>${f.originalFilename}</td>
         <td>${formatBytes(f.size)}</td>
         <td>${f.createdAt ?? "-"}</td>
-        <td><a href="${API_BASE}/${encodeURIComponent(f.id)}/download">다운로드</a></td>
+        <!-- ✅ 헤더 토큰 넣기 위해 a href 대신 onclick -->
+        <td><a href="#" onclick="downloadFile('${escapeHtml(f.id)}'); return false;">다운로드</a></td>
+
+       <!--- <td><a href="${API_BASE}/${encodeURIComponent(f.id)}/download">다운로드</a></td> --->
         <td><button onclick="deleteFile('${encodeURIComponent(f.id)}','${escapeHtml(f.originalFilename)}')">삭제</button></td>
 
       `;
