@@ -17,6 +17,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/notice")
 public class ViewNoticeController {
 
+    @GetMapping("/Attachment-notice/{noticeNo}")
+    public String noticeAttach(@PathVariable("noticeNo") Long noticeNo, Model model) {
+
+        model.addAttribute("noticeNo", noticeNo);
+
+        return "notice/Attachment-notice";
+    }
+
     @GetMapping("/list")
     public String noticeList() {
 
@@ -25,7 +33,7 @@ public class ViewNoticeController {
 
     // 상세 조회
     @GetMapping("/{noticeNo}")
-    public String placeDetail(@PathVariable("noticeNo") int noticeNo, Model model) {
+    public String placeDetail(@PathVariable("noticeNo") Long noticeNo, Model model) {
         model.addAttribute("noticeNo", noticeNo);
         return "notice/notice-detail";
     }

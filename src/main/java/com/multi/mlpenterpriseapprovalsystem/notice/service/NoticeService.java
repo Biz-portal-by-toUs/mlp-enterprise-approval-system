@@ -45,7 +45,7 @@ public class NoticeService {
     private static final ObjectMapper om = new ObjectMapper();
 
     @Transactional
-    public void registNotice(NoticeReqDto dto){
+    public NoticeResAllDto registNotice(NoticeReqDto dto){
 
         Employee employee = employeeRepository.findByEmpId(dto.getEmpId())
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -66,7 +66,22 @@ public class NoticeService {
                 .rating(dto.getRating())
                 .build();
 
-        noticeRepository.save(notice);
+        Notice regiNotice = noticeRepository.save(notice);
+
+        return NoticeResAllDto.builder()
+                .noticeNo(regiNotice.getNoticeNo())
+                .compId(regiNotice.getCompany().getComId())
+                .isDeleted(regiNotice.getIsDeleted())
+                .title(regiNotice.getTitle())
+                .contents(denormalizeFromJson(regiNotice.getContents()))
+                .isPopup(regiNotice.getIsPopup())
+                .startedAt(regiNotice.getStartedAt())
+                .endedAt(regiNotice.getEndedAt())
+                .empId(regiNotice.getEmployee().getEmpId())
+                .createdAt(regiNotice.getCreatedAt())
+                .updatedAt(regiNotice.getUpdatedAt())
+                .rating(regiNotice.getRating())
+                .build();
     }
 
     private String normalizeToJson(String raw) {
