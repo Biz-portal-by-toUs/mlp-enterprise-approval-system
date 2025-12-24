@@ -82,6 +82,34 @@ public class Document extends BaseEntity {
     @Column(name = "submitted_at")
     LocalDateTime submittedAt;
 
+    /**
+     * 문서 내용 수정 (임시저장 문서용)
+     */
+    public void update(String title, String content, String cnttHtml, String aiSumm, DocumentFormCategory category) {
+        this.title = title;
+        this.content = content;
+        this.cnttHtml = cnttHtml;
+        this.aiSumm = aiSumm;
+        this.documentFormCategory = category;
+    }
+
+
+    // 최종승인
+    // 문서코드(docId) 생성
+    // 문서가 최종승인되어야 발급
+    // 회사약어 최대3자리(comId) + 부서코드 최대3자리(depId) + 년도4자리 + 일련번호 4자리 = 최대 총 14자리
+    // 현재는 가짜 데이터 넣어놔서 14자리 넘음
+    public void finalize() {
+        this.docStat = DocStat.FI;
+    }
+
+    /**
+     * 반려
+     */
+    public void reject() {
+        this.docStat = DocStat.RJ;
+    }
+
     public void cancelSubmit() {
         this.submittedAt = null;
         this.temp = true;

@@ -27,8 +27,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.OptionalInt;
 
 /**
  * 문서 서비스 관리
@@ -386,13 +388,13 @@ public class DocumentService {
     // 결재라인 생성 (대직자 포함)
     private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
 
-        // ✅ seq 기준 정렬하여 순서 보장
+        // seq 기준 정렬하여 순서 보장
         List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
                 .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
                 .toList();
 
-        for (int i = 0; i < lineDtos.size(); i++) {
-            ReqApprovalLineDto lineDto = lineDtos.get(i);
+        for (int i = 0; i < sortedLines.size(); i++) {
+            ReqApprovalLineDto lineDto = sortedLines.get(i);
 
             Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -466,11 +468,169 @@ public class DocumentService {
         log.info("상신 취소 완료: docNo={}, writer={}", docNo, myEmpId);
     }
 
+    // 결재 승인 및 반려
+    // 결재 승인 및 반려
+    public void processApproval(String comId, String myEmpId, Long docNo, ReqApprovalLineDto reqDto) {
+
+        // 1. 문서 조회
+        Document document = documentRepository.findById(docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 2. 회사 일치 확인
+        if (!document.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 3. 문서 상태 확인 (결재중인 문서만 처리 가능)
+        if (document.getDocStat() != DocStat.AW) {
+            throw new CustomException(ErrorCode.DOCUMENT_NOT_AWAITING);
+        }
+
+        // 4. 결재라인에서 내 결재라인 조회 (본인이 결재자이거나 대직자인 경우)
+        List<ApprovalLine> allLines = approvalLineRepository.findByDocument_docNo(document.getDocNo());
+
+        ApprovalLine myLine = allLines.stream()
+                .filter(line -> line.getApprover().getEmpId().equals(myEmpId))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(ErrorCode.APPROVAL_LINE_NOT_FOUND));
+
+        // 5. 내 차례인지 확인 (apprStat이 I인 경우만 결재 가능)
+        if (myLine.getApprStat() != ApprStat.I) {
+            throw new CustomException(ErrorCode.NOT_MY_TURN_TO_APPROVE);
+        }
+
+        // 6. 승인/반려 처리
+        String apprStat = reqDto.getApprStat();
+
+        if ("A".equals(apprStat)) {
+            // 승인 처리
+            myLine.approve();
+
+            // 같은 seq의 다른 결재자(원 결재자 또는 대직자)도 승인 처리 (isActualAppr = false)
+            markOtherApproversInSameSeq(allLines, myLine.getSeq(), myEmpId, ApprStat.A, null);
+
+            // 다음 결재자에게 차례 넘기기
+            passToNextApprover(allLines, myLine.getSeq());
+
+            // 모든 결재자가 승인했는지 확인 후 문서 상태 변경
+            boolean allApproved = allLines.stream()
+                    .allMatch(line -> line.getApprStat() == ApprStat.A);
+
+            if (allApproved) {
+                String docId = generateDocId(document);
+                document.finalize(docId);
+                log.info("문서 최종 승인: docNo={}, docId={}", docNo, docId);
+            }
+
+        } else if ("R".equals(apprStat)) {
+            // 반려 처리
+            if (reqDto.getRejReason() == null || reqDto.getRejReason().trim().isEmpty()) {
+                throw new CustomException(ErrorCode.REJECT_REASON_REQUIRED);
+            }
+
+            myLine.reject(reqDto.getRejReason());
+
+            // 같은 seq의 다른 결재자(원 결재자 또는 대직자)도 반려 처리 (isActualAppr = false)
+            markOtherApproversInSameSeq(allLines, myLine.getSeq(), myEmpId, ApprStat.R, reqDto.getRejReason());
+
+            document.reject();
+
+            log.info("문서 반려: docNo={}, rejector={}, reason={}", docNo, myEmpId, reqDto.getRejReason());
+
+        } else {
+            throw new CustomException(ErrorCode.INVALID_APPROVAL_STATUS);
+        }
+
+        log.info("결재 처리 완료: docNo={}, approver={}, status={}", docNo, myEmpId, apprStat);
+    }
+
+    /**
+     * 같은 seq의 다른 결재자 상태 변경 (isActualAppr = false)
+     * - 원 결재자가 결재하면 대직자도 같이 처리
+     * - 대직자가 결재하면 원 결재자도 같이 처리
+     */
+    private void markOtherApproversInSameSeq(List<ApprovalLine> allLines, int seq, String actualApproverId, ApprStat status, String rejReason) {
+        allLines.stream()
+                .filter(line -> line.getSeq() == seq && !line.getApprover().getEmpId().equals(actualApproverId))
+                .forEach(line -> {
+                    line.markAsNotActualApprover(status, rejReason);
+                });
+    }
+
+    /**
+     * 다음 결재자에게 차례 넘기기
+     * 같은 seq에 원 결재자와 대직자가 있으면 둘 다 I로 변경
+     */
+    private void passToNextApprover(List<ApprovalLine> allLines, int currentSeq) {
+        // 다음 seq의 결재자 찾기 (W 상태인 결재자 중 가장 작은 seq)
+        OptionalInt nextSeqOpt = allLines.stream()
+                .filter(line -> line.getSeq() > currentSeq && line.getApprStat() == ApprStat.W)
+                .mapToInt(ApprovalLine::getSeq)
+                .min();
+
+        if (nextSeqOpt.isPresent()) {
+            int nextSeq = nextSeqOpt.getAsInt();
+
+            // 해당 seq의 모든 결재자를 I로 변경 (원 결재자 + 대직자 모두)
+            allLines.stream()
+                    .filter(line -> line.getSeq() == nextSeq && line.getApprStat() == ApprStat.W)
+                    .forEach(ApprovalLine::setInProgress);
+        }
+    }
+
     // 문서코드(docId) 생성
     // 문서가 최종승인되어야 발급
     // 회사약어 최대3자리(comId) + 부서코드 최대3자리(depId) + 년도4자리 + 일련번호 4자리 = 최대 총 14자리
-    // 현재는 가짜 데이터 넣어놔서 14자리 넘음
-//    private String generateDocId(String comId) {
-//        String newDocId = comId +
-//    }
+    /**
+     * 문서코드(docId) 생성
+     * 형식: 회사코드(3) + 부서코드(3) + 년도(4) + 일련번호(4) = 최대 14자리
+     * 예시: C01D012024A001
+     *
+     * 동시성 문제 해결: 비관적 락(Pessimistic Lock) 사용
+     */
+    public String generateDocId(Document document) {
+        String comId = document.getCompany().getComId();
+        String depId = document.getWriter().getDepartment().getDepId();
+        String year = String.valueOf(LocalDateTime.now().getYear());
+
+        // 접두사: 회사코드 + 부서코드 + 년도
+        String prefix = comId + depId + year;
+
+        // 해당 접두사로 시작하는 가장 마지막 문서코드 조회 (비관적 락)
+        String lastDocId = documentRepository.findLastDocIdByPrefixWithLock(prefix);
+
+        String newSerial;
+        if (lastDocId == null) {
+            // 해당 년도 첫 문서
+            newSerial = "0001";
+        } else {
+            // 마지막 4자리 추출 후 +1
+            String lastSerial = lastDocId.substring(lastDocId.length() - 4);
+            newSerial = incrementSerial(lastSerial);
+        }
+
+        return prefix + newSerial;
+    }
+
+    /**
+     * 일련번호 증가 (36진수: 0-9, A-Z)
+     * 0001 -> 0002 -> ... -> 9999 -> 000A -> 000B -> ... -> ZZZZ
+     */
+    private String incrementSerial(String serial) {
+        // 36진수로 변환 (0-9, A-Z)
+        int value = Integer.parseInt(serial, 36);
+        value++;
+
+        if (value > 1679615) { // ZZZZ = 1679615 (36진수)
+            throw new CustomException(ErrorCode.DOCUMENT_SERIAL_OVERFLOW);
+        }
+
+        // 다시 36진수 문자열로 변환 후 4자리 패딩
+        String newSerial = Integer.toString(value, 36).toUpperCase();
+        return String.format("%4s", newSerial).replace(' ', '0');
+    }
+
+
+
+
 }
