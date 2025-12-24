@@ -5,6 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.storage.domain.Attachment;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.AttachmentDto;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentFileType;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentStatus;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.repository.AttachmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +36,10 @@ import java.util.Set;
 public class AttachmentServiceImpl implements AttachmentService {
 
     private final AttachmentRepository attachmentRepository;
+    private final S3Client s3Client;
+
+    @Value("${app.s3.bucket}")
+    private String bucket;
 
     @Value("${app.s3.env}")
     private String env;
@@ -170,37 +178,46 @@ public class AttachmentServiceImpl implements AttachmentService {
         return ext.isEmpty() ? null : ext;
     }
 
-    @Override
     @Transactional
+    @Override
     public Long softDelete(Long attachmentId, CustomUser user) {
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
+        // 1) 조회 (테넌트 + ACTIVE만)
+        Attachment a = attachmentRepository
+                .findByAttachmentIdAndComIdAndStatus(attachmentId, user.getComId(), AttachmentStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "첨부파일이 없습니다."));
+
+        // 2) 권한 체크: 업로더만 삭제 가능 (너희 정책에 맞게 subjectId/empNo 매핑)
+        String requesterId = user.getUsername(); // 예: emp_no
+        if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 첨부파일만 삭제할 수 있습니다.");
         }
 
-        // 동시성 대비: row 잠그고 조회
-        Attachment attachment = attachmentRepository.findByIdForUpdate(attachmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "첨부파일을 찾을 수 없습니다."));
-
-        // 업로더(createdBy)만 삭제 가능
-        String actorEmpNo = user.getUsername(); // 너희 CustomUser에 맞게 변경
-        String ownerEmpNo = attachment.getCreatedBy();
-
-        // createdBy가 null일 수도 있으면 정책이 필요함 (여기선 null이면 삭제 불가 처리)
-        if (ownerEmpNo == null || actorEmpNo == null || !ownerEmpNo.equals(actorEmpNo)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "업로드한 사용자만 삭제할 수 있습니다.");
+        // 3) domain 분기
+        if (a.getDomain() == AttachmentDomain.CLOUD) {
+            // ✅ CLOUD: soft delete
+            a.softDelete(); // status=DELETED
+            // save 안 해도 영속 상태면 flush되지만 명시적으로 해도 OK
+            // attachmentRepository.save(a);
+            return a.getAttachmentId();
         }
 
-        // 이미 삭제된 경우: 멱등 처리
-        if (!attachment.isActive()) {
-            return attachment.getAttachmentId();
-        }
+        // ✅ 그 외: hard delete (S3 + DB)
+        deleteObjectFromS3(a.getObjectKey());  // S3 삭제
+        attachmentRepository.delete(a);        // DB row 삭제
 
-        attachment.softDelete();
-        // 영속 상태라 save 없어도 되지만, 명시적으로 호출해도 OK
-        attachmentRepository.save(attachment);
-
-        return attachment.getAttachmentId();
+        return attachmentId;
     }
 
-
+    private void deleteObjectFromS3(String objectKey) {
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(objectKey)
+                    .build());
+        } catch (S3Exception e) {
+            // S3 권한/버킷/키 문제 등
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "S3 삭제 실패: " + e.awsErrorDetails().errorMessage(), e);
+        }
+    }
 }
