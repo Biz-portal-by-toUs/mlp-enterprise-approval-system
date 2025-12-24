@@ -27,6 +27,7 @@ public class ChatRoom extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long roomNo;
+    @Column(name = "room_name",columnDefinition = "varchar(50)")
     private String roomName;
     @Enumerated(EnumType.STRING)
     private RoomType roomType;

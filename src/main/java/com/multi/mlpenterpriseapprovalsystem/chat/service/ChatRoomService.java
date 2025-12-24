@@ -63,7 +63,6 @@ public class ChatRoomService {
             throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
         }
 
-        // ✅ 회사 comId 검증
         for (String targetEmpId : targets) {
             Employee target = employeeRepository.findByEmpId(targetEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -122,24 +121,22 @@ public class ChatRoomService {
                 empNames.add(me.getEmpName());
 
                 for (String id : request.getMemberIds()) {
+                    if (empNames.size() >= 5) break;
                     Employee emp = employeeRepository.findByEmpId(id)
                             .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
                     empNames.add(emp.getEmpName());
                 }
 
                 roomName = String.join(", ", empNames);
-                if (roomName.length() > 255) {
-                    roomName = roomName.substring(0, 250) + "...";
+                if (roomName.length() > 45) {
+                    roomName = roomName.substring(0, 45) + "...";
                 }
             } else {
                 roomName = request.getRoomName();
-                if (roomName.length() > 255) {
+                if (roomName.length() > 50) {
                     throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
                 }
             }
-        }
-        if (roomName != null && roomName.length() > 255) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(roomName, roomType));
