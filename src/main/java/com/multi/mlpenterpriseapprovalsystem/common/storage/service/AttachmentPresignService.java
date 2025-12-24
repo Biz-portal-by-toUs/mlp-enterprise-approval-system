@@ -34,7 +34,11 @@ public class AttachmentPresignService {
 
     public PresignResponse presignPut(PresignRequest req, String comId) {
         // 1) 여기서 권한 체크 + (PK당 최대 5개) 제한 체크를 보통 함
-
+        log.info("====================[presign] nowUtc={} nowKst={} req={} comId={}",
+                java.time.Instant.now(),
+                java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul")),
+                req, comId
+        );
         // 2) objectKey 생성
         String safeName = req.originalName().replaceAll("\\s+", "_");
         String objectKey = String.format(env + "/%s/%s/%s/%s/%s_%s",
@@ -54,11 +58,16 @@ public class AttachmentPresignService {
                 .build();
 
         PutObjectPresignRequest presignReq = PutObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(5))
+                .signatureDuration(Duration.ofMinutes(60))
                 .putObjectRequest(putReq)
                 .build();
 
+
+
         PresignedPutObjectRequest presigned = presigner.presignPutObject(presignReq);
+
+        // ✅ 여기: 만들어진 URL에도 X-Amz-Date가 들어있어서 같이 찍으면 원인 찾기 쉬움
+        log.info("=====================[presign] objectKey={} url={}", objectKey, presigned.url());
 
         log.info("[presign] objectKey={}", objectKey);
 
