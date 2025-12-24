@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.common.storage.Service;
+package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.StoredFile;
 import org.springframework.beans.factory.annotation.Value;

@@ -8,7 +8,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
-import com.multi.mlpenterpriseapprovalsystem.common.storage.Service.StorageService;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.service.StorageService;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.StoredFile;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
