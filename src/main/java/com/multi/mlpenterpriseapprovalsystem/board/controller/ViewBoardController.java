@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 @Controller
 @RequestMapping("/boards")
-public class FrontBoardController {
+public class ViewBoardController {
 
     @GetMapping("/list")
     public String boardList() {

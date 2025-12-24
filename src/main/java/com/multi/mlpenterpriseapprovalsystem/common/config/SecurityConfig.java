@@ -15,6 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * SecurityConfig
@@ -39,6 +42,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -52,7 +57,8 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
-                                "/admin/**").permitAll()
+                                "/admin/**",
+                                "/attachment-test").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
                                 "/images/**",
@@ -73,5 +79,22 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
         return http.build();
 
+    }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 허용할 프론트엔드 주소 (현재 localhost 테스트 중이라면 아래와 같이 설정)
+        configuration.addAllowedOriginPattern("*");
+        // 허용할 HTTP 메서드
+        configuration.addAllowedMethod("*");
+        // 허용할 헤더 (Authorization 헤더가 포함되어야 함)
+        configuration.addAllowedHeader("*");
+        // 브라우저가 토큰을 읽을 수 있도록 허용
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 public class NoticeReqDto {
 
     private Long noticeNo; // 수정 시 필요, 등록 시에는 null 가능
-
     @NotBlank(message = "회사코드는 필수입니다.")
     private String comId;
     @NotNull
@@ -37,9 +36,9 @@ public class NoticeReqDto {
     private LocalDateTime startedAt;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endedAt;
-
     @NotNull(message = "사원 ID는 필수입니다.")
     private String empId;
+    private Integer rating;
 
     private LocalDateTime createdAt;
     private LocalDateTime updated;

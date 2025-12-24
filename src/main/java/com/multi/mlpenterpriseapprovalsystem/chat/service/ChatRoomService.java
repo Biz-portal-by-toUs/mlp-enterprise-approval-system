@@ -63,7 +63,6 @@ public class ChatRoomService {
             throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
         }
 
-        // ✅ 회사 comId 검증
         for (String targetEmpId : targets) {
             Employee target = employeeRepository.findByEmpId(targetEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -122,24 +121,22 @@ public class ChatRoomService {
                 empNames.add(me.getEmpName());
 
                 for (String id : request.getMemberIds()) {
+                    if (empNames.size() >= 5) break;
                     Employee emp = employeeRepository.findByEmpId(id)
                             .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
                     empNames.add(emp.getEmpName());
                 }
 
                 roomName = String.join(", ", empNames);
-                if (roomName.length() > 255) {
-                    roomName = roomName.substring(0, 250) + "...";
+                if (roomName.length() > 45) {
+                    roomName = roomName.substring(0, 45) + "...";
                 }
             } else {
                 roomName = request.getRoomName();
-                if (roomName.length() > 255) {
+                if (roomName.length() > 50) {
                     throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
                 }
             }
-        }
-        if (roomName != null && roomName.length() > 255) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(roomName, roomType));
@@ -230,6 +227,10 @@ public class ChatRoomService {
         String content = (latestMsg != null) ? latestMsg.getContent() : null;
         String createdAt = (latestMsg != null) ? latestMsg.getCreatedAt().toString() : null;
 
+        int activeMemberCount = (int) room.getMembers().stream()
+                .filter(ChatRoomMember::isActive)
+                .count();
+
         // 3. 최신 데이터(상대방 이름 포함)로 목록 업데이트 알림 전송
         ResChatRoomUpdateDto updateDto = new ResChatRoomUpdateDto(
                 roomNo,
@@ -238,6 +239,8 @@ public class ChatRoomService {
                 0, // 읽음 처리되었으므로 0
                 roomName // ✅ 이제 내가 아닌 상대방의 이름이 전달됨
                 ,false
+                ,room.getRoomType()
+                ,activeMemberCount
         );
 
         redisPublisher.publishRoomUpdate(empId, updateDto);
@@ -254,7 +257,7 @@ public class ChatRoomService {
                 .senderEmpId("SYSTEM")
                 .senderName("SYSTEM")
                 .content(content)
-                .type(MessageType.SYSTEM)   // ← ChatMessage 엔티티 필드명이 type가 아니면 너 필드명에 맞게만 바꿔
+                .type(MessageType.SYSTEM)
                 .createdAt(LocalDateTime.now())
                 .build();
         chatMessageRepository.save(systemMessage);
@@ -287,7 +290,7 @@ public class ChatRoomService {
         if (RoomType.GROUP.equals(member.getChatRoom().getRoomType())) {
             saveAndPublishSystemMessage(roomNo, leaver.getEmpName() + "님이 나갔습니다.");
         }
-        ResChatRoomUpdateDto dto = new ResChatRoomUpdateDto(roomNo, null, null, 0, null,true);
+        ResChatRoomUpdateDto dto = new ResChatRoomUpdateDto(roomNo, null, null, 0, null,true,RoomType.ONE,0);
         redisPublisher.publishRoomUpdate(empId, dto);
 
         log.info("[LEAVE] roomNo={}, empId={}, type={}", roomNo, empId, room.getRoomType());

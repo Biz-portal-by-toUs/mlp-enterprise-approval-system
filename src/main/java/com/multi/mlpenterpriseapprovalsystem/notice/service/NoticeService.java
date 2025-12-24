@@ -1,17 +1,27 @@
 package com.multi.mlpenterpriseapprovalsystem.notice.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notice.domain.Notice;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.repository.NoticeRepository;
+import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.criteria.JoinType;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,23 +39,48 @@ import java.util.stream.Collectors;
 public class NoticeService {
 
     private final NoticeRepository noticeRepository;
+    private final CompanyRepository companyRepository;
+    private final EmployeeRepository employeeRepository;
 
+    private static final ObjectMapper om = new ObjectMapper();
 
     @Transactional
     public void registNotice(NoticeReqDto dto){
 
+        Employee employee = employeeRepository.findByEmpId(dto.getEmpId())
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        Company company = companyRepository.findByComId(dto.getComId())
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
         Notice notice = Notice.builder()
-            //    .company(company)
+                .company(company)
                 .isDeleted(dto.getIsDeleted())
                 .title(dto.getTitle())
-                .contents(dto.getTitle())
+                .contents(normalizeToJson(dto.getContents()))
+               // .contents(dto.getContents())
                 .isPopup(dto.getIsPopup())
                 .startedAt(dto.getStartedAt())
                 .endedAt(dto.getEndedAt())
-             //   .employee(employee)
+                .employee(employee)
+                .rating(dto.getRating())
                 .build();
 
         noticeRepository.save(notice);
+    }
+
+    private String normalizeToJson(String raw) {
+        if (raw == null) return null;
+
+        try {
+            om.readTree(raw);     // 이미 JSON이면 그대로
+            return raw;
+        } catch (Exception ignore) {
+        }
+
+        ObjectNode node = om.createObjectNode();
+        node.put("text", raw);
+        return node.toString();
     }
 
     //공지사항 팝업 조회(startedAt , endedAt 사이 팝업 여부가 'Y'인거 검색
@@ -111,32 +146,58 @@ public class NoticeService {
     }
 
     @Transactional
-    public void deleteNotice(Long id) {
+    public void deleteNotice(Long noticeNo) {
 
-        Notice notice = noticeRepository.findById(id)
+        Notice notice = noticeRepository.findById(noticeNo)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항 정보가 없습니다")); // 내가 해봄
-        noticeRepository.deleteById(id);
+        noticeRepository.deleteById(noticeNo);
     }
 
     //공지사항 상세 조회
-    public NoticeResAllDto detailNotice(Long id) {
+    @Transactional
+    public NoticeResAllDto detailNotice(Long noticeNo) {
 
-        Notice notice = noticeRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("공지사항이 존재하지 않습니다"));
+        noticeRepository.incrementRating(noticeNo);
+
+        Notice notice = noticeRepository.findById(noticeNo).orElseThrow(() -> new IllegalArgumentException("공지사항이 존재하지 않습니다"));
 
         return NoticeResAllDto.builder()
                 .noticeNo(notice.getNoticeNo())
                 .compId(notice.getCompany().getComId())
                 .isDeleted(notice.getIsDeleted())
                 .title(notice.getTitle())
-                .contents(notice.getContents())
+                .contents(denormalizeFromJson(notice.getContents()))
                 .isPopup(notice.getIsPopup())
                 .startedAt(notice.getStartedAt())
                 .endedAt(notice.getEndedAt())
                 .empId(notice.getEmployee().getEmpId())
                 .createdAt(notice.getCreatedAt())
                 .updatedAt(notice.getUpdatedAt())
+                .rating(notice.getRating())
                 .build();
 
+    }
+
+    private String denormalizeFromJson(String json) {
+        if (json == null || json.isBlank()) {
+            return json;
+        }
+
+        try {
+            JsonNode node = om.readTree(json);
+
+            // normalizeToJson에서 감싼 {"text": "..."} 인 경우
+            if (node.isObject() && node.size() == 1 && node.has("text")) {
+                return node.get("text").asText();
+            }
+
+            // 그 외(JSON Object/Array)는 그대로 문자열로 반환
+            return node.toString();
+
+        } catch (Exception e) {
+            // JSON 파싱 실패 = 이미 그냥 문자열일 가능성
+            return json;
+        }
     }
 
     @Transactional
@@ -144,6 +205,11 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("변경할 공지사항이 없습니다"));
 
+        //Contents 데이타를 string -> json 형태로 전환
+        String contents = dto.getContents();
+        dto.setContents(normalizeToJson(contents));
+        System.out.println("dto.getContents() : " + dto.getContents() + "");
+        System.out.println("dto : " + dto + "");
         notice.update(dto);
     }
 
@@ -208,6 +274,7 @@ public class NoticeService {
                 n.getNoticeNo(),
                 n.getTitle(),
                 (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null,
+                n.getRating(),
                 n.getCreatedAt() // BaseEntity
         ));
     }

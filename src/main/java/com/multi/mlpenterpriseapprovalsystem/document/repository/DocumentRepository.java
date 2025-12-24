@@ -3,10 +3,12 @@ package com.multi.mlpenterpriseapprovalsystem.document.repository;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -219,4 +221,17 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     """)
     Optional<Document> findFinalizedDoc(@Param("comId") String comId,
                                         @Param("docNo") Long docNo);
+
+//======================================================================================================================
+
+    /**
+     * 해당 접두사로 시작하는 가장 마지막 문서코드 조회 (비관적 락)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT d.docId FROM Document d WHERE d.docId LIKE :prefix% ORDER BY d.docId DESC LIMIT 1")
+    String findLastDocIdByPrefixWithLock(@Param("prefix") String prefix);
+
+//======================================================================================================================
+
+
 }
