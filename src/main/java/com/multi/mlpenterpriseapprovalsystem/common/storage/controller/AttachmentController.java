@@ -59,12 +59,12 @@ public class AttachmentController {
 
     @DeleteMapping("/{attachmentId}")
     public ResponseEntity<ResponseDto<DeleteResponse>> delete(
-            @PathVariable Long attachmentId,
+            @PathVariable(name="attachmentId") Long attachmentId,
             @AuthenticationPrincipal CustomUser user
     ) {
         Long deletedId = attachmentService.softDelete(attachmentId, user);
         return ResponseEntity.ok(
-                new ResponseDto<>(HttpStatus.OK, "첨부파일 삭제(soft delete) 완료", new DeleteResponse(deletedId))
+                new ResponseDto<>(HttpStatus.OK, "첨부파일 삭제 완료", new DeleteResponse(deletedId))
         );
     }
 

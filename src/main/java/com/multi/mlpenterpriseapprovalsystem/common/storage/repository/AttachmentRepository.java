@@ -52,4 +52,6 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
     Optional<Attachment> findByAttachmentIdAndComIdAndStatus(
             Long attachmentId, String comId, AttachmentStatus status
     );
+
+
 }
