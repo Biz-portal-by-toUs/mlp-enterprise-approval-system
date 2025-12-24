@@ -329,6 +329,27 @@
         <button class="tab-btn active" data-target="review">첨부 파일</button>
     </div>
 
+    <div class="card">
+        <div class="row" style="justify-content: space-between;">
+            <h3 style="margin:0;">파일 목록</h3>
+            <button onclick="loadFiles()">새로고침</button>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>원본 파일명</th>
+                <th>사이즈</th>
+                <th>업로드 시각</th>
+                <th>다운로드</th>
+                <th>삭제</th>
+            </tr>
+            </thead>
+            <tbody id="filesTbody"></tbody>
+        </table>
+    </div>
+
     <div id="attach" class="tab-content active">
         <table id="attachList"></table>
         <div id="pagination"></div>
@@ -344,14 +365,13 @@
         <button id="delete-btn" class="btn ms-2" onclick="deleteNotice()">삭제하기</button>
     </div>
 
-    <a href="/main" class="home-link">← 홈으로 돌아가기</a>
 </div>
 
 
 <script>
     const noticeNo = [[${noticeNo}]];
 
-    async function loadPlaceDetail() {
+    async function loadNoticeDetail() {
         try {
             const token = localStorage.getItem('accessToken');
             const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
@@ -466,8 +486,10 @@
             pagination.append(`<button onclick="initReview(${pageInfo.pageNo + 1})">다음</button>`);
     }
 
+
+
     document.addEventListener('DOMContentLoaded', () => {
-        loadPlaceDetail();
+        loadNoticeDetail();
 
     });
 </script>
