@@ -8,8 +8,7 @@
         body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
         .wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
 
-        /* 상단 바 */
-        /* 상단 바 레이아웃 유지 */
+
         .top {
             padding: 14px 18px;
             border-bottom: 1px solid var(--border-color);
@@ -19,18 +18,62 @@
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             z-index: 10;
-            gap: 10px; /* 제목과 버튼 사이 최소 간격 */
+            gap: 10px;
         }
-        /* ✅ 채팅방 이름 말줄임 처리 */
         .title {
+            flex: 1;
+            min-width: 0;
+            max-width: 200px;
+            position: relative;
+            cursor: pointer;
+            overflow: visible !important;
+        }
+
+        /* ✅ 실제 제목 텍스트 전용 스타일 (말줄임 유지) */
+        .title-text {
+            display: block;
             font-weight: 800;
             font-size: 16px;
-            white-space: nowrap;      /* 줄바꿈 금지 */
-            overflow: hidden;         /* 넘치는 부분 숨김 */
-            text-overflow: ellipsis;  /* ... 표시 */
-            flex: 1;                  /* 남는 공간을 차지하게 함 */
-            min-width: 0;             /* flex 아이템이 넘칠 때 줄어들 수 있게 함 (중요) */
-            max-width: 200px;         /* 16px 기준 약 12~13자 정도의 너비 제한 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* chat-room.html <style> 부분 수정 */
+
+        /* 1. 툴팁의 기본 상태 (숨김) */
+        .title::after {
+            content: attr(data-title);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 400;
+            z-index: 9999;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            white-space: normal;
+            width: max-content;
+            max-width: 250px;
+            word-break: break-all;
+            line-height: 1.5;
+
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .title:hover::after {
+            opacity: 1;
+            visibility: visible;
+
+            transition-delay: 0.4s;
         }
         /* 버튼 영역이 찌그러지지 않게 고정 */
         .actions {
@@ -79,21 +122,62 @@
         .time-info { font-size: 10px; color: #aaa; margin-top: 4px; }
 
         /* 하단 바 */
-        .bottom { padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        /* .bottom 스타일 수정 및 추가 */
+        /* chat-room.html의 <style> 부분 수정 */
+        .bottom {
+            padding: 10px 15px 5px; /* 아래 간격 조정 */
+            background: white;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .bottom textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+            resize: none;
+            height: 40px;
+            max-height: 100px;
+
+            /* ✅ 핵심: 초기 스크롤바 숨김 */
+            overflow: hidden;
+
+            line-height: 1.4;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .bottom textarea:focus { border-color: var(--primary-color); }
         .bottom input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; transition: border-color 0.2s; }
         .bottom input:focus { border-color: var(--primary-color); }
         .bottom button { padding: 0 20px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
         .bottom button:disabled { background: #ccc; cursor: not-allowed; }
 
         /* ✅ 추가된 바이트 바 스타일 */
+        /* ✅ 바이트 바와 버튼 레이아웃 수정 */
         .bytebar {
-            padding: 0 20px 12px;
-            font-size: 12px;
-            color: #777;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
+            padding: 0 15px 12px;
             background: white;
+            display: flex;
+            justify-content: space-between; /* 양 끝으로 배치 */
+            align-items: center;
+        }
+
+        .bytebar button {
+            padding: 8px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .bytebar button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
         .bytebar .warn { color:#ff3b30; font-weight:700; }
 
@@ -161,13 +245,15 @@
     <div class="msgs" id="messages"></div>
 
     <div class="bottom">
-        <input id="messageInput" placeholder="메시지를 입력하세요..." onkeydown="if(event.keyCode==13){sendMessage()}" autocomplete="off" />
-        <button id="sendBtn" onclick="sendMessage()">전송</button>
+        <textarea id="messageInput" placeholder="메시지를 입력하세요..." rows="1" autocomplete="off"></textarea>
     </div>
 
     <div class="bytebar">
-        <span id="byteInfo">0 / 61440 bytes</span>
-        <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+        <div id="byteGroup">
+            <span id="byteInfo">0 / 61440 bytes</span>
+            <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+        </div>
+        <button id="sendBtn" onclick="sendMessage()">전송</button>
     </div>
 </div>
 
@@ -232,13 +318,20 @@
 
             let displayName = room.roomName;
 
-            // ✅ 1:1 채팅방이거나 방 이름이 없는 경우, 참여자 목록에서 상대방 이름을 찾음
             if (room.roomType === 'ONE' || !displayName) {
                 const opponent = (room.members || []).find(m => m.empId !== MY_EMP_ID);
                 displayName = opponent ? opponent.empName : (displayName || "대화 상대 없음");
             }
 
-            document.getElementById("roomTitle").innerText = displayName;
+            const titleEl = document.getElementById("roomTitle");
+
+            // ✅ [수정] 텍스트 전용 span(title-text)을 만들어서 넣어줌
+            // 이렇게 해야 제목은 '...'으로 유지되면서 툴팁만 아래에 뜹니다.
+            titleEl.innerHTML = `<span class="title-text">${escapeHtml(displayName)}</span>`;
+
+            // ✅ 툴팁에 표시될 전체 이름 설정
+            titleEl.setAttribute('data-title', displayName);
+            titleEl.removeAttribute('title');
         } catch (err) {
             console.error("방 정보 로드 실패:", err);
             document.getElementById("roomTitle").innerText = "채팅방";
@@ -449,12 +542,12 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    // sendMessage 함수 내 input.value 초기화 후 높이 초기화 로직 추가
     function sendMessage() {
         const input = document.getElementById("messageInput");
         const content = input.value.trim();
         if (!content || !stompClient?.connected) return;
 
-        // ✅ 전송 전 바이트 제한 최종 체크
         if (utf8Bytes(content) > MAX_BYTES) {
             alert("메시지 용량이 너무 큽니다.");
             return;
@@ -463,7 +556,10 @@
         stompClient.send("/pub/chat/message", { Authorization: 'Bearer ' + getAccessToken() },
             JSON.stringify({ roomNo: roomNo, content: content })
         );
+
         input.value = "";
+        input.style.height = '40px'; // ✅ 전송 후 다시 한 줄 높이로 초기화
+        input.style.overflowY = 'hidden'; // ✅ 전송 후 스크롤바 다시 숨김
         updateByteInfo();
     }
 
@@ -474,10 +570,38 @@
     });
 
     window.addEventListener("load", () => {
+        const messageInput = document.getElementById("messageInput");
+
+        messageInput.addEventListener("input", function() {
+            // 높이 초기화 후 재계산
+            this.style.height = '40px';
+            const newHeight = this.scrollHeight;
+            this.style.height = newHeight + 'px';
+
+            // ✅ 최대 높이(100px)를 넘으면 스크롤바 표시, 아니면 숨김
+            if (newHeight >= 100) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+
+            updateByteInfo();
+        });
+
+// 엔터키 전송 로직 수정
+        messageInput.addEventListener("keydown", function(e) {
+            // ✅ [핵심] 한글 조합 중(IME)일 때는 엔터 처리를 무시함
+            if (e.isComposing) return;
+
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
         loadRoomInfo();
         connectWs();
-        updateByteInfo(); // 바이트 카운터 초기화
-        document.getElementById("messageInput").addEventListener("input", updateByteInfo);
+        updateByteInfo();
     });
 </script>
 </body>

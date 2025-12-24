@@ -43,7 +43,7 @@ public class ChatRoomMember {
     private LocalDateTime lastReadAt;
 
     @Column(name = "unread_count", columnDefinition = "int default 0 ")
-    private int unreadCount = 0; // 자바 객체 생성 시에도 0으로 초기화
+    private int unreadCount = 0;
 
     @Column(name="is_active", columnDefinition = "boolean default false",nullable=false)
     private boolean isActive;
@@ -78,6 +78,8 @@ public class ChatRoomMember {
         this.unreadCount = 0;
         this.lastReadAt = null;
     }
+
+
 
 
 }

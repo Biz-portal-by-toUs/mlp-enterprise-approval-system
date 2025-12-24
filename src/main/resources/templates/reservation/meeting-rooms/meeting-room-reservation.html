@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <title>회의실 예약</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
+    <style>
+        body {
+            font-family: Pretendard, Arial, sans-serif;
+            background: #f7f8fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-bottom: 16px;
+        }
+
+        /* ===== 기준 덩어리 ===== */
+        .timetable-section {
+            width: fit-content;
+            margin: 0 auto;
+        }
+
+        /* ===== 상단 ===== */
+        .timetable-header {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* 범례 */
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 13px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .dot.selected {
+            background: #4a90e2;
+        }
+
+        .dot.reserved-other {
+            background: #8bc34a;
+        }
+
+        .dot.reserved-mine {
+            background: #9c27b0;
+        }
+
+        .legend-box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 6px;
+            border-radius: 3px;
+        }
+
+        .legend-box.legend-selected { background: #4f8fe3; }
+        .legend-box.legend-mine     { background: #9c27b0; }
+        .legend-box.legend-other    { background: #8bc34a; }
+
+        /* 선택 중 */
+        .time-cell.selected {
+            background: #4f8fe3;
+        }
+
+        /* 내 예약 */
+        .time-cell.reserved-mine {
+            background: #9c27b0;
+        }
+
+        /* 다른 사용자 예약 */
+        .time-cell.reserved-other {
+            background: #8bc34a;
+        }
+
+        /* 과거 시간/날짜 공통 */
+        .time-cell.disabled {
+            pointer-events: none;
+        }
+
+        /* 회색 오버레이 */
+        .time-cell.past {
+            position: relative;
+        }
+
+        .time-cell.past::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(200, 200, 200, 0.55); /* 반투명 회색 */
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 날짜 */
+        .date-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .date-nav button {
+            border: none;
+            background: none;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        /* 예약 버튼 */
+        .reserve-action-btn {
+            background: #2d7ff9;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            justify-self: end;
+        }
+
+        /* ===== 타임테이블 ===== */
+        .timetable-wrapper {
+            overflow-x: auto;
+        }
+
+        .timetable {
+            border: 1px solid #ddd;
+            background: white;
+            width: fit-content;
+        }
+
+        .time-header,
+        .room-row {
+            display: grid;
+            grid-template-columns: 150px repeat(18, 60px);
+        }
+
+        .time-header div,
+        .room-row div {
+            border-bottom: 1px solid #e0e0e0;
+            border-right: 1px solid #e0e0e0;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .time-header {
+            background: #f0f2f5;
+            font-weight: bold;
+        }
+
+        .room-name {
+            background: #fafafa;
+            font-weight: bold;
+        }
+
+
+    </style>
+</head>
+
+<body>
+
+<div class="timetable-section">
+    <h2>회의실 예약</h2>
+    <br><br>
+    <!-- 상단 -->
+    <div class="timetable-header">
+
+        <!-- 범례 -->
+        <ul class="legend">
+            <li class="legend-row">
+                <span class="legend-box legend-selected"></span> 선택한 예약
+            </li>
+            <li class="legend-row">
+                <span class="legend-box legend-mine"></span> 내 예약
+            </li>
+            <li class="legend-row">
+                <span class="legend-box legend-other"></span> 다른 사용자 예약
+            </li>
+        </ul>
+
+        <!-- 날짜 -->
+        <div class="date-nav">
+            <button id="prevDate">◀</button>
+            <span id="currentDate"></span>
+            <input type="date" id="hiddenDate" style="display:none"/>
+            <button id="nextDate">▶</button>
+        </div>
+
+        <!-- 예약 -->
+        <button class="reserve-action-btn" id="openReserve">예약하기</button>
+
+    </div>
+
+    <!-- 타임테이블 -->
+    <div class="timetable-wrapper">
+        <div class="timetable" id="timetable"></div>
+    </div>
+
+</div>
+
+<script>
+    const START_HOUR = 9;
+    const END_HOUR = 18;
+
+    let currentDate = dayjs();
+    let isDragging = false;
+    let dragRow = null;
+    let dragCells = [];
+
+    let ROOMS = [];
+    let RESERVATIONS = [];
+
+    const timetable = document.getElementById("timetable");
+    const currentDateEl = document.getElementById("currentDate");
+    const hiddenDate = document.getElementById("hiddenDate");
+
+    const myEmpId = "E000001"; // TODO: JWT 연동 시 교체
+
+    function isPastCell(cellIdx) {
+        const now = dayjs();
+
+        // 날짜가 과거면 → 전 셀 과거 (시간 무시)
+        if (currentDate.isBefore(now, "day")) {
+            return true;
+        }
+
+        // 오늘인 경우만 시간 비교
+        if (currentDate.isSame(now, "day")) {
+            const cellHour = START_HOUR + Math.floor(cellIdx / 2);
+            const cellMinute = cellIdx % 2 === 0 ? 0 : 30;
+
+            const cellTime = currentDate
+                .hour(cellHour)
+                .minute(cellMinute)
+                .second(0);
+
+            if (cellTime.isBefore(now)) {
+                return true;
+            }
+        }
+
+        // 미래 날짜
+        return false;
+    }
+
+    /* ================= 날짜 ================= */
+    function renderDate() {
+        currentDateEl.innerText = currentDate.format("YYYY.MM.DD");
+    }
+
+    function changeDate(diff) {
+        currentDate = currentDate.add(diff, "day");
+        renderDate();
+        clearSelection();
+        loadReservations(); // 날짜 바뀔 때 예약 다시 조회
+
+        buildTable();  // (과거 날짜면 전부 회색)
+        loadReservations();
+    }
+
+    function isPastDate() {
+        return currentDate.startOf("day").isBefore(dayjs().startOf("day"));
+    }
+
+    document.getElementById("prevDate").onclick = () => changeDate(-1);
+    document.getElementById("nextDate").onclick = () => changeDate(1);
+
+    currentDateEl.onclick = () => {
+        hiddenDate.value = currentDate.format("YYYY-MM-DD");
+        hiddenDate.showPicker?.();
+    };
+
+    hiddenDate.addEventListener("change", () => {
+        if (!hiddenDate.value) {
+            // 삭제 눌렀을 때
+            hiddenDate.value = dayjs().format("YYYY-MM-DD");
+        }
+
+        currentDate = dayjs(hiddenDate.value);
+        renderDate();
+        clearSelection();
+
+        buildTable();
+        loadReservations(); // ⭐ 달력 선택 시도 재조회
+    });
+
+
+    /* ================= 회의실 조회 ================= */
+    async function loadRooms() {
+        const res = await fetch("/api/v1/meeting-rooms", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+        });
+        const json = await res.json();
+        ROOMS = json.data?.data?.content ?? json.data ?? [];
+        buildTable();
+    }
+
+    /* ================= 예약 조회 ================= */
+    async function loadReservations() {
+        const dateStr = currentDate.format("YYYY-MM-DD");
+
+        const res = await fetch(`/api/v1/meeting-room-reservations?date=${dateStr}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+        });
+        const json = await res.json();
+
+        RESERVATIONS =
+            json.data?.data ??
+            json.data?.content ??
+            json.data ??
+            [];
+
+        paintReservations();
+    }
+
+    /* ================= 테이블 생성 ================= */
+    function buildTable() {
+        timetable.innerHTML = "";
+
+        if (ROOMS.length === 0) {
+            timetable.innerHTML = `<div style="padding:20px;color:#888">등록된 회의실이 없습니다.</div>`;
+            return;
+        }
+
+        const header = document.createElement("div");
+        header.className = "time-header";
+        header.innerHTML = "<div>회의실</div>";
+
+        for (let h = START_HOUR; h < END_HOUR; h++) {
+            header.innerHTML += `<div>${h}:00</div><div>${h}:30</div>`;
+        }
+        timetable.appendChild(header);
+
+        ROOMS.forEach(room => {
+            const row = document.createElement("div");
+            row.className = "room-row";
+            row.dataset.roomNo = room.roomNo;
+            row.innerHTML = `<div class="room-name">${room.roomName}</div>`;
+
+            for (let i = 0; i < 18; i++) {
+                const cell = document.createElement("div");
+                cell.className = "time-cell";
+
+                // ⭐ 여기!
+                if (isPastCell(i)) {
+                    cell.classList.add("disabled", "past");
+                }
+
+                cell.onmousedown = (e) => {
+                    if (cell.classList.contains("disabled")) return;
+                    e.preventDefault();
+                    clearSelection();
+                    isDragging = true;
+                    dragRow = row;
+                    selectCell(cell);
+                };
+
+                cell.onmouseover = () => {
+                    if (!isDragging) return;
+                    if (row !== dragRow) return;
+                    if (cell.classList.contains("disabled")) return;
+                    selectCell(cell);
+                };
+
+                row.appendChild(cell);
+            }
+            timetable.appendChild(row);
+        });
+
+        paintReservations(); // ⭐ 방 생성 후 예약 표시
+    }
+
+    /* ================= 예약 표시 ================= */
+    function paintReservations() {
+        document.querySelectorAll(".reserved-other, .reserved-mine")
+            .forEach(c => c.classList.remove("reserved-other", "reserved-mine"));
+
+        const dateStr = currentDate.format("YYYY-MM-DD");
+
+        RESERVATIONS.forEach(resv => {
+            const resvDate =
+                resv.resvDate ??
+                (resv.startedAt ? resv.startedAt.substring(0, 10) : null);
+
+            if (resvDate !== dateStr) return;
+
+            if (!resv.roomNo) return;
+
+            const row = document.querySelector(`.room-row[data-room-no="${resv.roomNo}"]`);
+            if (!row) return;
+
+            const parseHM = (t) => {
+                if (!t) return null;
+                if (typeof t === "string") {
+                    const [h, m] = t.split(":");
+                    return { h: Number(h), m: Number(m) };
+                }
+                return { h: t.hour, m: t.minute };
+            };
+
+            const st = parseHM(resv.startTime || resv.startedAt?.substring(11, 16));
+            const et = parseHM(resv.endTime   || resv.endedAt?.substring(11, 16));
+            if (!st || !et) return;
+
+            const startIdx = ((st.h - START_HOUR) * 2) + (st.m >= 30 ? 1 : 0);
+            const endIdx   = ((et.h - START_HOUR) * 2) + (et.m >= 30 ? 1 : 0);
+
+            const cells = row.querySelectorAll(".time-cell");
+            for (let i = startIdx; i < endIdx; i++) {
+                cells[i]?.classList.add(
+                    resv.resvEmpId === myEmpId ? "reserved-mine" : "reserved-other"
+                );
+            }
+        });
+    }
+
+    /* ================= 드래그 ================= */
+    document.onmouseup = () => {
+        isDragging = false;
+        dragRow = null;
+    };
+
+    function selectCell(cell) {
+        if (!dragCells.includes(cell)) {
+            cell.classList.add("selected");
+            dragCells.push(cell);
+        }
+    }
+
+    function clearSelection() {
+        dragCells.forEach(c => c.classList.remove("selected"));
+        dragCells = [];
+    }
+
+    document.getElementById("openReserve").onclick = () => {
+        if (dragCells.length === 0) {
+            alert("예약할 시간을 선택하세요.");
+            return;
+        }
+        alert("예약 진행");
+    };
+
+    /* ================= 초기 실행 ================= */
+    async function init() {
+        renderDate();
+        await loadRooms();
+        await loadReservations();
+    }
+
+    init();
+</script>
+
+
+</body>
+</html>

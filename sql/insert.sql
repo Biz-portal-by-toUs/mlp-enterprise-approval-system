@@ -31,31 +31,31 @@ VALUES
 -- 5) employee (dep_no:1~5, pos_no:1~5)
 INSERT INTO employee
 (com_id, dep_no, pos_no, emp_id, pwd, emp_name, email, phone, work_phone, gen,
- hire_date, ret_date, addr, role, atte, msg_stat, delegate)
+ hire_date, ret_date, addr, role, atte, msg_stat, delegate, is_deleted)
 VALUES
 -- 회사 관리자(사원 페이지에서도 최상위 관리자 역할로 쓸 수 있음)
 ('C01', 1, 1, 'E000001',
  '$2b$10$Dua3gQf03uEl91WTUjabhuxdk0gl1lq2UcdoPJpINAyV2KovcFtB6',
  '홍관리', 'comadmin@c01.com', '010-1111-1111', '0212345678', 'M',
- '2025-01-02 09:00:00', NULL, '서울특별시 강남구', 'COM_ADMIN', 'N', 'N', NULL),
+ '2025-01-02 09:00:00', NULL, '서울특별시 강남구', 'COM_ADMIN', 'N', 'N', NULL,false),
 
 -- 2차 관리자
 ('C01', 1, 1, 'E000002',
  '$2b$10$IRGCWkvwSo1QejSQoHuH/.V0TRU69cFAteCJurcoIWODwWmg5zu6G',
  '김보안', 'secadmin@c01.com', '010-2222-2222', '0212345679', 'F',
- '2025-01-02 09:10:00', NULL, '서울특별시 강남구', 'SEC_ADMIN', 'N', 'N', 'E000001'),
+ '2025-01-02 09:10:00', NULL, '서울특별시 강남구', 'SEC_ADMIN', 'N', 'N', 'E000001',false),
 
 -- 3차 관리자
 ('C01', 1, 1, 'E000003',
  '$2b$10$D4ZZH6fC11EykcEdVhHUvulXICZ6BRtKd4GeJ9hSMjGiOE0e5PCfS',
  '박삼차', 'thradmin@c01.com', '010-3333-3333', '0212345680', 'M',
- '2025-01-02 09:20:00', NULL, '서울특별시 강남구', 'THR_ADMIN', 'N', 'N', 'E000001'),
+ '2025-01-02 09:20:00', NULL, '서울특별시 강남구', 'THR_ADMIN', 'N', 'N', 'E000001',false),
 
 -- 일반 사원
 ('C01', 1, 1, 'E000004',
  '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
  '이사원', 'employee@c01.com', '010-4444-4444', '0212345681', 'F',
- '2025-01-02 09:30:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', 'E000001');
+ '2025-01-02 09:30:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', 'E000001',false);
 
 
 -- ========================================================

@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.dto;
 
+import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,4 +22,7 @@ public class ResChatRoomUpdateDto {
     private int unreadCount;
     private String roomName;
     private boolean removed;
+    private RoomType roomType;
+    private int memberCount;
+
 }

@@ -31,7 +31,6 @@ public class Comment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_no")
     private Board board;
-    @Lob
     private String contents;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")

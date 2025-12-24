@@ -898,3 +898,50 @@ SET FOREIGN_KEY_CHECKS = 1;
 use bizportal;
 ALTER TABLE payment_method
     ADD CONSTRAINT uk_payment_method_card UNIQUE (com_id, mask);
+
+-- =========================================================
+use bizportal;
+
+CREATE TABLE attachment (
+                            attachment_id   BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    -- 소속/참조(논리적 참조: FK는 못 걺)
+                            com_id          VARCHAR(3)   NOT NULL,
+                            domain          VARCHAR(20)  NOT NULL,   -- 예: MAIL, NOTICE, BOARD, APPROVAL, ...
+                            entity_id       BIGINT       NOT NULL,   -- 예: mail_id / notice_id / post_id / appr_doc_id
+
+    -- 화면 표시 순서 (1~5)
+                            display_order   TINYINT UNSIGNED NOT NULL,
+
+    -- 파일 메타
+                            file_type       VARCHAR(10)  NOT NULL,   -- DOC | IMAGE | AUDIO
+                            original_name   VARCHAR(255) NOT NULL,
+                            content_type    VARCHAR(100) NOT NULL,
+                            size            BIGINT       NOT NULL,
+                            ext             VARCHAR(20)  NULL,
+
+    -- S3 위치
+                            object_key      VARCHAR(1024) NOT NULL,
+                            etag            VARCHAR(128)  NULL,
+                            checksum_sha256 CHAR(64)      NULL,
+
+    -- 운영/감사
+                            status          VARCHAR(10) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE | DELETED
+                            created_by      BIGINT NULL,
+                            created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            updated_at      TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    -- 제약/인덱스
+                            CONSTRAINT ck_display_order_1_5 CHECK (display_order BETWEEN 1 AND 5),
+                            CONSTRAINT ck_status CHECK (status IN ('ACTIVE','DELETED')),
+
+    -- 같은 글(메일/공지/게시글/결재문서 등)에서 같은 순서는 1개만
+                            UNIQUE KEY uk_attach_order (com_id, domain, entity_id, display_order),
+
+    -- S3 key는 중복되면 안 됨(버킷 1개 기준)
+                            UNIQUE KEY uk_object_key (object_key),
+
+    -- 조회 최적화
+                            INDEX idx_attach_ref (com_id, domain, entity_id),
+                            INDEX idx_attach_ref_status (com_id, domain, entity_id, status)
+);

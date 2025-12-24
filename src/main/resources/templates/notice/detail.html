@@ -7,161 +7,297 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: "Noto Sans KR", sans-serif;
-            background-color: #f8f9fa;
+        :root{
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --line: rgba(17, 24, 39, 0.08);
+            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+            --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
+
+            --primary: #3b82f6;      /* blue */
+            --primary2: #2563eb;
+            --danger: #ef4444;
+            --danger2: #dc2626;
+            --chip: rgba(59, 130, 246, 0.10);
+            --success: #10b981;
+            --warn: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body{
             margin: 0;
+            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
+            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
+            var(--bg);
+            font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            color: var(--text);
+        }
+
+        /* 컨테이너: 가운데 카드 느낌 */
+        .container{
+            max-width: 920px;
+            margin: 64px auto;
             padding: 0;
-            color: #333;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 24px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-
-        h2 {
-            margin-bottom: 12px;
-            color: #1976d2;
-        }
-
-        .place-detail {
-            display: flex;
-            gap: 24px;
-            align-items: flex-start;
-        }
-
-        .place-detail img {
-            width: 380px;
-            height: auto;
-            border-radius: 12px;
-            object-fit: cover;
-        }
-
-        .place-info {
-            flex: 1;
-        }
-
-        .place-info p {
-            margin: 8px 0;
-            line-height: 1.6;
-        }
-
-        .favorite-btn {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #ff6b6b, #ff8787);
-            color: white;
+            background: transparent;
+            box-shadow: none;
             border: none;
-            border-radius: 20px;
-            width: 120px;
-            height: 48px;
-            font-size: 18px;
-            font-weight: 600;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.25s ease-in-out;
-            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.25);
         }
 
-        .favorite-btn:hover {
-            transform: translateY(-2px);
-            background: linear-gradient(135deg, #ff4d4d, #ff6b6b);
-            box-shadow: 0 6px 14px rgba(255, 107, 107, 0.35);
-        }
-
-        .favorite-btn:active {
-            transform: scale(0.95);
-        }
-
-        .tab-buttons {
-            display: flex;
-            gap: 10px;
-            margin: 30px 0 10px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 8px;
-        }
-
-        .tab-buttons button {
-            padding: 10px 18px;
-            border: none;
-            background: #f1f1f1;
-            cursor: pointer;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.2s ease-in-out;
-        }
-
-        .tab-buttons button.active {
-            background: #1976d2;
-            color: #fff;
-        }
-
-        .tab-content {
-            display: none;
-            padding: 30px;
-            border-radius: 8px;
-            background: #fafafa;
-            min-height: 350px;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        #details {
-            width: 100%;
-            height: 350px;
-            border-radius: 8px;
+        /* 상단 타이틀 영역(헤더 카드) */
+        .notice-detail{
+            background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(255,255,255,0));
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
             overflow: hidden;
         }
 
-        #reviewList {
+        /* 실제 정보 카드 */
+        .notice-info{
+            background: var(--card);
+            padding: 28px 28px 22px;
+            border-radius: 18px;
+        }
+
+        /* 제목/내용 영역 정리 */
+        .notice-info p{
+            margin: 0;
+            padding: 10px 0;
+            border-bottom: 1px dashed rgba(17,24,39,.12);
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .notice-info p strong{
+            color: var(--muted);
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+
+        #noticeTitle{
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        #noticeDescription{
+            margin: 0;
+            padding: 12px 0;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        /* 내용 줄은 기존에 <p><strong>내용:</strong><p id="noticeDescription"> 구조가 살짝 깨져있어서
+           #noticeDescription을 카드처럼 보이게 강화 */
+        #noticeDescription{
+            background: rgba(17,24,39,.03);
+            border: 1px solid rgba(17,24,39,.06);
+            border-radius: 12px;
+            padding: 14px 14px;
+        }
+
+        /* 메타 영역을 2열로 보이게 */
+        .notice-info{
+            position: relative;
+        }
+        .notice-info::after{
+            content:"";
+            display:block;
+            margin-top: 14px;
+        }
+
+        /* 팝업 여부 배지 느낌 */
+        #noticePopup{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: .9rem;
+            border: 1px solid rgba(17,24,39,.10);
+            background: rgba(17,24,39,.03);
+        }
+
+        /* JS 값이 true/false로 그대로 보이면 아쉬우니,
+           true면 초록/false면 회색으로 보이게 하려면 JS에서 텍스트를 Y/N로 바꾸면 베스트.
+           CSS만으로도 기본 배지 제공 */
+        .notice-info p:last-child{ border-bottom: none; }
+
+        /* 탭 버튼 영역 */
+        .tab-buttons{
+            margin-top: 18px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab-btn{
+            border: 1px solid var(--line);
+            background: var(--card);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            color: var(--muted);
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(17,24,39,.04);
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+
+        .tab-btn.active{
+            background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
+            color: var(--text);
+            border-color: rgba(59,130,246,.25);
+        }
+
+        .tab-btn:hover{
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(17,24,39,.08);
+        }
+
+        /* 첨부파일 카드 */
+        #attach.tab-content{
+            margin-top: 12px;
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            padding: 14px;
+        }
+
+        /* 첨부파일 테이블 */
+        #attachList{
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 12px;
         }
 
-        #reviewList th, #reviewList td {
-            text-align: center;
-            padding: 12px;
-            border-bottom: 1px solid #e0e0e0;
-            word-wrap: break-word;
+        #attachList th{
+            text-align: left;
+            font-size: .9rem;
+            color: var(--muted);
+            background: rgba(17,24,39,.03);
+            padding: 12px 12px;
+            border-bottom: 1px solid rgba(17,24,39,.08);
+            font-weight: 800;
         }
 
-        #reviewList th {
-            background-color: #f7f7f7;
-            font-weight: 600;
+        #attachList td{
+            padding: 12px 12px;
+            border-bottom: 1px solid rgba(17,24,39,.06);
+            font-size: .95rem;
+            color: var(--text);
         }
 
-        /* 날씨 정보 스타일 */
-        .weather-info {
-            text-align: center;
-            font-size: 1.2em;
-            color: #555;
-        }
-        .weather-icon {
-            font-size: 48px; /* 이모지 크기 */
-            display: block;
-            margin-bottom: 10px;
+        #attachList tr:hover td{
+            background: rgba(59,130,246,.05);
         }
 
-        a.home-link {
-            display: inline-block;
-            margin-top: 24px;
+        /* 페이지네이션 */
+        #pagination{
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        #pagination button{
+            border: 1px solid rgba(17,24,39,.10);
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 800;
+            color: var(--muted);
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
+        }
+
+        #pagination button:hover{
+            transform: translateY(-1px);
+            border-color: rgba(59,130,246,.35);
+            background: rgba(59,130,246,.06);
+        }
+
+        #pagination button.active{
+            background: rgba(59,130,246,.12);
+            border-color: rgba(59,130,246,.40);
+            color: var(--text);
+        }
+
+        /* 하단 버튼 그룹 */
+        .mt-4{
+            margin-top: 16px !important;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn{
+            appearance: none;
+            border: 1px solid rgba(17,24,39,.10);
+            background: var(--card);
+            padding: 11px 14px;
+            border-radius: 12px;
+            font-weight: 900;
+            color: var(--text);
             text-decoration: none;
-            color: #1976d2;
-            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(17,24,39,.06);
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
         }
 
-        a.home-link:hover { text-decoration: underline; }
+        .btn:hover{
+            transform: translateY(-1px);
+            box-shadow: var(--shadow2);
+            border-color: rgba(59,130,246,.25);
+            background: rgba(59,130,246,.05);
+        }
+
+        /* 수정/삭제 강조 */
+        #update-btn.btn{
+            background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
+            border-color: rgba(59,130,246,.25);
+        }
+
+        #delete-btn.btn{
+            background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
+            border-color: rgba(239,68,68,.25);
+        }
+
+        #delete-btn.btn:hover{
+            border-color: rgba(239,68,68,.40);
+            background: rgba(239,68,68,.06);
+        }
+
+        /* 홈 링크 */
+        .home-link{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 18px;
+            color: var(--primary2);
+            text-decoration: none;
+            font-weight: 900;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(59,130,246,.18);
+            background: rgba(59,130,246,.06);
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
+        }
+
+        .home-link:hover{
+            transform: translateY(-1px);
+            border-color: rgba(59,130,246,.35);
+            background: rgba(59,130,246,.10);
+        }
+
     </style>
 </head>
 <body>
@@ -172,12 +308,11 @@
 </div>
 
 <div class="container">
-
+    <h2>공지 사항 상세</h2>
     <div class="notice-detail">
         <div class="notice-info">
             <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
-            <p><strong>내용:</strong><p id="noticeDescription"></p>
-            <br>
+            <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
             <p><strong>팝업여부:</strong> <span id="noticePopup"></span></p>
             <p><strong>팝업시작일:</strong> <span id="noticeStarted"></span></p>
             <p><strong>팝업종료일:</strong> <span id="noticeEnded"></span></p>
@@ -192,7 +327,27 @@
 
     <div class="tab-buttons">
         <button class="tab-btn active" data-target="review">첨부 파일</button>
+    </div>
 
+    <div class="card">
+        <div class="row" style="justify-content: space-between;">
+            <h3 style="margin:0;">파일 목록</h3>
+            <button onclick="loadFiles()">새로고침</button>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>원본 파일명</th>
+                <th>사이즈</th>
+                <th>업로드 시각</th>
+                <th>다운로드</th>
+                <th>삭제</th>
+            </tr>
+            </thead>
+            <tbody id="filesTbody"></tbody>
+        </table>
     </div>
 
     <div id="attach" class="tab-content active">
@@ -200,17 +355,30 @@
         <div id="pagination"></div>
     </div>
 
+    <div class="mt-4">
+        <a href="/notice/list" class="btn">목록으로</a>
+        <button id="update-btn" class="btn ms-2">수정하기</button>
 
-    <a href="/main" class="home-link">← 홈으로 돌아가기</a>
+        <!-- 로그인 사용자 = 작성자일 때만 표시
+        <a id="edit-btn" th:href="@{|/notice/edit/${review.no}|}" class="btn ms-2">수정하기</a>
+        -->
+        <button id="delete-btn" class="btn ms-2" onclick="deleteNotice()">삭제하기</button>
+    </div>
+
 </div>
 
 
 <script>
     const noticeNo = [[${noticeNo}]];
 
-    async function loadPlaceDetail() {
+    async function loadNoticeDetail() {
         try {
-            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`);
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+
             const result = await response.json();
 
             if (result.status === 200 && result.data) {
@@ -232,9 +400,18 @@
         }
     }
 
+    // 수정 버튼 클릭 시 화면 이동
+    document.getElementById('update-btn').onclick = () => {
+        location.href = `/notice/update/${noticeNo}`;
+    };
+
     async function initAttach() {
         try {
-            const response = await fetch(`http://localhost:8090/api/v1/notice/`);
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`http://localhost:8090/api/v1/notice/`,{
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
             const result = await response.json();
 
             const attachList = $('#attachList').empty();
@@ -268,6 +445,32 @@
         }
     }
 
+    async function deleteNotice() {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        const noticeNo = document.getElementById("noticeNo").value;
+        const accessToken = localStorage.getItem("accessToken");
+
+        try {
+            const res = await fetch(`/api/v1/notice/${noticeNo}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`
+                }
+            });
+
+            if (res.ok) {
+                alert("공지사항이 삭제되었습니다.");
+                window.location.href = "/notice/list";
+            } else {
+                alert("삭제 실패했습니다.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("삭제 중 오류 발생");
+        }
+    }
+
     function renderPagination(pageInfo) {
         if (!pageInfo) return;
         const pagination = $('#pagination').empty();
@@ -283,11 +486,13 @@
             pagination.append(`<button onclick="initReview(${pageInfo.pageNo + 1})">다음</button>`);
     }
 
+
+
     document.addEventListener('DOMContentLoaded', () => {
-        loadPlaceDetail();
+        loadNoticeDetail();
 
     });
 </script>
-<a href="/main" class="home-link">← 홈으로 돌아가기</a>
+
 </body>
 </html>

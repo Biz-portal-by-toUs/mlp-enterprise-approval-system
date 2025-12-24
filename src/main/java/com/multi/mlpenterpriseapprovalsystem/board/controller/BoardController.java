@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.board.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.BoardCatDto;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.BoardReqDto;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.BoardResAllDto;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -43,10 +45,11 @@ public class BoardController {
 
     //회사별 페이징처리
     @GetMapping("/boards-all")
-    public ResponseEntity<ResponseDto<Page<BoardResAllDto>>> getBoardForAllByCompany(@RequestParam(name = "page", defaultValue = "0") int page,
+    public ResponseEntity<ResponseDto<Page<BoardResAllDto>>> getBoardForAllByCompany(@AuthenticationPrincipal CustomUser customUser,
+                                                                                       @RequestParam(name = "page", defaultValue = "0") int page,
                                                                                        @RequestParam(name = "size", defaultValue = "10") int size
                                                                                         ) {
-        String comId = "A01";
+        String comId = customUser.getComId();
         Pageable pageable = PageRequest.of(page, size, Sort.by("boardNo").descending());
         Page<BoardResAllDto> boards = boardService.selectBoardListWithPagingForAllByCompany(pageable,comId);
 
@@ -55,21 +58,21 @@ public class BoardController {
 
     //특정 게시판(Board)에 대한 댓글(Commnet) 목록을 조회
     @GetMapping("/boards/{boardNo}/comments")
-    public ResponseEntity<ResponseDto<List<CommentDto>>> getBoardById(@PathVariable Long boardNo) {
+    public ResponseEntity<ResponseDto<List<CommentDto>>> getBoardById(@PathVariable(name="boardNo") Long boardNo) {
 
         return ResponseEntity.ok().body(new ResponseDto<List<CommentDto>>(HttpStatus.OK, "댓글 조회 성공", boardService.getCommentByBoardNo(boardNo)));
     }
 
     //게시글 삭제
     @DeleteMapping("/boards/{boardNo}")
-    public ResponseEntity<String> delete(@PathVariable("boardNo") Long boardNo) {
+    public ResponseEntity<String> delete(@PathVariable(name="boardNo") Long boardNo) {
         boardService.deleteBoard(boardNo);
         return ResponseEntity.ok("게시판이 삭제되었습니다.");
     }
 
     //게시글 변경
     @PutMapping("/boards/{boardNo}")
-    public ResponseEntity<String> update(@PathVariable("boardNo") Long boardNo, @RequestBody @Valid BoardReqDto dto) {
+    public ResponseEntity<String> update(@PathVariable(name="boardNo") Long boardNo, @RequestBody @Valid BoardReqDto dto) {
 
         boardService.updateBoard(boardNo, dto);
         return ResponseEntity.ok("상품이 수정되었습니다.");
@@ -85,7 +88,7 @@ public class BoardController {
 
     //자유 게시글 상세조회  --- 일련번호(key로 조회)
     @GetMapping("/boards/{boardNo}")
-    public ResponseEntity<ResponseDto<BoardResAllDto>> detail(@PathVariable("boardNo") Long boardNo) {
+    public ResponseEntity<ResponseDto<BoardResAllDto>> detail(@PathVariable(name="boardNo") Long boardNo) {
         return ResponseEntity.ok().body(new ResponseDto<BoardResAllDto>(HttpStatus.OK, "조회 성공", boardService.detailBoard(boardNo)));
     }
 

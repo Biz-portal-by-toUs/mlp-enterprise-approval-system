@@ -8,6 +8,9 @@ import lombok.*;
 /**
  * 회의실 엔티티
  *
+ * 회사(Company)에 소속된 물리적인 회의실 자원을 표현한다.
+ * 회의실 예약(MeetingRoomReservation)의 기준이 되는 엔티티이다.
+ *
  * @author : 고송현
  * @filename : MeetingRoom
  * @since : 2025. 12. 16. 화요일
@@ -19,8 +22,14 @@ import lombok.*;
 @Table(name = "meeting_room")
 @Builder
 public class MeetingRoom {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long roomNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long roomNo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
+    private Company company;
+
     @Column(length = 20, nullable = false)
     private String roomName;
 
