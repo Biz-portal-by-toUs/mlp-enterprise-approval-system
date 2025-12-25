@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
@@ -32,10 +33,13 @@ public class ViewDocumentController {
         }
     }
 
-    // 상신한 문서, 결재할 문서, 결재한 조회 문서 화면
+    // 임시저장한 문서, 상신한 문서, 결재할 문서, 결재한 조회 문서 화면
     @GetMapping("/documents/me")
     public String viewDocumentsByStatus(@RequestParam(name = "status") String status) {
-        if(status.equals("SUBMITTED")) {
+        if("UNSUBMITTED".equals(status)) {
+            return "document/unsubmitted-list";
+        }
+        else if(status.equals("SUBMITTED")) {
             return "document/submitted-list";
         }
         else if(status.equals("AWAITING")){
@@ -53,16 +57,19 @@ public class ViewDocumentController {
     @GetMapping("/documents/{docNo}")
     public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status)
     {
-        if("SUBMITTED".equals(status)){
+        if("UNSUBMITTED".equals(status)) { // 임시저장 문서 상세
+            return "document/document-temp-rewrite";
+        }
+        else if("SUBMITTED".equals(status)){ // 상신한 문서 상세
             return "document/submitted-detail";
         }
-        else if("AWAITING".equals(status)){
+        else if("AWAITING".equals(status)){ // 결재할 문서 상세
             return "document/awaiting-detail";
         }
-        else if("PROCESSED".equals(status)){
+        else if("PROCESSED".equals(status)){ // 결재한 문서 상세
             return "document/processed-detail";
         }
-        else if("FINALIZED".equals(status)){
+        else if("FINALIZED".equals(status)){ // 최종승인 문서 상세
             return "document/finalized-detail";
         }
         else{
@@ -75,4 +82,11 @@ public class ViewDocumentController {
     public String viewNewDocument() {
         return "document/create";
     }
+
+    // 반려된 문서 재작성 화면
+    @GetMapping("/documents/{docNo}/rejected/rewrite")
+    public String documentRewriteRejected(@PathVariable(name = "docNo") Long docNo) {
+        return "document/document-rejected-rewrite";
+    }
+
 }
