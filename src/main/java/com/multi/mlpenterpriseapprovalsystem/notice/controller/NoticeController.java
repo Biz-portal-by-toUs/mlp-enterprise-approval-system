@@ -36,17 +36,16 @@ public class NoticeController {
 
     //공지사항 등록
     @PostMapping(value = "/notice", consumes = {"multipart/form-data"})
-    public ResponseEntity<ResponseDto> registNotice(@ModelAttribute NoticeReqDto dto, @AuthenticationPrincipal CustomUser customUser){
+    public ResponseEntity<ResponseDto<NoticeResAllDto>> registNotice(@ModelAttribute NoticeReqDto dto, @AuthenticationPrincipal CustomUser customUser){
         dto.setComId(customUser.getComId());
         dto.setEmpId(customUser.getUsername());
         dto.setRating(0);
         dto.setIsDeleted(false);
         System.out.println("dto : " + dto);
-        noticeService.registNotice(dto);
-        //return ResponseEntity.ok("공지사항이 등록되었습니다.");
+       // noticeService.registNotice(dto);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto(HttpStatus.OK, "공지사항 등록 성공", null));
+                .body(new ResponseDto<NoticeResAllDto>(HttpStatus.OK, "공지사항 등록 성공", noticeService.registNotice(dto)));
     }
 
     //회사별 전체 조회 (페이징 처리 없음
