@@ -68,7 +68,10 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getMyDocumentsByStatus(String comId, String empId, ReqDocumentDto reqDocumentDto, String status, int page, String sort) {
 
-        if("SUBMITTED".equals(status)){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
+        if("UNSUBMITTED".equals(status)){
+            return getMyUnSubmittedDocuments(comId, empId, page);
+        }
+        else if("SUBMITTED".equals(status)){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
             return getMySubmittedDocuments(comId, empId, reqDocumentDto, page, sort);
         }
         else if("AWAITING".equals(status)){ // status가 PENDING일때 내가 결재할 문서 반환
@@ -80,6 +83,25 @@ public class DocumentService {
         else{
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
+    }
+
+    // 내 회사의 문서 중 내가 임시저장한 문서 조회
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getMyUnSubmittedDocuments(String comId, String myEmpId, int page) {
+
+        Pageable pageable = PageRequest.of(page, 10);
+
+        // 문서상태가 US(상신전)여야 함
+        DocStat docStatFilter1 = DocStat.US;
+
+        Page<Document> documentPage = documentRepository.searchMyUnSubmittedDocuments(
+                comId,
+                myEmpId,
+                docStatFilter1,
+                pageable
+        );
+
+        return documentPage.map(ResDocumentDto::toDto);
     }
 
     // 내 회사의 문서 중 내가 상신한 문서 조회
@@ -272,7 +294,11 @@ public class DocumentService {
 
         Document document;
 
-        if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
+        if("UNSUBMITTED".equals(status)){
+            document = documentRepository.findUnSubmittedDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
             // 작성자가 나면서 문서상태가 AW or RJ or FI인 문서 조회
             document = documentRepository.findSubmittedDoc(comId, docNo, myEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
@@ -631,6 +657,91 @@ public class DocumentService {
     }
 
 
+    /**
+     * 반려된 문서 재작성 (새 문서 생성)
+     * - 기존 반려 문서는 그대로 유지
+     * - 새 문서를 생성하여 상신 또는 임시저장
+     */
+    public void resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
+
+        // 1. 원본 문서 조회
+        Document originalDoc = documentRepository.findById(originalDocNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 2. 본인 문서인지 확인
+        if (!originalDoc.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 3. 회사 일치 확인
+        if (!originalDoc.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 4. 반려 상태인지 확인
+        if (originalDoc.getDocStat() != DocStat.RJ) {
+            throw new CustomException(ErrorCode.DOCUMENT_NOT_REJECTED);
+        }
+
+        // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
+        createDocument(comId, myEmpId, reqDto);
+
+        log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
+    }
+
+
+    /**
+     * 임시저장 문서 수정 (UPDATE)
+     */
+    public void updateTempDocument(String comId, String myEmpId, Long docNo, ReqDocumentDto reqDto) {
+
+        // 1. 문서 조회
+        Document document = documentRepository.findById(docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 2. 본인 문서인지 확인
+        if (!document.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 3. 회사 일치 확인
+        if (!document.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 4. 임시저장 상태인지 확인
+        if (document.getDocStat() != DocStat.US) {
+            throw new CustomException(ErrorCode.DOCUMENT_NOT_TEMP);
+        }
+
+        // 5. 카테고리 조회
+        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
+
+        // 6. 문서 내용 수정
+        document.update(reqDto.getTitle(), reqDto.getContent(), reqDto.getCnttHtml(), reqDto.getAiSumm(), category);
+
+        boolean isTemp = Boolean.TRUE.equals(reqDto.getTemp());
+
+        if (isTemp) {
+            document.saveAsTemp();
+        } else {
+            document.submit();
+        }
+
+        // 7. 기존 결재라인 삭제 후 새로 생성
+        approvalLineRepository.deleteByDocument_docNo(docNo);
+
+        if (reqDto.getApprovalLines() != null && !reqDto.getApprovalLines().isEmpty()) {
+            validateApproverNotSelf(myEmpId, reqDto.getApprovalLines());
+            validateApprovalLineOrder(reqDto.getApprovalLines());
+
+            Company company = document.getCompany();
+            createApprovalLines(document, company, reqDto.getApprovalLines(), isTemp);
+        }
+
+        log.info("임시저장 문서 수정 완료: docNo={}, temp={}", docNo, isTemp);
+    }
 
 
 }
