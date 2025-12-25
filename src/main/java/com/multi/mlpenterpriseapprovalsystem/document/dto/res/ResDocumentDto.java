@@ -30,6 +30,7 @@ public class ResDocumentDto {
     private Long docFormNo;
     private String docFormName;
     private String docFormCatName;
+    private Long docFormCatNo;
     private String title;
     private String content;
     private List<ResApprovalLineDto> resApprovalLineDtos;
@@ -71,6 +72,8 @@ public class ResDocumentDto {
                 .temp(document.getTemp())
                 .docFormName(document.getDocumentForm().getDocfoName())
                 .docFormNo(document.getDocumentForm().getDocfoNo())
+                .docFormCatName(document.getDocumentFormCategory().getName())
+                .docFormCatNo(document.getDocumentFormCategory().getDocfoCatNo())
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
                 .submittedAt(document.getSubmittedAt())
@@ -101,6 +104,8 @@ public class ResDocumentDto {
                 .temp(document.getTemp())
                 .docFormName(document.getDocumentForm().getDocfoName())
                 .docFormNo(document.getDocumentForm().getDocfoNo())
+                .docFormCatName(document.getDocumentFormCategory().getName())
+                .docFormCatNo(document.getDocumentFormCategory().getDocfoCatNo())
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
                 .submittedAt(document.getSubmittedAt())
