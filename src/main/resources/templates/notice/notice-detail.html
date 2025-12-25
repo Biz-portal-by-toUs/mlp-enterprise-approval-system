@@ -331,7 +331,6 @@
 
     <div id="attach" class="tab-content active">
         <table id="attachList"></table>
-        <div id="pagination"></div>
     </div>
 
     <div class="mt-4">
@@ -347,6 +346,7 @@
 
 <script>
     const noticeNo = [[${noticeNo}]];
+    const API_BASE = "http://localhost:8090";
 
     async function loadPlaceDetail() {
         try {
@@ -373,7 +373,7 @@
                 initAttach();
             }
         } catch (error) {
-            console.error('Error loading place detail:', error);
+            console.error('Error loading notice detail:', error);
         }
     }
 
@@ -385,7 +385,7 @@
     async function initAttach() {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/notice/`,{
+            const response = await fetch(`http://localhost:8090/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`,{
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
                 });
@@ -393,32 +393,52 @@
 
             const attachList = $('#attachList').empty();
 
-            if (result.status === 200 && result.data?.data?.length) {
-                const attachs = result.data.data;
-                const pageInfo = result.data.pageInfo;
+            if (result.status === 200 && result.data?.length) {
+                const attachs = result.data;
 
                 attachList.append(`
-                    <tr><th>파일명</th><th>내용</th><th>작성자</th><th>첨부일자</th></tr>
+                    <tr><th>attachemntId</th><th>displayOrder</th><th>originalName</th><th>size</th><th>미리보기</th><th>다운로드</th></tr>
                 `);
 
                 attachs.forEach(r => {
 
                     attachList.append(`
                         <tr>
-                            <td>${r.title}</td>
-                            <td>${r.content}</td>
-                            <td>${r.writerEmail}</td>
-
+                            <td>${r.attachmentId}</td>
+                            <td>${r.displayOrder}</td>
+                            <td>${r.originalName}</td>
+                            <td>${r.size}</td>
+                            <td>
+                                <button class="document" data-view="${r.attachmentId}">미리보기</button>
+                            </td>
+                            <td>
+                                 <button class="document" data-down="${r.attachmentId}">다운로드</button>
+                            </td>
                         </tr>
                     `);
                 });
 
-                renderPagination(pageInfo);
+                // download handlers
+                document.querySelectorAll("button[data-down]").forEach(btn => {
+                    btn.addEventListener("click", async (e) => {
+                        const i = Number(e.currentTarget.getAttribute("data-down"));
+                        await downAttachment(i);
+                    });
+                });
+
+                // preview handlers
+                document.querySelectorAll("button[data-view]").forEach(btn => {
+                    btn.addEventListener("click", async (e) => {
+                        const j = Number(e.currentTarget.getAttribute("data-view"));
+                        await viewAttachment(j);
+                    });
+                });
+
             } else {
-                reviewList.html('<tr><td colspan="4">관련 리뷰가 없습니다.</td></tr>');
+                attachList.html('<tr><td colspan="4">관련 첨부파일이 없습니다.</td></tr>');
             }
         } catch (error) {
-            console.error('Failed to load reviews:', error);
+            console.error('Failed to load attachment file:', error);
         }
     }
 
@@ -449,19 +469,116 @@
         }
     }
 
-    function renderPagination(pageInfo) {
-        if (!pageInfo) return;
-        const pagination = $('#pagination').empty();
+    // delete handlers
+    document.querySelectorAll("button[data-del]").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            const i = Number(e.currentTarget.getAttribute("data-del"));
+            await deleteAttachment(i);
+        });
+    });
 
-        if (pageInfo.pageNo > 1)
-            pagination.append(`<button onclick="initReview(${pageInfo.pageNo - 1})">이전</button>`);
+    // ResponseDto 래핑( {data:{...}} ) vs 순수 응답({objectKey, uploadUrl}) 둘 다 대응
+    function unwrapMaybeResponseDto(obj) {
+        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+        return obj;
+    }
 
-        for (let i = pageInfo.startPage; i <= pageInfo.endPage; i++) {
-            pagination.append(`<button class="${i === pageInfo.pageNo ? 'active' : ''}" onclick="initReview(${i})">${i}</button>`);
+    async function downAttachment(attachmentId) {
+
+        if (!attachmentId) {
+            return;
         }
+        if (!confirm(`attachmentId=${r.attachmentId} 를 다운로드 할까요?`)) return;
 
-        if (pageInfo.pageNo < pageInfo.maxPage)
-            pagination.append(`<button onclick="initReview(${pageInfo.pageNo + 1})">다음</button>`);
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${r.attachmentId}/download-url`, {
+                method: "GET",
+                headers: { 'Authorization': `Bearer ${token}`,
+                           'Accept': 'application/json' }
+            });
+
+            if (!res.ok) throw new Error("다운로드 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+
+            // 2) 응답에서 URL 뽑기 (백엔드 응답 형태에 맞춰 여러 키를 지원)
+            const url =
+                data.downloadUrl ??
+                data.url ??
+                data.presignedUrl ??
+                data;
+
+            if (typeof url !== "string" || !url.startsWith("http")) {
+                console.error("응답:", data);
+                throw new Error("presigned download URL이 응답에 없습니다. (downloadUrl/url/presignedUrl 확인)");
+            }
+
+            // 3) 브라우저 다운로드 트리거
+            // (a) 가장 호환성 좋은 방식: a 태그 만들어 클릭
+            const a = document.createElement("a");
+            a.href = url;
+            a.rel = "noopener";
+            // 같은 origin이 아니면 download 속성이 무시될 수 있으나,
+            // presigned URL에 Content-Disposition=attachment가 있으면 다운로드가 잘 걸립니다.
+            a.download = "";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+        } catch (e) {
+            console.error(e);
+            alert("다운로드 중 오류: " + (e?.message ?? e));
+        }
+    }
+
+    async function viewAttachment(attachmentId) {
+
+        if (!attachmentId) {
+            return;
+        }
+        if (!confirm(`attachmentId=${r.attachmentId} 를 다운로드 할까요?`)) return;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${r.attachmentId}/download-url`, {
+                method: "GET",
+                headers: { 'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json' }
+            });
+
+            if (!res.ok) throw new Error("다운로드 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+
+            // 2) 응답에서 URL 뽑기 (백엔드 응답 형태에 맞춰 여러 키를 지원)
+            const url =
+                data.downloadUrl ??
+                data.url ??
+                data.presignedUrl ??
+                data;
+
+            if (typeof url !== "string" || !url.startsWith("http")) {
+                console.error("응답:", data);
+                throw new Error("presigned download URL이 응답에 없습니다. (downloadUrl/url/presignedUrl 확인)");
+            }
+
+            // 3) 브라우저 다운로드 트리거
+            // (a) 가장 호환성 좋은 방식: a 태그 만들어 클릭
+            const a = document.createElement("a");
+            a.href = url;
+            a.rel = "noopener";
+            // 같은 origin이 아니면 download 속성이 무시될 수 있으나,
+            // presigned URL에 Content-Disposition=attachment가 있으면 다운로드가 잘 걸립니다.
+            a.download = "";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+        } catch (e) {
+            console.error(e);
+            alert("다운로드 중 오류: " + (e?.message ?? e));
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
