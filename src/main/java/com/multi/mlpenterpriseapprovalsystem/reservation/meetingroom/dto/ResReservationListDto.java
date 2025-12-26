@@ -19,7 +19,7 @@ import java.time.LocalTime;
 
 @Getter
 @AllArgsConstructor
-public class MeetingRoomReservationDto {
+public class ResReservationListDto {
     private Long resvNo;
     private Long roomNo;
     private String roomName;

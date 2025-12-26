@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -37,4 +38,14 @@ public class MeetingRoomAttendee {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
+
+    @Builder
+    public MeetingRoomAttendee(Company company,
+                               MeetingRoomReservation meetingRoomReservation,
+                               Employee employee) {
+        this.company = company;
+        this.meetingRoomReservation = meetingRoomReservation;
+        this.employee = employee;
+    }
+
 }

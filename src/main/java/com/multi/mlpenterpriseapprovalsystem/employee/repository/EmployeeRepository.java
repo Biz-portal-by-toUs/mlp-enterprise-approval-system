@@ -78,6 +78,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     boolean existsByPositions_posNo(Long posNo);
 
+    List<Employee> findByEmpIdIn(List<String> attendeeIds);
+
     interface PosCount {
         Long getPosNo();
         Long getCnt();

@@ -75,9 +75,17 @@
             border-radius: 3px;
         }
 
-        .legend-box.legend-selected { background: #4f8fe3; }
-        .legend-box.legend-mine     { background: #9c27b0; }
-        .legend-box.legend-other    { background: #8bc34a; }
+        .legend-box.legend-selected {
+            background: #4f8fe3;
+        }
+
+        .legend-box.legend-mine {
+            background: #9c27b0;
+        }
+
+        .legend-box.legend-other {
+            background: #8bc34a;
+        }
 
         /* 선택 중 */
         .time-cell.selected {
@@ -176,6 +184,83 @@
             font-weight: bold;
         }
 
+        .modal-card {
+            width: 420px;
+            border-radius: 20px;
+            padding: 22px;
+            background: #fff;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, .15);
+            margin: 0 auto;
+        }
+
+        .room-img {
+            width: 100%;
+            height: 180px;
+            border-radius: 15px;
+            object-fit: cover;
+            margin-bottom: 14px;
+        }
+
+        .info-table > div {
+            margin: 8px 0;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 6px 0 10px;
+        }
+
+        .chip {
+            background: #f1f5ff;
+            border-radius: 20px;
+            padding: 4px 10px;
+            border: 1px solid #cdd9ff;
+            font-size: 13px;
+        }
+
+        .chip button {
+            border: none;
+            background: none;
+            margin-left: 4px;
+            cursor: pointer;
+        }
+
+        input, select {
+            width: 100%;
+            border-radius: 8px;
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+        }
+
+        .actions {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .actions button {
+            padding: 8px 22px;
+            border-radius: 10px;
+            border: none;
+            margin: 0 8px;
+        }
+
+        .actions .primary {
+            background: #2969ff;
+            color: #fff;
+        }
+
+        #employeeSearch,
+        #employeeList,
+        #purpose {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .form-block {
+            width: 100%;
+        }
 
     </style>
 </head>
@@ -219,16 +304,67 @@
         <div class="timetable" id="timetable"></div>
     </div>
 
+    <!-- 예약 확인 폼 -->
+    <div id="reserveModal" style="display:none;
+     position:fixed; inset:0; background: rgba(0,0,0,.15);
+     align-items:center; justify-content:center;">
+
+
+        <div class="modal-card">
+            <h2>회의실 예약</h2>
+
+            <!-- 이미지 -->
+            <img id="roomImage" class="room-img">
+
+            <!-- 정보 -->
+            <div class="info-table">
+
+                <div><b>회의실명:</b> <span id="roomName"></span></div>
+                <div><b>예약일자:</b> <span id="resvDate"></span></div>
+                <div><b>예약시간:</b> <span id="resvTime"></span></div>
+                <div><b>예약자:</b> <span id="reserver"></span></div>
+
+                <div class="form-block">
+                    <b>참석자:</b>
+
+                    <!-- chips -->
+                    <div id="attendeeChips" class="chips"></div>
+
+                    <!-- 검색 + 직원 선택 -->
+                    <input id="employeeSearch" placeholder="이름 검색">
+
+                    <select id="employeeList" size="4"></select>
+                </div>
+
+                <div class="form-block">
+                    <b>예약목적:</b>
+                    <input id="purpose">
+                </div>
+
+            </div>
+
+            <div class="actions">
+                <button class="primary" id="reserveBtn">예약</button>
+                <button id="cancelBtn">취소</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 </div>
 
 <script>
     const START_HOUR = 9;
     const END_HOUR = 18;
 
+    let selectedAttendees = [];
     let currentDate = dayjs();
+    let firstClickCell = null;
+
+    let dragCells = [];
     let isDragging = false;
     let dragRow = null;
-    let dragCells = [];
 
     let ROOMS = [];
     let RESERVATIONS = [];
@@ -311,7 +447,7 @@
     /* ================= 회의실 조회 ================= */
     async function loadRooms() {
         const res = await fetch("/api/v1/meeting-rooms", {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+            headers: {Authorization: `Bearer ${localStorage.getItem("accessToken")}`}
         });
         const json = await res.json();
         ROOMS = json.data?.data?.content ?? json.data ?? [];
@@ -323,7 +459,7 @@
         const dateStr = currentDate.format("YYYY-MM-DD");
 
         const res = await fetch(`/api/v1/meeting-room-reservations?date=${dateStr}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+            headers: {Authorization: `Bearer ${localStorage.getItem("accessToken")}`}
         });
         const json = await res.json();
 
@@ -369,20 +505,53 @@
                     cell.classList.add("disabled", "past");
                 }
 
-                cell.onmousedown = (e) => {
+                cell.onclick = (e) => {
                     if (cell.classList.contains("disabled")) return;
-                    e.preventDefault();
-                    clearSelection();
-                    isDragging = true;
-                    dragRow = row;
-                    selectCell(cell);
-                };
 
-                cell.onmouseover = () => {
-                    if (!isDragging) return;
-                    if (row !== dragRow) return;
-                    if (cell.classList.contains("disabled")) return;
-                    selectCell(cell);
+                    const row = cell.closest(".room-row");
+                    const cells = [...row.querySelectorAll(".time-cell")];
+
+                    // 1️⃣ 첫 클릭
+                    if (!firstClickCell) {
+                        clearSelection();
+                        firstClickCell = cell;
+                        selectCell(cell);
+                        return;
+                    }
+
+                    // 2️⃣ 두 번째 클릭 (같은 회의실만 허용)
+                    if (row !== firstClickCell.closest(".room-row")) {
+                        alert("같은 회의실에서만 선택할 수 있어요.");
+                        clearSelection();
+                        firstClickCell = null;
+                        return;
+                    }
+
+                    const startIdx = cells.indexOf(firstClickCell);
+                    const endIdx   = cells.indexOf(cell);
+
+                    let s = Math.min(startIdx, endIdx);
+                    let end = Math.max(startIdx, endIdx);
+
+                    // ✅ 3️⃣ 중간에 예약이 있는지 확인
+                    for (let i = s; i <= end; i++) {
+                        if (cells[i].classList.contains("reserved-other")
+                            || cells[i].classList.contains("reserved-mine")) {
+
+                            alert("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
+                            clearSelection();
+                            firstClickCell = null;
+                            return;
+                        }
+                    }
+
+                    // 4️⃣ 문제 없으면 쭉 선택
+                    clearSelection();
+                    for (let i = s; i <= end; i++) {
+                        selectCell(cells[i]);
+                    }
+
+                    firstClickCell = null;
                 };
 
                 row.appendChild(cell);
@@ -416,17 +585,17 @@
                 if (!t) return null;
                 if (typeof t === "string") {
                     const [h, m] = t.split(":");
-                    return { h: Number(h), m: Number(m) };
+                    return {h: Number(h), m: Number(m)};
                 }
-                return { h: t.hour, m: t.minute };
+                return {h: t.hour, m: t.minute};
             };
 
             const st = parseHM(resv.startTime || resv.startedAt?.substring(11, 16));
-            const et = parseHM(resv.endTime   || resv.endedAt?.substring(11, 16));
+            const et = parseHM(resv.endTime || resv.endedAt?.substring(11, 16));
             if (!st || !et) return;
 
             const startIdx = ((st.h - START_HOUR) * 2) + (st.m >= 30 ? 1 : 0);
-            const endIdx   = ((et.h - START_HOUR) * 2) + (et.m >= 30 ? 1 : 0);
+            const endIdx = ((et.h - START_HOUR) * 2) + (et.m >= 30 ? 1 : 0);
 
             const cells = row.querySelectorAll(".time-cell");
             for (let i = startIdx; i < endIdx; i++) {
@@ -455,17 +624,216 @@
         dragCells = [];
     }
 
-    document.getElementById("openReserve").onclick = () => {
+
+    const modal = document.getElementById("reserveModal");
+    const mRoomName = document.getElementById("roomName");
+    const mRoomImage = document.getElementById("roomImage");
+    const mDate = document.getElementById("resvDate");
+    const mTime = document.getElementById("resvTime");
+
+    document.getElementById("openReserve").onclick = async () => {
+
+        selectedAttendees = [];
+        renderChips();
+
+        document.getElementById("purpose").value = "";
+
         if (dragCells.length === 0) {
             alert("예약할 시간을 선택하세요.");
             return;
         }
-        alert("예약 진행");
+
+        const row = dragCells[0].closest(".room-row");
+        const roomNo = row.dataset.roomNo;
+
+        const roomName = row.querySelector(".room-name").innerText;
+
+        const startIdx = [...row.querySelectorAll(".time-cell")].indexOf(dragCells[0]);
+        const endIdx = [...row.querySelectorAll(".time-cell")].indexOf(dragCells.at(-1)) + 1;
+
+        const idxToTime = (idx) => {
+            const h = START_HOUR + Math.floor(idx / 2);
+            const m = idx % 2 === 0 ? "00" : "30";
+            return `${String(h).padStart(2, "0")}:${m}`;
+        };
+
+        mRoomName.innerText = roomName;
+        mDate.innerText = currentDate.format("YYYY-MM-DD");
+        mTime.innerText = `${idxToTime(startIdx)} ~ ${idxToTime(endIdx)}`;
+
+        // 회의실 이미지 처리
+        const room = ROOMS.find(r => r.roomNo == roomNo);
+
+        if (room?.imageUrl) {
+            mRoomImage.src = room.imageUrl;
+            mRoomImage.style.display = "block";
+        } else {
+            mRoomImage.style.display = "none";
+        }
+
+        await loadEmployees();
+
+        modal.style.display = "flex";
+
+        modal.dataset.roomNo = roomNo;
+        modal.dataset.start = idxToTime(startIdx);
+        modal.dataset.end = idxToTime(endIdx);
     };
+
+    document.getElementById("employeeList").addEventListener("change", e => {
+
+        const empId = e.target.value;
+        const empName = e.target.options[e.target.selectedIndex].text;
+
+
+        if (selectedAttendees.find(a => a.empId === empId)) return;
+
+        selectedAttendees.push({ empId, empName });
+        renderChips();
+    });
+
+    function renderChips() {
+        const area = document.getElementById("attendeeChips");
+        area.innerHTML = "";
+
+        selectedAttendees.forEach(a => {
+            const chip = document.createElement("div");
+            chip.className = "chip";
+            chip.innerHTML = `
+            ${a.empName}
+            <button onclick="removeChip('${a.empId}')">×</button>
+        `;
+            area.appendChild(chip);
+        });
+    }
+
+    function removeChip(empId) {
+        selectedAttendees = selectedAttendees.filter(a => a.empId !== empId);
+        renderChips();
+    }
+
+    document.getElementById("cancelBtn").onclick = () => {
+        modal.style.display = "none";
+    };
+
+    document.getElementById("reserveBtn").onclick = async () => {
+
+        if (selectedAttendees.length === 0) {
+            alert("참가자를 1명 이상 선택하세요.");
+            return;
+        }
+
+        const body = {
+            roomNo: Number(modal.dataset.roomNo),
+            resvDate: currentDate.format("YYYY-MM-DD"),
+            startTime: modal.dataset.start,
+            endTime: modal.dataset.end,
+            purp: document.getElementById("purpose").value,
+            attendeeIds: selectedAttendees.map(a => a.empId)
+        };
+
+        const res = await fetch("/api/v1/meeting-room-reservations", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            const msg = await res.text();
+            alert("예약 실패: " + msg);
+            return;
+        }
+
+        modal.style.display = "none";
+        clearSelection();
+        await loadReservations();
+    };
+
+    let ALL_EMPLOYEES = [];
+
+
+    function renderEmployeeList(list) {
+        const employeeList = document.getElementById("employeeList");
+        employeeList.innerHTML = "";
+
+        list.forEach(emp => {
+            const opt = document.createElement("option");
+            opt.value = emp.empId;
+            opt.textContent = `${emp.empName} (${emp.depName})`;
+            employeeList.appendChild(opt);
+        });
+    }
+
+    async function loadEmployees() {
+
+        const token = localStorage.getItem("accessToken");
+
+        const res = await fetch("/api/v1/employees?size=50&excludeMe=true", {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (res.status === 403) {
+            alert("로그인이 만료되었어요. 다시 로그인 해 주세요.");
+            return;
+        }
+
+        const json = await res.json();
+
+        const list = json.data?.items ?? [];
+
+        ALL_EMPLOYEES = list;
+        renderEmployeeList(ALL_EMPLOYEES);
+
+        const employeeList = document.getElementById("employeeList");
+        employeeList.innerHTML = "";
+
+        list.forEach(emp => {
+            const opt = document.createElement("option");
+            opt.value = emp.empId;
+            opt.textContent = `${emp.empName} (${emp.depName})`;
+            employeeList.appendChild(opt);
+        });
+    }
+
+    document.getElementById("employeeSearch").addEventListener("input", e => {
+        const keyword = e.target.value.toLowerCase();
+
+        const filtered = ALL_EMPLOYEES.filter(emp => {
+            const name = (emp.empName || "").toLowerCase();
+            const dep  = (emp.depName || "").toLowerCase();
+            return name.includes(keyword) || dep.includes(keyword);
+        });
+
+        renderEmployeeList(filtered);
+    });
+
+    async function loadMe() {
+        const res = await fetch("/api/v1/employees/me", {
+            headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+        });
+
+        const json = await res.json();
+        return json.data;
+    }
+
+
 
     /* ================= 초기 실행 ================= */
     async function init() {
         renderDate();
+
+        const me = await loadMe();
+        const mReserver = document.getElementById("reserver");
+        mReserver.innerText = `${me.empName} (${me.depName})`;
+
+        await loadEmployees();
+
         await loadRooms();
         await loadReservations();
     }
