@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>임시저장 문서 수정 - 기업용 전자결재시스템</title>
+    <style>
+        :root {
+            --primary-color: #339af0;
+            --border-color: #dee2e6;
+            --bg-light: #f8f9fa;
+            --text-dark: #333;
+            --text-muted: #868e96;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: #f1f3f5;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-dark);
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* 헤더 영역 */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .page-title { font-size: 24px; font-weight: 700; color: var(--primary-color); }
+
+        .header-btns { display: flex; gap: 8px; }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary-color); color: white; border: none; }
+        .btn-primary:hover { background: #228be6; }
+        .btn-temp { background: white; color: var(--text-dark); }
+        .btn-temp:hover { background: #f1f3f5; }
+        .btn-cancel { background: #adb5bd; color: white; border: none; }
+
+        /* 상단 정보 영역 */
+        .top-section {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: start;
+        }
+
+        .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .doc-table th { background: var(--bg-light); border: 1px solid var(--border-color); padding: 10px; width: 100px; text-align: center; }
+        .doc-table td { border: 1px solid var(--border-color); padding: 10px; }
+        .readonly-input { border: none; width: 100%; background: transparent; outline: none; color: #495057; font-weight: 500; }
+
+        /* 결재자 검색 및 리스트 */
+        .search-container { border: 1px solid var(--border-color); border-radius: 4px; display: flex; flex-direction: column; height: 220px; position: relative; }
+        .search-header { padding: 10px; background: var(--bg-light); border-bottom: 1px solid var(--border-color); font-weight: bold; }
+        .search-input-wrap { padding: 8px; border-bottom: 1px solid #eee; }
+        #approver-search { width: calc(100% - 16px); padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; font-size: 13px; }
+        .search-results { flex: 1; overflow-y: auto; max-height: 140px; }
+        .result-item { padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f8f9fa; font-size: 13px; }
+        .result-item:hover { background: #e7f5ff; }
+
+        .selected-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; min-height: 45px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 20px; background: var(--bg-light); }
+        .approver-tag { background: white; border: 1px solid var(--primary-color); padding: 8px 12px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
+        .approver-tag .seq-badge { background: var(--primary-color); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
+        .approver-tag .info { display: flex; flex-direction: column; gap: 2px; }
+        .approver-tag .info .name-pos { font-weight: 600; color: var(--text-dark); }
+        .approver-tag .info .dept-id { font-size: 11px; color: var(--text-muted); }
+        .approver-tag .remove-btn { cursor: pointer; color: #fa5252; font-weight: bold; font-size: 16px; margin-left: 4px; }
+
+        /* 정보 테이블 및 본문 */
+        .content-info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .content-info-table th { background: var(--bg-light); border: 1px solid var(--border-color); padding: 12px; width: 120px; text-align: center; }
+        .content-info-table td { border: 1px solid var(--border-color); padding: 10px 15px; }
+        .input-title-cell { width: 100%; border: none; outline: none; font-size: 15px; }
+
+        .category-group { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+        .cat-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; }
+        .cat-item input[type="radio"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary-color); }
+
+        .input-content { width: 100%; min-height: 350px; padding: 15px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; resize: vertical; font-size: 14px; line-height: 1.6; }
+        .bottom-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+        .alert { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 4px; color: white; z-index: 2000; display: none; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .alert-success { background: #40c057; }
+        .alert-error { background: #fa5252; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="page-header">
+        <div class="page-title">임시저장 문서 수정</div>
+        <div class="header-btns">
+            <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
+        </div>
+    </div>
+
+    <div class="top-section">
+        <div>
+            <table class="doc-table">
+                <tr><th>문서코드</th><td><input type="text" class="readonly-input" value="최종 승인 시 생성" readonly></td></tr>
+                <tr><th>작성부서</th><td><input type="text" id="writer-dept" class="readonly-input" placeholder="로드 중..." readonly></td></tr>
+                <tr><th>작성자</th><td><input type="text" id="writer-name" class="readonly-input" placeholder="로드 중..." readonly></td></tr>
+                <tr><th>상신일자</th><td><input type="text" id="write-date" class="readonly-input" readonly></td></tr>
+                <tr><th>전화번호</th><td><input type="text" id="writer-phone" class="readonly-input" placeholder="-" readonly></td></tr>
+            </table>
+        </div>
+
+        <div class="search-container">
+            <div class="search-header">결재선 수정 (최대 5명)</div>
+            <div class="search-input-wrap">
+                <input type="text" id="approver-search" placeholder="이름 또는 사번 검색" autocomplete="off">
+            </div>
+            <div class="search-results" id="search-results">
+                <div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="selected-list" id="selected-list">
+        <span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>
+    </div>
+
+    <table class="content-info-table">
+        <tr>
+            <th>제목</th>
+            <td><input type="text" id="doc-title" class="input-title-cell" placeholder="문서 제목을 입력하세요"></td>
+        </tr>
+        <tr>
+            <th>카테고리</th>
+            <td>
+                <div id="category-radio-group" class="category-group">
+                    <span style="color:#adb5bd; font-size:12px;">불러오는 중...</span>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="content-section">
+        <textarea id="doc-content" class="input-content" placeholder="내용을 수정하세요."></textarea>
+        <div class="bottom-actions">
+            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서상신</button>
+            <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
+        </div>
+    </div>
+</div>
+
+<div id="custom-alert" class="alert"></div>
+
+<script>
+    let myInfo = { empId: null, comId: null };
+    let selectedApprovers = [];
+    let searchTimeout = null;
+    let originalDocNo = null;
+    let originalHtmlTemplate = "";
+    const currentDocfoNo = 1;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // URL에서 docNo 파싱 (/documents/{docNo})
+        const pathParts = window.location.pathname.split('/');
+        originalDocNo = pathParts[2];
+
+        document.getElementById('write-date').value = new Date().toLocaleDateString();
+
+        await fetchMyEmployeeInfo();
+        await fetchFormDetails();
+        await loadOriginalDocumentData();
+        initApproverSearch();
+    });
+
+    /**
+     * ✅ 기존 임시저장 데이터를 로드하고 결재자 상세 정보 보완
+     */
+    async function loadOriginalDocumentData() {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`/api/v1/documents/${originalDocNo}?status=UNSUBMITTED`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+
+            if (response.ok && result.data) {
+                const doc = result.data;
+                document.getElementById('doc-title').value = doc.title || "";
+                document.getElementById('doc-content').value = doc.content || "";
+                originalHtmlTemplate = doc.cnttHtml || "";
+
+                if (doc.docfoCatNo) {
+                    const radio = document.querySelector(`input[name="docfoCatNo"][value="${doc.docfoCatNo}"]`);
+                    if (radio) radio.checked = true;
+                }
+
+                if (doc.resApprovalLineDtos && doc.resApprovalLineDtos.length > 0) {
+                    const sortedLines = doc.resApprovalLineDtos.sort((a, b) => a.seq - b.seq);
+                    const detailPromises = sortedLines.map(line => fetchEmployeeDetailByKeyword(line.approverId));
+                    const employeeDetails = await Promise.all(detailPromises);
+                    selectedApprovers = employeeDetails.filter(emp => emp !== null);
+                    renderSelectedTags();
+                }
+            }
+        } catch (e) {
+            console.error("데이터 로드 실패:", e);
+            showAlert("데이터 로드 중 오류가 발생했습니다.", "error");
+        }
+    }
+
+    async function fetchEmployeeDetailByKeyword(empId) {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`/api/v1/employees?keyword=${empId}&excludeMe=false`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            if (response.ok && result.data?.items && result.data.items.length > 0) {
+                const emp = result.data.items.find(item => item.empId === empId);
+                if (emp) {
+                    return {
+                        approverId: emp.empId,
+                        approverName: emp.empName,
+                        posName: emp.posName || '사원',
+                        depName: emp.depName || '부서미지정'
+                    };
+                }
+            }
+            return null;
+        } catch (e) { return null; }
+    }
+
+    /**
+     * ✅ 문서 저장 및 목록 이동 (isTemp 여부에 따라 경로 분기)
+     */
+    async function saveDocument(isTemp) {
+        const title = document.getElementById('doc-title').value.trim();
+        const content = document.getElementById('doc-content').value.trim();
+        const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
+
+        if (!title || !content) return showAlert("제목과 내용을 입력하세요.", "error");
+        if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
+        if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
+
+        const payload = {
+            comId: myInfo.comId,
+            writerId: myInfo.empId,
+            docfoNo: currentDocfoNo,
+            docfoCatNo: parseInt(checkedRadio.value, 10),
+            title: title,
+            content: content,
+            cnttHtml: originalHtmlTemplate,
+            temp: isTemp,
+            approvalLines: selectedApprovers.map((a, i) => ({
+                approverId: a.approverId,
+                seq: i + 1,
+                apprStat: isTemp ? "W" : (i === 0 ? "I" : "W")
+            }))
+        };
+
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`/api/v1/documents/${originalDocNo}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                showAlert(isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.", "success");
+
+                // ✅ 목적지 설정
+                const targetUrl = isTemp
+                    ? "/documents/me?status=UNSUBMITTED"
+                    : "/documents/me?status=SUBMITTED";
+
+                setTimeout(() => location.href = targetUrl, 500);
+            } else {
+                const err = await response.json();
+                showAlert(err.message || "처리에 실패했습니다.", "error");
+            }
+        } catch (e) { showAlert("서버 통신 오류", "error"); }
+    }
+
+    // --- 공통 헬퍼 함수들 ---
+
+    async function fetchMyEmployeeInfo() {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch('/api/v1/employees/me', { headers: { 'Authorization': `Bearer ${token}` } });
+            const result = await response.json();
+            if (response.ok && result.data) {
+                myInfo = { empId: result.data.empId, comId: result.data.comId || "C01" };
+                document.getElementById('writer-name').value = result.data.empName;
+                document.getElementById('writer-dept').value = result.data.depName || "총무팀";
+                document.getElementById('writer-phone').value = result.data.workPhone || "-";
+            }
+        } catch (e) { }
+    }
+
+    async function fetchFormDetails() {
+        const token = localStorage.getItem('accessToken');
+        const container = document.getElementById('category-radio-group');
+        try {
+            const response = await fetch(`/api/v1/temp/documentForms/${currentDocfoNo}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const result = await response.json();
+            if (response.ok && result.data?.tempResDocumentFormCategoryDtos) {
+                container.innerHTML = result.data.tempResDocumentFormCategoryDtos.map(cat => `
+                    <label class="cat-item">
+                        <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}">
+                        <span>${cat.docfoCatName}</span>
+                    </label>`).join('');
+            }
+        } catch (e) { }
+    }
+
+    async function searchEmployees(keyword = '') {
+        const token = localStorage.getItem('accessToken');
+        try {
+            let url = `/api/v1/employees?size=20&excludeMe=true`;
+            if (keyword.trim()) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const result = await res.json();
+            renderSearchResults(result.data?.items || []);
+        } catch (e) { }
+    }
+
+    function renderSearchResults(employees) {
+        const container = document.getElementById('search-results');
+        if (employees.length === 0) {
+            container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>';
+            return;
+        }
+        container.innerHTML = employees.map(emp => {
+            const isAdded = selectedApprovers.some(a => a.approverId === emp.empId);
+            return `
+                <div class="result-item" onclick="${isAdded ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || ''}', '${emp.depName || ''}')`}"
+                     style="${isAdded ? 'opacity:0.5; cursor:default' : ''}">
+                    <div><strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span><br><small>${emp.depName || '-'} | ${emp.empId}</small></div>
+                    <div style="color:var(--primary-color); font-weight:bold;">${isAdded ? '추가됨' : '+'}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function initApproverSearch() {
+        const searchInput = document.getElementById('approver-search');
+        searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
+        searchInput.addEventListener('input', (e) => {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => searchEmployees(e.target.value), 300);
+        });
+    }
+
+    function addApprover(id, name, pos, dept) {
+        if (selectedApprovers.length >= 5) return showAlert("최대 5명까지입니다.", "error");
+        selectedApprovers.push({ approverId: id, approverName: name, posName: pos || '사원', depName: dept || '-' });
+        renderSelectedTags();
+        document.getElementById('search-results').innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
+    }
+
+    function renderSelectedTags() {
+        const container = document.getElementById('selected-list');
+        if (selectedApprovers.length === 0) {
+            container.innerHTML = '<span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>';
+            return;
+        }
+        container.innerHTML = selectedApprovers.map((a, i) => `
+            <span class="approver-tag">
+                <span class="seq-badge">${i + 1}</span>
+                <span class="info">
+                    <span class="name-pos">${a.approverName} | ${a.posName}</span>
+                    <span class="dept-id">${a.depName} | ${a.approverId}</span>
+                </span>
+                <span class="remove-btn" onclick="removeApprover('${a.approverId}')">×</span>
+            </span>`).join('');
+    }
+
+    function removeApprover(id) {
+        selectedApprovers = selectedApprovers.filter(a => a.approverId !== id);
+        renderSelectedTags();
+    }
+
+    function showAlert(msg, type) {
+        const alert = document.getElementById('custom-alert');
+        alert.innerText = msg; alert.className = `alert alert-${type}`;
+        alert.style.display = 'block'; setTimeout(() => alert.style.display = 'none', 3000);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>임시저장 문서 목록 - 기업용 전자결재시스템</title>
+    <style>
+        /* [공통 디자인 시스템 유지] */
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 0; padding: 40px; }
+        .main-container {
+            max-width: 1200px; margin: 0 auto; background: white; padding: 40px;
+            min-height: 850px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #339af0;
+            padding-bottom: 15px;
+        }
+        .page-title { font-size: 24px; font-weight: bold; color: #333; }
+        .doc-count { font-size: 14px; color: #666; }
+
+        /* 테이블 스타일 */
+        .doc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 15px 12px; border-bottom: 1px solid #dee2e6; }
+        .doc-table td { padding: 15px 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
+
+        /* 제목 셀 스타일 - 클릭 시 수정 이동 */
+        .title-cell {
+            text-align: left !important;
+            padding-left: 20px !important;
+            cursor: pointer;
+            font-weight: 500;
+            word-break: break-all;
+            transition: color 0.2s;
+        }
+        .title-cell:hover { color: #339af0; text-decoration: underline; }
+
+        /* 상태 배지 */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-US { background: #f1f3f5; color: #495057; } /* 상신전(임시저장) 상태 */
+
+        /* 페이지네이션 */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
+        .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .page-btn-nav:hover:not(:disabled) { background: #f8f9fa; border-color: #adb5bd; }
+        .page-btn-nav:disabled { color: #dee2e6; cursor: not-allowed; }
+
+        .page-btn-num {
+            width: 32px; height: 32px; display: flex; justify-content: center; align-items: center;
+            border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer;
+            font-size: 13px; text-decoration: none; color: inherit;
+        }
+        .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
+
+        /* 로딩/공백 상태 */
+        .empty-msg { padding: 80px 0; color: #adb5bd; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="page-header">
+        <div class="page-title">임시저장 문서함</div>
+        <div class="doc-count" id="total-count">조회된 문서: 0건</div>
+    </div>
+
+    <table class="doc-table">
+        <thead>
+        <tr>
+            <th style="width: 60px;">NO</th>
+            <th style="width: 150px;">카테고리</th>
+            <th>제목</th>
+            <th style="width: 150px;">작성자</th>
+            <th style="width: 100px;">상태</th>
+            <th style="width: 180px;">마지막 저장일</th>
+        </tr>
+        </thead>
+        <tbody id="document-list">
+        <tr><td colspan="6" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
+        </tbody>
+    </table>
+
+    <div id="pagination-nav" class="pagination"></div>
+</div>
+
+<script th:inline="javascript">
+    const API_URL = '/api/v1/documents/me?status=UNSUBMITTED';
+    let currentPage = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData(0);
+    });
+
+    /**
+     * 임시저장 목록 로드
+     */
+    async function loadData(page) {
+        currentPage = page;
+        const token = localStorage.getItem('accessToken');
+
+        try {
+            const response = await fetch(`${API_URL}&page=${page}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            const result = await response.json();
+
+            if (result.status === 200) {
+                document.getElementById('total-count').textContent = `조회된 문서: ${result.data.totalElements}건`;
+                renderTable(result.data.content, page, result.data.size);
+                renderPagination(result.data.totalPages, page);
+            }
+        } catch (error) {
+            console.error('조회 실패:', error);
+            document.getElementById('document-list').innerHTML = '<tr><td colspan="6" class="empty-msg" style="color:#fa5252;">데이터 로드 중 오류가 발생했습니다.</td></tr>';
+        }
+    }
+
+    /**
+     * 테이블 렌더링
+     */
+    function renderTable(docs, page, size) {
+        const tbody = document.getElementById('document-list');
+        tbody.innerHTML = '';
+
+        if (!docs || docs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">임시저장된 문서가 없습니다.</td></tr>';
+            return;
+        }
+
+        docs.forEach((doc, index) => {
+            const no = (page * size) + index + 1;
+            const tr = document.createElement('tr');
+
+            // 임시저장 수정 화면으로 이동 (Detail = Edit 통합)
+            const editUrl = `/documents/${doc.docNo}?status=UNSUBMITTED`;
+
+            tr.innerHTML = `
+                <td>${no}</td>
+                <td>${doc.docFormCatName || '-'}</td>
+                <td class="title-cell" onclick="location.href='${editUrl}'">${doc.title || '(제목 없음)'}</td>
+                <td>${doc.writer}<br><small style="color:#868e96;">${doc.writerId}</small></td>
+                <td><span class="badge badge-US">임시저장</span></td>
+                <td>${formatDate(doc.updatedAt)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 10줄 고정을 원할 경우 빈 행 추가 (선택 사항)
+        for (let i = docs.length; i < 10; i++) {
+            tbody.innerHTML += '<tr style="height: 57px;"><td colspan="6"></td></tr>';
+        }
+    }
+
+    /**
+     * 페이지네이션 렌더링
+     */
+    function renderPagination(totalPages, currentPage) {
+        const nav = document.getElementById('pagination-nav');
+        nav.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        // 이전 버튼
+        const prev = document.createElement('button');
+        prev.className = 'page-btn-nav';
+        prev.innerText = '이전';
+        prev.disabled = (currentPage === 0);
+        prev.onclick = () => loadData(currentPage - 1);
+        nav.appendChild(prev);
+
+        // 페이지 번호
+        for (let i = 0; i < totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.className = `page-btn-num ${i === currentPage ? 'active' : ''}`;
+            btn.innerText = i + 1;
+            btn.onclick = () => loadData(i);
+            nav.appendChild(btn);
+        }
+
+        // 다음 버튼
+        const next = document.createElement('button');
+        next.className = 'page-btn-nav';
+        next.innerText = '다음';
+        next.disabled = (currentPage === totalPages - 1);
+        next.onclick = () => loadData(currentPage + 1);
+        nav.appendChild(next);
+    }
+
+    function formatDate(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+</script>
+</body>
+</html>

@@ -42,6 +42,74 @@ public class ApprovalLine {
     @Enumerated(EnumType.STRING)
     private ApprStat apprStat;
 
-    // 결재 시간이므로 직접 시간을 넣어줘야함
+    // 결재 시간
     private LocalDateTime endedAt;
+
+    // 실제 결재자 여부
+    @Column(name = "is_actual_appr", nullable = false)
+    private Boolean isActualAppr;
+
+    @Column(name = "rej_reason", columnDefinition = "text")
+    private String rejReason;
+
+    @Column(name = "is_delegate", nullable = false)
+    Boolean isDelegate = false;
+
+
+    /**
+     * 실제 결재자가 아닌 경우 상태만 변경 (같은 seq의 다른 결재자/대직자)
+     */
+    public void markAsNotActualApprover(ApprStat status, String rejReason) {
+        this.apprStat = status;
+        this.endedAt = LocalDateTime.now();
+        this.isActualAppr = false;  // 실제 결재한 사람이 아님
+        if (rejReason != null) {
+            this.rejReason = rejReason;
+        }
+    }
+
+    /**
+     * 승인 처리
+     */
+    public void approve() {
+        this.apprStat = ApprStat.A;
+        this.endedAt = LocalDateTime.now();
+        this.isActualAppr = true;
+    }
+
+    /**
+     * 반려 처리
+     */
+    public void reject(String reason) {
+        this.apprStat = ApprStat.R;
+        this.endedAt = LocalDateTime.now();
+        this.rejReason = reason;
+        this.isActualAppr = true;
+    }
+
+    /**
+     * 결재 진행중으로 변경
+     */
+    public void setInProgress() {
+        this.apprStat = ApprStat.I;
+    }
+
+    public static ApprovalLine toEntity(Document document,
+                                        Employee approver,
+                                        Company company,
+                                        int seq,
+                                        ApprStat apprStat,
+                                        boolean isDelegate) {
+        return ApprovalLine.builder()
+                .document(document)
+                .approver(approver)
+                .company(company)
+                .seq(seq)
+                .apprStat(apprStat)
+                .endedAt(null)
+                .isActualAppr(false)
+                .isDelegate(isDelegate)
+                .rejReason(null)
+                .build();
+    }
 }

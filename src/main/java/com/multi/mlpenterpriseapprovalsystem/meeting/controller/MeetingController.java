@@ -1,0 +1,114 @@
+package com.multi.mlpenterpriseapprovalsystem.meeting.controller;
+
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingScope;
+import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ReqMeetingCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ReqMeetingUpdateDto;
+import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ResMeetingDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ResMeetingListDto;
+import com.multi.mlpenterpriseapprovalsystem.meeting.service.MeetingService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+
+/**
+ * 회의 등록, 수정, 삭제 컨트롤러
+ *
+ * @author : 김승기
+ * @filename : MeetingController
+ * @since : 2025. 12. 22. 월요일
+ */
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/meeting")
+@Slf4j
+public class MeetingController {
+
+    private final MeetingService meetingService;
+
+    // 회의 목록 조회 (탭 + 제목검색 + 날짜검색(StartedAt 기준) + (전체탭)부서검색)
+    @GetMapping
+    public ResponseEntity<ResponseDto<ResMeetingListDto>> meeting(
+            @RequestParam(name="scope",defaultValue = "ALL") MeetingScope scope, // ALL | MY_DEPT | MY
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "depNo", required = false) Long depNo, // 전체회의 탭에서 부서별 검색용(서비스에서 scope에 따라 적용/무시)
+            @RequestParam(name = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @PageableDefault(size = 10, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+
+        ResMeetingListDto res = meetingService.getMeetingList(
+                empId, scope, keyword, depNo, fromDate, toDate, pageable
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의 목록 조회 성공", res));
+    }
+
+    // 회의 상세 조회
+    @GetMapping("/{meetNo}")
+    public ResponseEntity<ResponseDto<ResMeetingDetailDto>> meetingDetail(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        ResMeetingDetailDto res = meetingService.getMeetingDetail(empId, meetNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의 상세 조회 성공", res));
+    }
+
+    // 회의 등록
+    @PostMapping
+    public ResponseEntity<ResponseDto<Long>> createMeeting(
+            @RequestBody @Valid ReqMeetingCreateDto request,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        Long meetNo = meetingService.createMeeting(empId, request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, "회의 등록 성공", meetNo));
+    }
+
+    // 회의 수정
+    @PutMapping("/{meetNo}")
+    public ResponseEntity<ResponseDto<Long>> updateMeeting(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @RequestBody @Valid ReqMeetingUpdateDto request,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        Long updatedMeetNo = meetingService.updateMeeting(empId, meetNo, request);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의 수정 성공", updatedMeetNo));
+    }
+
+    // 회의 삭제(소프트 삭제)
+    @DeleteMapping("/{meetNo}")
+    public ResponseEntity<ResponseDto<Long>> deleteMeeting(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        Long deletedMeetNo = meetingService.deleteMeeting(empId, meetNo);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의 삭제 성공", deletedMeetNo));
+    }
+}

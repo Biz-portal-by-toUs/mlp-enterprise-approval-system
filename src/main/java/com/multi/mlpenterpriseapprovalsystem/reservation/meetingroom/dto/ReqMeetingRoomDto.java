@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto;
 
-import jakarta.persistence.Column;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,7 +7,10 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 /**
- * Please explain the class!!!
+ * 회의실 등록 및 수정 요청을 위한 DTO
+ *
+ * 회의실 관리 기능에서 사용자가 입력한 데이터를
+ * 서버로 전달하기 위해 사용하는 요청(Request) DTO이다.
  *
  * @author : 송현님
  * @filename : ReqMeetingRoomDto

@@ -32,6 +32,26 @@ public enum ErrorCode {
     INVALID_APPROVAL_STATUS(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_STATUS", "잘못된 결재 상태입니다"),
     INVALID_DOCUMENT_STATUS_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_STATUS", "잘못된 문서 상태 파라미터 값이 전달되었습니다"),
     INVALID_DOCUMENT_SORT_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_SORT_REQUEST", "잘못된 문서 정렬 파라미터 값이 전달되었습니다"),
+    DOCUMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "DOCUMENT_ACCESS_DENIED", "해당 문서에 접근 권한이 없습니다"),
+    DOCUMENT_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "DOCUMENT_ALREADY_PROCESSED", "이미 결재가 진행된 문서는 상신 취소할 수 없습니다"),
+    DOCUMENT_NOT_AWAITING(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_AWAITING", "결재 대기중인 문서가 아닙니다"),
+    DOCUMENT_SERIAL_OVERFLOW(HttpStatus.INTERNAL_SERVER_ERROR, "DOCUMENT_SERIAL_OVERFLOW", "문서 일련번호가 최대치를 초과했습니다"),
+    DOCUMENT_NOT_TEMP(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_TEMP", "임시저장 상태의 문서만 수정할 수 있습니다."),
+    DOCUMENT_NOT_REJECTED(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_REJECTED", "반려된 문서만 재작성할 수 있습니다."),
+
+
+    // 결재라인 관련
+    INVALID_APPROVAL_LINE_ORDER(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_LINE_ORDER", "잘못된 결재자 순서입니다"),
+    INVALID_APPROVAL_LINE_SELF(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_LINE_SELF", "본인은 결재라인에 포함될 수 없습니다"),
+    APPROVAL_LINE_NOT_FOUND(HttpStatus.NOT_FOUND, "APPROVAL_LINE_NOT_FOUND", "해당 문서의 결재라인에 포함되어 있지 않습니다"),
+    NOT_MY_TURN_TO_APPROVE(HttpStatus.BAD_REQUEST, "NOT_MY_TURN_TO_APPROVE", "아직 결재 차례가 아닙니다"),
+    REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED", "반려 사유를 입력해주세요"),
+
+    // 문서 양식 관련
+    DOCUMENT_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_NOT_FOUND", "문서 양식을 찾을 수 없습니다"),
+
+    // 문서 양식 내 카테고리 관련
+    DOCUMENT_FORM_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_CATEGORY_NOT_FOUND", "문서 양식 카테고리를 찾을 수 없습니다"),
 
     // 회사 관련
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUNT", "회사를 찾을 수 없습니다"),
@@ -96,6 +116,13 @@ public enum ErrorCode {
     // 서버/기술적 에러
     JSON_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "JSON_PARSING_ERROR", "메시지 데이터 변환 중 오류가 발생했습니다"),
     REDIS_PUB_SUB_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "REDIS_PUB_SUB_ERROR", "메시지 전송 시스템에 오류가 발생했습니다"),
+
+    // 회의 관련
+    MEETING_NOT_FOUND(HttpStatus.NOT_FOUND,"MEETING_NOT_FOUND","없거나 삭제된 회의입니다."),
+    MEETING_ACCESS_DENIED(HttpStatus.BAD_REQUEST,"MEETING_ACCESS_DENIED","회의에 접근할 권한이 없습니다"),
+    MEETING_EDIT_DELETE_DENIED(HttpStatus.BAD_REQUEST,"MEETING_EDIT_DELETE_DENIED","회의를 수정하거나 삭제할 권한이 없습니다"),
+    MEETING_DEPT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_DEPT_REQUIRED","부서는 한개 이상 선택해야 합니다"),
+    MEETING_PARTICIPANT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_PARTICIPANT_REQUIRED","참석자는 한명 이상 선택해야합니다"),
 
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),

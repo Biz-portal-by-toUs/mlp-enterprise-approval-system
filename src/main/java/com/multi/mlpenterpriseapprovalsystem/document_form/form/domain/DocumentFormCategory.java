@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 문서 양식에 들어갈 카테고리 도메인
  *
  * @author : 김승기
  * @filename : DocumentFormCategory
@@ -35,4 +35,16 @@ public class DocumentFormCategory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "docfo_no", nullable = false)
     private DocumentForm documentForm;
+
+    public static DocumentFormCategory create(
+            Company company,
+            DocumentForm documentForm,
+            String name
+    ) {
+        DocumentFormCategory c = new DocumentFormCategory();
+        c.company = company;
+        c.documentForm = documentForm;
+        c.name = name;
+        return c;
+    }
 }

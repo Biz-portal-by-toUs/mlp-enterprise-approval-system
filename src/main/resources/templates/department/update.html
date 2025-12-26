@@ -118,7 +118,7 @@
     <div class="user-actions">
         <div class="icon-circle">🔔</div>
         <div class="icon-circle">👤</div>
-        <button class="btn-logout" type="button">로그아웃</button>
+        <button class="btn-logout" id="logoutBtn" type="button">로그아웃</button>
     </div>
 </div>
 
@@ -181,6 +181,31 @@
         setTimeout(() => { el.style.display = "none"; }, 3000);
     }
 
+    async function safeJson(res) {
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
+    // (선택) 로그아웃 버튼 - 쿠키 기반이면 보통 POST /auth/logout 같은 API 호출로 처리
+    // 프로젝트 라우팅에 맞춰 경로만 바꿔서 쓰면 됨
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+            // 예: 백엔드에 POST /auth/logout 구현되어 있다면
+            const res = await fetch("/auth/logout", {
+                method: "POST",
+                credentials: "include"
+            });
+
+            // 성공/실패와 상관없이 쿠키 삭제 헤더 내려주게 해둔 상태라면
+            // 프론트는 그냥 로그인 페이지나 메인으로 이동시키면 됨
+            location.href = "/auth/companies/login";
+        } catch (e) {
+            console.error(e);
+            location.href = "/auth/companies/login";
+        }
+    });
+
     // 수정 완료 버튼 클릭 이벤트
     document.getElementById("submitBtn").addEventListener("click", async () => {
         const depNo = document.getElementById("depNo").value;
@@ -192,38 +217,39 @@
             return;
         }
 
-        // 로컬 스토리지에서 JWT 토큰 획득
-        const token = localStorage.getItem("accessToken");
-
-        if (!token) {
-            showStatus("세션이 만료되었습니다. 다시 로그인해주세요.", false);
-            return;
-        }
-
         const payload = { depId, depName };
 
         try {
             const response = await fetch(`${API_URL}/${depNo}`, {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` // JWT 인증 헤더 포함
+                    "Content-Type": "application/json"
                 },
+                credentials: "include", // ✅ httpOnly 쿠키(accessToken) 자동 포함
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
                 showStatus("부서 정보가 성공적으로 반영되었습니다.", true);
-                // 성공 시 1초 후 목록 페이지로 자동 이동
                 setTimeout(() => {
                     window.location.href = "/admin/departments/list";
                 }, 1000);
-            } else if (response.status === 403) {
-                showStatus("수정 권한이 없습니다 (관리자 전용).", false);
-            } else {
-                const errorData = await response.json();
-                showStatus(errorData.message || "수정 처리 중 오류가 발생했습니다.", false);
+                return;
             }
+
+            if (response.status === 401) {
+                showStatus("로그인이 필요합니다. 다시 로그인해주세요.", false);
+                return;
+            }
+
+            if (response.status === 403) {
+                showStatus("수정 권한이 없습니다 (관리자 전용).", false);
+                return;
+            }
+
+            const errorData = await safeJson(response);
+            showStatus(errorData.message || `수정 처리 중 오류가 발생했습니다. (HTTP ${response.status})`, false);
+
         } catch (error) {
             console.error("Fetch Error:", error);
             showStatus("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", false);

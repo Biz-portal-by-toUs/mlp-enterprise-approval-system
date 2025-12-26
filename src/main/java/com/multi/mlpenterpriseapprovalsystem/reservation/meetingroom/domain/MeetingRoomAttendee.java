@@ -4,13 +4,17 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 회의실 예약 참석자 엔티티
  *
- * @author : 김승기
+ * 회의실 예약(MeetingRoomReservation)과 직원(Employee) 간의
+ * 다대다(M:N) 관계를 풀기 위한 연결 테이블 역할을 한다.
+ *
+ * @author : 고송현
  * @filename : MeetingRoomAttendee
  * @since : 2025. 12. 16. 화요일
  */
@@ -19,8 +23,29 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "meeting_room_attendee")
 public class MeetingRoomAttendee {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long atteNo;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "com_id", referencedColumnName = "com_id") private Company company;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "meeting_resv_no") private MeetingRoomReservation meetingRoomReservation;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "emp_id", referencedColumnName = "emp_id") private Employee employee;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long atteNo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "com_id", referencedColumnName = "com_id")
+    private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "meeting_resv_no")
+    private MeetingRoomReservation meetingRoomReservation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
+    private Employee employee;
+
+    @Builder
+    public MeetingRoomAttendee(Company company,
+                               MeetingRoomReservation meetingRoomReservation,
+                               Employee employee) {
+        this.company = company;
+        this.meetingRoomReservation = meetingRoomReservation;
+        this.employee = employee;
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -12,7 +13,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 도메인
  *
  * @author : 김승기
  * @filename : DocumentForm
@@ -54,7 +55,29 @@ public class DocumentForm {
     private LocalDateTime createdAt;
 
     @Column(nullable = false, length = 1)
-    private String docfoStat; // T, P, R, A, D
+    @Enumerated(EnumType.STRING)
+    private DocumentFormStats docfoStat; // T, P, R, A, D
 
     private String rejectReason;
+
+//    public static DocumentForm create(
+//            String comId,
+//            String writerId,
+//            String docfoName,
+//            String cnttJson,
+//            String cnttHtml
+//    ) {
+//        DocumentForm f = new DocumentForm();
+//        f.comId = comId;
+//        f.writerId = writerId;
+//        f.docfoName = docfoName;
+//        f.cnttJson = cnttJson;
+//        f.cnttHtml = cnttHtml;
+//        f.docfoStat = DocumentFormStats.A; // 승인 로직 개발 후 T로 수정
+//        return f;
+//    }
+
+    public void delete(){
+        this.docfoStat=DocumentFormStats.D;
+    }
 }

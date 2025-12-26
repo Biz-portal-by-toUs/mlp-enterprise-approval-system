@@ -100,9 +100,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("isDeleted") Boolean isDeleted,
             @Param("keyword") String keyword);
 
+    List<Employee> findByEmpIdIn(List<String> attendeeIds);
+
     interface PosCount {
         Long getPosNo();
-
         Long getCnt();
     }
 
@@ -118,7 +119,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     interface DepCount {
         String getDepId();
-
         long getCnt();
     }
 

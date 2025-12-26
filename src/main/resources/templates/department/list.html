@@ -139,16 +139,6 @@
 </div>
 
 <script>
-    // ✅ 토큰 저장 키 유연하게 탐색
-    function getAccessToken() {
-        return (
-            localStorage.getItem("accessToken") ||
-            localStorage.getItem("jwt") ||
-            sessionStorage.getItem("accessToken") ||
-            sessionStorage.getItem("jwt")
-        );
-    }
-
     function showToast(msg, type) {
         const toast = document.getElementById("toast");
         toast.className = "toast " + (type || "");
@@ -160,31 +150,30 @@
         }, 2500);
     }
 
+    async function safeJson(res) {
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     async function loadDepartments() {
-        const token = getAccessToken();
         const tbody = document.getElementById("deptTbody");
         const emptyBox = document.getElementById("emptyBox");
 
         tbody.innerHTML = "";
         emptyBox.style.display = "none";
 
-        if (!token) {
-            emptyBox.style.display = "block";
-            emptyBox.textContent = "로그인이 필요합니다. (토큰 없음)";
-            return;
-        }
-
         const res = await fetch("/api/v1/admin/departments", {
             method: "GET",
+            credentials: "include", // ✅ accessToken 쿠키 자동 전송
             headers: {
-                "Authorization": "Bearer " + token,
                 "Accept": "application/json"
             }
         });
 
         if (res.status === 401) {
             emptyBox.style.display = "block";
-            emptyBox.textContent = "인증이 만료되었습니다. 다시 로그인 해주세요.";
+            emptyBox.textContent = "로그인이 필요합니다. 다시 로그인 해주세요.";
             return;
         }
         if (res.status === 403) {
@@ -198,7 +187,7 @@
             return;
         }
 
-        const json = await res.json();
+        const json = await safeJson(res);
         const list = json.data || [];
 
         if (!list.length) {
@@ -208,7 +197,6 @@
         }
 
         list.forEach(d => {
-            // ✅ depNo가 있으면 그걸 쓰고, 없으면 depId를 fallback
             const depNo = d.depNo;
             const depId = d.depId ?? "";
             const depName = d.depName ?? "";
@@ -231,33 +219,25 @@
         });
     }
 
-    // ✅ 수정 페이지 이동 (서버 컨트롤러가 /{depNo}/edit 형태라서 depNo 사용)
     function onEdit(depNo) {
         location.href = `/admin/departments/${depNo}/edit`;
     }
 
-    // ✅ 삭제 기능 (DELETE API 호출)
     async function onDelete(depNo, depName) {
-        const token = getAccessToken();
-        if (!token) {
-            showToast("로그인이 필요합니다. (토큰 없음)", "err");
-            return;
-        }
-
         const ok = confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`);
         if (!ok) return;
 
         try {
             const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
                 method: "DELETE",
+                credentials: "include", // ✅ accessToken 쿠키 자동 전송
                 headers: {
-                    "Authorization": "Bearer " + token,
                     "Accept": "application/json"
                 }
             });
 
             if (res.status === 401) {
-                showToast("인증이 만료되었습니다. 다시 로그인 해주세요.", "err");
+                showToast("로그인이 필요합니다. 다시 로그인 해주세요.", "err");
                 return;
             }
             if (res.status === 403) {
@@ -266,14 +246,11 @@
             }
 
             if (!res.ok) {
-                // 서버가 에러 메시지를 내려주면 출력 시도
                 let msg = `삭제 실패 (${res.status})`;
-                try {
-                    const json = await res.json();
-                    if (json && (json.message || json.error)) {
-                        msg = json.message || json.error;
-                    }
-                } catch (_) {}
+                const json = await safeJson(res);
+                if (json && (json.message || json.error)) {
+                    msg = json.message || json.error;
+                }
                 showToast(msg, "err");
                 return;
             }
@@ -286,7 +263,6 @@
         }
     }
 
-    // XSS 방지
     function escapeHtml(str) {
         return String(str)
             .replaceAll("&","&amp;")

@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.board.dto.BoardResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.CommentDto;
 import com.multi.mlpenterpriseapprovalsystem.board.repository.BoardCatRepository;
 import com.multi.mlpenterpriseapprovalsystem.board.repository.BoardRepository;
+import com.multi.mlpenterpriseapprovalsystem.board.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +30,7 @@ public class BoardService {
 
     private final BoardRepository boardRepository;
     private final BoardCatRepository boardCatRepository;
+    private final CommentRepository commentRepository;
 
     // public final CompanyRepository companyRepository;
     //  public final EmployeeRepository employeeRepository;
@@ -91,16 +93,27 @@ public class BoardService {
         Board board = boardRepository.findById(boardNo)
                 .orElseThrow(() -> new IllegalArgumentException("게시판이 존재하지 않습니다"));
 
-        return board.getComments().stream()
-                .map(comment -> CommentDto.builder()
-                        .commentNo(comment.getCommentNo())
-                        .comId(comment.getCompany().getComId())
-                        .boardNo(board.getBoardNo())
-                        .contents(comment.getContents())
-                        .empId(comment.getEmployee().getEmpId())
-                        .createdAt(comment.getCreatedAt())
+        return commentRepository.findByBoard_BoardNo(boardNo).stream()
+                .map(c -> CommentDto.builder()
+                        .commentNo(c.getCommentNo())
+                        .comId(c.getCompany().getComId())
+                        .boardNo(c.getBoard().getBoardNo())
+                        .contents(c.getContents())
+                        .empId(c.getEmployee().getEmpId())
+                        .createdAt(c.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+
+//        return board.getComments().stream()
+//                .map(comment -> CommentDto.builder()
+//                        .commentNo(comment.getCommentNo())
+//                        .comId(comment.getCompany().getComId())
+//                        .boardNo(board.getBoardNo())
+//                        .contents(comment.getContents())
+//                        .empId(comment.getEmployee().getEmpId())
+//                        .createdAt(comment.getCreatedAt())
+//                        .build())
+//                .collect(Collectors.toList());
     }
 
     //특정게시판 삭제

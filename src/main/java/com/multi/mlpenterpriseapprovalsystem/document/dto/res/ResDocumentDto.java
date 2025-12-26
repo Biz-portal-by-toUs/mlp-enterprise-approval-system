@@ -30,17 +30,23 @@ public class ResDocumentDto {
     private Long docFormNo;
     private String docFormName;
     private String docFormCatName;
+    private Long docFormCatNo;
     private String title;
     private String content;
     private List<ResApprovalLineDto> resApprovalLineDtos;
     private String cnttHtml;
     private String writer;
     private String writerId;
+    private String writerDepName;
+    private String writerDepId;
+    private Long writerDepNo;
+    private String writerWorkPhone;
     private String aiSumm;
     private Boolean temp;
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt; // 상신일
     private LocalDateTime updatedAt;
     private ApprStat myApprStat; // 나의 결재 상태
+    private LocalDateTime submittedAt;
 
 
     public static ResDocumentDto toDto(Document document) {
@@ -58,12 +64,19 @@ public class ResDocumentDto {
                 .cnttHtml(document.getCnttHtml())
                 .writer(document.getWriter().getEmpName())
                 .writerId(document.getWriter().getEmpId())
+                .writerDepName(document.getWriter().getDepartment().getDepName())
+                .writerDepNo(document.getWriter().getDepartment().getDepNo())
+                .writerDepId(document.getWriter().getDepartment().getDepId())
+                .writerWorkPhone(document.getWriter().getWorkPhone())
                 .aiSumm(document.getAiSumm())
                 .temp(document.getTemp())
                 .docFormName(document.getDocumentForm().getDocfoName())
                 .docFormNo(document.getDocumentForm().getDocfoNo())
+                .docFormCatName(document.getDocumentFormCategory().getName())
+                .docFormCatNo(document.getDocumentFormCategory().getDocfoCatNo())
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
+                .submittedAt(document.getSubmittedAt())
                 .build();
     }
 
@@ -83,12 +96,19 @@ public class ResDocumentDto {
                 .cnttHtml(document.getCnttHtml())
                 .writer(document.getWriter().getEmpName())
                 .writerId(document.getWriter().getEmpId())
+                .writerDepName(document.getWriter().getDepartment().getDepName())
+                .writerDepNo(document.getWriter().getDepartment().getDepNo())
+                .writerDepId(document.getWriter().getDepartment().getDepId())
+                .writerWorkPhone(document.getWriter().getWorkPhone())
                 .aiSumm(document.getAiSumm())
                 .temp(document.getTemp())
                 .docFormName(document.getDocumentForm().getDocfoName())
                 .docFormNo(document.getDocumentForm().getDocfoNo())
+                .docFormCatName(document.getDocumentFormCategory().getName())
+                .docFormCatNo(document.getDocumentFormCategory().getDocfoCatNo())
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
+                .submittedAt(document.getSubmittedAt())
                 .build();
 
         // empId가 전달되었다면 해당 사용자의 상태를 찾아 세팅

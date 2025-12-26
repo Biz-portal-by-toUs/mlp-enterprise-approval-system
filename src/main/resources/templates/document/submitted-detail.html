@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문서 상세 - 기업용 전자결재시스템</title>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 0; padding: 40px; }
+        .main-container {
+            max-width: 1100px; margin: 0 auto; background: white; padding: 50px;
+            min-height: 850px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* 헤더 */
+        .page-header { display: flex; justify-content: center; align-items: center; margin-bottom: 35px; position: relative; }
+        .page-title { font-size: 28px; font-weight: bold; color: #333; }
+
+        /* 왼쪽 버튼 그룹 */
+        .header-left-buttons {
+            position: absolute;
+            left: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        /* 상신취소 버튼 */
+        .btn-cancel-submit {
+            padding: 10px 24px; background: #fff; color: #fa5252;
+            border: 1px solid #ffc9c9; border-radius: 6px; cursor: pointer; font-size: 14px;
+            font-weight: 600; transition: all 0.2s;
+        }
+        .btn-cancel-submit:hover { background: #fff5f5; border-color: #fa5252; }
+
+        /* ✅ 재작성 버튼 */
+        .btn-rewrite {
+            padding: 10px 24px; background: #fff; color: #339af0;
+            border: 1px solid #a5d8ff; border-radius: 6px; cursor: pointer; font-size: 14px;
+            font-weight: 600; transition: all 0.2s;
+        }
+        .btn-rewrite:hover { background: #e7f5ff; border-color: #339af0; }
+
+        .btn-close {
+            position: absolute; right: 0; padding: 10px 24px; background: #fff; color: #495057;
+            border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-close:hover { background: #f8f9fa; border-color: #adb5bd; }
+
+        /* 섹션 공통 */
+        .section { margin-bottom: 25px; }
+        .section-title {
+            font-size: 15px; font-weight: 600; color: #495057; margin-bottom: 12px;
+            padding-left: 10px; border-left: 3px solid #339af0;
+        }
+
+        /* 문서 정보 카드 */
+        .info-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+            border: 1px solid #e9ecef; border-radius: 10px; padding: 25px;
+        }
+
+        /* 상단 영역: 문서정보 + 결재라인 */
+        .info-top { display: flex; gap: 30px; align-items: flex-start; }
+        .info-left { flex-shrink: 0; width: 220px; display: flex; flex-direction: column; gap: 12px; }
+        .info-right { flex: 1; min-width: 0; }
+        .info-item { display: flex; align-items: center; gap: 12px; }
+        .info-label { font-size: 13px; color: #868e96; font-weight: 600; min-width: 65px; }
+        .info-value { font-size: 14px; color: #333; font-weight: 500; }
+        .doc-id { font-size: 15px; font-weight: bold; color: #339af0; }
+
+        /* 결재라인 카드 */
+        .approval-section-title {
+            font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 12px;
+            padding-left: 10px; border-left: 3px solid #339af0;
+        }
+        .approval-card-container { display: flex; gap: 8px; flex-wrap: nowrap; align-items: stretch; }
+        .approval-card {
+            flex: 1 1 0; min-width: 90px; max-width: 150px; padding: 15px 8px;
+            border: 2px solid #e9ecef; border-radius: 10px;
+            text-align: center; background: #fff; transition: all 0.2s;
+        }
+        .approval-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .approval-card.approved { border-color: #51cf66; background: linear-gradient(180deg, #ebfbee 0%, #fff 100%); }
+        .approval-card.current { border-color: #339af0; background: linear-gradient(180deg, #e7f5ff 0%, #fff 100%); }
+        .approval-card.rejected { border-color: #ff6b6b; background: linear-gradient(180deg, #fff5f5 0%, #fff 100%); }
+        .approval-card.waiting { border-color: #dee2e6; background: #fff; }
+
+        .approval-seq { font-size: 10px; color: #adb5bd; margin-bottom: 6px; font-weight: 600; }
+        .approval-name { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .approval-pos { font-size: 11px; color: #868e96; margin-bottom: 4px; }
+        .approval-date { font-size: 10px; color: #868e96; line-height: 1.4; }
+        .approval-arrow { display: flex; align-items: center; color: #dee2e6; font-size: 16px; flex-shrink: 0; padding: 0 2px; }
+
+        /* 문서 내용 */
+        .content-card { background: #fff; border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden; }
+        .content-row { display: flex; border-bottom: 1px solid #f1f3f5; }
+        .content-row:last-child { border-bottom: none; }
+        .content-label {
+            width: 100px; padding: 15px 20px; background: #f8f9fa;
+            font-size: 13px; font-weight: 600; color: #495057;
+            display: flex; align-items: center; flex-shrink: 0;
+        }
+        .content-value { flex: 1; padding: 15px 20px; font-size: 14px; color: #333; display: flex; align-items: center; }
+        .content-body {
+            padding: 25px; font-size: 14px; line-height: 1.8; color: #333;
+            min-height: 150px; white-space: pre-wrap; background: #fff;
+        }
+
+        /* 반려 정보 */
+        .reject-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+            border: 1px solid #ffc9c9; border-radius: 10px; padding: 20px;
+        }
+        .reject-header { display: flex; gap: 30px; margin-bottom: 15px; }
+        .reject-item { display: flex; align-items: center; gap: 10px; }
+        .reject-label { font-size: 13px; color: #868e96; font-weight: 600; }
+        .reject-value { font-size: 14px; color: #c92a2a; font-weight: 500; }
+        .reject-reason-box {
+            background: #fff; border: 1px solid #ffc9c9; border-radius: 6px;
+            padding: 15px; font-size: 14px; color: #333; min-height: 60px;
+        }
+
+        /* AI 요약 */
+        .ai-card {
+            background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%);
+            border: 1px solid #d0bfff; border-radius: 10px; padding: 25px;
+        }
+        .ai-title { font-size: 15px; font-weight: bold; color: #7950f2; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .ai-content { font-size: 14px; line-height: 1.8; color: #495057; }
+
+        /* 로딩 */
+        .loading { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
+
+        /* 모달 */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-content {
+            background: white; padding: 30px 40px; border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); text-align: center; max-width: 400px;
+        }
+        .modal-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; }
+        .modal-message { font-size: 14px; color: #666; margin-bottom: 25px; line-height: 1.6; }
+        .modal-buttons { display: flex; gap: 12px; justify-content: center; }
+        .modal-btn {
+            padding: 12px 30px; border-radius: 6px; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .modal-btn-confirm { background: #fa5252; color: white; border: none; }
+        .modal-btn-confirm:hover { background: #e03131; }
+        .modal-btn-cancel { background: white; color: #495057; border: 1px solid #dee2e6; }
+        .modal-btn-cancel:hover { background: #f8f9fa; }
+
+        /* 토스트 */
+        .toast {
+            position: fixed; top: 20px; right: 20px; padding: 15px 25px;
+            border-radius: 8px; color: white; font-weight: 600; z-index: 2000;
+            display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #40c057; }
+        .toast.error { background: #fa5252; }
+        .toast.show { display: block; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div id="loading" class="loading">문서를 불러오는 중...</div>
+
+    <div id="doc-detail" style="display: none;">
+        <!-- 헤더 -->
+        <div class="page-header">
+            <!-- ✅ 왼쪽 버튼 그룹 -->
+            <div class="header-left-buttons">
+                <button class="btn-cancel-submit" id="btn-cancel-submit" style="display: none;" onclick="showCancelModal()">상신취소</button>
+                <button class="btn-rewrite" id="btn-rewrite" style="display: none;" onclick="goToRewrite()">재작성</button>
+            </div>
+            <div class="page-title" id="form-title">휴가 신청서</div>
+            <button class="btn-close" onclick="history.back()">닫기</button>
+        </div>
+
+        <!-- 문서 정보 + 결재라인 -->
+        <div class="section">
+            <div class="info-card">
+                <div class="info-top">
+                    <div class="info-left">
+                        <div class="info-item">
+                            <span class="info-label">문서번호</span>
+                            <span class="info-value doc-id" id="info-docId">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">상신일자</span>
+                            <span class="info-value" id="info-createdAt">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">작성부서</span>
+                            <span class="info-value" id="info-dept">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">작성자</span>
+                            <span class="info-value" id="info-writer">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">전화번호</span>
+                            <span class="info-value" id="info-phone">-</span>
+                        </div>
+                    </div>
+                    <div class="info-right">
+                        <div class="approval-section-title">결재라인</div>
+                        <div class="approval-card-container" id="approval-line"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 문서 내용 -->
+        <div class="section">
+            <div class="section-title">문서 내용</div>
+            <div class="content-card">
+                <div class="content-row">
+                    <div class="content-label">제목</div>
+                    <div class="content-value" id="doc-title">-</div>
+                </div>
+                <div class="content-row">
+                    <div class="content-label">카테고리</div>
+                    <div class="content-value" id="doc-category">-</div>
+                </div>
+                <div class="content-body" id="doc-content">내용이 표시됩니다.</div>
+                <div class="content-row">
+                    <div class="content-label">파일 첨부</div>
+                    <div class="content-value" id="doc-files">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 반려 정보 -->
+        <div class="section" id="reject-section" style="display: none;">
+            <div class="section-title">반려 정보</div>
+            <div class="reject-card">
+                <div class="reject-header">
+                    <div class="reject-item">
+                        <span class="reject-label">반려자</span>
+                        <span class="reject-value" id="reject-approver">-</span>
+                    </div>
+                    <div class="reject-item">
+                        <span class="reject-label">반려일자</span>
+                        <span class="reject-value" id="reject-date">-</span>
+                    </div>
+                </div>
+                <div class="reject-reason-box" id="reject-reason">-</div>
+            </div>
+        </div>
+
+        <!-- AI 요약 -->
+        <div class="section" id="ai-summary-section" style="display: none;">
+            <div class="ai-card">
+                <div class="ai-title">🤖 AI 요약</div>
+                <div class="ai-content" id="ai-summary-content"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 상신취소 확인 모달 -->
+<div class="modal-overlay" id="cancel-modal">
+    <div class="modal-content">
+        <div class="modal-title">⚠️ 상신 취소</div>
+        <div class="modal-message">
+            정말 상신을 취소하시겠습니까?<br>
+            취소 후 임시저장 상태로 변경됩니다.
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-confirm" onclick="confirmCancelSubmit()">확인</button>
+            <button class="modal-btn modal-btn-cancel" onclick="hideCancelModal()">취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- 토스트 알림 -->
+<div class="toast" id="toast"></div>
+
+<script>
+    let docData = null;
+    let currentDocNo = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const pathParts = window.location.pathname.split('/');
+        currentDocNo = pathParts[pathParts.length - 1];
+        loadDocumentDetail(currentDocNo);
+    });
+
+    async function loadDocumentDetail(docNo) {
+        const token = localStorage.getItem('accessToken');
+
+        try {
+            const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const result = await response.json();
+
+            if (result.status === 200) {
+                docData = result.data;
+                renderDetail(docData);
+            } else {
+                alert('문서를 불러올 수 없습니다.');
+                history.back();
+            }
+        } catch (error) {
+            console.error('문서 조회 실패:', error);
+            alert('문서 조회 중 오류가 발생했습니다.');
+        }
+    }
+
+    function renderDetail(doc) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('doc-detail').style.display = 'block';
+
+        document.getElementById('form-title').textContent = doc.docFormName || '문서 상세';
+        document.getElementById('info-docId').textContent = doc.docId || '-';
+        document.getElementById('info-createdAt').textContent = formatDate(doc.submittedAt);
+        document.getElementById('info-dept').textContent = doc.writerDepName || '-';
+
+        if (doc.writer && doc.writerId) {
+            document.getElementById('info-writer').textContent = `${doc.writer} (${doc.writerId})`;
+        } else {
+            document.getElementById('info-writer').textContent = doc.writer || '-';
+        }
+
+        document.getElementById('info-phone').textContent = doc.writerWorkPhone || '-';
+        renderApprovalLine(doc.resApprovalLineDtos);
+
+        // ✅ 버튼 표시 로직
+        checkButtonVisibility(doc.resApprovalLineDtos, doc.docStat);
+
+        document.getElementById('doc-title').textContent = doc.title || '-';
+        document.getElementById('doc-category').textContent = doc.docFormCatName || '-';
+        document.getElementById('doc-content').textContent = doc.content || '(내용 없음)';
+        document.getElementById('doc-files').innerHTML = '-';
+
+        renderRejectInfo(doc.resApprovalLineDtos, doc.docStat);
+
+        if (doc.aiSumm) {
+            document.getElementById('ai-summary-section').style.display = 'block';
+            document.getElementById('ai-summary-content').textContent = doc.aiSumm;
+        }
+    }
+
+    /**
+     * ✅ 버튼 표시 조건
+     * - 상신취소: docStat === 'AW' && 아무도 결재 안 함
+     * - 재작성: docStat === 'RJ' (반려된 문서)
+     */
+    function checkButtonVisibility(lines, docStat) {
+        const cancelBtn = document.getElementById('btn-cancel-submit');
+        const rewriteBtn = document.getElementById('btn-rewrite');
+
+        // 초기화
+        cancelBtn.style.display = 'none';
+        rewriteBtn.style.display = 'none';
+
+        // 반려된 문서 → 재작성 버튼 표시
+        if (docStat === 'RJ') {
+            rewriteBtn.style.display = 'block';
+            return;
+        }
+
+        // 결재중(AW) → 상신취소 조건 확인
+        if (docStat === 'AW') {
+            if (!lines || lines.length === 0) {
+                cancelBtn.style.display = 'block';
+                return;
+            }
+
+            const hasProcessedApproval = lines.some(line =>
+                line.apprStat === 'A' || line.apprStat === 'R' || line.endedAt !== null
+            );
+
+            if (!hasProcessedApproval) {
+                cancelBtn.style.display = 'block';
+            }
+        }
+    }
+
+    // ✅ 재작성 버튼 클릭 → 수정 화면으로 이동
+    function goToRewrite() {
+        location.href = `/documents/${currentDocNo}/rejected/rewrite`;
+    }
+
+    function renderApprovalLine(lines) {
+        const container = document.getElementById('approval-line');
+        container.innerHTML = '';
+
+        if (!lines || lines.length === 0) {
+            container.innerHTML = '<span style="color: #868e96; padding: 20px;">결재라인 정보가 없습니다.</span>';
+            return;
+        }
+
+        lines.sort((a, b) => a.seq - b.seq);
+        const displayLines = lines.slice(0, 5);
+
+        displayLines.forEach((line, index) => {
+            const card = document.createElement('div');
+            card.className = 'approval-card';
+
+            if (line.apprStat === 'A') card.classList.add('approved');
+            else if (line.apprStat === 'I') card.classList.add('current');
+            else if (line.apprStat === 'R') card.classList.add('rejected');
+            else card.classList.add('waiting');
+
+            card.innerHTML = `
+                <div class="approval-seq">결재자${line.seq}</div>
+                <div class="approval-name">${line.approverName || '-'}</div>
+                <div class="approval-pos">${line.approverPosName || ''}</div>
+                ${line.endedAt ? `<div class="approval-date">${formatDateTime(line.endedAt)}</div>` : '<div class="approval-date">-</div>'}
+            `;
+
+            container.appendChild(card);
+
+            if (index < displayLines.length - 1) {
+                const arrow = document.createElement('div');
+                arrow.className = 'approval-arrow';
+                arrow.innerHTML = '→';
+                container.appendChild(arrow);
+            }
+        });
+    }
+
+    function renderRejectInfo(lines, docStat) {
+        if (!lines || lines.length === 0) return;
+
+        const rejectedLine = lines.find(line => line.apprStat === 'R');
+
+        if (rejectedLine || docStat === 'RJ') {
+            document.getElementById('reject-section').style.display = 'block';
+            if (rejectedLine) {
+                document.getElementById('reject-approver').textContent = rejectedLine.approverName || '-';
+                document.getElementById('reject-date').textContent = formatDateTime(rejectedLine.endedAt);
+            }
+            document.getElementById('reject-reason').textContent = rejectedLine?.rejReason || '-';
+        }
+    }
+
+    function formatDate(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDateTime(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
+    }
+
+    function showCancelModal() {
+        document.getElementById('cancel-modal').classList.add('show');
+    }
+
+    function hideCancelModal() {
+        document.getElementById('cancel-modal').classList.remove('show');
+    }
+
+    async function confirmCancelSubmit() {
+        hideCancelModal();
+        const token = localStorage.getItem('accessToken');
+
+        try {
+            const response = await fetch(`/api/v1/documents/${currentDocNo}/cancel`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showToast('상신이 취소되었습니다.', 'success');
+                setTimeout(() => { location.href = '/documents/me?status=SUBMITTED'; }, 500);
+            } else {
+                showToast(result.message || '상신 취소에 실패했습니다.', 'error');
+            }
+        } catch (error) {
+            console.error('상신 취소 실패:', error);
+            showToast('서버 통신 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    function showToast(message, type) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
+</script>
+</body>
+</html>

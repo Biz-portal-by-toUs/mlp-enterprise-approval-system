@@ -66,7 +66,7 @@
         .form-control {
             width: 100%; height: 56px; border-radius: 14px; border: 1px solid #ddd;
             padding: 0 20px; font-size: 16px; transition: all 0.2s ease;
-            background: #fff; appearance: none; /* 브라우저 기본 화살표 제거 (필요시) */
+            background: #fff; appearance: none;
         }
         select.form-control {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23777' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
@@ -159,10 +159,6 @@
 <script th:inline="javascript">
     const API_BASE = "/api/v1/admin/positions";
 
-    function getAccessToken() {
-        return localStorage.getItem("accessToken") || localStorage.getItem("token");
-    }
-
     function showStatus(isOk, text) {
         const el = document.getElementById("statusMsg");
         el.textContent = text;
@@ -170,29 +166,29 @@
         el.style.display = "block";
     }
 
+    async function safeJson(res) {
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     async function submitUpdate() {
         const posNo = document.getElementById("posNo").value;
         const posName = document.getElementById("posName").value.trim();
-        const posOrder = document.getElementById("posOrder").value; // ✅ 드롭다운 값 읽기
-        const token = getAccessToken();
-
+        const posOrder = document.getElementById("posOrder").value; // 드롭다운 값
         if (!posNo) { showStatus(false, "직급 번호를 찾을 수 없습니다."); return; }
         if (!posName) { showStatus(false, "직급명을 입력해주세요."); return; }
-        if (!token) { showStatus(false, "인증 정보가 없습니다."); return; }
 
-        // ✅ 백엔드 DTO 필드명(posName, posOrder)에 맞춰 페이로드 구성
         const payload = {
             posName: posName,
-            posOrder: parseInt(posOrder) // 숫자로 변환하여 전송
+            posOrder: parseInt(posOrder, 10)
         };
 
         try {
             const response = await fetch(`${API_BASE}/${posNo}`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",          // ✅ httpOnly 쿠키(accessToken) 자동 전송
                 body: JSON.stringify(payload)
             });
 
@@ -201,10 +197,20 @@
                 setTimeout(() => {
                     location.href = "/admin/positions/list";
                 }, 1000);
-            } else {
-                const data = await response.json().catch(() => ({}));
-                showStatus(false, data.message || "수정 처리 중 오류가 발생했습니다.");
+                return;
             }
+
+            if (response.status === 401) {
+                showStatus(false, "로그인이 필요합니다. 다시 로그인 해주세요.");
+                return;
+            }
+            if (response.status === 403) {
+                showStatus(false, "수정 권한이 없습니다 (관리자 전용).");
+                return;
+            }
+
+            const data = await safeJson(response);
+            showStatus(false, data.message || data.msg || "수정 처리 중 오류가 발생했습니다.");
         } catch (error) {
             console.error("Fetch Error:", error);
             showStatus(false, "서버 연결 실패. 네트워크를 확인하세요.");

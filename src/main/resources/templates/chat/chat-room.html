@@ -8,8 +8,6 @@
         body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
         .wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
 
-        /* 상단 바 */
-        /* 상단 바 레이아웃 유지 */
         .top {
             padding: 14px 18px;
             border-bottom: 1px solid var(--border-color);
@@ -19,37 +17,73 @@
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             z-index: 10;
-            gap: 10px; /* 제목과 버튼 사이 최소 간격 */
+            gap: 10px;
         }
-        /* ✅ 채팅방 이름 말줄임 처리 */
         .title {
+            flex: 1;
+            min-width: 0;
+            max-width: 200px;
+            position: relative;
+            cursor: pointer;
+            overflow: visible !important;
+        }
+
+        .title-text {
+            display: block;
             font-weight: 800;
             font-size: 16px;
-            white-space: nowrap;      /* 줄바꿈 금지 */
-            overflow: hidden;         /* 넘치는 부분 숨김 */
-            text-overflow: ellipsis;  /* ... 표시 */
-            flex: 1;                  /* 남는 공간을 차지하게 함 */
-            min-width: 0;             /* flex 아이템이 넘칠 때 줄어들 수 있게 함 (중요) */
-            max-width: 200px;         /* 16px 기준 약 12~13자 정도의 너비 제한 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
         }
-        /* 버튼 영역이 찌그러지지 않게 고정 */
+
+        .title::after {
+            content: attr(data-title);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 400;
+            z-index: 9999;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            white-space: normal;
+            width: max-content;
+            max-width: 250px;
+            word-break: break-all;
+            line-height: 1.5;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .title:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0.4s;
+        }
+
         .actions {
             display: flex;
             gap: 8px;
-            flex-shrink: 0;           /* 공간이 부족해도 버튼 영역은 줄어들지 않음 */
+            flex-shrink: 0;
         }
         .actions button { padding: 8px 14px; cursor: pointer; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .actions button:hover { background: #f8f9fa; border-color: #bbb; }
         .btn-invite { background: var(--primary-color) !important; color: white !important; border: none !important; }
 
-        /* 참가자 목록 패널 */
         .member-panel { display: none; position: absolute; top: 65px; right: 15px; width: 240px; max-height: 450px; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); }
         .member-header { padding: 15px; font-weight: 800; border-bottom: 1px solid var(--border-color); background: #fafafa; font-size: 14px; }
         .member-list { flex: 1; overflow-y: auto; padding: 10px 0; }
         .member-item { padding: 10px 18px; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: background 0.2s; }
         .member-item:hover { background: #f5f5f5; }
 
-        /* 초대 모달 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal-content { background: white; width: 720px; height: 540px; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
         .modal-header { padding: 20px; font-weight: 800; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 18px; }
@@ -67,34 +101,116 @@
         .pill { display: inline-flex; gap: 8px; align-items: center; background: #f0f7ff; border-radius: 8px; padding: 8px 12px; margin: 6px 12px; font-size: 13px; border: 1px solid #d0e5ff; }
         .pill button { cursor: pointer; border: none; background: none; color: #ff3b30; font-weight: bold; }
 
-        /* 메시지 영역 */
         .msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .msg { display: flex; flex-direction: column; max-width: 80%; }
         .msg.me { align-self: flex-end; align-items: flex-end; }
         .msg.other { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .me .bubble { background-color: var(--me-bubble); border-top-right-radius: 2px; }
-        .other .bubble { background-color: white; border-top-left-radius: 2px; border: 1px solid #e2e2e2; }
+
+        /* ✅ 말풍선 공통 및 개별 배경색 설정 */
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-break: break-all;
+            cursor: pointer;
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+
+            white-space: pre-wrap;
+        }
+        /* 내가 보낸 메시지: 노란색 */
+        .msg.me .bubble {
+            background-color: var(--me-bubble);
+            border-top-right-radius: 2px;
+        }
+        /* 상대방 메시지: 흰색 */
+        .msg.other .bubble {
+            background-color: white;
+            border-top-left-radius: 2px;
+        }
+
+        /* 버블 내 링크 스타일 */
+        .bubble a {
+            color: #007bff;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+
+        .bubble.collapsed {
+            max-height: 150px;
+        }
+
+        .bubble.collapsed::after {
+            content: "클릭하여 더보기";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            font-size: 11px;
+            color: #888;
+            padding-bottom: 4px;
+            pointer-events: none;
+        }
+
+        .me .bubble.collapsed::after {
+            background: linear-gradient(transparent, var(--me-bubble));
+        }
+        .other .bubble.collapsed::after {
+            background: linear-gradient(transparent, white);
+        }
         .sender-info { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 4px; }
         .time-info { font-size: 10px; color: #aaa; margin-top: 4px; }
 
-        /* 하단 바 */
-        .bottom { padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
-        .bottom input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; transition: border-color 0.2s; }
-        .bottom input:focus { border-color: var(--primary-color); }
-        .bottom button { padding: 0 20px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
-        .bottom button:disabled { background: #ccc; cursor: not-allowed; }
-
-        /* ✅ 추가된 바이트 바 스타일 */
-        .bytebar {
-            padding: 0 20px 12px;
-            font-size: 12px;
-            color: #777;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
+        .bottom {
+            padding: 10px 15px 5px;
             background: white;
+            border-top: 1px solid var(--border-color);
         }
+
+        .bottom textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+            resize: none;
+            height: 40px;
+            max-height: 100px;
+            overflow: hidden;
+            line-height: 1.4;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .bottom textarea:focus { border-color: var(--primary-color); }
+
+        .bytebar {
+            padding: 0 15px 12px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bytebar button {
+            padding: 8px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .bytebar button:disabled { background: #ccc; cursor: not-allowed; }
         .bytebar .warn { color:#ff3b30; font-weight:700; }
 
         .modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
@@ -104,7 +220,7 @@
 
         .msg.system {
             align-self: center;
-            background: rgba(0, 0, 0, 0.05); /* 아주 연한 배경 */
+            background: rgba(0, 0, 0, 0.05);
             color: #888;
             font-size: 12px;
             padding: 5px 15px;
@@ -161,28 +277,37 @@
     <div class="msgs" id="messages"></div>
 
     <div class="bottom">
-        <input id="messageInput" placeholder="메시지를 입력하세요..." onkeydown="if(event.keyCode==13){sendMessage()}" autocomplete="off" />
-        <button id="sendBtn" onclick="sendMessage()">전송</button>
+        <textarea id="messageInput" placeholder="메시지를 입력하세요..." rows="1" autocomplete="off"></textarea>
     </div>
 
     <div class="bytebar">
-        <span id="byteInfo">0 / 61440 bytes</span>
-        <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+        <div id="byteGroup">
+            <span id="byteInfo">0 / 61440 bytes</span>
+            <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+        </div>
+        <button id="sendBtn" onclick="sendMessage()">전송</button>
     </div>
 </div>
 
 <script>
-    // ---------------- 기초 설정 ----------------
     function getAccessToken() { return localStorage.getItem("accessToken"); }
     function authHeaders() { return { 'Authorization': 'Bearer ' + getAccessToken() }; }
+
     function escapeHtml(str) {
         return String(str ?? "").replace(/[&<>"']/g, s => ({
             "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
         }[s]));
     }
 
-    // ✅ [추가] 바이트 계산 유틸
-    const MAX_BYTES = 60 * 1024; // 61440 bytes
+    // ✅ [추가] URL을 찾아 링크 태그로 변환하는 함수
+    function linkify(text) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, function(url) {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        });
+    }
+
+    const MAX_BYTES = 60 * 1024;
     function utf8Bytes(str) {
         return new TextEncoder().encode(str).length;
     }
@@ -223,29 +348,28 @@
             const room = result.data;
             if (!room) return;
 
-            // ✅ [추가] 1:1 채팅방인 경우 초대 버튼 숨김 처리
             const inviteBtn = document.querySelector(".btn-invite");
             if (inviteBtn) {
-                // 방 타입이 'ONE'이면 숨기고(none), 아니면 보이게(inline-block) 설정함
                 inviteBtn.style.display = (room.roomType === 'ONE') ? 'none' : 'inline-block';
             }
 
             let displayName = room.roomName;
 
-            // ✅ 1:1 채팅방이거나 방 이름이 없는 경우, 참여자 목록에서 상대방 이름을 찾음
             if (room.roomType === 'ONE' || !displayName) {
                 const opponent = (room.members || []).find(m => m.empId !== MY_EMP_ID);
                 displayName = opponent ? opponent.empName : (displayName || "대화 상대 없음");
             }
 
-            document.getElementById("roomTitle").innerText = displayName;
+            const titleEl = document.getElementById("roomTitle");
+            titleEl.innerHTML = `<span class="title-text">${escapeHtml(displayName)}</span>`;
+            titleEl.setAttribute('data-title', displayName);
+            titleEl.removeAttribute('title');
         } catch (err) {
             console.error("방 정보 로드 실패:", err);
             document.getElementById("roomTitle").innerText = "채팅방";
         }
     }
 
-    // ---------------- 초대 로직 ----------------
     const selected = new Map();
     let currentRoomMembers = new Set();
     let inviteCursor = null;
@@ -355,7 +479,6 @@
 
     function closeInviteModal() { document.getElementById("inviteModal").style.display = "none"; }
 
-    // ---------------- 참가자 목록 & 메시지 로직 ----------------
     let stompClient = null;
     let roomSub = null;
     let isMemberPanelOpen = false;
@@ -410,9 +533,7 @@
         const box = document.getElementById("messages");
         box.innerHTML = "";
 
-        // 기존 메시지 중복 set 처리
         msgs.forEach(m => { if(m.messageId) seenMsgIds.add(m.messageId); });
-
         msgs.slice().reverse().forEach(m => appendMessage(m));
         box.scrollTop = box.scrollHeight;
     }
@@ -426,19 +547,18 @@
         if (m.type === 'SYSTEM') {
             div.className = "msg system";
             div.innerHTML = `<span>${escapeHtml(m.content)}</span>`;
-        }
-        // ✅ 2. 일반 메시지 처리 (기존 로직)
-        else {
+        } else {
             const isMe = (m.senderEmpId === MY_EMP_ID);
             div.className = isMe ? "msg me" : "msg other";
 
             let html = "";
-
-            // ✅ 내가 보낸 메시지가 아닐 때만(상대방일 때만) 이름을 표시합니다.
             if (!isMe) {
                 html += `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
             }
-            html += `<div class="bubble">${escapeHtml(m.content)}</div>`;
+
+            // ✅ [수정] escapeHtml로 보안 처리 후 linkify로 URL을 링크로 변환
+            const safeContent = linkify(escapeHtml(m.content));
+            html += `<div class="bubble" onclick="toggleExpand(event, this)">${safeContent}</div>`;
 
             const t = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
             html += `<div class="time-info">${t}</div>`;
@@ -446,15 +566,38 @@
         }
 
         box.appendChild(div);
+
+        const bubble = div.querySelector(".bubble");
+        if (bubble && bubble.scrollHeight > 150) {
+            bubble.classList.add("collapsed");
+        }
+
         box.scrollTop = box.scrollHeight;
+    }
+
+    // ✅ [수정] 링크 클릭 시에는 접기/펴기 동작이 발생하지 않도록 event 매개변수 추가
+    function toggleExpand(event, element) {
+        // 클릭된 요소가 <a> 태그(링크)라면 함수 종료
+        if (event.target.tagName === 'A') return;
+
+        if (element.classList.contains("collapsed")) {
+            element.classList.remove("collapsed");
+            element.style.maxHeight = element.scrollHeight + "px";
+        } else {
+            if (element.scrollHeight > 150) {
+                element.classList.add("collapsed");
+                element.style.maxHeight = "150px";
+            }
+        }
     }
 
     function sendMessage() {
         const input = document.getElementById("messageInput");
-        const content = input.value.trim();
-        if (!content || !stompClient?.connected) return;
+        const content = input.value; // .trim() 제거 (원본 데이터 유지)
 
-        // ✅ 전송 전 바이트 제한 최종 체크
+        // 메시지가 아예 비어있거나(엔터/스페이스만 있는 경우) 체크 로직은 별도로 진행
+        if (!content.trim() || !stompClient?.connected) return;
+
         if (utf8Bytes(content) > MAX_BYTES) {
             alert("메시지 용량이 너무 큽니다.");
             return;
@@ -463,7 +606,10 @@
         stompClient.send("/pub/chat/message", { Authorization: 'Bearer ' + getAccessToken() },
             JSON.stringify({ roomNo: roomNo, content: content })
         );
+
         input.value = "";
+        input.style.height = '40px';
+        input.style.overflowY = 'hidden';
         updateByteInfo();
     }
 
@@ -474,10 +620,33 @@
     });
 
     window.addEventListener("load", () => {
+        const messageInput = document.getElementById("messageInput");
+
+        messageInput.addEventListener("input", function() {
+            this.style.height = '40px';
+            const newHeight = this.scrollHeight;
+            this.style.height = newHeight + 'px';
+
+            if (newHeight >= 100) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+
+            updateByteInfo();
+        });
+
+        messageInput.addEventListener("keydown", function(e) {
+            if (e.isComposing) return;
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
         loadRoomInfo();
         connectWs();
-        updateByteInfo(); // 바이트 카운터 초기화
-        document.getElementById("messageInput").addEventListener("input", updateByteInfo);
+        updateByteInfo();
     });
 </script>
 </body>
