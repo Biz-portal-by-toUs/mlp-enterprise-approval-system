@@ -14,7 +14,7 @@ import java.util.List;
  * @filename : ReservationDetailDto
  * @since : 2025-12-22 오후 2:59 월요일
  */
-public class ReservationDetailDto {
+public class ResReservationDetailDto {
     private Long resvNo;
 
     // 회의실
