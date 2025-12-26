@@ -51,4 +51,10 @@ public class ViewMeetingRoomController {
         return "reservation/meeting-rooms/meeting-room-reservation";
     }
 
+    // 회의실 예약 등록 화면
+    @GetMapping("/{roomNo}/meeting-room-reservation")
+    public String meetingRoomReservation(@PathVariable Long roomNo) {
+        return "reservation/meeting-rooms/meeting-room-reservation";
+    }
+
 }
