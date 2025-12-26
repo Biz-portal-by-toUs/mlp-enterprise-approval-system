@@ -2,7 +2,8 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.MeetingRoomReservationDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqReservationCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResReservationListDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomReservationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,17 +35,24 @@ public class MeetingRoomReservationController {
     private final MeetingRoomReservationService meetingRoomReservationService;
 
     @GetMapping("/meeting-room-reservations")
-    public ResponseEntity<ResponseDto<List<MeetingRoomReservationDto>>> getReservations(@AuthenticationPrincipal CustomUser user) {  // 한 페이지에서 보여줄 데이터 개수
+    public ResponseEntity<ResponseDto<List<ResReservationListDto>>> getReservations(@AuthenticationPrincipal CustomUser user,
+                                                                                    @RequestParam(required = false) String date) {  // 한 페이지에서 보여줄 데이터 개수
 
         String comId = user.getComId();
-        List<MeetingRoomReservationDto> reservations =
-                meetingRoomReservationService.getReservations(comId);
+        List<ResReservationListDto> reservations =
+                meetingRoomReservationService.getReservations(comId, date);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, null, reservations));
     }
 
+    @PostMapping("/meeting-room-reservations")
+    public ResponseEntity<ResponseDto<List<ResReservationListDto>>> createReservation(@RequestBody ReqReservationCreateDto dto,
+                                                                                      @AuthenticationPrincipal CustomUser user) {
+        meetingRoomReservationService.createReservation(dto, user);
+        return ResponseEntity.ok().build();
+    }
 
 
 }
