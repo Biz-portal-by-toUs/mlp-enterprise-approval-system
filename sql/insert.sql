@@ -34,19 +34,19 @@ INSERT INTO employee
  hire_date, ret_date, addr, role, atte, msg_stat, delegate, is_deleted)
 VALUES
 -- 회사 관리자(사원 페이지에서도 최상위 관리자 역할로 쓸 수 있음)
-('C01', 1, 1, 'E000001',
+('C01', 4, 4, 'E000001',
  '$2b$10$Dua3gQf03uEl91WTUjabhuxdk0gl1lq2UcdoPJpINAyV2KovcFtB6',
  '홍관리', 'comadmin@c01.com', '010-1111-1111', '0212345678', 'M',
  '2025-01-02 09:00:00', NULL, '서울특별시 강남구', 'COM_ADMIN', 'N', 'N', NULL,false),
 
 -- 2차 관리자
-('C01', 1, 1, 'E000002',
+('C01', 3, 3, 'E000002',
  '$2b$10$IRGCWkvwSo1QejSQoHuH/.V0TRU69cFAteCJurcoIWODwWmg5zu6G',
  '김보안', 'secadmin@c01.com', '010-2222-2222', '0212345679', 'F',
  '2025-01-02 09:10:00', NULL, '서울특별시 강남구', 'SEC_ADMIN', 'N', 'N', 'E000001',false),
 
 -- 3차 관리자
-('C01', 1, 1, 'E000003',
+('C01', 2, 2, 'E000003',
  '$2b$10$D4ZZH6fC11EykcEdVhHUvulXICZ6BRtKd4GeJ9hSMjGiOE0e5PCfS',
  '박삼차', 'thradmin@c01.com', '010-3333-3333', '0212345680', 'M',
  '2025-01-02 09:20:00', NULL, '서울특별시 강남구', 'THR_ADMIN', 'N', 'N', 'E000001',false),
@@ -55,48 +55,82 @@ VALUES
 ('C01', 1, 1, 'E000004',
  '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
  '이사원', 'employee@c01.com', '010-4444-4444', '0212345681', 'F',
- '2025-01-02 09:30:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', 'E000001',false);
+ '2025-01-02 09:30:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', 'E000001',false),
 
+('C01', 1, 5, 'E000005',
+    '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
+    '최부장', 'ceo@c01.com', '010-5555-5555', '0212345682', 'M',
+    '2020-01-02 09:00:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', NULL, false),
+
+-- 과장2 (중간 결재자)
+('C01', 1, 3, 'E000006',
+    '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
+    '정과장', 'manager@c01.com', '010-6666-6666', '0212345683', 'F',
+    '2021-03-15 09:00:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', NULL, false),
+
+-- 대리2 (결재자)
+('C01', 2, 2, 'E000007',
+    '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
+    '강대리', 'assistant@c01.com', '010-7777-7777', '0212345684', 'M',
+    '2022-06-01 09:00:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', NULL, false),
+
+-- 사원2 (문서 작성자)
+('C01', 1, 1, 'E000008',
+    '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
+    '윤사원', 'staff2@c01.com', '010-8888-8888', '0212345685', 'F',
+    '2023-09-01 09:00:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', NULL, false),
+
+-- 사원3 (문서 작성자)
+('C01', 3, 1, 'E000009',
+    '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
+    '장사원', 'staff3@c01.com', '010-9999-9999', '0212345686', 'M',
+    '2024-01-15 09:00:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'N', 'N', NULL, false),
+
+-- 휴가중인 차장 (대직자 테스트용)
+('C01', 1, 4, 'E000010',
+    '$2b$10$q/lg0kzYBgvalTaVFkToz.EBgcesFddLybxJ4jZc8UADuUTbMq4Iq',
+    '한차장', 'deputy@c01.com', '010-1010-1010', '0212345687', 'M',
+    '2019-05-01 09:00:00', NULL, '서울특별시 강남구', 'EMPLOYEE', 'V', 'N', 'E000006', false);
 
 -- ========================================================
 -- 3) department (dep_no 1~5 고정: employee.dep_no FK 충족)
 -- ========================================================
 INSERT INTO department (dep_no, dep_id, dep_name, com_id) VALUES
-                                                              (1, 'D01', '개발팀', 'C01'),
-                                                              (2, 'D02', '보안팀', 'C01'),
-                                                              (3, 'D03', '인사팀', 'C01'),
-                                                              (4, 'D04', '총무팀', 'C01'),
-                                                              (5, 'D05', '영업팀', 'C01');
+(1, 'D01', '개발팀', 'C01'),
+(2, 'D02', '보안팀', 'C01'),
+(3, 'D03', '인사팀', 'C01'),
+(4, 'D04', '총무팀', 'C01'),
+(5, 'D05', '영업팀', 'C01');
 
 -- ========================================================
 -- 4) positions (pos_no 1~5 고정: employee.pos_no FK 충족)
 -- ========================================================
-INSERT INTO positions (pos_no, pos_name, com_id) VALUES
-                                                     (1, '사원', 'C01'),
-                                                     (2, '대리', 'C01'),
-                                                     (3, '과장', 'C01'),
-                                                     (4, '차장', 'C01'),
-                                                     (5, '부장', 'C01');
+INSERT INTO positions (pos_no, pos_name, com_id, pos_order) VALUES
+(1, '사원', 'C01', 5),
+(2, '대리', 'C01', 4),
+(3, '과장', 'C01', 3),
+(4, '차장', 'C01', 2),
+(5, '부장', 'C01', 1);
 
 -- ========================================================
 -- 6) schedule (사용자 데이터 기반, FK 정합성 맞춘 버전)
 -- ========================================================
 INSERT INTO schedule (com_id, dep_no, title, content, start_at, ended_at, color, reg_emp) VALUES
-                                                                                              ('C01',1,'주간회의','주간업무 공유','2025-12-16 10:00:00','2025-12-16 11:00:00','#FFAA00','E000001'),
-                                                                                              ('C01',2,'스프린트 계획','백로그 점검','2025-12-17 14:00:00','2025-12-17 15:00:00','#00AAFF','E000002'),
-                                                                                              ('C01',3,'결산 준비','재무 자료 정리','2025-12-18 09:30:00','2025-12-18 10:30:00','#00CC66','E000003'),
-                                                                                              ('C01',4,'영업 미팅','고객사 미팅','2025-12-19 16:00:00','2025-12-19 17:00:00','#AA00FF','E000004'),
-                                                                                              ('C01',5,'운영 점검','장비 점검','2025-12-20 13:00:00','2025-12-20 14:00:00','#666666','E000001');
+('C01',1,'주간회의','주간업무 공유','2025-12-16 10:00:00','2025-12-16 11:00:00','#FFAA00','E000001'),
+('C01',2,'스프린트 계획','백로그 점검','2025-12-17 14:00:00','2025-12-17 15:00:00','#00AAFF','E000002'),
+('C01',3,'결산 준비','재무 자료 정리','2025-12-18 09:30:00','2025-12-18 10:30:00','#00CC66','E000003'),
+('C01',4,'영업 미팅','고객사 미팅','2025-12-19 16:00:00','2025-12-19 17:00:00','#AA00FF','E000004'),
+('C01',5,'운영 점검','장비 점검','2025-12-20 13:00:00','2025-12-20 14:00:00','#666666','E000001');
 
 -- ========================================================
 -- emp_schedule (5)
 -- ========================================================
 INSERT INTO emp_schedule (emp_id, title, content, start_at, ended_at, color) VALUES
-                                                                                 ('E000001','개인 일정 1','개인 업무 정리','2025-12-17 09:00:00','2025-12-17 09:30:00','#999999'),
-                                                                                 ('E000002','개인 일정 2','보안 리포트 작성','2025-12-17 12:10:00','2025-12-17 12:40:00','#999999'),
-                                                                                 ('E000003','개인 일정 3','인사 문서 검토','2025-12-17 16:10:00','2025-12-17 16:40:00','#999999'),
-                                                                                 ('E000004','개인 일정 4','API 구현','2025-12-18 10:00:00','2025-12-18 12:00:00','#999999'),
-                                                                                 ('E000001','개인 일정 5','회의 준비','2025-12-18 13:00:00','2025-12-18 14:00:00','#999999');
+('E000001','개인 일정 1','개인 업무 정리','2025-12-17 09:00:00','2025-12-17 09:30:00','#999999'),
+('E000002','개인 일정 2','보안 리포트 작성','2025-12-17 12:10:00','2025-12-17 12:40:00','#999999'),
+('E000003','개인 일정 3','인사 문서 검토','2025-12-17 16:10:00','2025-12-17 16:40:00','#999999'),
+('E000004','개인 일정 4','API 구현','2025-12-18 10:00:00','2025-12-18 12:00:00','#999999'),
+('E000001','개인 일정 5','회의 준비','2025-12-18 13:00:00','2025-12-18 14:00:00','#999999');
 
 -- ========================================================
 -- todo_list (5)
@@ -112,21 +146,99 @@ INSERT INTO todo_list (emp_id, title, is_done) VALUES
 -- document_form (5)
 -- ========================================================
 INSERT INTO document_form
-(docfo_no, com_id, writer_id, docfo_name, cntt_json, cntt_html, docfo_stat, reject_reason)
+(com_id, writer_id, docfo_name, cntt_json, cntt_html, docfo_stat, reject_reason)
 VALUES
-    (1,'C01','E000001','휴가 신청서', JSON_OBJECT('type','leave','fields',JSON_ARRAY('기간','사유')), '<h1>휴가 신청서</h1>', 'A', NULL),
-    (2,'C01','E000002','출장 신청서', JSON_OBJECT('type','trip','fields',JSON_ARRAY('목적','장소')), '<h1>출장 신청서</h1>', 'P', NULL),
-    (3,'C01','E000003','지출 결의서', JSON_OBJECT('type','expense','fields',JSON_ARRAY('금액','내역')), '<h1>지출 결의서</h1>', 'T', NULL),
-    (4,'C01','E000004','사내 공지 양식', JSON_OBJECT('type','notice','fields',JSON_ARRAY('제목','내용')), '<h1>공지</h1>', 'A', NULL),
-    (5,'C01','E000001','구매 요청서', JSON_OBJECT('type','purchase','fields',JSON_ARRAY('품목','수량')), '<h1>구매 요청서</h1>', 'R', '예산 부족');
+('C01', 'E000001', '기본 양식',
+     '{
+       "type": "doc",
+       "content": [
+         {
+           "type": "table",
+           "content": [
+             {
+               "type": "tableRow",
+               "attrs": { "height": 166 },
+               "content": [
+                 {
+                   "type": "tableCell",
+                   "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [240], "editable": false },
+                   "content": [
+                     {
+                       "type": "paragraph",
+                       "attrs": { "textAlign": null },
+                       "content": [
+                         { "text": "s", "type": "text", "marks": [{ "type": "textStyle", "attrs": { "fontSize": "16px" } }] },
+                         { "text": "adfasdf", "type": "text", "marks": [{ "type": "textStyle", "attrs": { "color": null, "fontSize": "12px", "fontFamily": null } }] }
+                       ]
+                     }
+                   ]
+                 },
+                 { "type": "tableCell", "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [71], "editable": true }, "content": [{ "type": "paragraph", "attrs": { "textAlign": null } }] },
+                 { "type": "tableCell", "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true }, "content": [{ "type": "paragraph", "attrs": { "textAlign": null } }] }
+               ]
+             },
+             {
+               "type": "tableRow",
+               "attrs": { "height": null },
+               "content": [
+                 {
+                   "type": "tableCell",
+                   "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [240], "editable": false },
+                   "content": [
+                     {
+                       "type": "paragraph",
+                       "attrs": { "textAlign": null },
+                       "content": [{ "text": "sadfasdf", "type": "text", "marks": [{ "type": "textStyle", "attrs": { "color": null, "fontSize": "24px", "fontFamily": null } }, { "type": "bold" }] }]
+                     }
+                   ]
+                 },
+                 { "type": "tableCell", "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [71], "editable": true }, "content": [{ "type": "paragraph", "attrs": { "textAlign": null } }] },
+                 { "type": "tableCell", "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true }, "content": [{ "type": "paragraph", "attrs": { "textAlign": null } }] }
+               ]
+             },
+             {
+               "type": "tableRow",
+               "attrs": { "height": null },
+               "content": [
+                 {
+                   "type": "tableCell",
+                   "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [240], "editable": false },
+                   "content": [{ "type": "paragraph", "attrs": { "textAlign": null }, "content": [{ "text": "sdfasd", "type": "text", "marks": [{ "type": "textStyle", "attrs": { "fontSize": "16px" } }] }] }]
+                 },
+                 { "type": "tableCell", "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [71], "editable": true }, "content": [{ "type": "paragraph", "attrs": { "textAlign": null } }] },
+                 { "type": "tableCell", "attrs": { "colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true }, "content": [{ "type": "paragraph", "attrs": { "textAlign": null } }] }
+               ]
+             }
+           ]
+         },
+         { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "​​safsadf:", "type": "text" }, { "type": "inputField", "attrs": { "value": "", "locked": false, "editable": true, "placeholder": "입력" } }] },
+         { "type": "paragraph", "attrs": { "textAlign": "center" }, "content": [{ "text": "sdfasf", "type": "text" }] },
+         { "type": "paragraph", "attrs": { "textAlign": "right" }, "content": [{ "text": "sfdasdfds", "type": "text" }] },
+         { "type": "bulletList", "content": [{ "type": "listItem", "content": [{ "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "1", "type": "text" }] }] }, { "type": "listItem", "content": [{ "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "2", "type": "text" }] }] }, { "type": "listItem", "content": [{ "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "3", "type": "text" }] }] }] },
+         { "type": "orderedList", "attrs": { "type": null, "start": 1 }, "content": [{ "type": "listItem", "content": [{ "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "1", "type": "text" }] }] }, { "type": "listItem", "content": [{ "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "2", "type": "text" }] }] }, { "type": "listItem", "content": [{ "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "text": "3", "type": "text" }] }] }] }
+       ]
+     }',
+     '', 'A', NULL),
+('C01','E000002','휴가 신청서', JSON_OBJECT('type','trip','fields',JSON_ARRAY('목적','장소')), '', 'A', NULL),
+('C01','E000003','출장 결의서', JSON_OBJECT('type','expense','fields',JSON_ARRAY('금액','내역')), '', 'A', NULL),
+('C01', 'E000004', '사직서',
+     '{"type": "doc", "content": [{"type": "paragraph", "attrs": {"textAlign": null}, "content": [{"text": "asdfsadf", "type": "text", "marks": [{"type": "textStyle", "attrs": {"color": null, "fontSize": "28px", "fontFamily": null}}]}]}, {"type": "paragraph", "attrs": {"textAlign": null}}, {"type": "table", "content": [{"type": "tableRow", "attrs": {"height": null}, "content": [{"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": false}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}, "content": [{"text": "sadf", "type": "text", "marks": [{"type": "textStyle", "attrs": {"fontSize": "16px"}}]}]}]}, {"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}}]}, {"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}}]}]}, {"type": "tableRow", "attrs": {"height": null}, "content": [{"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": false}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}, "content": [{"text": "asdf", "type": "text", "marks": [{"type": "textStyle", "attrs": {"fontSize": "16px"}}]}]}]}, {"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}}]}, {"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}}]}]}, {"type": "tableRow", "attrs": {"height": null}, "content": [{"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": false}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}, "content": [{"text": "asdf", "type": "text", "marks": [{"type": "textStyle", "attrs": {"fontSize": "16px"}}]}]}]}, {"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}}]}, {"type": "tableCell", "attrs": {"colspan": 1, "rowspan": 1, "colwidth": [240], "editable": true}, "content": [{"type": "paragraph", "attrs": {"textAlign": null}}]}]}]}, {"type": "paragraph", "attrs": {"textAlign": "left"}, "content": [{"text": "​​asas", "type": "text"}]}]}',
+     '<h1>사직서</h1>', 'A', NULL),
+('C01','E000001','자진퇴사 신청서', JSON_OBJECT('type','purchase','fields',JSON_ARRAY('품목','수량')), '<h1>자신퇴사 신청서</h1>', 'A', '예산 부족');
 
 -- document_form_category (5)
-INSERT INTO document_form_category (docfo_cat_no, com_id, name, docfo_no) VALUES
-                                                                              (1,'C01','인사',1),
-                                                                              (2,'C01','총무',2),
-                                                                              (3,'C01','재무',3),
-                                                                              (4,'C01','공지',4),
-                                                                              (5,'C01','구매',5);
+INSERT INTO document_form_category (com_id, name, docfo_no) VALUES
+('C01','기본 카테고리1',1),
+('C01','기본 카테고리2',1),
+('C01','기본 카테고리3',1),
+('C01','기본 카테고리4',1),
+('C01','기본 카테고리5',1),
+('C01','휴가신청',2),
+('C01','휴가취소신청',2),
+('C01','출장신청',3),
+('C01','출장취소신청',3),
+('C01','사직',4),
+('C01','자진퇴사',5);
 
 -- attach_box (5)
 INSERT INTO attach_box (attach_no, com_id, uploader, title, dscp, path, size) VALUES
@@ -137,33 +249,434 @@ INSERT INTO attach_box (attach_no, com_id, uploader, title, dscp, path, size) VA
                                                                                   (5,'C01','E000001','견적서','XLSX','/s3/attach/quote.xlsx', 307200);
 
 -- document (5)
-INSERT INTO document
-(doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, doc_stat)
-VALUES
-    (1,'C01','DOC25121600001',1,1,'휴가 신청(홍관리)', JSON_OBJECT('기간','2025-12-20~2025-12-22','사유','개인사유'), '<p>휴가 신청</p>', 'E000001', '휴가 3일 신청', FALSE, 'AW'),
-    (2,'C01','DOC25121700002',2,2,'출장 신청(김보안)', JSON_OBJECT('장소','부산','목적','점검'), '<p>출장 신청</p>', 'E000002', '부산 출장 점검', FALSE, 'AW'),
-    (3,'C01','DOC25121800003',3,3,'지출 결의(박삼차)', JSON_OBJECT('금액',100000,'내역','회의비'), '<p>지출 결의</p>', 'E000003', '회의비 10만원', FALSE, 'AW'),
-    (4,'C01','DOC25121900004',4,4,'공지(이사원)',     JSON_OBJECT('제목','점검 안내','내용','금요일 점검'), '<p>공지</p>', 'E000004', '점검 공지', FALSE, 'AW'),
-    (5,'C01','DOC25122000005',5,5,'구매 요청(홍관리)',   JSON_OBJECT('품목','모니터','수량',2), '<p>구매 요청</p>', 'E000001', '모니터 2대 구매', TRUE, 'AW');
+-- ========================================================
+-- 문서 & 결재라인 테스트 데이터 (5명 x 15개 = 75개 문서)
+-- ========================================================
+USE bizportal;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- approval_line (5)
-INSERT INTO approval_line (apprl_no, com_id, doc_no, emp_id, seq, appr_stat, ended_at) VALUES
-                                                                                           (1,'C01',1,'E000001',1,'A', NOW()),
-                                                                                           (2,'C01',1,'E000002',2,'A', NOW()),
-                                                                                           (3,'C01',1,'E000003',3,'A', NOW()),
-                                                                                           (4,'C01',1,'E000004',4,'A', NOW()),
-                                                                                           (5,'C01',2,'E000001',1,'I', NOW()),
-                                                                                           (6,'C01',2,'E000002',2,'W', NOW()),
-                                                                                           (7,'C01',2,'E000003',3,'W', NOW()),
-                                                                                           (8,'C01',2,'E000004',4,'W', NOW());
+-- ========================================================
+-- E000004 이사원 (사원) - 15개 문서
+-- 결재라인: 박삼차(대리) → 김보안(과장) → 홍관리(차장) → 최부장(부장)
+-- ========================================================
 
--- document_file (5)
-INSERT INTO document_file (docfi_no, com_id, doc_no, docfi_name, folder_path) VALUES
-                                                                                  (1,'C01',1,'leave_attach.pdf','/drive/C01/docs/leave'),
-                                                                                  (2,'C01',2,'trip_plan.pdf','/drive/C01/docs/trip'),
-                                                                                  (3,'C01',3,'expense_receipt.jpg','/drive/C01/docs/expense'),
-                                                                                  (4,'C01',4,'notice_img.png','/drive/C01/docs/notice'),
-                                                                                  (5,'C01',5,'purchase_quote.xlsx','/drive/C01/docs/purchase');
+-- 임시저장 (US) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (1, 'C01', NULL, 6, 2, '(임시) 신년 휴가 계획', '{"기간": "2026-01-02 ~ 2026-01-03", "사유": "", "일수": 2}', '', 'E000004', NULL, TRUE, NULL, '2025-12-24 10:00:00', '2025-12-24 10:00:00', 'US'),
+                                                                                                                                                                            (2, 'C01', NULL, 8, 3, '(임시) 제주 출장', '{"장소": "제주", "목적": "", "기간": ""}', '', 'E000004', NULL, TRUE, NULL, '2025-12-24 10:10:00', '2025-12-24 10:10:00', 'US'),
+                                                                                                                                                                            (3, 'C01', NULL, 1, 1, '(임시) 비품 구매', '{"품목": "키보드", "수량": 1}', '', 'E000004', NULL, TRUE, NULL, '2025-12-24 10:20:00', '2025-12-24 10:20:00', 'US');
+
+-- 임시저장 결재라인 (모두 W 상태)
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 1, 'E000003', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 1, 'E000002', 2, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 2, 'E000003', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 2, 'E000002', 2, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 3, 'E000003', 1, 'W', NULL, FALSE, NULL, FALSE);
+
+-- 결재중 (AW) 5개 - 다양한 진행 상태
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+-- 1번째 결재자 차례 (아무도 결재 안함) - 상신취소 가능
+(4, 'C01', NULL, 6, 2, '연차 휴가 신청 (1/10-1/12)', '{"기간": "2026-01-10 ~ 2026-01-12", "사유": "가족여행", "일수": 3}', '', 'E000004', '연차 3일 신청', FALSE, '2025-12-24 09:00:00', '2025-12-24 08:50:00', '2025-12-24 09:00:00', 'AW'),
+-- 1번째 결재자가 승인, 2번째 차례
+(5, 'C01', NULL, 8, 3, '서울 출장 신청', '{"장소": "서울 강남", "목적": "고객 미팅", "기간": "2026-01-15"}', '', 'E000004', '서울 출장 1일', FALSE, '2025-12-23 09:00:00', '2025-12-23 08:50:00', '2025-12-23 14:00:00', 'AW'),
+-- 2번째 결재자가 승인, 3번째 차례
+(6, 'C01', NULL, 6, 2, '오후 반차 신청', '{"기간": "2026-01-20 오후", "사유": "병원", "일수": 0.5}', '', 'E000004', '오후 반차', FALSE, '2025-12-22 09:00:00', '2025-12-22 08:50:00', '2025-12-23 10:00:00', 'AW'),
+-- 3번째 결재자가 승인, 4번째(마지막) 차례
+(7, 'C01', NULL, 1, 1, '모니터 구매 요청', '{"품목": "32인치 모니터", "수량": 1, "예상금액": 500000}', '', 'E000004', '모니터 구매 50만원', FALSE, '2025-12-21 09:00:00', '2025-12-21 08:50:00', '2025-12-23 16:00:00', 'AW'),
+-- 결재자 1명만 (승인하면 바로 최종승인)
+(8, 'C01', NULL, 1, 1, '문구류 구매 요청', '{"품목": "볼펜, 노트", "수량": 10, "예상금액": 30000}', '', 'E000004', '문구류 3만원', FALSE, '2025-12-24 11:00:00', '2025-12-24 10:50:00', '2025-12-24 11:00:00', 'AW');
+
+-- 결재중 결재라인
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+-- 문서 4: 1번째 차례
+('C01', 4, 'E000003', 1, 'I', NULL, FALSE, NULL, FALSE),
+('C01', 4, 'E000002', 2, 'W', NULL, FALSE, NULL, FALSE),
+('C01', 4, 'E000001', 3, 'W', NULL, FALSE, NULL, FALSE),
+('C01', 4, 'E000005', 4, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 5: 2번째 차례
+('C01', 5, 'E000003', 1, 'A', '2025-12-23 14:00:00', TRUE, NULL, FALSE),
+('C01', 5, 'E000002', 2, 'I', NULL, FALSE, NULL, FALSE),
+('C01', 5, 'E000001', 3, 'W', NULL, FALSE, NULL, FALSE),
+('C01', 5, 'E000005', 4, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 6: 3번째 차례
+('C01', 6, 'E000003', 1, 'A', '2025-12-22 14:00:00', TRUE, NULL, FALSE),
+('C01', 6, 'E000002', 2, 'A', '2025-12-23 10:00:00', TRUE, NULL, FALSE),
+('C01', 6, 'E000001', 3, 'I', NULL, FALSE, NULL, FALSE),
+('C01', 6, 'E000005', 4, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 7: 4번째(마지막) 차례
+('C01', 7, 'E000003', 1, 'A', '2025-12-21 14:00:00', TRUE, NULL, FALSE),
+('C01', 7, 'E000002', 2, 'A', '2025-12-22 10:00:00', TRUE, NULL, FALSE),
+('C01', 7, 'E000001', 3, 'A', '2025-12-23 10:00:00', TRUE, NULL, FALSE),
+('C01', 7, 'E000005', 4, 'I', NULL, FALSE, NULL, FALSE),
+-- 문서 8: 결재자 1명만
+('C01', 8, 'E000003', 1, 'I', NULL, FALSE, NULL, FALSE);
+
+-- 최종승인 (FI) 4개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (9, 'C01', 'C01D0120250001', 6, 2, '연차 휴가 (12/20-12/22)', '{"기간": "2025-12-20 ~ 2025-12-22", "사유": "가족 여행", "일수": 3}', '', 'E000004', '연차 3일', FALSE, '2025-12-10 09:00:00', '2025-12-10 08:50:00', '2025-12-12 16:30:00', 'FI'),
+                                                                                                                                                                            (10, 'C01', 'C01D0120250002', 8, 3, '부산 출장 완료', '{"장소": "부산", "목적": "고객 미팅", "기간": "2025-12-15~16"}', '', 'E000004', '부산 출장 2일', FALSE, '2025-12-05 09:00:00', '2025-12-05 08:50:00', '2025-12-08 14:00:00', 'FI'),
+                                                                                                                                                                            (11, 'C01', 'C01D0120250003', 6, 2, '오전 반차 (12/05)', '{"기간": "2025-12-05 오전", "사유": "병원", "일수": 0.5}', '', 'E000004', '오전 반차', FALSE, '2025-12-03 09:00:00', '2025-12-03 08:50:00', '2025-12-04 10:00:00', 'FI'),
+                                                                                                                                                                            (12, 'C01', 'C01D0120250004', 1, 1, '사무용품 구매 완료', '{"품목": "A4용지", "수량": 10, "예상금액": 50000}', '', 'E000004', '사무용품 5만원', FALSE, '2025-12-01 09:00:00', '2025-12-01 08:50:00', '2025-12-02 16:00:00', 'FI');
+
+-- 최종승인 결재라인 (모두 A)
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 9, 'E000003', 1, 'A', '2025-12-10 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 9, 'E000002', 2, 'A', '2025-12-11 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 9, 'E000001', 3, 'A', '2025-12-12 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 9, 'E000005', 4, 'A', '2025-12-12 16:30:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 10, 'E000003', 1, 'A', '2025-12-06 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 10, 'E000002', 2, 'A', '2025-12-07 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 10, 'E000005', 3, 'A', '2025-12-08 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 11, 'E000003', 1, 'A', '2025-12-03 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 11, 'E000002', 2, 'A', '2025-12-04 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 12, 'E000003', 1, 'A', '2025-12-01 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 12, 'E000002', 2, 'A', '2025-12-02 16:00:00', TRUE, NULL, FALSE);
+
+-- 반려 (RJ) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+-- 1번째 결재자가 반려
+(13, 'C01', NULL, 6, 2, '장기 휴가 신청 (반려)', '{"기간": "2026-01-01 ~ 2026-01-15", "사유": "해외여행", "일수": 15}', '', 'E000004', '장기휴가 15일', FALSE, '2025-12-15 09:00:00', '2025-12-15 08:50:00', '2025-12-15 14:00:00', 'RJ'),
+-- 2번째 결재자가 반려
+(14, 'C01', NULL, 8, 3, '해외 출장 신청 (반려)', '{"장소": "일본 도쿄", "목적": "전시회", "기간": "2026-02-01~05"}', '', 'E000004', '해외출장 5일', FALSE, '2025-12-14 09:00:00', '2025-12-14 08:50:00', '2025-12-16 10:00:00', 'RJ'),
+-- 3번째 결재자가 반려
+(15, 'C01', NULL, 1, 1, '고가 장비 구매 (반려)', '{"품목": "맥북 프로", "수량": 1, "예상금액": 4500000}', '', 'E000004', '맥북 450만원', FALSE, '2025-12-13 09:00:00', '2025-12-13 08:50:00', '2025-12-17 16:00:00', 'RJ');
+
+-- 반려 결재라인
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+-- 문서 13: 1번째가 반려
+('C01', 13, 'E000003', 1, 'R', '2025-12-15 14:00:00', TRUE, '15일 연속 휴가는 업무 공백이 큽니다.', FALSE),
+('C01', 13, 'E000002', 2, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 14: 2번째가 반려
+('C01', 14, 'E000003', 1, 'A', '2025-12-15 10:00:00', TRUE, NULL, FALSE),
+('C01', 14, 'E000002', 2, 'R', '2025-12-16 10:00:00', TRUE, '해외 출장 예산이 부족합니다.', FALSE),
+('C01', 14, 'E000001', 3, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 15: 3번째가 반려
+('C01', 15, 'E000003', 1, 'A', '2025-12-14 10:00:00', TRUE, NULL, FALSE),
+('C01', 15, 'E000002', 2, 'A', '2025-12-15 10:00:00', TRUE, NULL, FALSE),
+('C01', 15, 'E000001', 3, 'R', '2025-12-17 16:00:00', TRUE, '장비 구매 예산이 초과되었습니다.', FALSE),
+('C01', 15, 'E000005', 4, 'W', NULL, FALSE, NULL, FALSE);
+
+
+-- ========================================================
+-- E000003 박삼차 (대리) - 15개 문서
+-- 결재라인: 김보안(과장) → 홍관리(차장) → 최부장(부장)
+-- ========================================================
+
+-- 임시저장 (US) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (16, 'C01', NULL, 6, 2, '(임시) 설 연휴 휴가', '{"기간": "2026-01-27 ~ 2026-01-30", "사유": "귀향"}', '', 'E000003', NULL, TRUE, NULL, '2025-12-24 11:00:00', '2025-12-24 11:00:00', 'US'),
+                                                                                                                                                                            (17, 'C01', NULL, 8, 3, '(임시) 대구 출장', '{"장소": "대구", "목적": ""}', '', 'E000003', NULL, TRUE, NULL, '2025-12-24 11:10:00', '2025-12-24 11:10:00', 'US'),
+                                                                                                                                                                            (18, 'C01', NULL, 1, 1, '(임시) 의자 구매', '{"품목": "사무용 의자"}', '', 'E000003', NULL, TRUE, NULL, '2025-12-24 11:20:00', '2025-12-24 11:20:00', 'US');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 16, 'E000002', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 16, 'E000001', 2, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 17, 'E000002', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 18, 'E000002', 1, 'W', NULL, FALSE, NULL, FALSE);
+
+-- 결재중 (AW) 5개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (19, 'C01', NULL, 6, 2, '연차 휴가 (2/1-2/3)', '{"기간": "2026-02-01 ~ 2026-02-03", "사유": "개인사유", "일수": 3}', '', 'E000003', '연차 3일', FALSE, '2025-12-24 09:10:00', '2025-12-24 09:00:00', '2025-12-24 09:10:00', 'AW'),
+                                                                                                                                                                            (20, 'C01', NULL, 8, 3, '인천 출장 신청', '{"장소": "인천 송도", "목적": "파트너사 미팅"}', '', 'E000003', '인천 출장', FALSE, '2025-12-23 09:10:00', '2025-12-23 09:00:00', '2025-12-23 15:00:00', 'AW'),
+                                                                                                                                                                            (21, 'C01', NULL, 6, 2, '오전 반차 (2/10)', '{"기간": "2026-02-10 오전", "사유": "개인사유"}', '', 'E000003', '오전 반차', FALSE, '2025-12-22 09:10:00', '2025-12-22 09:00:00', '2025-12-23 11:00:00', 'AW'),
+                                                                                                                                                                            (22, 'C01', NULL, 1, 1, '노트북 거치대 구매', '{"품목": "노트북 거치대", "수량": 2, "예상금액": 80000}', '', 'E000003', '거치대 8만원', FALSE, '2025-12-21 09:10:00', '2025-12-21 09:00:00', '2025-12-23 17:00:00', 'AW'),
+                                                                                                                                                                            (23, 'C01', NULL, 1, 1, '마우스 구매', '{"품목": "무선 마우스", "수량": 1, "예상금액": 50000}', '', 'E000003', '마우스 5만원', FALSE, '2025-12-24 12:00:00', '2025-12-24 11:50:00', '2025-12-24 12:00:00', 'AW');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+-- 문서 19: 1번째 차례
+('C01', 19, 'E000002', 1, 'I', NULL, FALSE, NULL, FALSE),
+('C01', 19, 'E000001', 2, 'W', NULL, FALSE, NULL, FALSE),
+('C01', 19, 'E000005', 3, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 20: 2번째 차례
+('C01', 20, 'E000002', 1, 'A', '2025-12-23 15:00:00', TRUE, NULL, FALSE),
+('C01', 20, 'E000001', 2, 'I', NULL, FALSE, NULL, FALSE),
+('C01', 20, 'E000005', 3, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 21: 3번째(마지막) 차례
+('C01', 21, 'E000002', 1, 'A', '2025-12-22 15:00:00', TRUE, NULL, FALSE),
+('C01', 21, 'E000001', 2, 'A', '2025-12-23 11:00:00', TRUE, NULL, FALSE),
+('C01', 21, 'E000005', 3, 'I', NULL, FALSE, NULL, FALSE),
+-- 문서 22: 3번째(마지막) 차례
+('C01', 22, 'E000002', 1, 'A', '2025-12-21 15:00:00', TRUE, NULL, FALSE),
+('C01', 22, 'E000001', 2, 'A', '2025-12-22 15:00:00', TRUE, NULL, FALSE),
+('C01', 22, 'E000005', 3, 'I', NULL, FALSE, NULL, FALSE),
+-- 문서 23: 1명만
+('C01', 23, 'E000002', 1, 'I', NULL, FALSE, NULL, FALSE);
+
+-- 최종승인 (FI) 4개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (24, 'C01', 'C01D0220250001', 6, 2, '연차 휴가 (12/10-12/11)', '{"기간": "2025-12-10 ~ 2025-12-11", "사유": "개인사유", "일수": 2}', '', 'E000003', '연차 2일', FALSE, '2025-12-05 09:00:00', '2025-12-05 08:50:00', '2025-12-07 16:00:00', 'FI'),
+                                                                                                                                                                            (25, 'C01', 'C01D0220250002', 8, 3, '광주 출장 완료', '{"장소": "광주", "목적": "세미나 참석"}', '', 'E000003', '광주 출장', FALSE, '2025-12-01 09:00:00', '2025-12-01 08:50:00', '2025-12-03 14:00:00', 'FI'),
+                                                                                                                                                                            (26, 'C01', 'C01D0220250003', 6, 2, '경조사 휴가 (11/25)', '{"기간": "2025-11-25", "사유": "결혼식", "일수": 1}', '', 'E000003', '경조사 1일', FALSE, '2025-11-20 09:00:00', '2025-11-20 08:50:00', '2025-11-22 16:00:00', 'FI'),
+                                                                                                                                                                            (27, 'C01', 'C01D0220250004', 1, 1, '키보드 구매 완료', '{"품목": "기계식 키보드", "수량": 1, "예상금액": 150000}', '', 'E000003', '키보드 15만원', FALSE, '2025-11-15 09:00:00', '2025-11-15 08:50:00', '2025-11-17 10:00:00', 'FI');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 24, 'E000002', 1, 'A', '2025-12-05 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 24, 'E000001', 2, 'A', '2025-12-06 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 24, 'E000005', 3, 'A', '2025-12-07 16:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 25, 'E000002', 1, 'A', '2025-12-01 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 25, 'E000001', 2, 'A', '2025-12-02 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 25, 'E000005', 3, 'A', '2025-12-03 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 26, 'E000002', 1, 'A', '2025-11-20 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 26, 'E000001', 2, 'A', '2025-11-21 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 26, 'E000005', 3, 'A', '2025-11-22 16:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 27, 'E000002', 1, 'A', '2025-11-15 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 27, 'E000005', 2, 'A', '2025-11-17 10:00:00', TRUE, NULL, FALSE);
+
+-- 반려 (RJ) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (28, 'C01', NULL, 6, 2, '장기 휴가 (반려)', '{"기간": "2026-03-01 ~ 2026-03-10", "사유": "해외여행", "일수": 10}', '', 'E000003', '장기휴가 10일', FALSE, '2025-12-10 09:00:00', '2025-12-10 08:50:00', '2025-12-10 14:00:00', 'RJ'),
+                                                                                                                                                                            (29, 'C01', NULL, 8, 3, '유럽 출장 (반려)', '{"장소": "프랑스 파리", "목적": "박람회"}', '', 'E000003', '유럽 출장', FALSE, '2025-12-08 09:00:00', '2025-12-08 08:50:00', '2025-12-10 10:00:00', 'RJ'),
+                                                                                                                                                                            (30, 'C01', NULL, 1, 1, '고급 모니터 (반려)', '{"품목": "울트라와이드 모니터", "수량": 1, "예상금액": 2000000}', '', 'E000003', '모니터 200만원', FALSE, '2025-12-05 09:00:00', '2025-12-05 08:50:00', '2025-12-08 16:00:00', 'RJ');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 28, 'E000002', 1, 'R', '2025-12-10 14:00:00', TRUE, '10일 연속 휴가는 승인 어렵습니다.', FALSE),
+                                                                                                                          ('C01', 28, 'E000001', 2, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 29, 'E000002', 1, 'A', '2025-12-09 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 29, 'E000001', 2, 'R', '2025-12-10 10:00:00', TRUE, '해외 출장 예산 초과입니다.', FALSE),
+                                                                                                                          ('C01', 30, 'E000002', 1, 'A', '2025-12-06 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 30, 'E000001', 2, 'A', '2025-12-07 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 30, 'E000005', 3, 'R', '2025-12-08 16:00:00', TRUE, '장비 예산이 초과되었습니다.', FALSE);
+
+
+-- ========================================================
+-- E000002 김보안 (과장) - 15개 문서
+-- 결재라인: 홍관리(차장) → 최부장(부장)
+-- ========================================================
+
+-- 임시저장 (US) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (31, 'C01', NULL, 6, 2, '(임시) 추석 휴가', '{"기간": "2026-09-15 ~ 2026-09-18"}', '', 'E000002', NULL, TRUE, NULL, '2025-12-24 12:00:00', '2025-12-24 12:00:00', 'US'),
+                                                                                                                                                                            (32, 'C01', NULL, 8, 3, '(임시) 대전 출장', '{"장소": "대전"}', '', 'E000002', NULL, TRUE, NULL, '2025-12-24 12:10:00', '2025-12-24 12:10:00', 'US'),
+                                                                                                                                                                            (33, 'C01', NULL, 1, 1, '(임시) 보안장비', '{"품목": "보안 USB"}', '', 'E000002', NULL, TRUE, NULL, '2025-12-24 12:20:00', '2025-12-24 12:20:00', 'US');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 31, 'E000001', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 31, 'E000005', 2, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 32, 'E000001', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 33, 'E000001', 1, 'W', NULL, FALSE, NULL, FALSE);
+
+-- 결재중 (AW) 5개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (34, 'C01', NULL, 6, 2, '연차 휴가 (3/1-3/2)', '{"기간": "2026-03-01 ~ 2026-03-02", "일수": 2}', '', 'E000002', '연차 2일', FALSE, '2025-12-24 09:20:00', '2025-12-24 09:10:00', '2025-12-24 09:20:00', 'AW'),
+                                                                                                                                                                            (35, 'C01', NULL, 8, 3, '세종 출장 신청', '{"장소": "세종시", "목적": "정부기관 미팅"}', '', 'E000002', '세종 출장', FALSE, '2025-12-23 09:20:00', '2025-12-23 09:10:00', '2025-12-23 16:00:00', 'AW'),
+                                                                                                                                                                            (36, 'C01', NULL, 6, 2, '오후 반차 (3/5)', '{"기간": "2026-03-05 오후"}', '', 'E000002', '오후 반차', FALSE, '2025-12-22 09:20:00', '2025-12-22 09:10:00', '2025-12-23 12:00:00', 'AW'),
+                                                                                                                                                                            (37, 'C01', NULL, 1, 1, '보안 소프트웨어 구매', '{"품목": "백신 프로그램", "수량": 50, "예상금액": 2500000}', '', 'E000002', '백신 250만원', FALSE, '2025-12-21 09:20:00', '2025-12-21 09:10:00', '2025-12-23 18:00:00', 'AW'),
+                                                                                                                                                                            (38, 'C01', NULL, 1, 1, '보안 교육 자료', '{"품목": "교육 책자", "수량": 100, "예상금액": 200000}', '', 'E000002', '책자 20만원', FALSE, '2025-12-24 13:00:00', '2025-12-24 12:50:00', '2025-12-24 13:00:00', 'AW');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+-- 문서 34: 1번째 차례
+('C01', 34, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE),
+('C01', 34, 'E000005', 2, 'W', NULL, FALSE, NULL, FALSE),
+-- 문서 35: 2번째(마지막) 차례
+('C01', 35, 'E000001', 1, 'A', '2025-12-23 16:00:00', TRUE, NULL, FALSE),
+('C01', 35, 'E000005', 2, 'I', NULL, FALSE, NULL, FALSE),
+-- 문서 36: 2번째(마지막) 차례
+('C01', 36, 'E000001', 1, 'A', '2025-12-23 12:00:00', TRUE, NULL, FALSE),
+('C01', 36, 'E000005', 2, 'I', NULL, FALSE, NULL, FALSE),
+-- 문서 37: 2번째(마지막) 차례
+('C01', 37, 'E000001', 1, 'A', '2025-12-23 18:00:00', TRUE, NULL, FALSE),
+('C01', 37, 'E000005', 2, 'I', NULL, FALSE, NULL, FALSE),
+-- 문서 38: 1명만
+('C01', 38, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE);
+
+-- 최종승인 (FI) 4개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (39, 'C01', 'C01D0320250001', 6, 2, '연차 휴가 (11/20-11/21)', '{"기간": "2025-11-20 ~ 2025-11-21", "일수": 2}', '', 'E000002', '연차 2일', FALSE, '2025-11-15 09:00:00', '2025-11-15 08:50:00', '2025-11-18 16:00:00', 'FI'),
+                                                                                                                                                                            (40, 'C01', 'C01D0320250002', 8, 3, '수원 출장 완료', '{"장소": "수원", "목적": "협력사 미팅"}', '', 'E000002', '수원 출장', FALSE, '2025-11-10 09:00:00', '2025-11-10 08:50:00', '2025-11-12 14:00:00', 'FI'),
+                                                                                                                                                                            (41, 'C01', 'C01D0320250003', 6, 2, '오전 반차 (11/05)', '{"기간": "2025-11-05 오전"}', '', 'E000002', '오전 반차', FALSE, '2025-11-01 09:00:00', '2025-11-01 08:50:00', '2025-11-03 10:00:00', 'FI'),
+                                                                                                                                                                            (42, 'C01', 'C01D0320250004', 1, 1, '보안 장비 구매', '{"품목": "보안 카메라", "수량": 5, "예상금액": 1000000}', '', 'E000002', '카메라 100만원', FALSE, '2025-10-25 09:00:00', '2025-10-25 08:50:00', '2025-10-28 16:00:00', 'FI');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 39, 'E000001', 1, 'A', '2025-11-16 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 39, 'E000005', 2, 'A', '2025-11-18 16:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 40, 'E000001', 1, 'A', '2025-11-11 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 40, 'E000005', 2, 'A', '2025-11-12 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 41, 'E000001', 1, 'A', '2025-11-02 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 41, 'E000005', 2, 'A', '2025-11-03 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 42, 'E000001', 1, 'A', '2025-10-26 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 42, 'E000005', 2, 'A', '2025-10-28 16:00:00', TRUE, NULL, FALSE);
+
+-- 반려 (RJ) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (43, 'C01', NULL, 6, 2, '장기 휴가 (반려)', '{"기간": "2026-04-01 ~ 2026-04-14", "일수": 14}', '', 'E000002', '장기휴가 14일', FALSE, '2025-12-01 09:00:00', '2025-12-01 08:50:00', '2025-12-01 14:00:00', 'RJ'),
+                                                                                                                                                                            (44, 'C01', NULL, 8, 3, '미국 출장 (반려)', '{"장소": "미국 뉴욕", "목적": "컨퍼런스"}', '', 'E000002', '미국 출장', FALSE, '2025-11-25 09:00:00', '2025-11-25 08:50:00', '2025-11-27 10:00:00', 'RJ'),
+                                                                                                                                                                            (45, 'C01', NULL, 1, 1, '서버 구매 (반려)', '{"품목": "서버 장비", "수량": 1, "예상금액": 50000000}', '', 'E000002', '서버 5000만원', FALSE, '2025-11-20 09:00:00', '2025-11-20 08:50:00', '2025-11-22 16:00:00', 'RJ');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 43, 'E000001', 1, 'R', '2025-12-01 14:00:00', TRUE, '14일 휴가는 승인 불가합니다.', FALSE),
+                                                                                                                          ('C01', 43, 'E000005', 2, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 44, 'E000001', 1, 'A', '2025-11-26 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 44, 'E000005', 2, 'R', '2025-11-27 10:00:00', TRUE, '해외 출장 예산이 없습니다.', FALSE),
+                                                                                                                          ('C01', 45, 'E000001', 1, 'A', '2025-11-21 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 45, 'E000005', 2, 'R', '2025-11-22 16:00:00', TRUE, '고가 장비는 내년 예산으로 검토바랍니다.', FALSE);
+
+
+-- ========================================================
+-- E000001 홍관리 (차장) - 15개 문서
+-- 결재라인: 최부장(부장)
+-- ========================================================
+
+-- 임시저장 (US) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (46, 'C01', NULL, 6, 2, '(임시) 하계 휴가', '{"기간": "2026-07-20 ~ 2026-07-24"}', '', 'E000001', NULL, TRUE, NULL, '2025-12-24 13:00:00', '2025-12-24 13:00:00', 'US'),
+                                                                                                                                                                            (47, 'C01', NULL, 8, 3, '(임시) 울산 출장', '{"장소": "울산"}', '', 'E000001', NULL, TRUE, NULL, '2025-12-24 13:10:00', '2025-12-24 13:10:00', 'US'),
+                                                                                                                                                                            (48, 'C01', NULL, 1, 1, '(임시) 회의실 장비', '{"품목": "프로젝터"}', '', 'E000001', NULL, TRUE, NULL, '2025-12-24 13:20:00', '2025-12-24 13:20:00', 'US');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 46, 'E000005', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 47, 'E000005', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 48, 'E000005', 1, 'W', NULL, FALSE, NULL, FALSE);
+
+-- 결재중 (AW) 5개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (49, 'C01', NULL, 6, 2, '연차 휴가 (4/1-4/3)', '{"기간": "2026-04-01 ~ 2026-04-03", "일수": 3}', '', 'E000001', '연차 3일', FALSE, '2025-12-24 09:30:00', '2025-12-24 09:20:00', '2025-12-24 09:30:00', 'AW'),
+                                                                                                                                                                            (50, 'C01', NULL, 8, 3, '창원 출장 신청', '{"장소": "창원", "목적": "공장 점검"}', '', 'E000001', '창원 출장', FALSE, '2025-12-23 09:30:00', '2025-12-23 09:20:00', '2025-12-23 09:30:00', 'AW'),
+                                                                                                                                                                            (51, 'C01', NULL, 6, 2, '오전 반차 (4/10)', '{"기간": "2026-04-10 오전"}', '', 'E000001', '오전 반차', FALSE, '2025-12-22 09:30:00', '2025-12-22 09:20:00', '2025-12-22 09:30:00', 'AW'),
+                                                                                                                                                                            (52, 'C01', NULL, 1, 1, '회의 테이블 구매', '{"품목": "대형 테이블", "수량": 1, "예상금액": 3000000}', '', 'E000001', '테이블 300만원', FALSE, '2025-12-21 09:30:00', '2025-12-21 09:20:00', '2025-12-21 09:30:00', 'AW'),
+                                                                                                                                                                            (53, 'C01', NULL, 1, 1, '의자 구매', '{"품목": "회의용 의자", "수량": 10, "예상금액": 1000000}', '', 'E000001', '의자 100만원', FALSE, '2025-12-24 14:00:00', '2025-12-24 13:50:00', '2025-12-24 14:00:00', 'AW');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 49, 'E000005', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 50, 'E000005', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 51, 'E000005', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 52, 'E000005', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 53, 'E000005', 1, 'I', NULL, FALSE, NULL, FALSE);
+
+-- 최종승인 (FI) 4개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (54, 'C01', 'C01D0420250001', 6, 2, '연차 휴가 (10/15-10/17)', '{"기간": "2025-10-15 ~ 2025-10-17", "일수": 3}', '', 'E000001', '연차 3일', FALSE, '2025-10-10 09:00:00', '2025-10-10 08:50:00', '2025-10-12 16:00:00', 'FI'),
+                                                                                                                                                                            (55, 'C01', 'C01D0420250002', 8, 3, '대구 출장 완료', '{"장소": "대구", "목적": "지사 방문"}', '', 'E000001', '대구 출장', FALSE, '2025-10-05 09:00:00', '2025-10-05 08:50:00', '2025-10-07 14:00:00', 'FI'),
+                                                                                                                                                                            (56, 'C01', 'C01D0420250003', 6, 2, '오후 반차 (10/01)', '{"기간": "2025-10-01 오후"}', '', 'E000001', '오후 반차', FALSE, '2025-09-28 09:00:00', '2025-09-28 08:50:00', '2025-09-30 10:00:00', 'FI'),
+                                                                                                                                                                            (57, 'C01', 'C01D0420250004', 1, 1, '사무실 리모델링', '{"품목": "인테리어 공사", "예상금액": 10000000}', '', 'E000001', '리모델링 1000만원', FALSE, '2025-09-20 09:00:00', '2025-09-20 08:50:00', '2025-09-25 16:00:00', 'FI');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 54, 'E000005', 1, 'A', '2025-10-12 16:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 55, 'E000005', 1, 'A', '2025-10-07 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 56, 'E000005', 1, 'A', '2025-09-30 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 57, 'E000005', 1, 'A', '2025-09-25 16:00:00', TRUE, NULL, FALSE);
+
+-- 반려 (RJ) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (58, 'C01', NULL, 6, 2, '장기 휴가 (반려)', '{"기간": "2026-05-01 ~ 2026-05-20", "일수": 20}', '', 'E000001', '장기휴가 20일', FALSE, '2025-11-01 09:00:00', '2025-11-01 08:50:00', '2025-11-02 14:00:00', 'RJ'),
+                                                                                                                                                                            (59, 'C01', NULL, 8, 3, '해외 연수 (반려)', '{"장소": "독일", "목적": "기술 연수", "기간": "2026-06-01~14"}', '', 'E000001', '독일 연수 2주', FALSE, '2025-10-20 09:00:00', '2025-10-20 08:50:00', '2025-10-22 10:00:00', 'RJ'),
+                                                                                                                                                                            (60, 'C01', NULL, 1, 1, '차량 구매 (반려)', '{"품목": "법인 차량", "수량": 1, "예상금액": 80000000}', '', 'E000001', '법인차 8000만원', FALSE, '2025-10-15 09:00:00', '2025-10-15 08:50:00', '2025-10-17 16:00:00', 'RJ');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 58, 'E000005', 1, 'R', '2025-11-02 14:00:00', TRUE, '20일 휴가는 승인 불가합니다.', FALSE),
+                                                                                                                          ('C01', 59, 'E000005', 1, 'R', '2025-10-22 10:00:00', TRUE, '해외 연수 예산이 없습니다.', FALSE),
+                                                                                                                          ('C01', 60, 'E000005', 1, 'R', '2025-10-17 16:00:00', TRUE, '차량 구매는 내년도 예산으로 검토바랍니다.', FALSE);
+
+
+-- ========================================================
+-- E000005 최부장 (부장) - 15개 문서
+-- 결재라인: 없음 (CEO가 없어서 본인이 최종 결재권자이므로 결재라인 1명도 가능)
+-- 여기서는 홍관리(차장)를 형식적 결재자로 설정
+-- ========================================================
+
+-- 임시저장 (US) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (61, 'C01', NULL, 6, 2, '(임시) 연말 휴가', '{"기간": "2025-12-30 ~ 2025-12-31"}', '', 'E000005', NULL, TRUE, NULL, '2025-12-24 14:00:00', '2025-12-24 14:00:00', 'US'),
+                                                                                                                                                                            (62, 'C01', NULL, 8, 3, '(임시) 본사 출장', '{"장소": "본사"}', '', 'E000005', NULL, TRUE, NULL, '2025-12-24 14:10:00', '2025-12-24 14:10:00', 'US'),
+                                                                                                                                                                            (63, 'C01', NULL, 1, 1, '(임시) 경영진 회의 준비', '{"품목": "회의 물품"}', '', 'E000005', NULL, TRUE, NULL, '2025-12-24 14:20:00', '2025-12-24 14:20:00', 'US');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 61, 'E000001', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 62, 'E000001', 1, 'W', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 63, 'E000001', 1, 'W', NULL, FALSE, NULL, FALSE);
+
+-- 결재중 (AW) 5개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (64, 'C01', NULL, 6, 2, '연차 휴가 (5/1-5/3)', '{"기간": "2026-05-01 ~ 2026-05-03", "일수": 3}', '', 'E000005', '연차 3일', FALSE, '2025-12-24 09:40:00', '2025-12-24 09:30:00', '2025-12-24 09:40:00', 'AW'),
+                                                                                                                                                                            (65, 'C01', NULL, 8, 3, '제주 워크샵', '{"장소": "제주도", "목적": "경영진 워크샵"}', '', 'E000005', '제주 워크샵', FALSE, '2025-12-23 09:40:00', '2025-12-23 09:30:00', '2025-12-23 09:40:00', 'AW'),
+                                                                                                                                                                            (66, 'C01', NULL, 6, 2, '오전 반차 (5/10)', '{"기간": "2026-05-10 오전"}', '', 'E000005', '오전 반차', FALSE, '2025-12-22 09:40:00', '2025-12-22 09:30:00', '2025-12-22 09:40:00', 'AW'),
+                                                                                                                                                                            (67, 'C01', NULL, 1, 1, '임원 회의 비용', '{"품목": "회의 케이터링", "예상금액": 500000}', '', 'E000005', '케이터링 50만원', FALSE, '2025-12-21 09:40:00', '2025-12-21 09:30:00', '2025-12-21 09:40:00', 'AW'),
+                                                                                                                                                                            (68, 'C01', NULL, 1, 1, '경영 컨설팅 비용', '{"품목": "컨설팅", "예상금액": 20000000}', '', 'E000005', '컨설팅 2000만원', FALSE, '2025-12-24 15:00:00', '2025-12-24 14:50:00', '2025-12-24 15:00:00', 'AW');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 64, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 65, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 66, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 67, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE),
+                                                                                                                          ('C01', 68, 'E000001', 1, 'I', NULL, FALSE, NULL, FALSE);
+
+-- 최종승인 (FI) 4개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (69, 'C01', 'C01D0120250010', 6, 2, '연차 휴가 (9/1-9/3)', '{"기간": "2025-09-01 ~ 2025-09-03", "일수": 3}', '', 'E000005', '연차 3일', FALSE, '2025-08-25 09:00:00', '2025-08-25 08:50:00', '2025-08-27 16:00:00', 'FI'),
+                                                                                                                                                                            (70, 'C01', 'C01D0120250011', 8, 3, '싱가포르 출장', '{"장소": "싱가포르", "목적": "해외 파트너 미팅"}', '', 'E000005', '싱가포르 출장', FALSE, '2025-08-20 09:00:00', '2025-08-20 08:50:00', '2025-08-22 14:00:00', 'FI'),
+                                                                                                                                                                            (71, 'C01', 'C01D0120250012', 6, 2, '오후 반차 (8/15)', '{"기간": "2025-08-15 오후"}', '', 'E000005', '오후 반차', FALSE, '2025-08-10 09:00:00', '2025-08-10 08:50:00', '2025-08-12 10:00:00', 'FI'),
+                                                                                                                                                                            (72, 'C01', 'C01D0120250013', 1, 1, '전사 워크샵 비용', '{"품목": "워크샵 비용", "예상금액": 30000000}', '', 'E000005', '워크샵 3000만원', FALSE, '2025-08-01 09:00:00', '2025-08-01 08:50:00', '2025-08-05 16:00:00', 'FI');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 69, 'E000001', 1, 'A', '2025-08-27 16:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 70, 'E000001', 1, 'A', '2025-08-22 14:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 71, 'E000001', 1, 'A', '2025-08-12 10:00:00', TRUE, NULL, FALSE),
+                                                                                                                          ('C01', 72, 'E000001', 1, 'A', '2025-08-05 16:00:00', TRUE, NULL, FALSE);
+
+-- 반려 (RJ) 3개
+INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, ai_summ, temp, submitted_at, created_at, updated_at, doc_stat) VALUES
+                                                                                                                                                                            (73, 'C01', NULL, 6, 2, '장기 해외 휴가 (반려)', '{"기간": "2026-06-01 ~ 2026-06-30", "일수": 30}', '', 'E000005', '장기휴가 30일', FALSE, '2025-09-01 09:00:00', '2025-09-01 08:50:00', '2025-09-02 14:00:00', 'RJ'),
+                                                                                                                                                                            (74, 'C01', NULL, 8, 3, '해외 지사 설립 출장 (반려)', '{"장소": "베트남", "목적": "지사 설립", "기간": "2026-07-01~30"}', '', 'E000005', '베트남 1개월', FALSE, '2025-08-15 09:00:00', '2025-08-15 08:50:00', '2025-08-17 10:00:00', 'RJ'),
+                                                                                                                                                                            (75, 'C01', NULL, 1, 1, '전용기 구매 (반려)', '{"품목": "전용기", "수량": 1, "예상금액": 5000000000}', '', 'E000005', '전용기 50억', FALSE, '2025-08-10 09:00:00', '2025-08-10 08:50:00', '2025-08-12 16:00:00', 'RJ');
+
+INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, ended_at, is_actual_appr, rej_reason, is_delegate) VALUES
+                                                                                                                          ('C01', 73, 'E000001', 1, 'R', '2025-09-02 14:00:00', TRUE, '30일 휴가는 승인 불가합니다.', FALSE),
+                                                                                                                          ('C01', 74, 'E000001', 1, 'R', '2025-08-17 10:00:00', TRUE, '지사 설립은 이사회 결의가 필요합니다.', FALSE),
+                                                                                                                          ('C01', 75, 'E000001', 1, 'R', '2025-08-12 16:00:00', TRUE, '예산 범위를 초과합니다.', FALSE);
+
+
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ========================================================
+-- 데이터 확인 쿼리
+-- ========================================================
+SELECT '=== 사원별 문서 현황 ===' AS info;
+SELECT e.emp_name, e.emp_id,
+       SUM(CASE WHEN d.doc_stat = 'US' THEN 1 ELSE 0 END) as 임시저장,
+       SUM(CASE WHEN d.doc_stat = 'AW' THEN 1 ELSE 0 END) as 결재중,
+       SUM(CASE WHEN d.doc_stat = 'FI' THEN 1 ELSE 0 END) as 최종승인,
+       SUM(CASE WHEN d.doc_stat = 'RJ' THEN 1 ELSE 0 END) as 반려,
+       COUNT(*) as 총합
+FROM employee e
+         LEFT JOIN document d ON e.emp_id = d.emp_id
+WHERE e.emp_id IN ('E000001', 'E000002', 'E000003', 'E000004', 'E000005')
+GROUP BY e.emp_id, e.emp_name
+ORDER BY e.emp_id;
+
+SELECT '=== 결재라인 상태별 현황 ===' AS info;
+SELECT appr_stat, COUNT(*) as cnt FROM approval_line GROUP BY appr_stat;
+
+SELECT '=== 사원별 결재 대기 문서 (I 상태) ===' AS info;
+SELECT e.emp_name, e.emp_id, COUNT(al.apprl_no) as 결재대기
+FROM employee e
+         JOIN approval_line al ON e.emp_id = al.emp_id
+WHERE al.appr_stat = 'I'
+GROUP BY e.emp_id, e.emp_name
+ORDER BY e.emp_id;
+
+SELECT '=== 근태 데이터 현황 ===' AS info;
+SELECT e.emp_name, a.doc_id, a.type, a.day, a.created_at, a.ended_at
+FROM attendance a
+         JOIN employee e ON a.emp_id = e.emp_id
+ORDER BY a.emp_id, a.created_at;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ========================================================
+-- 데이터 확인 쿼리
+-- ========================================================
+SELECT '=== 문서 현황 ===' AS info;
+SELECT doc_stat, COUNT(*) as cnt FROM document GROUP BY doc_stat;
+
+SELECT '=== 결재라인 현황 ===' AS info;
+SELECT appr_stat, COUNT(*) as cnt FROM approval_line GROUP BY appr_stat;
+
+SELECT '=== 사원별 작성 문서 ===' AS info;
+SELECT e.emp_name, e.emp_id, COUNT(d.doc_no) as doc_cnt
+FROM employee e
+         LEFT JOIN document d ON e.emp_id = d.emp_id
+GROUP BY e.emp_id, e.emp_name
+ORDER BY doc_cnt DESC;
 
 -- prov_document (5)
 INSERT INTO prov_document
@@ -369,14 +882,30 @@ VALUES
     (4,'SYS',     0, TRUE,  4, '2025-12-04 10:00:00'),
     (5,'C01',  9900, TRUE,  1, '2025-12-05 10:00:00');
 
-INSERT INTO attendance
-(atte_no, com_id, emp_id, doc_id, type, day, delegate, created_at, ended_at)
-VALUES
-    (1,'C01','E000001','DOC25121600001','V',3,NULL,'2025-12-20 09:00:00','2025-12-22 18:00:00'),
-    (2,'C01','E000002','DOC25121700002','B',1,'E000001','2025-12-17 09:00:00','2025-12-17 18:00:00'),
-    (3,'C01','E000003','DOC25121800003','O',1,NULL,'2025-12-18 09:00:00','2025-12-18 18:00:00'),
-    (4,'C01','E000004','DOC25121900004','V',1,NULL,'2025-12-19 09:00:00','2025-12-19 18:00:00'),
-    (5,'C01','E000001','DOC25122000005','B',2,'E000002','2025-12-20 09:00:00','2025-12-21 18:00:00');
+-- ========================================================
+-- attendance (근태) 데이터 - 최종승인된 휴가/출장 문서 기반
+-- ========================================================
+INSERT INTO attendance (com_id, emp_id, doc_id, type, day, delegate, created_at, ended_at) VALUES
+-- E000004 이사원
+('C01', 'E000004', 'C01D0120250001', 'V', 3, NULL, '2025-12-20 09:00:00', '2025-12-22 18:00:00'),
+('C01', 'E000004', 'C01D0120250002', 'B', 2, NULL, '2025-12-15 09:00:00', '2025-12-16 18:00:00'),
+('C01', 'E000004', 'C01D0120250003', 'V', 1, NULL, '2025-12-05 09:00:00', '2025-12-05 13:00:00'),
+-- E000003 박삼차
+('C01', 'E000003', 'C01D0220250001', 'V', 2, NULL, '2025-12-10 09:00:00', '2025-12-11 18:00:00'),
+('C01', 'E000003', 'C01D0220250002', 'B', 1, NULL, '2025-12-01 09:00:00', '2025-12-01 18:00:00'),
+('C01', 'E000003', 'C01D0220250003', 'V', 1, NULL, '2025-11-25 09:00:00', '2025-11-25 18:00:00'),
+-- E000002 김보안
+('C01', 'E000002', 'C01D0320250001', 'V', 2, NULL, '2025-11-20 09:00:00', '2025-11-21 18:00:00'),
+('C01', 'E000002', 'C01D0320250002', 'B', 1, NULL, '2025-11-10 09:00:00', '2025-11-10 18:00:00'),
+('C01', 'E000002', 'C01D0320250003', 'V', 1, NULL, '2025-11-05 09:00:00', '2025-11-05 13:00:00'),
+-- E000001 홍관리
+('C01', 'E000001', 'C01D0420250001', 'V', 3, NULL, '2025-10-15 09:00:00', '2025-10-17 18:00:00'),
+('C01', 'E000001', 'C01D0420250002', 'B', 1, NULL, '2025-10-05 09:00:00', '2025-10-05 18:00:00'),
+('C01', 'E000001', 'C01D0420250003', 'V', 1, NULL, '2025-10-01 13:00:00', '2025-10-01 18:00:00'),
+-- E000005 최부장
+('C01', 'E000005', 'C01D0120250010', 'V', 3, NULL, '2025-09-01 09:00:00', '2025-09-03 18:00:00'),
+('C01', 'E000005', 'C01D0120250011', 'B', 3, NULL, '2025-08-20 09:00:00', '2025-08-22 18:00:00'),
+('C01', 'E000005', 'C01D0120250012', 'V', 1, NULL, '2025-08-15 13:00:00', '2025-08-15 18:00:00');
 
 -- ========================================================
 -- mail (각 5)
@@ -405,3 +934,129 @@ INSERT INTO mail_attach (mail_attach_no, mail_id, path, size) VALUES
                                                                   (5,'MAIL_E000001_251217_005','/mail/attach/a5.jpg', 98765);
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+USE bizportal;
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE attendance;
+TRUNCATE TABLE approval_line;
+TRUNCATE TABLE document;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 2) 프로시저 생성
+-- 2) 보완된 프로시저 생성
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS PopulateDocumentTestData;
+CREATE PROCEDURE PopulateDocumentTestData()
+BEGIN
+    DECLARE v_writer_id VARCHAR(7);
+    DECLARE v_doc_no BIGINT DEFAULT 1;
+    DECLARE v_writer_idx INT DEFAULT 1;
+    DECLARE v_doc_idx INT DEFAULT 1;
+    DECLARE v_stat VARCHAR(2);
+    DECLARE v_temp BOOLEAN;
+    DECLARE v_form_no INT;
+    DECLARE v_cat_no INT;
+    DECLARE v_appr_count INT;
+    DECLARE v_appr_step INT;
+    DECLARE v_appr_stat CHAR(1);
+    DECLARE v_doc_id_val VARCHAR(14);
+    DECLARE v_appr_emp_id VARCHAR(7);
+    DECLARE v_submit_time DATETIME;
+
+    -- 작성자 루프: 4(이사원), 8(윤사원), 9(장사원)
+    WHILE v_writer_idx <= 3 DO
+            SET v_writer_id = CASE v_writer_idx WHEN 1 THEN 'E000004' WHEN 2 THEN 'E000008' ELSE 'E000009' END;
+            SET v_doc_idx = 1;
+
+            WHILE v_doc_idx <= 50 DO
+                    -- 문서 상태 설정
+                    IF v_doc_idx <= 10 THEN SET v_stat = 'US', v_temp = TRUE;
+                    ELSEIF v_doc_idx <= 25 THEN SET v_stat = 'AW', v_temp = FALSE;
+                    ELSEIF v_doc_idx <= 40 THEN SET v_stat = 'FI', v_temp = FALSE;
+                    ELSE SET v_stat = 'RJ', v_temp = FALSE;
+                    END IF;
+
+                    SET v_form_no = (v_doc_idx % 4) + 1;
+                    SET v_cat_no = CASE v_form_no WHEN 1 THEN 1 WHEN 2 THEN 6 WHEN 3 THEN 8 ELSE 10 END;
+                    SET v_submit_time = DATE_SUB(NOW(), INTERVAL (200 - v_doc_no) HOUR);
+
+                    IF v_stat = 'FI' THEN
+                        SET v_doc_id_val = CONCAT('DOC', DATE_FORMAT(v_submit_time, '%y%m%d'), LPAD(v_doc_no, 5, '0'));
+                    ELSE
+                        SET v_doc_id_val = NULL;
+                    END IF;
+
+                    INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, temp, submitted_at, created_at, doc_stat)
+                    VALUES (v_doc_no, 'C01', v_doc_id_val, v_cat_no, v_form_no,
+                            CONCAT(v_writer_id, '의 문서 ', v_doc_idx, ' (', v_stat, ')'),
+                            '{"data": "Test Content"}', '<p>내용</p>', v_writer_id, v_temp,
+                            IF(v_temp, NULL, v_submit_time), DATE_SUB(v_submit_time, INTERVAL 10 MINUTE), v_stat);
+
+                    SET v_appr_count = 3;
+                    SET v_appr_step = 1;
+
+                    WHILE v_appr_step <= v_appr_count DO
+                        -- [수정 포인트 1] 결재자 배치 로직을 케이스별로 분리
+                        -- 16~20번 문서(Waiting 테스트용)에서는 이사원을 2번 결재자로 강제 배치
+                            IF v_writer_id != 'E000004' AND v_doc_idx BETWEEN 16 AND 20 THEN
+                                SET v_appr_emp_id = CASE v_appr_step
+                                                        WHEN 1 THEN 'E000008' -- 1번 결재자 (윤사원)
+                                                        WHEN 2 THEN 'E000004' -- 2번 결재자 (이사원 -> 여기서 W 상태가 됨)
+                                                        ELSE 'E000001'
+                                    END;
+                                -- 작성자 본인이 결재선에 들어가는 것 방지
+                                IF v_appr_emp_id = v_writer_id THEN SET v_appr_emp_id = 'E000009'; END IF;
+                            ELSE
+                                -- 일반적인 경우 (기존 로직 유지)
+                                SET v_appr_emp_id = CASE v_appr_step
+                                                        WHEN 1 THEN IF(v_writer_id='E000004', 'E000008', 'E000004')
+                                                        WHEN 2 THEN IF(v_writer_id='E000008', 'E000009', 'E000008')
+                                                        ELSE 'E000001'
+                                    END;
+                            END IF;
+
+                            -- 결재 상태 결정 (이사원 E000004를 위한 정밀 세팅)
+                            IF v_stat = 'US' THEN SET v_appr_stat = 'W';
+                            ELSEIF v_stat = 'FI' THEN SET v_appr_stat = 'A';
+                            ELSEIF v_stat = 'RJ' THEN
+                                IF v_appr_emp_id = 'E000004' AND (v_doc_idx % 2 = 0) THEN SET v_appr_stat = 'R';
+                                ELSEIF v_appr_step = 1 THEN SET v_appr_stat = 'A';
+                                ELSEIF v_appr_step = 2 THEN SET v_appr_stat = 'R';
+                                ELSE SET v_appr_stat = 'W'; END IF;
+
+                            ELSEIF v_stat = 'AW' THEN
+                                -- [수정 포인트 2] Waiting 상태 생성 로직
+                                IF v_appr_emp_id = 'E000004' AND v_doc_idx BETWEEN 16 AND 20 THEN
+                                    SET v_appr_stat = 'W'; -- 이사원은 2번이므로 무조건 대기중(W)
+                                ELSEIF v_appr_emp_id = 'E000004' AND v_doc_idx BETWEEN 11 AND 15 THEN
+                                    SET v_appr_stat = 'I'; -- 이사원이 바로 결재할 차례(I)
+                                ELSEIF v_appr_emp_id = 'E000004' AND v_doc_idx BETWEEN 21 AND 25 THEN
+                                    SET v_appr_stat = 'A'; -- 이사원이 이미 승인함(A)
+                                ELSE
+                                    -- 기본 흐름 (1번 결재자가 'I'인 상태 유지)
+                                    IF v_appr_step = 1 THEN SET v_appr_stat = 'I';
+                                    ELSE SET v_appr_stat = 'W'; END IF;
+                                END IF;
+                            END IF;
+
+                            INSERT INTO approval_line (com_id, doc_no, emp_id, seq, appr_stat, is_actual_appr, is_delegate, rej_reason, ended_at)
+                            VALUES ('C01', v_doc_no, v_appr_emp_id, v_appr_step, v_appr_stat,
+                                    IF(v_appr_stat IN ('A', 'R'), 1, 0),
+                                    FALSE,
+                                    IF(v_appr_stat = 'R', '데이터 불충분', NULL),
+                                    IF(v_appr_stat IN ('A', 'R'), DATE_ADD(v_submit_time, INTERVAL (v_appr_step * 30) MINUTE), NULL));
+
+                            SET v_appr_step = v_appr_step + 1;
+                        END WHILE;
+
+                    SET v_doc_no = v_doc_no + 1;
+                    SET v_doc_idx = v_doc_idx + 1;
+                END WHILE;
+            SET v_writer_idx = v_writer_idx + 1;
+        END WHILE;
+END $$
+DELIMITER ;
+
+CALL PopulateDocumentTestData();

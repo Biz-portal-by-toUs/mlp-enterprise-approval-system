@@ -25,6 +25,21 @@ import java.util.Optional;
 
 public interface DocumentRepository extends JpaRepository<Document, Long> {
 
+    // 내 회사의 문서 중 내가 임시저장한 문서 조회
+    @EntityGraph(attributePaths = {"writer", "writer.department", "documentForm", "documentFormCategory"})
+    @Query("SELECT d FROM Document d " +
+            "WHERE d.company.comId = :comId " +
+            "AND d.writer.empId = :myEmpId " + // 기안자가 본인인 문서
+            "AND d.temp = true " +            // 임시저장만
+            "AND d.docStat = :docStat " +
+            "ORDER BY d.updatedAt DESC")    // 문서 상태 필터링
+    Page<Document> searchMyUnSubmittedDocuments(@Param("comId") String comId,
+                                                @Param("myEmpId") String myEmpId,
+                                                @Param("docStat") DocStat docStatFilter1,
+                                                Pageable pageable);
+
+//======================================================================================================================
+
     // 내 회사의 문서 중 내가 상신한 문서 조회
     @EntityGraph(attributePaths = {"writer", "writer.department", "documentForm", "documentFormCategory"})
     @Query("SELECT d FROM Document d " +
@@ -172,6 +187,18 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 //======================================================================================================================
 
     // 문서코드로 문서 상세조회
+
+    // 임시저장한 문서 검증: 작성자가 나이고 문서상태가 US(상신전)인 경우
+    @Query("""
+        SELECT d FROM Document d 
+        WHERE d.company.comId = :comId 
+          AND d.docNo = :docNo 
+          AND d.writer.empId = :myEmpId 
+          AND d.docStat = 'US'
+    """)
+    Optional<Document> findUnSubmittedDoc(@Param("comId") String comId, @Param("docNo") Long docNo, @Param("myEmpId") String myEmpId);
+
+
     // 상신한 문서 검증: 작성자가 나(myEmpId)이고 문서 상태가 AW(결재중), FI(최종승인), RJ(반려)인 경우
     @Query("""
         SELECT d FROM Document d 
@@ -230,6 +257,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d.docId FROM Document d WHERE d.docId LIKE :prefix% ORDER BY d.docId DESC LIMIT 1")
     String findLastDocIdByPrefixWithLock(@Param("prefix") String prefix);
+
 
 //======================================================================================================================
 

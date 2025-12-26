@@ -43,4 +43,15 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Attachment a where a.attachmentId = :id")
     Optional<Attachment> findByIdForUpdate(@Param("id") Long id);
+
+
+    List<Attachment> findByComIdAndDomainAndEntityIdAndStatusOrderByDisplayOrderAsc(
+            String comId, AttachmentDomain domain, Long entityId, AttachmentStatus status
+    );
+
+    Optional<Attachment> findByAttachmentIdAndComIdAndStatus(
+            Long attachmentId, String comId, AttachmentStatus status
+    );
+
+
 }

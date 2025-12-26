@@ -2,8 +2,11 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository
 
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoomReservation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -21,4 +24,15 @@ import java.util.List;
 public interface MeetingRoomReservationRepository extends JpaRepository<MeetingRoomReservation, Long> {
 
     List<MeetingRoomReservation> findByCompany_ComIdAndIsDeletedFalse(String comId);
+
+    @Query(""" 
+            select count(r) > 0
+            from MeetingRoomReservation r
+            where r.meetingRoom.roomNo = :roomNo
+            and r.startedAt < :endedAt
+            and r.endedAt > :startedAt
+            """)
+    boolean existsOverlapping(@Param("roomNo") Long roomNo,
+                              @Param("startedAt") LocalDateTime startedAt,
+                              @Param("endedAt") LocalDateTime endedAt);
 }

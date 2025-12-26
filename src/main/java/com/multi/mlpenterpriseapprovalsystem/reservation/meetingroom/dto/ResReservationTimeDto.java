@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * @filename : ReservationTimeDto
  * @since : 2025-12-22 오후 2:59 월요일
  */
-public class ReservationTimeDto {
+public class ResReservationTimeDto {
 
     private Long resvNo;
     private Long roomNo;

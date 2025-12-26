@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -45,5 +46,28 @@ public class MeetingRoomReservation {
 
     private String purp;
 
-    private Boolean isDeleted;
+    private boolean isDeleted;
+
+    @Builder
+    public MeetingRoomReservation(
+            Company company,
+            MeetingRoom meetingRoom,
+            Employee resvEmp,
+            LocalDateTime startedAt,
+            LocalDateTime endedAt,
+            String purp
+    ) {
+        this.company = company;
+        this.meetingRoom = meetingRoom;
+        this.resvEmp = resvEmp;
+        this.startedAt = startedAt;
+        this.endedAt = endedAt;
+        this.purp = purp;
+        this.isDeleted = false;
+    }
+
+    // 도메인 행위
+    public void delete() {
+        this.isDeleted = true;
+    }
 }

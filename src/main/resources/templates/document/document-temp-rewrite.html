@@ -2,7 +2,7 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>반려 문서 재작성 - 기업용 전자결재시스템</title>
+    <title>임시저장 문서 수정 - 기업용 전자결재시스템</title>
     <style>
         :root {
             --primary-color: #339af0;
@@ -34,11 +34,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #fa5252;
+            border-bottom: 2px solid var(--primary-color);
             padding-bottom: 15px;
             margin-bottom: 25px;
         }
-        .page-title { font-size: 24px; font-weight: 700; color: #fa5252; }
+        .page-title { font-size: 24px; font-weight: 700; color: var(--primary-color); }
 
         .header-btns { display: flex; gap: 8px; }
 
@@ -66,104 +66,31 @@
             align-items: start;
         }
 
-        .doc-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .doc-table th {
-            background: var(--bg-light);
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            width: 100px;
-            text-align: center;
-        }
-        .doc-table td {
-            border: 1px solid var(--border-color);
-            padding: 10px;
-        }
+        .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .doc-table th { background: var(--bg-light); border: 1px solid var(--border-color); padding: 10px; width: 100px; text-align: center; }
+        .doc-table td { border: 1px solid var(--border-color); padding: 10px; }
         .readonly-input { border: none; width: 100%; background: transparent; outline: none; color: #495057; font-weight: 500; }
 
-        /* 결재자 검색 영역 */
-        .search-container {
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            height: 220px;
-            position: relative;
-        }
+        /* 결재자 검색 및 리스트 */
+        .search-container { border: 1px solid var(--border-color); border-radius: 4px; display: flex; flex-direction: column; height: 220px; position: relative; }
         .search-header { padding: 10px; background: var(--bg-light); border-bottom: 1px solid var(--border-color); font-weight: bold; }
         .search-input-wrap { padding: 8px; border-bottom: 1px solid #eee; }
         #approver-search { width: calc(100% - 16px); padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; font-size: 13px; }
-        .search-results {
-            flex: 1;
-            overflow-y: auto;
-            max-height: 140px;
-        }
-        .result-item {
-            padding: 10px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            border-bottom: 1px solid #f8f9fa;
-            font-size: 13px;
-        }
+        .search-results { flex: 1; overflow-y: auto; max-height: 140px; }
+        .result-item { padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f8f9fa; font-size: 13px; }
         .result-item:hover { background: #e7f5ff; }
 
-        /* 선택된 결재자 태그 */
-        .selected-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 12px;
-            min-height: 45px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            margin-bottom: 20px;
-            background: var(--bg-light);
-        }
-        .approver-tag {
-            background: white;
-            border: 1px solid var(--primary-color);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .approver-tag .seq-badge {
-            background: var(--primary-color);
-            color: white;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 11px;
-        }
-        .approver-tag .info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
+        .selected-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; min-height: 45px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 20px; background: var(--bg-light); }
+        .approver-tag { background: white; border: 1px solid var(--primary-color); padding: 8px 12px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
+        .approver-tag .seq-badge { background: var(--primary-color); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
+        .approver-tag .info { display: flex; flex-direction: column; gap: 2px; }
         .approver-tag .info .name-pos { font-weight: 600; color: var(--text-dark); }
         .approver-tag .info .dept-id { font-size: 11px; color: var(--text-muted); }
         .approver-tag .remove-btn { cursor: pointer; color: #fa5252; font-weight: bold; font-size: 16px; margin-left: 4px; }
 
-        /* 문서 본문 정보 테이블 */
+        /* 정보 테이블 및 본문 */
         .content-info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .content-info-table th {
-            background: var(--bg-light);
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            width: 120px;
-            text-align: center;
-        }
+        .content-info-table th { background: var(--bg-light); border: 1px solid var(--border-color); padding: 12px; width: 120px; text-align: center; }
         .content-info-table td { border: 1px solid var(--border-color); padding: 10px 15px; }
         .input-title-cell { width: 100%; border: none; outline: none; font-size: 15px; }
 
@@ -171,34 +98,10 @@
         .cat-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px; }
         .cat-item input[type="radio"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary-color); }
 
-        /* 본문 입력 */
-        .input-content {
-            width: 100%;
-            min-height: 350px;
-            padding: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-            resize: vertical;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
+        .input-content { width: 100%; min-height: 350px; padding: 15px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; resize: vertical; font-size: 14px; line-height: 1.6; }
         .bottom-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
-        /* 토스트 알림 */
-        .alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 4px;
-            color: white;
-            z-index: 2000;
-            display: none;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
+        .alert { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 4px; color: white; z-index: 2000; display: none; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .alert-success { background: #40c057; }
         .alert-error { background: #fa5252; }
     </style>
@@ -207,7 +110,7 @@
 
 <div class="main-container">
     <div class="page-header">
-        <div class="page-title">반려 문서 재작성</div>
+        <div class="page-title">임시저장 문서 수정</div>
         <div class="header-btns">
             <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
         </div>
@@ -257,7 +160,7 @@
     <div class="content-section">
         <textarea id="doc-content" class="input-content" placeholder="내용을 수정하세요."></textarea>
         <div class="bottom-actions">
-            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서 재상신</button>
+            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서상신</button>
             <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
         </div>
     </div>
@@ -274,81 +177,62 @@
     const currentDocfoNo = 1;
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // URL 파싱 (/documents/{docNo}/rewrite)
+        // URL에서 docNo 파싱 (/documents/{docNo})
         const pathParts = window.location.pathname.split('/');
-        originalDocNo = pathParts[pathParts.length - 2];
+        originalDocNo = pathParts[2];
 
         document.getElementById('write-date').value = new Date().toLocaleDateString();
 
-        // 1. 기초 정보 로드
         await fetchMyEmployeeInfo();
         await fetchFormDetails();
-
-        // 2. 기존 데이터 로드 (사원 정보 연쇄 조회 포함)
         await loadOriginalDocumentData();
-
-        // 3. 검색 이벤트 초기화
         initApproverSearch();
     });
 
     /**
-     * ✅ 기존 문서 데이터를 가져오고, 결재자들의 상세 정보를 사원 검색 API(keyword)로 다시 조회
+     * ✅ 기존 임시저장 데이터를 로드하고 결재자 상세 정보 보완
      */
     async function loadOriginalDocumentData() {
         const token = localStorage.getItem('accessToken');
         try {
-            const response = await fetch(`/api/v1/documents/${originalDocNo}?status=SUBMITTED`, {
+            const response = await fetch(`/api/v1/documents/${originalDocNo}?status=UNSUBMITTED`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await response.json();
 
             if (response.ok && result.data) {
                 const doc = result.data;
-
-                // 텍스트 정보 채우기
                 document.getElementById('doc-title').value = doc.title || "";
                 document.getElementById('doc-content').value = doc.content || "";
                 originalHtmlTemplate = doc.cnttHtml || "";
 
-                // 카테고리 체크
                 if (doc.docfoCatNo) {
                     const radio = document.querySelector(`input[name="docfoCatNo"][value="${doc.docfoCatNo}"]`);
                     if (radio) radio.checked = true;
                 }
 
-                // 결재자 정보 보완 (사번을 키워드로 하여 사원 검색 API 연쇄 호출)
                 if (doc.resApprovalLineDtos && doc.resApprovalLineDtos.length > 0) {
                     const sortedLines = doc.resApprovalLineDtos.sort((a, b) => a.seq - b.seq);
-
-                    // 각 결재자별 상세 정보 fetch (비동기 병렬 처리)
                     const detailPromises = sortedLines.map(line => fetchEmployeeDetailByKeyword(line.approverId));
                     const employeeDetails = await Promise.all(detailPromises);
-
-                    // 성공적으로 가져온 데이터만 selectedApprovers에 할당
                     selectedApprovers = employeeDetails.filter(emp => emp !== null);
                     renderSelectedTags();
                 }
             }
         } catch (e) {
-            console.error("원본 데이터 로드 실패:", e);
+            console.error("데이터 로드 실패:", e);
             showAlert("데이터 로드 중 오류가 발생했습니다.", "error");
         }
     }
 
-    /**
-     * ✅ 사번을 키워드로 사원 검색 API 호출하여 부서, 직급 정보를 완벽하게 가져옴
-     */
     async function fetchEmployeeDetailByKeyword(empId) {
         const token = localStorage.getItem('accessToken');
         try {
-            // 사원 검색 API 활용
             const response = await fetch(`/api/v1/employees?keyword=${empId}&excludeMe=false`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await response.json();
-
             if (response.ok && result.data?.items && result.data.items.length > 0) {
-                // 검색 결과 중 사번이 일치하는 사원 반환
                 const emp = result.data.items.find(item => item.empId === empId);
                 if (emp) {
                     return {
@@ -360,13 +244,62 @@
                 }
             }
             return null;
-        } catch (e) {
-            console.error(`사원(${empId}) 정보 조회 중 오류:`, e);
-            return null;
-        }
+        } catch (e) { return null; }
     }
 
-    // --- 이하 기능은 작성(write.html) 화면과 동일하게 유지 ---
+    /**
+     * ✅ 문서 저장 및 목록 이동 (isTemp 여부에 따라 경로 분기)
+     */
+    async function saveDocument(isTemp) {
+        const title = document.getElementById('doc-title').value.trim();
+        const content = document.getElementById('doc-content').value.trim();
+        const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
+
+        if (!title || !content) return showAlert("제목과 내용을 입력하세요.", "error");
+        if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
+        if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
+
+        const payload = {
+            comId: myInfo.comId,
+            writerId: myInfo.empId,
+            docfoNo: currentDocfoNo,
+            docfoCatNo: parseInt(checkedRadio.value, 10),
+            title: title,
+            content: content,
+            cnttHtml: originalHtmlTemplate,
+            temp: isTemp,
+            approvalLines: selectedApprovers.map((a, i) => ({
+                approverId: a.approverId,
+                seq: i + 1,
+                apprStat: isTemp ? "W" : (i === 0 ? "I" : "W")
+            }))
+        };
+
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`/api/v1/documents/${originalDocNo}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                showAlert(isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.", "success");
+
+                // ✅ 목적지 설정
+                const targetUrl = isTemp
+                    ? "/documents/me?status=UNSUBMITTED"
+                    : "/documents/me?status=SUBMITTED";
+
+                setTimeout(() => location.href = targetUrl, 500);
+            } else {
+                const err = await response.json();
+                showAlert(err.message || "처리에 실패했습니다.", "error");
+            }
+        } catch (e) { showAlert("서버 통신 오류", "error"); }
+    }
+
+    // --- 공통 헬퍼 함수들 ---
 
     async function fetchMyEmployeeInfo() {
         const token = localStorage.getItem('accessToken');
@@ -379,26 +312,23 @@
                 document.getElementById('writer-dept').value = result.data.depName || "총무팀";
                 document.getElementById('writer-phone').value = result.data.workPhone || "-";
             }
-        } catch (e) { showAlert("내 정보 로드 실패", "error"); }
+        } catch (e) { }
     }
 
     async function fetchFormDetails() {
         const token = localStorage.getItem('accessToken');
         const container = document.getElementById('category-radio-group');
         try {
-            const response = await fetch(`/api/v1/temp/documentForms/${currentDocfoNo}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetch(`/api/v1/temp/documentForms/${currentDocfoNo}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const result = await response.json();
             if (response.ok && result.data?.tempResDocumentFormCategoryDtos) {
                 container.innerHTML = result.data.tempResDocumentFormCategoryDtos.map(cat => `
                     <label class="cat-item">
                         <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}">
                         <span>${cat.docfoCatName}</span>
-                    </label>
-                `).join('');
+                    </label>`).join('');
             }
-        } catch (e) { console.error("카테고리 로드 실패", e); }
+        } catch (e) { }
     }
 
     async function searchEmployees(keyword = '') {
@@ -409,7 +339,7 @@
             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             const result = await res.json();
             renderSearchResults(result.data?.items || []);
-        } catch (e) { renderSearchResults([]); }
+        } catch (e) { }
     }
 
     function renderSearchResults(employees) {
@@ -423,10 +353,7 @@
             return `
                 <div class="result-item" onclick="${isAdded ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || ''}', '${emp.depName || ''}')`}"
                      style="${isAdded ? 'opacity:0.5; cursor:default' : ''}">
-                    <div>
-                        <strong>${emp.empName}</strong> <span style="color:#868e96;">| ${emp.posName || '사원'}</span><br>
-                        <small style="color:#adb5bd;">${emp.depName || '-'} | ${emp.empId}</small>
-                    </div>
+                    <div><strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span><br><small>${emp.depName || '-'} | ${emp.empId}</small></div>
                     <div style="color:var(--primary-color); font-weight:bold;">${isAdded ? '추가됨' : '+'}</div>
                 </div>`;
         }).join('');
@@ -468,50 +395,6 @@
     function removeApprover(id) {
         selectedApprovers = selectedApprovers.filter(a => a.approverId !== id);
         renderSelectedTags();
-    }
-
-    async function saveDocument(isTemp) {
-        const title = document.getElementById('doc-title').value.trim();
-        const content = document.getElementById('doc-content').value.trim();
-        const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
-
-        if (!title || !content) return showAlert("제목과 내용을 입력하세요.", "error");
-        if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
-        if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
-
-        const payload = {
-            comId: myInfo.comId,
-            writerId: myInfo.empId,
-            docfoNo: currentDocfoNo,
-            docfoCatNo: parseInt(checkedRadio.value, 10),
-            title: title,
-            content: content,
-            cnttHtml: originalHtmlTemplate,
-            temp: isTemp,
-            approvalLines: selectedApprovers.map((a, i) => ({
-                approverId: a.approverId,
-                seq: i + 1,
-                apprStat: isTemp ? "W" : (i === 0 ? "I" : "W")
-            }))
-        };
-
-        const token = localStorage.getItem('accessToken');
-        try {
-            // ✅ 반려 문서 재상신 API 호출 (resubmit)
-            const response = await fetch(`/api/v1/documents/${originalDocNo}/resubmit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showAlert(isTemp ? "임시 저장되었습니다." : "문서가 재상신되었습니다.", "success");
-                setTimeout(() => location.href = "/documents/me?status=SUBMITTED", 1500);
-            } else {
-                const err = await response.json();
-                showAlert(err.message || "상신 실패", "error");
-            }
-        } catch (e) { showAlert("서버 통신 오류", "error"); }
     }
 
     function showAlert(msg, type) {

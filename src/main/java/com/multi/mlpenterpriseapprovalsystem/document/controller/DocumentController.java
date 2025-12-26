@@ -56,7 +56,8 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, message, resDocumentDtos));
     }
 
-    // 내가 상신한 문서 조회(status = "SUBMITTED"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
+    // 임시저장한 문서 조회(status = "UNSUBMITTED), 내가 상신한 문서 조회(status = "SUBMITTED"),
+    // 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
     @GetMapping("/documents/me")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getMyDocumentsByStatus(@AuthenticationPrincipal CustomUser customUser,
                                                                                     @ModelAttribute ReqDocumentDto reqDocumentDto,
@@ -67,7 +68,10 @@ public class DocumentController {
         Page<ResDocumentDto> resDocumentDtos = documentService.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
 
         String message = "";
-        if ("SUBMITTED".equals(status)) {
+        if("UNSUBMITTED".equals(status)){
+            message = resDocumentDtos.isEmpty() ? "임시저장한 문서가 없습니다" : "임시저장한 문서 조회 성공";
+        }
+        else if ("SUBMITTED".equals(status)) {
             message = resDocumentDtos.isEmpty() ? "내가 상신한 문서가 없습니다" : "내가 상신한 문서 조회 성공";
         }
         else if ("AWAITING".equals(status)) {
@@ -92,7 +96,7 @@ public class DocumentController {
                                                                           @RequestParam(name = "status") String status,
                                                                           @AuthenticationPrincipal CustomUser customUser) {
 
-        if (!"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
+        if (!"UNSUBMITTED".equals(status) && !"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
 
@@ -145,7 +149,7 @@ public class DocumentController {
 
         documentService.processApproval(comId, myEmpId, docNo, reqApprovalLineDto);
 
-        String message = "A".equals(reqApprovalLineDto.getApprStat()) ? "결재가 승인되었습니다." : "결재가 반려되었습니다.";
+        String message = "A".equals(reqApprovalLineDto.getApprStat()) ? "결재가 승인되었습니다" : "결재가 반려되었습니다";
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -153,6 +157,50 @@ public class DocumentController {
     }
 
 
+    /**
+     * 반려된 문서 재작성 (새 문서로 생성)
+     * - 기존 반려 문서는 유지, 새 문서 생성 (INSERT)
+     */
+    @PostMapping("/documents/{docNo}/resubmit")
+    public ResponseEntity<ResponseDto<Void>> resubmitRejectedDocument(@PathVariable(name = "docNo") Long docNo,
+                                                                      @AuthenticationPrincipal CustomUser customUser,
+                                                                      @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        documentService.resubmitRejectedDocument(comId, myEmpId, docNo, reqDocumentDto);
+
+        String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
+                ? "문서가 임시저장되었습니다"
+                : "문서가 재상신되었습니다";
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, null));
+    }
+
+
+    /**
+     * 임시저장 문서 수정
+     * - 기존 문서를 수정 (UPDATE)
+     */
+    @PutMapping("/documents/{docNo}")
+    public ResponseEntity<ResponseDto<Void>> updateTempDocument(@PathVariable(name = "docNo") Long docNo,
+                                                                @AuthenticationPrincipal CustomUser customUser,
+                                                                @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        documentService.updateTempDocument(comId, myEmpId, docNo, reqDocumentDto);
+
+        String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
+                ? "문서가 임시저장되었습니다"
+                : "문서가 상신되었습니다";
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, message, null));
+    }
 
 
 

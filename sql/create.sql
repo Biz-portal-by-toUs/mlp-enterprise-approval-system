@@ -71,12 +71,15 @@ CREATE TABLE IF NOT EXISTS positions (
                                          pos_no    BIGINT      NOT NULL AUTO_INCREMENT,
                                          pos_name  VARCHAR(10) NOT NULL,
                                          com_id    VARCHAR(3)  NOT NULL,
+                                         pos_order int         not null,
 
                                          CONSTRAINT pk_positions PRIMARY KEY (pos_no),
                                          CONSTRAINT fk_positions_company
                                              FOREIGN KEY (com_id) REFERENCES company(com_id)
                                                  ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 
 -- 5) 사원 (✅ role_no 제거, ✅ role 추가, ✅ atte/msg_stat default 'c')
 CREATE TABLE IF NOT EXISTS employee (
@@ -189,7 +192,7 @@ CREATE TABLE IF NOT EXISTS document_form (
                                              writer_id     VARCHAR(7) NOT NULL COMMENT '작성자 사원번호',
                                              docfo_name    VARCHAR(100) NOT NULL COMMENT '문서 양식 이름',
                                              cntt_json     JSON NOT NULL COMMENT '내용(JSON)',
-                                             cntt_html     TEXT NOT NULL COMMENT '내용(HTML)',
+                                             cntt_html     mediumtext NULL COMMENT '내용(HTML)',
                                              created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                              docfo_stat    CHAR(1) NOT NULL COMMENT 'T:임시저장, P:대기, R:반려, A:승인, D:삭제',
                                              reject_reason VARCHAR(255) NULL COMMENT '반려 이유',
@@ -234,21 +237,23 @@ CREATE TABLE IF NOT EXISTS attach_box (
 CREATE TABLE IF NOT EXISTS document (
                                         doc_no        BIGINT        NOT NULL AUTO_INCREMENT,
                                         com_id        VARCHAR(3)    NOT NULL,
-                                        doc_id        VARCHAR(14)   NOT NULL,
+                                        doc_id        VARCHAR(14)   NULL,
                                         docfo_cat_no  BIGINT        NOT NULL,
                                         docfo_no      BIGINT        NOT NULL,
                                         title         VARCHAR(100)  NOT NULL,
-                                        content       JSON          NOT NULL,
-                                        cntt_html     TEXT          NOT NULL,
+                                        content       mediumTEXT          not NULL,
+                                        cntt_html     mediumtext    NULL,
                                         emp_id        VARCHAR(7)    NOT NULL,
                                         ai_summ       TEXT          NULL,
                                         temp          BOOLEAN       NOT NULL DEFAULT FALSE,
+                                        submitted_at  TIMESTAMP      NULL,
                                         created_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
                                         updated_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                         doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
 
                                         CONSTRAINT pk_document PRIMARY KEY (doc_no),
                                         CONSTRAINT uk_document_doc_id UNIQUE (doc_id),
+                                        CONSTRAINT ck_document_stat CHECK (doc_stat IN ('US', 'AW', 'RJ', 'FI')),
 
                                         CONSTRAINT fk_document_company
                                             FOREIGN KEY (com_id) REFERENCES company(com_id)
@@ -256,15 +261,15 @@ CREATE TABLE IF NOT EXISTS document (
 
                                         CONSTRAINT fk_document_employee
                                             FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
-                                                ON UPDATE CASCADE ON DELETE CASCADE,
+                                                ON UPDATE CASCADE,
 
                                         CONSTRAINT fk_document_form
                                             FOREIGN KEY (docfo_no) REFERENCES document_form(docfo_no)
-                                                ON UPDATE CASCADE ON DELETE CASCADE,
+                                                ON UPDATE CASCADE,
 
                                         CONSTRAINT fk_document_form_cat
                                             FOREIGN KEY (docfo_cat_no) REFERENCES document_form_category(docfo_cat_no)
-                                                ON UPDATE CASCADE ON DELETE CASCADE
+                                                ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS approval_line (
@@ -273,8 +278,11 @@ CREATE TABLE IF NOT EXISTS approval_line (
                                              doc_no      BIGINT        NOT NULL,
                                              emp_id      VARCHAR(7)    NOT NULL,
                                              seq         INT           NOT NULL,
-                                             appr_stat   CHAR(1)       NOT NULL DEFAULT '0',
+                                             appr_stat   CHAR(1)       NOT NULL DEFAULT 'W',
                                              ended_at    TIMESTAMP     NULL,
+                                             is_actual_appr boolean    not null,
+                                             rej_reason  text          null,
+                                             is_delegate boolean       not null default false,
 
                                              CONSTRAINT pk_approval_line PRIMARY KEY (apprl_no),
                                              CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('I', 'W', 'A', 'R')),
@@ -289,24 +297,24 @@ CREATE TABLE IF NOT EXISTS approval_line (
 
                                              CONSTRAINT fk_approval_line_employee
                                                  FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
-                                                     ON UPDATE CASCADE ON DELETE CASCADE
+                                                     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS document_file (
-                                             docfi_no    BIGINT        NOT NULL AUTO_INCREMENT,
-                                             com_id      VARCHAR(3)    NOT NULL,
-                                             doc_no      BIGINT        NOT NULL,
-                                             docfi_name  VARCHAR(255)  NOT NULL,
-                                             folder_path VARCHAR(255)  NULL,
-
-                                             CONSTRAINT pk_document_file PRIMARY KEY (docfi_no),
-                                             CONSTRAINT fk_document_file_company
-                                                 FOREIGN KEY (com_id) REFERENCES company(com_id)
-                                                     ON UPDATE CASCADE ON DELETE CASCADE,
-                                             CONSTRAINT fk_document_file_document
-                                                 FOREIGN KEY (doc_no) REFERENCES document(doc_no)
-                                                     ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# CREATE TABLE IF NOT EXISTS document_file (
+#                                              docfi_no    BIGINT        NOT NULL AUTO_INCREMENT,
+#                                              com_id      VARCHAR(3)    NOT NULL,
+#                                              doc_no      BIGINT        NOT NULL,
+#                                              docfi_name  VARCHAR(255)  NOT NULL,
+#                                              folder_path VARCHAR(255)  NULL,
+#
+#                                              CONSTRAINT pk_document_file PRIMARY KEY (docfi_no),
+#                                              CONSTRAINT fk_document_file_company
+#                                                  FOREIGN KEY (com_id) REFERENCES company(com_id)
+#                                                      ON UPDATE CASCADE ON DELETE CASCADE,
+#                                              CONSTRAINT fk_document_file_document
+#                                                  FOREIGN KEY (doc_no) REFERENCES document(doc_no)
+#                                                      ON UPDATE CASCADE ON DELETE CASCADE
+# ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS prov_document (
                                              prov_no     BIGINT NOT NULL AUTO_INCREMENT COMMENT '파일 식별자',
@@ -757,6 +765,7 @@ CREATE TABLE IF NOT EXISTS payment_method (
 
                                               CONSTRAINT pk_payment_method PRIMARY KEY (paym_no),
                                               CONSTRAINT uk_payment_method_bill UNIQUE (billing_key),
+                                              CONSTRAINT uk_payment_method_card UNIQUE (com_id, mask),
                                               CONSTRAINT ck_payment_method_type CHECK (paym_type IN ('C','A')),
                                               CONSTRAINT fk_payment_method_company
                                                   FOREIGN KEY (com_id) REFERENCES company(com_id)
@@ -895,10 +904,6 @@ CREATE INDEX idx_file_folder_no      ON `file`(folder_no);
 SET FOREIGN_KEY_CHECKS = 1;
 
 
-use bizportal;
-ALTER TABLE payment_method
-    ADD CONSTRAINT uk_payment_method_card UNIQUE (com_id, mask);
-
 -- =========================================================
 use bizportal;
 
@@ -921,7 +926,7 @@ CREATE TABLE attachment (
                             ext             VARCHAR(20)  NULL,
 
     -- S3 위치
-                            object_key      VARCHAR(1024) NOT NULL,
+                            object_key      VARCHAR(255) NOT NULL,
                             etag            VARCHAR(128)  NULL,
                             checksum_sha256 CHAR(64)      NULL,
 
