@@ -343,7 +343,6 @@
     <a href="/main" class="home-link">← 홈으로 돌아가기</a>
 </div>
 
-
 <script>
     const noticeNo = [[${noticeNo}]];
     const API_BASE = "http://localhost:8090";
@@ -351,7 +350,7 @@
     async function loadPlaceDetail() {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
+            const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
@@ -377,151 +376,142 @@
         }
     }
 
-    // 수정 버튼 클릭 시 화면 이동
     document.getElementById('update-btn').onclick = () => {
         location.href = `/notice/update/${noticeNo}`;
     };
 
+    function unwrapMaybeResponseDto(obj) {
+        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+        return obj;
+    }
+
     async function initAttach() {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`,{
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                });
-            const result = await response.json();
+            const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
 
+            const result = await response.json();
             const attachList = $('#attachList').empty();
 
             if (result.status === 200 && result.data?.length) {
                 const attachs = result.data;
 
                 attachList.append(`
-                    <tr><th>attachemntId</th><th>displayOrder</th><th>originalName</th><th>size</th><th>미리보기</th><th>다운로드</th></tr>
-                `);
+          <tr>
+            <th>attachmentId</th>
+            <th>displayOrder</th>
+            <th>originalName</th>
+            <th>size</th>
+            <th>미리보기</th>
+            <th>다운로드</th>
+          </tr>
+        `);
 
                 attachs.forEach(r => {
-
                     attachList.append(`
-                        <tr>
-                            <td>${r.attachmentId}</td>
-                            <td>${r.displayOrder}</td>
-                            <td>${r.originalName}</td>
-                            <td>${r.size}</td>
-                            <td>
-                                <button class="document" data-view="${r.attachmentId}">미리보기</button>
-                            </td>
-                            <td>
-                                 <button class="document" data-down="${r.attachmentId}">다운로드</button>
-                            </td>
-                        </tr>
-                    `);
+            <tr>
+              <td>${r.attachmentId}</td>
+              <td>${r.displayOrder}</td>
+              <td>${r.originalName}</td>
+              <td>${r.size}</td>
+              <td><button type="button" class="document" data-view="${r.attachmentId}">미리보기</button></td>
+              <td><button type="button" class="document" data-down="${r.attachmentId}">다운로드</button></td>
+            </tr>
+          `);
                 });
 
-                // download handlers
+                // ✅ 이벤트 연결 (테이블 다시 그린 뒤에 연결)
                 document.querySelectorAll("button[data-down]").forEach(btn => {
                     btn.addEventListener("click", async (e) => {
-                        const i = Number(e.currentTarget.getAttribute("data-down"));
-                        await downAttachment(i);
+                        const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
+                        await downAttachment(attachmentId);
                     });
                 });
 
-                // preview handlers
                 document.querySelectorAll("button[data-view]").forEach(btn => {
                     btn.addEventListener("click", async (e) => {
-                        const j = Number(e.currentTarget.getAttribute("data-view"));
-                        await viewAttachment(j);
+                        const attachmentId = Number(e.currentTarget.getAttribute("data-view"));
+                        await viewAttachment(attachmentId);
                     });
                 });
 
             } else {
-                attachList.html('<tr><td colspan="4">관련 첨부파일이 없습니다.</td></tr>');
+                attachList.html('<tr><td colspan="6">관련 첨부파일이 없습니다.</td></tr>');
             }
+
         } catch (error) {
             console.error('Failed to load attachment file:', error);
         }
     }
 
-    async function deleteNotice() {
-        if (!confirm("정말 삭제하시겠습니까?")) return;
-        console.log(noticeNo);
-        try {
-            const accessToken = localStorage.getItem("accessToken");
-            const response = await fetch(`/api/v1/notice/${noticeNo}`, {
-                method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`
-                }
-            });
+    async function fetchDownloadUrl(attachmentId) {
+        const token = localStorage.getItem('accessToken');
 
-            console.log(response);
-            const result = await response.json();
-
-            if (response.ok) {
-                alert("공지사항이 삭제되었습니다.");
-                window.location.href = "/notice/list";
-            } else {
-                alert(result.message || '공지사항 삭제 실패');
+        const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
+            method: "GET",
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
             }
-        } catch (e) {
-            console.error(e);
-            alert("삭제 중 오류 발생");
-        }
-    }
-
-    // delete handlers
-    document.querySelectorAll("button[data-del]").forEach(btn => {
-        btn.addEventListener("click", async (e) => {
-            const i = Number(e.currentTarget.getAttribute("data-del"));
-            await deleteAttachment(i);
         });
-    });
 
-    // ResponseDto 래핑( {data:{...}} ) vs 순수 응답({objectKey, uploadUrl}) 둘 다 대응
-    function unwrapMaybeResponseDto(obj) {
-        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
-        return obj;
+        if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
+
+        const raw = await res.json();
+        const data = unwrapMaybeResponseDto(raw);
+
+        // ✅ 너가 준 Postman 응답 구조: data.url
+        const url = data.url;
+
+        if (typeof url !== "string" || !url.startsWith("http")) {
+            console.error("응답:", raw);
+            throw new Error("응답에 url이 없습니다. (data.url 확인)");
+        }
+        return { url, meta: data };
+    }
+    async function fetchPreviewloadUrl(attachmentId) {
+        const token = localStorage.getItem('accessToken');
+
+        const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
+            method: "GET",
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
+
+        const raw = await res.json();
+        const data = unwrapMaybeResponseDto(raw);
+
+        // ✅ 너가 준 Postman 응답 구조: data.url
+        const url = data.url;
+
+        if (typeof url !== "string" || !url.startsWith("http")) {
+            console.error("응답:", raw);
+            throw new Error("응답에 url이 없습니다. (data.url 확인)");
+        }
+        return { url, meta: data };
     }
 
     async function downAttachment(attachmentId) {
-
-        if (!attachmentId) {
-            return;
-        }
-        if (!confirm(`attachmentId=${r.attachmentId} 를 다운로드 할까요?`)) return;
+        if (!attachmentId) return;
+        if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_BASE}/api/v1/attachments/${r.attachmentId}/download-url`, {
-                method: "GET",
-                headers: { 'Authorization': `Bearer ${token}`,
-                           'Accept': 'application/json' }
-            });
+            const { url, meta } = await fetchDownloadUrl(attachmentId);
 
-            if (!res.ok) throw new Error("다운로드 실패: " + await res.text());
-            const raw = await res.json();
-            const data = unwrapMaybeResponseDto(raw);
-
-            // 2) 응답에서 URL 뽑기 (백엔드 응답 형태에 맞춰 여러 키를 지원)
-            const url =
-                data.downloadUrl ??
-                data.url ??
-                data.presignedUrl ??
-                data;
-
-            if (typeof url !== "string" || !url.startsWith("http")) {
-                console.error("응답:", data);
-                throw new Error("presigned download URL이 응답에 없습니다. (downloadUrl/url/presignedUrl 확인)");
-            }
-
-            // 3) 브라우저 다운로드 트리거
-            // (a) 가장 호환성 좋은 방식: a 태그 만들어 클릭
+            // ✅ 다운로드 트리거
             const a = document.createElement("a");
             a.href = url;
             a.rel = "noopener";
-            // 같은 origin이 아니면 download 속성이 무시될 수 있으나,
-            // presigned URL에 Content-Disposition=attachment가 있으면 다운로드가 잘 걸립니다.
-            a.download = "";
+            // same-origin 아니면 download 속성 무시될 수 있지만,
+            // presigned URL이 attachment disposition을 주면 다운로드 잘 됩니다.
+            a.download = meta.originalName || "";
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -533,59 +523,23 @@
     }
 
     async function viewAttachment(attachmentId) {
-
-        if (!attachmentId) {
-            return;
-        }
-        if (!confirm(`attachmentId=${r.attachmentId} 를 다운로드 할까요?`)) return;
+        if (!attachmentId) return;
 
         try {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch(`${API_BASE}/api/v1/attachments/${r.attachmentId}/download-url`, {
-                method: "GET",
-                headers: { 'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json' }
-            });
+            const { url } = await fetchPreviewloadUrl(attachmentId);
 
-            if (!res.ok) throw new Error("다운로드 실패: " + await res.text());
-            const raw = await res.json();
-            const data = unwrapMaybeResponseDto(raw);
-
-            // 2) 응답에서 URL 뽑기 (백엔드 응답 형태에 맞춰 여러 키를 지원)
-            const url =
-                data.downloadUrl ??
-                data.url ??
-                data.presignedUrl ??
-                data;
-
-            if (typeof url !== "string" || !url.startsWith("http")) {
-                console.error("응답:", data);
-                throw new Error("presigned download URL이 응답에 없습니다. (downloadUrl/url/presignedUrl 확인)");
-            }
-
-            // 3) 브라우저 다운로드 트리거
-            // (a) 가장 호환성 좋은 방식: a 태그 만들어 클릭
-            const a = document.createElement("a");
-            a.href = url;
-            a.rel = "noopener";
-            // 같은 origin이 아니면 download 속성이 무시될 수 있으나,
-            // presigned URL에 Content-Disposition=attachment가 있으면 다운로드가 잘 걸립니다.
-            a.download = "";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            // ✅ 미리보기: 새 탭으로 열기
+            window.open(url, "_blank", "noopener");
 
         } catch (e) {
             console.error(e);
-            alert("다운로드 중 오류: " + (e?.message ?? e));
+            alert("미리보기 중 오류: " + (e?.message ?? e));
         }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         loadPlaceDetail();
-
     });
 </script>
-
 </body>
 </html>
