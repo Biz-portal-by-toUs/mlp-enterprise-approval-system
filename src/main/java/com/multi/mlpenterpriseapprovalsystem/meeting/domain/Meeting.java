@@ -32,13 +32,15 @@ public class Meeting extends BaseEntity {
     @Column(name = "meet_no")
     private Long meetNo;
 
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false)
     private String title;
 
     @Lob
+    @Column(name = "stt_text", columnDefinition="MEDIUMTEXT")
     private String sttText;
 
     @Lob
+    @Column(name = "ai_text", columnDefinition="MEDIUMTEXT")
     private String aiText;
 
     @Column(name = "started_at", nullable = false)
@@ -48,8 +50,12 @@ public class Meeting extends BaseEntity {
     private Boolean isDeleted = false;
 
     // 공개/비공개 (true=공개 예시)
-    @Column(name = "status", nullable = true)
+    @Column(name = "status")
     private Boolean status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_status", nullable = false, length = 20)
+    private AiStatus aiStatus = AiStatus.NONE;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
@@ -76,6 +82,7 @@ public class Meeting extends BaseEntity {
 
         // 기본값
         meeting.isDeleted = false;
+        meeting.aiStatus = AiStatus.NONE;
 
         return meeting;
     }
@@ -97,5 +104,25 @@ public class Meeting extends BaseEntity {
 
     public void delete() {
         this.isDeleted = true;
+    }
+
+    public void updateTexts(String sttText, String aiText) {
+        this.sttText = sttText;
+        this.aiText = aiText;
+    }
+
+    public void markAiProcessing() {
+        this.aiStatus = AiStatus.PROCESSING;
+    }
+
+    public void markAiFailed(String errorMessage) {
+        this.aiStatus = AiStatus.FAILED;
+        this.aiText = errorMessage;
+    }
+
+    public void markAiDone(@NotBlank String sttText, @NotBlank String aiText) {
+        this.aiStatus = AiStatus.DONE;
+        this.aiText = aiText;
+        this.sttText = sttText;
     }
 }
