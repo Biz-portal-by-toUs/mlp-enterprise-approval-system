@@ -184,6 +184,12 @@
     const form = document.getElementById('company-login-form');
     const serverError = document.getElementById('serverError');
 
+    async function safeJson(res) {
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         serverError.style.display = 'none';
@@ -196,20 +202,15 @@
             const res = await fetch('/auth/companies/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // ✅ Set-Cookie(AT/RT)를 저장/전송하기 위해
                 body: JSON.stringify({ email, password })
             });
 
-            const result = await res.json().catch(() => ({}));
+            const result = await safeJson(res);
 
             if (res.ok) {
-                const accessToken = result?.data?.accessToken;
-                if (accessToken) {
-                    localStorage.setItem('accessToken', accessToken);
-                    localStorage.setItem('loginType', 'company'); // ✅ 회사 로그인 표시용
-                    localStorage.setItem('loginId', email);       // ✅ (선택) 표시용
-                }
-
-                // ✅ 메인으로 이동 -> main.html에서 로그인된 UI로 바뀜
+                // ✅ accessToken/refreshToken은 서버가 Set-Cookie로 내려주면
+                // 브라우저가 httpOnly 쿠키로 자동 저장함 (localStorage 저장 X)
                 window.location.href = '/';
             } else {
                 serverError.textContent = result?.message || `로그인 실패 (${res.status})`;
