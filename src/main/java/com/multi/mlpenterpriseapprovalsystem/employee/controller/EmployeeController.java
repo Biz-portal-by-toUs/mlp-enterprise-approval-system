@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.employee.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResAdminEmployeeDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResChatEmployeeCursorDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
@@ -11,10 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -83,5 +81,18 @@ public class EmployeeController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "사원 목록 조회 성공", list));
+    }
+
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @GetMapping("/admin/employees/{empNo}") // ✅ 요청하신 POST 방식
+    public ResponseEntity<ResponseDto<ResAdminEmployeeDetailDto>> getEmployeeDetail(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="empNo") Long empNo
+    ) {
+        ResAdminEmployeeDetailDto dto = employeeService.getEmployeeDetail(user.getComId(), empNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "사원 상세 조회 성공", dto));
     }
 }
