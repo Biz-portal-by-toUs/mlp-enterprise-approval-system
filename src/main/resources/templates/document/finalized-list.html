@@ -10,14 +10,28 @@
             max-width: 1400px; margin: 0 auto; background: white; padding: 40px;
             min-height: 850px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+        .page-header { margin-bottom: 20px; }
         .page-title { font-size: 24px; font-weight: bold; color: #333; }
 
-        /* [정렬 옵션] */
-        .sort-options { font-size: 13px; color: #666; display: flex; gap: 15px; }
-        .sort-options span { cursor: pointer; transition: color 0.2s; }
-        .sort-options span:hover { color: #339af0; }
-        .sort-options .active { color: #339af0; font-weight: bold; text-decoration: underline; }
+        /* ✅ 정렬 옵션: 드롭다운 + 클릭 방식 혼합 */
+        .sort-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+            padding: 10px 0;
+        }
+        .sort-basis-select {
+            padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;
+            font-size: 13px; outline: none; background: white; cursor: pointer;
+        }
+        .sort-basis-select:focus { border-color: #339af0; }
+
+        .sort-order-group { display: flex; gap: 15px; font-size: 13px; color: #666; }
+        .sort-order-group span { cursor: pointer; transition: color 0.2s; }
+        .sort-order-group span:hover { color: #339af0; }
+        .sort-order-group span.active { color: #339af0; font-weight: bold; text-decoration: underline; }
 
         /* [상세 검색창] 4열 그리드 레이아웃 */
         .search-container {
@@ -71,19 +85,13 @@
 <div class="main-container">
     <div class="page-header">
         <div class="page-title">최종 승인 문서</div>
-        <div class="sort-options">
-            <span id="sort-FINALIZED_LATEST" class="active" onclick="changeSort('FINALIZED_LATEST')">최신순(최종승인)</span>
-            <span id="sort-FINALIZED_OLDEST" onclick="changeSort('FINALIZED_OLDEST')">오래된순(최종승인)</span>
-            <span id="sort-SUBMIT_LATEST" onclick="changeSort('SUBMIT_LATEST')">최신순(상신일)</span>
-            <span id="sort-SUBMIT_OLDEST" onclick="changeSort('SUBMIT_OLDEST')">오래된순(상신일)</span>
-        </div>
     </div>
 
     <div class="search-container">
         <div class="search-group">
             <label>카테고리</label>
             <div class="custom-dropdown" id="cat-dropdown-wrapper">
-                <input type="text" id="search-docfoCatName" class="search-input" placeholder="카테고리 선택" autocomplete="off">
+                <input type="text" id="search-docfoCatName" class="search-input" placeholder="카테고리 선택" autocomplete="off" maxlength="100">
                 <div id="cat-list" class="dropdown-list"></div>
             </div>
         </div>
@@ -105,21 +113,33 @@
 
         <div class="search-group">
             <label>문서코드</label>
-            <input type="text" id="search-docId" class="search-input" placeholder="DOC~">
+            <input type="text" id="search-docId" class="search-input" placeholder="문서코드 입력" maxlength="15">
         </div>
         <div class="search-group">
             <label>제목</label>
-            <input type="text" id="search-title" class="search-input" placeholder="제목 키워드">
+            <input type="text" id="search-title" class="search-input" placeholder="제목 입력" maxlength="100">
         </div>
         <div class="search-group">
             <label>작성자명</label>
-            <input type="text" id="search-writerName" class="search-input" placeholder="이름 입력">
+            <input type="text" id="search-writerName" class="search-input" placeholder="이름 입력" maxlength="20">
         </div>
         <div class="search-group">
             <label>사원번호</label>
-            <input type="text" id="search-writerId" class="search-input" placeholder="EMP~">
+            <input type="text" id="search-writerId" class="search-input" placeholder="사원번호 입력" maxlength="15">
         </div>
         <button class="btn-search" onclick="loadData(0)">검색</button>
+    </div>
+
+    <!-- ✅ 드롭다운(정렬기준) + 클릭(정렬순서) 방식 -->
+    <div class="sort-options">
+        <select id="sort-basis" class="sort-basis-select" onchange="applySort()">
+            <option value="FINALIZED">최종승인일</option>
+            <option value="SUBMIT">상신일</option>
+        </select>
+        <div class="sort-order-group">
+            <span id="order-LATEST" class="active" onclick="changeOrder('LATEST')">최신순</span>
+            <span id="order-OLDEST" onclick="changeOrder('OLDEST')">오래된순</span>
+        </div>
     </div>
 
     <table class="doc-table">
@@ -144,19 +164,43 @@
 
 <script th:inline="javascript">
     const API_URL = '/api/v1/documents?status=FINALIZED';
-    let currentSort = 'FINALIZED_LATEST';
+    let currentBasis = 'FINALIZED';  // 정렬 기준 (FINALIZED, SUBMIT)
+    let currentOrder = 'LATEST';     // 정렬 순서 (LATEST, OLDEST)
     let currentPage = 0;
     let allCategories = [];
 
     document.addEventListener('DOMContentLoaded', () => {
         fetchDepartments();
-        fetchCategoryNames(); // ✅ 카테고리 이름 전용 API 호출
-        initCustomDropdown(); // ✅ 드롭다운 인터랙션 초기화
+        fetchCategoryNames();
+        initCustomDropdown();
         loadData(0);
     });
 
     /**
-     * ✅ [핵심 기능] 카테고리 이름 조회 API 연동
+     * ✅ 드롭다운(정렬기준) 변경 시 호출
+     */
+    function applySort() {
+        currentBasis = document.getElementById('sort-basis').value;
+        currentPage = 0;
+        loadData(0);
+    }
+
+    /**
+     * ✅ 클릭(정렬순서) 변경 시 호출
+     */
+    function changeOrder(order) {
+        currentOrder = order;
+        currentPage = 0;
+
+        // active 클래스 업데이트
+        document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
+        document.getElementById('order-' + order).classList.add('active');
+
+        loadData(0);
+    }
+
+    /**
+     * [핵심 기능] 카테고리 이름 조회 API 연동
      */
     async function fetchCategoryNames() {
         const token = localStorage.getItem('accessToken');
@@ -167,7 +211,6 @@
             const result = await response.json();
 
             if (response.ok && result.data) {
-                // 공백 제거(Trim) 처리
                 allCategories = result.data.map(name => name.trim());
                 renderDropdownItems(allCategories);
             }
@@ -176,7 +219,6 @@
 
     function renderDropdownItems(list) {
         const listEl = document.getElementById('cat-list');
-        // '전체' 선택 시 텍스트 노출을 위해 data-value를 "전체"로 설정
         listEl.innerHTML = '<div class="dropdown-item" data-value="전체">전체</div>';
 
         if (list.length === 0) {
@@ -237,23 +279,20 @@
         } catch (e) { console.error("부서 목록 조회 실패", e); }
     }
 
-    function changeSort(sort) {
-        currentSort = sort;
-        currentPage = 0;
-        document.querySelectorAll('.sort-options span').forEach(el => el.classList.remove('active'));
-        document.getElementById('sort-' + sort).classList.add('active');
-        loadData(0);
-    }
-
+    /**
+     * ✅ [서버 통신] 검색 데이터 로드
+     */
     async function loadData(page) {
         currentPage = page;
         const token = localStorage.getItem('accessToken');
         const catValue = document.getElementById('search-docfoCatName').value;
 
+        // ✅ 정렬값 조합: FINALIZED_LATEST, SUBMIT_OLDEST 등
+        const sortValue = `${currentBasis}_${currentOrder}`;
+
         const params = new URLSearchParams({
             page: page,
-            sort: currentSort,
-            // ✅ "전체"를 선택한 경우 서버에는 빈 값 전송
+            sort: sortValue, // ✅ 조합된 정렬값 전달
             docfoCatName: catValue === '전체' ? '' : catValue,
             writerDepName: document.getElementById('search-writerDepName').value,
             docId: document.getElementById('search-docId').value,
@@ -287,7 +326,6 @@
             const no = (currentPage * pageSize) + index + 1;
             const tr = document.createElement('tr');
 
-            // ✅ 경로: 컨트롤러 정의에 맞춰 /documents/{docNo} 반영
             tr.innerHTML = `
                 <td>${no}</td>
                 <td>${doc.docId || '-'}</td>
