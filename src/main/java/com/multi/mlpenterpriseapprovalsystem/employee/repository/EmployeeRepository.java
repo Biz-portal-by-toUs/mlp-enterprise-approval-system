@@ -5,9 +5,11 @@ import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -112,7 +114,22 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Optional<Employee> findAdminDetailByComIdAndEmpNo(@Param("comId") String comId,
                                                       @Param("empNo") Long empNo);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Employee e
+           set e.isDeleted = true,
+               e.retDate = :retDate
+         where e.empNo = :empNo
+           and e.company.comId = :comId
+           and e.isDeleted = false
+    """)
+    int retireEmployee(@Param("comId") String comId,
+                       @Param("empNo") Long empNo,
+                       @Param("retDate") LocalDateTime retDate);
+
     List<Employee> findByEmpIdIn(List<String> attendeeIds);
+
+    Optional<Employee> findByEmpNoAndCompany_ComId(Long empNo, String comId);
 
     interface PosCount {
         Long getPosNo();
