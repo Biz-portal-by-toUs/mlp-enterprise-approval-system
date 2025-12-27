@@ -38,36 +38,37 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
      * - (empName > cursorName) OR (empName == cursorName AND empNo > cursorNo)
      */
     @Query("""
-                select new com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto(
-                    e.empNo,
-                    e.empId,
-                    e.empName,
-                    d.depName,
-                    p.posName,
-                    e.msgStat,
-                    e.atte,
-                    e.email
-                )
-                from Employee e
-                join e.department d
-                join e.positions p
-                where e.company.comId = :comId
-                  and e.isDeleted = false
-                  and (:excludeEmpId is null or e.empId <> :excludeEmpId)
-                  and (
-                      :keyword is null or :keyword = '' or
-                      lower(e.empId)   like lower(concat('%', :keyword, '%')) or
-                      lower(e.empName) like lower(concat('%', :keyword, '%')) or
-                      lower(d.depName) like lower(concat('%', :keyword, '%')) or
-                      lower(p.posName) like lower(concat('%', :keyword, '%'))
-                  )
-                  and (
-                      :cursorName is null
-                      or e.empName > :cursorName
-                      or (e.empName = :cursorName and e.empNo > :cursorNo)
-                  )
-                order by e.empName asc, e.empNo asc
-            """)
+        select new com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto(
+            e.empNo,
+            e.empId,
+            e.empName,
+            d.depName,
+            p.posName,
+            p.posOrder,
+            e.msgStat,
+            e.atte,
+            e.email
+        )
+        from Employee e
+        join e.department d
+        join e.positions p
+        where e.company.comId = :comId
+          and e.isDeleted = false
+          and (:excludeEmpId is null or e.empId <> :excludeEmpId)
+          and (
+              :keyword is null or :keyword = '' or
+              lower(e.empId)   like lower(concat('%', :keyword, '%')) or
+              lower(e.empName) like lower(concat('%', :keyword, '%')) or
+              lower(d.depName) like lower(concat('%', :keyword, '%')) or
+              lower(p.posName) like lower(concat('%', :keyword, '%'))
+          )
+          and (
+              :cursorName is null
+              or e.empName > :cursorName
+              or (e.empName = :cursorName and e.empNo > :cursorNo)
+          )
+        order by e.empName asc, e.empNo asc
+    """)
     List<ChatEmployeeItemDto> findChatEmployeesByNameCursor(
             @Param("comId") String comId,
             @Param("excludeEmpId") String excludeEmpId,

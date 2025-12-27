@@ -2,15 +2,15 @@ package com.multi.mlpenterpriseapprovalsystem.meeting.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingScope;
-import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ReqMeetingCreateDto;
-import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ReqMeetingUpdateDto;
-import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ResMeetingDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.meeting.dto.ResMeetingListDto;
+import com.multi.mlpenterpriseapprovalsystem.meeting.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.meeting.service.MeetingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -31,11 +31,14 @@ import java.time.LocalDate;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/meeting")
+@RequestMapping("/api/v1/meetings")
 @Slf4j
 public class MeetingController {
 
     private final MeetingService meetingService;
+
+    @Value("${internal.ai.callback-key}")
+    private String internalCallbackKey;
 
     // 회의 목록 조회 (탭 + 제목검색 + 날짜검색(StartedAt 기준) + (전체탭)부서검색)
     @GetMapping
@@ -110,5 +113,50 @@ public class MeetingController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "회의 삭제 성공", deletedMeetNo));
+    }
+
+    // =========================================================
+    // ✅ (추가1) 프론트 -> AI 처리 요청
+    // =========================================================
+    @PostMapping("/{meetNo}/ai-request")
+    public ResponseEntity<ResponseDto<Long>> requestAi(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @RequestBody @Valid ReqMeetingAiRequestDto request,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+
+        meetingService.requestAiPipeline(empId, meetNo, request);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "AI 처리 요청 성공", meetNo));
+    }
+
+    // =========================================================
+    // ✅ (추가2) FastAPI -> AI 결과 콜백(서버간)
+    // =========================================================
+    @PatchMapping("/{meetNo}/ai")
+    public ResponseEntity<ResponseDto<Long>> aiCallback(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @RequestBody @Valid ReqMeetingAiCallbackDto request,
+            @RequestHeader(name = "X-Internal-Callback-Key") String callbackKey
+    ) {
+        // meetNo 일치 확인
+        if (request.getMeetNo() == null || !request.getMeetNo().equals(meetNo)) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST); // 없으면 만들어서 써
+        }
+
+        // 내부 콜백키 검증
+        String expected = internalCallbackKey; // 아래 필드 추가 필요
+        if (expected == null || !expected.equals(callbackKey)) {
+            throw new CustomException(ErrorCode.FORBIDDEN); // 없으면 만들어서 써
+        }
+
+        Long updatedMeetNo = meetingService.applyAiResult(meetNo, request);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "AI 결과 반영 성공", updatedMeetNo));
     }
 }

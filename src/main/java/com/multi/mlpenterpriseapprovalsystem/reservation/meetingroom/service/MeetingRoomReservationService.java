@@ -127,4 +127,24 @@ public class MeetingRoomReservationService {
         }
 
     }
+
+    public void deleteReservation(Long resvNo, CustomUser user) {
+
+        // 예약 조회
+        MeetingRoomReservation reservation =
+                reservationRepository.findById(resvNo)
+                        .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+
+        // 권한 체크(예약자 본인만 취소 가능/또는 관리자 역할이면 허용)
+        boolean isOwner = reservation.getResvEmp().getEmpId().equals(user.getUsername());
+        boolean isAdmin = user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isOwner && !isAdmin) {
+            throw new SecurityException("해당 예약을 취소할 권한이 없습니다.");
+        }
+
+        // 삭제
+        reservationRepository.delete(reservation);
+
+    }
 }

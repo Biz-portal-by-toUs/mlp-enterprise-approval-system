@@ -54,5 +54,12 @@ public class MeetingRoomReservationController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/meeting-room-reservations/{resvNo}")
+    public ResponseEntity<Void> deleteReservation(
+            @PathVariable Long resvNo,
+            @AuthenticationPrincipal CustomUser user) {
 
+        meetingRoomReservationService.deleteReservation(resvNo, user);
+        return ResponseEntity.noContent().build();   // 204
+    }
 }
