@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -45,5 +46,11 @@ public class ViewEmployeeController {
         }
 
         return "/employee/list";
+    }
+
+    @GetMapping("/{empNo}")
+    public String employeeDetailPage(@PathVariable(name="empNo") Long empNo, Model model) {
+        model.addAttribute("empNo", empNo);
+        return "employee/detail";
     }
 }
