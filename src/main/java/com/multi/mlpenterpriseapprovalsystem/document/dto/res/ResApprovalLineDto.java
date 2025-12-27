@@ -27,12 +27,16 @@ public class ResApprovalLineDto {
     private String docId;
     private String approverName; // 결재자 이름
     private String approverId; // 결재자 사원번호
+    private String approverDepName;
+    private String approverPosName;
+    private int approverPosOrder;
     private String comId;
     private int seq;
     private ApprStat apprStat;
     private LocalDateTime endedAt;
     private boolean isActualAppr;
     private String rejReason;
+    private boolean isDelegate;
 
     public static ResApprovalLineDto toDto(ApprovalLine approvalLine) {
         return ResApprovalLineDto.builder()
@@ -41,12 +45,16 @@ public class ResApprovalLineDto {
                 .docId(approvalLine.getDocument().getDocId())
                 .approverName(approvalLine.getApprover().getEmpName())
                 .approverId(approvalLine.getApprover().getEmpId())
+                .approverDepName(approvalLine.getApprover().getDepartment().getDepName())
+                .approverPosName(approvalLine.getApprover().getPositions().getPosName())
+                .approverPosOrder(approvalLine.getApprover().getPositions().getPosOrder())
                 .comId(approvalLine.getCompany().getComId())
                 .seq(approvalLine.getSeq())
                 .apprStat(approvalLine.getApprStat())
                 .endedAt(approvalLine.getEndedAt())
                 .isActualAppr(approvalLine.getIsActualAppr())
                 .rejReason(approvalLine.getRejReason())
+                .isDelegate(approvalLine.getIsDelegate())
                 .build();
     }
 

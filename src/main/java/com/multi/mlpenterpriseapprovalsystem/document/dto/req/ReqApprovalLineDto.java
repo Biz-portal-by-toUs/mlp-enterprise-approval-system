@@ -28,4 +28,5 @@ public class ReqApprovalLineDto {
     private LocalDateTime endedAt;
     private Boolean isActualAppr;
     private String rejReason;
+    private boolean isDelegate;
 }
