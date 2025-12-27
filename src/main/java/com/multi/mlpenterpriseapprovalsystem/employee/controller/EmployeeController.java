@@ -69,10 +69,10 @@ public class EmployeeController {
     @GetMapping("/admin/employees")
     public ResponseEntity<ResponseDto<List<ResEmployeeListDto>>> getEmployees(
             @AuthenticationPrincipal CustomUser user,
-            @RequestParam(required = false) Long depNo,
-            @RequestParam(required = false) Long posNo,
-            @RequestParam(required = false) String status, // "active", "retired"
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false, name="depNo") Long depNo,
+            @RequestParam(required = false, name="posNo") Long posNo,
+            @RequestParam(required = false, name="status") String status, // "active", "retired"
+            @RequestParam(required = false, name="keyword") String keyword
     ) {
         Boolean isDeleted = null;
         if ("active".equals(status)) isDeleted = false;
