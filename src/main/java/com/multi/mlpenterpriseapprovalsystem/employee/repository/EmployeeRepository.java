@@ -99,6 +99,19 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("keyword") String keyword
     );
 
+    @Query("""
+        SELECT e
+        FROM Employee e
+        JOIN FETCH e.company c
+        JOIN FETCH e.department d
+        JOIN FETCH e.positions p
+        LEFT JOIN FETCH e.delegate del
+        WHERE e.empNo = :empNo
+          AND c.comId = :comId
+    """)
+    Optional<Employee> findAdminDetailByComIdAndEmpNo(@Param("comId") String comId,
+                                                      @Param("empNo") Long empNo);
+
     List<Employee> findByEmpIdIn(List<String> attendeeIds);
 
     interface PosCount {
