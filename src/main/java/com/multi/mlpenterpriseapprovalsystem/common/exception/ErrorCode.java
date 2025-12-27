@@ -109,6 +109,8 @@ public enum ErrorCode {
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
+    EMPLOYEE_ALREADY_RETIRED(HttpStatus.BAD_REQUEST,"EMPLOYEE_ALREADY_RETIRED","이미 퇴사 처리된 사원입니다"),
+
 
     // 웹소켓 관련
     SOCKET_AUTHENTICATION_ERROR(HttpStatus.UNAUTHORIZED, "SOCKET_AUTHENTICATION_ERROR", "웹소켓 인증 정보가 유효하지 않습니다"),

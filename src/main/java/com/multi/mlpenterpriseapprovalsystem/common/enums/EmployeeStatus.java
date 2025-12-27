@@ -9,6 +9,5 @@ package com.multi.mlpenterpriseapprovalsystem.common.enums;
  */
 public enum EmployeeStatus {
     ACTIVE,
-    INACTIVE,
-    TERMINATED
+    RETIRED
 }

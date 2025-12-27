@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.domain;
 
+import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "employee")
-public class Employee {
+public class Employee extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "emp_no")
