@@ -360,6 +360,49 @@
             border-color: rgba(59,130,246,.35);
         }
 
+        /* 팝업여부 + 날짜를 한 줄에 */
+        .popup-row{
+            display: grid;
+            grid-template-columns: 110px 160px 1fr; /* label | select | dates */
+            align-items: center;
+            gap: 12px;
+        }
+
+        .popup-row > label{ margin-bottom: 0 !important; }
+
+        /* 날짜 2개는 그 안에서 2열 */
+        .popup-dates{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* 날짜 한 칸: label 옆 input */
+        .date-field{
+            display: grid;
+            grid-template-columns: 70px 1fr;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .date-field label{ margin-bottom: 0 !important; }
+
+        /* date input 톤 맞추기 */
+        #updateForm input[type="date"]{
+            height: 44px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(17, 24, 39, .10);
+            font-weight: 700;
+        }
+
+        @media (max-width: 720px){
+            .popup-row{ grid-template-columns: 1fr; }
+            .popup-dates{ grid-template-columns: 1fr; }
+            .date-field{ grid-template-columns: 90px 1fr; }
+        }
+
+
 
 
     </style>
@@ -388,6 +431,7 @@
             <textarea id="contents" name="contents" placeholder="공지 내용을 입력하세요" required></textarea>
         </div>
 
+        <!----
         <div class="mb-3">
             <label>팝업여부</label><br>
             <label>
@@ -407,6 +451,28 @@
         <div class="mb-3">
             <label for="endedAt">팝업종료일</label>
             <input type="datetime-local" id="endedAt" name="endedAt" required>
+        </div>
+        --->
+
+        <div class="mb-3 popup-row">
+            <label for="isPopupSelect">팝업여부</label>
+
+            <select id="isPopupSelect" name="isPopup" required>
+                <option value="true">사용</option>
+                <option value="false">미사용</option>
+            </select>
+
+            <div class="popup-dates">
+                <div class="date-field">
+                    <label for="startedAt">시작일</label>
+                    <input type="date" id="startedAt" name="startedAt">
+                </div>
+
+                <div class="date-field">
+                    <label for="endedAt">종료일</label>
+                    <input type="date" id="endedAt" name="endedAt">
+                </div>
+            </div>
         </div>
 
         <!-- ✅ 첨부파일 섹션 (항상 노출) -->
@@ -457,36 +523,37 @@
         return value.replace(" ", "T").substring(0, 16);
     }
 
+
+    function toDateOnly(value) {
+        if (!value) return "";
+        // "2025-12-23T10:30:00" 또는 "2025-12-23 10:30:00" -> "2025-12-23"
+        return String(value).substring(0, 10);
+    }
+
+
     function setupPopupToggle() {
-        const radios = document.querySelectorAll('input[name="isPopup"]');
-        const startAt = document.getElementById('startedAt');
-        const endAt = document.getElementById('endedAt');
+        const select = document.getElementById("isPopupSelect");
+        const startAt = document.getElementById("startedAt");
+        const endAt = document.getElementById("endedAt");
 
-        function togglePopupDates(value) {
-            const enabled = value === 'true';
-
+        function toggle(value){
+            const enabled = value === "true";
             startAt.disabled = !enabled;
             endAt.disabled = !enabled;
 
-            // Y일 때만 필수
             startAt.required = enabled;
             endAt.required = enabled;
 
-            // N이면 값 제거(전송 방지)
             if (!enabled) {
-                startAt.value = '';
-                endAt.value = '';
+                startAt.value = "";
+                endAt.value = "";
             }
         }
 
-        radios.forEach(r => {
-            r.addEventListener('change', (e) => togglePopupDates(e.target.value));
-        });
-
-        // 현재 체크값 기준 반영
-        const checked = document.querySelector('input[name="isPopup"]:checked');
-        if (checked) togglePopupDates(checked.value);
+        select.addEventListener("change", (e) => toggle(e.target.value));
+        toggle(select.value);
     }
+
 
     // 수정 화면 초기 데이터 로드
     async function loadNoticeDetails() {
@@ -508,13 +575,16 @@
                 document.getElementById('title').value = notice.title ?? "";
                 document.getElementById('contents').value = notice.contents ?? "";
 
-                // 라디오 checked 처리
-                const popupValue = String(notice.isPopup); // "true" / "false"
-                const radio = document.querySelector(`input[name="isPopup"][value="${popupValue}"]`);
-                if (radio) radio.checked = true;
 
-                document.getElementById('startedAt').value = toDatetimeLocal(notice.startedAt);
-                document.getElementById('endedAt').value = toDatetimeLocal(notice.endedAt);
+                // 팝업여부 select 세팅
+                document.getElementById("isPopupSelect").value = String(notice.isPopup);
+
+                // 날짜는 date만 세팅
+                document.getElementById("startedAt").value = toDateOnly(notice.startedAt);
+                document.getElementById("endedAt").value = toDateOnly(notice.endedAt);
+
+                setupPopupToggle();
+
                 setupPopupToggle();
 
                 initAttach();
@@ -533,6 +603,19 @@
         event.preventDefault();
 
         const formData = new FormData(this);
+
+        const isPopup = formData.get("isPopup");
+        const startedDate = formData.get("startedAt"); // YYYY-MM-DD
+        const endedDate = formData.get("endedAt");     // YYYY-MM-DD
+
+        if (isPopup === "true") {
+            if (startedDate) formData.set("startedAt", `${startedDate}T00:00:00`);
+            if (endedDate) formData.set("endedAt", `${endedDate}T23:59:59`);
+        } else {
+            formData.delete("startedAt");
+            formData.delete("endedAt");
+        }
+
 
         try {
             const token = localStorage.getItem('accessToken');

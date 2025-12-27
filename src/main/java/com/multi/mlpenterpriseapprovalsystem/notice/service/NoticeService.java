@@ -14,6 +14,7 @@ import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.repository.NoticeRepository;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -230,6 +231,9 @@ public class NoticeService {
         notice.update(dto);
     }
 
+
+    //===================================================================
+
     public Page<NoticeListItemResDto> searchNotices(
             String comId,
             String type,
@@ -240,61 +244,98 @@ public class NoticeService {
     ) {
         Specification<Notice> spec = (root, query, cb) -> cb.conjunction();
 
-        // 회사조건 (Notice.company.comId)
+        // ✅ 회사조건 (Notice.company.comId)
         spec = spec.and((root, query, cb) ->
                 cb.equal(root.get("company").get("comId"), comId)
         );
 
-        // 삭제 제외 (isDeleted가 null일 수도 있으니 null OR false)
+        // ✅ 삭제 제외 (isDeleted null OR false)
         spec = spec.and((root, query, cb) ->
                 cb.or(cb.isNull(root.get("isDeleted")), cb.isFalse(root.get("isDeleted")))
         );
 
-        if (type != null && !type.isBlank()) {
-            switch (type) {
-                case "title" -> {
-                    if (keyword != null && !keyword.isBlank()) {
-                        spec = spec.and((root, query, cb) ->
-                                cb.like(root.get("title"), "%" + keyword + "%")
-                        );
-                    }
-                }
-                case "writer" -> {
-                    if (keyword != null && !keyword.isBlank()) {
-                        spec = spec.and((root, query, cb) ->
-                                cb.like(root.join("employee", JoinType.LEFT).get("empId"), "%" + keyword + "%")
-                        );
-                    }
-                }
-                case "date" -> {
-                    // BaseEntity에 createdAt이 있다고 가정 (필드명이 다르면 여기 수정)
-                    LocalDateTime fromDt = (from != null) ? from.atStartOfDay() : null;
-                    LocalDateTime toExclusive = (to != null) ? to.plusDays(1).atStartOfDay() : null;
+        // ✅ type/keyword normalize
+        String t = (type == null) ? "" : type.trim();
+        String k = (keyword == null) ? "" : keyword.trim();
 
-                    if (fromDt != null) {
+        // ✅ 조건별 검색
+        if ("date".equals(t)) {
+            // 날짜 범위는 기존 로직 유지(끝은 다음날 0시 미만)
+            LocalDateTime fromDt = (from != null) ? from.atStartOfDay() : null;
+            LocalDateTime toExclusive = (to != null) ? to.plusDays(1).atStartOfDay() : null;
+
+            if (fromDt != null) {
+                spec = spec.and((root, query, cb) ->
+                        cb.greaterThanOrEqualTo(root.get("createdAt"), fromDt)
+                );
+            }
+            if (toExclusive != null) {
+                spec = spec.and((root, query, cb) ->
+                        cb.lessThan(root.get("createdAt"), toExclusive)
+                );
+            }
+
+        } else {
+            // date가 아닌 경우: keyword 기반 검색
+            if (!k.isBlank()) {
+                switch (t) {
+                    case "" -> {
+                        // ✅ 전체: title + contents (OR)
+                        spec = spec.and((root, query, cb) -> cb.or(
+                                cb.like(root.get("title"), "%" + k + "%"),
+                                cb.like(root.get("contents"), "%" + k + "%")
+                        ));
+                    }
+                    case "title" -> {
                         spec = spec.and((root, query, cb) ->
-                                cb.greaterThanOrEqualTo(root.get("createdAt"), fromDt)
+                                cb.like(root.get("title"), "%" + k + "%")
                         );
                     }
-                    if (toExclusive != null) {
+                    case "empName" -> {
                         spec = spec.and((root, query, cb) ->
-                                cb.lessThan(root.get("createdAt"), toExclusive)
+                                cb.like(root.join("employee", JoinType.LEFT).get("empName"), "%" + k + "%")
                         );
+                    }
+                    case "depName" -> {
+                        spec = spec.and((root, query, cb) -> {
+                            Join<Object, Object> emp = root.join("employee", JoinType.LEFT);
+                            Join<Object, Object> dep = emp.join("department", JoinType.LEFT);
+                            return cb.like(dep.get("depName"), "%" + k + "%");
+                        });
+                    }
+                    default -> {
+                        // 알 수 없는 type이면 전체검색으로
+                        spec = spec.and((root, query, cb) -> cb.or(
+                                cb.like(root.get("title"), "%" + k + "%"),
+                                cb.like(root.get("contents"), "%" + k + "%")
+                        ));
                     }
                 }
             }
         }
 
-        Page<Notice> page = noticeRepository.findAll(spec, pageable);
+        // ✅ N+1 방지: employee/department fetch join (count 쿼리 방해 방지)
+        Specification<Notice> fetchSpec = (root, query, cb) -> {
+            // count 쿼리에는 fetch join 하면 안됨
+            if (!Long.class.equals(query.getResultType()) && !long.class.equals(query.getResultType())) {
+                root.fetch("employee", JoinType.LEFT).fetch("department", JoinType.LEFT);
+                query.distinct(true);
+            }
+            return cb.conjunction();
+        };
+
+        Page<Notice> page = noticeRepository.findAll(spec.and(fetchSpec), pageable);
 
         return page.map(n -> new NoticeListItemResDto(
                 n.getNoticeNo(),
                 n.getTitle(),
-                (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null,
-                n.getEmployee().getEmpName(),
-                n.getEmployee().getDepartment().getDepName(),
+                (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null, // ✅ DTO 생성자 유지 때문에 남김(화면에 안 쓰면 됨)
+                (n.getEmployee() != null) ? n.getEmployee().getEmpName() : null,
+                (n.getEmployee() != null && n.getEmployee().getDepartment() != null)
+                        ? n.getEmployee().getDepartment().getDepName()
+                        : null,
                 n.getRating(),
-                n.getCreatedAt() // BaseEntity
+                n.getCreatedAt()
         ));
     }
 

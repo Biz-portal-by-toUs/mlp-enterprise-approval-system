@@ -284,18 +284,19 @@
 <div class="container notice-container">
     <h2>공지사항 목록</h2>
     <div class="top-bar">
-        <a href="/notice/form" class="btn btn-create">공지내용등록</a>
+        <a href="/notice/form" class="btn btn-create">공지사항등록</a>
     </div>
     <!-- 검색창 -->
     <div class="search-bar">
         <select id="searchType">
             <option value="">전체</option>
             <option value="title">제목</option>
-            <option value="writer">작성자</option>
+            <option value="empName">작성자</option>
+            <option value="depName">부서</option>
             <option value="date">작성일</option>
         </select>
 
-        <input id="keyword" type="text" placeholder="제목/작성자 검색어" />
+        <input id="keyword" type="text" placeholder="키워드를 입력하세요" />
 
         <input id="fromDate" type="date" class="hidden" />
         <span id="dateTilde" class="hidden">~</span>
@@ -359,11 +360,12 @@
     function updateHint() {
         const hint = document.getElementById("searchHint");
         if (!currentQuery.type) {
-            hint.textContent = "전체 공지사항을 조회합니다.";
+            hint.textContent = "전체(제목+내용)에서 키워드로 검색합니다.";
             return;
         }
         if (currentQuery.type === "title") hint.textContent = "제목에 포함된 키워드로 검색합니다.";
-        if (currentQuery.type === "writer") hint.textContent = "작성자(empId)에 포함된 키워드로 검색합니다.";
+        if (currentQuery.type === "empName") hint.textContent = "작성자(사원명)에 포함된 키워드로 검색합니다.";
+        if (currentQuery.type === "depName") hint.textContent = "부서명에 포함된 키워드로 검색합니다.";
         if (currentQuery.type === "date") hint.textContent = "작성일 범위(from~to)로 검색합니다.";
     }
 
@@ -374,13 +376,12 @@
 
         if (currentQuery.type) params.set("type", currentQuery.type);
 
-        if (currentQuery.type === "title" || currentQuery.type === "writer") {
-            if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
-        }
-
         if (currentQuery.type === "date") {
             if (currentQuery.from) params.set("from", currentQuery.from);
             if (currentQuery.to) params.set("to", currentQuery.to);
+        } else {
+            // ✅ 핵심: date가 아니면(전체/제목/작성자/부서) keyword를 항상 전송
+            if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
         }
 
         return `${API_URL}?${params.toString()}`;
