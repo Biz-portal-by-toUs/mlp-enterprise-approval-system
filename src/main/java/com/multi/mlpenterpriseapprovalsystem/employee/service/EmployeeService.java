@@ -4,10 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResChatEmployeeCursorDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -90,6 +87,15 @@ public class EmployeeService {
     public List<ResEmployeeListDto> searchEmployees(String comId, Long depNo, Long posNo, Boolean isDeleted, String keyword) {
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return employeeRepository.searchEmployees(comId, depNo, posNo, isDeleted, searchKeyword);
+    }
+
+    @Transactional(readOnly = true)
+    public ResAdminEmployeeDetailDto getEmployeeDetail(String comId, Long empNo) {
+
+        Employee employee = employeeRepository.findAdminDetailByComIdAndEmpNo(comId, empNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        return ResAdminEmployeeDetailDto.from(employee);
     }
 
     private record CursorKey(String name, Long no) {}
