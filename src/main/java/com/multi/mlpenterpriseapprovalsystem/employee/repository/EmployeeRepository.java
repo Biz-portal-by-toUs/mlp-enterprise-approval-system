@@ -89,16 +89,15 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "AND (:posNo IS NULL OR p.posNo = :posNo) " +
             "AND (:isDeleted IS NULL OR e.isDeleted = :isDeleted) " +
             "AND (:keyword IS NULL OR :keyword = '' " +
-            "    OR e.empName LIKE %:keyword% " +
-            "    OR e.empId LIKE %:keyword% " +
-            "    OR e.email LIKE %:keyword%) " +
+            "    OR e.empName LIKE CONCAT('%', :keyword, '%')) " +
             "ORDER BY e.empNo DESC")
     List<ResEmployeeListDto> searchEmployees(
             @Param("comId") String comId,
             @Param("depNo") Long depNo,
             @Param("posNo") Long posNo,
             @Param("isDeleted") Boolean isDeleted,
-            @Param("keyword") String keyword);
+            @Param("keyword") String keyword
+    );
 
     List<Employee> findByEmpIdIn(List<String> attendeeIds);
 
