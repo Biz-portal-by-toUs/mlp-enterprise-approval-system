@@ -13,6 +13,8 @@ public record NoticeListItemResDto(
         Long noticeNo,
         String title,
         String empId,
+        String empName,
+        String depName,
         Integer rating,
         LocalDateTime createdAt
 ) {}

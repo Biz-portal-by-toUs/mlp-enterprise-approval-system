@@ -111,18 +111,6 @@
             margin-top: 14px;
         }
 
-        /* 팝업 여부 배지 느낌 */
-        #noticePopup{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-weight: 800;
-            font-size: .9rem;
-            border: 1px solid rgba(17,24,39,.10);
-            background: rgba(17,24,39,.03);
-        }
 
         /* JS 값이 true/false로 그대로 보이면 아쉬우니,
            true면 초록/false면 회색으로 보이게 하려면 JS에서 텍스트를 Y/N로 바꾸면 베스트.
@@ -267,6 +255,59 @@
             background: rgba(59,130,246,.10);
         }
 
+        /* 3개 항목을 한 줄에 */
+        .notice-info p.triple{
+            grid-template-columns: 120px 1fr 120px 1fr 120px 1fr;
+            gap: 10px 14px;
+        }
+
+        /* 작은 화면에서는 2줄로 자연스럽게 */
+        @media (max-width: 720px){
+            .notice-info p.triple{
+                grid-template-columns: 120px 1fr;
+            }
+        }
+
+        /* (선택) 등록일/변경일/조회건수 줄의 우선순위 튜닝 */
+        .notice-info p.triple.triple-2-1 strong:nth-of-type(3),
+        .notice-info p.triple.triple-2-1 span:nth-of-type(3){
+            /* 필요하면 숨기거나 아래로 내리는 등 조정 가능 */
+        }
+
+        .btn.btn-sm{
+            padding: 8px 10px;
+            font-weight: 800;
+            box-shadow: 0 6px 14px rgba(17,24,39,.05);
+        }
+
+        /* 공통 배지 */
+        .badge{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: .8rem;
+            font-weight: 900;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+
+        /* 사용 */
+        .badge.success{
+            background: rgba(16,185,129,.12);
+            color: var(--success);
+            border-color: rgba(16,185,129,.35);
+        }
+
+        /* 미사용 */
+        .badge.muted{
+            background: rgba(107,114,128,.12);
+            color: var(--muted);
+            border-color: rgba(107,114,128,.35);
+        }
+
+
     </style>
 </head>
 <body>
@@ -282,13 +323,23 @@
         <div class="notice-info">
             <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
             <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
-            <p><strong>팝업여부:</strong> <span id="noticePopup"></span></p>
-            <p><strong>팝업시작일:</strong> <span id="noticeStarted"></span></p>
-            <p><strong>팝업종료일:</strong> <span id="noticeEnded"></span></p>
-            <p><strong>조회건수:</strong> <span id="noticeRating"></span></p>
-            <p><strong>작성자:</strong> <span id="noticeWriter"></span></p>
-            <p><strong>등록일:</strong> <span id="noticeCreated"></span></p>
-            <p><strong>변경일:</strong> <span id="noticeUpdated"></span></p>
+            <p class="triple">
+                <strong>팝업여부:</strong> <span id="noticePopup"></span>
+                <strong>팝업시작일:</strong> <span id="noticeStarted"></span>
+                <strong>팝업종료일:</strong> <span id="noticeEnded"></span>
+            </p>
+
+            <p class="triple">
+                <strong>작성자:</strong> <span id="noticeWriter"></span>
+                <strong>직번:</strong> <span id="noticeWriterId"></span>
+                <strong>부서:</strong> <span id="noticeDepart"></span>
+            </p>
+
+            <p class="triple triple-2-1">
+                <strong>등록일:</strong> <span id="noticeCreated"></span>
+                <strong>변경일:</strong> <span id="noticeUpdated"></span>
+                <strong>조회건수:</strong> <span id="noticeRating"></span>
+            </p>
         </div>
     </div>
 
@@ -309,7 +360,6 @@
         <button id="delete-btn" class="btn ms-2" onclick="deleteNotice()">삭제하기</button>
     </div>
 
-    <a href="/main" class="home-link">← 홈으로 돌아가기</a>
 </div>
 
 <script>
@@ -330,13 +380,26 @@
                 const notice = result.data;
                 $('#noticeTitle').text(notice.title);
                 $('#noticeDescription').text(notice.contents);
-                $('#noticePopup').text(notice.isPopup);
-                $('#noticeStarted').text(notice.startedAt);
-                $('#noticeEnded').text(notice.endedAt);
+               // $('#noticePopup').text(notice.isPopup);
+                const isPopup = notice.isPopup === true || notice.isPopup === 'true';
+
+                $('#noticePopup').html(
+                    isPopup
+                        ? `<span class="badge success">사용</span>`
+                        : `<span class="badge muted">미사용</span>`
+                );
+                const startedAt = notice.startedAt ? notice.startedAt.substring(0, 10) : "-";
+                $('#noticeStarted').text(startedAt);
+                const endedAt = notice.endedAt ? notice.endedAt.substring(0, 10) : "-";
+                $('#noticeEnded').text(endedAt);
                 $('#noticeRating').text(notice.rating);
-                $('#noticeWriter').text(notice.empId);
-                $('#noticeCreated').text(notice.createdAt);
-                $('#noticeUpdated').text(notice.updatedAt);
+                $('#noticeWriter').text(notice.empName);
+                $('#noticeWriterId').text(notice.empId);
+                $('#noticeDepart').text(notice.depName);
+                const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
+                $('#noticeCreated').text(createdAt);
+                const updatedAt = notice.updatedAt ? notice.updatedAt.substring(0, 10) : "-";
+                $('#noticeUpdated').text(updatedAt);
 
                 initAttach();
             }
@@ -370,26 +433,28 @@
 
                 attachList.append(`
           <tr>
+            <th>일련번호</th>
+            <th>파일명</th>
             <th>attachmentId</th>
             <th>displayOrder</th>
-            <th>originalName</th>
             <th>size</th>
             <th>미리보기</th>
             <th>다운로드</th>
           </tr>
         `);
 
-                attachs.forEach(r => {
+                attachs.forEach((r, index) => {
                     attachList.append(`
-            <tr>
-              <td>${r.attachmentId}</td>
-              <td>${r.displayOrder}</td>
-              <td>${r.originalName}</td>
-              <td>${r.size}</td>
-              <td><button type="button" class="document" data-view="${r.attachmentId}">미리보기</button></td>
-              <td><button type="button" class="document" data-down="${r.attachmentId}">다운로드</button></td>
-            </tr>
-          `);
+                        <tr>
+                          <td>${index+1} </td>
+                          <td>${r.originalName}</td>
+                          <td>${r.attachmentId}</td>
+                          <td>${r.displayOrder}</td>
+                          <td>${formatFileSize(r.size)}</td>
+                          <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+                          <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+                        </tr>
+                      `);
                 });
 
                 // ✅ 이벤트 연결 (테이블 다시 그린 뒤에 연결)
@@ -414,6 +479,17 @@
         } catch (error) {
             console.error('Failed to load attachment file:', error);
         }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes == null || isNaN(bytes)) return "-";
+        if (bytes < 1024) return `${bytes} B`;
+
+        const kb = bytes / 1024;
+        if (kb < 1024) return `${kb.toFixed(1)} KB`;
+
+        const mb = kb / 1024;
+        return `${mb.toFixed(1)} MB`;
     }
 
     async function fetchDownloadUrl(attachmentId) {

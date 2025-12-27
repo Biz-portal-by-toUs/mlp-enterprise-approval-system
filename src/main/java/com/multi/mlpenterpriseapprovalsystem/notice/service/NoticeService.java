@@ -186,6 +186,8 @@ public class NoticeService {
                 .startedAt(notice.getStartedAt())
                 .endedAt(notice.getEndedAt())
                 .empId(notice.getEmployee().getEmpId())
+                .empName(notice.getEmployee().getEmpName())
+                .depName(notice.getEmployee().getDepartment().getDepName())
                 .createdAt(notice.getCreatedAt())
                 .updatedAt(notice.getUpdatedAt())
                 .rating(notice.getRating())
@@ -289,6 +291,8 @@ public class NoticeService {
                 n.getNoticeNo(),
                 n.getTitle(),
                 (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null,
+                n.getEmployee().getEmpName(),
+                n.getEmployee().getDepartment().getDepName(),
                 n.getRating(),
                 n.getCreatedAt() // BaseEntity
         ));

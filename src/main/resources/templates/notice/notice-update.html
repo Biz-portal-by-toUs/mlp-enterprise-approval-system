@@ -322,6 +322,45 @@
             border-color: rgba(59,130,246,.35);
         }
 
+        /* 오른쪽 액션 영역 */
+        .attach-actions{
+            margin-left: auto;                 /* ✅ 오른쪽 끝으로 밀기 */
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 새로고침 아이콘 버튼 */
+        .attach-refresh{
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(59,130,246,.18);
+            background: rgba(59,130,246,.06);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
+            position: relative;
+        }
+
+        /* 아이콘(문자 대신 CSS로) */
+        .attach-refresh::before{
+            content: "⟳";                      /* ✅ 새로고침 느낌 */
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--primary2);
+            line-height: 1;
+        }
+
+        .attach-refresh:hover{
+            transform: translateY(-1px);
+            background: rgba(59,130,246,.10);
+            border-color: rgba(59,130,246,.35);
+        }
+
+
 
     </style>
 
@@ -375,19 +414,16 @@
             <div class="attach-head">
                 <h3 class="attach-title">첨부 파일</h3>
 
-                <!-- 등록 화면 이동 (폼 전송과 무관) -->
-                <a class="attach-link"
-                   th:href="@{/notice/Attachment-notice/{noticeNo}(noticeNo=${noticeNo})}"
-                   target="_blank">
-                    첨부파일등록
-                </a>
+                <!-- 오른쪽 버튼 그룹 -->
+                <div class="attach-actions">
+                    <button type="button" class="attach-refresh" id="refreshAttachBtn" aria-label="새로고침"></button>
 
-                <!-- ✅ 첨부 리스트 새로고침 -->
-                <button type="button"
-                        class="attach-link"
-                        id="refreshAttachBtn">
-                    새로고침
-                </button>
+                    <a class="attach-link"
+                       th:href="@{/notice/Attachment-notice/{noticeNo}(noticeNo=${noticeNo})}"
+                       target="_blank">
+                        첨부파일등록
+                    </a>
+                </div>
 
             </div>
 
@@ -402,8 +438,6 @@
 
     </form>
 
-       <!-- 홈으로 돌아가기 -->
-    <a href="/main" style="display: inline-block; margin-top: 20px;">홈으로 돌아가기</a>
 </div>
 <div class="footer">
     <!--
@@ -543,24 +577,26 @@
 
                 attachList.insertAdjacentHTML("beforeend", `
         <tr>
+          <th>일련번호</th>
+          <th>파일명</th>
           <th>attachmentId</th>
           <th>displayOrder</th>
-          <th>originalName</th>
           <th>size</th>
           <th>삭제</th>
         </tr>
       `);
 
-                attachs.forEach(r => {
+                attachs.forEach((r,index) => {
                     attachList.insertAdjacentHTML("beforeend", `
-          <tr>
-            <td>${r.attachmentId}</td>
-            <td>${r.displayOrder}</td>
-            <td>${r.originalName}</td>
-            <td>${r.size}</td>
-            <td><button type="button" data-attachment-id="${r.attachmentId}">삭제</button></td>
-          </tr>
-        `);
+                              <tr>
+                                <td>${index+1}</td>
+                                <td>${r.originalName}</td>
+                                <td>${r.attachmentId}</td>
+                                <td>${r.displayOrder}</td>
+                                <td>${formatFileSize(r.size)}</td>
+                                <td><button type="button" data-attachment-id="${r.attachmentId}">삭제</button></td>
+                              </tr>
+                            `);
                 });
 
                 attachList.querySelectorAll("button[data-attachment-id]").forEach(btn => {
@@ -578,6 +614,18 @@
             console.error('Failed to load attachment file:', error);
         }
     }
+
+    function formatFileSize(bytes) {
+        if (bytes == null || isNaN(bytes)) return "-";
+        if (bytes < 1024) return `${bytes} B`;
+
+        const kb = bytes / 1024;
+        if (kb < 1024) return `${kb.toFixed(1)} KB`;
+
+        const mb = kb / 1024;
+        return `${mb.toFixed(1)} MB`;
+    }
+
 
     document.getElementById("refreshAttachBtn")
         ?.addEventListener("click", () => {

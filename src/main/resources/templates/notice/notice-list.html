@@ -313,6 +313,7 @@
         <tr>
             <th>번호</th>
             <th>제목</th>
+            <th>부서</th>
             <th>작성자</th>
             <th>등록일</th>
             <th>조회건수</th>
@@ -426,7 +427,7 @@
             console.log(result);
             // ResponseDto 형식: { status, message, data }
             if (!result || result.status !== 200 || !result.data) {
-                tbody.innerHTML = `<tr><td colspan="4">데이터 오류</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6">데이터 오류</td></tr>`;
                 document.getElementById("pagination").innerHTML = "";
                 return;
             }
@@ -435,31 +436,35 @@
             const notices = pageData.content || [];
 
             if (notices.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4">공지사항이 없습니다.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6">공지사항이 없습니다.</td></tr>`;
                 renderPagination(pageData);
                 return;
             }
 
-            notices.forEach((notice) => {
-                const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
+            const startNo = page * PAGE_SIZE;
+
+            notices.forEach((notice, index) => {
+                const no = startNo + index + 1;
+                //const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-          <td>${notice.noticeNo}</td>
-          <td class="title">
-            <a href="/notice/${notice.noticeNo}">${notice.title}</a>
-          </td>
-          <td>${notice.empId ?? ""}</td>
-          <td>${createdAt}</td>
-          <td>${notice.rating}</td>
-        `;
+                              <td>${no}</td>
+                              <td class="title">
+                                <a href="/notice/${notice.noticeNo}">${notice.title}</a>
+                              </td>
+                              <td>${notice.depName ?? ""}</td>
+                              <td>${notice.empName ?? ""}</td>
+                              <td>${notice.createdAt?.substring(0, 10) ?? "-"}</td>
+                              <td>${notice.rating}</td>
+                            `;
                 tbody.appendChild(tr);
             });
 
             renderPagination(pageData);
 
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="4">서버 오류</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6">서버 오류</td></tr>`;
             document.getElementById("pagination").innerHTML = "";
         }
     }
