@@ -666,6 +666,28 @@
             gap: 10px !important;
         }
 
+        /* 첨부파일 등록 체크박스 (작게) */
+        .attach-check{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(17,24,39,.10);
+            background: rgba(17,24,39,.02);
+            box-shadow: 0 8px 18px rgba(17,24,39,.06);
+            font-weight: 800;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .attach-check input{
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+        }
+
     </style>
 </head>
 <body>
@@ -718,6 +740,11 @@
         </div>
 
         <div class="form-actions">
+            <!-- ✅ 첨부파일 등록 체크박스 -->
+            <label class="attach-check">
+                <input type="checkbox" id="attachAfter" name="attachAfter">
+                <span>첨부파일 등록</span>
+            </label>
             <button type="submit" class="btn-submit">공지 등록</button>
             <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
         </div>
@@ -766,16 +793,16 @@
         });
 
         // 현재 체크값 기준 반영
-        const checked = document.querySelector('input[name="idPopup"]:checked');
+        const checked = document.querySelector('input[name="isPopup"]:checked');
         if (checked) togglePopupDates(checked.value);
     }
-
 
     // ✅ 공지 등록 fetch
     document.getElementById('noticeForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
         const token = localStorage.getItem("accessToken");
+
         if (!token) {
             alert("로그인 후 이용해주세요.");
             window.location.href = "/auth/login";
@@ -798,12 +825,58 @@
             const result = await response.json();
             const notice = result.data;
             console.log(notice.noticeNo);
-            if (response.ok) {
-                alert('공지 등록 성공!');
-                window.location.href = `/notice/Attachment-notice/${notice.noticeNo}`;
-            } else {
-                alert(result.message || '리뷰 등록 실패');
+
+            if (!response.ok) {
+                alert(result.message || '공지 등록 실패');
+                return;
             }
+
+            alert('공지 등록 성공!');
+
+            //const noticeNo = result?.data?.notice.noticeNo;
+            const attachChecked = document.getElementById('attachAfter')?.checked;
+
+            // ✅ 체크되어 있으면 새창 오픈(팝업)
+            if (attachChecked && notice) {
+                const w = 1100, h = 800;
+                const left = Math.max(0, (window.screen.width - w) / 2);
+                const top = Math.max(0, (window.screen.height - h) / 2);
+
+                // Thymeleaf의 <a th:href="...">와 같은 URL 구조를 JS에서 그대로 사용:
+                const attachUrl = `/notice/Attachment-notice/${notice.noticeNo}`;
+
+                const popup = window.open(
+                    attachUrl,
+                    "attachPopup",
+                    `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+                );
+
+                // 팝업 차단 시 안내
+                if (!popup) {
+                    alert("팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해주세요.");
+                }
+            }
+
+            // ✅ 부모창은 무조건 리스트로 이동
+            window.location.href = "/notice/list";
+
+
+            // if (response.ok) {
+            //     alert('공지 등록 성공!');
+            //     //const noticeNo = result?.data?.noticeNo;
+            //
+            //     // ✅ 체크박스 여부로 이동 분기
+            //     const attachChecked = document.getElementById('attachAfter')?.checked;
+            //
+            //     if (attachChecked) {
+            //         window.location.href = `/notice/Attachment-notice/${notice.noticeNo}`;
+            //     } else {
+            //         window.location.href = `/notice/list`;
+            //     }
+            //
+            // } else {
+            //     alert(result.message || '공지 등록 실패');
+            // }
 
         } catch (error) {
             console.error('공지사항 등록 중 오류 발생:', error);
