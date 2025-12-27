@@ -48,14 +48,14 @@ public class Document extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String title;
 
-    @Column(columnDefinition = "json")
+    @Column(columnDefinition = "mediumtext")
     private String content = "";
 
     @OneToMany( mappedBy = "document", fetch = FetchType.LAZY)
     private List<ApprovalLine> approvalLines;
 
     @Lob
-    @Column(name = "cntt_html")
+    @Column(name = "cntt_html", columnDefinition = "mediumtext")
     private String cnttHtml = "";
 
     // 작성자 참조 (emp_id -> employee.emp_id)

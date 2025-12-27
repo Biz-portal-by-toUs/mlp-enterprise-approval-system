@@ -10,13 +10,28 @@
             max-width: 1400px; margin: 0 auto; background: white; padding: 40px;
             min-height: 850px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+        .page-header { margin-bottom: 20px; }
         .page-title { font-size: 24px; font-weight: bold; color: #333; }
 
-        .sort-options { font-size: 13px; color: #666; display: flex; gap: 15px; }
-        .sort-options span { cursor: pointer; transition: color 0.2s; }
-        .sort-options span:hover { color: #339af0; }
-        .sort-options .active { color: #339af0; font-weight: bold; text-decoration: underline; }
+        /* ✅ 정렬 옵션: 드롭다운 + 클릭 방식 혼합 */
+        .sort-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+            padding: 10px 0;
+        }
+        .sort-basis-select {
+            padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;
+            font-size: 13px; outline: none; background: white; cursor: pointer;
+        }
+        .sort-basis-select:focus { border-color: #339af0; }
+
+        .sort-order-group { display: flex; gap: 15px; font-size: 13px; color: #666; }
+        .sort-order-group span { cursor: pointer; transition: color 0.2s; }
+        .sort-order-group span:hover { color: #339af0; }
+        .sort-order-group span.active { color: #339af0; font-weight: bold; text-decoration: underline; }
 
         .search-container {
             background: #f1f3f5; padding: 20px; border-radius: 6px; margin-bottom: 25px;
@@ -56,14 +71,63 @@
         .title-cell:hover { color: #339af0; text-decoration: underline; }
 
         .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .badge-AW { background: #e7f5ff; color: #228be6; } .badge-FI { background: #e6fcf5; color: #0ca678; }
-        .badge-RJ { background: #fff5f5; color: #fa5252; } .badge-A { background: #e6fcf5; color: #0ca678; }
-        .badge-R { background: #fff5f5; color: #fa5252; }
+        .badge-AW { background: #e7f5ff; color: #228be6; }
+        .badge-FI { background: #e6fcf5; color: #0ca678; }
+        .badge-RJ { background: #fff5f5; color: #fa5252; cursor: pointer; transition: all 0.2s; }
+        .badge-RJ:hover { background: #ffe0e0; transform: scale(1.05); }
+        .badge-A { background: #e6fcf5; color: #0ca678; }
+        .badge-R { background: #fff5f5; color: #fa5252; cursor: pointer; transition: all 0.2s; }
+        .badge-R:hover { background: #ffe0e0; transform: scale(1.05); }
 
         .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
         .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; }
         .page-btn-num { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
         .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
+
+        /* ✅ 모달 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease-out;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -71,19 +135,13 @@
 <div class="main-container">
     <div class="page-header">
         <div class="page-title">결재한 문서</div>
-        <div class="sort-options">
-            <span id="sort-APPR_LATEST" class="active" onclick="changeSort('APPR_LATEST')">최신순(내 결재일)</span>
-            <span id="sort-APPR_OLDEST" onclick="changeSort('APPR_OLDEST')">오래된순(내 결재일)</span>
-            <span id="sort-SUBMIT_LATEST" onclick="changeSort('SUBMIT_LATEST')">최신순(상신일)</span>
-            <span id="sort-SUBMIT_OLDEST" onclick="changeSort('SUBMIT_OLDEST')">오래된순(상신일)</span>
-        </div>
     </div>
 
     <div class="search-container">
         <div class="search-group">
             <label>카테고리</label>
             <div class="custom-dropdown" id="cat-dropdown-wrapper">
-                <input type="text" id="search-docfoCatName" class="search-input" placeholder="카테고리 선택" autocomplete="off">
+                <input type="text" id="search-docfoCatName" class="search-input" placeholder="카테고리 선택" autocomplete="off" maxlength="100">
                 <div id="cat-list" class="dropdown-list"></div>
             </div>
         </div>
@@ -113,21 +171,33 @@
         </div>
         <div class="search-group">
             <label>문서코드</label>
-            <input type="text" id="search-docId" class="search-input" placeholder="DOC~">
+            <input type="text" id="search-docId" class="search-input" placeholder="문서코드 입력" maxlength="15">
         </div>
         <div class="search-group">
             <label>제목</label>
-            <input type="text" id="search-title" class="search-input" placeholder="제목 키워드">
+            <input type="text" id="search-title" class="search-input" placeholder="제목 입력" maxlength="100">
         </div>
         <div class="search-group">
             <label>작성자명</label>
-            <input type="text" id="search-writerName" class="search-input" placeholder="이름">
+            <input type="text" id="search-writerName" class="search-input" placeholder="이름 입력" maxlength="20">
         </div>
         <div class="search-group">
             <label>사원번호</label>
-            <input type="text" id="search-writerId" class="search-input" placeholder="EMP~">
+            <input type="text" id="search-writerId" class="search-input" placeholder="사원번호 입력" maxlength="15">
         </div>
         <button class="btn-search" onclick="loadData(0)">검색</button>
+    </div>
+
+    <!-- ✅ 드롭다운(정렬기준) + 클릭(정렬순서) 방식 -->
+    <div class="sort-options">
+        <select id="sort-basis" class="sort-basis-select" onchange="applySort()">
+            <option value="APPR">내 결재일</option>
+            <option value="SUBMIT">상신일</option>
+        </select>
+        <div class="sort-order-group">
+            <span id="order-LATEST" class="active" onclick="changeOrder('LATEST')">최신순</span>
+            <span id="order-OLDEST" onclick="changeOrder('OLDEST')">오래된순</span>
+        </div>
     </div>
 
     <table class="doc-table">
@@ -152,22 +222,114 @@
     <div class="pagination" id="pagination-nav"></div>
 </div>
 
+<!-- ✅ 반려 정보 모달 -->
+<div id="reject-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #fa5252; padding-bottom: 15px;">
+            <h3 style="margin: 0; color: #fa5252; font-size: 22px; display: flex; align-items: center; gap: 10px;">
+                <span>❌</span>
+                <span>반려 정보</span>
+            </h3>
+            <button onclick="closeRejectModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #868e96; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+
+        <div style="background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 10px; padding: 25px; margin-bottom: 25px;">
+            <div style="margin-bottom: 25px;">
+                <div style="font-weight: 600; color: #868e96; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>👤</span>
+                    <span>반려자 정보</span>
+                </div>
+                <div style="background: white; border: 1px solid #ffc9c9; border-radius: 8px; padding: 20px;">
+                    <div style="display: grid; grid-template-columns: 90px 1fr 90px 1fr; gap: 12px 20px; font-size: 14px;">
+                        <div style="color: #868e96; font-weight: 500;">이름</div>
+                        <div id="modal-rejecter-name" style="color: #333; font-weight: 600;">-</div>
+
+                        <div style="color: #868e96; font-weight: 500;">사번</div>
+                        <div id="modal-rejecter-id" style="color: #333; font-family: 'Courier New', monospace;">-</div>
+
+                        <div style="color: #868e96; font-weight: 500;">부서</div>
+                        <div id="modal-rejecter-dept" style="color: #333;">-</div>
+
+                        <div style="color: #868e96; font-weight: 500;">직급</div>
+                        <div id="modal-rejecter-pos" style="color: #333;">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 15px; padding: 12px 20px; background: white; border: 1px solid #ffc9c9; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">📅</span>
+                    <span style="font-weight: 600; color: #868e96; font-size: 14px;">반려일자</span>
+                </div>
+                <div id="modal-rejectDate" style="color: #333; font-size: 14px; font-weight: 500;">-</div>
+            </div>
+        </div>
+
+        <div>
+            <div style="font-weight: 600; color: #868e96; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                <span>💬</span>
+                <span>반려 사유</span>
+            </div>
+            <div id="modal-rejectReason" style="background: white; border: 2px solid #ffc9c9; border-radius: 10px; padding: 20px; min-height: 120px; color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 14px; max-height: 300px; overflow-y: auto;">-</div>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 30px;">
+            <button onclick="closeRejectModal()" style="padding: 12px 28px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.2s;" onmouseover="this.style.background='#dee2e6'" onmouseout="this.style.background='#e9ecef'">닫기</button>
+        </div>
+    </div>
+</div>
+
 <script th:inline="javascript">
     const API_URL = '/api/v1/documents/me?status=PROCESSED';
-    let currentSort = 'APPR_LATEST';
+    let currentBasis = 'APPR';
+    let currentOrder = 'LATEST';
     let currentPage = 0;
     let allCategories = [];
+    let currentUserId = null;
 
     document.addEventListener('DOMContentLoaded', () => {
+        fetchCurrentUser();
         fetchDepartments();
         fetchCategoryNames();
         initCustomDropdown();
-        loadData(0);
     });
 
-    /**
-     * [Logic] 카테고리 이름 조회 API 연동
-     */
+    async function fetchCurrentUser() {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch('/api/v1/temp/employees/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+
+            if (response.ok && result.data) {
+                currentUserId = result.data.empId;
+                console.log('✅ 현재 사용자 ID:', currentUserId);
+                loadData(0);
+            } else {
+                console.error('사용자 정보 조회 실패:', result);
+                loadData(0);
+            }
+        } catch (e) {
+            console.error('사용자 정보 로드 실패:', e);
+            loadData(0);
+        }
+    }
+
+    function applySort() {
+        currentBasis = document.getElementById('sort-basis').value;
+        currentPage = 0;
+        loadData(0);
+    }
+
+    function changeOrder(order) {
+        currentOrder = order;
+        currentPage = 0;
+        document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
+        document.getElementById('order-' + order).classList.add('active');
+        loadData(0);
+    }
+
     async function fetchCategoryNames() {
         const token = localStorage.getItem('accessToken');
         try {
@@ -177,20 +339,14 @@
             const result = await response.json();
 
             if (response.ok && result.data) {
-                // 서버에서 온 데이터의 공백 제거(Trim) 후 저장
                 allCategories = result.data.map(name => name.trim());
                 renderDropdownItems(allCategories);
             }
         } catch (e) { console.error("카테고리 로드 실패", e); }
     }
 
-    /**
-     * ✅ [기능 수정] 드롭다운 리스트 렌더링
-     * '전체' 선택 시 데이터 값을 "전체"로 설정하여 표시 버그 해결
-     */
     function renderDropdownItems(list) {
         const listEl = document.getElementById('cat-list');
-        // '전체' 항목 클릭 시 input에 "전체"라고 표시되도록 data-value 설정
         listEl.innerHTML = '<div class="dropdown-item" data-value="전체">전체</div>';
 
         if (list.length === 0) {
@@ -202,9 +358,6 @@
         }
     }
 
-    /**
-     * ✅ [UI 인터랙션] 검색형 드롭다운 이벤트
-     */
     function initCustomDropdown() {
         const input = document.getElementById('search-docfoCatName');
         const listEl = document.getElementById('cat-list');
@@ -216,7 +369,6 @@
 
         input.addEventListener('input', (e) => {
             const val = e.target.value.trim().toLowerCase();
-            // "전체"라고 직접 타이핑했을 때의 처리
             const filtered = allCategories.filter(cat => cat.toLowerCase().includes(val));
             renderDropdownItems(filtered);
             listEl.style.display = 'block';
@@ -224,7 +376,6 @@
 
         listEl.addEventListener('click', (e) => {
             if (e.target.classList.contains('dropdown-item') && !e.target.classList.contains('no-result')) {
-                // 선택한 항목의 텍스트(예: "전체" 또는 "인사")를 input에 세팅
                 input.value = e.target.getAttribute('data-value');
                 listEl.style.display = 'none';
             }
@@ -256,26 +407,15 @@
         } catch (e) { console.error("부서 로드 실패", e); }
     }
 
-    function changeSort(sort) {
-        currentSort = sort;
-        currentPage = 0;
-        document.querySelectorAll('.sort-options span').forEach(el => el.classList.remove('active'));
-        document.getElementById('sort-' + sort).classList.add('active');
-        loadData(0);
-    }
-
-    /**
-     * ✅ [서버 통신] 검색 데이터 로드
-     * 카테고리 값이 "전체"인 경우 서버에는 빈 값("")을 보내도록 처리
-     */
     async function loadData(page) {
         currentPage = page;
         const token = localStorage.getItem('accessToken');
         const catValue = document.getElementById('search-docfoCatName').value;
+        const sortValue = `${currentBasis}_${currentOrder}`;
 
         const params = new URLSearchParams({
-            page: page, sort: currentSort,
-            // ✅ "전체"라고 표시되어 있으면 서버 검색 조건에서는 제외(빈값 처리)
+            page: page,
+            sort: sortValue,
             docfoCatName: catValue === '전체' ? '' : catValue,
             writerDepName: document.getElementById('search-writerDepName').value,
             docStat: document.getElementById('search-docStat').value,
@@ -309,6 +449,30 @@
 
         docs.forEach((doc, index) => {
             const no = (currentPage * pageSize) + index + 1;
+
+            let myApprovalDate = '-';
+            if (doc.resApprovalLineDtos && Array.isArray(doc.resApprovalLineDtos) && currentUserId) {
+                const myApproval = doc.resApprovalLineDtos.find(line =>
+                    line.approverId === currentUserId &&
+                    (line.apprStat === 'A' || line.apprStat === 'R') &&
+                    line.endedAt
+                );
+
+                if (myApproval && myApproval.endedAt) {
+                    myApprovalDate = formatDate(myApproval.endedAt);
+                }
+            }
+
+            // ✅ 문서상태 배지 - 반려일 때 클릭 가능
+            const docStatusBadge = doc.docStat === 'RJ'
+                ? `<span class="badge badge-${doc.docStat}" onclick="showRejectModal(${doc.docNo})" title="클릭하여 반려 정보 보기">${getDocStatusName(doc.docStat)}</span>`
+                : `<span class="badge badge-${doc.docStat}">${getDocStatusName(doc.docStat)}</span>`;
+
+            // ✅ 내 결재상태 배지 - 반려일 때 클릭 가능
+            const myApprBadge = doc.myApprStat === 'R'
+                ? `<span class="badge badge-${doc.myApprStat}" onclick="showRejectModal(${doc.docNo})" title="클릭하여 반려 정보 보기">${getMyApprStatusName(doc.myApprStat)}</span>`
+                : `<span class="badge badge-${doc.myApprStat}">${getMyApprStatusName(doc.myApprStat)}</span>`;
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${no}</td>
@@ -319,10 +483,10 @@
                 <td>
                     ${doc.writer}<br><span style="font-size:12px; color:#868e96;">${doc.writerId}</span>
                 </td>
-                <td><span class="badge badge-${doc.docStat}">${getDocStatusName(doc.docStat)}</span></td>
+                <td>${docStatusBadge}</td>
                 <td>${formatDate(doc.submittedAt)}</td>
-                <td><span class="badge badge-${doc.myApprStat}">${getMyApprStatusName(doc.myApprStat)}</span></td>
-                <td>${formatDate(doc.updatedAt)}</td>
+                <td>${myApprBadge}</td>
+                <td>${myApprovalDate}</td>
                 <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="alert('AI요약을 조회합니다.')">보기</button>` : '-'}</td>
             `;
             tbody.appendChild(tr);
@@ -332,6 +496,62 @@
             tbody.innerHTML += '<tr>' + '<td></td>'.repeat(11) + '</tr>';
         }
     }
+
+    // ✅ 반려 모달 열기
+    async function showRejectModal(docNo) {
+        const token = localStorage.getItem('accessToken');
+
+        try {
+            const response = await fetch(`/api/v1/documents/${docNo}?status=PROCESSED`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.data) {
+                const doc = result.data;
+
+                // 반려 정보 찾기
+                const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R');
+
+                if (rejectedLine) {
+                    document.getElementById('modal-rejecter-name').textContent = rejectedLine.approverName || '-';
+                    document.getElementById('modal-rejecter-id').textContent = rejectedLine.approverId || '-';
+                    document.getElementById('modal-rejecter-dept').textContent = rejectedLine.approverDepName || '-';
+                    document.getElementById('modal-rejecter-pos').textContent = rejectedLine.approverPosName || '-';
+                    document.getElementById('modal-rejectDate').textContent = formatDateSimple(rejectedLine.endedAt);
+                    document.getElementById('modal-rejectReason').textContent = rejectedLine.rejReason || '반려 사유가 입력되지 않았습니다.';
+                } else {
+                    document.getElementById('modal-rejecter-name').textContent = '-';
+                    document.getElementById('modal-rejecter-id').textContent = '-';
+                    document.getElementById('modal-rejecter-dept').textContent = '-';
+                    document.getElementById('modal-rejecter-pos').textContent = '-';
+                    document.getElementById('modal-rejectDate').textContent = '-';
+                    document.getElementById('modal-rejectReason').textContent = '반려 정보를 찾을 수 없습니다.';
+                }
+
+                document.getElementById('reject-modal').classList.add('show');
+            } else {
+                alert('문서 정보를 불러올 수 없습니다.');
+            }
+        } catch (error) {
+            console.error('문서 조회 실패:', error);
+            alert('문서 조회 중 오류가 발생했습니다.');
+        }
+    }
+
+    // ✅ 반려 모달 닫기
+    function closeRejectModal() {
+        document.getElementById('reject-modal').classList.remove('show');
+    }
+
+    // ✅ 모달 외부 클릭 시 닫기
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('reject-modal');
+        if (e.target === modal) {
+            closeRejectModal();
+        }
+    });
 
     function renderPagination(totalPages, currentPage) {
         const nav = document.getElementById('pagination-nav');
@@ -370,14 +590,22 @@
         const map = { 'AW': '결재중', 'FI': '최종승인', 'RJ': '반려' };
         return map[stat] || stat;
     }
+
     function getMyApprStatusName(stat) {
         const map = { 'A': '승인', 'R': '반려' };
         return map[stat] || stat || '-';
     }
+
     function formatDate(str) {
         if (!str) return '-';
         const d = new Date(str);
         return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
+    }
+
+    function formatDateSimple(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 </script>
 </body>
