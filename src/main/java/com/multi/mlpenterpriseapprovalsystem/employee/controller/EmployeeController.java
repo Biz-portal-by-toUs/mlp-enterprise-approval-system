@@ -95,4 +95,19 @@ public class EmployeeController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "사원 상세 조회 성공", dto));
     }
+
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PatchMapping("/admin/employees/{empNo}/retire")
+    public ResponseEntity<ResponseDto<Void>> retireEmployee(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="empNo") Long empNo
+    ) {
+        employeeService.retireEmployee(user.getComId(), empNo);
+
+        return ResponseEntity.ok(new ResponseDto<>(
+                HttpStatus.OK,
+                "퇴사 처리 완료",
+                null
+        ));
+    }
 }
