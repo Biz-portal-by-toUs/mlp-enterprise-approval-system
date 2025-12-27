@@ -179,6 +179,12 @@
     const form = document.getElementById('employee-login-form');
     const serverError = document.getElementById('serverError');
 
+    async function safeJson(res) {
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         serverError.style.display = 'none';
@@ -191,19 +197,19 @@
             const res = await fetch('/auth/employee/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // ✅ Set-Cookie(AT/RT)를 저장/전송하기 위해
                 body: JSON.stringify({ empId, password })
             });
 
-            const result = await res.json();
+            const result = await safeJson(res);
 
             if (res.ok) {
-                const accessToken = result?.data?.accessToken;
-                if (accessToken) localStorage.setItem('accessToken', accessToken);
-
+                // ✅ accessToken/refreshToken은 서버가 Set-Cookie로 내려주면
+                // 브라우저가 httpOnly 쿠키로 자동 저장함 (localStorage 저장 X)
                 alert(result?.message || '로그인 성공!');
                 window.location.href = '/';
             } else {
-                serverError.textContent = result?.message || '로그인에 실패했습니다.';
+                serverError.textContent = result?.message || `로그인에 실패했습니다. (${res.status})`;
                 serverError.style.display = 'block';
             }
         } catch (err) {

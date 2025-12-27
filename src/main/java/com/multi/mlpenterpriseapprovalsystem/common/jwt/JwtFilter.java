@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.TokenException;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * JwtFilter
@@ -123,12 +126,14 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
+        // 1) Authorization 헤더 우선
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        //Header에서 Bearer 부분 이하로 붙은 token을 파싱한다.
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            return bearerToken.substring(7);
+            return bearerToken.substring(BEARER_PREFIX.length());
         }
-        return null;
+
+        // 2) 없으면 accessToken 쿠키에서 찾기
+        return extractCookie(request, "accessToken").orElse(null);
     }
 
     public String convertObjectToJson(Object object) throws JsonProcessingException {
@@ -137,6 +142,17 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writeValueAsString(object);
+    }
+
+    private Optional<String> extractCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return Optional.empty();
+
+        return Arrays.stream(cookies)
+                .filter(c -> name.equals(c.getName()))
+                .map(Cookie::getValue)
+                .filter(v -> v != null && !v.isBlank())
+                .findFirst();
     }
 
 }

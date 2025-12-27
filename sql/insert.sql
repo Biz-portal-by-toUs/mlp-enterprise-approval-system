@@ -943,8 +943,6 @@ TRUNCATE TABLE approval_line;
 TRUNCATE TABLE document;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 2) 프로시저 생성
--- 2) 보완된 프로시저 생성
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS PopulateDocumentTestData;
@@ -964,6 +962,7 @@ BEGIN
     DECLARE v_doc_id_val VARCHAR(14);
     DECLARE v_appr_emp_id VARCHAR(7);
     DECLARE v_submit_time DATETIME;
+    DECLARE v_reject_step INT; -- ✅ 추가: 몇 번째 결재자가 반려했는지
 
     -- 작성자 루프: 4(이사원), 8(윤사원), 9(장사원)
     WHILE v_writer_idx <= 3 DO
@@ -971,11 +970,15 @@ BEGIN
             SET v_doc_idx = 1;
 
             WHILE v_doc_idx <= 50 DO
-                    -- 문서 상태 설정
-                    IF v_doc_idx <= 10 THEN SET v_stat = 'US', v_temp = TRUE;
-                    ELSEIF v_doc_idx <= 25 THEN SET v_stat = 'AW', v_temp = FALSE;
-                    ELSEIF v_doc_idx <= 40 THEN SET v_stat = 'FI', v_temp = FALSE;
-                    ELSE SET v_stat = 'RJ', v_temp = FALSE;
+                    -- 1. 문서 상태 배분
+                    IF v_doc_idx <= 10 THEN
+                        SET v_stat = 'US', v_temp = TRUE;
+                    ELSEIF v_doc_idx <= 25 THEN
+                        SET v_stat = 'AW', v_temp = FALSE;
+                    ELSEIF v_doc_idx <= 40 THEN
+                        SET v_stat = 'FI', v_temp = FALSE;
+                    ELSE
+                        SET v_stat = 'RJ', v_temp = FALSE;
                     END IF;
 
                     SET v_form_no = (v_doc_idx % 4) + 1;
@@ -988,56 +991,74 @@ BEGIN
                         SET v_doc_id_val = NULL;
                     END IF;
 
+                    -- ✅ 반려 문서인 경우, 몇 번째 결재자가 반려할지 미리 결정
+                    IF v_stat = 'RJ' THEN
+                        SET v_reject_step = (v_doc_idx % 3) + 1; -- 1, 2, 3번째 결재자 중 하나가 반려
+                    ELSE
+                        SET v_reject_step = 0;
+                    END IF;
+
+                    -- 문서 생성
                     INSERT INTO document (doc_no, com_id, doc_id, docfo_cat_no, docfo_no, title, content, cntt_html, emp_id, temp, submitted_at, created_at, doc_stat)
                     VALUES (v_doc_no, 'C01', v_doc_id_val, v_cat_no, v_form_no,
                             CONCAT(v_writer_id, '의 문서 ', v_doc_idx, ' (', v_stat, ')'),
-                            '{"data": "Test Content"}', '<p>내용</p>', v_writer_id, v_temp,
+                            '{"data": "Test Content"}', '<p>내용 샘플</p>', v_writer_id, v_temp,
                             IF(v_temp, NULL, v_submit_time), DATE_SUB(v_submit_time, INTERVAL 10 MINUTE), v_stat);
 
                     SET v_appr_count = 3;
                     SET v_appr_step = 1;
 
                     WHILE v_appr_step <= v_appr_count DO
-                        -- [수정 포인트 1] 결재자 배치 로직을 케이스별로 분리
-                        -- 16~20번 문서(Waiting 테스트용)에서는 이사원을 2번 결재자로 강제 배치
-                            IF v_writer_id != 'E000004' AND v_doc_idx BETWEEN 16 AND 20 THEN
-                                SET v_appr_emp_id = CASE v_appr_step
-                                                        WHEN 1 THEN 'E000008' -- 1번 결재자 (윤사원)
-                                                        WHEN 2 THEN 'E000004' -- 2번 결재자 (이사원 -> 여기서 W 상태가 됨)
-                                                        ELSE 'E000001'
-                                    END;
-                                -- 작성자 본인이 결재선에 들어가는 것 방지
-                                IF v_appr_emp_id = v_writer_id THEN SET v_appr_emp_id = 'E000009'; END IF;
-                            ELSE
-                                -- 일반적인 경우 (기존 로직 유지)
-                                SET v_appr_emp_id = CASE v_appr_step
-                                                        WHEN 1 THEN IF(v_writer_id='E000004', 'E000008', 'E000004')
-                                                        WHEN 2 THEN IF(v_writer_id='E000008', 'E000009', 'E000008')
-                                                        ELSE 'E000001'
-                                    END;
-                            END IF;
+                            -- 결재자 배정
+                            SET v_appr_emp_id = CASE v_writer_id
+                                                    WHEN 'E000004' THEN
+                                                        CASE v_appr_step WHEN 1 THEN 'E000008' WHEN 2 THEN 'E000009' ELSE 'E000001' END
+                                                    WHEN 'E000008' THEN
+                                                        CASE
+                                                            WHEN v_doc_idx BETWEEN 16 AND 20 THEN
+                                                                CASE v_appr_step WHEN 1 THEN 'E000009' WHEN 2 THEN 'E000004' ELSE 'E000001' END
+                                                            ELSE
+                                                                CASE v_appr_step WHEN 1 THEN 'E000004' WHEN 2 THEN 'E000009' ELSE 'E000001' END
+                                                            END
+                                                    WHEN 'E000009' THEN
+                                                        CASE
+                                                            WHEN v_doc_idx BETWEEN 16 AND 20 THEN
+                                                                CASE v_appr_step WHEN 1 THEN 'E000008' WHEN 2 THEN 'E000004' ELSE 'E000001' END
+                                                            ELSE
+                                                                CASE v_appr_step WHEN 1 THEN 'E000004' WHEN 2 THEN 'E000008' ELSE 'E000001' END
+                                                            END
+                                END;
 
-                            -- 결재 상태 결정 (이사원 E000004를 위한 정밀 세팅)
-                            IF v_stat = 'US' THEN SET v_appr_stat = 'W';
-                            ELSEIF v_stat = 'FI' THEN SET v_appr_stat = 'A';
+                            -- ✅ 2. 결재 상태 결정 (수정됨)
+                            IF v_stat = 'US' THEN
+                                SET v_appr_stat = 'W';
+
+                            ELSEIF v_stat = 'FI' THEN
+                                SET v_appr_stat = 'A';
+
                             ELSEIF v_stat = 'RJ' THEN
-                                IF v_appr_emp_id = 'E000004' AND (v_doc_idx % 2 = 0) THEN SET v_appr_stat = 'R';
-                                ELSEIF v_appr_step = 1 THEN SET v_appr_stat = 'A';
-                                ELSEIF v_appr_step = 2 THEN SET v_appr_stat = 'R';
-                                ELSE SET v_appr_stat = 'W'; END IF;
+                                -- ✅ 반려 로직 수정: 지정된 결재자만 반려, 그 이전은 승인, 이후는 대기
+                                IF v_appr_step < v_reject_step THEN
+                                    SET v_appr_stat = 'A';  -- 반려 전까지는 승인
+                                ELSEIF v_appr_step = v_reject_step THEN
+                                    SET v_appr_stat = 'R';  -- 해당 순서에서 반려
+                                ELSE
+                                    SET v_appr_stat = 'W';  -- 반려 이후는 대기 (결재 못함)
+                                END IF;
 
                             ELSEIF v_stat = 'AW' THEN
-                                -- [수정 포인트 2] Waiting 상태 생성 로직
                                 IF v_appr_emp_id = 'E000004' AND v_doc_idx BETWEEN 16 AND 20 THEN
-                                    SET v_appr_stat = 'W'; -- 이사원은 2번이므로 무조건 대기중(W)
+                                    SET v_appr_stat = 'W'; -- 대기중
                                 ELSEIF v_appr_emp_id = 'E000004' AND v_doc_idx BETWEEN 11 AND 15 THEN
-                                    SET v_appr_stat = 'I'; -- 이사원이 바로 결재할 차례(I)
+                                    SET v_appr_stat = 'I'; -- 내순서
                                 ELSEIF v_appr_emp_id = 'E000004' AND v_doc_idx BETWEEN 21 AND 25 THEN
-                                    SET v_appr_stat = 'A'; -- 이사원이 이미 승인함(A)
+                                    SET v_appr_stat = 'A'; -- 승인완료
                                 ELSE
-                                    -- 기본 흐름 (1번 결재자가 'I'인 상태 유지)
-                                    IF v_appr_step = 1 THEN SET v_appr_stat = 'I';
-                                    ELSE SET v_appr_stat = 'W'; END IF;
+                                    IF v_appr_step = 1 THEN
+                                        SET v_appr_stat = 'I';
+                                    ELSE
+                                        SET v_appr_stat = 'W';
+                                    END IF;
                                 END IF;
                             END IF;
 
@@ -1045,7 +1066,7 @@ BEGIN
                             VALUES ('C01', v_doc_no, v_appr_emp_id, v_appr_step, v_appr_stat,
                                     IF(v_appr_stat IN ('A', 'R'), 1, 0),
                                     FALSE,
-                                    IF(v_appr_stat = 'R', '데이터 불충분', NULL),
+                                    IF(v_appr_stat = 'R', '데이터 불충분 반려', NULL),
                                     IF(v_appr_stat IN ('A', 'R'), DATE_ADD(v_submit_time, INTERVAL (v_appr_step * 30) MINUTE), NULL));
 
                             SET v_appr_step = v_appr_step + 1;
@@ -1058,5 +1079,6 @@ BEGIN
         END WHILE;
 END $$
 DELIMITER ;
+
 
 CALL PopulateDocumentTestData();

@@ -41,6 +41,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             e.empName,
             d.depName,
             p.posName,
+            p.posOrder,
             e.msgStat,
             e.atte,
             e.email

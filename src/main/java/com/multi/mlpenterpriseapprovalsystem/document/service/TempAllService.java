@@ -9,6 +9,7 @@ import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFor
 import com.multi.mlpenterpriseapprovalsystem.document.repository.TempEmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import lombok.RequiredArgsConstructor;
@@ -86,7 +87,7 @@ public class TempAllService {
 
     // 전체 문서 양식 조회
     public List<TempResDocumentFormDto> getAllDocumentForms(String comId) {
-        List<DocumentForm> documentForms = tempDocumentFormRepository.findAllByCompany_comId(comId);
+        List<DocumentForm> documentForms = tempDocumentFormRepository.findAllByCompany_ComIdAndDocfoStat(comId, DocumentFormStats.A);
 
         List<TempResDocumentFormDto> tempResDocumentFormDtos = documentForms.stream()
                 .map(TempResDocumentFormDto::toDto)

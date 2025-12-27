@@ -53,6 +53,26 @@ public class ViewDocumentController {
         }
     }
 
+
+    // 반려된 문서 재작성 화면
+    @GetMapping("/documents/{docNo}/rejected/rewrite")
+    public String documentRewriteRejected(@PathVariable(name = "docNo") Long docNo) {
+        return "document/document-rejected-rewrite";
+    }
+
+    // 문서양식 리스트 화면
+    @GetMapping("/document-forms")
+    public String viewDocumentForms() {
+        return "document/documentform-list";
+    }
+
+
+    // 문서 작성 화면
+    @GetMapping("/documents/create")
+    public String viewNewDocument(@RequestParam(name = "docfoNo") Long docfoNo) {
+        return "document/create";
+    }
+
     // 문서 상세 조회 화면
     @GetMapping("/documents/{docNo}")
     public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status)
@@ -76,17 +96,4 @@ public class ViewDocumentController {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
     }
-
-    // 문서 작성 화면
-    @GetMapping("/documents/new")
-    public String viewNewDocument() {
-        return "document/create";
-    }
-
-    // 반려된 문서 재작성 화면
-    @GetMapping("/documents/{docNo}/rejected/rewrite")
-    public String documentRewriteRejected(@PathVariable(name = "docNo") Long docNo) {
-        return "document/document-rejected-rewrite";
-    }
-
 }
