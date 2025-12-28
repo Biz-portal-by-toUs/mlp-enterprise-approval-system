@@ -47,7 +47,9 @@ public class TempAllService {
         // 포지션 세팅
         tempResEmployeeDto.setPosition(TempResPositionDto.toDto(employee.getPositions()));
         // 대직자 세팅
-        tempResEmployeeDto.setDelegate(TempResEmployeeDto.toDto(employee.getDelegate()));
+        if(employee.getDelegate() != null) {
+            tempResEmployeeDto.setDelegate(TempResEmployeeDto.toDto(employee.getDelegate()));
+        }
 
         return tempResEmployeeDto;
     }
