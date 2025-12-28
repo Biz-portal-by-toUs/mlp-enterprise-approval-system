@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * @since : 2025-12-17 수요일
  */
 @Controller
-@RequestMapping("/boards")
+@RequestMapping("/board")
 public class ViewBoardController {
 
     @GetMapping("/list")
