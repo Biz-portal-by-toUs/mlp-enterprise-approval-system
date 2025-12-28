@@ -698,7 +698,7 @@
         <div class="bottom-actions">
             <button type="button" class="btn btn-temp" style="padding: 8px 16px; font-size: 13px;" onclick="generateAiSummary()">AI 요약 생성</button>
             <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
-                <input type="checkbox" id="include-ai-summ"> AI 요약본 포함
+                <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
             </label>
             <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서상신</button>
             <button type="button" class="btn btn-cancel" onclick="goBackToFormSelection()">취소</button>
@@ -1522,24 +1522,55 @@
         console.log('\n✅ [uploadFiles] 모든 파일 업로드 완료!');
     }
 
-    function generateAiSummary() {
+    async function generateAiSummary() {
+        const html = tiptapEditor.getHTML();  // ✅ HTML로 변환
         const text = tiptapEditor.getText().trim();
-        if (text.length < 10) {
+
+        // 텍스트 길이로만 검증
+        if (text.length < 100) {
             return showModal(
                 '⚠️',
                 'AI 요약 오류',
-                '내용이 너무 짧아 요약할 수 없습니다.\n최소 10자 이상 입력해주세요.',
-                [
-                    {
-                        text: '확인',
-                        className: 'modal-btn-primary',
-                        callback: null
-                    }
-                ]
+                '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
             );
         }
-        document.getElementById('ai-summary-box').style.display = 'block';
-        document.getElementById('ai-summary-text').innerText = text.substring(0, 50) + "... [자동 요약됨]";
+
+        const summaryBox = document.getElementById('ai-summary-box');
+        const summaryText = document.getElementById('ai-summary-text');
+
+        summaryBox.style.display = 'block';
+        summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
+
+        try {
+            const response = await fetch('/api/v1/documents/ai-summary', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: html })  // ✅ HTML 전송
+            });
+
+            if (!response.ok) throw new Error('AI 요약 생성 실패');
+
+            const result = await response.json();
+
+            if (result.data) {
+                summaryText.innerText = result.data;
+                console.log('✅ [AI 요약] 생성 완료:', result.data);
+            } else {
+                throw new Error('요약 데이터가 없습니다');
+            }
+
+        } catch (error) {
+            console.error('❌ [AI 요약] 오류:', error);
+            summaryBox.style.display = 'none';
+            showModal(
+                '❌',
+                'AI 요약 실패',
+                'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
+            );
+        }
     }
 
     function goBackToFormSelection() {
