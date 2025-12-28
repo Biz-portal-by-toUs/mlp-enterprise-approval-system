@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>문서 상세 - 기업용 전자결재시스템</title>
+
+    <!-- TipTap 번들 -->
+    <script th:src="@{/js/tiptap.min.js}"></script>
+
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 0; padding: 40px; }
         .main-container {
@@ -30,7 +34,7 @@
         }
         .btn-cancel-submit:hover { background: #fff5f5; border-color: #fa5252; }
 
-        /* ✅ 재작성 버튼 */
+        /* 재작성 버튼 */
         .btn-rewrite {
             padding: 10px 24px; background: #fff; color: #339af0;
             border: 1px solid #a5d8ff; border-radius: 6px; cursor: pointer; font-size: 14px;
@@ -100,9 +104,175 @@
             display: flex; align-items: center; flex-shrink: 0;
         }
         .content-value { flex: 1; padding: 15px 20px; font-size: 14px; color: #333; display: flex; align-items: center; }
+
+        /* ✅ TipTap 읽기 전용 스타일 */
         .content-body {
-            padding: 25px; font-size: 14px; line-height: 1.8; color: #333;
-            min-height: 150px; white-space: pre-wrap; background: #fff;
+            padding: 25px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+            min-height: 150px;
+            background: #fff;
+        }
+
+        /* TipTap 읽기 전용 콘텐츠 스타일 */
+        .ProseMirror {
+            outline: none;
+        }
+
+        .ProseMirror p {
+            margin: 0.5em 0;
+        }
+
+        .ProseMirror table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        .ProseMirror table td,
+        .ProseMirror table th {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            min-width: 50px;
+            vertical-align: top;
+        }
+
+        .ProseMirror table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .ProseMirror ul,
+        .ProseMirror ol {
+            padding-left: 1.5em;
+            margin: 0.5em 0;
+        }
+
+        .ProseMirror h1 {
+            font-size: 2em;
+            margin: 0.67em 0;
+        }
+
+        .ProseMirror h2 {
+            font-size: 1.5em;
+            margin: 0.75em 0;
+        }
+
+        .ProseMirror h3 {
+            font-size: 1.17em;
+            margin: 0.83em 0;
+        }
+
+        .ProseMirror blockquote {
+            border-left: 3px solid #dee2e6;
+            padding-left: 1em;
+            margin-left: 0;
+            color: #868e96;
+        }
+
+        .ProseMirror code {
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .ProseMirror pre {
+            background: #f8f9fa;
+            padding: 1em;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .ProseMirror img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .ProseMirror a {
+            color: #339af0;
+            text-decoration: underline;
+        }
+
+        /* ✅ 첨부파일 스타일 - 가로 스크롤 */
+        .file-attachments {
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .file-attachments::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .file-attachments::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 3px;
+        }
+
+        .file-attachments::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 3px;
+        }
+
+        .file-attachments::-webkit-scrollbar-thumb:hover {
+            background: #adb5bd;
+        }
+
+        .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            min-width: 120px;
+            max-width: 140px;
+            flex-shrink: 0;
+        }
+
+        .file-item:hover {
+            background: #e7f5ff;
+            border-color: #339af0;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(51, 154, 240, 0.15);
+        }
+
+        .file-info {
+            width: 100%;
+            text-align: center;
+        }
+
+        .file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .file-meta {
+            font-size: 11px;
+            color: #868e96;
+        }
+
+        .no-files {
+            color: #adb5bd;
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+            width: 100%;
         }
 
         /* 반려 정보 */
@@ -172,7 +342,7 @@
     <div id="doc-detail" style="display: none;">
         <!-- 헤더 -->
         <div class="page-header">
-            <!-- ✅ 왼쪽 버튼 그룹 -->
+            <!-- 왼쪽 버튼 그룹 -->
             <div class="header-left-buttons">
                 <button class="btn-cancel-submit" id="btn-cancel-submit" style="display: none;" onclick="showCancelModal()">상신취소</button>
                 <button class="btn-rewrite" id="btn-rewrite" style="display: none;" onclick="goToRewrite()">재작성</button>
@@ -227,10 +397,16 @@
                     <div class="content-label">카테고리</div>
                     <div class="content-value" id="doc-category">-</div>
                 </div>
-                <div class="content-body" id="doc-content">내용이 표시됩니다.</div>
+                <!-- ✅ TipTap 읽기 전용 에디터 -->
+                <div class="content-body" id="doc-content-viewer"></div>
+                <!-- ✅ 첨부파일 영역 -->
                 <div class="content-row">
-                    <div class="content-label">파일 첨부</div>
-                    <div class="content-value" id="doc-files">-</div>
+                    <div class="content-label">첨부파일</div>
+                    <div class="content-value" style="padding: 0;">
+                        <div class="file-attachments" id="file-attachments">
+                            <div class="no-files">첨부된 파일이 없습니다.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -284,6 +460,7 @@
 <script>
     let docData = null;
     let currentDocNo = null;
+    let tiptapViewer = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         const pathParts = window.location.pathname.split('/');
@@ -302,6 +479,9 @@
             if (result.status === 200) {
                 docData = result.data;
                 renderDetail(docData);
+
+                // ✅ 첨부파일 로드
+                await loadAttachments(docNo);
             } else {
                 alert('문서를 불러올 수 없습니다.');
                 history.back();
@@ -318,7 +498,7 @@
 
         document.getElementById('form-title').textContent = doc.docFormName || '문서 상세';
         document.getElementById('info-docId').textContent = doc.docId || '-';
-        document.getElementById('info-createdAt').textContent = formatDate(doc.submittedAt);
+        document.getElementById('info-createdAt').textContent = formatDateTime(doc.submittedAt);
         document.getElementById('info-dept').textContent = doc.writerDepName || '-';
 
         if (doc.writer && doc.writerId) {
@@ -330,13 +510,14 @@
         document.getElementById('info-phone').textContent = doc.writerWorkPhone || '-';
         renderApprovalLine(doc.resApprovalLineDtos);
 
-        // ✅ 버튼 표시 로직
+        // 버튼 표시 로직
         checkButtonVisibility(doc.resApprovalLineDtos, doc.docStat);
 
         document.getElementById('doc-title').textContent = doc.title || '-';
         document.getElementById('doc-category').textContent = doc.docFormCatName || '-';
-        document.getElementById('doc-content').textContent = doc.content || '(내용 없음)';
-        document.getElementById('doc-files').innerHTML = '-';
+
+        // ✅ TipTap 읽기 전용 뷰어 초기화
+        initTipTapViewer(doc.content);
 
         renderRejectInfo(doc.resApprovalLineDtos, doc.docStat);
 
@@ -346,8 +527,154 @@
         }
     }
 
+    // ✅ TipTap 읽기 전용 뷰어 초기화
+    function initTipTapViewer(contentJson) {
+        const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader,
+            TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
+
+        let content = '<p>내용이 없습니다.</p>';
+
+        // content가 JSON 문자열인지 확인하고 파싱
+        if (contentJson) {
+            try {
+                if (typeof contentJson === 'string') {
+                    content = JSON.parse(contentJson);
+                } else {
+                    content = contentJson;
+                }
+            } catch (e) {
+                console.error('JSON 파싱 실패:', e);
+                content = contentJson; // HTML로 간주
+            }
+        }
+
+        tiptapViewer = new Editor({
+            element: document.querySelector('#doc-content-viewer'),
+            extensions: [
+                StarterKit,
+                Table.configure({ resizable: false }),
+                TableRow,
+                TableCell,
+                TableHeader,
+                TextAlign.configure({ types: ['heading', 'paragraph'] }),
+                TextStyle,
+                Color,
+                FontFamily,
+                Highlight,
+                Image,
+                Link.configure({ openOnClick: true }), // 링크 클릭 가능
+                Underline,
+            ],
+            content: content,
+            editable: false, // ✅ 읽기 전용
+            editorProps: {
+                attributes: {
+                    style: 'outline: none;'
+                }
+            }
+        });
+
+        console.log('✅ TipTap 읽기 전용 뷰어 초기화 완료');
+    }
+
+    // ✅ 첨부파일 로드
+    async function loadAttachments(docNo) {
+        try {
+            console.log('📎 [loadAttachments] 시작 - docNo:', docNo);
+
+            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, {
+                credentials: 'include'
+            });
+
+            console.log('📋 [loadAttachments] 응답 상태:', response.status);
+
+            if (!response.ok) {
+                console.error('❌ 첨부파일 조회 실패:', response.status);
+                return;
+            }
+
+            const result = await response.json();
+            console.log('📦 [loadAttachments] 전체 응답:', result);
+            console.log('📦 [loadAttachments] result.data:', result.data);
+
+            // 다양한 응답 구조 처리
+            let attachments = [];
+            if (result.data) {
+                if (Array.isArray(result.data)) {
+                    // data가 배열인 경우
+                    attachments = result.data;
+                } else if (result.data.items && Array.isArray(result.data.items)) {
+                    // data.items가 배열인 경우
+                    attachments = result.data.items;
+                } else if (result.data.content && Array.isArray(result.data.content)) {
+                    // data.content가 배열인 경우
+                    attachments = result.data.content;
+                }
+            }
+
+            console.log('✅ [loadAttachments] 최종 첨부파일 개수:', attachments.length);
+            console.log('✅ [loadAttachments] 첨부파일 목록:', attachments);
+
+            renderAttachments(attachments);
+        } catch (error) {
+            console.error('❌ 첨부파일 로드 오류:', error);
+        }
+    }
+
+    // ✅ 첨부파일 렌더링
+    function renderAttachments(attachments) {
+        const container = document.getElementById('file-attachments');
+
+        if (attachments.length === 0) {
+            container.innerHTML = '<div class="no-files">첨부된 파일이 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = attachments.map(file => {
+            return `
+                <div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')">
+                    <div class="file-info">
+                        <div class="file-name" title="${file.originalName}">${file.originalName}</div>
+                        <div class="file-meta">${formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ✅ 파일 다운로드
+    async function downloadFile(atchNo, originalName) {
+        try {
+            console.log('📥 [downloadFile] 시작 - atchNo:', atchNo, 'originalName:', originalName);
+
+            const response = await fetch(`/api/v1/attachments/${atchNo}/download-url`, {
+                credentials: 'include'
+            });
+
+            console.log('📋 [downloadFile] 응답 상태:', response.status);
+
+            if (!response.ok) {
+                showToast('파일 다운로드에 실패했습니다.', 'error');
+                return;
+            }
+
+            const result = await response.json();
+            console.log('📦 [downloadFile] 응답 데이터:', result);
+
+            const downloadUrl = result.data?.url || result.data;
+            console.log('🔗 [downloadFile] 다운로드 URL:', downloadUrl);
+
+            // 새 창에서 다운로드 URL 열기
+            window.open(downloadUrl, '_blank');
+
+        } catch (error) {
+            console.error('❌ 파일 다운로드 오류:', error);
+            showToast('파일 다운로드 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
     /**
-     * ✅ 버튼 표시 조건
+     * 버튼 표시 조건
      * - 상신취소: docStat === 'AW' && 아무도 결재 안 함
      * - 재작성: docStat === 'RJ' (반려된 문서)
      */
@@ -382,7 +709,7 @@
         }
     }
 
-    // ✅ 재작성 버튼 클릭 → 수정 화면으로 이동
+    // 재작성 버튼 클릭 → 수정 화면으로 이동
     function goToRewrite() {
         location.href = `/documents/${currentDocNo}/rejected/rewrite`;
     }
@@ -396,8 +723,11 @@
             return;
         }
 
-        lines.sort((a, b) => a.seq - b.seq);
-        const displayLines = lines.slice(0, 5);
+        // isDelegate가 false인 결재자만 표시 (대직자는 제외)
+        const approvers = lines.filter(line => !line.isDelegate);
+
+        approvers.sort((a, b) => a.seq - b.seq);
+        const displayLines = approvers.slice(0, 5);
 
         displayLines.forEach((line, index) => {
             const card = document.createElement('div');
@@ -408,13 +738,29 @@
             else if (line.apprStat === 'R') card.classList.add('rejected');
             else card.classList.add('waiting');
 
+            // 대직자 표시 로직: 결재가 완료되었고(endedAt 존재) 같은 seq에서 대직자가 실제 결재한 경우
+            let delegateLabel = '';
+            if (line.endedAt) {
+                // 같은 seq의 대직자 중 실제 결재한(isActualAppr=true) 사람이 있는지 확인
+                const delegateApprover = lines.find(l =>
+                    l.seq === line.seq &&
+                    l.isDelegate === true &&
+                    l.isActualAppr === true
+                );
+
+                if (delegateApprover) {
+                    delegateLabel = '<div style="font-size: 10px; color: #fa5252; font-weight: 600; margin-top: 2px;">(대직)</div>';
+                }
+            }
+
             card.innerHTML = `
                 <div class="approval-seq">결재자${line.seq}</div>
                 <div class="approval-name">${line.approverName || '-'}</div>
+                ${delegateLabel}
                 <div class="approval-id">${line.approverId || '-'}</div>
                 <div class="approval-dep">${line.approverDepName || '-'}</div>
                 <div class="approval-pos">${line.approverPosName || ''}</div>
-                ${line.endedAt ? `<div class="approval-date">${formatDateTime(line.endedAt)}</div>` : '<div class="approval-date">-</div>'}
+                ${line.endedAt ? `<div class="approval-date">${formatDateTimeInline(line.endedAt)}</div>` : '<div class="approval-date">-</div>'}
             `;
 
             container.appendChild(card);
@@ -443,6 +789,14 @@
         }
     }
 
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
     function formatDate(str) {
         if (!str) return '-';
         const d = new Date(str);
@@ -452,7 +806,15 @@
     function formatDateTime(str) {
         if (!str) return '-';
         const d = new Date(str);
-        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
+    }
+
+    function formatDateTimeInline(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        return `${date} ${time}`;
     }
 
     function showCancelModal() {
