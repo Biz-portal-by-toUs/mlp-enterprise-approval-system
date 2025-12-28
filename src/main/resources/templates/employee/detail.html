@@ -306,7 +306,6 @@
                         <div class="actions">
                             <button class="btn primary" type="button" onclick="goEdit()">수정</button>
                             <button class="btn warn" type="button" onclick="retireEmployee()">퇴사</button>
-                            <button class="btn gray" type="button" onclick="deleteEmployee()">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -571,28 +570,6 @@
         }catch(e){
             console.error(e);
             showToast("err", "퇴사 처리 중 오류");
-        }
-    }
-
-    async function deleteEmployee(){
-        const ok = confirm("정말 삭제할까요? (복구 불가)");
-        if(!ok) return;
-
-        try{
-            const res = await fetch(`/api/v1/admin/employees/${EMP_NO}`, {
-                method: "DELETE",
-                credentials: "include",
-                headers: {"Accept":"application/json"}
-            });
-            if(res.ok){
-                showToast("ok", "삭제되었습니다.");
-                setTimeout(()=> location.href="/admin/employees", 400);
-                return;
-            }
-            showToast("err", `삭제 실패 (HTTP ${res.status})`);
-        }catch(e){
-            console.error(e);
-            showToast("err", "삭제 중 오류");
         }
     }
 
