@@ -579,7 +579,17 @@
             </div>
         </div>
 
+        <!-- ✅ AI 요약 박스 -->
+        <div id="ai-summary-box" style="display:none; margin-top:15px; padding:15px; background:#f1f3f5; border-left:4px solid var(--primary-color); font-size:13px;">
+            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
+        </div>
+
         <div class="bottom-actions">
+            <!-- ✅ AI 요약 버튼 -->
+            <button type="button" class="btn btn-temp" style="padding: 8px 16px; font-size: 13px;" onclick="generateAiSummary()">AI 요약 생성</button>
+            <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
+            </label>
             <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서 재상신</button>
             <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
         </div>
@@ -622,6 +632,17 @@
             if (response.ok && result.data) {
                 const doc = result.data;
                 document.getElementById('doc-title').value = doc.title || "";
+
+                // ✅ AI 요약 로드
+                if (doc.aiSumm && doc.aiSumm.trim() !== '') {
+                    const summaryBox = document.getElementById('ai-summary-box');
+                    const summaryText = document.getElementById('ai-summary-text');
+
+                    summaryBox.style.display = 'block';
+                    summaryText.innerText = doc.aiSumm;
+
+                    console.log('✅ 기존 AI 요약 로드:', doc.aiSumm);
+                }
 
                 const originalDocfoNo = doc.docFormNo;
 
@@ -1001,6 +1022,47 @@
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
+    // ✅ AI 요약 생성 함수
+    async function generateAiSummary() {
+        const html = tiptapEditor.getHTML();
+        const text = tiptapEditor.getText().trim();
+
+        if (text.length < 100) {
+            return showAlert('내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.', 'error');
+        }
+
+        const summaryBox = document.getElementById('ai-summary-box');
+        const summaryText = document.getElementById('ai-summary-text');
+
+        summaryBox.style.display = 'block';
+        summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
+
+        try {
+            const response = await fetch('/api/v1/documents/ai-summary', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: html })
+            });
+
+            if (!response.ok) throw new Error('AI 요약 생성 실패');
+
+            const result = await response.json();
+
+            if (result.data) {
+                summaryText.innerText = result.data;
+                console.log('✅ [AI 요약] 생성 완료:', result.data);
+            } else {
+                throw new Error('요약 데이터가 없습니다');
+            }
+
+        } catch (error) {
+            console.error('❌ [AI 요약] 오류:', error);
+            summaryBox.style.display = 'none';
+            showAlert('AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.', 'error');
+        }
+    }
+
     async function saveDocument(isTemp) {
         const title = document.getElementById('doc-title').value.trim();
         const contentJson = tiptapEditor.getJSON();
@@ -1008,12 +1070,31 @@
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
 
+        // ✅ AI 요약 데이터
+        const aiSummaryBox = document.getElementById('ai-summary-box');
+        const aiSummaryText = document.getElementById('ai-summary-text').innerText;
+        const includeAiSummary = document.getElementById('include-ai-summ').checked;
+        const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
+
         if (!title) return showAlert("제목을 입력하세요.", "error");
         if (title.length > 100) return showAlert("제목은 100자 이내로 입력하세요.", "error");
         if (!contentText) return showAlert("내용을 입력하세요.", "error");
         if (contentText.length > 1000) return showAlert("내용은 1000자 이내로 입력하세요.", "error");
         if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
         if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
+
+        // ✅ AI 요약 체크박스 검증 (상신 시만)
+        if (!isTemp && includeAiSummary && !hasAiSummary) {
+            return showAlert('AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.', 'error');
+        }
+
+        // ✅ AI 요약 최종 결정
+        let finalAiSummary = null;
+        if (isTemp) {
+            finalAiSummary = hasAiSummary ? aiSummaryText : null;
+        } else {
+            finalAiSummary = (includeAiSummary && hasAiSummary) ? aiSummaryText : null;
+        }
 
         try {
             const payload = {
@@ -1025,6 +1106,7 @@
                 content: JSON.stringify(contentJson),
                 cnttHtml: contentHtml,
                 temp: isTemp,
+                aiSumm: finalAiSummary,
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,
@@ -1047,7 +1129,6 @@
 
                 console.log('✅ 문서 저장 성공! 새 docNo:', newDocNo);
 
-                // 1. 삭제되지 않은 기존 파일 복사
                 const activeExistingFiles = existingFiles.filter(file =>
                     !filesToDelete.includes(file.attachmentId)
                 );
@@ -1057,7 +1138,6 @@
                     await copyExistingFiles(activeExistingFiles, newDocNo);
                 }
 
-                // 2. 새 파일 업로드
                 if (newFiles.length > 0) {
                     console.log('📤 새 파일 업로드:', newFiles);
                     await uploadFiles(newDocNo);
@@ -1098,7 +1178,6 @@
                     continue;
                 }
 
-                // 1. Presigned Download URL 요청
                 console.log(`  1️⃣ [${file.originalName}] Presigned Download URL 요청 중... (ID: ${fileId})`);
                 const downloadUrlRes = await fetch(`/api/v1/attachments/${fileId}/download-url`, {
                     credentials: 'include'
@@ -1115,7 +1194,6 @@
                 const downloadUrl = downloadUrlData.data.url;
                 console.log(`  🔗 [${file.originalName}] Download URL 발급 완료`);
 
-                // 2. S3에서 파일 다운로드
                 console.log(`  2️⃣ [${file.originalName}] S3 다운로드 중...`);
                 const downloadRes = await fetch(downloadUrl);
 
@@ -1129,7 +1207,6 @@
                 const blob = await downloadRes.blob();
                 console.log(`  ✅ [${file.originalName}] 다운로드 성공 - 크기: ${blob.size}`);
 
-                // 3. Presigned Upload URL 요청
                 console.log(`  3️⃣ [${file.originalName}] Presigned Upload URL 요청 중...`);
                 const presignRes = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
@@ -1158,7 +1235,6 @@
                 const { objectKey, uploadUrl } = presignData.data;
                 console.log(`  🔑 [${file.originalName}] objectKey:`, objectKey);
 
-                // 4. S3 업로드
                 console.log(`  4️⃣ [${file.originalName}] S3 업로드 중...`);
                 const uploadRes = await fetch(uploadUrl, {
                     method: 'PUT',
@@ -1176,7 +1252,6 @@
                 const etag = uploadRes.headers.get('ETag');
                 console.log(`  ✅ [${file.originalName}] S3 업로드 성공! ETag:`, etag);
 
-                // 5. Complete 요청
                 console.log(`  5️⃣ [${file.originalName}] Complete 요청 중...`);
                 const completeRes = await fetch('/api/v1/attachments/complete', {
                     method: 'POST',
