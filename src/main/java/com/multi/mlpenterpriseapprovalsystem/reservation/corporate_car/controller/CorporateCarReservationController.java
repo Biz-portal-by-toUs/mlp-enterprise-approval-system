@@ -53,6 +53,15 @@ public class CorporateCarReservationController {
         corporateCarReservationService.createReservation(dto, user);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/corporate-car-reservations/{resvNo}")
+    public ResponseEntity<Void> deleteReservation(
+            @PathVariable Long resvNo,
+            @AuthenticationPrincipal CustomUser user) {
+
+        corporateCarReservationService.deleteReservation(resvNo, user);
+        return ResponseEntity.noContent().build();   // 204
+    }
 }
 
 
