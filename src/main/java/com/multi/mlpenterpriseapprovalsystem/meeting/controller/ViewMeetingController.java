@@ -1,7 +1,9 @@
 package com.multi.mlpenterpriseapprovalsystem.meeting.controller;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -17,6 +19,24 @@ public class ViewMeetingController {
 
     @GetMapping("/create")
     public String createMeeting(){
-        return "meeting/create";
+        return "meeting/meeting-create";
     }
+
+    @GetMapping
+    public String selectMeeting(){
+        return "meeting/meeting-list";
+    }
+
+    @GetMapping("/{meetNo}")
+    public String meetingDetail(@PathVariable(name = "meetNo") Long meetNo, Model model) {
+        model.addAttribute("meetNo", meetNo);
+        return "meeting/meeting-detail";
+    }
+
+    @GetMapping("/{meetNo}/update")
+    public String updateMeeting(@PathVariable(name = "meetNo") Long meetNo, Model model) {
+        model.addAttribute("meetNo", meetNo);
+        return "meeting/meeting-update";
+    }
+
 }
