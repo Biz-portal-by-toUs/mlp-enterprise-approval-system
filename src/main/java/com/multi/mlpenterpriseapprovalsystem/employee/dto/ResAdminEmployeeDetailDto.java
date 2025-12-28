@@ -69,6 +69,8 @@ public class ResAdminEmployeeDetailDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private String objectKey;
+
     public static ResAdminEmployeeDetailDto from(Employee e) {
         if (e == null) return null;
 
@@ -120,6 +122,8 @@ public class ResAdminEmployeeDetailDto {
                 // BaseEntity
                 .createdAt(e.getCreatedAt())
                 .updatedAt(e.getUpdatedAt())
+
+                .objectKey(e.getObjectKey())
                 .build();
     }
 
