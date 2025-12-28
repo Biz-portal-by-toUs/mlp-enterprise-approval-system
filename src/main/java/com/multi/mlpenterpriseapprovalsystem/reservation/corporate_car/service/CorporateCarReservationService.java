@@ -1,6 +1,11 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.domain.CorporateCar;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.domain.CorporateCarReservation;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ReqReservationCreateDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ResReservationListDto;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.repository.CorporateCarRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.repository.CorporateCarReservationRepository;
@@ -10,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -31,6 +37,7 @@ public class CorporateCarReservationService {
 
     private final CorporateCarReservationRepository reservationRepository;
     private final CorporateCarRepository corporateCarRepository;
+    private final EmployeeRepository employeeRepository;
 
     public List<ResReservationListDto> getReservations(String comId, String data) {
         List<CorporateCarReservation> reservations =
@@ -57,8 +64,47 @@ public class CorporateCarReservationService {
     }
 
 
+    public void createReservation(ReqReservationCreateDto dto, CustomUser user) {
+        // 시작/종료 시간 만들기
+        LocalDateTime startedAt =
+                LocalDateTime.of(dto.getResvDate(), dto.getStartTime());
+        LocalDateTime endedAt =
+                LocalDateTime.of(dto.getResvDate(), dto.getEndTime());
 
+        // 지난 시간 예약 차단
+        if (startedAt.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("지난 시간은 예약할 수 없습니다.");
+        }
 
+        // 시간 유효성
+        if (!endedAt.isAfter(startedAt)) {
+            throw new IllegalArgumentException("종료 시간은 시작 시간 이후여야 합니다.");
+        }
 
+        // 회의실 존재 확인
+        CorporateCar car = corporateCarRepository.findById(dto.getCarNo())
+                .orElseThrow(() -> new IllegalArgumentException("법인 차량이 존재하지 않습니다."));
 
+        // 예약자 조회 (Employee)
+        Employee employee = employeeRepository.findByEmpId(user.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("예약자 정보가 없습니다."));
+
+        // 중복 예약 검사
+        if (reservationRepository.existsOverlapping(dto.getCarNo(), startedAt, endedAt)) {
+            throw new IllegalArgumentException("이미 예약된 시간입니다.");
+        }
+
+        CorporateCarReservation reservation =
+                CorporateCarReservation.builder()
+                        .company(car.getCompany())
+                        .corporateCar(car)
+                        .resvEmp(employee)
+                        .startedAt(startedAt)
+                        .endedAt(endedAt)
+                        .purp(dto.getPurp())
+                        .build();
+
+        reservationRepository.save(reservation);
+
+    }
 }
