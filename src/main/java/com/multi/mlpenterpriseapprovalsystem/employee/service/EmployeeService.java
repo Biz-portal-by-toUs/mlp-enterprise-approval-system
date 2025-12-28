@@ -190,9 +190,30 @@ public class EmployeeService {
         // save() 안해도 dirty checking으로 업데이트됨
     }
 
-    public Void updateEmployee(String comId, Long empNo, @Valid ReqAdminEmployeeUpdateDto req) {
+    public void updateEmployee(String comId, Long empNo, @Valid ReqAdminEmployeeUpdateDto req) {
 
+        Employee emp = employeeRepository
+                .findByEmpNoAndCompany_ComId(empNo, comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
+        Company company = companyRepository.findByComIdForUpdate(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        Department dep = departmentRepository.findByCompanyAndDepNo(company, req.getDepNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+        Positions pos = positionsRepository.findByCompanyAndPosNo(company, req.getPosNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.POSITIONS_NOT_FOUND));
+
+        emp.updateAdminInfo(
+                dep, pos,
+                req.getEmail(),
+                req.getPhone(),
+                req.getWorkPhone(),
+                req.getAddr(),
+                req.getGen(),   // "M" or "F"
+                req.getRole()
+        );
     }
 
     private record CursorKey(String name, Long no) {}
