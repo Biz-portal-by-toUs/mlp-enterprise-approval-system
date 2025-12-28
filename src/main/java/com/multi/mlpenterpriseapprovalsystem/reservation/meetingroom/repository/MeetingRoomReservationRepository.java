@@ -35,4 +35,6 @@ public interface MeetingRoomReservationRepository extends JpaRepository<MeetingR
     boolean existsOverlapping(@Param("roomNo") Long roomNo,
                               @Param("startedAt") LocalDateTime startedAt,
                               @Param("endedAt") LocalDateTime endedAt);
+
+    List<MeetingRoomReservation> findAllByCompany_ComIdAndResvEmp_EmpIdAndStartedAtBetween(String comId, String empId, LocalDateTime from, LocalDateTime toExclusive);
 }

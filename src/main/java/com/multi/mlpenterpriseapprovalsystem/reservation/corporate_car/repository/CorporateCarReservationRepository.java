@@ -37,6 +37,5 @@ public interface CorporateCarReservationRepository extends JpaRepository<Corpora
                               @Param("endedAt") LocalDateTime endedAt);
 
 
-
-
+    List<CorporateCarReservation> findAllByCompany_ComIdAndResvEmp_EmpIdAndStartedAtBetween(String comId, String empId, LocalDateTime from, LocalDateTime toExclusive);
 }
