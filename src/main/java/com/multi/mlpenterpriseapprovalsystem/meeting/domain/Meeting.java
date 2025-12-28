@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -56,6 +57,10 @@ public class Meeting extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "ai_status", nullable = false, length = 20)
     private AiStatus aiStatus = AiStatus.NONE;
+
+    @Setter
+    @Column(name = "audio_object_key")
+    private String audioObjectKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id", nullable = false)
@@ -125,4 +130,5 @@ public class Meeting extends BaseEntity {
         this.aiText = aiText;
         this.sttText = sttText;
     }
+
 }
