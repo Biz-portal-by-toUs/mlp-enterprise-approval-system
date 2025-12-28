@@ -2,12 +2,19 @@ package com.multi.mlpenterpriseapprovalsystem.employee.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.repository.PositionsRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +37,9 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final CompanyRepository companyRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionsRepository positionsRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * ✅ 이름순 정렬 + 검색 + 커서 기반 무한스크롤
@@ -116,6 +126,73 @@ public class EmployeeService {
 
         // 이론상 여기까지 잘 안 옴(동시성 등). 그래도 안전빵:
         throw new CustomException(ErrorCode.EMPLOYEE_ALREADY_RETIRED);
+    }
+
+    public ResAdminEmployeeCreateDto createEmployee(String comId, ReqAdminEmployeeCreateDto req) {
+
+        // ✅ 회사 row 락(동시등록 시 empId 중복 방지)
+        Company company = companyRepository.findByComIdForUpdate(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        Department department = departmentRepository.findByCompanyAndDepNo(company, req.getDepNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+        Positions positions = positionsRepository.findByCompanyAndPosNo(company, req.getPosNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.POSITIONS_NOT_FOUND));
+
+        String nextEmpId = nextEmpId(comId);
+
+        // ✅ pwd는 1234로 자동 저장(무조건 인코딩해서 저장 권장)
+        String encodedPwd = passwordEncoder.encode("1234");
+
+        Employee saved = employeeRepository.save(
+                Employee.create(
+                        nextEmpId,
+                        company,
+                        department,
+                        positions,
+                        encodedPwd,
+                        req.getEmpName(),
+                        req.getEmail(),
+                        req.getPhone(),
+                        req.getWorkPhone(),
+                        req.getGen(),
+                        req.getHireDate(),
+                        req.getRole(),
+                        req.getAddr(),
+                        req.getObjectKey(),
+                        req.getBirth()
+                )
+        );
+
+        return new ResAdminEmployeeCreateDto(saved.getEmpNo(), saved.getEmpId(), "1234");
+    }
+
+    private String nextEmpId(String comId) {
+        int maxNo = employeeRepository.findMaxEmpNoByComId(comId);
+        int next = maxNo + 1;
+
+        while (true) {
+            String candidate = comId + String.format("%04d", next);
+            if (!employeeRepository.existsByCompany_ComIdAndEmpId(comId, candidate)) {
+                return candidate;
+            }
+            next++;
+        }
+    }
+
+    @Transactional
+    public void updateObjectKey(String comId, Long empNo, String objectKey) {
+        Employee emp = employeeRepository.findByEmpNoAndCompany_ComId(empNo, comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        emp.updateObjectKey(objectKey); // 엔티티 메서드로 세팅
+        // save() 안해도 dirty checking으로 업데이트됨
+    }
+
+    public Void updateEmployee(String comId, Long empNo, @Valid ReqAdminEmployeeUpdateDto req) {
+
+
     }
 
     private record CursorKey(String name, Long no) {}
