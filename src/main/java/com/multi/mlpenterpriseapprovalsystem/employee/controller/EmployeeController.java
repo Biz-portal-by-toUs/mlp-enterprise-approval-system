@@ -2,11 +2,9 @@ package com.multi.mlpenterpriseapprovalsystem.employee.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResAdminEmployeeDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResChatEmployeeCursorDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -107,6 +105,46 @@ public class EmployeeController {
         return ResponseEntity.ok(new ResponseDto<>(
                 HttpStatus.OK,
                 "퇴사 처리 완료",
+                null
+        ));
+    }
+
+    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PostMapping("/admin/employees")
+    public ResponseEntity<ResponseDto<ResAdminEmployeeCreateDto>> createEmployee(
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody ReqAdminEmployeeCreateDto req
+    ) {
+
+        return ResponseEntity.ok(new ResponseDto<>(
+                HttpStatus.OK,
+                "사원 등록 완료",
+                employeeService.createEmployee(user.getComId(), req)
+        ));
+    }
+
+    @PatchMapping("/admin/employees/{empNo}/object-key")
+    public void updateEmployeeObjectKey(@PathVariable(name="empNo") Long empNo,
+                                        @Valid @RequestBody ReqEmployeeObjectKeyUpdateDto req,
+                                        @AuthenticationPrincipal CustomUser user) {
+
+        String comId = user.getComId(); // 너희 인증에서 comId 꺼내는 방식으로 변경
+        employeeService.updateObjectKey(comId, empNo, req.getObjectKey());
+    }
+
+    @PatchMapping("/admin/employees/{empNo}")
+    public ResponseEntity<ResponseDto<Void>> updateEmployee(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="empNo") Long empNo,
+            @RequestBody @Valid ReqAdminEmployeeUpdateDto req
+    ){
+
+        String comId = user.getComId();
+        employeeService.updateEmployee(comId, empNo, req);
+
+        return ResponseEntity.ok(new ResponseDto<>(
+                HttpStatus.OK,
+                "사원 등록 완료",
                 null
         ));
     }
