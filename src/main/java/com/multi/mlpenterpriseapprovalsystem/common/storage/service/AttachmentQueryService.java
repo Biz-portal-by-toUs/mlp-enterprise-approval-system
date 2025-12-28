@@ -48,7 +48,7 @@ public class AttachmentQueryService {
 
     public AttachmentDto.PresignedUrlResponse issuePreviewUrl(String comId, Long attachmentId) {
         Attachment a = findActive(comId, attachmentId);
-        String disposition = "inline; filename=\"" + safeFileName(a.getOriginalName()) + "\"";
+        String disposition = "inline";
         return presignGet(a, disposition);
     }
 
