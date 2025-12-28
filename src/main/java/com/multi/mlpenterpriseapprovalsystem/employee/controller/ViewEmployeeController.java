@@ -76,4 +76,30 @@ public class ViewEmployeeController {
 
         return "/employee/create";
     }
+
+    @GetMapping("/{empNo}/edit")
+    public String editPage(@PathVariable(name="empNo") Long empNo, @AuthenticationPrincipal CustomUser user, Model model) {
+
+        model.addAttribute("username", user != null ? user.getUsername() : "");
+        model.addAttribute("comId", user != null ? user.getComId() : "");
+
+        String comId = (user != null ? user.getComId() : null);
+
+        // select 옵션
+        if (comId != null && !comId.isBlank()) {
+            model.addAttribute("departments", departmentRepository.findAllByCompany_ComId(comId));
+            model.addAttribute("positions", positionsRepository.findAllByCompany_ComId(comId));
+        } else {
+            // 템플릿에서 null 처리 싫으면 빈 리스트로
+            model.addAttribute("departments", java.util.Collections.emptyList());
+            model.addAttribute("positions", java.util.Collections.emptyList());
+
+        }
+        model.addAttribute("roles", RoleType.values());
+
+        // JS에서 사용할 empNo
+        model.addAttribute("empNo", empNo);
+
+        return "employee/update";
+    }
 }
