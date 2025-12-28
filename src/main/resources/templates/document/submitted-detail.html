@@ -292,11 +292,9 @@
     });
 
     async function loadDocumentDetail(docNo) {
-        const token = localStorage.getItem('accessToken');
-
         try {
             const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
 
             const result = await response.json();
@@ -467,12 +465,14 @@
 
     async function confirmCancelSubmit() {
         hideCancelModal();
-        const token = localStorage.getItem('accessToken');
 
         try {
             const response = await fetch(`/api/v1/documents/${currentDocNo}/cancel`, {
                 method: 'PATCH',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
 
             const result = await response.json();
