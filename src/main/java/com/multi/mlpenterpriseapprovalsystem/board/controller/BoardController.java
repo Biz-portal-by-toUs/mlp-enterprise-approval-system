@@ -4,7 +4,6 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.board.service.BoardService;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -64,14 +62,17 @@ public class BoardController {
     }
 
     //게시글 삭제
-    @DeleteMapping("/boards/{boardNo}")
-    public ResponseEntity<String> delete(@PathVariable(name="boardNo") Long boardNo) {
+    @DeleteMapping("/board/{boardNo}")
+    public ResponseEntity<ResponseDto> delete(@PathVariable(name="boardNo") Long boardNo) {
         boardService.deleteBoard(boardNo);
-        return ResponseEntity.ok("게시판이 삭제되었습니다.");
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto(HttpStatus.OK, "게시판 삭제 성공", null));
+
     }
 
     //게시글 변경
-    @PutMapping("/boards/{boardNo}")
+    @PutMapping("/board/{boardNo}")
     public ResponseEntity<String> update(@PathVariable(name="boardNo") Long boardNo, @RequestBody @Valid BoardReqDto dto) {
 
         boardService.updateBoard(boardNo, dto);
@@ -79,15 +80,23 @@ public class BoardController {
     }
 
     // 게시글 작성
-    @PostMapping("/boards")
-    public ResponseEntity<String> getBoardById(@RequestBody @Valid BoardReqDto dto) {
+    @PostMapping(value ="/board", consumes = {"multipart/form-data"})
+    public ResponseEntity<ResponseDto<BoardResAllDto>> regitBoard(@ModelAttribute BoardReqDto dto, @AuthenticationPrincipal CustomUser customUser) {
 
-        boardService.registBoard(dto);
-        return ResponseEntity.created(URI.create("/api/v1/boards-all/{comid}")).build();
+        dto.setComId(customUser.getComId());
+        dto.setEmpId(customUser.getUsername());
+        dto.setRating(0);
+        dto.setIsDeleted(false);
+        System.out.println("dto : " + dto);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<BoardResAllDto>(HttpStatus.OK, "공지사항 등록 성공", boardService.registBoard(dto)));
+
     }
 
     //자유 게시글 상세조회  --- 일련번호(key로 조회)
-    @GetMapping("/boards/{boardNo}")
+    @GetMapping("/board/{boardNo}")
     public ResponseEntity<ResponseDto<BoardResAllDto>> detail(@PathVariable(name="boardNo") Long boardNo) {
         return ResponseEntity.ok().body(new ResponseDto<BoardResAllDto>(HttpStatus.OK, "조회 성공", boardService.detailBoard(boardNo)));
     }

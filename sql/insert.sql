@@ -405,3 +405,6 @@ INSERT INTO mail_attach (mail_attach_no, mail_id, path, size) VALUES
                                                                   (5,'MAIL_E000001_251217_005','/mail/attach/a5.jpg', 98765);
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+use bizportal;
+select * from comment;

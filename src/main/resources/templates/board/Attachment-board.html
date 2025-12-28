@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Attachment Upload & Soft Delete Test</title>
+    <style>
+        :root{
+            --bg:#f3f5f9;
+            --card:#ffffff;
+            --text:#111;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --primary:#2f6fda;
+            --danger:#dc2626;
+            --ok:#16a34a;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+        .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.05);padding:18px}
+        .row{display:flex;gap:12px;flex-wrap:wrap}
+        .field{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1}
+        label{font-size:12px;color:var(--muted)}
+        input,select{
+            height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;outline:none;
+            background:#fff;font-size:14px;
+        }
+        input:focus,select:focus{border-color:rgba(47,111,218,.55);box-shadow:0 0 0 3px rgba(47,111,218,.12)}
+        .actions{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+        button{
+            height:40px;border:0;border-radius:10px;padding:0 14px;background:var(--primary);color:#fff;
+            font-weight:600;cursor:pointer;
+        }
+        button:disabled{opacity:.55;cursor:not-allowed}
+        .ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+        .danger{background:var(--danger)}
+        .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45}
+        .log{
+            margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#0b1020;color:#e5e7eb;
+            padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;
+            white-space:pre-wrap;min-height:130px;
+        }
+        .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+        .ok{background:rgba(22,163,74,.15);color:var(--ok);border:1px solid rgba(22,163,74,.35)}
+        .bad{background:rgba(220,38,38,.15);color:var(--danger);border:1px solid rgba(220,38,38,.35)}
+        .progress-wrap{margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        progress{width:280px;max-width:100%}
+        .small{font-size:12px;color:var(--muted)}
+        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+        .tokenval{
+            padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;max-width:100%;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        }
+
+        table{width:100%;border-collapse:collapse;margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+        th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:13px;vertical-align:top}
+        th{background:#fafafa;color:#374151;font-weight:700}
+        tr:last-child td{border-bottom:0}
+        .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:#374151;background:#fafafa}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h2 style="margin:0 0 8px 0;">공지사항첨부파일등록</h2>
+
+        <div class="row" style="margin-top:14px;">
+            <div class="field" style="min-width:300px;">
+                <label>파일 선택 (여러 개 가능)</label>
+                <input id="file" type="file" multiple />
+                <div class="small">여러 개 선택하면 순차 업로드로 진행</div>
+            </div>
+
+            <div class="field">
+                <label>domain</label>
+                <input type="hidden" id="domain" name="domain" value="BOARD">
+            </div>
+
+            <div class="field">
+                <label>entityId</label>
+                <input id="entityId" type="number" th:value="${boardNo}"  />
+            </div>
+
+            <div class="field">
+                <label>fileType</label>
+                <input type="hidden" id="fileType" name="fileType" value="DOC">
+            </div>
+        </div>
+
+        <div class="row" style="margin-top:12px; display:none;">
+            <div class="field" style="min-width:320px;">
+                <label>Token Key (localStorage)</label>
+                <div class="row" style="gap:8px;align-items:center;">
+                    <input id="tokenKey" type="text" value="auto" placeholder="auto 또는 accessToken/token/jwt/Authorization" />
+                    <button id="refreshTokenBtn" class="ghost" type="button">토큰 읽기</button>
+                </div>
+                <div class="small">
+                    auto면 accessToken/token/jwt/Authorization 순서로 탐색. 값이 Bearer로 시작 안 하면 자동으로 붙임.
+                </div>
+            </div>
+
+            <div class="field">
+                <label>현재 Authorization</label>
+                <div id="tokenPreview" class="tokenval mono">-</div>
+            </div>
+        </div>
+
+        <div class="progress-wrap">
+            <progress id="progress" value="0" max="100"></progress>
+            <span id="progressText" class="small">0%</span>
+        </div>
+
+        <h3 style="margin:18px 0 8px 0;">업로드된 첨부 목록</h3>
+
+        <table>
+            <thead>
+            <tr>
+                <th style="width:110px;">fileName</th>
+                <th style="width:110px;">attachmentId</th>
+                <th style="width:110px;">displayOrder</th>
+                <th style="width:120px;">domain</th>
+                <th style="width:120px;">entityId</th>
+                <th style="width:90px;">fileType</th>
+                <th>objectKey</th>
+                <th style="width:140px;">액션</th>
+            </tr>
+            </thead>
+            <tbody id="tbody">
+            <tr><td colspan="7" class="small">아직 없음</td></tr>
+            </tbody>
+        </table>
+
+        <div class="actions">
+            <button id="uploadBtn" type="button">업로드(등록)</button>
+            <button id="clearBtn" class="ghost" type="button">로그/목록 초기화</button>
+            <span id="status" class="badge" style="display:none;"></span>
+        </div>
+
+        <div id="log" class="log"></div>
+
+    </div>
+</div>
+
+<script>
+    // ✅ 같은 도메인/포트에서 백엔드가 떠 있으면 "" 유지
+    // 예: 백엔드가 http://localhost:8090 이면 API_BASE = "http://localhost:8090"
+    const API_BASE = "http://localhost:8090";
+
+    const $file = document.getElementById("file");
+    const $domain = document.getElementById("domain");
+    const $entityId = document.getElementById("entityId");
+    const $fileType = document.getElementById("fileType");
+    const $uploadBtn = document.getElementById("uploadBtn");
+    const $clearBtn = document.getElementById("clearBtn");
+    const $log = document.getElementById("log");
+    const $status = document.getElementById("status");
+    const $progress = document.getElementById("progress");
+    const $progressText = document.getElementById("progressText");
+    const $tokenKey = document.getElementById("tokenKey");
+    const $refreshTokenBtn = document.getElementById("refreshTokenBtn");
+    const $tokenPreview = document.getElementById("tokenPreview");
+    const $tbody = document.getElementById("tbody");
+
+    const rows = []; // {attachmentId, displayOrder, domain, entityId, fileType, objectKey, deleted}
+
+    function logLine(msg) {
+        const ts = new Date().toLocaleTimeString();
+        $log.textContent += `[${ts}] ${msg}\n`;
+        $log.scrollTop = $log.scrollHeight;
+    }
+    function setStatus(type, text) {
+        $status.style.display = "inline-block";
+        $status.className = "badge " + (type === "ok" ? "ok" : "bad");
+        $status.textContent = text;
+    }
+    function setProgress(pct) {
+        const v = Math.max(0, Math.min(100, pct));
+        $progress.value = v;
+        $progressText.textContent = `${v}%`;
+    }
+
+    function pickTokenFromLocalStorage(tokenKeyInput) {
+        const key = (tokenKeyInput || "").trim();
+        const candidates = ["accessToken", "token", "jwt", "Authorization"];
+        let raw = null;
+        let usedKey = null;
+
+        if (key && key !== "auto") {
+            raw = localStorage.getItem(key);
+            usedKey = key;
+        } else {
+            for (const k of candidates) {
+                const v = localStorage.getItem(k);
+                if (v && String(v).trim().length > 0) {
+                    raw = v;
+                    usedKey = k;
+                    break;
+                }
+            }
+        }
+        if (!raw) return { usedKey, authorization: null };
+
+        const trimmed = String(raw).trim().replace(/^"+|"+$/g, "");
+        if (/^Bearer\s+/i.test(trimmed)) return { usedKey, authorization: trimmed };
+        return { usedKey, authorization: `Bearer ${trimmed}` };
+    }
+
+    function refreshTokenPreview() {
+        const { usedKey, authorization } = pickTokenFromLocalStorage($tokenKey.value);
+        if (!authorization) {
+            $tokenPreview.textContent = "- (토큰 없음)";
+            $tokenPreview.style.borderColor = "#fbbf24";
+            logLine(`⚠️ localStorage 토큰 못 찾음 (tokenKey=${$tokenKey.value}, usedKey=${usedKey ?? "none"})`);
+            return null;
+        }
+        $tokenPreview.textContent = authorization;
+        $tokenPreview.style.borderColor = "#e5e7eb";
+        logLine(`토큰 로드 OK (usedKey=${usedKey})`);
+        return authorization;
+    }
+
+    function authHeadersJson() {
+        const auth = refreshTokenPreview();
+        const headers = { "Content-Type": "application/json" };
+        if (auth) headers["Authorization"] = auth;
+        return headers;
+    }
+
+    $refreshTokenBtn.addEventListener("click", refreshTokenPreview);
+
+    $clearBtn.addEventListener("click", () => {
+        $log.textContent = "";
+        rows.length = 0;
+        renderTable();
+        $status.style.display = "none";
+        setProgress(0);
+        logLine("초기화 완료");
+    });
+
+    function renderTable() {
+        if (rows.length === 0) {
+            $tbody.innerHTML = `<tr><td colspan="7" class="small">아직 없음</td></tr>`;
+            return;
+        }
+        $tbody.innerHTML = rows.map((r, idx) => `
+      <tr>
+        <td class="mono">${r.name ?? "-"}</td>
+        <td class="mono">${r.attachmentId ?? "-"}</td>
+        <td>${r.displayOrder ?? "-"}</td>
+        <td><span class="pill">${r.domain}</span></td>
+        <td class="mono">${r.entityId}</td>
+        <td><span class="pill">${r.fileType}</span></td>
+        <td class="mono" style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.objectKey)}</td>
+        <td>
+          ${r.deleted
+            ? `<span class="badge ok">DELETED</span>`
+            : `<button class="danger" data-del="${idx}">삭제(soft)</button>`
+        }
+        </td>
+      </tr>
+    `).join("");
+
+        // delete handlers
+        document.querySelectorAll("button[data-del]").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                const i = Number(e.currentTarget.getAttribute("data-del"));
+                await deleteAttachment(i);
+            });
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replaceAll("&","&amp;")
+            .replaceAll("<","&lt;")
+            .replaceAll(">","&gt;")
+            .replaceAll('"',"&quot;")
+            .replaceAll("'","&#039;");
+    }
+
+    async function presign(domain, entityId, fileType, file) {
+        const res = await fetch(`${API_BASE}/api/v1/attachments/presign`, {
+            method: "POST",
+            headers: authHeadersJson(),
+            credentials: "include",
+            body: JSON.stringify({
+                domain,
+                entityId,
+                fileType,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size
+            })
+        });
+        if (!res.ok) throw new Error("presign 실패: " + await res.text());
+        return await res.json(); // ResponseDto일 수도 있으니 아래에서 처리
+    }
+
+    async function uploadToS3(uploadUrl, file) {
+        // S3 PUT에는 Authorization 넣으면 안됨
+        const res = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+            body: file
+        });
+        if (!res.ok) throw new Error("S3 업로드 실패: " + res.status);
+        // ETag는 CORS ExposeHeaders 설정되어 있으면 읽힐 수도 있음
+        const etag = res.headers.get("ETag");
+        return { etag };
+    }
+
+    async function complete(domain, entityId, fileType, objectKey, file, etag) {
+        const res = await fetch(`${API_BASE}/api/v1/attachments/complete`, {
+            method: "POST",
+            headers: authHeadersJson(),
+            credentials: "include",
+            body: JSON.stringify({
+                domain,
+                entityId,
+                fileType,
+                objectKey,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+                etag: etag || null
+            })
+        });
+        if (!res.ok) throw new Error("complete 실패: " + await res.text());
+        return await res.json(); // ResponseDto일 수도 있으니 아래에서 처리
+    }
+
+    // ResponseDto 래핑( {data:{...}} ) vs 순수 응답({objectKey, uploadUrl}) 둘 다 대응
+    function unwrapMaybeResponseDto(obj) {
+        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+        return obj;
+    }
+
+    async function uploadOne(file, domain, entityId, fileType, idx, total) {
+        logLine(`--- 업로드 시작 (${idx+1}/${total}) : ${file.name} ---`);
+        setProgress(Math.floor((idx / total) * 100));
+
+        // 1) presign
+        logLine("1) presign...");
+        const presignRaw = await presign(domain, entityId, fileType, file);
+        const presignData = unwrapMaybeResponseDto(presignRaw);
+        const { objectKey, uploadUrl } = presignData;
+        if (!objectKey || !uploadUrl) throw new Error("presign 응답에 objectKey/uploadUrl 없음");
+        logLine(`presign OK: objectKey=${objectKey}`);
+
+        // 2) S3 PUT
+        logLine("2) S3 PUT...");
+        const { etag } = await uploadToS3(uploadUrl, file);
+        logLine(`S3 업로드 OK${etag ? " (etag=" + etag + ")" : ""}`);
+
+        // 3) complete
+        logLine("3) complete(DB 저장)...");
+        const completeRaw = await complete(domain, entityId, fileType, objectKey, file, etag);
+        const completeData = unwrapMaybeResponseDto(completeRaw);
+
+        // 네가 만든 CompleteResponse가 {attachmentId, displayOrder} 형태
+        const attachmentId = completeData.attachmentId ?? completeData.id ?? null;
+        const displayOrder = completeData.displayOrder ?? null;
+
+        if (!attachmentId) {
+            logLine("⚠️ complete 응답에 attachmentId가 없는데 저장은 됐을 수 있어. 응답 구조 확인 필요");
+        }
+
+        rows.unshift({
+            name:file.name,
+            attachmentId,
+            displayOrder,
+            domain,
+            entityId,
+            fileType,
+            objectKey,
+            deleted: false
+        });
+        renderTable();
+        logLine(`complete OK: attachmentId=${attachmentId}, displayOrder=${displayOrder}`);
+        setProgress(Math.floor(((idx + 1) / total) * 100));
+    }
+
+    async function deleteAttachment(rowIndex) {
+        const r = rows[rowIndex];
+        if (!r || !r.attachmentId) {
+            setStatus("bad", "attachmentId 없음");
+            logLine("삭제 실패: attachmentId 없음");
+            return;
+        }
+
+        if (!confirm(`attachmentId=${r.attachmentId} 를 soft delete 할까?`)) return;
+
+        try {
+            setStatus("ok", "삭제 중...");
+            logLine(`DELETE /api/v1/attachments/${r.attachmentId} ...`);
+
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${r.attachmentId}`, {
+                method: "DELETE",
+                headers: authHeadersJson(),
+                credentials: "include"
+            });
+
+            if (!res.ok) throw new Error("삭제 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+
+            r.deleted = true;
+            renderTable();
+            setStatus("ok", "삭제 완료");
+            logLine("삭제 OK: " + JSON.stringify(data));
+        } catch (e) {
+            console.error(e);
+            setStatus("bad", "삭제 실패");
+            logLine("에러: " + (e.message || e));
+        }
+    }
+
+    $uploadBtn.addEventListener("click", async () => {
+        const files = Array.from($file.files || []);
+        if (files.length === 0) {
+            setStatus("bad", "파일을 선택해줘");
+            logLine("에러: 파일 미선택");
+            return;
+        }
+
+        const domain = $domain.value;
+        const entityId = Number($entityId.value);
+        const fileType = $fileType.value;
+
+        try {
+            $uploadBtn.disabled = true;
+            setStatus("ok", "업로드 중...");
+            setProgress(0);
+
+            const auth = pickTokenFromLocalStorage($tokenKey.value).authorization;
+            if (!auth) logLine("⚠️ Authorization 토큰이 없어서 presign/complete가 401 날 수 있어!");
+
+            for (let i = 0; i < files.length; i++) {
+                await uploadOne(files[i], domain, entityId, fileType, i, files.length);
+            }
+
+            setStatus("ok", "업로드 완료");
+            logLine("전체 업로드 완료");
+
+            alert('첨부파일이 등록되었습니다.');
+            console.log('child origin:', location.origin);
+            console.log('opener:', window.opener);
+            console.log('opener origin try:', window.opener?.location?.origin);
+
+
+            // ✅ 부모 창(공지 수정 화면) 갱신
+            try {
+                console.log("child origin:", location.origin);
+                console.log("opener exists:", !!window.opener);
+                if (window.opener && !window.opener.closed) {
+                    // 부모에서 initAttach가 전역에 있어야 함
+                    //window.opener.initAttach?.();
+                    window.opener.postMessage({ type: 'ATTACH_UPDATED' }, "*");
+                    console.log("opener postMessage sent");
+                }
+            } catch (e) {
+                console.warn('부모 창 갱신 실패:', e);
+            }
+
+            // ✅ 새창 닫기
+            window.close();
+        } catch (e) {
+            console.error(e);
+            setStatus("bad", "업로드 실패");
+            logLine("에러: " + (e.message || e));
+            setProgress(0);
+        } finally {
+            $uploadBtn.disabled = false;
+        }
+    });
+
+    // init
+    logLine("준비 완료");
+    refreshTokenPreview();
+    renderTable();
+</script>
+</body>
+</html>

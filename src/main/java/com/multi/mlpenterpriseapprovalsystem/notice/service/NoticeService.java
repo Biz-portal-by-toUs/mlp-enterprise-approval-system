@@ -59,7 +59,6 @@ public class NoticeService {
                 .isDeleted(dto.getIsDeleted())
                 .title(dto.getTitle())
                 .contents(normalizeToJson(dto.getContents()))
-               // .contents(dto.getContents())
                 .isPopup(dto.getIsPopup())
                 .startedAt(dto.getStartedAt())
                 .endedAt(dto.getEndedAt())
