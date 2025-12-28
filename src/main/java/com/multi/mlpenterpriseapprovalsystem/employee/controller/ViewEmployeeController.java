@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.repository.PositionsRepository;
 import lombok.RequiredArgsConstructor;
@@ -52,5 +53,53 @@ public class ViewEmployeeController {
     public String employeeDetailPage(@PathVariable(name="empNo") Long empNo, Model model) {
         model.addAttribute("empNo", empNo);
         return "employee/detail";
+    }
+
+    @GetMapping("/create")
+    public String employeeCreatePage(@AuthenticationPrincipal CustomUser user, Model model) {
+        model.addAttribute("username", user != null ? user.getUsername() : "");
+        model.addAttribute("comId", user != null ? user.getComId() : "");
+
+        String comId = (user != null ? user.getComId() : null);
+
+        // ✅ 드롭다운 데이터는 로그인(=user 존재)일 때만 조회
+        if (comId != null && !comId.isBlank()) {
+            model.addAttribute("departments", departmentRepository.findAllByCompany_ComId(comId));
+            model.addAttribute("positions", positionsRepository.findAllByCompany_ComId(comId));
+        } else {
+            // 템플릿에서 null 처리 싫으면 빈 리스트로
+            model.addAttribute("departments", java.util.Collections.emptyList());
+            model.addAttribute("positions", java.util.Collections.emptyList());
+
+        }
+        model.addAttribute("roles", RoleType.values());
+
+        return "/employee/create";
+    }
+
+    @GetMapping("/{empNo}/edit")
+    public String editPage(@PathVariable(name="empNo") Long empNo, @AuthenticationPrincipal CustomUser user, Model model) {
+
+        model.addAttribute("username", user != null ? user.getUsername() : "");
+        model.addAttribute("comId", user != null ? user.getComId() : "");
+
+        String comId = (user != null ? user.getComId() : null);
+
+        // select 옵션
+        if (comId != null && !comId.isBlank()) {
+            model.addAttribute("departments", departmentRepository.findAllByCompany_ComId(comId));
+            model.addAttribute("positions", positionsRepository.findAllByCompany_ComId(comId));
+        } else {
+            // 템플릿에서 null 처리 싫으면 빈 리스트로
+            model.addAttribute("departments", java.util.Collections.emptyList());
+            model.addAttribute("positions", java.util.Collections.emptyList());
+
+        }
+        model.addAttribute("roles", RoleType.values());
+
+        // JS에서 사용할 empNo
+        model.addAttribute("empNo", empNo);
+
+        return "employee/update";
     }
 }

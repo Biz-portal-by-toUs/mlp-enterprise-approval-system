@@ -24,6 +24,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Optional<Employee> findByEmpId(String empId);
 
+    @Query(value = """
+    SELECT IFNULL(MAX(CAST(SUBSTRING(e.emp_id, CHAR_LENGTH(:comId) + 1) AS UNSIGNED)), 0)
+    FROM employee e
+    WHERE e.com_id = :comId
+      AND e.emp_id LIKE CONCAT(:comId, '%')
+""", nativeQuery = true)
+    int findMaxEmpNoByComId(@Param("comId") String comId);
+
+    boolean existsByCompany_ComIdAndEmpId(String comId, String empId);
+
     @Query("""
                 select e.company.comId
                 from Employee e

@@ -50,7 +50,7 @@ public class AttachmentQueryService {
 
     public AttachmentDto.PresignedUrlResponse issuePreviewUrl(String comId, Long attachmentId) {
         Attachment a = findActive(comId, attachmentId);
-        String disposition = buildContentDisposition("inline", a.getOriginalName());
+        String disposition = "inline";
         return presignGet(a, disposition);
     }
 
@@ -75,7 +75,8 @@ public class AttachmentQueryService {
                 a.getFileType().name(),
                 a.getOriginalName(),
                 a.getContentType(),
-                a.getSize()
+                a.getSize(),
+                a.getObjectKey()
         );
     }
 

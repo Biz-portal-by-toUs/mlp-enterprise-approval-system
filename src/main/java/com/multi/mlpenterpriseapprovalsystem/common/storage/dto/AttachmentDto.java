@@ -19,7 +19,8 @@ public class AttachmentDto {
             String fileType,
             String originalName,
             String contentType,
-            Long size
+            Long size,
+            String objectKey
     ) {}
 
     public record PresignedUrlResponse(

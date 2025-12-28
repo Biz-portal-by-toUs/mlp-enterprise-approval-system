@@ -950,3 +950,18 @@ CREATE TABLE attachment (
                             INDEX idx_attach_ref (com_id, domain, entity_id),
                             INDEX idx_attach_ref_status (com_id, domain, entity_id, status)
 );
+
+use bizportal;
+show databases;
+DESC employee;
+
+-- 1) 먼저 NULL 허용으로 추가
+ALTER TABLE employee ADD COLUMN birth DATE NULL;
+
+-- 2) 기존 데이터 채우기 (정책에 맞게)
+UPDATE employee SET birth = '2000-01-01' WHERE birth IS NULL;
+
+-- 3) 마지막에 NOT NULL로 변경
+ALTER TABLE employee MODIFY birth DATE NOT NULL;
+
+ALTER TABLE employee MODIFY COLUMN object_key VARCHAR(255) NULL;

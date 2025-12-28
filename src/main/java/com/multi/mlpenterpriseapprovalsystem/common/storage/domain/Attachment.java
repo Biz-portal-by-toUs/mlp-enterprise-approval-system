@@ -72,7 +72,7 @@ public class Attachment extends BaseEntity {
     private String ext;
 
     // S3 위치
-    @Column(name = "object_key", nullable = false, length = 1024, unique = true)
+    @Column(name = "object_key", nullable = false, length = 255, unique = true)
     private String objectKey;
 
     @Column(name = "etag", length = 128)
