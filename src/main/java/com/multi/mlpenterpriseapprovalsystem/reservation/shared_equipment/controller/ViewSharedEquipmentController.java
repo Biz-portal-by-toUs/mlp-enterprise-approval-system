@@ -47,4 +47,10 @@ public class ViewSharedEquipmentController {
     public String sharedEquipmentReservation() {
         return "reservation/shared-equipment/shared-equipment-reservation";
     }
+
+    // 공유 설비 예약 등록 화면
+    @GetMapping("/{eqNo}/shared-equipment-reservation")
+    public String sharedEquipmentReservation(@PathVariable Long eqNo) {
+        return "reservation/shared-equipment/shared-equipment-reservation";
+    }
 }
