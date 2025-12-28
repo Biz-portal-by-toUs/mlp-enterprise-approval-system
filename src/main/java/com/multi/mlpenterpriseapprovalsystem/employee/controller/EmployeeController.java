@@ -144,7 +144,7 @@ public class EmployeeController {
 
         return ResponseEntity.ok(new ResponseDto<>(
                 HttpStatus.OK,
-                "사원 등록 완료",
+                "사원 수정 완료",
                 null
         ));
     }
