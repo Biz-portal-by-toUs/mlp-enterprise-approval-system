@@ -73,7 +73,8 @@ public class AttachmentQueryService {
                 a.getFileType().name(),
                 a.getOriginalName(),
                 a.getContentType(),
-                a.getSize()
+                a.getSize(),
+                a.getObjectKey()
         );
     }
 
