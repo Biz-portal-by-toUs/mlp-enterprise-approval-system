@@ -41,4 +41,10 @@ public class ViewSharedEquipmentController {
         model.addAttribute("eqNo", eqNo);
         return "reservation/shared-equipment/shared-equipment-edit";
     }
+
+    // 공유 설비 예약 조회 화면
+    @GetMapping("/shared-equipment-reservation")
+    public String sharedEquipmentReservation() {
+        return "reservation/shared-equipment/shared-equipment-reservation";
+    }
 }
