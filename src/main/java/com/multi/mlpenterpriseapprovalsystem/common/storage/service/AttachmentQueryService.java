@@ -15,6 +15,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
@@ -54,7 +56,7 @@ public class AttachmentQueryService {
 
     public AttachmentDto.PresignedUrlResponse issueDownloadUrl(String comId, Long attachmentId) {
         Attachment a = findActive(comId, attachmentId);
-        String disposition = "attachment; filename=\"" + safeFileName(a.getOriginalName()) + "\"";
+        String disposition = buildContentDisposition("attachment", a.getOriginalName());
         return presignGet(a, disposition);
     }
 
@@ -100,8 +102,31 @@ public class AttachmentQueryService {
         );
     }
 
-    private String safeFileName(String name) {
-        if (name == null || name.isBlank()) return "file";
-        return name.replace("\"", "");
+    /**
+     * RFC 5987 방식으로 Content-Disposition 헤더 생성
+     * 한글 등 non-ASCII 문자를 안전하게 처리
+     */
+    private String buildContentDisposition(String type, String originalName) {
+        if (originalName == null || originalName.isBlank()) {
+            return type + "; filename=\"file\"";
+        }
+
+        // ASCII만 포함된 경우
+        if (isAsciiOnly(originalName)) {
+            String safeName = originalName.replace("\"", "");
+            return type + "; filename=\"" + safeName + "\"";
+        }
+
+        // 한글 등 non-ASCII 포함: RFC 5987 인코딩 사용
+        String encodedName = URLEncoder.encode(originalName, StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        return type + "; filename=\"file\"; filename*=UTF-8''" + encodedName;
+    }
+
+    private boolean isAsciiOnly(String str) {
+        for (char c : str.toCharArray()) {
+            if (c > 127) return false;
+        }
+        return true;
     }
 }

@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 /**
  * 회의 참석 부서 repository
  *
@@ -20,4 +22,6 @@ public interface MeetingDeptRepository extends JpaRepository<MeetingDept, Long> 
     void deleteAllByMeeting_MeetNo(@Param("meetNo") Long meetNo);
 
     boolean existsByMeeting_MeetNoAndDepartment_DepNo(Long meetNo, Long depNo);
+
+    List<MeetingDept> findAllByMeeting_MeetNo(Long meetNo);
 }

@@ -3,11 +3,13 @@ package com.multi.mlpenterpriseapprovalsystem.meeting.service;
 import com.multi.mlpenterpriseapprovalsystem.common.client.MeetingAiClient;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.Meeting;
+import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingDept;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingEmp;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingScope;
 import com.multi.mlpenterpriseapprovalsystem.meeting.dto.*;
@@ -50,6 +52,8 @@ public class MeetingService {
     private final DepartmentRepository departmentRepository;
 
     private final MeetingAiClient meetingAiClient;
+
+    private final S3UrlService s3UrlService;
 
     private final EntityManager em;
 
@@ -174,14 +178,25 @@ public class MeetingService {
                     .empName(me.getEmployee().getEmpName())
                     .build());
         }
+        List<ResMeetingDepartmentDto> departments = new ArrayList<>();
+        if (meeting.getMeetingDepts() != null) {
+            for (MeetingDept md : meeting.getMeetingDepts()) {
+                Department d = md.getDepartment();
+                if (d == null) continue;
+                departments.add(ResMeetingDepartmentDto.builder()
+                        .depNo(d.getDepNo())
+                        .depName(d.getDepName())
+                        .build());
+            }
+        }
 
 
-        Long depNo = null;
-        String depName = null;
-        if (meeting.getMeetingDepts() != null && !meeting.getMeetingDepts().isEmpty()) {
-            Department d = meeting.getMeetingDepts().get(0).getDepartment();
-            depNo = d.getDepNo();
-            depName = d.getDepName();
+
+        String audioKey = meeting.getAudioObjectKey();
+        String recordUrl = null;
+
+        if (audioKey != null && !audioKey.isBlank()) {
+            recordUrl = s3UrlService.presignGetUrl(audioKey);
         }
 
         return ResMeetingDetailDto.builder()
@@ -190,11 +205,12 @@ public class MeetingService {
                 .sttText(meeting.getSttText())
                 .aiText(meeting.getAiText())
                 .startAt(meeting.getStartedAt())
-                .endAt(meeting.getCreatedAt()) // 너가 endAt을 createdAt로 쓰는 구조면 유지
-                .depNo(depNo)
-                .depName(depName)
+                .endAt(meeting.getCreatedAt())
+                .departments(departments)
                 .writerEmpId(meeting.getWriter().getEmpId())
                 .writerName(meeting.getWriter().getEmpName())
+                .recordUrl(recordUrl)
+                .objectKey(audioKey)
                 .participants(participants)
                 .build();
     }
@@ -352,7 +368,7 @@ public class MeetingService {
          meeting.markAiProcessing();
 
         // ✅ Spring -> FastAPI 호출 (비동기 권장)
-        meetingAiClient.requestAi(meetNo, req.getObjectKey());
+        meetingAiClient.requestAi(meetNo, req.getObjectKey(),req.getTitle());
     }
 
     // MeetingService.java 안에 추가
@@ -376,6 +392,8 @@ public class MeetingService {
 
         // DONE
         meeting.markAiDone(request.getSttText(), request.getAiText());
+
+        meeting.setAudioObjectKey(request.getObjectKey());
 
         // 디버깅용: 바로 DB 반영 확인하고 싶으면
         // meetingRepository.saveAndFlush(meeting);

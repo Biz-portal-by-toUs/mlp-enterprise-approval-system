@@ -203,10 +203,9 @@
      * [핵심 기능] 카테고리 이름 조회 API 연동
      */
     async function fetchCategoryNames() {
-        const token = localStorage.getItem('accessToken');
         try {
             const response = await fetch('/api/v1/temp/documentFormCategoryNames', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
 
@@ -261,10 +260,9 @@
     }
 
     async function fetchDepartments() {
-        const token = localStorage.getItem('accessToken');
         try {
             const response = await fetch('/api/v1/temp/departments', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
             if (response.ok && result.data) {
@@ -284,7 +282,6 @@
      */
     async function loadData(page) {
         currentPage = page;
-        const token = localStorage.getItem('accessToken');
         const catValue = document.getElementById('search-docfoCatName').value;
 
         // ✅ 정렬값 조합: FINALIZED_LATEST, SUBMIT_OLDEST 등
@@ -303,7 +300,7 @@
 
         try {
             const response = await fetch(`${API_URL}&${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
             if (result.status === 200) {

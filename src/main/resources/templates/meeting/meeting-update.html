@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>회의 수정</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --panel: #ffffff;
+            --line: #e5e7eb;
+            --text: #111827;
+            --muted: #6b7280;
+            --blue: #2b6ae6;
+            --blueSoft: #e7f1ff;
+            --chip: #f3f4f6;
+            --danger: #ef4444;
+            --ok: #22c55e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* Layout */
+        .app {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #fff;
+            border-right: 1px solid var(--line);
+            padding: 24px 0;
+        }
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 20px;
+        }
+        .nav a {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 24px;
+            text-decoration: none;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .nav a.active {
+            background: var(--blueSoft);
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        /* Main Content */
+        .main {
+            padding: 32px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            height: 40px;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--text);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn:hover { background: #f9fafb; }
+        .btn.primary {
+            background: var(--blue);
+            color: #fff;
+            border: none;
+        }
+        .btn.danger-outline {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        /* Grid System */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Card Design */
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        h2 {
+            margin: 0 0 20px 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        /* Form Elements */
+        .field { margin-bottom: 16px; }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        input, select, textarea {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--text);
+            padding: 10px 12px;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus, textarea:focus { border-color: var(--blue); }
+        textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
+
+        /* Employee Selection */
+        .selected-box {
+            min-height: 50px;
+            padding: 8px;
+            background: #f9fafb;
+            border: 1px dashed var(--line);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--blueSoft);
+            color: var(--blue);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .pill button {
+            border: none;
+            background: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .list-container {
+            height: 220px;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+        }
+        .emp-row {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .emp-info b { font-size: 14px; }
+        .emp-info small { color: var(--muted); }
+
+        .error {
+            padding: 14px;
+            border-radius: 8px;
+            background: rgba(239,68,68,.1);
+            border: 1px solid rgba(239,68,68,.3);
+            color: #b91c1c;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+        @media (max-width: 800px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <nav class="nav">
+            <a href="/meeting">회의 목록</a>
+            <a href="#" class="active">회의 정보 수정</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div id="error" class="error"></div>
+
+        <div class="topbar">
+            <button class="btn" onclick="history.back()">← 취소</button>
+            <div style="display:flex; gap:12px">
+                <button class="btn danger-outline" id="deleteBtn">회의 삭제</button>
+                <button class="btn primary" id="updateBtn">수정 완료</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📁 1. 기본 정보 수정</h2>
+                <div class="field">
+                    <label>회의 제목</label>
+                    <input id="title" placeholder="회의 주제를 입력하세요" />
+                </div>
+                <div style="display:flex; gap:12px;">
+                    <div class="field" style="flex:1">
+                        <label>공개 여부</label>
+                        <select id="status">
+                            <option value="true">전체 공개</option>
+                            <option value="false">비공개</option>
+                        </select>
+                    </div>
+                    <div class="field" style="flex:1">
+                        <label>시작 일시</label>
+                        <input id="startedAt" type="datetime-local" />
+                    </div>
+                </div>
+                <div class="field">
+                    <label>관련 부서 번호 (쉼표 구분)</label>
+                    <input id="depNos" placeholder="예: 1, 2" />
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>👥 2. 참석자 수정</h2>
+                <label>참여 중인 멤버</label>
+                <div id="selectedBox" class="selected-box">
+                    <div style="color:var(--muted); font-size:12px;">선택된 멤버가 없습니다.</div>
+                </div>
+
+                <label>사원 검색</label>
+                <input id="empSearchKeyword" placeholder="이름 또는 부서명을 입력하세요..." style="margin-bottom: 12px;" />
+                <div id="empList" class="list-container"></div>
+                <div style="font-size:11px; color:var(--muted); margin-top:8px;">💡 아래로 스크롤하면 더 많은 사원이 표시됩니다.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📝 3. 텍스트 보정</h2>
+            <div class="field">
+                <label>STT 변환 결과</label>
+                <textarea id="sttText" placeholder="회의 음성 변환 내용을 수정할 수 있습니다."></textarea>
+            </div>
+            <div class="field">
+                <label>AI 요약 결과</label>
+                <textarea id="aiText" style="background:#f5f7ff; border-color:#dbeafe" placeholder="AI가 분석한 핵심 요약 내용을 수정할 수 있습니다."></textarea>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+    const API_BASE = "http://localhost:8090";
+    const selectedEmployees = new Map();
+
+    // ✅ 사용자의 경로 방식(/meeting/123/update)에서 meetNo 추출
+    const getMeetNo = () => {
+        const parts = location.pathname.split("/").filter(Boolean);
+        // parts = ["meeting", "123", "update"] 일 때 index 1이 ID임
+        const meetNo = parts[1];
+        return meetNo && !isNaN(meetNo) ? meetNo : null;
+    };
+
+    function getCookie(name) {
+        let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+
+    const authHeaders = () => {
+        const token = getCookie("accessToken");
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        return headers;
+    };
+
+    // datetime-local 입력창 포맷 변환 (YYYY-MM-DDTHH:mm)
+    function formatForInput(isoStr) {
+        if (!isoStr) return "";
+        return isoStr.replace(" ", "T").slice(0, 16);
+    }
+
+    // 1. 기존 데이터 로드 및 폼 채우기
+    async function loadData() {
+        const meetNo = getMeetNo();
+        if (!meetNo) {
+            setError("회의 정보를 찾을 수 없습니다.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                headers: authHeaders(),
+                credentials: 'include'
+            });
+            const json = await res.json();
+            const d = json.data || json;
+
+            // 값 채우기
+            $("title").value = d.title || "";
+            $("status").value = String(d.status);
+            $("startedAt").value = formatForInput(d.startAt);
+            $("depNos").value = d.departments ? d.departments.map(dept => dept.depNo).join(", ") : "";
+            $("sttText").value = d.sttText || "";
+            $("aiText").value = d.aiText || "";
+
+            // 참석자 Map 복원 및 렌더링
+            if (d.participants) {
+                selectedEmployees.clear();
+                d.participants.forEach(p => {
+                    selectedEmployees.set(p.empId, { empId: p.empId, empName: p.empName });
+                });
+                renderSelected();
+            }
+        } catch (e) {
+            setError("기존 데이터를 불러오지 못했습니다: " + e.message);
+        }
+    }
+
+    function renderSelected() {
+        const box = $("selectedBox");
+        box.innerHTML = "";
+        if (selectedEmployees.size === 0) {
+            box.innerHTML = '<div style="color:var(--muted); font-size:12px;">선택된 멤버가 없습니다.</div>';
+            return;
+        }
+        [...selectedEmployees.values()].forEach(e => {
+            const pill = document.createElement("div");
+            pill.className = "pill";
+            pill.innerHTML = `<span>${e.empName}</span><button type="button" onclick="removeSelected('${e.empId}')">×</button>`;
+            box.appendChild(pill);
+        });
+    }
+
+    window.removeSelected = (id) => {
+        selectedEmployees.delete(id);
+        renderSelected();
+    };
+
+    window.addSelected = (id, name) => {
+        if (selectedEmployees.has(id)) return;
+        selectedEmployees.set(id, { empId: id, empName: name });
+        renderSelected();
+    };
+
+    // --- 사원 검색 및 무한 스크롤 (meeting-create.html 로직 이식) ---
+    let cursor = null, hasNext = true, loading = false, kwTimer = null;
+
+    async function loadMoreEmp(isReset = false) {
+        if (loading) return;
+        if (!isReset && !hasNext) return;
+
+        if (isReset) {
+            cursor = null;
+            hasNext = true;
+            $("empList").innerHTML = '<div style="padding:10px; font-size:12px; color:gray;">불러오는 중...</div>';
+        }
+
+        loading = true;
+        const keyword = $("empSearchKeyword").value.trim();
+        const qs = new URLSearchParams({ size: "20", excludeMe: "true" });
+        if (keyword) qs.set("keyword", keyword);
+        if (cursor) qs.set("cursor", cursor);
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/employees?${qs.toString()}`, {
+                headers: authHeaders(),
+                credentials: 'include'
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const result = await res.json();
+            const payload = result.data || result;
+
+            if (isReset) $("empList").innerHTML = "";
+
+            const items = payload.items || [];
+            cursor = payload.nextCursor;
+            hasNext = !!payload.hasNext;
+
+            if (items.length === 0 && isReset) {
+                $("empList").innerHTML = '<div style="padding:10px; font-size:12px; color:gray;">검색 결과가 없습니다.</div>';
+            }
+
+            items.forEach(e => {
+                const row = document.createElement("div");
+                row.className = "emp-row";
+                row.innerHTML = `
+                    <div class="emp-info"><b>${e.empName}</b> <small>(${e.empId})</small><br/><small>${e.depName || '소속 부서 없음'}</small></div>
+                    <button class="btn ok" style="font-size:11px; padding:4px 10px;" onclick="addSelected('${e.empId}', '${e.empName}')">추가</button>
+                `;
+                $("empList").appendChild(row);
+            });
+        } catch (err) {
+            console.error("사원 로드 실패", err);
+            if (isReset) $("empList").innerHTML = '<div style="padding:10px; font-size:12px; color:red;">불러오기 실패</div>';
+        } finally {
+            loading = false;
+        }
+    }
+
+    // 2. 수정 내용 저장 (PATCH)
+    $("updateBtn").onclick = async () => {
+        const meetNo = getMeetNo();
+        const requestBody = {
+            title: $("title").value.trim(),
+            startedAt: $("startedAt").value,
+            status: $("status").value === "true",
+            sttText: $("sttText").value,
+            aiText: $("aiText").value,
+            depNos: $("depNos").value.split(",").map(n => Number(n.trim())).filter(n => !isNaN(n)),
+            participantEmpIds: [...selectedEmployees.keys()]
+        };
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                method: "PUT",
+                headers: authHeaders(),
+                credentials: 'include',
+                body: JSON.stringify(requestBody)
+            });
+
+            if (res.ok) {
+                alert("회의 정보가 수정되었습니다.");
+                location.href = `/meeting/${meetNo}`;
+            } else {
+                const err = await res.json();
+                setError("수정 실패: " + (err.message || "권한이 없거나 정보가 올바르지 않습니다."));
+            }
+        } catch (e) {
+            setError("서버 연결 실패");
+        }
+    };
+
+    // 3. 회의 삭제 (DELETE)
+    $("deleteBtn").onclick = async () => {
+        if (!confirm("정말로 이 회의를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
+
+        const meetNo = getMeetNo();
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                method: "DELETE",
+                headers: authHeaders(),
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                alert("성공적으로 삭제되었습니다.");
+                location.href = "/meeting";
+            } else {
+                setError("삭제 실패: 작성자만 삭제할 수 있습니다.");
+            }
+        } catch (e) {
+            setError("삭제 처리 중 오류 발생");
+        }
+    };
+
+    // 검색어 입력 시 디바운스 적용
+    $("empSearchKeyword").oninput = () => {
+        clearTimeout(kwTimer);
+        kwTimer = setTimeout(() => {
+            loadMoreEmp(true);
+        }, 300);
+    };
+
+    // 무한 스크롤 적용
+    $("empList").onscroll = (e) => {
+        if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) {
+            loadMoreEmp(false);
+        }
+    };
+
+    function setError(msg) {
+        const b = $("error");
+        b.style.display = "block";
+        b.textContent = msg;
+        window.scrollTo(0, 0);
+    }
+
+    window.onload = () => {
+        loadData();      // 기존 데이터 로드
+        loadMoreEmp(true); // 사원 목록 초기 로드
+    };
+</script>
+</body>
+</html>

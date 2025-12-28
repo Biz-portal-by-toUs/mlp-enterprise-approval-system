@@ -4,43 +4,32 @@
     <meta charset="UTF-8" />
     <title>Create Chat Room</title>
     <style>
+        /* CSS 디자인은 수정하지 않았습니다. */
         :root { --primary-color: #007bff; --bg-color: #f8f9fa; --border-color: #eee; }
         body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
         .wrap { height: 100vh; display: flex; flex-direction: column; background: white; }
-
-        /* 상단 바 */
         .top { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; gap: 12px; align-items: center; background: white; }
         .top input { flex: 1; padding: 12px 18px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; }
         .top input:focus { border-color: var(--primary-color); }
         .top button { padding: 10px 16px; cursor: pointer; background: white; border: 1px solid #ddd; border-radius: 8px; font-weight: 600; }
-
         .main { flex: 1; display: flex; min-height: 0; border-bottom: 1px solid var(--border-color); }
         .left, .right { flex: 1; display: flex; flex-direction: column; min-height: 0; }
         .left { border-right: 1px solid var(--border-color); }
-
         .sectionTitle { padding: 12px 18px; font-size: 12px; font-weight: 700; color: #999; background: #fafafa; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
         .list { flex: 1; overflow: auto; }
-
-        /* 사원 행 스타일 */
         .row { padding: 15px 20px; border-bottom: 1px solid #f8f8f8; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
         .row:hover { background: #fcfcfc; }
         .info .name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
         .info .sub { font-size: 12px; color: #888; }
         .btn-add { background: #f0f7ff; color: var(--primary-color); border: none; border-radius: 6px; padding: 6px 12px; font-weight: 800; cursor: pointer; }
-
-        /* 선택된 인원 필 스타일 */
         .pill { display: inline-flex; gap: 8px; align-items: center; background: #f0f7ff; border-radius: 8px; padding: 8px 12px; margin: 8px; font-size: 13px; border: 1px solid #d0e5ff; }
         .pill b { color: #333; }
         .pill button { cursor: pointer; border: none; background: none; color: #ff3b30; font-weight: bold; font-size: 14px; }
-
-        /* 하단 생성 바 */
         .footer { padding: 15px 20px; display: flex; gap: 10px; align-items: center; background: white; }
         .input-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
         .footer input { width: 100%; padding: 14px 18px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; box-sizing: border-box; }
         .footer button { padding: 14px 28px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,123,255,0.2); }
         .footer button:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
-
-        /* ✅ 추가된 카운트 정보 스타일 */
         .count-info { font-size: 12px; color: #777; align-self: flex-end; }
         .count-info.warn { color: #ff3b30; font-weight: 700; }
     </style>
@@ -73,8 +62,11 @@
 </div>
 
 <script>
-    function getAccessToken() { return localStorage.getItem("accessToken"); }
-    function authHeaders() { return { 'Authorization': 'Bearer ' + getAccessToken() }; }
+    // ✅ HttpOnly 쿠키 사용으로 인해 localStorage 관련 로직 및 Authorization 헤더 제거
+    function authHeaders() {
+        return { 'Content-Type': 'application/json' };
+    }
+
     function escapeHtml(str) {
         return String(str ?? "").replace(/[&<>"']/g, s => ({
             "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
@@ -132,7 +124,8 @@
         if (keyword) qs.set("keyword", keyword);
         if (cursor) qs.set("cursor", cursor);
 
-        const res = await fetch("/api/v1/employees?" + qs.toString(), { headers: authHeaders() });
+        // ✅ 헤더에서 명시적인 토큰 제거
+        const res = await fetch("/api/v1/employees?" + qs.toString());
         const result = await res.json();
         const payload = result.data || result;
 
@@ -188,15 +181,15 @@
         if (selected.size === 0) return alert("한 명 이상 선택하세요");
         const roomName = document.getElementById("roomName").value.trim();
 
-        // 전송 전 최종 체크
         if (roomName.length > MAX_CHARS) {
             alert(`방 이름은 최대 ${MAX_CHARS}자까지 가능합니다.`);
             return;
         }
 
+        // ✅ POST 요청 시 authHeaders()에서 토큰 제거된 상태로 전송 (쿠키 자동 포함)
         const res = await fetch("/api/v1/chat", {
             method: "POST",
-            headers: { "Content-Type":"application/json", ...authHeaders() },
+            headers: authHeaders(),
             body: JSON.stringify({
                 roomType: "GROUP",
                 roomName: roomName || null,

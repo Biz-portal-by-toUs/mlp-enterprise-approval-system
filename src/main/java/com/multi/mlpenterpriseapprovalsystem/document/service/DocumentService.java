@@ -4,10 +4,13 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.config.DocumentOpenAiConfig;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.DocumentOpenAiRequest;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqApprovalLineDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.DocumentOpenAiResponse;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
@@ -26,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -51,6 +55,8 @@ public class DocumentService {
     private final EmployeeRepository employeeRepository;
     private final TempDocumentFormRepository tempDocumentFormRepository;
     private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
+    private final DocumentOpenAiConfig documentOpenAiConfig;
+    private final WebClient documentOpenAiWebClient;
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
@@ -328,7 +334,7 @@ public class DocumentService {
 
 
     // 문서 상신 및 임시저장
-    public void createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
+    public Long createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
 
         // 1. 연관 엔티티 조회
         Company company = companyRepository.findByComId(comId)
@@ -364,6 +370,8 @@ public class DocumentService {
         }
 
         log.info("문서 {} 완료: docNo={}, writer={}", isTemp ? "임시저장" : "상신", document.getDocNo(), myEmpId);
+
+        return document.getDocNo();
     }
 
     /**
@@ -663,7 +671,7 @@ public class DocumentService {
      * - 기존 반려 문서는 그대로 유지
      * - 새 문서를 생성하여 상신 또는 임시저장
      */
-    public void resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
+    public Long resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
 
         // 1. 원본 문서 조회
         Document originalDoc = documentRepository.findById(originalDocNo)
@@ -685,9 +693,11 @@ public class DocumentService {
         }
 
         // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
-        createDocument(comId, myEmpId, reqDto);
+        Long newDocNo = createDocument(comId, myEmpId, reqDto);
 
         log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
+
+        return newDocNo;
     }
 
 
@@ -745,4 +755,68 @@ public class DocumentService {
     }
 
 
+    /**
+     * AI 요약 생성 (GPT-4o-mini 사용)
+     */
+    public String generateAiSummary(String content) {
+
+        log.info("AI 요약 생성 시작 - contentLength: {}", content.length());
+
+        try {
+            DocumentOpenAiRequest request = DocumentOpenAiRequest.builder()
+                    .model(documentOpenAiConfig.getModel())
+                    .messages(List.of(
+                            DocumentOpenAiRequest.Message.builder()
+                                    .role("system")
+                                    .content("당신은 기업 결재 문서를 요약하는 전문 AI입니다.\n" +
+                                            "\n" +
+                                            "**입력 형식:**\n" +
+                                            "- HTML 형식의 문서 (표, 리스트 포함 가능)\n" +
+                                            "\n" +
+                                            "**요약 규칙:**\n" +
+                                            "1. HTML 태그는 무시하고 내용만 파악\n" +
+                                            "2. 표(table)의 경우: 각 셀의 내용을 문맥으로 이해하여 핵심만 추출\n" +
+                                            "3. 리스트의 경우: 항목들을 그룹화하여 요약\n" +
+                                            "4. 최종 요약은 100자 이내로 작성\n" +
+                                            "5. 핵심 요청사항, 보고사항, 주요 일정만 포함\n" +
+                                            "6. 명확하고 간결한 한국어 문장\n" +
+                                            "\n" +
+                                            "**좋은 요약 예시:**\n" +
+                                            "- \"어제: 데이터 정리 및 대직자 이슈 해결. 오늘: 화면 검증 및 양식 개선. 내일: 코드리뷰 예정\"\n" +
+                                            "- \"1분기 마케팅 예산 500만원에서 800만원으로 증액 요청 (경쟁사 대응)\"\n" +
+                                            "\n" +
+                                            "**나쁜 요약 예시:**\n" +
+                                            "- \"어제한거 데이터 이쁘게 넣기 임시저장에서...\" (맥락 없음)\n" +
+                                            "- \"표에 항목1, 항목2가 있고...\" (구조 설명)")
+                                    .build(),
+                            DocumentOpenAiRequest.Message.builder()
+                                    .role("user")
+                                    .content("다음 문서를 요약해주세요:\n\n" + content)
+                                    .build()
+                    ))
+                    .maxTokens(documentOpenAiConfig.getMaxTokens())
+                    .temperature(0.3)  // 낮은 temperature = 더 일관된 요약
+                    .build();
+
+            DocumentOpenAiResponse response = documentOpenAiWebClient.post()
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(DocumentOpenAiResponse.class)
+                    .block();
+
+            if (response == null || response.getChoices().isEmpty()) {
+                throw new CustomException(ErrorCode.AI_SUMMARY_GENERATION_FAILED);
+            }
+
+            String summary = response.getChoices().get(0).getMessage().getContent().trim();
+
+            log.info("AI 요약 생성 완료 - summaryLength: {}", summary.length());
+
+            return summary;
+
+        } catch (Exception e) {
+            log.error("AI 요약 생성 실패", e);
+            throw new CustomException(ErrorCode.AI_SUMMARY_GENERATION_FAILED);
+        }
+    }
 }

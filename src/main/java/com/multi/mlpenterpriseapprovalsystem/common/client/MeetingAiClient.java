@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -32,18 +33,20 @@ public class MeetingAiClient {
     @Value("${internal.ai.callback-key}")
     private String callbackKey;
 
-    public void requestAi(Long meetNo, String objectKey) {
+    public void requestAi(Long meetNo, String objectKey, String title) {
 
         WebClient wc = webClientBuilder.baseUrl(fastApiBaseUrl).build();
 
-        Map<String, Object> body = Map.of(
-                "meetNo", meetNo,
-                "objectKey", objectKey,
-                "callbackUrl", callbackUrl,      // 예: http://spring:8090/api/v1/meeting/{meetNo}/ai
-                "callbackKey", callbackKey       // FastAPI가 Spring 콜백 호출할 때 헤더로 실어줌
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("meetNo", meetNo);
+        body.put("objectKey", objectKey);
+        body.put("callbackUrl", callbackUrl);
+        body.put("callbackKey", callbackKey);
 
-        // ✅ 일단 단순 호출(운영이면 @Async + retry/queue 추천)
+
+        body.put("meetingTitle", title.trim());
+
+
         wc.post()
                 .uri("/ai/meetings/run")
                 .contentType(MediaType.APPLICATION_JSON)

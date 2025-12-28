@@ -23,11 +23,13 @@ public class ResMeetingDetailDto {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
 
-    private Long depNo;
-    private String depName;
+    private String recordUrl;
+    private String objectKey;
+
 
     private String writerEmpId;
     private String writerName;
 
     private List<ResMeetingParticipantDto> participants;
+    private List<ResMeetingDepartmentDto> departments;
 }

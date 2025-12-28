@@ -38,7 +38,8 @@ public enum ErrorCode {
     DOCUMENT_SERIAL_OVERFLOW(HttpStatus.INTERNAL_SERVER_ERROR, "DOCUMENT_SERIAL_OVERFLOW", "문서 일련번호가 최대치를 초과했습니다"),
     DOCUMENT_NOT_TEMP(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_TEMP", "임시저장 상태의 문서만 수정할 수 있습니다."),
     DOCUMENT_NOT_REJECTED(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_REJECTED", "반려된 문서만 재작성할 수 있습니다."),
-
+    CONTENT_TOO_SHORT_FOR_SUMMARY(HttpStatus.BAD_REQUEST, "CONTENT_TOO_SHORT_FOR_SUMMARY", "요약하기엔 내용이 너무 짧습니다 (최소 100자)"),
+    AI_SUMMARY_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI_SUMMARY_GENERATION_FAILED", "AI 요약 생성에 실패했습니다"),
 
     // 결재라인 관련
     INVALID_APPROVAL_LINE_ORDER(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_LINE_ORDER", "잘못된 결재자 순서입니다"),
