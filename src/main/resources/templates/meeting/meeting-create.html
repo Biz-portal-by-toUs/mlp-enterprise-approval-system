@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>새 회의 생성</title>
+    <style>
+        :root {
+            --bg: #f3f4f9;
+            --panel: #ffffff;
+            --line: #e2e8f0;
+            --text: #1e293b;
+            --muted: #64748b;
+            --blue: #2563eb;
+            --blueSoft: #eff6ff;
+            --blueHover: #1d4ed8;
+            --chip: #f1f5f9;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Pretendard", system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: #fff;
+            border-right: 1px solid var(--line);
+            padding: 24px 0;
+        }
+        .nav { display: flex; flex-direction: column; gap: 6px; }
+        .nav a {
+            display: flex; align-items: center; height: 46px; padding: 0 24px;
+            text-decoration: none; font-weight: 600; color: var(--muted); transition: 0.2s;
+        }
+        .nav a.active { background: var(--blueSoft); color: var(--blue); border-right: 4px solid var(--blue); }
+        .nav a:hover:not(.active) { background: #f8fafc; color: var(--text); }
+
+        .main {
+            padding: 30px 40px;
+            max-width: 1240px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .topbar { margin-bottom: 20px; }
+        .page-title { margin: 0; font-size: 25px; font-weight: 800; color: #111; }
+
+        .container-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: stretch; /* 좌우 하단 라인 맞춤 */
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .card-header {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 18px; font-size: 18px; font-weight: 800; color: var(--blue);
+        }
+
+        .field { margin-bottom: 14px; }
+        label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 5px; }
+        input, select {
+            width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #f8fafc;
+            padding: 10px 14px; font-size: 14px; transition: 0.2s; outline: none;
+        }
+        input:focus, select:focus { background: #fff; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blueSoft); }
+
+        .recording-section {
+            margin-top: auto; /* 상단 입력부와 분리 */
+            padding-top: 18px;
+            border-top: 2px dashed var(--line);
+        }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .btn {
+            height: 42px; border-radius: 10px; font-size: 14px; font-weight: 700;
+            cursor: pointer; border: 1px solid var(--line); background: #fff;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn:hover { background: #f8fafc; transform: translateY(-1px); }
+        .btn.success { background: var(--success); color: #fff; border: none; }
+        .btn.danger { color: var(--danger); border-color: var(--danger); }
+        .btn.primary {
+            background: var(--blue); color: #fff; border: none;
+            width: 100%; height: 56px; font-size: 16px; margin-top: 15px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .selected-box {
+            min-height: 52px; padding: 8px; background: #f8fafc; border: 1px dashed var(--line);
+            border-radius: 10px; display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+        }
+        .pill {
+            background: #fff; border: 1px solid var(--blue); color: var(--blue);
+            padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .pill button { border: none; background: none; color: var(--danger); cursor: pointer; font-size: 14px; }
+
+        /* ✅ 리스트 컨테이너 레이아웃 안정화 */
+        .list-container {
+            flex-grow: 1;
+            flex-shrink: 1;
+            flex-basis: 0;
+            min-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+        }
+        .emp-row {
+            padding: 10px 16px; border-bottom: 1px solid #f1f5f9;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        progress { width: 100%; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 10px; appearance: none; }
+        progress::-webkit-progress-bar { background: var(--line); }
+        progress::-webkit-progress-value { background: var(--blue); }
+
+        @media (max-width: 900px) { .container-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <nav class="nav">
+            <a href="/meeting">회의 목록</a>
+            <a href="#" class="active">새 회의 생성</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="topbar"><h1 class="page-title">새 회의 생성</h1></div>
+
+        <div class="container-grid">
+            <div class="card">
+                <div class="card-header">📁 회의 정보 및 등록</div>
+                <div class="field">
+                    <label>회의 제목</label>
+                    <input id="title" placeholder="회의 주제를 입력하세요" />
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px">
+                    <div class="field">
+                        <label>공개 여부</label>
+                        <select id="status">
+                            <option value="true">전체 공개</option>
+                            <option value="false">비공개</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>회의 시간 (<span id="todayLabel">오늘</span>)</label>
+                        <input id="startedAtTime" type="time" style="font-weight: 700; color: var(--blue);" />
+                    </div>
+                </div>
+                <div class="field">
+                    <label>관련 부서 번호</label>
+                    <input id="depNos" placeholder="예: 1, 2" />
+                </div>
+                <div class="recording-section">
+                    <div class="btn-group">
+                        <button id="recStartBtn" class="btn success">녹음 시작</button>
+                        <button id="recStopBtn" class="btn danger" disabled>중지</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px; border-radius:10px; border:1px solid var(--line); margin-bottom:8px;">
+                        <span style="font-size:13px; font-weight:700;">상태: <b id="recState" style="color:var(--blue)">대기</b></span>
+                        <button id="clearAudioBtn" class="btn" style="height:28px; font-size:11px; padding:0 8px;">초기화</button>
+                    </div>
+                    <audio id="audioPreview" controls style="width:100%; display:none; height:34px"></audio>
+                    <div id="fileInfo" style="font-size:12px; color:var(--muted); text-align:center; margin-top:5px;">선택된 파일 없음</div>
+                </div>
+                <button id="createBtn" class="btn primary">🚀 회의 생성 및 분석 요청</button>
+                <progress id="progress" value="0" max="100" style="display:none"></progress>
+                <div id="statusMsg" style="font-size:12px; font-weight:700; color:var(--blue); margin-top:8px; text-align:center"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">👥 참석자 선택</div>
+                <label>선택된 멤버</label>
+                <div id="selectedBox" class="selected-box">
+                    <div style="color:var(--muted); font-size:12px; width:100%; text-align:center">사원을 추가하세요.</div>
+                </div>
+                <label>사원 검색</label>
+                <input id="empSearchKeyword" placeholder="이름 또는 부서명 입력..." style="margin-bottom:12px;" />
+                <div id="empList" class="list-container"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+    const progEl = $("progress");
+    const statusMsg = $("statusMsg");
+
+    function updateStatus(msg) { statusMsg.textContent = msg; }
+    function getCookie(name) {
+        let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+    const fetchOptions = (method, body) => ({
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: body ? JSON.stringify(body) : null
+    });
+
+    const selectedEmployees = new Map();
+    function renderSelected() {
+        const box = $("selectedBox"); box.innerHTML = "";
+        if (selectedEmployees.size === 0) {
+            box.innerHTML = `<div style="color:var(--muted); font-size:12px; width:100%; text-align:center">사원을 추가하세요.</div>`;
+            return;
+        }
+        [...selectedEmployees.values()].forEach(e => {
+            const pill = document.createElement("div"); pill.className = "pill";
+            pill.innerHTML = `<span>${e.empName}</span><button onclick="removeSelected('${e.empId}')">×</button>`;
+            box.appendChild(pill);
+        });
+    }
+    function addSelected(empId, empName) {
+        if (!empId || selectedEmployees.has(empId)) return;
+        selectedEmployees.set(empId, { empId, empName }); renderSelected();
+    }
+    window.removeSelected = (empId) => { selectedEmployees.delete(empId); renderSelected(); };
+
+    let cursor = null, hasNext = true, loading = false, kwTimer = null;
+    async function loadMoreEmp() {
+        if (loading || !hasNext) return;
+        loading = true;
+        const kw = $("empSearchKeyword").value.trim();
+        const qs = new URLSearchParams({ size: "20", excludeMe: "true" });
+        if (kw) qs.set("keyword", kw);
+        if (cursor) qs.set("cursor", cursor);
+        try {
+            const res = await fetch(`http://localhost:8090/api/v1/employees?${qs.toString()}`, { credentials: 'include' });
+            const result = await res.json();
+            const payload = result.data || result;
+            cursor = payload.nextCursor; hasNext = !!payload.hasNext;
+
+            // ✅ 반복문 변수 'e'와 내부 참조 변수를 일치시켰습니다.
+            payload.items.forEach(e => {
+                const row = document.createElement("div"); row.className = "emp-row";
+                row.innerHTML = `<div style="font-size:13px"><b>${e.empName}</b> <small>${e.depName || ''}</small></div>
+                                 <button class="btn" style="height:30px; padding:0 10px; font-size:11px" onclick="addSelected('${e.empId}', '${e.empName}')">추가</button>`;
+                $("empList").appendChild(row);
+            });
+        } catch (err) { console.error(err); } finally { loading = false; }
+    }
+
+    let mediaRecorder = null, chunks = [], audioFile = null, audioBlobUrl = null;
+    $("recStartBtn").onclick = async () => {
+        try {
+            chunks = [];
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: "audio/webm" });
+                audioFile = new File([blob], `rec_${Date.now()}.webm`, { type: "audio/webm" });
+                if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+                audioBlobUrl = URL.createObjectURL(blob);
+                $("audioPreview").src = audioBlobUrl; $("audioPreview").style.display = "block";
+                $("fileInfo").textContent = `준비됨: ${(audioFile.size/1024).toFixed(1)} KB`;
+            };
+            mediaRecorder.start(); $("recState").textContent = "녹음중"; $("recState").style.color = "var(--danger)";
+            $("recStartBtn").disabled = true; $("recStopBtn").disabled = false;
+        } catch (e) { alert("마이크 권한이 필요합니다."); }
+    };
+    $("recStopBtn").onclick = () => {
+        mediaRecorder.stop(); $("recState").textContent = "대기"; $("recState").style.color = "var(--blue)";
+        $("recStartBtn").disabled = false; $("recStopBtn").disabled = true;
+    };
+    $("clearAudioBtn").onclick = () => {
+        audioFile = null; chunks = []; if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+        $("audioPreview").style.display = "none"; $("fileInfo").textContent = "선택된 파일 없음";
+    };
+
+    $("createBtn").onclick = async () => {
+        const today = new Date().toISOString().split('T')[0];
+        const selectedTime = $("startedAtTime").value;
+        const combinedStartedAt = selectedTime ? `${today}T${selectedTime}:00` : null;
+        if (!$("title").value.trim()) return alert("회의 제목을 입력하세요.");
+        try {
+            $("createBtn").disabled = true; progEl.style.display = "block"; progEl.value = 10;
+            updateStatus("🚀 회의 정보 등록 중...");
+            const res = await fetch(`http://localhost:8090/api/v1/meetings`, fetchOptions("POST", {
+                title: $("title").value.trim(), startedAt: combinedStartedAt,
+                status: $("status").value === "true",
+                depNos: ($("depNos").value || "").split(",").map(Number).filter(n => !isNaN(n)),
+                participantEmpIds: [...selectedEmployees.keys()]
+            }));
+            if (!res.ok) throw new Error();
+            const meetNo = (await res.json()).data.meetNo;
+            progEl.value = 40;
+            if (audioFile) {
+                updateStatus("📦 분석 요청 중...");
+                const pRes = await fetch(`http://localhost:8090/api/v1/attachments/presign`, fetchOptions("POST", {
+                    domain: "MEETING", entityId: meetNo, fileType: "AUDIO",
+                    originalName: audioFile.name, contentType: audioFile.type, size: audioFile.size
+                }));
+                const { objectKey, uploadUrl } = (await pRes.json()).data;
+                await fetch(uploadUrl, { method: "PUT", body: audioFile, headers: { "Content-Type": audioFile.type } });
+                await fetch(`http://localhost:8090/api/v1/attachments/complete`, fetchOptions("POST", {
+                    domain: "MEETING", entityId: meetNo, fileType: "AUDIO", objectKey, originalName: audioFile.name, contentType: audioFile.type, size: audioFile.size
+                }));
+                await fetch(`http://localhost:8090/api/v1/meetings/${meetNo}/ai-request`, fetchOptions("POST", {
+                    objectKey, size: audioFile.size, contentType: audioFile.type, originalName: audioFile.name,
+                    title: $("title").value.trim()
+                }));
+            }
+            progEl.value = 100; updateStatus("🎉 완료되었습니다!");
+            setTimeout(() => { if(confirm("등록 완료! 목록으로 이동할까요?")) location.href = "/meeting"; }, 500);
+        } catch (e) { alert("처리 중 오류가 발생했습니다."); $("createBtn").disabled = false; }
+    };
+
+    $("empSearchKeyword").oninput = () => {
+        clearTimeout(kwTimer);
+        kwTimer = setTimeout(() => { cursor = null; hasNext = true; $("empList").innerHTML = ""; loadMoreEmp(); }, 300);
+    };
+    $("empList").onscroll = (e) => { if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreEmp(); };
+
+    window.onload = () => {
+        const now = new Date();
+        $("todayLabel").textContent = now.toISOString().split('T')[0];
+        $("startedAtTime").value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        loadMoreEmp();
+    };
+</script>
+</body>
+</html>

@@ -20,6 +20,8 @@ public class ReqMeetingAiRequestDto {
     @NotBlank
     private String objectKey;
 
+    private String title;
+
     // 프론트가 알고 있으면 같이 보내면 좋아(로깅/검증용)
     private String contentType;
     private String originalName;
