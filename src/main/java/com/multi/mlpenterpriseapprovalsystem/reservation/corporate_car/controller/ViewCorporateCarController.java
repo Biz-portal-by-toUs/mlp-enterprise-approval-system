@@ -42,4 +42,9 @@ public class ViewCorporateCarController {
         return "reservation/corporate-cars/corporate-car-edit";
     }
 
+    @GetMapping("/corporate-car-reservation")
+    public String corporateCarReservation() {
+        return "reservation/corporate-cars/corporate-car-reservation";
+    }
+
 }
