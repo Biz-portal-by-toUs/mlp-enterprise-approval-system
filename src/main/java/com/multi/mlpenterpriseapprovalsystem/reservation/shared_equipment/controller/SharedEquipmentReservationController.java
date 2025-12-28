@@ -54,5 +54,13 @@ public class SharedEquipmentReservationController {
         sharedEquipmentReservationService.createReservation(dto, user);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/shared-equipment-reservations/{resvNo}")
+    public ResponseEntity<Void> deleteReservation(@PathVariable Long resvNo,
+                                                  @AuthenticationPrincipal CustomUser user) {
+
+        sharedEquipmentReservationService.deleteReservation(resvNo, user);
+        return ResponseEntity.noContent().build();   // 204
+    }
 }
 
