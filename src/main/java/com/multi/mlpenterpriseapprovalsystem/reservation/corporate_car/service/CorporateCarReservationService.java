@@ -1,16 +1,15 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
+package com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoom;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoomAttendee;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoomReservation;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqReservationCreateDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResReservationListDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.MeetingRoomAttendeeRepository;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.MeetingRoomRepository;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.MeetingRoomReservationRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.domain.CorporateCar;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.domain.CorporateCarReservation;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ReqReservationCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ResReservationListDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.repository.CorporateCarRepository;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.repository.CorporateCarReservationRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,44 +19,41 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 회의실 예약 비즈니스 로직을 처리하는 Service 클래스
+ * 법인 차량 예약 비즈니스 로직을 처리하는 Service 클래스
  *
- * 회의실 예약과 관련된 조회, 생성, 취소 등의
+ * 법인 차량 예약과 관련된 조회, 생성, 취소 등의
  * 핵심 비즈니스 로직을 담당한다.
  *
  * @author : 송현님
- * @filename : MeetingRoomReservationService
- * @since : 2025-12-22 오후 2:28 월요일
+ * @filename : CorporateCarReservationService
+ * @since : 2025-12-27 오후 10:28 토요일
  */
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
-public class MeetingRoomReservationService {
+public class CorporateCarReservationService {
 
-    private final MeetingRoomReservationRepository reservationRepository;
-    private final MeetingRoomRepository meetingRoomRepository;
+    private final CorporateCarReservationRepository reservationRepository;
+    private final CorporateCarRepository corporateCarRepository;
     private final EmployeeRepository employeeRepository;
-    private final MeetingRoomAttendeeRepository meetingRoomAttendeeRepository;
 
-    public List<ResReservationListDto> getReservations(String comId, String date) {
-
-        List<MeetingRoomReservation> reservations =
+    public List<ResReservationListDto> getReservations(String comId, String data) {
+        List<CorporateCarReservation> reservations =
                 reservationRepository.findByCompany_ComIdAndIsDeletedFalse(comId);
 
-        // 날짜 필터링
-        if (date != null) {
+        if (data != null) {
             reservations = reservations.stream()
-                    .filter(r -> r.getStartedAt().toLocalDate().toString().equals(date))
+                    .filter(r -> r.getStartedAt().toLocalDate().toString().equals(data))
                     .toList();
         }
 
         return reservations.stream()
                 .map(resv -> new ResReservationListDto(
-                        resv.getMeetingResvNo(),
-                        resv.getMeetingRoom().getRoomNo(),
-                        resv.getMeetingRoom().getRoomName(),
+                        resv.getCarResvNo(),
+                        resv.getCorporateCar().getCarNo(),
+                        resv.getCorporateCar().getCarName(),
                         resv.getStartedAt().toLocalDate(),
                         resv.getStartedAt().toLocalTime(),
                         resv.getEndedAt().toLocalTime(),
@@ -66,6 +62,7 @@ public class MeetingRoomReservationService {
                 ))
                 .toList();
     }
+
 
     public void createReservation(ReqReservationCreateDto dto, CustomUser user) {
         // 시작/종료 시간 만들기
@@ -85,22 +82,22 @@ public class MeetingRoomReservationService {
         }
 
         // 회의실 존재 확인
-        MeetingRoom room = meetingRoomRepository.findById(dto.getRoomNo())
-                .orElseThrow(() -> new IllegalArgumentException("회의실이 존재하지 않습니다."));
+        CorporateCar car = corporateCarRepository.findById(dto.getCarNo())
+                .orElseThrow(() -> new IllegalArgumentException("법인 차량이 존재하지 않습니다."));
 
         // 예약자 조회 (Employee)
         Employee employee = employeeRepository.findByEmpId(user.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("예약자 정보가 없습니다."));
 
         // 중복 예약 검사
-        if (reservationRepository.existsOverlapping(dto.getRoomNo(), startedAt, endedAt)) {
+        if (reservationRepository.existsOverlapping(dto.getCarNo(), startedAt, endedAt)) {
             throw new IllegalArgumentException("이미 예약된 시간입니다.");
         }
 
-        MeetingRoomReservation reservation =
-                MeetingRoomReservation.builder()
-                        .company(room.getCompany())
-                        .meetingRoom(room)
+        CorporateCarReservation reservation =
+                CorporateCarReservation.builder()
+                        .company(car.getCompany())
+                        .corporateCar(car)
                         .resvEmp(employee)
                         .startedAt(startedAt)
                         .endedAt(endedAt)
@@ -109,29 +106,12 @@ public class MeetingRoomReservationService {
 
         reservationRepository.save(reservation);
 
-        if (dto.getAttendeeIds() != null && !dto.getAttendeeIds().isEmpty()) {
-
-            List<Employee> attendees =
-                    employeeRepository.findByEmpIdIn(dto.getAttendeeIds());
-
-            for (Employee emp : attendees) {
-
-                MeetingRoomAttendee attendee = MeetingRoomAttendee.builder()
-                        .company(room.getCompany())
-                        .meetingRoomReservation(reservation)
-                        .employee(emp)
-                        .build();
-
-                meetingRoomAttendeeRepository.save(attendee);
-            }
-        }
-
     }
 
     public void deleteReservation(Long resvNo, CustomUser user) {
 
         // 예약 조회
-        MeetingRoomReservation reservation =
+        CorporateCarReservation reservation =
                 reservationRepository.findById(resvNo)
                         .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
 
@@ -145,6 +125,5 @@ public class MeetingRoomReservationService {
 
         // 삭제
         reservationRepository.delete(reservation);
-
     }
 }

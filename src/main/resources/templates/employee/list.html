@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>사원 관리</title>
+    <style>
+        :root{
+            --primary:#2f6fda;
+            --bg:#f3f5f9;
+            --panel:#f1f3f6;
+            --card:#ffffff;
+            --text:#111;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --shadow: 0 12px 28px rgba(0,0,0,.12);
+            --radius: 18px;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* ===== Topbar ===== */
+        .topbar{
+            height:72px;
+            background: var(--primary);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:0 18px;
+            box-shadow: 0 10px 25px rgba(0,0,0,.12);
+            position:sticky;
+            top:0;
+            z-index:100;
+        }
+        .top-left{
+            display:flex;
+            align-items:center;
+            gap:14px;
+            min-width: 260px;
+        }
+        .grid-btn{
+            width:42px;height:42px;border-radius:14px;
+            display:grid;place-items:center;
+            background: rgba(255,255,255,.18);
+            cursor:pointer;
+        }
+        .brand{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            font-weight:900;
+            font-size:22px;
+            letter-spacing:-.4px;
+        }
+        .brand .logo{
+            width:38px;height:38px;border-radius:12px;
+            background:#fff;
+            color:var(--primary);
+            display:grid;place-items:center;
+            font-weight:1000;
+        }
+
+        .top-search{
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .search-pill{
+            width:min(680px, 100%);
+            height:42px;
+            border-radius:999px;
+            background: rgba(255,255,255,.95);
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:0 12px;
+            color:#111;
+        }
+        .search-pill .icon{
+            opacity:.65;
+            font-size:16px;
+        }
+        .search-pill select{
+            border:0;outline:0;
+            background:transparent;
+            font-weight:800;
+            color:#333;
+            padding:6px 6px;
+            border-radius:10px;
+        }
+        .search-pill input{
+            border:0;outline:0;
+            background:transparent;
+            flex:1;
+            font-size:14px;
+        }
+
+        .top-right{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-width: 260px;
+            justify-content:flex-end;
+        }
+        .icon-circle{
+            width:42px;height:42px;border-radius:999px;
+            background: rgba(255,255,255,.18);
+            display:grid;place-items:center;
+            cursor:pointer;
+            font-size:18px;
+        }
+        .logout{
+            height:42px;
+            padding:0 16px;
+            border:0;
+            border-radius:999px;
+            background: rgba(255,255,255,.25);
+            color:#fff;
+            font-weight:900;
+            cursor:pointer;
+        }
+
+        /* ===== Layout ===== */
+        .wrap{display:flex; min-height: calc(100vh - 72px);}
+        .sidenav{
+            width:88px;
+            background:#fff;
+            border-right:1px solid var(--line);
+            padding:14px 10px;
+        }
+        .side-item{
+            height:58px;
+            border-radius:16px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            margin:10px 0;
+            color:#1f2937;
+            font-size:12px;
+            cursor:pointer;
+        }
+        .side-item .ico{
+            width:30px;height:30px;border-radius:12px;
+            border:2px solid currentColor;
+            display:grid;place-items:center;
+            font-size:14px;
+        }
+        .side-item.active{
+            background:#eef4ff;
+            color:var(--primary);
+            font-weight:900;
+        }
+
+        .subnav{
+            width:250px;
+            background:#fbfcfe;
+            border-right:1px solid var(--line);
+            padding:18px 16px;
+        }
+        .subnav .title{
+            font-weight:1000;
+            margin:10px 0 16px;
+            color:#111;
+        }
+        .subnav a{
+            display:block;
+            padding:14px 14px;
+            border-radius:14px;
+            color:#2b5db8;
+            text-decoration:none;
+            font-weight:800;
+            margin:8px 0;
+        }
+        .subnav a.active{
+            background:#eef4ff;
+        }
+
+        .content{
+            flex:1;
+            padding:26px 34px;
+        }
+        .page-title{
+            font-size:36px;
+            font-weight:1000;
+            margin:10px 0 6px;
+        }
+        .page-sub{
+            font-size:18px;
+            font-weight:900;
+            margin:0 0 18px;
+            color:#111;
+        }
+
+        /* ===== Filter Panel ===== */
+        .filter-card{
+            background: #f2f4f7;
+            border-radius: 26px;
+            padding: 22px 24px;
+            width: min(860px, 100%);
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,.03);
+            margin: 8px 0 22px;
+        }
+        .filter-grid{
+            display:grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap:18px;
+            margin-bottom: 14px;
+        }
+        .field .label{
+            font-weight:1000;
+            margin:0 0 10px;
+            font-size:14px;
+        }
+        .control{
+            height:44px;
+            border-radius: 12px;
+            border:1px solid var(--line);
+            background:#fff;
+            width:100%;
+            padding:0 14px;
+            outline:none;
+            font-size:14px;
+        }
+        .search-row{
+            display:flex;
+            align-items:flex-end;
+            gap:16px;
+        }
+        .search-row .search-field{
+            flex:1;
+        }
+        .btns{
+            display:flex;
+            gap:12px;
+            align-items:center;
+        }
+        .btn{
+            height:44px;
+            min-width:120px;
+            border:0;
+            border-radius: 12px;
+            font-weight:1000;
+            cursor:pointer;
+        }
+        .btn.primary{
+            background: var(--primary);
+            color:#fff;
+            box-shadow: 0 12px 24px rgba(47,111,218,.25);
+        }
+        .btn.secondary{
+            background: #2f6fda;
+            color:#fff;
+        }
+
+        /* ===== Table Card ===== */
+        .table-card{
+            background:#f2f4f7;
+            border-radius: 26px;
+            padding: 22px 22px 18px;
+            width: min(980px, 100%);
+        }
+        .table{
+            width:100%;
+            border-collapse:separate;
+            border-spacing:0 14px;
+            table-layout: fixed;
+        }
+        .thead th{
+            background:#fff;
+            padding:14px 16px;
+            font-size:14px;
+            text-align:left;
+            white-space:nowrap;
+        }
+        .thead th:first-child{border-top-left-radius:16px;border-bottom-left-radius:16px}
+        .thead th:last-child{border-top-right-radius:16px;border-bottom-right-radius:16px}
+
+        .row td{
+            background:#fff;
+            padding:16px 16px;
+            font-size:14px;
+            vertical-align:middle;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .row td:first-child{border-top-left-radius:16px;border-bottom-left-radius:16px}
+        .row td:last-child{border-top-right-radius:16px;border-bottom-right-radius:16px}
+
+        .link{
+            color:#2b5db8;
+            font-weight:1000;
+            text-decoration:none;
+        }
+        .center{text-align:center}
+
+        .empty{
+            display:none;
+            padding:32px 10px;
+            text-align:center;
+            color:var(--muted);
+            font-weight:900;
+        }
+
+        /* ===== Pagination ===== */
+        .pager{
+            display:flex;
+            justify-content:center;
+            gap:10px;
+            padding: 18px 0 4px;
+            color:#6b7280;
+            font-weight:900;
+            user-select:none;
+        }
+        .page-btn{
+            cursor:pointer;
+            padding:6px 8px;
+            border-radius:10px;
+        }
+        .page-btn.active{
+            background:#eef4ff;
+            color:var(--primary);
+        }
+
+        /* ===== Toast ===== */
+        .toast{
+            position:fixed;
+            left:50%;
+            bottom:22px;
+            transform:translateX(-50%);
+            background:#111;
+            color:#fff;
+            padding:12px 14px;
+            border-radius:12px;
+            font-weight:900;
+            font-size:14px;
+            box-shadow:0 14px 28px rgba(0,0,0,.18);
+            opacity:0;
+            pointer-events:none;
+            transition:opacity .18s ease, transform .18s ease;
+            z-index:9999;
+        }
+        .toast.show{
+            opacity:1;
+            transform:translateX(-50%) translateY(-2px);
+        }
+        .toast.err{ background:#c62828; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="top-left">
+        <div class="grid-btn" title="메뉴">⋮⋮</div>
+        <div class="brand" onclick="location.href='/'" style="cursor:pointer;">
+            <div class="logo">B</div>
+            <div>Bizportal</div>
+        </div>
+    </div>
+
+    <div class="top-search">
+        <div class="search-pill">
+            <span class="icon">🔍</span>
+            <select aria-label="search type">
+                <option>Label</option>
+                <option>Title</option>
+                <option>Content</option>
+            </select>
+            <input type="text" placeholder="Search" />
+        </div>
+    </div>
+
+    <div class="top-right">
+        <div class="icon-circle" title="알림">🔔</div>
+        <div class="icon-circle" title="프로필">👤</div>
+        <button class="logout" type="button" onclick="onLogout()">로그아웃</button>
+    </div>
+</header>
+
+<div class="wrap">
+    <!-- Left icon sidebar -->
+    <aside class="sidenav">
+        <div class="side-item" onclick="go('#')"><div class="ico">✓</div><div>결재</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">💬</div><div>회의</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">✉</div><div>메일</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">📄</div><div>문서함</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">☁</div><div>공유함</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">📅</div><div>캘린더</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">📝</div><div>게시판</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">🕒</div><div>예약</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">💼</div><div>근태</div></div>
+        <div class="side-item" onclick="go('#')"><div class="ico">👥</div><div>조직도</div></div>
+        <div class="side-item active"><div class="ico">⚙</div><div>관리자</div></div>
+    </aside>
+
+    <!-- Admin sub menu -->
+    <aside class="subnav">
+        <div class="title">관리자</div>
+        <a href="/admin/departments/list" class="">부서 편성</a>
+        <a href="/admin/positions/list" class="">직급 편성</a>
+        <a href="/admin/employees/list" class="active">사원 관리</a>
+        <a href="/admin/rules" class="">사내 규정 관리</a>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+        <div class="page-title">사원 관리</div>
+        <div class="page-sub">사원 조회</div>
+
+        <!-- Filter -->
+        <section class="filter-card">
+            <div class="filter-grid">
+                <div class="field">
+                    <div class="label">부서</div>
+                    <select id="depSelect" class="control">
+                        <option value="">전체</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <div class="label">직급</div>
+                    <select id="posSelect" class="control">
+                        <option value="">전체</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <div class="label">상태</div>
+                    <select id="statusSelect" class="control">
+                        <option value="">전체</option>
+                        <option value="active">재직</option>
+                        <option value="retired">퇴직</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="search-row">
+                <div class="field search-field">
+                    <div class="label">검색</div>
+                    <input id="keywordInput" class="control" type="text" placeholder="이름(키워드)" />
+                </div>
+
+                <div class="btns">
+                    <button class="btn primary" type="button" onclick="onSearch()">조회</button>
+                    <button class="btn secondary" type="button" onclick="location.href='/admin/employees/create'">사원 등록</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Table -->
+        <section class="table-card">
+            <table class="table">
+                <colgroup>
+                    <col style="width:14%;">
+                    <col style="width:14%;">
+                    <col style="width:14%;">
+                    <col style="width:14%;">
+                    <col style="width:12%;">
+                    <col style="width:22%;">
+                    <col style="width:10%;">
+                </colgroup>
+
+                <thead>
+                <tr class="thead">
+                    <th class="center">사번</th>
+                    <th class="center">이름</th>
+                    <th class="center">부서</th>
+                    <th class="center">직급</th>
+                    <th class="center">상태</th>
+                    <th class="center">이메일</th>
+                    <th class="center">관리</th>
+                </tr>
+                </thead>
+
+                <tbody id="empTbody"></tbody>
+            </table>
+
+            <div id="emptyBox" class="empty">조회 결과가 없습니다.</div>
+
+            <div id="pager" class="pager"></div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<script>
+    const API = {
+        employees: "/api/v1/admin/employees",
+        departments: "/api/v1/admin/departments",
+        positions: "/api/v1/admin/positions",
+        logout: "/auth/logout" // 너희 프로젝트 로그아웃 엔드포인트에 맞게 바꿔도 됨
+    };
+
+    const state = {
+        allEmployees: [],
+        page: 1,
+        pageSize: 8
+    };
+
+    function go(url){ if(url && url !== '#') location.href = url; }
+
+    // ===== Toast =====
+    let toastTimer = null;
+    function showToast(text, isErr){
+        const el = document.getElementById("toast");
+        el.className = "toast" + (isErr ? " err" : "");
+        el.textContent = text;
+        el.classList.add("show");
+        if(toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(()=> el.classList.remove("show"), 1800);
+    }
+
+    // ===== XSS escape =====
+    function esc(s){
+        return String(s ?? "")
+            .replaceAll("&","&amp;")
+            .replaceAll("<","&lt;")
+            .replaceAll(">","&gt;")
+            .replaceAll("\"","&quot;")
+            .replaceAll("'","&#039;");
+    }
+
+    // ===== API fetch helper (cookie auth) =====
+    async function apiFetch(url, options={}){
+        const res = await fetch(url, {
+            ...options,
+            credentials: "include", // ✅ httpOnly cookie 포함
+            headers: {
+                "Accept": "application/json",
+                ...(options.headers || {})
+            }
+        });
+
+        if(res.status === 401){
+            // 로그인 만료
+            showToast("인증이 만료되었습니다. 다시 로그인 해주세요.", true);
+            // 필요하면 로그인 페이지로 이동
+            // setTimeout(()=> location.href="/auth/companies/login", 700);
+            throw new Error("UNAUTHORIZED");
+        }
+        if(res.status === 403){
+            showToast("권한이 없습니다. (COM_ADMIN만 가능)", true);
+            throw new Error("FORBIDDEN");
+        }
+        return res;
+    }
+
+    // ===== dropdown load =====
+    async function loadDepartments(){
+        try{
+            const res = await apiFetch(API.departments, { method:"GET" });
+            if(!res.ok) return;
+            const json = await res.json().catch(()=> ({}));
+            const list = json.data || [];
+            const sel = document.getElementById("depSelect");
+            // reset
+            sel.innerHTML = `<option value="">전체</option>`;
+            list.forEach(d => {
+                const depNo = d.depNo ?? d.id ?? d.no;
+                const depName = d.depName ?? d.name ?? "";
+                if(depNo == null) return;
+                const opt = document.createElement("option");
+                opt.value = String(depNo);
+                opt.textContent = depName || `부서 ${depNo}`;
+                sel.appendChild(opt);
+            });
+        }catch(e){}
+    }
+
+    async function loadPositions(){
+        try{
+            const res = await apiFetch(API.positions, { method:"GET" });
+            if(!res.ok) return;
+            const json = await res.json().catch(()=> ({}));
+            const list = json.data || [];
+            const sel = document.getElementById("posSelect");
+            sel.innerHTML = `<option value="">전체</option>`;
+            list.forEach(p => {
+                const posNo = p.posNo ?? p.id ?? p.no;
+                const posName = p.posName ?? p.name ?? "";
+                if(posNo == null) return;
+                const opt = document.createElement("option");
+                opt.value = String(posNo);
+                opt.textContent = posName || `직급 ${posNo}`;
+                sel.appendChild(opt);
+            });
+        }catch(e){}
+    }
+
+    // ===== employees =====
+    function buildQuery(){
+        const depNo = document.getElementById("depSelect").value;
+        const posNo = document.getElementById("posSelect").value;
+        const status = document.getElementById("statusSelect").value;
+        const keyword = document.getElementById("keywordInput").value.trim();
+
+        const q = new URLSearchParams();
+        if(depNo) q.set("depNo", depNo);
+        if(posNo) q.set("posNo", posNo);
+        if(status) q.set("status", status);
+        if(keyword) q.set("keyword", keyword);
+        return q.toString();
+    }
+
+    async function loadEmployees(){
+        const tbody = document.getElementById("empTbody");
+        const empty = document.getElementById("emptyBox");
+        tbody.innerHTML = "";
+        empty.style.display = "none";
+
+        try{
+            const qs = buildQuery();
+            const url = qs ? `${API.employees}?${qs}` : API.employees;
+
+            const res = await apiFetch(url, { method:"GET" });
+            if(!res.ok){
+                empty.style.display = "block";
+                empty.textContent = `조회 중 오류가 발생했습니다. (${res.status})`;
+                return;
+            }
+
+            const json = await res.json().catch(()=> ({}));
+            const list = json.data || [];
+            state.allEmployees = list;
+            state.page = 1;
+            renderEmployees();
+        }catch(e){
+            if(String(e.message).includes("UNAUTHORIZED") || String(e.message).includes("FORBIDDEN")) return;
+            empty.style.display = "block";
+            empty.textContent = "조회 중 예외가 발생했습니다.";
+        }
+    }
+
+    function renderEmployees(){
+        const tbody = document.getElementById("empTbody");
+        const empty = document.getElementById("emptyBox");
+        const pager = document.getElementById("pager");
+
+        const all = state.allEmployees || [];
+        if(!all.length){
+            tbody.innerHTML = "";
+            empty.style.display = "block";
+            pager.innerHTML = "";
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(all.length / state.pageSize));
+        if(state.page > totalPages) state.page = totalPages;
+
+        const start = (state.page - 1) * state.pageSize;
+        const pageItems = all.slice(start, start + state.pageSize);
+
+        tbody.innerHTML = "";
+        pageItems.forEach(e => {
+            const empNo = e.empNo ?? "";
+            const empId = e.empId ?? "";
+            const empName = e.empName ?? "";
+            const depName = e.depName ?? "";
+            const posName = e.posName ?? "";
+            const email = e.email ?? "";
+            const deleted = e.deleted ?? e.isDeleted ?? false;
+            const statusLabel = deleted ? "퇴직" : "재직";
+
+            const tr = document.createElement("tr");
+            tr.className = "row";
+            tr.innerHTML = `
+                <td class="center">${esc(empId)}</td>
+                <td class="center">${esc(empName)}</td>
+                <td class="center">${esc(depName)}</td>
+                <td class="center">${esc(posName)}</td>
+                <td class="center">${esc(statusLabel)}</td>
+                <td class="center">${esc(email)}</td>
+                <td class="center">
+                    <a class="link" href="/admin/employees/${encodeURIComponent(empNo)}">상세</a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // pager
+        pager.innerHTML = "";
+        for(let i=1; i<=totalPages; i++){
+            const b = document.createElement("div");
+            b.className = "page-btn" + (i === state.page ? " active" : "");
+            b.textContent = String(i);
+            b.addEventListener("click", ()=> { state.page = i; renderEmployees(); });
+            pager.appendChild(b);
+        }
+    }
+
+    function onSearch(){
+        loadEmployees();
+    }
+
+    // 엔터로 검색
+    document.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){
+            const active = document.activeElement?.id;
+            if(active === "keywordInput"){
+                onSearch();
+            }
+        }
+    });
+
+    async function onLogout(){
+        // 쿠키 기반이면 서버 로그아웃 호출해서 쿠키 삭제 + RT revoke
+        try{
+            const res = await fetch(API.logout, { method:"POST", credentials:"include" });
+            // 성공/실패 상관없이 로그인 화면으로
+        }catch(e){}
+        location.href = "/auth/companies/login";
+    }
+
+    // init
+    (async function init(){
+        await Promise.all([loadDepartments(), loadPositions()]);
+        await loadEmployees();
+    })();
+</script>
+</body>
+</html>

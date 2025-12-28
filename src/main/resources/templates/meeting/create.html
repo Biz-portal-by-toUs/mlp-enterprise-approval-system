@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>회의 생성 + 녹음 (Compact)</title>
+    <style>
+        :root{--bg:#0b1220;--card:#0f172a;--line:rgba(148,163,184,.2);--txt:#e5e7eb;--muted:#94a3b8;--ok:#22c55e;--bad:#ef4444;--btn:#2563eb;}
+        body{margin:0;background:linear-gradient(120deg,#0b1220,#111827);color:var(--txt);font-size:13px;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif}
+        .wrap{max-width:1200px;margin:16px auto;padding:0 12px}
+        .grid{display:grid;grid-template-columns:1.2fr 0.8fr;gap:12px}
+        .card{background:rgba(15,23,42,.9);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+        h2{margin:0 0 8px 0;font-size:16px;font-weight:600}
+        .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .field{flex:1;min-width:180px}
+        label{display:block;font-size:11px;color:var(--muted);margin:6px 0 4px}
+        input,select,textarea{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:var(--txt);padding:8px 10px;font-size:13px}
+        textarea{min-height:80px;resize:vertical}
+        .btn{border:0;border-radius:8px;padding:8px 12px;background:var(--btn);color:white;font-weight:600;cursor:pointer;font-size:12px;transition:0.2s}
+        .btn:hover{filter:brightness(1.1)}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        .ghost{background:transparent;border:1px solid var(--line)}
+        .danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fecaca}
+        .ok{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#bbf7d0}
+        .pill{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:var(--muted);font-size:11px}
+        .mono{font-family:ui-monospace,Menlo,Monaco,Consolas,monospace;font-size:11px}
+        .log{white-space:pre-wrap;background:#050814;border:1px solid var(--line);border-radius:8px;padding:8px;height:180px;overflow:auto;font-size:11px;color:#a5f3fc}
+        progress{width:100%;height:6px;border-radius:3px;overflow:hidden}
+        progress::-webkit-progress-bar{background:var(--line)}
+        progress::-webkit-progress-value{background:var(--btn)}
+        .hint{color:var(--muted);font-size:11px;line-height:1.4;margin-top:2px}
+        .split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        @media (max-width:768px){.grid{grid-template-columns:1fr}.wrap{margin:8px auto}}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="grid">
+
+        <div class="card">
+            <h2>회의 생성</h2>
+
+            <div class="row">
+                <div class="field">
+                    <label>API_BASE</label>
+                    <input id="apiBase" value="http://localhost:8090" />
+                </div>
+                <div class="field">
+                    <label>Storage Token Key</label>
+                    <div class="row" style="display:grid; grid-template-columns: 1fr auto;">
+                        <input id="tokenKey" value="auto" />
+                        <button id="refreshTokenBtn" class="btn ghost" type="button">새로고침</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pill" style="margin-top:8px;width:100%;justify-content:space-between;box-sizing:border-box">
+                <span>Auth</span>
+                <span id="tokenPreview" class="mono" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</span>
+            </div>
+
+            <div class="split">
+                <div class="field">
+                    <label>제목</label>
+                    <input id="title" placeholder="회의 주제" />
+                </div>
+                <div class="field">
+                    <label>공개</label>
+                    <select id="status">
+                        <option value="true">공개</option>
+                        <option value="false">비공개</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="split">
+                <div class="field">
+                    <label>시작일시</label>
+                    <input id="startedAt" type="datetime-local" />
+                </div>
+                <div class="field">
+                    <label>부서 (ID)</label>
+                    <input id="depNos" placeholder="1, 2" />
+                </div>
+            </div>
+
+            <div class="field">
+                <label>참석자 (사번)</label>
+                <input id="participantEmpIds" placeholder="E0001, E0002" />
+            </div>
+
+            <div class="row" style="margin-top:16px">
+                <button id="createBtn" class="btn" type="button">회의 생성 및 업로드</button>
+                <button id="clearBtn" class="btn ghost" type="button">로그 비우기</button>
+                <span id="badge" class="pill" style="display:none"></span>
+            </div>
+
+            <div style="margin-top:12px">
+                <progress id="progress" value="0" max="100"></progress>
+            </div>
+
+            <div style="margin-top:8px" class="log" id="log"></div>
+        </div>
+
+        <div class="card">
+            <h2>녹음 제어</h2>
+
+            <div class="row" style="margin-top:8px">
+                <button id="recStartBtn" class="btn ok" type="button" style="flex:1">녹음 시작</button>
+                <button id="recStopBtn" class="btn danger" type="button" style="flex:1" disabled>중지</button>
+            </div>
+
+            <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center">
+                <span class="pill">상태: <b id="recState">대기</b></span>
+                <button id="clearAudioBtn" class="btn ghost" style="padding:4px 8px; font-size:10px">초기화</button>
+            </div>
+
+            <div class="field" style="margin-top:12px">
+                <label>오디오 파일</label>
+                <div class="pill" style="width:100%;box-sizing:border-box;justify-content:center;background:rgba(255,255,255,0.03)">
+                    <span id="fileInfo" style="font-size:10px">파일 없음</span>
+                </div>
+            </div>
+
+            <audio id="audioPreview" controls style="width:100%;margin-top:10px;display:none;height:32px"></audio>
+
+            <div class="field" style="margin-top:16px">
+                <label>회의 메모</label>
+                <textarea id="memo" placeholder="핵심 내용을 적어주세요."></textarea>
+            </div>
+
+            <div class="hint" style="margin-top:12px">
+                💡 <b>팁</b>: 녹음을 먼저 진행한 후 좌측의 '생성' 버튼을 누르면 자동으로 S3 업로드와 AI 분석이 시작됩니다.
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+    const badgeEl = $("badge");
+    const progEl = $("progress");
+
+    function logLine(msg, obj) {
+        const ts = new Date().toLocaleTimeString();
+        logEl.textContent += `[${ts}] ${msg}` + (obj ? `\n${JSON.stringify(obj, null, 2)}` : "") + "\n\n";
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+    function setBadge(type, text) {
+        badgeEl.style.display = "inline-flex";
+        badgeEl.className = "pill " + (type === "ok" ? "ok" : "danger");
+        badgeEl.textContent = text;
+    }
+    function setProgress(p) { progEl.value = Math.max(0, Math.min(100, p)); }
+    function unwrapMaybeResponseDto(obj) {
+        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+        return obj;
+    }
+
+    function pickTokenFromLocalStorage(tokenKeyInput) {
+        const key = (tokenKeyInput || "").trim();
+        const candidates = ["accessToken", "token", "jwt", "Authorization"];
+        let raw = null;
+        let usedKey = null;
+
+        if (key && key !== "auto") {
+            raw = localStorage.getItem(key);
+            usedKey = key;
+        } else {
+            for (const k of candidates) {
+                const v = localStorage.getItem(k);
+                if (v && String(v).trim().length > 0) {
+                    raw = v;
+                    usedKey = k;
+                    break;
+                }
+            }
+        }
+        if (!raw) return { usedKey, authorization: null };
+
+        const trimmed = String(raw).trim().replace(/^"+|"+$/g, "");
+        if (/^Bearer\s+/i.test(trimmed)) return { usedKey, authorization: trimmed };
+        return { usedKey, authorization: `Bearer ${trimmed}` };
+    }
+
+    function refreshTokenPreview() {
+        const { usedKey, authorization } = pickTokenFromLocalStorage($("tokenKey").value);
+        if (!authorization) {
+            $("tokenPreview").textContent = "- (토큰 없음)";
+            return null;
+        }
+        $("tokenPreview").textContent = authorization;
+        return authorization;
+    }
+
+    function authHeadersJson() {
+        const auth = refreshTokenPreview();
+        const headers = { "Content-Type": "application/json" };
+        if (auth) headers["Authorization"] = auth;
+        return headers;
+    }
+
+    $("refreshTokenBtn").addEventListener("click", refreshTokenPreview);
+    $("clearBtn").addEventListener("click", () => {
+        logEl.textContent = "";
+        setProgress(0);
+        badgeEl.style.display = "none";
+        logLine("로그 초기화 완료");
+    });
+
+    let mediaRecorder = null;
+    let chunks = [];
+    let audioFile = null;
+    let audioBlobUrl = null;
+
+    function setRecState(s) { $("recState").textContent = s; }
+
+    $("clearAudioBtn").addEventListener("click", () => {
+        audioFile = null;
+        chunks = [];
+        if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+        audioBlobUrl = null;
+        $("audioPreview").style.display = "none";
+        $("fileInfo").textContent = "파일 없음";
+        logLine("녹음 파일 제거됨");
+    });
+
+    $("recStartBtn").addEventListener("click", async () => {
+        try {
+            chunks = [];
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: "audio/webm" });
+                audioFile = new File([blob], `rec_${Date.now()}.webm`, { type: "audio/webm" });
+                if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+                audioBlobUrl = URL.createObjectURL(blob);
+                $("audioPreview").src = audioBlobUrl;
+                $("audioPreview").style.display = "block";
+                $("fileInfo").textContent = `${(audioFile.size/1024/1024).toFixed(2)} MB 준비됨`;
+                logLine("녹음 완료", { name: audioFile.name });
+            };
+            mediaRecorder.start();
+            setRecState("녹음중");
+            $("recStartBtn").disabled = true;
+            $("recStopBtn").disabled = false;
+        } catch (e) {
+            logLine("녹음 실패", { error: e.message });
+        }
+    });
+
+    $("recStopBtn").addEventListener("click", () => {
+        if (mediaRecorder) mediaRecorder.stop();
+        setRecState("대기");
+        $("recStartBtn").disabled = false;
+        $("recStopBtn").disabled = true;
+    });
+
+    async function presign(apiBase, domain, entityId, fileType, file) {
+        const res = await fetch(`${apiBase}/api/v1/attachments/presign`, {
+            method: "POST",
+            headers: authHeadersJson(),
+            body: JSON.stringify({
+                domain, entityId, fileType,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size
+            })
+        });
+        if (!res.ok) throw new Error("presign 실패");
+        return await res.json();
+    }
+
+    async function uploadToS3(uploadUrl, file) {
+        const res = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+            body: file
+        });
+        if (!res.ok) throw new Error("S3 업로드 실패");
+        return { etag: res.headers.get("ETag") };
+    }
+
+    async function complete(apiBase, domain, entityId, fileType, objectKey, file, etag) {
+        const res = await fetch(`${apiBase}/api/v1/attachments/complete`, {
+            method: "POST",
+            headers: authHeadersJson(),
+            body: JSON.stringify({
+                domain, entityId, fileType, objectKey,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+                etag: etag || null
+            })
+        });
+        return await res.json();
+    }
+
+    $("createBtn").addEventListener("click", async () => {
+        const apiBase = $("apiBase").value.trim().replace(/\/+$/,"");
+        try {
+            $("createBtn").disabled = true;
+            setBadge("ok", "처리 중...");
+            logLine("회의 생성 요청...");
+
+            const body = {
+                title: $("title").value.trim(),
+                startedAt: $("startedAt").value || null,
+                status: $("status").value === "true",
+                depNos: ($("depNos").value || "").split(",").map(Number).filter(n => !isNaN(n)),
+                participantEmpIds: ($("participantEmpIds").value || "").split(",").map(v => v.trim()).filter(Boolean),
+                memo: $("memo").value.trim() || null
+            };
+
+            const res = await fetch(`${apiBase}/api/v1/meetings`, {
+                method: "POST",
+                headers: authHeadersJson(),
+                body: JSON.stringify(body)
+            });
+
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const meetNo = (typeof data === "number") ? data : (data.meetNo || data.id);
+
+            if (!meetNo) throw new Error("ID를 가져올 수 없음");
+            logLine("✅ 생성 완료", { meetNo });
+            setProgress(40);
+
+            if (audioFile) {
+                logLine("S3 업로드 시작...");
+                const p = await presign(apiBase, "MEETING", meetNo, "AUDIO", audioFile);
+                const { objectKey, uploadUrl } = unwrapMaybeResponseDto(p);
+
+                await uploadToS3(uploadUrl, audioFile);
+                setProgress(70);
+
+                await complete(apiBase, "MEETING", meetNo, "AUDIO", objectKey, audioFile);
+                logLine("✅ 업로드 완료", { objectKey });
+
+                // ✅ AI 요약 요청: 컨트롤러 @PostMapping("/{meetNo}/ai-request") 에 맞춤
+                logLine("AI 처리 요청...");
+
+// audioFile이 있으면 그 메타를 같이 보냄 (DTO @Valid 통과)
+                const reqBody = {
+                    objectKey,
+                    size: audioFile?.size ?? 0,                 // ✅ 필수 (Long)
+                    contentType: audioFile?.type ?? "audio/webm",
+                    originalName: audioFile?.name ?? null
+                };
+
+                const aiRes = await fetch(`${apiBase}/api/v1/meetings/${meetNo}/ai-request`, {
+                    method: "POST",
+                    headers: authHeadersJson(),
+                    body: JSON.stringify(reqBody)
+                });
+
+// ✅ 400일 때 원인 보이게 텍스트로 로그
+                const aiText = await aiRes.text();
+                logLine("AI 요청 응답", { status: aiRes.status, body: aiText });
+
+                if (!aiRes.ok) throw new Error(`AI 요청 실패 (${aiRes.status})`);
+                logLine("✅ AI 요청 성공");
+
+                // 응답 로그 (실패 원인 빨리 보려고)
+                let aiJson = null;
+                try { aiJson = await aiRes.json(); } catch (_) {}
+                if (!aiRes.ok) {
+                    throw new Error(`AI 요청 실패 (${aiRes.status})`);
+                }
+                logLine("✅ AI 요청 성공", aiJson);
+            } else {
+                logLine("오디오 파일이 없어서 업로드/AI 요청은 스킵");
+            }
+
+            setProgress(100);
+            setBadge("ok", "성공!");
+        } catch (e) {
+            logLine("❌ 에러 발생", { message: e.message });
+            setBadge("bad", "실패");
+        } finally {
+            $("createBtn").disabled = false;
+        }
+    });
+
+    refreshTokenPreview();
+</script>
+</body>
+</html>

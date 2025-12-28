@@ -596,11 +596,14 @@
     let originalDocumentJson = null;
     const currentDocfoNo = 1;
     let tiptapEditor = null;
-    let attachedFiles = [];
+
+    let existingFiles = [];
+    let newFiles = [];
+    let filesToDelete = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
         const pathParts = window.location.pathname.split('/');
-        originalDocNo = pathParts[2]; // /documents/{docNo}/rejected/rewrite 가정
+        originalDocNo = pathParts[2];
 
         document.getElementById('write-date').value = new Date().toLocaleDateString();
 
@@ -610,10 +613,9 @@
     });
 
     async function loadOriginalDocumentData() {
-        const token = localStorage.getItem('accessToken');
         try {
             const response = await fetch(`/api/v1/documents/${originalDocNo}?status=SUBMITTED`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
 
@@ -621,10 +623,8 @@
                 const doc = result.data;
                 document.getElementById('doc-title').value = doc.title || "";
 
-                // ✅ 문서가 사용한 문서양식 번호 저장
                 const originalDocfoNo = doc.docFormNo;
 
-                // ✅ content (JSON 문자열)을 파싱하여 저장
                 if (doc.content) {
                     try {
                         let parsedJson = JSON.parse(doc.content);
@@ -652,31 +652,25 @@
                     }
                 }
 
-                // ✅ 에디터 초기화 (문서 데이터 로드 후)
                 initTipTapEditor();
 
-                // ✅ 원래 문서가 사용한 문서양식의 카테고리 불러오기
                 if (originalDocfoNo) {
                     await fetchFormDetailsForDocument(originalDocfoNo);
                 }
 
-                // ✅ 카테고리 자동 선택
                 if (doc.docFormCatNo) {
                     const radio = document.querySelector(`input[name="docfoCatNo"][value="${doc.docFormCatNo}"]`);
                     if (radio) {
                         radio.checked = true;
                         console.log('✅ 카테고리 자동 선택됨:', doc.docFormCatNo);
-                    } else {
-                        console.warn('❌ 카테고리 라디오 버튼을 찾을 수 없음:', doc.docFormCatNo);
                     }
                 }
 
-                // 결재선 로드 (대직자 제외) - 두 가지 경우 모두 체크
+                await loadExistingAttachments(originalDocNo);
+
                 if (doc.resApprovalLineDtos && doc.resApprovalLineDtos.length > 0) {
-                    // ✅ isDelegate 또는 delegate 둘 다 체크
                     const filteredLines = doc.resApprovalLineDtos.filter(line => {
                         const isDelegateValue = line.isDelegate ?? line.delegate ?? false;
-                        console.log(`${line.approverId}: isDelegate=${line.isDelegate}, delegate=${line.delegate}`);
                         return !isDelegateValue;
                     });
                     const sortedLines = filteredLines.sort((a, b) => a.seq - b.seq);
@@ -693,13 +687,28 @@
         }
     }
 
-    // ✅ 특정 문서양식의 카테고리만 불러오는 함수
+    async function loadExistingAttachments(docNo) {
+        try {
+            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                existingFiles = result.data || [];
+                console.log('✅ 기존 첨부파일 로드:', existingFiles);
+                renderFileList();
+            }
+        } catch (e) {
+            console.error('❌ 첨부파일 로드 실패:', e);
+        }
+    }
+
     async function fetchFormDetailsForDocument(docfoNo) {
-        const token = localStorage.getItem('accessToken');
         const container = document.getElementById('category-radio-group');
         try {
             const response = await fetch(`/api/v1/temp/documentForms/${docfoNo}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
 
@@ -721,10 +730,9 @@
     }
 
     async function fetchEmployeeDetailByKeyword(empId) {
-        const token = localStorage.getItem('accessToken');
         try {
             const response = await fetch(`/api/v1/employees?keyword=${empId}&excludeMe=false`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
             if (response.ok && result.data?.items && result.data.items.length > 0) {
@@ -743,9 +751,6 @@
         } catch (e) { return null; }
     }
 
-    /**
-     * ✅ TipTap 에디터 초기화 (문서 데이터 로드 후 실행)
-     */
     function initTipTapEditor() {
         const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader,
             TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
@@ -756,23 +761,17 @@
             element: document.querySelector('#editor-container'),
             extensions: [
                 StarterKit,
-                Table.configure({
-                    resizable: true,
-                }),
+                Table.configure({ resizable: true }),
                 TableRow,
                 TableCell,
                 TableHeader,
-                TextAlign.configure({
-                    types: ['heading', 'paragraph'],
-                }),
+                TextAlign.configure({ types: ['heading', 'paragraph'] }),
                 TextStyle,
                 Color,
                 FontFamily,
                 Highlight,
                 Image,
-                Link.configure({
-                    openOnClick: false,
-                }),
+                Link.configure({ openOnClick: false }),
                 Underline,
             ],
             content: initialContent,
@@ -798,9 +797,6 @@
         updateCharCounter();
     }
 
-    /**
-     * ✅ 글자수 카운터 업데이트
-     */
     function updateCharCounter() {
         if (!tiptapEditor) return;
 
@@ -819,9 +815,6 @@
         }
     }
 
-    /**
-     * ✅ 툴바 버튼 상태 업데이트
-     */
     function updateToolbarButtons() {
         if (!tiptapEditor) return;
 
@@ -850,21 +843,10 @@
         });
     }
 
-    function toggleBold() {
-        tiptapEditor.chain().focus().toggleBold().run();
-    }
-
-    function toggleItalic() {
-        tiptapEditor.chain().focus().toggleItalic().run();
-    }
-
-    function toggleUnderline() {
-        tiptapEditor.chain().focus().toggleUnderline().run();
-    }
-
-    function toggleStrike() {
-        tiptapEditor.chain().focus().toggleStrike().run();
-    }
+    function toggleBold() { tiptapEditor.chain().focus().toggleBold().run(); }
+    function toggleItalic() { tiptapEditor.chain().focus().toggleItalic().run(); }
+    function toggleUnderline() { tiptapEditor.chain().focus().toggleUnderline().run(); }
+    function toggleStrike() { tiptapEditor.chain().focus().toggleStrike().run(); }
 
     function setHeading(level) {
         if (level === '') {
@@ -874,21 +856,10 @@
         }
     }
 
-    function setTextAlign(align) {
-        tiptapEditor.chain().focus().setTextAlign(align).run();
-    }
-
-    function toggleBulletList() {
-        tiptapEditor.chain().focus().toggleBulletList().run();
-    }
-
-    function toggleOrderedList() {
-        tiptapEditor.chain().focus().toggleOrderedList().run();
-    }
-
-    function toggleBlockquote() {
-        tiptapEditor.chain().focus().toggleBlockquote().run();
-    }
+    function setTextAlign(align) { tiptapEditor.chain().focus().setTextAlign(align).run(); }
+    function toggleBulletList() { tiptapEditor.chain().focus().toggleBulletList().run(); }
+    function toggleOrderedList() { tiptapEditor.chain().focus().toggleOrderedList().run(); }
+    function toggleBlockquote() { tiptapEditor.chain().focus().toggleBlockquote().run(); }
 
     function insertTable() {
         const rows = prompt('행(row) 수를 입력하세요:', '3');
@@ -915,9 +886,7 @@
         }
     }
 
-    function deleteTable() {
-        tiptapEditor.chain().focus().deleteTable().run();
-    }
+    function deleteTable() { tiptapEditor.chain().focus().deleteTable().run(); }
 
     function insertLink() {
         const url = prompt('링크 URL을 입력하세요:');
@@ -938,8 +907,10 @@
         const maxSize = 10 * 1024 * 1024;
         const maxCount = 5;
 
+        const totalFiles = existingFiles.length - filesToDelete.length + newFiles.length;
+
         for (let file of files) {
-            if (attachedFiles.length >= maxCount) {
+            if (totalFiles + newFiles.length >= maxCount) {
                 showAlert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`, "error");
                 break;
             }
@@ -949,12 +920,12 @@
                 continue;
             }
 
-            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
                 showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
                 continue;
             }
 
-            attachedFiles.push(file);
+            newFiles.push(file);
         }
 
         event.target.value = '';
@@ -964,27 +935,61 @@
     function renderFileList() {
         const container = document.getElementById('file-list');
 
-        if (attachedFiles.length === 0) {
+        const activeExistingFiles = existingFiles.filter(file =>
+            !filesToDelete.includes(file.attachmentId)
+        );
+
+        const totalFiles = activeExistingFiles.length + newFiles.length;
+
+        if (totalFiles === 0) {
             container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>';
             return;
         }
 
-        container.innerHTML = attachedFiles.map((file, index) => `
-            <div class="file-item">
-                <div class="file-item-info">
-                    <span style="font-size: 18px;">📄</span>
-                    <div>
-                        <div class="file-item-name">${file.name}</div>
-                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+        let html = '';
+
+        activeExistingFiles.forEach(file => {
+            html += `
+                <div class="file-item" style="background: #f0f8ff;">
+                    <div class="file-item-info">
+                        <span style="font-size: 18px;">📄</span>
+                        <div>
+                            <div class="file-item-name">${file.originalName}</div>
+                            <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존 파일)</span></div>
+                        </div>
                     </div>
+                    <span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span>
                 </div>
-                <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
-            </div>
-        `).join('');
+            `;
+        });
+
+        newFiles.forEach((file, index) => {
+            html += `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <span style="font-size: 18px;">📄</span>
+                        <div>
+                            <div class="file-item-name">${file.name}</div>
+                            <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div>
+                        </div>
+                    </div>
+                    <span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
     }
 
-    function removeFile(index) {
-        attachedFiles.splice(index, 1);
+    function removeExistingFile(attachmentId) {
+        console.log('🗑️ 기존 파일 삭제 예약:', attachmentId);
+        filesToDelete.push(attachmentId);
+        renderFileList();
+    }
+
+    function removeNewFile(index) {
+        console.log('🗑️ 새 파일 삭제:', newFiles[index].name);
+        newFiles.splice(index, 1);
         renderFileList();
     }
 
@@ -996,29 +1001,19 @@
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
-    /**
-     * ✅ 문서 저장/재상신 (TipTap JSON으로 저장 + 완전한 벨리데이션 + 파일 업로드)
-     */
     async function saveDocument(isTemp) {
         const title = document.getElementById('doc-title').value.trim();
-
         const contentJson = tiptapEditor.getJSON();
         const contentHtml = tiptapEditor.getHTML();
         const contentText = tiptapEditor.getText().trim();
-
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
 
-        // ✅ 완전한 유효성 검증
         if (!title) return showAlert("제목을 입력하세요.", "error");
         if (title.length > 100) return showAlert("제목은 100자 이내로 입력하세요.", "error");
-
         if (!contentText) return showAlert("내용을 입력하세요.", "error");
         if (contentText.length > 1000) return showAlert("내용은 1000자 이내로 입력하세요.", "error");
-
         if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
         if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
-
-        const token = localStorage.getItem('accessToken');
 
         try {
             const payload = {
@@ -1039,17 +1034,33 @@
 
             const response = await fetch(`/api/v1/documents/${originalDocNo}/resubmit`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
                 const result = await response.json();
-                const docNo = result.data?.docNo;
+                const newDocNo = result.data?.docNo || result.data;
 
-                // ✅ 파일 업로드
-                if (attachedFiles.length > 0 && docNo) {
-                    await uploadFiles(docNo, token);
+                console.log('✅ 문서 저장 성공! 새 docNo:', newDocNo);
+
+                // 1. 삭제되지 않은 기존 파일 복사
+                const activeExistingFiles = existingFiles.filter(file =>
+                    !filesToDelete.includes(file.attachmentId)
+                );
+
+                if (activeExistingFiles.length > 0) {
+                    console.log('📋 기존 파일 복사:', activeExistingFiles);
+                    await copyExistingFiles(activeExistingFiles, newDocNo);
+                }
+
+                // 2. 새 파일 업로드
+                if (newFiles.length > 0) {
+                    console.log('📤 새 파일 업로드:', newFiles);
+                    await uploadFiles(newDocNo);
                 }
 
                 showAlert(isTemp ? "임시 저장되었습니다." : "문서가 재상신되었습니다.", "success");
@@ -1069,36 +1080,238 @@
         }
     }
 
-    async function uploadFiles(docNo, token) {
-        const formData = new FormData();
+    async function copyExistingFiles(files, newDocNo) {
+        console.log('📋 [copyExistingFiles] 시작 - newDocNo:', newDocNo, 'files:', files);
 
-        attachedFiles.forEach(file => {
-            formData.append('files', file);
-        });
+        let successCount = 0;
+        let failCount = 0;
 
-        formData.append('docNo', docNo);
+        for (const file of files) {
+            console.log(`\n🔄 [파일 ${file.originalName}] 복사 시작...`);
 
-        try {
-            const response = await fetch(`/api/v1/documents/${docNo}/files`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
+            try {
+                const fileId = file.attachmentId;
 
-            if (!response.ok) {
-                console.warn('파일 업로드 실패, 문서는 저장되었습니다.');
+                if (!fileId) {
+                    console.error(`  ❌ [${file.originalName}] attachmentId를 찾을 수 없음:`, file);
+                    failCount++;
+                    continue;
+                }
+
+                // 1. Presigned Download URL 요청
+                console.log(`  1️⃣ [${file.originalName}] Presigned Download URL 요청 중... (ID: ${fileId})`);
+                const downloadUrlRes = await fetch(`/api/v1/attachments/${fileId}/download-url`, {
+                    credentials: 'include'
+                });
+
+                if (!downloadUrlRes.ok) {
+                    const errorText = await downloadUrlRes.text();
+                    console.error(`  ❌ [${file.originalName}] Download URL 요청 실패:`, downloadUrlRes.status, errorText);
+                    failCount++;
+                    continue;
+                }
+
+                const downloadUrlData = await downloadUrlRes.json();
+                const downloadUrl = downloadUrlData.data.url;
+                console.log(`  🔗 [${file.originalName}] Download URL 발급 완료`);
+
+                // 2. S3에서 파일 다운로드
+                console.log(`  2️⃣ [${file.originalName}] S3 다운로드 중...`);
+                const downloadRes = await fetch(downloadUrl);
+
+                if (!downloadRes.ok) {
+                    const errorText = await downloadRes.text();
+                    console.error(`  ❌ [${file.originalName}] S3 다운로드 실패:`, downloadRes.status, errorText);
+                    failCount++;
+                    continue;
+                }
+
+                const blob = await downloadRes.blob();
+                console.log(`  ✅ [${file.originalName}] 다운로드 성공 - 크기: ${blob.size}`);
+
+                // 3. Presigned Upload URL 요청
+                console.log(`  3️⃣ [${file.originalName}] Presigned Upload URL 요청 중...`);
+                const presignRes = await fetch('/api/v1/attachments/presign', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'APPROVAL',
+                        entityId: newDocNo,
+                        fileType: file.fileType,
+                        originalName: file.originalName,
+                        contentType: file.contentType,
+                        size: file.size
+                    })
+                });
+
+                if (!presignRes.ok) {
+                    const errorText = await presignRes.text();
+                    console.error(`  ❌ [${file.originalName}] Presign 실패:`, presignRes.status, errorText);
+                    failCount++;
+                    continue;
+                }
+
+                const presignData = await presignRes.json();
+                const { objectKey, uploadUrl } = presignData.data;
+                console.log(`  🔑 [${file.originalName}] objectKey:`, objectKey);
+
+                // 4. S3 업로드
+                console.log(`  4️⃣ [${file.originalName}] S3 업로드 중...`);
+                const uploadRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': file.contentType },
+                    body: blob
+                });
+
+                if (!uploadRes.ok) {
+                    const errorText = await uploadRes.text();
+                    console.error(`  ❌ [${file.originalName}] S3 업로드 실패:`, uploadRes.status, errorText);
+                    failCount++;
+                    continue;
+                }
+
+                const etag = uploadRes.headers.get('ETag');
+                console.log(`  ✅ [${file.originalName}] S3 업로드 성공! ETag:`, etag);
+
+                // 5. Complete 요청
+                console.log(`  5️⃣ [${file.originalName}] Complete 요청 중...`);
+                const completeRes = await fetch('/api/v1/attachments/complete', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'APPROVAL',
+                        entityId: newDocNo,
+                        fileType: file.fileType,
+                        objectKey: objectKey,
+                        originalName: file.originalName,
+                        contentType: file.contentType,
+                        size: file.size,
+                        etag: etag ? etag.replace(/"/g, '') : null
+                    })
+                });
+
+                if (completeRes.ok) {
+                    console.log(`  ✅ [${file.originalName}] Complete 성공!`);
+                    successCount++;
+                } else {
+                    const errorText = await completeRes.text();
+                    console.error(`  ❌ [${file.originalName}] Complete 실패:`, completeRes.status, errorText);
+                    failCount++;
+                }
+
+            } catch (e) {
+                console.error(`❌ [${file.originalName}] 파일 복사 오류:`, e);
+                failCount++;
             }
-        } catch (e) {
-            console.error('파일 업로드 오류:', e);
         }
+
+        console.log(`\n📊 [copyExistingFiles] 완료 - 성공: ${successCount}개, 실패: ${failCount}개`);
+    }
+
+    function getFileType(mimeType) {
+        if (mimeType.startsWith('image/')) return 'IMAGE';
+        if (mimeType.startsWith('audio/')) return 'AUDIO';
+        return 'DOC';
+    }
+
+    async function uploadFiles(docNo) {
+        console.log('📎 [uploadFiles] 시작 - docNo:', docNo, 'newFiles:', newFiles);
+
+        if (newFiles.length === 0) {
+            console.log('⚠️ [uploadFiles] 새 파일이 없어서 종료');
+            return;
+        }
+
+        console.log(`📤 [uploadFiles] 총 ${newFiles.length}개 파일 업로드 시작`);
+
+        for (const file of newFiles) {
+            console.log(`\n🔄 [파일 ${file.name}] 업로드 시작...`);
+
+            try {
+                console.log(`  1️⃣ [${file.name}] Presigned URL 요청 중...`);
+                const presignRes = await fetch('/api/v1/attachments/presign', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'APPROVAL',
+                        entityId: docNo,
+                        fileType: getFileType(file.type),
+                        originalName: file.name,
+                        contentType: file.type,
+                        size: file.size
+                    })
+                });
+
+                if (!presignRes.ok) {
+                    console.error(`  ❌ [${file.name}] Presign 실패:`, presignRes.status);
+                    continue;
+                }
+
+                const presignData = await presignRes.json();
+                const { objectKey, uploadUrl } = presignData.data;
+
+                console.log(`  2️⃣ [${file.name}] S3 직접 업로드 중...`);
+                const uploadRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': file.type },
+                    body: file
+                });
+
+                if (!uploadRes.ok) {
+                    console.error(`  ❌ [${file.name}] S3 업로드 실패:`, uploadRes.status);
+                    continue;
+                }
+
+                const etag = uploadRes.headers.get('ETag');
+                console.log(`  ✅ [${file.name}] S3 업로드 성공! ETag:`, etag);
+
+                console.log(`  3️⃣ [${file.name}] Complete 요청 중...`);
+                const completeRes = await fetch('/api/v1/attachments/complete', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'APPROVAL',
+                        entityId: docNo,
+                        fileType: getFileType(file.type),
+                        objectKey: objectKey,
+                        originalName: file.name,
+                        contentType: file.type,
+                        size: file.size,
+                        etag: etag ? etag.replace(/"/g, '') : null
+                    })
+                });
+
+                if (completeRes.ok) {
+                    console.log(`  ✅ [${file.name}] Complete 성공!`);
+                } else {
+                    console.error(`  ❌ [${file.name}] Complete 실패:`, completeRes.status);
+                }
+
+            } catch (e) {
+                console.error(`❌ [${file.name}] 파일 업로드 오류:`, e);
+            }
+        }
+
+        console.log('\n✅ [uploadFiles] 모든 파일 업로드 완료!');
     }
 
     async function fetchMyEmployeeInfo() {
-        const token = localStorage.getItem('accessToken');
         try {
-            const response = await fetch('/api/v1/employees/me', { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch('/api/v1/employees/me', {
+                credentials: 'include'
+            });
             const result = await response.json();
             if (response.ok && result.data) {
                 myInfo = { empId: result.data.empId, comId: result.data.comId || "C01" };
@@ -1109,36 +1322,13 @@
         } catch (e) { showAlert("내 정보 로드 실패", "error"); }
     }
 
-    async function fetchFormDetails() {
-        const token = localStorage.getItem('accessToken');
-        const container = document.getElementById('category-radio-group');
-        try {
-            const response = await fetch(`/api/v1/temp/documentForms/${currentDocfoNo}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const result = await response.json();
-
-            if (response.ok && result.data && result.data.tempResDocumentFormCategoryDtos) {
-                const categories = result.data.tempResDocumentFormCategoryDtos;
-                if (categories.length > 0) {
-                    container.innerHTML = categories.map((cat, index) => `
-                        <label class="cat-item">
-                            <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}">
-                            <span>${cat.docfoCatName}</span>
-                        </label>`).join('');
-                } else {
-                    container.innerHTML = '<span style="color:#adb5bd; font-size:12px;">선택 가능한 카테고리가 없습니다.</span>';
-                }
-            }
-        } catch (e) { console.error('카테고리 로드 실패:', e); }
-    }
-
     async function searchEmployees(keyword = '') {
-        const token = localStorage.getItem('accessToken');
         try {
             let url = `/api/v1/employees?size=20&excludeMe=true`;
             if (keyword && keyword.trim().length > 0) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch(url, {
+                credentials: 'include'
+            });
             const result = await res.json();
             renderSearchResults(result.data?.items || []);
         } catch (e) { renderSearchResults([]); }

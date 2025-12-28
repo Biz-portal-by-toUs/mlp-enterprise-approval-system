@@ -109,17 +109,19 @@ public class DocumentController {
 
     // 문서 상신 및 임시저장
     @PostMapping("/documents")
-    public ResponseEntity<ResponseDto<Void>> createDocument(@AuthenticationPrincipal CustomUser customUser,
+    public ResponseEntity<ResponseDto<Long>> createDocument(@AuthenticationPrincipal CustomUser customUser,
                                                             @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
-        documentService.createDocument(customUser.getComId(), /*empId*/customUser.getUsername(), reqDocumentDto);
+        Long docNo = documentService.createDocument(customUser.getComId(), /*empId*/customUser.getUsername(), reqDocumentDto);
 
         String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
                 ? "문서 임시저장 성공"
                 : "문서 상신 성공";
 
+        log.info("문서 상신 및 임시저장 성공! docNo = {}", docNo);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(HttpStatus.CREATED, message, null));
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, docNo));
     }
 
     // 결재자 없을 시 상신 취소. 상신일 null로 변경, 임시저장상태를 true로 변경, 문서상태를 상신전(US)로 변경.
@@ -162,13 +164,13 @@ public class DocumentController {
      * - 기존 반려 문서는 유지, 새 문서 생성 (INSERT)
      */
     @PostMapping("/documents/{docNo}/resubmit")
-    public ResponseEntity<ResponseDto<Void>> resubmitRejectedDocument(@PathVariable(name = "docNo") Long docNo,
+    public ResponseEntity<ResponseDto<Long>> resubmitRejectedDocument(@PathVariable(name = "docNo") Long docNo,
                                                                       @AuthenticationPrincipal CustomUser customUser,
                                                                       @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
         String comId = customUser.getComId();
         String myEmpId = customUser.getUsername();
 
-        documentService.resubmitRejectedDocument(comId, myEmpId, docNo, reqDocumentDto);
+        Long newDocNo = documentService.resubmitRejectedDocument(comId, myEmpId, docNo, reqDocumentDto);
 
         String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
                 ? "문서가 임시저장되었습니다"
@@ -176,7 +178,7 @@ public class DocumentController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(HttpStatus.CREATED, message, null));
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, newDocNo));
     }
 
 
@@ -185,7 +187,7 @@ public class DocumentController {
      * - 기존 문서를 수정 (UPDATE)
      */
     @PutMapping("/documents/{docNo}")
-    public ResponseEntity<ResponseDto<Void>> updateTempDocument(@PathVariable(name = "docNo") Long docNo,
+    public ResponseEntity<ResponseDto<Long>> updateTempDocument(@PathVariable(name = "docNo") Long docNo,
                                                                 @AuthenticationPrincipal CustomUser customUser,
                                                                 @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
         String comId = customUser.getComId();
@@ -199,10 +201,7 @@ public class DocumentController {
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, message, null));
+                .body(new ResponseDto<>(HttpStatus.OK, message, docNo));
     }
-
-
-
 
 }

@@ -328,7 +328,7 @@ public class DocumentService {
 
 
     // 문서 상신 및 임시저장
-    public void createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
+    public Long createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
 
         // 1. 연관 엔티티 조회
         Company company = companyRepository.findByComId(comId)
@@ -364,6 +364,8 @@ public class DocumentService {
         }
 
         log.info("문서 {} 완료: docNo={}, writer={}", isTemp ? "임시저장" : "상신", document.getDocNo(), myEmpId);
+
+        return document.getDocNo();
     }
 
     /**
@@ -663,7 +665,7 @@ public class DocumentService {
      * - 기존 반려 문서는 그대로 유지
      * - 새 문서를 생성하여 상신 또는 임시저장
      */
-    public void resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
+    public Long resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
 
         // 1. 원본 문서 조회
         Document originalDoc = documentRepository.findById(originalDocNo)
@@ -685,9 +687,11 @@ public class DocumentService {
         }
 
         // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
-        createDocument(comId, myEmpId, reqDto);
+        Long newDocNo = createDocument(comId, myEmpId, reqDto);
 
         log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
+
+        return newDocNo;
     }
 
 

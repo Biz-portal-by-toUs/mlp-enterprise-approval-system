@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8"/>
-    <title>회의실 예약</title>
+    <title>법인 차량 예약</title>
 
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 
@@ -160,13 +160,13 @@
         }
 
         .time-header,
-        .room-row {
+        .car-row {
             display: grid;
             grid-template-columns: 150px repeat(18, 60px);
         }
 
         .time-header div,
-        .room-row div {
+        .car-row div {
             border-bottom: 1px solid #e0e0e0;
             border-right: 1px solid #e0e0e0;
             text-align: center;
@@ -179,7 +179,7 @@
             font-weight: bold;
         }
 
-        .room-name {
+        .car-name {
             background: #fafafa;
             font-weight: bold;
         }
@@ -193,7 +193,7 @@
             margin: 0 auto;
         }
 
-        .room-img {
+        .car-img {
             width: 100%;
             height: 180px;
             border-radius: 15px;
@@ -205,27 +205,6 @@
             margin: 8px 0;
         }
 
-        .chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin: 6px 0 10px;
-        }
-
-        .chip {
-            background: #f1f5ff;
-            border-radius: 20px;
-            padding: 4px 10px;
-            border: 1px solid #cdd9ff;
-            font-size: 13px;
-        }
-
-        .chip button {
-            border: none;
-            background: none;
-            margin-left: 4px;
-            cursor: pointer;
-        }
 
         input, select {
             width: 100%;
@@ -251,15 +230,58 @@
             color: #fff;
         }
 
-        #employeeSearch,
-        #employeeList,
-        #purpose {
-            width: 100%;
-            box-sizing: border-box;
+        /* ✅ 목적 줄은 input이 옆으로 자연스럽게 붙게 */
+        .form-block.reserve-only{
+            display:block;
+            align-items:center;
+            gap:12px;
         }
 
-        .form-block {
-            width: 100%;
+        .form-block.reserve-only > b{
+            margin:0;
+            white-space:nowrap;
+        }
+
+        .form-block.reserve-only > input#purpose{
+            display:block;
+            flex:1;
+            min-width:0;
+            width:100%;
+            margin-top:8px;
+        }
+
+        /* ✅ 모달(info-table) 안 버튼 공통 스타일 */
+        .info-table button{
+            padding: 8px 22px;
+            border-radius: 10px;
+            border: none;
+            margin: 0 8px;
+            cursor: pointer;
+        }
+
+        /* ✅ 예약 = 파란 버튼 (reserveBtn은 이미 class="primary") */
+        .info-table button.primary{
+            background: #2d7ff9;   /* 위에 '예약하기' 버튼이랑 톤 맞춤 */
+            color: #fff;
+        }
+        .info-table button.primary:hover{
+            background: #1d6fe8;
+        }
+
+        /* ✅ 취소 = 회색 버튼 */
+        .info-table #cancelBtn{
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .info-table #cancelBtn:hover{
+            background: #d1d5db;
+        }
+        .actions #cancelBtn{
+            background:#e5e7eb;
+            color:#111827;
+        }
+        .actions #cancelBtn:hover{
+            background:#d1d5db;
         }
 
     </style>
@@ -268,7 +290,7 @@
 <body>
 
 <div class="timetable-section">
-    <h2>회의실 예약</h2>
+    <h2>법인 차량 예약</h2>
     <br><br>
     <!-- 상단 -->
     <div class="timetable-header">
@@ -313,36 +335,30 @@
   z-index: 999999;">
 
         <div class="modal-card" style="position:relative; z-index:1000000;">
-            <h2>회의실 예약</h2>
+            <h2>법인 차량 예약</h2>
 
             <!-- 이미지 -->
-            <img id="roomImage" class="room-img">
+            <img id="carImage" class="car-img">
 
             <!-- 정보 -->
             <div class="info-table">
 
-                <div><b>회의실명:</b> <span id="roomName"></span></div>
+                <div><b>차량명:</b> <span id="carName"></span></div>
                 <div><b>예약일자:</b> <span id="resvDate"></span></div>
                 <div><b>예약시간:</b> <span id="resvTime"></span></div>
                 <div><b>예약자:</b> <span id="reserver"></span></div>
 
                 <div class="form-block reserve-only">
-                    <b>참석자:</b>
-                    <div id="attendeeChips" class="chips"></div>
-                    <input id="employeeSearch" placeholder="이름 검색">
-                    <select id="employeeList" size="4"></select>
-                </div>
-
-                <div class="form-block reserve-only">
                     <b>예약목적:</b>
                     <input id="purpose">
                 </div>
-
+                <div class="actions">
                 <button class="primary reserve-only" id="reserveBtn">예약</button>
                 <button id="deleteBtn" style="background:#ff4d4f;color:#fff;display:none;">
                     예약 취소
                 </button>
                 <button id="cancelBtn">취소</button>
+                </div>
             </div>
         </div>
 
@@ -356,7 +372,6 @@
     const END_HOUR = 18;
 
     let myEmpId = null;
-    let selectedAttendees = [];
     let currentDate = dayjs();
     let firstClickCell = null;
 
@@ -364,7 +379,7 @@
     let isDragging = false;
     let dragRow = null;
 
-    let ROOMS = [];
+    let CARS = [];
     let RESERVATIONS = [];
 
     const timetable = document.getElementById("timetable");
@@ -503,20 +518,20 @@
     });
 
 
-    /* ================= 회의실 조회 ================= */
-    async function loadRooms() {
-        const res = await apiFetch("/api/v1/meeting-rooms");
+    /* ================= 법인 차량 조회 ================= */
+    async function loadCars() {
+        const res = await apiFetch("/api/v1/corporate-cars");
         const json = await res.json();
 
-        // 방 목록은 페이징/래핑 케이스 대비
+        // 차 목록은 페이징/래핑 케이스 대비
         const raw = json?.data?.data ?? json?.data ?? json;
-        ROOMS = Array.isArray(raw) ? raw : (raw?.content ?? []);
+        CARS = Array.isArray(raw) ? raw : (raw?.content ?? []);
         buildTable();
     }
 
     async function loadReservations() {
         const dateStr = currentDate.format("YYYY-MM-DD");
-        const res = await apiFetch(`/api/v1/meeting-room-reservations?date=${dateStr}`);
+        const res = await apiFetch(`/api/v1/corporate-car-reservations?date=${dateStr}`);
 
         const json = await res.json();
         console.log("[reservations] json:", json);
@@ -541,25 +556,25 @@
         timetable.innerHTML = "";
 
 
-        if (ROOMS.length === 0) {
-            timetable.innerHTML = `<div style="padding:20px;color:#888">등록된 회의실이 없습니다.</div>`;
+        if (CARS.length === 0) {
+            timetable.innerHTML = `<div style="padding:20px;color:#888">등록된 법인 차량이 없습니다.</div>`;
             return;
         }
 
         const header = document.createElement("div");
         header.className = "time-header";
-        header.innerHTML = "<div>회의실</div>";
+        header.innerHTML = "<div>법인 차량</div>";
 
         for (let h = START_HOUR; h < END_HOUR; h++) {
             header.innerHTML += `<div>${h}:00</div><div>${h}:30</div>`;
         }
         timetable.appendChild(header);
 
-        ROOMS.forEach(room => {
+        CARS.forEach(car => {
             const row = document.createElement("div");
-            row.className = "room-row";
-            row.dataset.roomNo = room.roomNo;
-            row.innerHTML = `<div class="room-name">${room.roomName}</div>`;
+            row.className = "car-row";
+            row.dataset.carNo = car.carNo;
+            row.innerHTML = `<div class="car-name">${car.carName}</div>`;
 
             for (let i = 0; i < 18; i++) {
                 const cell = document.createElement("div");
@@ -588,7 +603,7 @@
         cell.onclick = () => {
             if (cell.classList.contains("disabled")) return;
 
-            const row = cell.closest(".room-row");
+            const row = cell.closest(".car-row");
             const cells = [...row.querySelectorAll(".time-cell")];
 
             if (!cell.classList.contains("disabled")) bindSelectable(cell);
@@ -601,9 +616,9 @@
                 return;
             }
 
-            // 2️⃣ 두 번째 클릭 (같은 회의실만 허용)
-            if (row !== firstClickCell.closest(".room-row")) {
-                alert("같은 회의실에서만 선택할 수 있어요.");
+            // 2️⃣ 두 번째 클릭 (같은 차량만 허용)
+            if (row !== firstClickCell.closest(".car-row")) {
+                alert("같은 차량에서만 선택할 수 있어요.");
                 clearSelection();
                 firstClickCell = null;
                 return;
@@ -669,9 +684,9 @@
                 (resv.startedAt ? String(resv.startedAt).substring(0, 10) : null);
 
             if (resvDate !== dateStr) return;
-            if (!resv.roomNo) return;
+            if (!resv.carNo) return;
 
-            const row = document.querySelector(`.room-row[data-room-no="${resv.roomNo}"]`);
+            const row = document.querySelector(`.car-row[data-car-no="${resv.carNo}"]`);
             if (!row) return;
 
             const st = parseHM(resv.startTime || (resv.startedAt ? String(resv.startedAt).substring(11, 16) : null));
@@ -692,12 +707,6 @@
             let depName =
                 resv.reservedByDepName ??
                 resv.depName ?? resv.resvDepName ?? resv.departmentName ?? resv.deptName ?? resv.resvEmp?.depName ?? "-";
-
-            // ✅ 부서가 안오면 직원목록에서 empId로 찾아서 채움
-            if (depName === "-" && resv.resvEmpId && Array.isArray(ALL_EMPLOYEES)) {
-                const emp = ALL_EMPLOYEES.find(e => String(e.empId) === String(resv.resvEmpId));
-                depName = emp?.depName ?? "-";
-            }
 
             for (let i = startIdx; i < endIdx; i++) {
                 const cell = cells[i];
@@ -741,8 +750,8 @@
 
 
     const modal = document.getElementById("reserveModal");
-    const mRoomName = document.getElementById("roomName");
-    const mRoomImage = document.getElementById("roomImage");
+    const mCarName = document.getElementById("carName");
+    const mCarImage = document.getElementById("carImage");
     const mDate = document.getElementById("resvDate");
     const mTime = document.getElementById("resvTime");
 
@@ -752,8 +761,6 @@
 
         showReserveMode();
         setReserverToMe();
-        selectedAttendees = [];
-        renderChips();
 
         document.getElementById("purpose").value = "";
 
@@ -762,10 +769,10 @@
             return;
         }
 
-        const row = dragCells[0].closest(".room-row");
-        const roomNo = row.dataset.roomNo;
+        const row = dragCells[0].closest(".car-row");
+        const carNo = row.dataset.carNo;
 
-        const roomName = row.querySelector(".room-name").innerText;
+        const carName = row.querySelector(".car-name").innerText;
 
         const startIdx = [...row.querySelectorAll(".time-cell")].indexOf(dragCells[0]);
         const endIdx = [...row.querySelectorAll(".time-cell")].indexOf(dragCells.at(-1)) + 1;
@@ -776,81 +783,42 @@
             return `${String(h).padStart(2, "0")}:${m}`;
         };
 
-        mRoomName.innerText = roomName;
+        mCarName.innerText = carName;
         mDate.innerText = currentDate.format("YYYY-MM-DD");
         mTime.innerText = `${idxToTime(startIdx)} ~ ${idxToTime(endIdx)}`;
 
-        // 회의실 이미지 처리
-        const room = ROOMS.find(r => r.roomNo == roomNo);
+        // 법인 차량 이미지 처리
+        const car = CARS.find(r => r.carNo == carNo);
 
-        if (room?.imageUrl) {
-            mRoomImage.src = room.imageUrl;
-            mRoomImage.style.display = "block";
+        if (car?.imageUrl) {
+            mCarImage.src = car.imageUrl;
+            mCarImage.style.display = "block";
         } else {
-            mRoomImage.style.display = "none";
+            mCarImage.style.display = "none";
         }
-
-        await loadEmployees();
 
         modal.style.display = "flex";
 
-        modal.dataset.roomNo = roomNo;
+        modal.dataset.carNo = carNo;
         modal.dataset.start = idxToTime(startIdx);
         modal.dataset.end = idxToTime(endIdx);
     };
-
-    document.getElementById("employeeList").addEventListener("change", e => {
-
-        const empId = e.target.value;
-        const empName = e.target.options[e.target.selectedIndex].text;
-
-
-        if (selectedAttendees.find(a => a.empId === empId)) return;
-
-        selectedAttendees.push({empId, empName});
-        renderChips();
-    });
-
-    function renderChips() {
-        const area = document.getElementById("attendeeChips");
-        area.innerHTML = "";
-
-        selectedAttendees.forEach(a => {
-            const chip = document.createElement("div");
-            chip.className = "chip";
-            chip.innerHTML = `
-            ${a.empName}
-            <button onclick="removeChip('${a.empId}')">×</button>
-        `;
-            area.appendChild(chip);
-        });
-    }
-
-    function removeChip(empId) {
-        selectedAttendees = selectedAttendees.filter(a => a.empId !== empId);
-        renderChips();
-    }
 
     document.getElementById("cancelBtn").onclick = () => {
         modal.style.display = "none";
     };
 
     document.getElementById("reserveBtn").onclick = async () => {
-        if (selectedAttendees.length === 0) {
-            alert("참가자를 1명 이상 선택하세요.");
-            return;
-        }
 
         const body = {
-            roomNo: Number(modal.dataset.roomNo),
+            carNo: Number(modal.dataset.carNo),
             resvDate: currentDate.format("YYYY-MM-DD"),
             startTime: modal.dataset.start,
             endTime: modal.dataset.end,
             purp: document.getElementById("purpose").value,
-            attendeeIds: selectedAttendees.map(a => a.empId)
         };
 
-        const res = await apiFetch("/api/v1/meeting-room-reservations", {
+        const res = await apiFetch("/api/v1/corporate-car-reservations", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify(body)
@@ -867,56 +835,19 @@
         await loadReservations();
     };
 
-    let ALL_EMPLOYEES = [];
-
-
-    function renderEmployeeList(list) {
-        const employeeList = document.getElementById("employeeList");
-        employeeList.innerHTML = "";
-
-        list.forEach(emp => {
-            const opt = document.createElement("option");
-            opt.value = emp.empId;
-            opt.textContent = `${emp.empName} (${emp.depName})`;
-            employeeList.appendChild(opt);
-        });
-    }
-
-    async function loadEmployees() {
-        const res = await apiFetch("/api/v1/employees?size=50&excludeMe=true");
-        const json = await res.json();
-
-        const raw = json?.data?.items ?? json?.data?.data ?? json?.data ?? json ?? [];
-        const list = Array.isArray(raw) ? raw : (raw?.content ?? raw?.items ?? []);
-
-        ALL_EMPLOYEES = list;
-        renderEmployeeList(ALL_EMPLOYEES);
-    }
-
-    document.getElementById("employeeSearch").addEventListener("input", e => {
-        const keyword = e.target.value.toLowerCase();
-
-        const filtered = ALL_EMPLOYEES.filter(emp => {
-            const name = (emp.empName || "").toLowerCase();
-            const dep = (emp.depName || "").toLowerCase();
-            return name.includes(keyword) || dep.includes(keyword);
-        });
-
-        renderEmployeeList(filtered);
-    });
-
-    function setRoomImageByRoomNo(roomNo) {
-        const room = ROOMS.find(r => String(r.roomNo) === String(roomNo));
-        const url  = room?.imageUrl || room?.imgUrl || room?.image || null;
+    function setCarImageByCarNo(carNo) {
+        const car = CARS.find(r => String(r.carNo) === String(carNo));
+        const url  = car?.imageUrl || car?.imgUrl || car?.image || null;
 
         if (url) {
-            mRoomImage.src = url;
-            mRoomImage.style.display = "block";
+            mCarImage.src = url;
+            mCarImage.style.display = "block";
         } else {
-            mRoomImage.removeAttribute("src");   // ✅ 이전 이미지 잔상 제거
-            mRoomImage.style.display = "none";
+            mCarImage.removeAttribute("src");   // ✅ 이전 이미지 잔상 제거
+            mCarImage.style.display = "none";
         }
     }
+
 
     function openCancelModal(resv, empNameFromCell, depNameFromCell) {
         modal.style.display = "flex";
@@ -925,7 +856,7 @@
         reserveBtn.style.display = "none";
         deleteBtn.style.display  = "inline-block";
 
-        const roomName = pick(resv, ["roomName", "meetingRoomName", "room.roomName"], "-");
+        const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], "-");
         const resvDate = pick(resv, ["resvDate", "date"], resv.startedAt ? String(resv.startedAt).substring(0, 10) : "-");
 
         const startRaw = pick(resv, ["startTime"], resv.startedAt ? String(resv.startedAt).substring(11, 19) : null);
@@ -947,13 +878,13 @@
             "resvEmp.depName", "employee.depName", "user.depName"
         ], "-");
 
-        document.getElementById("roomName").innerText = roomName;
+        document.getElementById("carName").innerText = carName;
         document.getElementById("resvDate").innerText = resvDate;
         document.getElementById("resvTime").innerText = `${toHM(startRaw)} ~ ${toHM(endRaw)}`; // ✅ 초 제거 확정
         reserverEl.innerText = `${empName} (${depName})`;
 
         // ✅ 이미지도 여기서 반드시 세팅/숨김 처리 (아래 3번 참고)
-        setRoomImageByRoomNo(pick(resv, ["roomNo", "meetingRoomNo", "room.roomNo"], null));
+        setCarImageByCarNo(pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null));
 
         modal.dataset.resvNo = pick(resv, ["resvNo", "reservationNo", "id"], "");
     }
@@ -964,7 +895,7 @@
 
         if (!confirm("정말 예약을 취소할까요?")) return;
 
-        const res = await apiFetch(`/api/v1/meeting-room-reservations/${resvNo}`, {
+        const res = await apiFetch(`/api/v1/corporate-car-reservations/${resvNo}`, {
             method: "DELETE"
         });
 
@@ -1004,8 +935,7 @@
 
         setReserverToMe();
 
-        await loadRooms();
-        await loadEmployees();
+        await loadCars();
         await loadReservations();
     }
 

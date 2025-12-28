@@ -1,10 +1,12 @@
-package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.controller;
+package com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqReservationCreateDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ResReservationListDto;
-import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service.MeetingRoomReservationService;
+
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ReqReservationCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.dto.ResReservationListDto;
+import com.multi.mlpenterpriseapprovalsystem.reservation.corporate_car.service.CorporateCarReservationService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,52 +16,56 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 /**
- * 회의실 예약 API Controller
- *
- * 회의실 예약과 관련된 사용자 행위(예약 조회·생성·취소)를 처리하는
+ * 법인 차량 예약 API Controller
+ * <p>
+ * 법인 차량 예약과 관련된 사용자 행위(예약 조회·생성·취소)를 처리하는
  * REST API 전용 Controller이다.
  *
  * @author : 송현님
- * @filename : MeetingRoomReservationController
- * @since : 2025-12-22 오후 2:27 월요일
+ * @filename : CorporateCarReservationController
+ * @since : 2025-12-27 오후 10:16 토요일
  */
 
 @RestController
 @Slf4j
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-public class MeetingRoomReservationController {
+public class CorporateCarReservationController {
 
-    private final MeetingRoomReservationService meetingRoomReservationService;
+    private final CorporateCarReservationService corporateCarReservationService;
 
-    @GetMapping("/meeting-room-reservations")
+    @GetMapping("/corporate-car-reservations")
     public ResponseEntity<ResponseDto<List<ResReservationListDto>>> getReservations(@AuthenticationPrincipal CustomUser user,
-                                                                                    @RequestParam(required = false) String date) {  // 한 페이지에서 보여줄 데이터 개수
-
+                                                                                    @RequestParam(required = false) String data) {
         String comId = user.getComId();
         List<ResReservationListDto> reservations =
-                meetingRoomReservationService.getReservations(comId, date);
+                corporateCarReservationService.getReservations(comId, data);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, null, reservations));
     }
 
-    @PostMapping("/meeting-room-reservations")
+    @PostMapping("/corporate-car-reservations")
     public ResponseEntity<ResponseDto<List<ResReservationListDto>>> createReservation(@RequestBody ReqReservationCreateDto dto,
                                                                                       @AuthenticationPrincipal CustomUser user) {
-        meetingRoomReservationService.createReservation(dto, user);
+        corporateCarReservationService.createReservation(dto, user);
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/meeting-room-reservations/{resvNo}")
+    @DeleteMapping("/corporate-car-reservations/{resvNo}")
     public ResponseEntity<Void> deleteReservation(
             @PathVariable Long resvNo,
             @AuthenticationPrincipal CustomUser user) {
 
-        meetingRoomReservationService.deleteReservation(resvNo, user);
+        corporateCarReservationService.deleteReservation(resvNo, user);
         return ResponseEntity.noContent().build();   // 204
     }
 }
+
+
+
+
+
+
