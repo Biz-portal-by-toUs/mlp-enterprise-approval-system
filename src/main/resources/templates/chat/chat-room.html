@@ -4,86 +4,24 @@
     <meta charset="UTF-8"/>
     <title>Chat Room</title>
     <style>
+        /* CSS 디자인은 수정하지 않았습니다. */
         :root { --primary-color: #007bff; --me-bubble: #ffeb33; --bg-color: #f8f9fa; --border-color: #eee; }
         body { font-family: 'Pretendard', sans-serif; margin: 0; background-color: var(--bg-color); color: #333; }
         .wrap { height: 100vh; display: flex; flex-direction: column; position: relative; }
-
-        .top {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            z-index: 10;
-            gap: 10px;
-        }
-        .title {
-            flex: 1;
-            min-width: 0;
-            max-width: 200px;
-            position: relative;
-            cursor: pointer;
-            overflow: visible !important;
-        }
-
-        .title-text {
-            display: block;
-            font-weight: 800;
-            font-size: 16px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-
-        .title::after {
-            content: attr(data-title);
-            position: absolute;
-            top: 100%;
-            left: 0;
-            margin-top: 8px;
-            background: rgba(0, 0, 0, 0.85);
-            color: #fff;
-            padding: 10px 14px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 400;
-            z-index: 9999;
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            white-space: normal;
-            width: max-content;
-            max-width: 250px;
-            word-break: break-all;
-            line-height: 1.5;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-
-        .title:hover::after {
-            opacity: 1;
-            visibility: visible;
-            transition-delay: 0.4s;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
+        .top { padding: 14px 18px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02); z-index: 10; gap: 10px; }
+        .title { flex: 1; min-width: 0; max-width: 200px; position: relative; cursor: pointer; overflow: visible !important; }
+        .title-text { display: block; font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+        .title::after { content: attr(data-title); position: absolute; top: 100%; left: 0; margin-top: 8px; background: rgba(0, 0, 0, 0.85); color: #fff; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: 400; z-index: 9999; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); white-space: normal; width: max-content; max-width: 250px; word-break: break-all; line-height: 1.5; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .title:hover::after { opacity: 1; visibility: visible; transition-delay: 0.4s; }
+        .actions { display: flex; gap: 8px; flex-shrink: 0; }
         .actions button { padding: 8px 14px; cursor: pointer; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 13px; font-weight: 600; transition: all 0.2s; }
         .actions button:hover { background: #f8f9fa; border-color: #bbb; }
         .btn-invite { background: var(--primary-color) !important; color: white !important; border: none !important; }
-
         .member-panel { display: none; position: absolute; top: 65px; right: 15px; width: 240px; max-height: 450px; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); }
         .member-header { padding: 15px; font-weight: 800; border-bottom: 1px solid var(--border-color); background: #fafafa; font-size: 14px; }
         .member-list { flex: 1; overflow-y: auto; padding: 10px 0; }
         .member-item { padding: 10px 18px; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: background 0.2s; }
         .member-item:hover { background: #f5f5f5; }
-
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal-content { background: white; width: 720px; height: 540px; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
         .modal-header { padding: 20px; font-weight: 800; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 18px; }
@@ -100,135 +38,32 @@
         .btn-add { background: #f0f7ff; color: var(--primary-color); border: none; border-radius: 4px; padding: 4px 10px; font-weight: 800; cursor: pointer; }
         .pill { display: inline-flex; gap: 8px; align-items: center; background: #f0f7ff; border-radius: 8px; padding: 8px 12px; margin: 6px 12px; font-size: 13px; border: 1px solid #d0e5ff; }
         .pill button { cursor: pointer; border: none; background: none; color: #ff3b30; font-weight: bold; }
-
         .msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .msg { display: flex; flex-direction: column; max-width: 80%; }
         .msg.me { align-self: flex-end; align-items: flex-end; }
         .msg.other { align-self: flex-start; align-items: flex-start; }
-
-        /* ✅ 말풍선 공통 및 개별 배경색 설정 */
-        .bubble {
-            padding: 10px 14px;
-            border-radius: 14px;
-            font-size: 14px;
-            line-height: 1.5;
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            word-break: break-all;
-            cursor: pointer;
-            transition: max-height 0.3s ease-out;
-            overflow: hidden;
-
-            white-space: pre-wrap;
-        }
-        /* 내가 보낸 메시지: 노란색 */
-        .msg.me .bubble {
-            background-color: var(--me-bubble);
-            border-top-right-radius: 2px;
-        }
-        /* 상대방 메시지: 흰색 */
-        .msg.other .bubble {
-            background-color: white;
-            border-top-left-radius: 2px;
-        }
-
-        /* 버블 내 링크 스타일 */
-        .bubble a {
-            color: #007bff;
-            text-decoration: underline;
-            word-break: break-all;
-        }
-
-        .bubble.collapsed {
-            max-height: 150px;
-        }
-
-        .bubble.collapsed::after {
-            content: "클릭하여 더보기";
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 50px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            font-size: 11px;
-            color: #888;
-            padding-bottom: 4px;
-            pointer-events: none;
-        }
-
-        .me .bubble.collapsed::after {
-            background: linear-gradient(transparent, var(--me-bubble));
-        }
-        .other .bubble.collapsed::after {
-            background: linear-gradient(transparent, white);
-        }
+        .bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-break: break-all; cursor: pointer; transition: max-height 0.3s ease-out; overflow: hidden; white-space: pre-wrap; }
+        .msg.me .bubble { background-color: var(--me-bubble); border-top-right-radius: 2px; }
+        .msg.other .bubble { background-color: white; border-top-left-radius: 2px; }
+        .bubble a { color: #007bff; text-decoration: underline; word-break: break-all; }
+        .bubble.collapsed { max-height: 150px; }
+        .bubble.collapsed::after { content: "클릭하여 더보기"; position: absolute; bottom: 0; left: 0; right: 0; height: 50px; display: flex; align-items: flex-end; justify-content: center; font-size: 11px; color: #888; padding-bottom: 4px; pointer-events: none; }
+        .me .bubble.collapsed::after { background: linear-gradient(transparent, var(--me-bubble)); }
+        .other .bubble.collapsed::after { background: linear-gradient(transparent, white); }
         .sender-info { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 4px; }
         .time-info { font-size: 10px; color: #aaa; margin-top: 4px; }
-
-        .bottom {
-            padding: 10px 15px 5px;
-            background: white;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .bottom textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            outline: none;
-            font-size: 14px;
-            resize: none;
-            height: 40px;
-            max-height: 100px;
-            overflow: hidden;
-            line-height: 1.4;
-            font-family: inherit;
-            box-sizing: border-box;
-        }
+        .bottom { padding: 10px 15px 5px; background: white; border-top: 1px solid var(--border-color); }
+        .bottom textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; resize: none; height: 40px; max-height: 100px; overflow: hidden; line-height: 1.4; font-family: inherit; box-sizing: border-box; }
         .bottom textarea:focus { border-color: var(--primary-color); }
-
-        .bytebar {
-            padding: 0 15px 12px;
-            background: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .bytebar button {
-            padding: 8px 20px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
+        .bytebar { padding: 0 15px 12px; background: white; display: flex; justify-content: space-between; align-items: center; }
+        .bytebar button { padding: 8px 20px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
         .bytebar button:disabled { background: #ccc; cursor: not-allowed; }
         .bytebar .warn { color:#ff3b30; font-weight:700; }
-
         .modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
         .modal-footer button { flex: 1; padding: 14px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; font-size: 15px; }
         .btn-confirm { background: var(--primary-color); color: white; }
         .btn-cancel { background: #eee; color: #666; }
-
-        .msg.system {
-            align-self: center;
-            background: rgba(0, 0, 0, 0.05);
-            color: #888;
-            font-size: 12px;
-            padding: 5px 15px;
-            border-radius: 20px;
-            margin: 10px 0;
-            max-width: 90%;
-            text-align: center;
-        }
+        .msg.system { align-self: center; background: rgba(0, 0, 0, 0.05); color: #888; font-size: 12px; padding: 5px 15px; border-radius: 20px; margin: 10px 0; max-width: 90%; text-align: center; }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
@@ -290,8 +125,8 @@
 </div>
 
 <script>
-    function getAccessToken() { return localStorage.getItem("accessToken"); }
-    function authHeaders() { return { 'Authorization': 'Bearer ' + getAccessToken() }; }
+    // ✅ HttpOnly 쿠키 사용에 따른 헤더 수정 및 MY_EMP_ID 관리 방식 변경
+    function authHeaders() { return { 'Content-Type': 'application/json' }; }
 
     function escapeHtml(str) {
         return String(str ?? "").replace(/[&<>"']/g, s => ({
@@ -299,7 +134,6 @@
         }[s]));
     }
 
-    // ✅ [추가] URL을 찾아 링크 태그로 변환하는 함수
     function linkify(text) {
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         return text.replace(urlRegex, function(url) {
@@ -308,9 +142,7 @@
     }
 
     const MAX_BYTES = 60 * 1024;
-    function utf8Bytes(str) {
-        return new TextEncoder().encode(str).length;
-    }
+    function utf8Bytes(str) { return new TextEncoder().encode(str).length; }
 
     function updateByteInfo() {
         const input = document.getElementById("messageInput");
@@ -318,32 +150,31 @@
         const warn = document.getElementById("byteWarn");
         const btn  = document.getElementById("sendBtn");
         if (!input || !info) return;
-
         const b = utf8Bytes(input.value || "");
         info.textContent = `${b} / ${MAX_BYTES} bytes`;
-
         const tooBig = b > MAX_BYTES;
         info.style.color = tooBig ? "#ff3b30" : "#777";
         if (warn) warn.style.display = tooBig ? "inline" : "none";
         if (btn) btn.disabled = tooBig;
     }
 
-    function getMyEmpId() {
-        const token = getAccessToken();
-        if (!token) return null;
+    // ✅ 전역 변수로 관리하고 loadMyInfo()에서 초기화
+    let MY_EMP_ID = null;
+
+    async function loadMyInfo() {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.username;
-        } catch (e) { return null; }
+            const res = await fetch("/api/v1/employees/me");
+            const result = await res.json();
+            MY_EMP_ID = result.data.empId;
+        } catch (err) { console.error("내 정보 로드 실패:", err); }
     }
 
-    const MY_EMP_ID = getMyEmpId();
     const pathSegments = location.pathname.split('/');
     const roomNo = Number(pathSegments[pathSegments.length - 1]);
 
     async function loadRoomInfo() {
         try {
-            const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
+            const res = await fetch(`/api/v1/chat/${roomNo}`);
             const result = await res.json();
             const room = result.data;
             if (!room) return;
@@ -354,7 +185,6 @@
             }
 
             let displayName = room.roomName;
-
             if (room.roomType === 'ONE' || !displayName) {
                 const opponent = (room.members || []).find(m => m.empId !== MY_EMP_ID);
                 displayName = opponent ? opponent.empName : (displayName || "대화 상대 없음");
@@ -363,11 +193,7 @@
             const titleEl = document.getElementById("roomTitle");
             titleEl.innerHTML = `<span class="title-text">${escapeHtml(displayName)}</span>`;
             titleEl.setAttribute('data-title', displayName);
-            titleEl.removeAttribute('title');
-        } catch (err) {
-            console.error("방 정보 로드 실패:", err);
-            document.getElementById("roomTitle").innerText = "채팅방";
-        }
+        } catch (err) { console.error("방 정보 로드 실패:", err); }
     }
 
     const selected = new Map();
@@ -375,13 +201,11 @@
     let inviteCursor = null;
     let inviteHasNext = true;
     let inviteLoading = false;
-    let inviteKwTimer = null;
 
     async function openInviteModal() {
-        const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
+        const res = await fetch(`/api/v1/chat/${roomNo}`);
         const result = await res.json();
         currentRoomMembers = new Set((result.data.members || []).map(m => m.empId));
-
         selected.clear();
         renderSelected();
         resetAndLoadInvites();
@@ -389,8 +213,8 @@
     }
 
     function onInviteSearch() {
-        clearTimeout(inviteKwTimer);
-        inviteKwTimer = setTimeout(resetAndLoadInvites, 250);
+        clearTimeout(window.inviteKwTimer);
+        window.inviteKwTimer = setTimeout(resetAndLoadInvites, 250);
     }
 
     async function resetAndLoadInvites() {
@@ -403,17 +227,15 @@
     async function loadMoreInvites() {
         if (inviteLoading || !inviteHasNext) return;
         inviteLoading = true;
-
         const keyword = document.getElementById("inviteKeyword").value.trim();
         const qs = new URLSearchParams({ size: 30, excludeMe: "true" });
         if (keyword) qs.set("keyword", keyword);
         if (inviteCursor) qs.set("cursor", inviteCursor);
 
         try {
-            const res = await fetch("/api/v1/employees?" + qs.toString(), { headers: authHeaders() });
+            const res = await fetch("/api/v1/employees?" + qs.toString());
             const raw = await res.json();
             const payload = raw?.data ?? raw;
-
             const items = payload?.items ?? [];
             inviteCursor = payload?.nextCursor ?? null;
             inviteHasNext = !!payload?.hasNext;
@@ -421,16 +243,9 @@
             const box = document.getElementById("inviteEmpList");
             items.forEach(e => {
                 if (currentRoomMembers.has(e.empId)) return;
-
                 const row = document.createElement("div");
                 row.className = "emp-row";
-                row.innerHTML = `
-                    <div class="emp-info">
-                        <div class="name">${escapeHtml(e.empName)}</div>
-                        <div class="sub">${escapeHtml(e.depName ?? "")} · ${escapeHtml(e.posName ?? "")}</div>
-                    </div>
-                    <button class="btn-add" onclick="addSelected('${escapeHtml(e.empId)}', '${escapeHtml(e.empName)}')">+</button>
-                `;
+                row.innerHTML = `<div class="emp-info"><div class="name">${escapeHtml(e.empName)}</div><div class="sub">${escapeHtml(e.depName ?? "")} · ${escapeHtml(e.posName ?? "")}</div></div><button class="btn-add" onclick="addSelected('${escapeHtml(e.empId)}', '${escapeHtml(e.empName)}')">+</button>`;
                 box.appendChild(row);
             });
         } finally { inviteLoading = false; }
@@ -448,50 +263,36 @@
         [...selected.values()].forEach(e => {
             const pill = document.createElement("div");
             pill.className = "pill";
-            pill.innerHTML = `
-                <span><b>${escapeHtml(e.empName)}</b></span>
-                <button onclick="removeSelected('${escapeHtml(e.empId)}')">x</button>
-            `;
+            pill.innerHTML = `<span><b>${escapeHtml(e.empName)}</b></span><button onclick="removeSelected('${escapeHtml(e.empId)}')">x</button>`;
             box.appendChild(pill);
         });
     }
 
-    function removeSelected(empId) {
-        selected.delete(empId);
-        renderSelected();
-    }
+    function removeSelected(empId) { selected.delete(empId); renderSelected(); }
 
     async function submitInvite() {
         if (selected.size === 0) return alert("초대할 인원을 선택하세요.");
         const memberIds = [...selected.keys()];
-
         const res = await fetch(`/api/v1/chat/${roomNo}/invite`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            headers: authHeaders(),
             body: JSON.stringify({ memberIds })
         });
-
-        if (res.ok) {
-            closeInviteModal();
-            if (isMemberPanelOpen) toggleMembers();
-        } else { alert("초대 실패"); }
+        if (res.ok) { closeInviteModal(); if (isMemberPanelOpen) toggleMembers(); } else { alert("초대 실패"); }
     }
 
     function closeInviteModal() { document.getElementById("inviteModal").style.display = "none"; }
 
     let stompClient = null;
-    let roomSub = null;
     let isMemberPanelOpen = false;
     const seenMsgIds = new Set();
 
     async function toggleMembers() {
         const panel = document.getElementById("memberPanel");
         if (isMemberPanelOpen) { panel.style.display = "none"; isMemberPanelOpen = false; return; }
-
-        const res = await fetch(`/api/v1/chat/${roomNo}`, { headers: authHeaders() });
+        const res = await fetch(`/api/v1/chat/${roomNo}`);
         const result = await res.json();
         const members = result.data.members || [];
-
         const list = document.getElementById("memberList");
         document.getElementById("memberCount").innerText = members.length;
         list.innerHTML = "";
@@ -499,10 +300,7 @@
             const div = document.createElement("div");
             div.className = "member-item";
             const isMe = (m.empId === MY_EMP_ID);
-            div.innerHTML = `
-                <span style="flex:1">${escapeHtml(m.empName)} (${escapeHtml(m.empId)})</span>
-                ${isMe ? '<b style="color:#007bff; font-size:10px;">나</b>' : ''}
-            `;
+            div.innerHTML = `<span style="flex:1">${escapeHtml(m.empName)} (${escapeHtml(m.empId)})</span>${isMe ? '<b style="color:#007bff; font-size:10px;">나</b>' : ''}`;
             list.appendChild(div);
         });
         panel.style.display = "flex";
@@ -512,10 +310,11 @@
     function connectWs() {
         const socket = new SockJS('/ws-chat');
         stompClient = Stomp.over(socket);
-        stompClient.connect({ Authorization: 'Bearer ' + getAccessToken() }, async () => {
+        // ✅ 헤더에 토큰 제거 (쿠키가 자동 전송됨)
+        stompClient.connect({}, async () => {
             await markRead();
             await loadMessages();
-            roomSub = stompClient.subscribe('/sub/chat/rooms/' + roomNo, (msg) => {
+            stompClient.subscribe('/sub/chat/rooms/' + roomNo, (msg) => {
                 const body = JSON.parse(msg.body);
                 if (body.messageId && seenMsgIds.has(body.messageId)) return;
                 seenMsgIds.add(body.messageId);
@@ -527,126 +326,91 @@
     }
 
     async function loadMessages() {
-        const res = await fetch(`/api/v1/chat/messages/${roomNo}?size=50`, { headers: authHeaders() });
+        const res = await fetch(`/api/v1/chat/messages/${roomNo}?size=50`);
         const result = await res.json();
         const msgs = result.data || [];
         const box = document.getElementById("messages");
         box.innerHTML = "";
-
         msgs.forEach(m => { if(m.messageId) seenMsgIds.add(m.messageId); });
         msgs.slice().reverse().forEach(m => appendMessage(m));
         box.scrollTop = box.scrollHeight;
     }
 
-    async function markRead() { await fetch(`/api/v1/chat/${roomNo}/read`, { method:"POST", headers: authHeaders() }); }
+    async function markRead() { await fetch(`/api/v1/chat/${roomNo}/read`, { method:"POST" }); }
 
     function appendMessage(m) {
         const box = document.getElementById("messages");
         const div = document.createElement("div");
-
         if (m.type === 'SYSTEM') {
             div.className = "msg system";
             div.innerHTML = `<span>${escapeHtml(m.content)}</span>`;
         } else {
             const isMe = (m.senderEmpId === MY_EMP_ID);
             div.className = isMe ? "msg me" : "msg other";
-
             let html = "";
-            if (!isMe) {
-                html += `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
-            }
-
-            // ✅ [수정] escapeHtml로 보안 처리 후 linkify로 URL을 링크로 변환
+            if (!isMe) html += `<div class="sender-info">${escapeHtml(m.senderName)}</div>`;
             const safeContent = linkify(escapeHtml(m.content));
             html += `<div class="bubble" onclick="toggleExpand(event, this)">${safeContent}</div>`;
-
             const t = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
             html += `<div class="time-info">${t}</div>`;
             div.innerHTML = html;
         }
-
         box.appendChild(div);
-
         const bubble = div.querySelector(".bubble");
-        if (bubble && bubble.scrollHeight > 150) {
-            bubble.classList.add("collapsed");
-        }
-
+        if (bubble && bubble.scrollHeight > 150) bubble.classList.add("collapsed");
         box.scrollTop = box.scrollHeight;
     }
 
-    // ✅ [수정] 링크 클릭 시에는 접기/펴기 동작이 발생하지 않도록 event 매개변수 추가
     function toggleExpand(event, element) {
-        // 클릭된 요소가 <a> 태그(링크)라면 함수 종료
         if (event.target.tagName === 'A') return;
-
         if (element.classList.contains("collapsed")) {
             element.classList.remove("collapsed");
             element.style.maxHeight = element.scrollHeight + "px";
-        } else {
-            if (element.scrollHeight > 150) {
-                element.classList.add("collapsed");
-                element.style.maxHeight = "150px";
-            }
+        } else if (element.scrollHeight > 150) {
+            element.classList.add("collapsed");
+            element.style.maxHeight = "150px";
         }
     }
 
     function sendMessage() {
         const input = document.getElementById("messageInput");
-        const content = input.value; // .trim() 제거 (원본 데이터 유지)
-
-        // 메시지가 아예 비어있거나(엔터/스페이스만 있는 경우) 체크 로직은 별도로 진행
+        const content = input.value;
         if (!content.trim() || !stompClient?.connected) return;
-
-        if (utf8Bytes(content) > MAX_BYTES) {
-            alert("메시지 용량이 너무 큽니다.");
-            return;
-        }
-
-        stompClient.send("/pub/chat/message", { Authorization: 'Bearer ' + getAccessToken() },
-            JSON.stringify({ roomNo: roomNo, content: content })
-        );
-
+        if (utf8Bytes(content) > MAX_BYTES) { alert("메시지 용량이 너무 큽니다."); return; }
+        // ✅ 전송 시 헤더에 토큰 제거
+        stompClient.send("/pub/chat/message", {}, JSON.stringify({ roomNo: roomNo, content: content }));
         input.value = "";
         input.style.height = '40px';
-        input.style.overflowY = 'hidden';
         updateByteInfo();
     }
 
-    async function leaveRoom() { if (confirm("방을 나가시겠습니까?")) { const res = await fetch(`/api/v1/chat/${roomNo}/leave`, { method: "POST", headers: authHeaders() }); if (res.ok) window.close(); } }
+    async function leaveRoom() { if (confirm("방을 나가시겠습니까?")) { const res = await fetch(`/api/v1/chat/${roomNo}/leave`, { method: "POST" }); if (res.ok) window.close(); } }
 
     document.getElementById("inviteEmpList").addEventListener("scroll", (e) => {
         if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreInvites();
     });
 
-    window.addEventListener("load", () => {
-        const messageInput = document.getElementById("messageInput");
+    // ✅ 초기화 순서 제어: 내 정보 로드 후 방 정보 로드 및 소켓 연결
+    window.addEventListener("load", async () => {
+        await loadMyInfo();
+        loadRoomInfo();
+        connectWs();
+        updateByteInfo();
 
+        const messageInput = document.getElementById("messageInput");
         messageInput.addEventListener("input", function() {
             this.style.height = '40px';
             const newHeight = this.scrollHeight;
             this.style.height = newHeight + 'px';
-
-            if (newHeight >= 100) {
-                this.style.overflowY = 'auto';
-            } else {
-                this.style.overflowY = 'hidden';
-            }
-
+            this.style.overflowY = newHeight >= 100 ? 'auto' : 'hidden';
             updateByteInfo();
         });
-
         messageInput.addEventListener("keydown", function(e) {
-            if (e.isComposing) return;
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (!e.isComposing && e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
-
-        loadRoomInfo();
-        connectWs();
-        updateByteInfo();
     });
 </script>
 </body>
