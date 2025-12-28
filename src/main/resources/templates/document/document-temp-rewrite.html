@@ -579,7 +579,17 @@
             </div>
         </div>
 
+        <!-- ✅ AI 요약 박스 -->
+        <div id="ai-summary-box" style="display:none; margin-top:15px; padding:15px; background:#f1f3f5; border-left:4px solid var(--primary-color); font-size:13px;">
+            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
+        </div>
+
         <div class="bottom-actions">
+            <!-- ✅ AI 요약 버튼 -->
+            <button type="button" class="btn btn-temp" style="padding: 8px 16px; font-size: 13px;" onclick="generateAiSummary()">AI 요약 생성</button>
+            <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
+            </label>
             <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서 상신</button>
             <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
         </div>
@@ -598,9 +608,9 @@
     let tiptapEditor = null;
 
     // 첨부파일 관련 변수
-    let existingFiles = [];      // 기존 첨부파일 목록
-    let newFiles = [];           // 새로 추가할 파일
-    let filesToDelete = [];      // 삭제할 파일 ID 목록
+    let existingFiles = [];
+    let newFiles = [];
+    let filesToDelete = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
         const pathParts = window.location.pathname.split('/');
@@ -623,6 +633,17 @@
             if (response.ok && result.data) {
                 const doc = result.data;
                 document.getElementById('doc-title').value = doc.title || "";
+
+                // ✅ AI 요약 로드
+                if (doc.aiSumm && doc.aiSumm.trim() !== '') {
+                    const summaryBox = document.getElementById('ai-summary-box');
+                    const summaryText = document.getElementById('ai-summary-text');
+
+                    summaryBox.style.display = 'block';
+                    summaryText.innerText = doc.aiSumm;
+
+                    console.log('✅ 기존 AI 요약 로드:', doc.aiSumm);
+                }
 
                 const originalDocfoNo = doc.docFormNo;
 
@@ -667,7 +688,6 @@
                     }
                 }
 
-                // 첨부파일 로드
                 await loadExistingAttachments(originalDocNo);
 
                 if (doc.resApprovalLineDtos && doc.resApprovalLineDtos.length > 0) {
@@ -908,10 +928,9 @@
 
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 10 * 1024 * 1024;
         const maxCount = 5;
 
-        // 현재 유효한 파일 수 계산 (기존 - 삭제예정 + 새파일)
         const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
 
         for (let file of files) {
@@ -925,7 +944,6 @@
                 continue;
             }
 
-            // 중복 체크
             if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
                 showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
                 continue;
@@ -941,7 +959,6 @@
     function renderFileList() {
         const container = document.getElementById('file-list');
 
-        // 삭제 예정이 아닌 기존 파일만 필터링
         const activeExistingFiles = existingFiles.filter(file =>
             !filesToDelete.includes(file.attachmentId)
         );
@@ -955,7 +972,6 @@
 
         let html = '';
 
-        // 기존 파일 렌더링
         activeExistingFiles.forEach(file => {
             html += `
                 <div class="file-item" style="background: #f0f8ff;">
@@ -971,7 +987,6 @@
             `;
         });
 
-        // 새 파일 렌더링
         newFiles.forEach((file, index) => {
             html += `
                 <div class="file-item">
@@ -1016,6 +1031,47 @@
         return 'DOC';
     }
 
+    // ✅ AI 요약 생성 함수
+    async function generateAiSummary() {
+        const html = tiptapEditor.getHTML();
+        const text = tiptapEditor.getText().trim();
+
+        if (text.length < 100) {
+            return showAlert('내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.', 'error');
+        }
+
+        const summaryBox = document.getElementById('ai-summary-box');
+        const summaryText = document.getElementById('ai-summary-text');
+
+        summaryBox.style.display = 'block';
+        summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
+
+        try {
+            const response = await fetch('/api/v1/documents/ai-summary', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: html })
+            });
+
+            if (!response.ok) throw new Error('AI 요약 생성 실패');
+
+            const result = await response.json();
+
+            if (result.data) {
+                summaryText.innerText = result.data;
+                console.log('✅ [AI 요약] 생성 완료:', result.data);
+            } else {
+                throw new Error('요약 데이터가 없습니다');
+            }
+
+        } catch (error) {
+            console.error('❌ [AI 요약] 오류:', error);
+            summaryBox.style.display = 'none';
+            showAlert('AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.', 'error');
+        }
+    }
+
     // ==================== 문서 저장 ====================
 
     async function saveDocument(isTemp) {
@@ -1025,6 +1081,12 @@
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
 
+        // ✅ AI 요약 데이터
+        const aiSummaryBox = document.getElementById('ai-summary-box');
+        const aiSummaryText = document.getElementById('ai-summary-text').innerText;
+        const includeAiSummary = document.getElementById('include-ai-summ').checked;
+        const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
+
         // 유효성 검사
         if (!title) return showAlert("제목을 입력하세요.", "error");
         if (title.length > 100) return showAlert("제목은 100자 이내로 입력하세요.", "error");
@@ -1032,6 +1094,19 @@
         if (contentText.length > 1000) return showAlert("내용은 1000자 이내로 입력하세요.", "error");
         if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
         if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
+
+        // ✅ AI 요약 체크박스 검증 (상신 시만)
+        if (!isTemp && includeAiSummary && !hasAiSummary) {
+            return showAlert('AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.', 'error');
+        }
+
+        // ✅ AI 요약 최종 결정
+        let finalAiSummary = null;
+        if (isTemp) {
+            finalAiSummary = hasAiSummary ? aiSummaryText : null;
+        } else {
+            finalAiSummary = (includeAiSummary && hasAiSummary) ? aiSummaryText : null;
+        }
 
         try {
             const payload = {
@@ -1043,6 +1118,7 @@
                 content: JSON.stringify(contentJson),
                 cnttHtml: contentHtml,
                 temp: isTemp,
+                aiSumm: finalAiSummary,  // ✅ AI 요약 추가
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,
@@ -1062,13 +1138,11 @@
             if (response.ok) {
                 console.log('✅ 문서 저장 성공! docNo:', originalDocNo);
 
-                // 1. 삭제할 파일 처리
                 if (filesToDelete.length > 0) {
                     console.log('🗑️ 삭제할 파일:', filesToDelete);
                     await deleteFiles(filesToDelete);
                 }
 
-                // 2. 새 파일 업로드
                 if (newFiles.length > 0) {
                     console.log('📤 새 파일 업로드:', newFiles);
                     await uploadFiles(originalDocNo);
@@ -1128,7 +1202,6 @@
             console.log(`\n🔄 [파일 ${file.name}] 업로드 시작...`);
 
             try {
-                // 1. Presigned URL 요청
                 console.log(`  1️⃣ [${file.name}] Presigned URL 요청 중...`);
                 const presignRes = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
@@ -1154,7 +1227,6 @@
                 const presignData = await presignRes.json();
                 const { objectKey, uploadUrl } = presignData.data;
 
-                // 2. S3 직접 업로드
                 console.log(`  2️⃣ [${file.name}] S3 직접 업로드 중...`);
                 const uploadRes = await fetch(uploadUrl, {
                     method: 'PUT',
@@ -1170,7 +1242,6 @@
                 const etag = uploadRes.headers.get('ETag');
                 console.log(`  ✅ [${file.name}] S3 업로드 성공! ETag:`, etag);
 
-                // 3. Complete 요청 (DB 저장)
                 console.log(`  3️⃣ [${file.name}] Complete 요청 중...`);
                 const completeRes = await fetch('/api/v1/attachments/complete', {
                     method: 'POST',

@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * 문서 처리 컨트롤러
  *
@@ -203,5 +205,30 @@ public class DocumentController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, message, docNo));
     }
+
+
+    /**
+     * AI 요약 생성 (문서 내용만 요약)
+     */
+    @PostMapping("/documents/ai-summary")
+    public ResponseEntity<ResponseDto<String>> generateAiSummary(
+            @AuthenticationPrincipal CustomUser customUser,
+            @RequestBody Map<String, String> request) {
+
+        String content = request.get("content");
+
+        // 최소 길이 검증
+        if (content == null || content.trim().length() < 100) {
+            throw new CustomException(ErrorCode.CONTENT_TOO_SHORT_FOR_SUMMARY);
+        }
+
+        // AI 요약 서비스 호출
+        String summary = documentService.generateAiSummary(content);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "AI 요약 생성 성공", summary));
+    }
+
 
 }
