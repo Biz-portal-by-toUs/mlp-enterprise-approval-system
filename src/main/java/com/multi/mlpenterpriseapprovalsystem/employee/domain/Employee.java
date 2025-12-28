@@ -158,4 +158,17 @@ public class Employee extends BaseEntity {
     public void updateObjectKey(String objectKey) {
         this.objectKey = objectKey;
     }
+
+    public void updateAdminInfo(Department dep, Positions pos,
+                                String email, String phone, String workPhone, String addr,
+                                String gen, RoleType role) {
+        this.department = dep;
+        this.positions = pos;
+        this.email = email;
+        this.phone = phone;
+        this.workPhone = workPhone;
+        this.addr = addr;
+        this.gen = gen;
+        this.role = role;
+    }
 }
