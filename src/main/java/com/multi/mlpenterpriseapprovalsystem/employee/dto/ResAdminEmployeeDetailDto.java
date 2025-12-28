@@ -5,7 +5,9 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 
 /**
  * 관리자용 사원 상세 DTO
@@ -43,6 +45,8 @@ public class ResAdminEmployeeDetailDto {
     private String workPhone;
     private String gen;
     private String addr;
+    private LocalDate birth;
+    private Integer age;
 
     // ===== 상태/권한 =====
     private RoleType role;
@@ -51,8 +55,8 @@ public class ResAdminEmployeeDetailDto {
     private String msgStat;
 
     // ===== 재직 =====
-    private LocalDateTime hireDate;
-    private LocalDateTime retDate;
+    private LocalDate hireDate;
+    private LocalDate retDate;
 
     // ===== 대직자 =====
     // - delegate FK가 emp_id라서 "수정 저장"에는 delegateEmpId가 핵심
@@ -64,6 +68,8 @@ public class ResAdminEmployeeDetailDto {
     // ===== 공통(BaseEntity) =====
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    private String objectKey;
 
     public static ResAdminEmployeeDetailDto from(Employee e) {
         if (e == null) return null;
@@ -95,6 +101,8 @@ public class ResAdminEmployeeDetailDto {
                 .workPhone(e.getWorkPhone())
                 .gen(e.getGen())
                 .addr(e.getAddr())
+                .birth(e.getBirth())
+                .age(calcAge(e.getBirth()))
 
                 // 상태/권한
                 .role(e.getRole())
@@ -114,6 +122,13 @@ public class ResAdminEmployeeDetailDto {
                 // BaseEntity
                 .createdAt(e.getCreatedAt())
                 .updatedAt(e.getUpdatedAt())
+
+                .objectKey(e.getObjectKey())
                 .build();
+    }
+
+    private static int calcAge(LocalDate birthDate) {
+        if (birthDate == null) return 0;
+        return Period.between(birthDate, LocalDate.now()).getYears();
     }
 }

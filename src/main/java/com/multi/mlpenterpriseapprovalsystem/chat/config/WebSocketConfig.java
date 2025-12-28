@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.config;
 
+import com.multi.mlpenterpriseapprovalsystem.chat.interceptor.CustomHandshakeInterceptor;
 import com.multi.mlpenterpriseapprovalsystem.chat.interceptor.StompAuthChannelInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
                 .setAllowedOriginPatterns("*")
+                .addInterceptors(new CustomHandshakeInterceptor()) // 인터셉터 추가
                 .withSockJS();
     }
 

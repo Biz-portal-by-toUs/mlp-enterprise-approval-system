@@ -8,5 +8,5 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.enums;
  * @since : 2025. 12. 24. 수요일
  */
 public enum AttachmentDomain {
-    MAIL, NOTICE, BOARD, APPROVAL, CLOUD, MEETING, RESERVATION, DOC_FORM
+    MAIL, NOTICE, BOARD, APPROVAL, CLOUD, MEETING, RESERVATION, DOC_FORM, EMPLOYEE
 }

@@ -150,7 +150,7 @@
 
         <div class="field">
             <label>보관위치</label>
-            <input type="text" name="loc" maxlength="20">
+            <input type="text" name="location" maxlength="20">
         </div>
 
         <div class="field">
@@ -172,11 +172,28 @@
 <script th:inline="javascript">
     /* ================== 공통 변수 ================== */
     const eqNo = /*[[${eqNo}]]*/ null;
-    const accessToken = localStorage.getItem("accessToken");
 
-    if (!accessToken) {
-        alert("로그인이 필요합니다.");
-        location.href = "/login";
+    // ✅ httpOnly cookie 기반 공통 fetch (쿠키 자동 포함)
+    const API_BASE = window.location.origin;
+
+    async function apiFetch(path, options = {}) {
+        const url = API_BASE + path;
+
+        const res = await fetch(url, {
+            ...options,
+            credentials: "include",
+            headers: {
+                ...(options.headers || {})
+            }
+        });
+
+        // 401/403이면 로그인으로
+        if (res.status === 401 || res.status === 403) {
+            alert("로그인이 필요합니다. 다시 로그인 해주세요.");
+            location.href = "/login";
+            throw new Error("UNAUTHORIZED");
+        }
+        return res;
     }
 
     if (!eqNo) {
@@ -218,12 +235,10 @@
             alert("설비명을 입력해주세요.");
             return false;
         }
-
         if (name.length > 20) {
             alert("설비명은 20자 이내입니다.");
             return false;
         }
-
         return true;
     }
 
@@ -232,30 +247,34 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
         try {
-            const res = await fetch(`/api/v1/shared-equipment/${eqNo}`, {
-                headers: {
-                    Authorization: "Bearer " + accessToken
-                }
+            // ✅ 조회는 GET
+            const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
+                method: "GET"
             });
 
             if (!res.ok) {
+                const text = await res.text();
+                console.error("[load fail]", res.status, text);
                 alert("공유 설비 정보를 불러오지 못했습니다.");
                 return;
             }
 
-            const eq = (await res.json()).data;
+            // ResponseDto 형태면 보통 { data: ... } 라서 안전하게 처리
+            const json = await res.json();
+            const eq = json.data ?? json;
 
-            document.querySelector("[name=eqName]").value = eq.eqName;
-            document.querySelector("[name=eqId]").value = eq.eqId;
+            document.querySelector("[name=eqName]").value = eq.eqName ?? "";
+            document.querySelector("[name=eqId]").value = eq.eqId ?? "";
             document.querySelector("[name=modelName]").value = eq.modelName ?? "";
-            document.querySelector("[name=loc]").value = eq.loc ?? "";
+            document.querySelector("[name=location]").value = eq.location ?? "";
 
             originalData = {
-                eqName: eq.eqName,
-                eqId: eq.eqId,
+                eqName: eq.eqName ?? "",
+                eqId: eq.eqId ?? "",
                 modelName: eq.modelName ?? "",
-                loc: eq.loc ?? "",
-                imageChanged: false};
+                location: eq.location ?? "",
+                imageChanged: false
+            };
 
             if (eq.imageUrl) {
                 const preview = document.getElementById("imagePreview");
@@ -272,24 +291,22 @@
     /* ================== 수정 submit ================== */
     document.getElementById("editForm").addEventListener("submit", async e => {
         e.preventDefault();
-
         if (!validateEditForm()) return;
 
         const formData = new FormData(e.target);
 
         try {
-            const res = await fetch(`/api/v1/shared-equipment/${eqNo}`, {
+            // ✅ 쿠키 인증이면 Authorization 헤더 붙이지 말기
+            // ✅ FormData 보낼 땐 Content-Type도 넣지 말기(브라우저가 boundary 자동 세팅)
+            const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
                 method: "PUT",
-                headers: {
-                    Authorization: "Bearer " + accessToken
-                },
                 body: formData
             });
 
-            const result = await res.json();
-
             if (!res.ok) {
-                alert(result.message || "공유 설비 수정 실패했습니다.");
+                const text = await res.text();
+                console.error("[update fail]", res.status, text);
+                alert("공유 설비 수정 실패했습니다.");
                 return;
             }
 
@@ -298,12 +315,12 @@
 
         } catch (e) {
             console.error(e);
+            if (String(e.message || "").includes("UNAUTHORIZED")) return;
             alert("서버 오류가 발생했습니다.");
         }
     });
 
-
-
+    /* ================== 변경 감지(버튼 enable/disable) ================== */
     function hasChanged() {
         if (!originalData) return false;
 
@@ -311,7 +328,7 @@
             eqName: document.querySelector("[name=eqName]").value.trim(),
             eqId: document.querySelector("[name=eqId]").value.trim(),
             modelName: document.querySelector("[name=modelName]").value.trim(),
-            loc: document.querySelector("[name=loc]").value.trim(),
+            location: document.querySelector("[name=location]").value.trim(),
             imageChanged: document.querySelector("[name=imageFile]").files.length > 0
         };
 
@@ -319,7 +336,7 @@
             current.eqName !== originalData.eqName ||
             current.eqId !== originalData.eqId ||
             current.modelName !== originalData.modelName ||
-            current.loc !== originalData.loc ||
+            current.location !== originalData.location ||
             current.imageChanged
         );
     }
@@ -337,14 +354,11 @@
     }
 
     document.querySelectorAll(
-        "input[name=eqName], input[name=eqId], input[name=modelName], input[name=loc]"
-    ).forEach(el => {
-        el.addEventListener("input", updateSubmitButton);
-    });
+        "input[name=eqName], input[name=eqId], input[name=modelName], input[name=location]"
+    ).forEach(el => el.addEventListener("input", updateSubmitButton));
 
     document.querySelector("[name=imageFile]")
         .addEventListener("change", updateSubmitButton);
-
 </script>
 
 </body>

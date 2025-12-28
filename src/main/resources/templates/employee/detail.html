@@ -102,6 +102,19 @@
             display:grid;place-items:center;color:#6b7280;font-weight:900;
             margin:0 auto;
             border:1px solid #d9dde5;
+            position:relative;
+            overflow:hidden;
+        }
+        .photo-box img{
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:none;
+        }
+        .photo-placeholder{
+            position:absolute; inset:0;
+            display:grid; place-items:center;
+            color:#6b7280; font-weight:900;
         }
 
         .kv{
@@ -206,9 +219,9 @@
     <!-- Sub navigation -->
     <nav class="subnav">
         <div class="title">관리자</div>
-        <a href="/admin/departments">부서 편성</a>
+        <a href="/admin/departments/list">부서 편성</a>
         <a href="/admin/positions/list">직급 편성</a>
-        <a class="active" href="/admin/employees">사원 관리</a>
+        <a class="active" href="/admin/employees/list">사원 관리</a>
         <a href="/admin/policies">사내 규정 관리</a>
     </nav>
 
@@ -223,7 +236,10 @@
                 <div class="detail-grid">
                     <!-- Left photo -->
                     <div>
-                        <div class="photo-box">사진</div>
+                        <div class="photo-box">
+                            <img id="empPhoto" alt="사원 사진"/>
+                            <div class="photo-placeholder" id="photoPlaceholder">사진</div>
+                        </div>
                     </div>
 
                     <!-- Right details -->
@@ -234,6 +250,9 @@
                             <div class="k">사번</div><div class="v" id="empId">-</div>
                             <div class="k">성별</div><div class="v" id="gen">-</div>
                             <div class="k">권한(Role)</div><div class="v" id="role">-</div>
+
+                            <div class="k">생년월일</div><div class="v" id="birth">-</div>
+                            <div class="k">나이</div><div class="v" id="age">-</div>
                         </div>
 
                         <div class="divider"></div>
@@ -243,9 +262,7 @@
                             <div class="k">회사</div><div class="v" id="company">-</div>
                             <div class="k">회사코드</div><div class="v muted" id="comId">-</div>
                             <div class="k">부서</div><div class="v" id="department">-</div>
-                            <div class="k">부서번호(depNo)</div><div class="v muted" id="depNo">-</div>
                             <div class="k">직급</div><div class="v" id="position">-</div>
-                            <div class="k">직급번호(posNo)</div><div class="v muted" id="posNo">-</div>
                         </div>
 
                         <div class="divider"></div>
@@ -289,7 +306,6 @@
                         <div class="actions">
                             <button class="btn primary" type="button" onclick="goEdit()">수정</button>
                             <button class="btn warn" type="button" onclick="retireEmployee()">퇴사</button>
-                            <button class="btn gray" type="button" onclick="deleteEmployee()">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -301,11 +317,12 @@
 <div id="toast" class="toast" aria-live="polite"></div>
 
 <script th:inline="javascript">
-    // ViewController가 model에 넣어준 empNo
     const EMP_NO = /*[[${empNo}]]*/ 0;
-    const API_DETAIL = `/api/v1/admin/employees/${EMP_NO}`;
 
-    // ===== Toast =====
+    const API_DETAIL = `/api/v1/admin/employees/${EMP_NO}`;
+    const API_ATTACH_LIST = (empNo) => `/api/v1/attachments?domain=EMPLOYEE&entityId=${empNo}`;
+    const API_PREVIEW_URL = (attachmentId) => `/api/v1/attachments/${attachmentId}/preview-url`;
+
     let toastTimer = null;
     function showToast(type, text){
         const el = document.getElementById("toast");
@@ -316,25 +333,26 @@
         toastTimer = setTimeout(()=> el.classList.remove("show"), 1800);
     }
 
-    // ===== Utils =====
+    function fmtDate(v){
+        if(!v) return "-";
+        const s = String(v);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        return s.slice(0, 10);
+    }
     function fmtDateTime(v){
         if(!v) return "-";
-        // "2025-12-28T01:24:53" 형태면 보기 좋게 변환
         return String(v).replace("T", " ").slice(0, 19);
     }
     function safe(v){ return (v === null || v === undefined || v === "") ? "-" : String(v); }
 
     function mapGen(v){
-        // 프로젝트 값에 맞춰 조정
         if(!v) return "-";
         const s = String(v).toUpperCase();
         if(s === "M") return "남";
         if(s === "F") return "여";
         return v;
     }
-
     function mapAtte(v){
-        // B: 출장, V: 휴가, C: 출근(예시)
         if(!v) return "-";
         const s = String(v).toUpperCase();
         if(s === "B") return "출장";
@@ -342,9 +360,7 @@
         if(s === "C") return "출근";
         return v;
     }
-
     function mapMsgStat(v){
-        // C: 근무중, M: 회의중, D: 집중, X: 자리비움, H: 출근안함(예시)
         if(!v) return "-";
         const s = String(v).toUpperCase();
         if(s === "C") return "근무 중";
@@ -356,7 +372,9 @@
     }
 
     function setText(id, v){
-        document.getElementById(id).textContent = safe(v);
+        const el = document.getElementById(id);
+        if(!el) return; // ✅ 없는 필드는 무시 (안전)
+        el.textContent = safe(v);
     }
 
     function setEmploymentStatus(isDeleted){
@@ -366,8 +384,102 @@
         pill.className = "pill " + (isDeleted ? "danger" : "ok");
         pill.textContent = isDeleted ? "퇴사" : "재직";
         el.appendChild(pill);
-        // raw 값도 보고 싶으면 아래 주석 해제
-        // const raw = document.createElement("span"); raw.className="pill"; raw.textContent=`isDeleted=${isDeleted}`; el.appendChild(raw);
+    }
+
+    function unwrap(maybe){
+        if(maybe && typeof maybe === "object" && "data" in maybe) return maybe.data;
+        return maybe;
+    }
+
+    function extractUrl(raw){
+        const unwrapped = unwrap(raw);
+        if(!unwrapped) return null;
+        if(typeof unwrapped === "object"){
+            if (unwrapped.url) return unwrapped.url;
+            if (unwrapped.previewUrl) return unwrapped.previewUrl;
+            if (unwrapped.presignedUrl) return unwrapped.presignedUrl;
+            if (unwrapped.data && typeof unwrapped.data === "object"){
+                if (unwrapped.data.url) return unwrapped.data.url;
+                if (unwrapped.data.previewUrl) return unwrapped.data.previewUrl;
+                if (unwrapped.data.presignedUrl) return unwrapped.data.presignedUrl;
+            }
+        }
+        return null;
+    }
+
+    async function loadPhoto(){
+        const img = document.getElementById("empPhoto");
+        const ph  = document.getElementById("photoPlaceholder");
+
+        img.style.display = "none";
+        img.removeAttribute("src");
+        ph.style.display = "grid";
+        ph.textContent = "사진";
+
+        try{
+            const listRes = await fetch(API_ATTACH_LIST(EMP_NO), {
+                method:"GET",
+                credentials:"include",
+                headers:{ "Accept":"application/json" }
+            });
+            if(!listRes.ok) return;
+
+            const listRaw = await listRes.json();
+            const listJson = unwrap(listRaw);
+            const items = Array.isArray(listJson) ? listJson : [];
+
+            const photoItem =
+                items.find(x => String(x.fileType || "").toUpperCase() === "IMAGE") ||
+                items.find(x => String(x.contentType || "").startsWith("image/")) ||
+                items[0];
+
+            if(!photoItem || !photoItem.attachmentId){
+                ph.textContent = "사진 없음";
+                return;
+            }
+
+            const attachmentId = photoItem.attachmentId;
+
+            const prevRes = await fetch(API_PREVIEW_URL(attachmentId), {
+                method:"GET",
+                credentials:"include",
+                headers:{ "Accept":"application/json" }
+            });
+
+            if(!prevRes.ok){
+                ph.textContent = "사진 불러오기 실패";
+                return;
+            }
+
+            const prevRaw = await prevRes.json();
+            console.log("preview raw=", prevRaw);
+
+            const url = extractUrl(prevRaw);
+            console.log("preview url=", url);
+
+            if(!url){
+                ph.textContent = "사진 URL 없음";
+                return;
+            }
+
+            img.onload = () => {
+                img.style.display = "block";
+                ph.style.display = "none";
+            };
+            img.onerror = () => {
+                img.style.display = "none";
+                ph.style.display = "grid";
+                ph.textContent = "사진 로드 실패";
+            };
+
+            img.crossOrigin = "anonymous";
+            img.referrerPolicy = "no-referrer";
+            img.src = url;
+
+        }catch(e){
+            console.error(e);
+            ph.textContent = "사진 로드 실패";
+        }
     }
 
     async function loadDetail(){
@@ -378,7 +490,7 @@
 
         const res = await fetch(API_DETAIL, {
             method: "GET",
-            credentials: "include",   // ✅ httpOnly cookie 전송
+            credentials: "include",
             headers: { "Accept":"application/json" }
         });
 
@@ -396,23 +508,21 @@
         }
 
         const json = await res.json();
-        // ResponseDto 형태: { status, message, data }
-        const d = json.data;
+        const d = unwrap(json);
 
-        // ✅ ResAdminEmployeeDetailDto 필드들 전부 표시
         setText("empNo", d.empNo);
         setText("empId", d.empId);
         setText("empName", d.empName);
         setText("gen", mapGen(d.gen));
         setText("role", d.role);
 
+        setText("birth", fmtDate(d.birth));
+        setText("age", (d.age === null || d.age === undefined || d.age === 0) ? "-" : `${d.age}세`);
+
         setText("comId", d.comId);
         setText("company", `${safe(d.comName)} (${safe(d.comId)})`);
 
-        setText("depNo", d.depNo);
         setText("department", safe(d.depName));
-
-        setText("posNo", d.posNo);
         setText("position", safe(d.posName));
 
         setText("email", d.email);
@@ -420,8 +530,8 @@
         setText("workPhone", d.workPhone);
         setText("addr", d.addr);
 
-        setText("hireDate", fmtDateTime(d.hireDate));
-        setText("retDate", fmtDateTime(d.retDate));
+        setText("hireDate", fmtDate(d.hireDate));
+        setText("retDate", fmtDate(d.retDate));
 
         setEmploymentStatus(d.isDeleted);
 
@@ -433,17 +543,15 @@
 
         setText("createdAt", fmtDateTime(d.createdAt));
         setText("updatedAt", fmtDateTime(d.updatedAt));
+
+        loadPhoto().catch(console.error);
     }
 
-    // ===== Buttons (경로는 너 프로젝트에 맞게 조정) =====
     function goEdit(){
-        // 예: /admin/employees/{empNo}/edit 페이지 만들어두면 여기로
         location.href = `/admin/employees/${EMP_NO}/edit`;
     }
 
     async function retireEmployee(){
-        // ⚠️ 너 퇴사 처리 API가 아직 없으면, 아래는 “틀”만 제공
-        // 예) PATCH /api/v1/admin/employees/{empNo}/retire
         const ok = confirm("해당 사원을 퇴사 처리할까요?");
         if(!ok) return;
 
@@ -462,29 +570,6 @@
         }catch(e){
             console.error(e);
             showToast("err", "퇴사 처리 중 오류");
-        }
-    }
-
-    async function deleteEmployee(){
-        // ⚠️ 삭제 API가 없다면, 아래는 “틀”만
-        const ok = confirm("정말 삭제할까요? (복구 불가)");
-        if(!ok) return;
-
-        try{
-            const res = await fetch(`/api/v1/admin/employees/${EMP_NO}`, {
-                method: "DELETE",
-                credentials: "include",
-                headers: {"Accept":"application/json"}
-            });
-            if(res.ok){
-                showToast("ok", "삭제되었습니다.");
-                setTimeout(()=> location.href="/admin/employees", 400);
-                return;
-            }
-            showToast("err", `삭제 실패 (HTTP ${res.status})`);
-        }catch(e){
-            console.error(e);
-            showToast("err", "삭제 중 오류");
         }
     }
 

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 @Controller
 @RequestMapping("/chat")
-public class ChatViewController {
+public class ViewChatController {
 
 
     // 메인(사원탭/채팅탭)
