@@ -419,11 +419,9 @@
     });
 
     async function loadDocumentDetail(docNo) {
-        const token = localStorage.getItem('accessToken');
-
         try {
             const response = await fetch(`/api/v1/documents/${docNo}?status=AWAITING`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
 
             const result = await response.json();
@@ -582,13 +580,12 @@
     // ✅ 승인 처리
     async function confirmApprove() {
         hideApproveModal();
-        const token = localStorage.getItem('accessToken');
 
         try {
             const response = await fetch(`/api/v1/documents/${currentDocNo}/process`, {
                 method: 'PATCH',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -615,14 +612,13 @@
     // ✅ 반려 처리
     async function confirmReject() {
         hideRejectConfirmModal();
-        const token = localStorage.getItem('accessToken');
         const rejReason = document.getElementById('reject-reason-input').value.trim();
 
         try {
             const response = await fetch(`/api/v1/documents/${currentDocNo}/process`, {
                 method: 'PATCH',
+                credentials: 'include',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({

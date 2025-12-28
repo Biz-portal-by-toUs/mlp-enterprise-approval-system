@@ -280,8 +280,8 @@
 
 <script th:inline="javascript">
     const API_URL = '/api/v1/documents/me?status=SUBMITTED';
-    let currentBasis = 'SUBMIT';   // ✅ 정렬 기준 (SUBMIT, APPR)
-    let currentOrder = 'LATEST';   // ✅ 정렬 순서 (LATEST, OLDEST)
+    let currentBasis = 'SUBMIT';
+    let currentOrder = 'LATEST';
     let currentPage = 0;
     let allCategories = [];
 
@@ -292,23 +292,16 @@
         loadData(0);
     });
 
-    /**
-     * ✅ 드롭다운(정렬기준) 변경 시 호출
-     */
     function applySort() {
         currentBasis = document.getElementById('sort-basis').value;
         currentPage = 0;
         loadData(0);
     }
 
-    /**
-     * ✅ 클릭(정렬순서) 변경 시 호출
-     */
     function changeOrder(order) {
         currentOrder = order;
         currentPage = 0;
 
-        // active 클래스 업데이트
         document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
         document.getElementById('order-' + order).classList.add('active');
 
@@ -316,10 +309,9 @@
     }
 
     async function fetchMyEmployeeInfo() {
-        const token = localStorage.getItem('accessToken');
         try {
             const response = await fetch('/api/v1/temp/employees/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
 
@@ -336,10 +328,9 @@
     }
 
     async function fetchCategoryNames() {
-        const token = localStorage.getItem('accessToken');
         try {
             const response = await fetch('/api/v1/temp/documentFormCategoryNames', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const result = await response.json();
 
@@ -395,15 +386,13 @@
 
     async function loadData(page) {
         currentPage = page;
-        const token = localStorage.getItem('accessToken');
         const catValue = document.getElementById('search-docfoCatName').value;
 
-        // ✅ 정렬값 조합: SUBMIT_LATEST, APPR_OLDEST 등
         const sortValue = `${currentBasis}_${currentOrder}`;
 
         const params = new URLSearchParams({
             page: page,
-            sort: sortValue, // ✅ 조합된 정렬값 전달
+            sort: sortValue,
             docfoCatName: catValue === '전체' ? '' : catValue,
             writerDepName: document.getElementById('search-writerDepName').value,
             docStat: document.getElementById('search-docStat').value,
@@ -415,7 +404,10 @@
 
         try {
             const response = await fetch(`${API_URL}&${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
             const result = await response.json();
             if (result.status === 200) {
@@ -437,7 +429,6 @@
         docs.forEach((doc, index) => {
             const no = (currentPage * pageSize) + index + 1;
 
-            // ✅ 최근 결재일 계산
             let latestApprovalDate = '-';
             if (doc.resApprovalLineDtos && Array.isArray(doc.resApprovalLineDtos)) {
                 const approvedLines = doc.resApprovalLineDtos
@@ -519,16 +510,14 @@
         return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
     }
 
-    // ✅ 반려 모달 열기
     let currentRejectDocNo = null;
 
     async function showRejectModal(docNo) {
         currentRejectDocNo = docNo;
-        const token = localStorage.getItem('accessToken');
 
         try {
             const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
 
             const result = await response.json();
