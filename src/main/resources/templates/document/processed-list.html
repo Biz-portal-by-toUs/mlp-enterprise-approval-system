@@ -128,6 +128,63 @@
                 transform: translateY(0);
             }
         }
+
+        /* ✅ AI 요약 모달 스타일 */
+        .ai-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease-out;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .ai-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #7950f2;
+            padding-bottom: 15px;
+        }
+
+        .ai-modal-title {
+            margin: 0;
+            color: #7950f2;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #868e96;
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-modal-body {
+            background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%);
+            border: 1px solid #d0bfff;
+            border-radius: 10px;
+            padding: 25px;
+            min-height: 120px;
+            color: #333;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
@@ -275,6 +332,22 @@
 
         <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 30px;">
             <button onclick="closeRejectModal()" style="padding: 12px 28px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.2s;" onmouseover="this.style.background='#dee2e6'" onmouseout="this.style.background='#e9ecef'">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ AI 요약 모달 -->
+<div id="ai-summary-modal" class="modal-overlay">
+    <div class="ai-modal-content">
+        <div class="ai-modal-header">
+            <h3 class="ai-modal-title">
+                <span>🤖</span>
+                <span>AI 요약</span>
+            </h3>
+            <button onclick="closeAiSummaryModal()" class="ai-modal-close">&times;</button>
+        </div>
+        <div id="ai-summary-text" class="ai-modal-body">
+            AI 요약 내용이 여기에 표시됩니다.
         </div>
     </div>
 </div>
@@ -483,7 +556,7 @@
                 <td>${formatDate(doc.submittedAt)}</td>
                 <td>${myApprBadge}</td>
                 <td>${myApprovalDate}</td>
-                <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="alert('AI요약을 조회합니다.')">보기</button>` : '-'}</td>
+                <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -539,11 +612,34 @@
         document.getElementById('reject-modal').classList.remove('show');
     }
 
+    // ✅ AI 요약 모달 함수
+    function showAiSummaryModal(summary) {
+        document.getElementById('ai-summary-text').textContent = summary || 'AI 요약 내용이 없습니다.';
+        document.getElementById('ai-summary-modal').classList.add('show');
+    }
+
+    function closeAiSummaryModal() {
+        document.getElementById('ai-summary-modal').classList.remove('show');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/'/g, '&#39;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     // ✅ 모달 외부 클릭 시 닫기
     document.addEventListener('click', (e) => {
-        const modal = document.getElementById('reject-modal');
-        if (e.target === modal) {
+        const rejectModal = document.getElementById('reject-modal');
+        const aiModal = document.getElementById('ai-summary-modal');
+
+        if (e.target === rejectModal) {
             closeRejectModal();
+        }
+        if (e.target === aiModal) {
+            closeAiSummaryModal();
         }
     });
 
