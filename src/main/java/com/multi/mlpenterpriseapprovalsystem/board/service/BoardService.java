@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.multi.mlpenterpriseapprovalsystem.board.domain.Board;
+import com.multi.mlpenterpriseapprovalsystem.board.domain.BoardCat;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.board.repository.BoardCatRepository;
 import com.multi.mlpenterpriseapprovalsystem.board.repository.BoardRepository;
@@ -192,8 +193,10 @@ public class BoardService {
 
         boardRepository.incrementRating(boardNo);
 
-        Board board = boardRepository.findById(boardNo).orElseThrow(() -> new IllegalArgumentException("자유게시판이 존재하지 않습니다"));
-
+        Board board = boardRepository.findById(boardNo)
+                      .orElseThrow(() -> new IllegalArgumentException("자유게시판이 존재하지 않습니다"));
+        BoardCat boardCat = boardCatRepository.findByCatCode(board.getCatCode())
+                       .orElseThrow(() -> new IllegalArgumentException("카테고리가 존재하지 않습니다"));
         return BoardResAllDto.builder()
                 .boardNo(board.getBoardNo())
                 .compId(board.getCompany().getComId())
@@ -201,6 +204,7 @@ public class BoardService {
                 .title(board.getTitle())
                 .contents(denormalizeFromJson(board.getContents()))
                 .catCode(board.getCatCode())
+                .catDescript(boardCat.getCatDescript())
                 .empId(board.getEmployee().getEmpId())
                 .empName(board.getEmployee().getEmpName())
                 .depName(board.getEmployee().getDepartment().getDepName())

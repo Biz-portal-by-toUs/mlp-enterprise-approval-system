@@ -307,6 +307,169 @@
             border-color: rgba(107,114,128,.35);
         }
 
+        /* ✅ 댓글 등록 UI */
+        .comment-editor{
+            margin-top: 14px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 12px;
+        }
+
+        .comment-editor textarea{
+            width: 100%;
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            resize: vertical;
+            outline: none;
+        }
+
+        .comment-editor textarea:focus{
+            border-color: rgba(59,130,246,.45);
+            box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+        }
+
+        .comment-editor__footer{
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .comment-editor__counter{
+            color: var(--muted);
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        .comment-editor__actions{
+            display: flex;
+            gap: 8px;
+        }
+
+        /* =========================
+   ✅ 댓글(관련 댓글) 영역만 세련되게
+   ========================= */
+        #comment{
+            margin-top: 12px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 14px;
+        }
+
+        #commentList{
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        /* 헤더 */
+        #commentList thead th{
+            text-align: left;
+            font-size: .9rem;
+            color: var(--muted);
+            background: rgba(17,24,39,.03);
+            padding: 12px 12px;
+            border-bottom: 1px solid rgba(17,24,39,.08);
+            font-weight: 900;
+        }
+
+        /* 바디 */
+        #commentList tbody td{
+            padding: 14px 12px;
+            border-bottom: 1px solid rgba(17,24,39,.06);
+            font-size: .95rem;
+            color: var(--text);
+            vertical-align: top;
+        }
+
+        #commentList tbody tr:hover td{
+            background: rgba(59,130,246,.05);
+        }
+
+        /* 내용 칸을 “말풍선/카드”처럼 */
+        .comment-content{
+            display: inline-block;
+            max-width: 100%;
+            background: rgba(17,24,39,.03);
+            border: 1px solid rgba(17,24,39,.06);
+            border-radius: 12px;
+            padding: 10px 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        /* 작성자/부서 텍스트 정리 */
+        .comment-meta{
+            display: inline-flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .comment-meta .name{
+            font-weight: 900;
+            color: var(--text);
+        }
+
+        .comment-meta .dept{
+            font-size: .85rem;
+            font-weight: 800;
+            color: var(--muted);
+        }
+
+        /* 날짜 */
+        .comment-date{
+            font-size: .85rem;
+            font-weight: 800;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        /* 일련번호 */
+        .comment-no{
+            font-weight: 900;
+            color: var(--muted);
+            width: 80px;
+        }
+
+        /* 댓글이 없을 때 */
+        .comment-empty{
+            padding: 18px 10px;
+            color: var(--muted);
+            font-weight: 900;
+            text-align: center;
+        }
+
+        /* 반응형: 작은 화면에서 내용 위주로 */
+        @media (max-width: 720px){
+            #commentList thead{ display: none; }
+            #commentList, #commentList tbody, #commentList tr, #commentList td{
+                display: block;
+                width: 100%;
+            }
+            #commentList tbody tr{
+                border: 1px solid rgba(17,24,39,.06);
+                border-radius: 14px;
+                margin-bottom: 10px;
+                overflow: hidden;
+            }
+            #commentList tbody td{
+                border-bottom: 1px solid rgba(17,24,39,.06);
+            }
+            #commentList tbody td:last-child{
+                border-bottom: none;
+            }
+            .comment-no{ width: auto; }
+        }
+
 
     </style>
 </head>
@@ -323,7 +486,7 @@
         <div class="notice-info">
             <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
             <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
-            <p><strong>카테고리:</strong> <span id="noticeCategroy"></span></p>
+            <p><strong>카테고리:</strong> <span id="noticeCategory"></span></p>
             <p class="triple">
                 <strong>작성자:</strong> <span id="noticeWriter"></span>
                 <strong>직번:</strong> <span id="noticeWriterId"></span>
@@ -352,6 +515,25 @@
         <table id="commentList"></table>
     </div>
 
+    <!-- ✅ 댓글 등록 입력란 -->
+    <div id="commentEditor" class="comment-editor">
+      <textarea id="commentContents"
+                placeholder="의견입력"
+                rows="5"></textarea>
+
+            <div class="comment-editor__footer">
+                <div class="comment-editor__counter">
+                    <span id="commentByte">0</span>/600bytes
+                </div>
+
+                <div class="comment-editor__actions">
+                    <button type="button" class="btn btn-sm" id="commentSubmitBtn">등록</button>
+                    <button type="button" class="btn btn-sm" id="commentCancelBtn">취소</button>
+                </div>
+            </div>
+      </div>
+
+
     <div class="mt-4">
         <a href="/board/list" class="btn">목록으로</a>
         <button id="delete-btn" class="btn ms-2" onclick="deleteBoard()">삭제하기</button>
@@ -377,7 +559,7 @@
                 const board = result.data;
                 $('#noticeTitle').text(board.title);
                 $('#noticeDescription').text(board.contents);
-                $('#noticeCategory').text(board.catCode);
+                $('#noticeCategory').text(board.catDescrit);
                 $('#noticeRating').text(board.rating);
                 $('#noticeWriter').text(board.empName);
                 $('#noticeWriterId').text(board.empId);
@@ -604,29 +786,46 @@
 
             const commentList = $('#commentList').empty();
 
-            if (result.data.length === 0) {
-                commentList.append(`
-                    등록된 댓글이 없습니다.
-                `);
+            if (!result.data || result.data.length === 0) {
+                commentList.html(`<tr><td colspan="5">등록된 댓글이 없습니다.</td></tr>`);
                 return;
             }
+
             if (result.status === 200 && result.data) {
                 const comments = result.data;
                 console.log(comments);
                 commentList.append(`
-                    <tr><th>일련번호</th><th>내용</th><th>작성자</th><th>부서</th><th>등록일자</th></tr>
+                    <thead>
+                        <tr>
+                          <th>일련번호</th>
+                          <th>내용</th>
+                          <th>작성자</th>
+                          <th>부서</th>
+                          <th>등록일자</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
                 `);
 
+                const tbody = commentList.find("tbody");
                 comments.forEach((r,index) => {
 
                     const createdAt = r.createdAt ? r.createdAt.substring(0, 10) : "-";
-                    commentList.append(`
+                    tbody.append(`
                         <tr>
-                            <td>${index+1}</td>
-                            <td>${r.contents}</td>
-                            <td>${r.empName}</td>
-                            <td>${r.depName}</td>
-                            <td>${createdAt}</td>
+                              <td class="comment-no">${index + 1}</td>
+                              <td><div class="comment-content">${r.contents ?? ""}</div></td>
+                              <td>
+                                <div class="comment-meta">
+                                  <div class="name">${r.empName ?? "-"}</div>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="comment-meta">
+                                  <div class="dept">${r.depName ?? "-"}</div>
+                                </div>
+                              </td>
+                              <td class="comment-date">${createdAt}</td>
                         </tr>
                     `);
                 });
@@ -639,8 +838,105 @@
         }
     }
 
+    //=====================================================================================
+    // ✅ UTF-8 기준 bytes 계산
+    function getUtf8Bytes(str) {
+        return new Blob([str ?? ""], { type: "text/plain; charset=UTF-8" }).size;
+    }
+
+    // ✅ 600 bytes 제한(초과 시 잘라내기)
+    function enforceByteLimit(text, limitBytes = 600) {
+        if (!text) return "";
+
+        let lo = 0, hi = text.length;
+        // 이진 탐색으로 limitBytes에 맞는 최대 길이 찾기
+        while (lo < hi) {
+            const mid = Math.ceil((lo + hi) / 2);
+            const sliced = text.slice(0, mid);
+            if (getUtf8Bytes(sliced) <= limitBytes) lo = mid;
+            else hi = mid - 1;
+        }
+        return text.slice(0, lo);
+    }
+
+    function updateCommentByteCounter() {
+        const ta = document.getElementById("commentContents");
+        const counter = document.getElementById("commentByte");
+
+        const limited = enforceByteLimit(ta.value, 600);
+        if (limited !== ta.value) ta.value = limited;
+
+        counter.textContent = String(getUtf8Bytes(ta.value));
+    }
+
+    // ✅ 댓글 등록
+    async function submitComment() {
+        const token = localStorage.getItem("accessToken");
+        const contentsEl = document.getElementById("commentContents");
+        const contents = (contentsEl.value ?? "").trim();
+
+        if (!contents) {
+            alert("댓글 내용을 입력해주세요.");
+            contentsEl.focus();
+            return;
+        }
+
+        // FormData로 multipart/form-data 전송 (@ModelAttribute 매핑)
+        const fd = new FormData();
+        fd.append("boardNo", String(boardNo));
+        fd.append("contents", contents);
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/comment`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                    // ✅ Content-Type 넣지 마세요 (boundary 자동 설정)
+                },
+                body: fd
+            });
+
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                console.error("댓글 등록 실패:", res.status, json);
+                alert("댓글 등록 실패: " + (json?.message ?? res.statusText));
+                return;
+            }
+
+            // 성공 처리
+            alert(json?.message ?? "댓글 등록 성공");
+            contentsEl.value = "";
+            updateCommentByteCounter();
+
+            // ✅ 댓글 목록 다시 불러오기
+            await initComment();
+
+        } catch (e) {
+            console.error(e);
+            alert("댓글 등록 중 오류: " + (e?.message ?? e));
+        }
+    }
+
+    function cancelComment() {
+        const contentsEl = document.getElementById("commentContents");
+        contentsEl.value = "";
+        updateCommentByteCounter();
+    }
+
+
     document.addEventListener('DOMContentLoaded', () => {
         loadBoardDetail();
+        const ta = document.getElementById("commentContents");
+        const submitBtn = document.getElementById("commentSubmitBtn");
+        const cancelBtn = document.getElementById("commentCancelBtn");
+
+        if (ta) {
+            ta.addEventListener("input", updateCommentByteCounter);
+            updateCommentByteCounter();
+        }
+        if (submitBtn) submitBtn.addEventListener("click", submitComment);
+        if (cancelBtn) cancelBtn.addEventListener("click", cancelComment);
     });
 </script>
 </body>

@@ -1,11 +1,14 @@
 package com.multi.mlpenterpriseapprovalsystem.board.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.board.dto.BoardResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.CommentDto;
 import com.multi.mlpenterpriseapprovalsystem.board.service.CommentService;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -31,6 +34,19 @@ public class CommentController {
     public ResponseEntity<String> delete(@PathVariable(name="commentNo") Long commentNo) {
         commentService.deleteComment(commentNo);
         return ResponseEntity.ok("댓글이 삭제되었습니다.");
+    }
+
+    @PostMapping(value ="/comment", consumes = {"multipart/form-data"})
+    public ResponseEntity<ResponseDto> regiComment(@ModelAttribute CommentDto dto, @AuthenticationPrincipal CustomUser customUser) {
+
+        dto.setComId(customUser.getComId());
+        dto.setEmpId(customUser.getUsername());
+        commentService.registComment(dto);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<BoardResAllDto>(HttpStatus.OK, "댓글 등록 성공", null));
+
     }
 
 
