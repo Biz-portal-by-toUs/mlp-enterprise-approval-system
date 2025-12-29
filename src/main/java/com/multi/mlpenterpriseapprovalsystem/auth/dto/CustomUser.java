@@ -1,10 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.auth.dto;
 
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -21,6 +18,7 @@ import java.util.Collection;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Getter
 public class CustomUser implements UserDetails {
 
     private Long subjectId;                 // comNo or empNo
