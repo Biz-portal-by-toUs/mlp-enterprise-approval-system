@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>회사 인증</title>
+    <style>
+        :root{
+            --primary:#2f6fda;
+            --bg:#f3f5f9;
+            --card:#ffffff;
+            --text:#111;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --shadow:0 18px 50px rgba(17,24,39,.08);
+            --radius:16px;
+            --danger:#ef4444;
+            --ok:#22c55e;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+        .shell{min-height:100vh;padding:22px}
+        .frame{background:#fff;border:1px solid #e6e6e6;border-radius:8px; padding:22px; min-height:calc(100vh - 44px);}
+        .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 6px;}
+        .brand{font-weight:800;font-size:34px;letter-spacing:-.4px}
+        .nav{display:flex;gap:16px;color:var(--text);font-weight:600}
+        .nav a{color:inherit;text-decoration:none}
+        .right{display:flex;gap:10px}
+        .btn{height:38px;padding:0 16px;border-radius:10px;border:1px solid #cfd6e4;background:#fff;font-weight:600;cursor:pointer;}
+        .center{display:flex;align-items:center;justify-content:center;padding:56px 0 40px;}
+        .card{
+            width:min(620px, 92vw);
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            padding:28px 26px 24px;
+        }
+        .title{font-size:40px;font-weight:900;text-align:center;margin:0 0 18px;}
+        .field{margin:16px 0;}
+        .label{font-size:12px;color:var(--muted);font-weight:800;letter-spacing:.4px;margin:0 0 6px;}
+        .input{
+            width:100%;height:48px;border-radius:12px;border:1px solid var(--line);
+            padding:0 14px;font-size:15px;outline:none;
+        }
+        .input:focus{border-color:#b7c9f5;box-shadow:0 0 0 4px rgba(47,111,218,.12);}
+        .actions{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+        .primary{
+            width:320px;height:50px;border-radius:12px;border:0;background:var(--primary);color:#fff;
+            font-weight:800;cursor:pointer;
+        }
+        .helper{font-size:13px;color:var(--muted);text-align:center}
+        .msg{margin-top:10px;font-size:13px;text-align:center}
+        .msg.ok{color:var(--ok)}
+        .msg.bad{color:var(--danger)}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <div class="frame">
+        <div class="topbar">
+            <div class="brand">Bizportal</div>
+            <div class="nav">
+                <a href="#">요금제</a>
+                <a href="#">마이페이지</a>
+            </div>
+            <div class="right">
+                <button class="btn" type="button" onclick="location.href='/'">메인</button>
+            </div>
+        </div>
+
+        <div class="center">
+            <div class="card">
+                <div class="title">Verify</div>
+
+                <!-- ✅ form으로 묶어서 Enter로도 제출되게 -->
+                <form id="verifyForm" autocomplete="off">
+                    <div class="field">
+                        <div class="label">EMAIL</div>
+                        <input id="email" name="email" class="input" type="email"
+                               placeholder="예) admin@c01.com" maxlength="50" required />
+                    </div>
+
+                    <div class="field">
+                        <div class="label">BRN (사업자등록번호)</div>
+                        <input id="brn" name="brn" class="input" type="text"
+                               placeholder="예) 10120203030" inputmode="numeric" maxlength="20" required />
+                    </div>
+
+                    <div class="actions">
+                        <button id="verifyBtn" class="primary" type="submit">인증하기</button>
+                        <div class="helper">이메일 + 사업자등록번호가 일치하면 인증 성공 처리</div>
+                        <div id="msg" class="msg"></div>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ✅ 너가 쓰는 API 경로로 맞추기
+    // 백엔드에서 실제 만든 경로로 맞춰줘.
+    // 예) /api/v1/auth/verify/company 로 쓰고 있으면 그걸로!
+    const VERIFY_URL = "/auth/verify/company";
+
+    // ✅ sessionStorage 저장 키(비밀번호 변경 페이지에서 동일하게 사용)
+    const SS_SUBJECT_ID_KEY = "companyPwSubjectId";
+    const SS_SUBJECT_TYPE_KEY = "companyPwSubjectType";
+    const COMPANY_TYPE = "COMPANY";
+
+    function showMsg(text, ok) {
+        const el = document.getElementById("msg");
+        el.textContent = text;
+        el.className = "msg " + (ok ? "ok" : "bad");
+    }
+
+    function isValidEmail(email){
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function setVerifiedSession(subjectId){
+        // ✅ 기존 값 있으면 덮어쓰기
+        sessionStorage.setItem(SS_SUBJECT_ID_KEY, String(subjectId));
+        sessionStorage.setItem(SS_SUBJECT_TYPE_KEY, COMPANY_TYPE);
+    }
+
+    document.getElementById("verifyForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("email").value.trim();
+        const brn = document.getElementById("brn").value.trim();
+
+        if (!email) return showMsg("이메일을 입력해주세요.", false);
+        if (!isValidEmail(email)) return showMsg("이메일 형식이 올바르지 않습니다.", false);
+        if (!brn) return showMsg("사업자등록번호를 입력해주세요.", false);
+
+        // 선택) 숫자만 허용하고 싶으면 주석 해제
+        // if (!/^\d+$/.test(brn)) return showMsg("사업자등록번호는 숫자만 입력해주세요.", false);
+
+        try {
+            const res = await fetch(VERIFY_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, brn })
+            });
+
+            if (!res.ok) {
+                let err = "인증 실패";
+                try { err = (await res.json()).message || err; } catch(e) {}
+                showMsg(err, false);
+                return;
+            }
+
+            // ✅ ResVerifyDto 응답에서 subjectId(comNo) 받기
+            const data = await res.json();
+            console.log("verify raw response = ", data);
+
+            // 서버 DTO가 SubjectId로 내려갈 수도 있어서 둘 다 대응
+            const subjectId =
+                data?.subjectId ??
+                data?.SubjectId ??
+                data?.data?.subjectId ??
+                data?.data?.SubjectId ??
+                data?.result?.subjectId ??
+                data?.result?.SubjectId ??
+                data?.comNo ??
+                data?.empNo;
+
+            if (subjectId === null || subjectId === undefined) {
+                showMsg("인증 응답에 subjectId가 없습니다. (서버 응답 확인 필요)", false);
+                return;
+            }
+
+            // ✅ 인증 성공: comNo + subjectType 저장
+            sessionStorage.setItem("companyPwSubjectId", String(subjectId));
+            sessionStorage.setItem("companyPwSubjectType", "COMPANY");
+
+            showMsg("인증 성공! 비밀번호 변경 페이지로 이동합니다.", true);
+            setTimeout(() => location.href = "/auth/companies/password", 450);
+
+        } catch (e) {
+            showMsg("요청 실패: " + e.message, false);
+        }
+    });
+</script>
+</body>
+</html>
