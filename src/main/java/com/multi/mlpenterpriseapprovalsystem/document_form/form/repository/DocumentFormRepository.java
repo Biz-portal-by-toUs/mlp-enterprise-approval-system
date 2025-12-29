@@ -15,11 +15,19 @@ import org.springframework.data.repository.query.Param;
  * @filename : DocumentFormRepository
  * @since : 2025-12-22 월요일
  */
+
 public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long> {
 
-    Page<ResDocumentFormListDto> findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(
+    Page<DocumentForm> findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(
             DocumentFormStats stat,
             String comId,
+            Pageable pageable
+    );
+
+    Page<DocumentForm> findByDocfoStatAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+            DocumentFormStats stat,
+            String comId,
+            String docfoName,
             Pageable pageable
     );
 
@@ -31,4 +39,13 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
     """)
     int updateDocfoStat(@Param("docfoNo") Long docfoNo,
                         @Param("stat") DocumentFormStats stat);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update DocumentForm d
+           set d.rejectReason = :rejectReason
+         where d.docfoNo = :docfoNo
+    """)
+    int updateRejectReason(@Param("docfoNo") Long docfoNo,
+                           @Param("rejectReason") String rejectReason);
 }

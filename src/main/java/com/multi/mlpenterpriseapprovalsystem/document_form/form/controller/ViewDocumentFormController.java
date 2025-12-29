@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
 
+import lombok.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,32 +18,34 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 
 @Controller
-@RequestMapping("/document-form/manager/form")
+@RequestMapping("/form")
+@RequiredArgsConstructor
 public class ViewDocumentFormController {
 
-    // 목록 화면
     @GetMapping("/forms")
-    public String formListPage() {
-        return "document-form/manager/form/form-list";
+    public String formList() {
+        return "document-form/form-list";
     }
 
-    // 생성 화면
-    @GetMapping("/make-form")
-    public String makeForm() {
-        return "document-form/manager/form/make-form";
-    }
-
-    // 수정 화면
-    @GetMapping("/update-form")
-    public String updateForm(@RequestParam("docfoNo") Long docfoNo, Model model) {
-        model.addAttribute("docfoNo", docfoNo);
-        return "document-form/manager/form/update-form";
-    }
-
-    // 상세 화면
     @GetMapping("/{docfoNo}")
-    public String detail(@PathVariable("docfoNo") Long docfoNo, Model model) {
+    public String formDetail(@PathVariable Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
-        return "document-form/manager/form/detail";
+        return "document-form/detail";
+    }
+
+    @GetMapping("/new")
+    public String createForm() {
+        return "document-form/make-form";
+    }
+
+    @GetMapping("/{docfoNo}/edit")
+    public String updateForm(@PathVariable Long docfoNo, Model model) {
+        model.addAttribute("docfoNo", docfoNo);
+        return "document-form/update-form";
+    }
+
+    @GetMapping("/pending")
+    public String pendingList() {
+        return "document-form/pending-form-list";
     }
 }

@@ -14,9 +14,9 @@ import java.util.List;
 public record ResDocumentFormDetailDto(
         Long docfoNo,
         String docfoName,
-        String docfoId,
-        JsonNode cnttJson,
+        String cnttJson,
         String cnttHtml,
+        String rejectReason,
         List<ResDocumentFormCategoryNameDto> categories
 ) {
 }

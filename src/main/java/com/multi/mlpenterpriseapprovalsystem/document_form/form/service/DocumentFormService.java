@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
@@ -20,6 +21,7 @@ public interface DocumentFormService {
     Page<ResDocumentFormListDto> findListByStatus(
             DocumentFormStats stat,
             String comId,
+            String keyword,
             Pageable pageable
     );
 
@@ -27,7 +29,14 @@ public interface DocumentFormService {
 
     Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId);
 
-    Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req, String comId, String writerId);
+    Long updateDocumentForm(
+            Long docfoNo,
+            ReqDocumentFormCreateDto req,
+            String comId,
+            String writerId
+    );
 
     void deleteDocumentForm(Long docfoNo, String comId);
+
+    void changeStatus(Long docfoNo, String comId, DocumentFormStats stat, String rejectReason);
 }

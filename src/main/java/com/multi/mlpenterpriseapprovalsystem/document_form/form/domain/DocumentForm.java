@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
  * @filename : DocumentForm
  * @since : 2025. 12. 16. 화요일
  */
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -46,7 +47,7 @@ public class DocumentForm {
     private String cnttJson;
 
     @Lob
-    @Column(columnDefinition ="MEDIUMTEXT", nullable = false)
+    @Column(columnDefinition ="MEDIUMTEXT", nullable = true)
     private String cnttHtml;
 
     // 명세서에 created_at만 존재하므로 BaseEntity 상속 대신 직접 정의
@@ -73,7 +74,7 @@ public class DocumentForm {
         f.docfoName = docfoName;
         f.cnttJson = cnttJson;
         f.cnttHtml = cnttHtml;
-        f.docfoStat = DocumentFormStats.A; // 승인 로직 개발 후 T로 수정
+        f.docfoStat = DocumentFormStats.P; // 승인 로직 개발 후 T로 수정
         return f;
     }
 
