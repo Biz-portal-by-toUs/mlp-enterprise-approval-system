@@ -44,7 +44,12 @@ public class JwtFilter extends OncePerRequestFilter {
     };
 
     private static final String[] WILDCARD_PATHS = {
-            "/auth/**",
+            "/auth/companies/**",
+            "/auth/employee/**",
+            "/auth/refresh",
+            "/auth/logout",
+            "/auth/password",
+            "/auth/verify/**",
             "/public/**",
             "/swagger-ui/**"
     };
