@@ -21,4 +21,6 @@ public class ReqCompanyIdentityVerifyDto {
     @Email
     @Size(max = 50)
     private String email;
+
+    private String brn;
 }
