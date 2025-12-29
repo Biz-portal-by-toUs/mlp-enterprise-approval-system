@@ -48,11 +48,13 @@ public class AuthService {
     private final SubscriptionRepository subscriptionRepository;
     private final BusinessVerificationService businessVerificationService;
 
+    private static final String DEFAULT_PASSWORD = "1234";
+
     @Transactional(readOnly = true)
     public boolean isRegisteredBusiness(String brn) {
         if (!businessVerificationService.isRegisteredBusiness(brn)) {
             throw new CustomException(ErrorCode.INVALID_BRN);
-        } else if(companyRepository.existsByBrn(brn)) {
+        } else if (companyRepository.existsByBrn(brn)) {
             throw new CustomException(ErrorCode.BRN_DUPLICATE);
         }
         return true;
@@ -85,7 +87,7 @@ public class AuthService {
         }
 
         // 5) sub_no=1 연결 (회원가입 시 기본 요금제)
-        Subscription basic = subscriptionRepository.findById((long)1)
+        Subscription basic = subscriptionRepository.findById((long) 1)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
         // 6) Company 생성 + 저장
@@ -138,7 +140,13 @@ public class AuthService {
         }
 
         // 3) 토큰 발급 + refresh 쿠키 세팅
-        return tokenService.createToken(user, response);
+        ResTokenDto res = tokenService.createToken(user, response);
+
+        boolean mustChange = passwordEncoder.matches(DEFAULT_PASSWORD, user.getPassword());
+
+        return res.toBuilder()
+                .mustChangePassword(mustChange)
+                .build();
     }
 
 
@@ -148,7 +156,7 @@ public class AuthService {
         // comId 무조건 대문자 처리
         comId = comId.trim().toUpperCase();
 
-        if(companyRepository.existsByComId(comId)) {
+        if (companyRepository.existsByComId(comId)) {
             throw new CustomException(ErrorCode.DUPLICATE_COMID);
         }
         return true;
