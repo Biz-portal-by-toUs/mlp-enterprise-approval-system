@@ -102,6 +102,25 @@
             font-size:18px;
             background:transparent;
         }
+
+        /* ✅ 눈 버튼 */
+        .eye-btn{
+            width:44px;
+            height:36px;
+            border:0;
+            background:transparent;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:0;
+            margin:-6px -4px -6px 0; /* input-wrap 패딩과 자연스럽게 */
+            opacity:.7;
+            flex:0 0 auto;
+        }
+        .eye-btn:hover{opacity:1}
+        .eye-btn svg{width:20px;height:20px;display:block}
+
         .login-btn{
             margin-top:6px;
             border:0;
@@ -167,6 +186,14 @@
                     <div class="label">PASSWORD</div>
                     <div class="input-wrap">
                         <input id="password" name="password" type="password" placeholder="••••" autocomplete="current-password" required />
+
+                        <!-- ✅ 눈 버튼 추가 -->
+                        <button class="eye-btn" type="button" aria-label="toggle password" data-target="password">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -184,6 +211,16 @@
 </div>
 
 <script>
+    // ✅ 비밀번호 보기/숨기기
+    document.querySelectorAll('.eye-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-target');
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.type = (input.type === 'password') ? 'text' : 'password';
+        });
+    });
+
     const form = document.getElementById('company-login-form');
     const serverError = document.getElementById('serverError');
 
@@ -212,8 +249,6 @@
             const result = await safeJson(res);
 
             if (res.ok) {
-                // ✅ accessToken/refreshToken은 서버가 Set-Cookie로 내려주면
-                // 브라우저가 httpOnly 쿠키로 자동 저장함 (localStorage 저장 X)
                 window.location.href = '/';
             } else {
                 serverError.textContent = result?.message || `로그인 실패 (${res.status})`;
