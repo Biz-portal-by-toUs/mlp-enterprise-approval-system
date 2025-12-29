@@ -547,10 +547,11 @@
 
     async function loadBoardDetail() {
         try {
-            const token = localStorage.getItem('accessToken');
+
             const response = await fetch(`${API_BASE}/api/v1/board/${boardNo}`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                credentials: "include",
+                headers: {'Content-Type': 'application/json' }
             });
 
             const result = await response.json();
@@ -583,10 +584,11 @@
 
     async function initAttach() {
         try {
-            const token = localStorage.getItem('accessToken');
+
             const response = await fetch(`${API_BASE}/api/v1/attachments?domain=BOARD&entityId=${boardNo}`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                credentials: "include",
+                headers: { 'Content-Type': 'application/json' }
             });
 
             const result = await response.json();
@@ -657,12 +659,11 @@
     }
 
     async function fetchDownloadUrl(attachmentId) {
-        const token = localStorage.getItem('accessToken');
 
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
             method: "GET",
+            credentials: "include",
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json'
             }
         });
@@ -683,12 +684,12 @@
     }
 
     async function fetchPreviewloadUrl(attachmentId) {
-        const token = localStorage.getItem('accessToken');
+
 
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
             method: "GET",
+            credentials: "include",
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json'
             }
         });
@@ -751,14 +752,13 @@
         if (!confirm("정말 삭제하시겠습니까?")) return;
 
        // const reviewId = document.getElementById("reviewId").value;
-        const accessToken = localStorage.getItem("accessToken");
+
 
         try {
             const res = await fetch(`/api/v1/board/${boardNo}`, {
                 method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`
-                }
+                credentials: "include"
+
             });
 
             if (res.ok) {
@@ -775,10 +775,11 @@
 
     async function initComment() {
         try {
-            const token = localStorage.getItem('accessToken');
+
             const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: "include"
+
             });
             console.log("comments status:", response.status);
 
@@ -871,7 +872,7 @@
 
     // ✅ 댓글 등록
     async function submitComment() {
-        const token = localStorage.getItem("accessToken");
+
         const contentsEl = document.getElementById("commentContents");
         const contents = (contentsEl.value ?? "").trim();
 
@@ -889,10 +890,8 @@
         try {
             const res = await fetch(`${API_BASE}/api/v1/comment`, {
                 method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                    // ✅ Content-Type 넣지 마세요 (boundary 자동 설정)
-                },
+                credentials: "include",
+
                 body: fd
             });
 

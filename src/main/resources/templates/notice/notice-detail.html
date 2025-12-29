@@ -368,10 +368,11 @@
 
     async function loadPlaceDetail() {
         try {
-            const token = localStorage.getItem('accessToken');
+
             const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                credentials: "include",
+                headers: { 'Content-Type': 'application/json' }
             });
 
             const result = await response.json();
@@ -419,10 +420,11 @@
 
     async function initAttach() {
         try {
-            const token = localStorage.getItem('accessToken');
+
             const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                credentials: "include",
+                headers: { 'Content-Type': 'application/json' }
             });
 
             const result = await response.json();
@@ -493,12 +495,12 @@
     }
 
     async function fetchDownloadUrl(attachmentId) {
-        const token = localStorage.getItem('accessToken');
+
 
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
             method: "GET",
+            credentials: "include",
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json'
             }
         });
@@ -519,12 +521,12 @@
     }
 
     async function fetchPreviewloadUrl(attachmentId) {
-        const token = localStorage.getItem('accessToken');
+
 
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
             method: "GET",
+            credentials: "include",
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json'
             }
         });
@@ -587,14 +589,11 @@
         if (!confirm("정말 삭제하시겠습니까?")) return;
 
        // const reviewId = document.getElementById("reviewId").value;
-        const accessToken = localStorage.getItem("accessToken");
 
         try {
             const res = await fetch(`/api/v1/notice/${noticeNo}`, {
                 method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`
-                }
+                credentials: "include"
             });
 
             if (res.ok) {
