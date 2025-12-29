@@ -9,6 +9,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,7 +37,7 @@ public class AuthController {
 
     @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<Void>> signUpCompany(
-            @ModelAttribute ReqCompanySignupDto reqCompanySignupDto,
+            @ModelAttribute @Valid ReqCompanySignupDto reqCompanySignupDto,
             @RequestPart(value = "logo", required = false) MultipartFile logo
     ) {
         ResponseDto<Void> response = authService.signUpCompany(reqCompanySignupDto, logo);
@@ -102,4 +103,5 @@ public class AuthController {
         tokenService.logout(request, response);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "로그아웃 성공", null));
     }
+
 }
