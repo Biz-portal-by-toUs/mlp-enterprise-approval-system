@@ -38,13 +38,26 @@ public class ViewAuthController {
 
     // 회사 인증 페이지
     @GetMapping("/companies/verify")
-    public String verifyPage() {
+    public String verifyCompanyPage() {
         return "company/common/verify";
     }
 
-    // 비밀번호 변경 페이지
+    // 회사 비밀번호 변경 페이지
     @GetMapping("/companies/password")
-    public String changePage() {
+    public String changeCompanyPwdPage() {
         return "company/common/password";
     }
+
+    // 사원 인증 페이지
+    @GetMapping("/employee/verify")
+    public String verifyEmployeePage() {
+        return "employee/common/verify";
+    }
+
+    // 사원 비밀번호 변경 페이지
+    @GetMapping("/employee/password")
+    public String changeEmployeePwdPage() {
+        return "employee/common/password";
+    }
+
 }
