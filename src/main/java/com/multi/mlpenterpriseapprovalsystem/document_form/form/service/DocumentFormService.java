@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
@@ -15,16 +17,26 @@ import org.springframework.data.domain.Pageable;
  */
 
 public interface DocumentFormService {
+
     Page<ResDocumentFormListDto> findListByStatus(
             DocumentFormStats stat,
+            String comId,
+            String keyword,
             Pageable pageable
     );
 
-    ResDocumentFormDetailDto findDetailById(Long docfoNo);
+    ResDocumentFormDetailDto findDetailById(Long docfoNo, String comId);
 
-    //Long createDocumentForm(ReqDocumentFormCreateDto req);
+    Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId);
 
-    void deleteDocumentForm(Long docfoNo);
+    Long updateDocumentForm(
+            Long docfoNo,
+            ReqDocumentFormCreateDto req,
+            String comId,
+            String writerId
+    );
 
-    //Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req);
+    void deleteDocumentForm(Long docfoNo, String comId);
+
+    void changeStatus(Long docfoNo, String comId, DocumentFormStats stat, String rejectReason);
 }

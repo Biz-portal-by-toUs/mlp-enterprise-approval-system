@@ -1,4 +1,4 @@
-// static/src/detail.js
+// static/src/detail-form.js
 
 const TIPTAP_V = '2.11.2'
 

@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
 
+import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
+
 /**
  * Please explain the class!!!
  *
@@ -9,5 +11,6 @@ package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
  */
 
 public record ResDocumentFormUpdateDto(
+        Company company,
         Long newDocfoNo
 ) {}

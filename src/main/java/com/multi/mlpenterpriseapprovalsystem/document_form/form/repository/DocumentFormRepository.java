@@ -15,22 +15,21 @@ import org.springframework.data.repository.query.Param;
  * @filename : DocumentFormRepository
  * @since : 2025-12-22 월요일
  */
+
 public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long> {
 
-    Page<DocumentForm> findByDocfoStatOrderByDocfoNoAsc(DocumentFormStats docfoStat, Pageable pageable);
+    Page<DocumentForm> findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(
+            DocumentFormStats stat,
+            String comId,
+            Pageable pageable
+    );
 
-    @Query("""
-        select new com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto(
-            d.docfoNo,
-            d.docfoName,
-            d.docfoStat
-        )
-          from DocumentForm d
-         where d.docfoStat = :stat
-         order by d.docfoNo asc
-    """)
-    Page<ResDocumentFormListDto> findListByDocfoStat(@Param("stat") DocumentFormStats stat,
-                                                     Pageable pageable);
+    Page<DocumentForm> findByDocfoStatAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+            DocumentFormStats stat,
+            String comId,
+            String docfoName,
+            Pageable pageable
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -40,4 +39,13 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
     """)
     int updateDocfoStat(@Param("docfoNo") Long docfoNo,
                         @Param("stat") DocumentFormStats stat);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update DocumentForm d
+           set d.rejectReason = :rejectReason
+         where d.docfoNo = :docfoNo
+    """)
+    int updateRejectReason(@Param("docfoNo") Long docfoNo,
+                           @Param("rejectReason") String rejectReason);
 }
