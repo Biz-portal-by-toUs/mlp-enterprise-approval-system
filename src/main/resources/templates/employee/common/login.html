@@ -242,6 +242,13 @@
         try { return await res.json(); } catch { return {}; }
     }
 
+    function getMustChangePassword(result){
+        // ✅ ResponseDto 형태(data 안에 있을 수도, 루트에 있을 수도 있어서 둘 다 대응)
+        // 예) { message, data: { mustChangePassword: true, ... } }
+        // 예) { mustChangePassword: true, ... }
+        return Boolean(result?.data?.mustChangePassword ?? result?.mustChangePassword);
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         serverError.style.display = 'none';
@@ -261,6 +268,15 @@
             const result = await safeJson(res);
 
             if (res.ok) {
+                const mustChangePassword = getMustChangePassword(result);
+
+                if (mustChangePassword) {
+                    alert('초기 비밀번호입니다. 보안을 위해 비밀번호를 변경해주세요.');
+                    // ✅ 인증부터 진행
+                    window.location.href = '/auth/employee/verify';
+                    return;
+                }
+
                 alert(result?.message || '로그인 성공!');
                 window.location.href = '/employees';
             } else {
