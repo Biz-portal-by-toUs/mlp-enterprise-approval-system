@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
 /**
  * Please explain the class!!!
  *
@@ -41,6 +43,7 @@ public class CommentController {
 
         dto.setComId(customUser.getComId());
         dto.setEmpId(customUser.getUsername());
+        dto.setCreatedAt(LocalDateTime.now());
         commentService.registComment(dto);
 
         return ResponseEntity

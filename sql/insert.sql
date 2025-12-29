@@ -408,3 +408,4 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 use bizportal;
 select * from comment;
+select * from board_cat;
