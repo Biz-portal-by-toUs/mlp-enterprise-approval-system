@@ -10,8 +10,6 @@
             --text:#111;
             --border:#d7d7d7;
             --primary:#2f66d7;
-
-            /* ✅ 성공 포인트 컬러 */
             --success:#16a34a;
             --successBorder: rgba(22,163,74,.35);
         }
@@ -109,7 +107,6 @@
             border-radius:10px;
         }
 
-        /* ✅ 토스트 */
         .toast{
             position:fixed;
             left:50%;
@@ -181,18 +178,10 @@
     const mainDesc = document.getElementById('mainDesc');
     const toastEl = document.getElementById('toast');
 
-    const ME_URL = "/auth/me";         // ✅ 너가 만든 API
-    const LOGOUT_URL = "/auth/logout"; // ✅ 너 프로젝트 로그아웃 API(쿠키 삭제)
-
-    function goCompanyLogin() { window.location.href = '/auth/companies/login'; }
+    function goCompanyLogin()  { window.location.href = '/auth/companies/login'; }
     function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
     function goCompanySignup() { window.location.href = '/auth/companies/signup'; }
-
-    function goDashboardBySubjectType(subjectType) {
-        // ✅ subjectType: COMPANY / EMPLOYEE
-        if (subjectType === 'EMPLOYEE') window.location.href = '/employee';
-        else window.location.href = '/company';
-    }
+    function goCompanyDashboard(){ window.location.href = '/company'; }
 
     function showToast(message, type = 'success', ms = 1000) {
         toastEl.textContent = message;
@@ -201,56 +190,32 @@
         toastEl.classList.add('show');
         window.setTimeout(() => toastEl.classList.remove('show'), ms);
     }
-    function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
 
-    // ✅ ResponseDto 래핑 대비
-    async function safeJson(res) {
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.includes('application/json')) return null;
-        try { return await res.json(); } catch { return null; }
-    }
-
-    // ✅ /auth/me 호출해서 로그인 상태 판단
-    async function fetchMe() {
-        try {
-            const res = await fetch(ME_URL, {
-                method: "GET",
-                credentials: "include" // ✅ HttpOnly 쿠키 전송 핵심
-            });
-
-            // 서버가 200으로 내려주고 body에 authenticated=false를 담는 구조라면
-            const body = await safeJson(res);
-            if (!body) return { authenticated: false };
-
-            // ResponseDto<ResMeDto> 구조 가정: { status, message, data }
-            const data = body.data || body.result || body.body || body; // 혹시 몰라서 방어
-            // 너는 data에 ResMeDto 넣는다고 했으니:
-            if (data && data.authenticated === true) return data;
-            return { authenticated: false };
-        } catch (e) {
-            console.warn("fetchMe failed:", e);
-            return { authenticated: false };
-        }
-    }
-
-    // ✅ 로그아웃: 쿠키 삭제 요청
     async function doLogout() {
         try {
-            const res = await fetch(LOGOUT_URL, {
-                method: "POST",
-                credentials: "include" // ✅ 쿠키 기반이면 무조건
-            });
-
-            if (!res.ok && res.status !== 401) {
-                console.warn("logout not ok:", res.status);
-            }
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' });
         } catch (e) {
-            console.warn("logout failed:", e);
+            console.warn('logout request failed:', e);
         } finally {
-            showToast("로그아웃 성공", "success", 900);
-            await sleep(900);
-            window.location.href = "/";
+            showToast('로그아웃 성공', 'success', 900);
+            setTimeout(() => window.location.href = '/', 900);
         }
+    }
+
+    function toStr(v){ return (v == null) ? '' : String(v).trim(); }
+    function toUpper(v){ return toStr(v).toUpperCase(); }
+
+    // ✅ boolean/문자열 모두 처리
+    function parseBoolean(v){
+        if (v === true) return true;
+        if (v === false || v == null) return false;
+        const s = toUpper(v);
+        return s === 'TRUE' || s === '1' || s === 'Y' || s === 'YES';
+    }
+
+    function isCompanySubjectType(st){
+        const t = toUpper(st);
+        return t === 'COMPANY' || t.includes('COMPANY') || t.startsWith('COM');
     }
 
     function renderLoggedOut() {
@@ -275,32 +240,72 @@
         document.getElementById('btnCompanySignupMain').addEventListener('click', goCompanySignup);
     }
 
-    function renderLoggedIn(me) {
-        const whoText = (me.subjectType === 'EMPLOYEE') ? '사원' : '회사';
-        const idText = me.username ? ` · ${me.username}` : (me.subjectId ? ` · #${me.subjectId}` : '');
+    function renderCompanyLoggedIn(username) {
+        const whoLine = username ? `${username}이 로그인했습니다.` : '회사 계정이 로그인했습니다.';
 
         navRight.innerHTML = `
-            <span class="who">${whoText} 로그인됨${idText}</span>
+            <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
+            <span class="who">${whoLine}</span>
             <button class="btn primary" type="button" id="btnDashboard">대시보드</button>
             <button class="btn" type="button" id="btnLogout">로그아웃</button>
         `;
-        document.getElementById('btnDashboard').addEventListener('click', () => goDashboardBySubjectType(me.subjectType));
+        document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
+        document.getElementById('btnDashboard').addEventListener('click', goCompanyDashboard);
         document.getElementById('btnLogout').addEventListener('click', doLogout);
 
         mainTitle.textContent = 'Hello';
-        mainDesc.textContent = `${whoText} 계정으로 로그인되어 있습니다. 계속 진행해 주세요.`;
+        mainDesc.textContent = whoLine + ' 계속 진행해 주세요.';
         mainActions.innerHTML = `
-            <button class="btn primary" type="button" id="btnDashboardMain">대시보드로 이동</button>
+            <button class="btn primary" type="button" id="btnDashboardMain">회사 대시보드로 이동</button>
+            <button class="btn" type="button" id="btnEmployeeMain">사원 로그인 페이지로</button>
             <button class="btn" type="button" id="btnLogoutMain">로그아웃</button>
         `;
-        document.getElementById('btnDashboardMain').addEventListener('click', () => goDashboardBySubjectType(me.subjectType));
+        document.getElementById('btnDashboardMain').addEventListener('click', goCompanyDashboard);
+        document.getElementById('btnEmployeeMain').addEventListener('click', goEmployeeLogin);
         document.getElementById('btnLogoutMain').addEventListener('click', doLogout);
     }
 
+    function extractData(json){
+        if (!json || typeof json !== 'object') return null;
+        // 네 응답 구조: { data: {...}, message, status }
+        return json.data ?? json.result ?? json.body ?? json.response ?? null;
+    }
+
+    async function fetchMe() {
+        const res = await fetch('/auth/me', {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store'
+        });
+        if (!res.ok) return null;
+
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) return null;
+
+        const json = await res.json().catch(() => null);
+        return extractData(json);
+    }
+
     async function boot() {
-        const me = await fetchMe();
-        if (me && me.authenticated) renderLoggedIn(me);
-        else renderLoggedOut();
+        try {
+            const me = await fetchMe();
+
+            // ✅ 여기! 네 응답은 authenticated로 내려옴
+            const authenticated = parseBoolean(me?.authenticated);
+
+            const subjectType = me?.subjectType;
+            const username = me?.username;
+
+            // ✅ 회사 로그인만 표시
+            if (authenticated && isCompanySubjectType(subjectType)) {
+                renderCompanyLoggedIn(username);
+            } else {
+                renderLoggedOut();
+            }
+        } catch (e) {
+            console.warn('boot failed:', e);
+            renderLoggedOut();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', boot);
