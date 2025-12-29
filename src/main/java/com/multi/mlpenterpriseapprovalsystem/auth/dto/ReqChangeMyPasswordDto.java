@@ -1,7 +1,9 @@
 package com.multi.mlpenterpriseapprovalsystem.auth.dto;
 
 import com.multi.mlpenterpriseapprovalsystem.common.enums.TokenSubjectType;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,10 +19,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ReqChangeMyPasswordDto {
 
+    @NotNull(message = "subjectId는 필수입니다.")
     private Long subjectId;
 
+    @NotNull(message = "subjectType은 필수입니다.")
     private TokenSubjectType subjectType;
-
 
     @NotBlank(message = "현재 비밀번호는 필수입니다.")
     private String currentPassword;
@@ -35,6 +38,7 @@ public class ReqChangeMyPasswordDto {
     @NotBlank(message = "새 비밀번호 확인은 필수입니다.")
     private String newPasswordConfirm;
 
+    @AssertTrue(message = "새 비밀번호 확인이 일치하지 않습니다.")
     public boolean isNewPasswordConfirmed() {
         return newPassword != null && newPassword.equals(newPasswordConfirm);
     }
