@@ -34,4 +34,5 @@ public interface SharedEquipmentReservationRepository extends JpaRepository<Shar
                               @Param("startedAt") LocalDateTime startedAt,
                               @Param("endedAt") LocalDateTime endedAt);
 
+    List<SharedEquipmentReservation> findAllByCompany_ComIdAndResvEmp_EmpIdAndStartedAtBetween(String comId, String empId, LocalDateTime from, LocalDateTime toExclusive);
 }

@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.notice.dto;
+package com.multi.mlpenterpriseapprovalsystem.board.dto;
 
 import java.time.LocalDateTime;
 
@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
  * @filename : ApiResponse
  * @since : 2025-12-22 월요일
  */
-public record NoticeListItemResDto(
-        Long noticeNo,
+public record BoardListItemResDto(
+        Long boardNo,
         String title,
         String empId,
         String empName,

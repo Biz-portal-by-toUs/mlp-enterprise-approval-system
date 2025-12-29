@@ -935,6 +935,9 @@ INSERT INTO mail_attach (mail_attach_no, mail_id, path, size) VALUES
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+use bizportal;
+select * from comment;
+select * from board_cat;
 
 USE bizportal;
 SET FOREIGN_KEY_CHECKS = 0;
