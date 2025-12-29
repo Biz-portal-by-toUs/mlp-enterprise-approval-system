@@ -208,9 +208,9 @@
 
     <aside class="subnav">
         <div class="title">직급 편성</div>
-        <a href="/admin/departments">부서 편성</a>
+        <a href="/admin/departments/list">부서 편성</a>
         <a class="active" href="/admin/positions/list">직급 편성</a>
-        <a href="/admin/employees">사원 관리</a>
+        <a href="/admin/employees/list">사원 관리</a>
         <a href="/admin/rules">사내 규정 관리</a>
     </aside>
 
@@ -275,15 +275,6 @@
 <div id="toast" class="toast" aria-live="polite"></div>
 
 <script>
-    function getAccessToken() {
-        return (
-            localStorage.getItem("accessToken") ||
-            localStorage.getItem("jwt") ||
-            sessionStorage.getItem("accessToken") ||
-            sessionStorage.getItem("jwt")
-        );
-    }
-
     // ===== Toast =====
     let toastTimer = null;
     function showToast(type, text) {
@@ -316,31 +307,28 @@
         if (e.target.id === "confirmBackdrop") closeConfirm();
     });
 
+    async function safeJson(res) {
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     async function loadPositions() {
-        const token = getAccessToken();
         const tbody = document.getElementById("posTbody");
         const emptyBox = document.getElementById("emptyBox");
 
         tbody.innerHTML = "";
         emptyBox.style.display = "none";
 
-        if (!token) {
-            emptyBox.style.display = "block";
-            emptyBox.textContent = "로그인이 필요합니다. (토큰 없음)";
-            return;
-        }
-
         const res = await fetch("/api/v1/admin/positions", {
             method: "GET",
-            headers: {
-                "Authorization": "Bearer " + token,
-                "Accept": "application/json"
-            }
+            headers: { "Accept": "application/json" },
+            credentials: "include" // ✅ httpOnly 쿠키(accessToken) 자동 전송
         });
 
         if (res.status === 401) {
             emptyBox.style.display = "block";
-            emptyBox.textContent = "인증이 만료되었습니다. 다시 로그인 해주세요.";
+            emptyBox.textContent = "로그인이 필요합니다. 다시 로그인 해주세요.";
             return;
         }
         if (res.status === 403) {
@@ -354,7 +342,7 @@
             return;
         }
 
-        const json = await res.json();
+        const json = await safeJson(res);
         const list = json.data || [];
 
         if (!list.length) {
@@ -399,11 +387,6 @@
 
     // ✅ 삭제 버튼 클릭 -> 모달 오픈
     function onDeleteClick(posNo, posName) {
-        const token = getAccessToken();
-        if (!token) {
-            showToast("err", "로그인이 필요합니다. (토큰 없음)");
-            return;
-        }
         openConfirm(posNo, posName);
     }
 
@@ -412,25 +395,17 @@
         if (!pendingDelete) return;
 
         const { posNo, posName } = pendingDelete;
-        const token = getAccessToken();
-        if (!token) {
-            closeConfirm();
-            showToast("err", "로그인이 필요합니다. (토큰 없음)");
-            return;
-        }
 
         try {
             const res = await fetch(`/api/v1/admin/positions/${posNo}`, {
                 method: "DELETE",
-                headers: {
-                    "Authorization": "Bearer " + token,
-                    "Accept": "application/json"
-                }
+                headers: { "Accept": "application/json" },
+                credentials: "include" // ✅ httpOnly 쿠키(accessToken) 자동 전송
             });
 
             if (res.status === 401) {
                 closeConfirm();
-                showToast("err", "인증이 만료되었습니다. 다시 로그인 해주세요.");
+                showToast("err", "로그인이 필요합니다. 다시 로그인 해주세요.");
                 return;
             }
             if (res.status === 403) {
@@ -441,10 +416,8 @@
 
             if (!res.ok) {
                 let msg = `직급 삭제 중 오류가 발생했습니다. (${res.status})`;
-                try {
-                    const json = await res.json();
-                    if (json && (json.message || json.msg)) msg = json.message || json.msg;
-                } catch (e) {}
+                const json = await safeJson(res);
+                if (json && (json.message || json.msg)) msg = json.message || json.msg;
                 closeConfirm();
                 showToast("err", msg);
                 return;

@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문서 작성 - 양식 선택</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Urbanist:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.12);
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* 헤더 영역 */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 24px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-family: 'Urbanist', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* 검색 및 필터 영역 */
+        .controls-section {
+            max-width: 1400px;
+            margin: 32px auto;
+            padding: 0 32px;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 48px 14px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .category-filter {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 8px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--card-bg);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .filter-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* 메인 콘텐츠 영역 */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto 60px;
+            padding: 0 32px;
+        }
+
+        .result-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .result-count {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .result-count strong {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .view-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+            background: var(--bg-main);
+        }
+
+        .view-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* 카드 그리드 */
+        .forms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-card {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .form-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), #60a5fa);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .form-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .form-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .form-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .form-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .form-category {
+            background: #eff6ff;
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .form-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .form-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .form-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 리스트 뷰 */
+        .forms-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-list-item {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .form-list-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .form-list-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .form-list-content {
+            flex: 1;
+        }
+
+        .form-list-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .form-list-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .form-list-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* 빈 상태 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-description {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* 로딩 상태 */
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .header-content,
+            .controls-section,
+            .main-content {
+                padding: 0 20px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .search-bar {
+                flex-direction: column;
+            }
+
+            .forms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .result-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 헤더 -->
+<div class="header">
+    <div class="header-content">
+        <div>
+            <h1 class="page-title">문서 양식 선택</h1>
+            <p class="page-subtitle">작성할 문서 양식을 선택해주세요</p>
+        </div>
+    </div>
+</div>
+
+<!-- 검색 및 필터 -->
+<div class="controls-section">
+    <div class="search-bar">
+        <div class="search-input-wrapper">
+            <input type="text" id="searchInput" class="search-input" placeholder="양식 이름으로 검색...">
+            <span class="search-icon">🔍</span>
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <span class="filter-label">카테고리:</span>
+        <div class="category-filter" id="categoryFilter">
+            <div class="filter-chip active" data-category="all">전체</div>
+        </div>
+    </div>
+</div>
+
+<!-- 메인 콘텐츠 -->
+<div class="main-content">
+    <div class="result-info">
+        <div class="result-count">
+            총 <strong id="totalCount">0</strong>개의 양식
+        </div>
+        <div class="view-toggle">
+            <button class="view-btn active" id="gridViewBtn" title="카드 뷰">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                </svg>
+            </button>
+            <button class="view-btn" id="listViewBtn" title="리스트 뷰">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <rect x="3" y="4" width="2" height="4"></rect>
+                    <rect x="3" y="10" width="2" height="4"></rect>
+                    <rect x="3" y="16" width="2" height="4"></rect>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- 로딩 상태 -->
+    <div class="loading-container" id="loadingContainer">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 카드 그리드 뷰 -->
+    <div class="forms-grid" id="formsGrid" style="display: none;"></div>
+
+    <!-- 리스트 뷰 -->
+    <div class="forms-list" id="formsList" style="display: none;"></div>
+
+    <!-- 빈 상태 -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">📄</div>
+        <h3 class="empty-title">검색 결과가 없습니다</h3>
+        <p class="empty-description">다른 검색어나 필터를 시도해보세요</p>
+    </div>
+</div>
+
+<script>
+    // 전역 변수
+    let allForms = [];
+    let filteredForms = [];
+    let currentView = 'grid';
+    let selectedCategory = 'all';
+    let allCategories = new Set();
+
+    // 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDocumentForms();
+        initEventListeners();
+    });
+
+    // 이벤트 리스너 초기화
+    function initEventListeners() {
+        // 검색
+        document.getElementById('searchInput').addEventListener('input', handleSearch);
+
+        // 뷰 토글
+        document.getElementById('gridViewBtn').addEventListener('click', () => switchView('grid'));
+        document.getElementById('listViewBtn').addEventListener('click', () => switchView('list'));
+    }
+
+    // API 호출: 전체 문서양식 조회
+    async function loadDocumentForms() {
+        try {
+            const response = await fetch('/api/v1/temp/documentForms', {
+                credentials: 'include'
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.data) {
+                allForms = result.data;
+                extractCategories();
+                renderCategoryFilters();
+                filteredForms = [...allForms];
+                renderForms();
+            } else {
+                showError('문서 양식을 불러오는데 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('문서 양식 조회 실패:', error);
+            showError('서버 연결에 실패했습니다.');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // 카테고리 추출
+    function extractCategories() {
+        allCategories.clear();
+        allForms.forEach(form => {
+            if (form.tempResDocumentFormCategoryDtos && form.tempResDocumentFormCategoryDtos.length > 0) {
+                form.tempResDocumentFormCategoryDtos.forEach(cat => {
+                    allCategories.add(cat.docfoCatName);
+                });
+            }
+        });
+    }
+
+    // 카테고리 필터 렌더링
+    function renderCategoryFilters() {
+        const container = document.getElementById('categoryFilter');
+
+        // "전체" 버튼 유지
+        const allChip = container.querySelector('[data-category="all"]');
+        container.innerHTML = '';
+        container.appendChild(allChip);
+
+        // 카테고리 칩 추가
+        allCategories.forEach(category => {
+            const chip = document.createElement('div');
+            chip.className = 'filter-chip';
+            chip.dataset.category = category;
+            chip.textContent = category;
+            chip.addEventListener('click', () => handleCategoryFilter(category));
+            container.appendChild(chip);
+        });
+
+        // "전체" 버튼 이벤트
+        allChip.addEventListener('click', () => handleCategoryFilter('all'));
+    }
+
+    // 카테고리 필터 처리
+    function handleCategoryFilter(category) {
+        selectedCategory = category;
+
+        // 활성 상태 업데이트
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.classList.remove('active');
+            if (chip.dataset.category === category) {
+                chip.classList.add('active');
+            }
+        });
+
+        applyFilters();
+    }
+
+    // 검색 처리
+    function handleSearch(e) {
+        applyFilters();
+    }
+
+    // 필터 적용
+    function applyFilters() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+
+        filteredForms = allForms.filter(form => {
+            // 검색어 필터
+            const matchesSearch = !searchTerm ||
+                form.docfoName.toLowerCase().includes(searchTerm);
+
+            // 카테고리 필터
+            const matchesCategory = selectedCategory === 'all' ||
+                (form.tempResDocumentFormCategoryDtos &&
+                    form.tempResDocumentFormCategoryDtos.some(cat => cat.docfoCatName === selectedCategory));
+
+            return matchesSearch && matchesCategory;
+        });
+
+        renderForms();
+    }
+
+    // 문서 양식 렌더링
+    function renderForms() {
+        document.getElementById('totalCount').textContent = filteredForms.length;
+
+        if (filteredForms.length === 0) {
+            showEmptyState();
+            return;
+        }
+
+        hideEmptyState();
+
+        if (currentView === 'grid') {
+            renderGridView();
+        } else {
+            renderListView();
+        }
+    }
+
+    // 그리드 뷰 렌더링
+    function renderGridView() {
+        const container = document.getElementById('formsGrid');
+        container.innerHTML = '';
+
+        filteredForms.forEach((form, index) => {
+            const card = createGridCard(form, index);
+            container.appendChild(card);
+        });
+
+        container.style.display = 'grid';
+        document.getElementById('formsList').style.display = 'none';
+    }
+
+    // 리스트 뷰 렌더링
+    function renderListView() {
+        const container = document.getElementById('formsList');
+        container.innerHTML = '';
+
+        filteredForms.forEach((form, index) => {
+            const item = createListItem(form, index);
+            container.appendChild(item);
+        });
+
+        container.style.display = 'flex';
+        document.getElementById('formsGrid').style.display = 'none';
+    }
+
+    // 그리드 카드 생성
+    function createGridCard(form, index) {
+        const card = document.createElement('div');
+        card.className = 'form-card';
+        card.style.animationDelay = `${index * 0.05}s`;
+
+        const categoryName = form.tempResDocumentFormCategoryDtos && form.tempResDocumentFormCategoryDtos.length > 0
+            ? form.tempResDocumentFormCategoryDtos[0].docfoCatName
+            : '기타';
+
+        const icon = getFormIcon(categoryName);
+
+        card.innerHTML = `
+                <div class="form-card-header">
+                    <div class="form-icon">${icon}</div>
+                    <div class="form-category">${categoryName}</div>
+                </div>
+                <h3 class="form-name">${form.docfoName}</h3>
+                <div class="form-meta">
+                    <div class="form-meta-item">
+                        <span>📋</span>
+                        <span>양식 번호: ${form.docfoNo}</span>
+                    </div>
+                </div>
+            `;
+
+        card.addEventListener('click', () => selectForm(form));
+
+        return card;
+    }
+
+    // 리스트 아이템 생성
+    function createListItem(form, index) {
+        const item = document.createElement('div');
+        item.className = 'form-list-item';
+        item.style.animationDelay = `${index * 0.03}s`;
+
+        const categoryName = form.tempResDocumentFormCategoryDtos && form.tempResDocumentFormCategoryDtos.length > 0
+            ? form.tempResDocumentFormCategoryDtos[0].docfoCatName
+            : '기타';
+
+        const icon = getFormIcon(categoryName);
+
+        item.innerHTML = `
+                <div class="form-list-icon">${icon}</div>
+                <div class="form-list-content">
+                    <div class="form-list-header">
+                        <h3 class="form-list-name">${form.docfoName}</h3>
+                        <div class="form-category">${categoryName}</div>
+                    </div>
+                    <div class="form-list-meta">
+                        <div class="form-meta-item">
+                            <span>📋</span>
+                            <span>양식 번호: ${form.docfoNo}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        item.addEventListener('click', () => selectForm(form));
+
+        return item;
+    }
+
+    // 카테고리별 아이콘 반환
+    function getFormIcon(category) {
+        const icons = {
+            '휴가': '🏖️',
+            '지출': '💰',
+            '품의': '📝',
+            '보고': '📊',
+            '계약': '📑',
+            '인사': '👤',
+            '구매': '🛒',
+            '기타': '📄'
+        };
+
+        for (const [key, icon] of Object.entries(icons)) {
+            if (category.includes(key)) {
+                return icon;
+            }
+        }
+
+        return icons['기타'];
+    }
+
+    // ✅ 양식 선택 - 문서 작성 페이지로 이동
+    function selectForm(form) {
+        console.log('선택된 양식:', form);
+
+        // 문서 작성 페이지로 이동 (docfoNo를 URL 파라미터로 전달)
+        window.location.href = `/documents/create?docfoNo=${form.docfoNo}`;
+    }
+
+    // 뷰 전환
+    function switchView(view) {
+        currentView = view;
+
+        document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+        document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+
+        renderForms();
+    }
+
+    // 빈 상태 표시
+    function showEmptyState() {
+        document.getElementById('formsGrid').style.display = 'none';
+        document.getElementById('formsList').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+    }
+
+    // 빈 상태 숨기기
+    function hideEmptyState() {
+        document.getElementById('emptyState').style.display = 'none';
+    }
+
+    // 로딩 숨기기
+    function hideLoading() {
+        document.getElementById('loadingContainer').style.display = 'none';
+    }
+
+    // 에러 표시
+    function showError(message) {
+        alert(message);
+    }
+</script>
+</body>
+</html>

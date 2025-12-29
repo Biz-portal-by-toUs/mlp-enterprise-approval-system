@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.document.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.List;
 
@@ -15,4 +16,7 @@ import java.util.List;
 public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Long> {
 
     List<ApprovalLine> findByDocument_docNo(Long docNo);
+
+    @Modifying
+    void deleteByDocument_docNo(Long docNo);
 }

@@ -25,21 +25,71 @@ import java.util.Optional;
 
 public interface DocumentRepository extends JpaRepository<Document, Long> {
 
-    // 내 회사의 문서 중 내가 상신한 문서 조회
+    // 내 회사의 문서 중 내가 임시저장한 문서 조회
     @EntityGraph(attributePaths = {"writer", "writer.department", "documentForm", "documentFormCategory"})
     @Query("SELECT d FROM Document d " +
             "WHERE d.company.comId = :comId " +
             "AND d.writer.empId = :myEmpId " + // 기안자가 본인인 문서
-            "AND d.temp = false " +            // 임시저장 제외
-            "AND d.docStat IN :docStats " +    // 문서 상태 필터링
+            "AND d.temp = true " +            // 임시저장만
+            "AND d.docStat = :docStat " +
+            "ORDER BY d.updatedAt DESC")    // 문서 상태 필터링
+    Page<Document> searchMyUnSubmittedDocuments(@Param("comId") String comId,
+                                                @Param("myEmpId") String myEmpId,
+                                                @Param("docStat") DocStat docStatFilter1,
+                                                Pageable pageable);
+
+//======================================================================================================================
+
+    // 내 회사의 문서 중 내가 상신한 문서 조회
+//    @EntityGraph(attributePaths = {"writer", "writer.department", "documentForm", "documentFormCategory"})
+//    @Query("SELECT d FROM Document d " +
+//            "WHERE d.company.comId = :comId " +
+//            "AND d.writer.empId = :myEmpId " + // 기안자가 본인인 문서
+//            "AND d.temp = false " +            // 임시저장 제외
+//            "AND d.docStat IN :docStats " +    // 문서 상태 필터링
+//            // 상세 검색 조건
+//            "AND (:docfoCatName IS NULL OR d.documentFormCategory.name = :docfoCatName) " +
+//            "AND (:depName IS NULL OR d.writer.department.depName = :depName) " +
+//            "AND (:docId IS NULL OR d.docId LIKE %:docId%) " +
+//            "AND (:title IS NULL OR d.title LIKE %:title%) " +
+//            "ORDER BY " +
+//            "CASE WHEN :sort = 'SUBMIT_LATEST' OR :sort IS NULL THEN d.submittedAt END DESC, " +
+//            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC")
+//    Page<Document> searchMySubmittedDocuments(@Param("comId") String comId,
+//                                              @Param("myEmpId") String myEmpId,
+//                                              @Param("docfoCatName") String docfoCatName,
+//                                              @Param("depName") String depName,
+//                                              @Param("docId") String docId,
+//                                              @Param("title") String title,
+//                                              @Param("sort") String sort,
+//                                              @Param("docStats") List<DocStat> docStats,
+//                                              Pageable pageable);
+
+    @EntityGraph(attributePaths = {"writer", "writer.department", "documentForm", "documentFormCategory"})
+    @Query(value = "SELECT d FROM Document d " +
+            "LEFT JOIN d.approvalLines al " +  // ✅ 추가: 결재라인 JOIN
+            "WHERE d.company.comId = :comId " +
+            "AND d.writer.empId = :myEmpId " +
+            "AND d.temp = false " +
+            "AND d.docStat IN :docStats " +
             // 상세 검색 조건
             "AND (:docfoCatName IS NULL OR d.documentFormCategory.name = :docfoCatName) " +
             "AND (:depName IS NULL OR d.writer.department.depName = :depName) " +
             "AND (:docId IS NULL OR d.docId LIKE %:docId%) " +
             "AND (:title IS NULL OR d.title LIKE %:title%) " +
+            "GROUP BY d " +  // ✅ 추가: 중복 제거
             "ORDER BY " +
+            // ✅ 추가: 최근 결재일 기준 정렬
+            "CASE WHEN :sort = 'APPR_LATEST' THEN MAX(al.endedAt) END DESC, " +
+            "CASE WHEN :sort = 'APPR_OLDEST' THEN MIN(al.endedAt) END ASC, " +
+            // 기존: 상신일 기준 정렬
             "CASE WHEN :sort = 'SUBMIT_LATEST' OR :sort IS NULL THEN d.submittedAt END DESC, " +
-            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC")
+            "CASE WHEN :sort = 'SUBMIT_OLDEST' THEN d.submittedAt END ASC",
+            countQuery = "SELECT COUNT(DISTINCT d) FROM Document d " +  // ✅ 수정
+                    "WHERE d.company.comId = :comId " +
+                    "AND d.writer.empId = :myEmpId " +
+                    "AND d.temp = false " +
+                    "AND d.docStat IN :docStats")
     Page<Document> searchMySubmittedDocuments(@Param("comId") String comId,
                                               @Param("myEmpId") String myEmpId,
                                               @Param("docfoCatName") String docfoCatName,
@@ -172,6 +222,18 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 //======================================================================================================================
 
     // 문서코드로 문서 상세조회
+
+    // 임시저장한 문서 검증: 작성자가 나이고 문서상태가 US(상신전)인 경우
+    @Query("""
+        SELECT d FROM Document d 
+        WHERE d.company.comId = :comId 
+          AND d.docNo = :docNo 
+          AND d.writer.empId = :myEmpId 
+          AND d.docStat = 'US'
+    """)
+    Optional<Document> findUnSubmittedDoc(@Param("comId") String comId, @Param("docNo") Long docNo, @Param("myEmpId") String myEmpId);
+
+
     // 상신한 문서 검증: 작성자가 나(myEmpId)이고 문서 상태가 AW(결재중), FI(최종승인), RJ(반려)인 경우
     @Query("""
         SELECT d FROM Document d 
@@ -230,6 +292,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d.docId FROM Document d WHERE d.docId LIKE :prefix% ORDER BY d.docId DESC LIMIT 1")
     String findLastDocIdByPrefixWithLock(@Param("prefix") String prefix);
+
 
 //======================================================================================================================
 

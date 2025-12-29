@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,4 +15,7 @@ import java.util.List;
  */
 public interface TempDocumentFormRepository extends JpaRepository<DocumentForm, Long> {
     List<DocumentForm> findAllByCompany_comId(String comId);
+
+    // 회사의 승인된 문서 양식만 조회
+    List<DocumentForm> findAllByCompany_ComIdAndDocfoStat(String comId, DocumentFormStats docfoStat);
 }

@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * 내 정보 조회 resDto
@@ -38,7 +38,7 @@ public class ResEmployeeDetailDto {
     private String phone;
     private String workPhone;
     private String gen;
-    private LocalDateTime hireDate;
+    private LocalDate hireDate;
     private String addr;
     private RoleType role;
 

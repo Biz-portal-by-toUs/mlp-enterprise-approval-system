@@ -319,19 +319,16 @@
 
     let selectedRoomNo = null;
     let isAdmin = false;
-    // 이미지 없을 때 띄워줄 이미지
+
     const NO_IMAGE_URL = "/images/no-image.png";
-    // ✅ 필요하면 여기만 바꿔
-    // 같은 서버(스프링)에서 정적 페이지를 서빙하면 "" 로 둬도 됨.
-    const API_BASE = "http://localhost:8090"; // 또는 ""
+    const API_BASE = "http://localhost:8090";   // 같은 서버면 "" 가능
 
     const grid = document.getElementById("grid");
     const paging = document.getElementById("paging");
     const errBox = document.getElementById("errBox");
-    const accessToken = localStorage.getItem("accessToken");
 
     let state = {
-        page: 0,      // 0부터 시작 (Spring PageRequest)
+        page: 0,
         size: 6,
         totalPages: 0
     };
@@ -346,7 +343,7 @@
     }
 
     function cardTemplate(room){
-        const safe = (v) => (v === null || v === undefined || v === "") ? "-" : v;
+        const safe = (v) => (v ?? "") === "" ? "-" : v;
 
         return `
       <article class="card ${isAdmin ? "selectable" : ""}" data-room-no="${room.roomNo}">
@@ -383,7 +380,7 @@
 
                 selectedRoomNo = card.dataset.roomNo;
 
-                document.getElementById("btnEdit").disabled = false;
+                document.getElementById("btnEdit").disabled   = false;
                 document.getElementById("btnDelete").disabled = false;
             });
         });
@@ -404,14 +401,15 @@
 
         paging.appendChild(mkBtn("‹", () => loadRooms(current - 1), current === 0));
 
-        // 페이지 버튼 너무 많으면 1~5개만 보여주는 간단 버전
         const windowSize = 5;
         const start = Math.max(0, current - Math.floor(windowSize/2));
-        const end = Math.min(total - 1, start + windowSize - 1);
+        const end   = Math.min(total - 1, start + windowSize - 1);
         const realStart = Math.max(0, end - windowSize + 1);
 
         for(let p = realStart; p <= end; p++){
-            paging.appendChild(mkBtn(String(p+1), () => loadRooms(p), false, p === current));
+            paging.appendChild(
+                mkBtn(String(p+1), () => loadRooms(p), false, p === current)
+            );
         }
 
         paging.appendChild(mkBtn("›", () => loadRooms(current + 1), current >= total - 1));
@@ -421,58 +419,47 @@
         clearError();
 
         selectedRoomNo = null;
-        document.getElementById("btnEdit").disabled = true;
+        document.getElementById("btnEdit").disabled   = true;
         document.getElementById("btnDelete").disabled = true;
 
-        // 1. accessToken 여기서 꺼냄
-        if (!accessToken) {
-            showError("로그인이 필요합니다.");
-            return;
-        }
-
-        // 2. comId 제거 (JWT에서 서버가 꺼냄)
         const url = `${API_BASE}/api/v1/meeting-rooms?page=${page}&size=${state.size}`;
 
         try{
-            // ⭐ 3. fetch에 Authorization 헤더 추가
             const res = await fetch(url, {
                 method: "GET",
-                headers: {
-                    "Authorization": "Bearer " + accessToken
-                }
+                credentials: "include"       // 🔥 핵심 — 쿠키 자동 전송
             });
 
-            const json = await res.json();
-            // 관리자 여부 세팅
-            isAdmin = json.data.isAdmin === true;
-
-            // 관리자면 하단 버튼 보이기
-            if (isAdmin) {
-                document.getElementById("actionBar").style.display = "flex";
-            } else {
-                document.getElementById("actionBar").style.display = "none";
-            }
-            if(!res.ok){
-                showError(json?.message || `조회에 실패했습니다. (${res.status})`);
-                grid.innerHTML = "";
-                paging.innerHTML = "";
+            if (res.status === 401) {
+                showError("로그인이 필요합니다.");
                 return;
             }
 
-            const pageData = json.data.data;   // Page 객체
-            const content = pageData.content || [];
+            if (!res.ok) {
+                showError(`조회 실패 (${res.status})`);
+                return;
+            }
+
+            const json = await res.json();
+
+            isAdmin = json.data.isAdmin === true;
+            document.getElementById("actionBar").style.display =
+                isAdmin ? "flex" : "none";
+
+            const pageData = json.data.data;
+            const content  = pageData.content ?? [];
 
             renderGrid(content);
             enableSelection();
 
-            state.totalPages = pageData.totalPages || 0;
+            state.totalPages = pageData.totalPages ?? 0;
             renderPaging(pageData.number ?? page, state.totalPages);
 
-
         }catch(e){
-            showError("서버 연결에 실패했습니다. 토큰/포트/CORS 확인해주세요.");
+            showError("서버 연결 실패. (네트워크 / 쿠키 / 포트 확인)");
         }
     }
+
     document.getElementById("btnCreate").onclick = () => {
         location.href = "/reservation/meeting-rooms/meeting-room-register";
     };
@@ -482,12 +469,12 @@
         location.href = `/reservation/meeting-rooms/${selectedRoomNo}/meeting-room-edit`;
     };
 
-    const deleteModal = document.getElementById("deleteModal");
-    const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
-    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+    /* ---------------- 삭제 모달 ---------------- */
 
+    const deleteModal       = document.getElementById("deleteModal");
+    const cancelDeleteBtn   = document.getElementById("cancelDeleteBtn");
+    const confirmDeleteBtn  = document.getElementById("confirmDeleteBtn");
 
-    // 삭제 버튼 클릭 시 (조회 페이지의 삭제 버튼)
     function openDeleteModal() {
         deleteModal.classList.remove("hidden");
     }
@@ -497,32 +484,36 @@
         openDeleteModal();
     };
 
-    // 취소
     cancelDeleteBtn.addEventListener("click", () => {
         deleteModal.classList.add("hidden");
     });
 
-    // 삭제 확정
     confirmDeleteBtn.addEventListener("click", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/v1/meeting-rooms/${selectedRoomNo}`, {
                 method: "DELETE",
-                headers: {
-                    Authorization: "Bearer " + accessToken
-                }
+                credentials: "include"     // 🔥 여기서도 쿠키 인증
             });
 
+            if (res.status === 401) {
+                alert("로그인이 필요합니다.");
+                location.href = "/login";
+                return;
+            }
+
             if (!res.ok) {
-                throw new Error("삭제에 실패했습니다.");
+                alert("삭제에 실패했습니다.");
+                return;
             }
 
             alert("회의실이 삭제되었습니다.");
             deleteModal.classList.add("hidden");
-            // 선택 표시 초기화
+
             selectedRoomNo = null;
-            document.getElementById("btnEdit").disabled = true;
+            document.getElementById("btnEdit").disabled   = true;
             document.getElementById("btnDelete").disabled = true;
-            loadRooms(state.page); // 현재 페이지 다시 조회
+
+            loadRooms(state.page);
 
         } catch (e) {
             alert("삭제 중 오류가 발생했습니다.");
@@ -535,8 +526,8 @@
         }
     });
 
-    // 처음 로드
     loadRooms(0);
+
 </script>
 </body>
 </html>

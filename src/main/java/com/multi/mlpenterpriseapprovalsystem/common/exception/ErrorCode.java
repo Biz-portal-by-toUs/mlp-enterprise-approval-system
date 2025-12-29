@@ -38,7 +38,8 @@ public enum ErrorCode {
     DOCUMENT_SERIAL_OVERFLOW(HttpStatus.INTERNAL_SERVER_ERROR, "DOCUMENT_SERIAL_OVERFLOW", "문서 일련번호가 최대치를 초과했습니다"),
     DOCUMENT_NOT_TEMP(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_TEMP", "임시저장 상태의 문서만 수정할 수 있습니다."),
     DOCUMENT_NOT_REJECTED(HttpStatus.BAD_REQUEST, "DOCUMENT_NOT_REJECTED", "반려된 문서만 재작성할 수 있습니다."),
-
+    CONTENT_TOO_SHORT_FOR_SUMMARY(HttpStatus.BAD_REQUEST, "CONTENT_TOO_SHORT_FOR_SUMMARY", "요약하기엔 내용이 너무 짧습니다 (최소 100자)"),
+    AI_SUMMARY_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI_SUMMARY_GENERATION_FAILED", "AI 요약 생성에 실패했습니다"),
 
     // 결재라인 관련
     INVALID_APPROVAL_LINE_ORDER(HttpStatus.BAD_REQUEST, "INVALID_APPROVAL_LINE_ORDER", "잘못된 결재자 순서입니다"),
@@ -109,6 +110,8 @@ public enum ErrorCode {
 
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
+    EMPLOYEE_ALREADY_RETIRED(HttpStatus.BAD_REQUEST,"EMPLOYEE_ALREADY_RETIRED","이미 퇴사 처리된 사원입니다"),
+
 
     // 웹소켓 관련
     SOCKET_AUTHENTICATION_ERROR(HttpStatus.UNAUTHORIZED, "SOCKET_AUTHENTICATION_ERROR", "웹소켓 인증 정보가 유효하지 않습니다"),
@@ -123,6 +126,7 @@ public enum ErrorCode {
     MEETING_EDIT_DELETE_DENIED(HttpStatus.BAD_REQUEST,"MEETING_EDIT_DELETE_DENIED","회의를 수정하거나 삭제할 권한이 없습니다"),
     MEETING_DEPT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_DEPT_REQUIRED","부서는 한개 이상 선택해야 합니다"),
     MEETING_PARTICIPANT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_PARTICIPANT_REQUIRED","참석자는 한명 이상 선택해야합니다"),
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST,"INVALID_REQUEST","유효하지 않는 요청입니다"),
 
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),

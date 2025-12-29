@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>회의 목록</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --panel: #ffffff;
+            --line: #e5e7eb;
+            --text: #111827;
+            --muted: #6b7280;
+            --blue: #2b6ae6;
+            --blueSoft: #e7f1ff;
+            --chip: #f3f4f6;
+            --tableHead: #f9fafb; /* 조금 더 밝은 톤으로 변경 */
+            --tableRow: #ffffff;
+            --tableLine: #e5e7eb;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* Layout */
+        .app {
+            display: grid;
+            grid-template-columns: 240px 1fr; /* 사이드바 너비 최적화 */
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #fff;
+            border-right: 1px solid var(--line);
+            padding: 24px 0;
+        }
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 20px;
+        }
+        .nav a {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 24px;
+            text-decoration: none;
+            font-weight: 600;
+            color: var(--muted);
+            transition: all 0.2s;
+        }
+        .nav a.active {
+            background: var(--blueSoft);
+            color: var(--blue);
+            font-weight: 800;
+        }
+        .nav a:hover:not(.active) {
+            background: #f9fafb;
+            color: var(--text);
+        }
+
+        /* Main */
+        .main {
+            padding: 32px 40px;
+            max-width: 1400px; /* 너무 넓어지지 않게 제한 */
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .select {
+            height: 44px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: #fff;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .searchWrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            height: 44px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: #fff;
+            padding: 0 14px;
+        }
+        .searchIcon {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            color: var(--muted);
+        }
+        .searchInput {
+            border: 0;
+            outline: none;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .btn {
+            height: 44px;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: var(--blue);
+            color: #fff;
+            white-space: nowrap;
+        }
+        .btn:hover { background: #1a56cc; }
+
+        .subbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .pill {
+            padding: 6px 12px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Table */
+        .tableWrap {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        thead th {
+            background: var(--tableHead);
+            border-bottom: 1px solid var(--line);
+            text-align: center;
+            padding: 14px 10px;
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        tbody td {
+            border-bottom: 1px solid var(--line);
+            text-align: center;
+            padding: 16px 10px;
+            font-size: 15px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: #fcfdfe; cursor: pointer; }
+
+        /* 컬럼 비율 조정 */
+        colgroup col:nth-child(1) { width: 80px; }  /* 번호 */
+        colgroup col:nth-child(2) { width: auto; }  /* 제목 (유연하게) */
+        colgroup col:nth-child(3) { width: 180px; } /* 시작일시 */
+        colgroup col:nth-child(4) { width: 120px; } /* 부서 */
+        colgroup col:nth-child(5) { width: 120px; } /* 주최자 */
+        colgroup col:nth-child(6) { width: 100px; } /* 참석자 */
+
+        .filler {
+            min-height: 300px; /* 고정 높이 대신 최소 높이로 변경 */
+            display: none; /* 데이터가 있을 때는 필요 없음 */
+        }
+
+        /* Pagination */
+        .pager {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 24px;
+        }
+        .pageBtn {
+            min-width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .pageBtn.active {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+        }
+        .pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        @media (max-width: 1024px) {
+            .app { grid-template-columns: 200px 1fr; }
+            .main { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <nav class="nav">
+            <a href="#" class="active" data-scope="ALL">전체 회의</a>
+            <a href="#" data-scope="MY_DEPT">내 부서 회의</a>
+            <a href="#" data-scope="MY">내 회의</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="toolbar">
+            <select id="depSelect" class="select">
+                <option value="">부서 전체</option>
+                <option value="1">개발팀</option>
+                <option value="2">기획팀</option>
+                <option value="3">디자인팀</option>
+            </select>
+
+            <select id="periodSelect" class="select">
+                <option value="">전체 기간</option>
+                <option value="7">최근 7일</option>
+                <option value="30">최근 30일</option>
+                <option value="CUSTOM">직접 선택</option>
+            </select>
+
+            <div class="searchWrap">
+                <svg class="searchIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input id="keyword" class="searchInput" placeholder="회의 제목을 입력하세요..." />
+            </div>
+
+            <button id="createBtn" class="btn">+ 새 회의</button>
+        </div>
+
+        <div class="subbar">
+            <div id="scopePill" class="pill">전체 회의</div>
+
+            <div class="dateRow" id="customDateRow" style="display:none; gap:8px; align-items:center;">
+                <input id="fromDate" class="select" type="date" style="height:36px">
+                <span>~</span>
+                <input id="toDate" class="select" type="date" style="height:36px">
+                <button id="applyCustomDateBtn" class="pageBtn">적용</button>
+            </div>
+
+            <div style="display:flex; gap:12px; align-items:center">
+                <span id="countPill" style="font-size:14px; font-weight:600; color:var(--blue)">0건</span>
+                <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+            </div>
+        </div>
+
+        <section class="tableWrap">
+            <table>
+                <colgroup>
+                    <col /><col /><col /><col /><col /><col />
+                </colgroup>
+                <thead>
+                <tr>
+                    <th>번호</th>
+                    <th>회의 제목</th>
+                    <th>시작 일시</th>
+                    <th>부서</th>
+                    <th>주최자</th>
+                    <th>참석자</th>
+                </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+            </table>
+        </section>
+
+        <div class="pager" id="pager"></div>
+    </main>
+</div>
+
+<script>
+    /* [스크립트 부분은 기존 로직과 동일하게 유지하되, UI 반영을 위해 일부 클래스/ID만 맞춤] */
+    const $ = (id) => document.getElementById(id);
+
+    function unwrapMaybeResponseDto(resJson) {
+        if (resJson && typeof resJson === "object" && "data" in resJson) return resJson.data;
+        return resJson;
+    }
+
+    function getCookie(name) {
+        let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+    function authHeadersJson() {
+        const raw = getCookie("accessToken");
+        const headers = { "Content-Type": "application/json" };
+        if (raw) headers["Authorization"] = `Bearer ${raw}`;
+        return headers;
+    }
+
+    const API_BASE = "http://localhost:8090";
+    const PAGE_SIZE = 10;
+    let currentScope = "ALL";
+    let currentPage = 0;
+    let lastTotalPages = 0;
+
+    function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+    }
+
+    function formatDateTime(isoLike){
+        if (!isoLike) return "-";
+        const s = String(isoLike).replace("T", " ");
+        const [datePart, timePart] = s.split(" ");
+        if (!datePart) return s;
+        const [yy,mm,dd] = datePart.split("-");
+        const hhmm = (timePart ? timePart.slice(0,5) : "");
+        return `${yy}.${mm}.${dd} ${hhmm}`;
+    }
+
+    function buildQuery(page){
+        const qs = new URLSearchParams();
+        qs.set("scope", currentScope);
+        qs.set("page", String(page));
+        qs.set("size", String(PAGE_SIZE));
+        const kw = $("keyword").value.trim();
+        if (kw) qs.set("keyword", kw);
+        const depVal = $("depSelect").value;
+        if (currentScope === "ALL" && depVal) qs.set("depNo", depVal);
+        const period = $("periodSelect").value;
+        if (period === "CUSTOM") {
+            if ($("fromDate").value) qs.set("fromDate", $("fromDate").value);
+            if ($("toDate").value) qs.set("toDate", $("toDate").value);
+        } else if (period) {
+            const today = new Date();
+            const from = new Date();
+            from.setDate(today.getDate() - (Number(period) - 1));
+            qs.set("fromDate", from.toISOString().split('T')[0]);
+            qs.set("toDate", today.toISOString().split('T')[0]);
+        }
+        return qs;
+    }
+
+    async function loadPage(page){
+        try{
+            const qs = buildQuery(page);
+            const res = await fetch(`${API_BASE}/api/v1/meetings?${qs.toString()}`, {
+                headers: authHeadersJson(),
+                credentials: "include"
+            });
+            const json = await res.json();
+            const data = unwrapMaybeResponseDto(json);
+
+            const meetings = data.meetings || [];
+            const curPage = data.page ?? page;
+            const totalPages = data.totalPages ?? 0;
+            lastTotalPages = totalPages;
+
+            const tb = $("tbody");
+            tb.innerHTML = "";
+            if (meetings.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="padding:40px; color:var(--muted)">회의 내역이 없습니다.</td></tr>';
+            }
+
+            meetings.forEach((m) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+          <td>${m.meetNo}</td>
+          <td style="text-align:left; padding-left:20px; font-weight:700" title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</td>
+          <td>${formatDateTime(m.startAt)}</td>
+          <td>${m.deptName || '-'}</td>
+          <td>${escapeHtml(m.writerName)}</td>
+          <td>${m.attendeeCount || 0}명</td>
+        `;
+                tr.onclick = () => location.href = `/meeting/${m.meetNo}`;
+                tb.appendChild(tr);
+            });
+
+            renderPager(curPage, totalPages);
+            $("countPill").textContent = `${data.totalElements ?? 0}건`;
+            $("pageInfo").textContent = `page ${curPage + 1} / ${Math.max(totalPages,1)}`;
+        } catch(e){
+            $("tbody").innerHTML = `<tr><td colspan="6" style="padding:20px; color:red;">오류: ${e.message}</td></tr>`;
+        }
+    }
+
+    function renderPager(page, totalPages) {
+        const wrap = $("pager");
+        wrap.innerHTML = "";
+
+        if (totalPages <= 0) return;
+
+        const blockSize = 5; // 한 번에 보여줄 페이지 개수 (1~5, 6~10...)
+
+        // 현재 페이지가 속한 블록 계산
+        // 예: 0~4페이지면 block 0, 5~9페이지면 block 1
+        const currentBlock = Math.floor(page / blockSize);
+
+        const startPage = currentBlock * blockSize; // 블록의 시작 번호 (0, 5, 10...)
+        let endPage = startPage + blockSize - 1;    // 블록의 끝 번호 (4, 9, 14...)
+
+        // 실제 전체 페이지 수를 넘지 않도록 제한
+        if (endPage > totalPages - 1) {
+            endPage = totalPages - 1;
+        }
+
+        const createBtn = (txt, target, active = false, disabled = false) => {
+            const b = document.createElement("button");
+            b.className = `pageBtn ${active ? 'active' : ''}`;
+            b.textContent = txt;
+            b.disabled = disabled;
+            // 클릭 시 해당 페이지로 이동
+            b.onclick = () => loadPage(target);
+            return b;
+        };
+
+        // [이전] 버튼: 현재 페이지에서 1페이지 뒤로
+        wrap.appendChild(createBtn("<", page - 1, false, page <= 0));
+
+        // 숫자 버튼 (현재 블록의 시작부터 끝까지)
+        for (let i = startPage; i <= endPage; i++) {
+            wrap.appendChild(createBtn(i + 1, i, i === page));
+        }
+
+        // [다음] 버튼: 현재 페이지에서 1페이지 앞으로
+        // 페이지가 넘어가서 다음 블록(예: 6번)이 되면 자동으로 6~10이 표시됩니다.
+        wrap.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
+    }
+
+    // Event Listeners
+    document.querySelectorAll(".nav a").forEach(a => {
+        a.addEventListener("click", (e) => {
+            e.preventDefault();
+            currentScope = a.dataset.scope;
+            document.querySelectorAll(".nav a").forEach(link => link.classList.remove("active"));
+            a.classList.add("active");
+            $("scopePill").textContent = a.textContent;
+            $("depSelect").disabled = (currentScope !== "ALL");
+            loadPage(0);
+        });
+    });
+
+    $("depSelect").onchange = () => loadPage(0);
+    $("keyword").oninput = () => {
+        clearTimeout(window.t);
+        window.t = setTimeout(() => loadPage(0), 300);
+    };
+    $("periodSelect").onchange = () => {
+        $("customDateRow").style.display = ($("periodSelect").value === "CUSTOM") ? "flex" : "none";
+        if($("periodSelect").value !== "CUSTOM") loadPage(0);
+    };
+    $("applyCustomDateBtn").onclick = () => loadPage(0);
+    $("createBtn").onclick = () => location.href = "/meeting/create";
+
+    window.onload = () => loadPage(0);
+</script>
+</body>
+</html>

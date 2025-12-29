@@ -143,7 +143,7 @@
 
         <div class="field">
             <label>보관위치</label>
-            <input type="text" name="loc" maxlength="20">
+            <input type="text" name="location" maxlength="20">
         </div>
 
         <div class="field">
@@ -168,106 +168,96 @@
     </form>
 </div>
 <script>
-    /* ---------- image preview ---------- */
+    const API_BASE = window.location.origin;
+
+    // ✅ httpOnly cookie 기반 공통 fetch
+    async function apiFetch(path, options = {}) {
+        const url = API_BASE + path;
+
+        const res = await fetch(url, {
+            ...options,
+            credentials: "include",                 // ✅ 쿠키 자동 포함
+            headers: { ...(options.headers || {}) } // ✅ 기존 헤더 유지
+            // ✅ FormData면 Content-Type 절대 지정하지 말기
+        });
+
+        // Spring Security가 /login 으로 리다이렉트 시켜버리는 케이스 방어
+        if ((res.redirected && res.url.includes("/login")) || res.status === 401 || res.status === 403) {
+            alert("로그인이 필요합니다. 다시 로그인 해 주세요.");
+            location.href = "/login";
+            throw new Error("UNAUTHORIZED");
+        }
+
+        return res;
+    }
+
     function previewImage(input) {
-        console.log("🔥 previewImage 실행");
-
         const preview = document.getElementById("imagePreview");
-
         if (!input.files || !input.files[0]) {
             preview.style.display = "none";
             preview.src = "";
             return;
         }
-
         const file = input.files[0];
-
-
         if (!file.type.startsWith("image/")) {
             alert("이미지 파일만 업로드 가능합니다.");
             input.value = "";
             return;
         }
-
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = (e) => {
             preview.src = e.target.result;
             preview.style.display = "block";
         };
-
         reader.readAsDataURL(file);
+    }
 
+    async function submitSharedEquipmentForm(e) {
+        e.preventDefault();
+
+        const name = document.querySelector("[name=eqName]").value.trim();
+        const eqId = document.querySelector("[name=eqId]").value.trim();
+        const modelName = document.querySelector("[name=modelName]").value.trim();
+        const loc = document.querySelector("[name=location]").value.trim();
+
+        if (!name) return alert("설비명을 입력해주세요.");
+        if (name.length > 20) return alert("설비명은 20자 이내여야 합니다.");
+        if (eqId.length > 20) return alert("설비 번호는 20자 이내여야 합니다.");
+        if (modelName.length > 20) return alert("모델명은 20자 이내여야 합니다.");
+        if (loc.length > 20) return alert("보관위치는 20자 이내여야 합니다.");
+
+        const form = document.getElementById("eqForm");
+        const formData = new FormData(form);
+
+        try {
+            const res = await apiFetch("/api/v1/shared-equipment", {
+                method: "POST",
+                body: formData
+            });
+
+            // ✅ 에러 응답이 JSON 아닐 수도 있어서 안전 파싱
+            const ct = res.headers.get("content-type") || "";
+            const payload = ct.includes("application/json") ? await res.json() : await res.text();
+
+            if (!res.ok) {
+                const msg =
+                    (payload && payload.message) ||
+                    (typeof payload === "string" && payload) ||
+                    `등록 실패 (${res.status})`;
+                alert(msg);
+                return;
+            }
+
+            alert("공유 설비 등록 성공!");
+            location.href = "/reservation/shared-equipment"; // ✅ 뒤로가기 꼬임 방지
+        } catch (err) {
+            if (err.message === "UNAUTHORIZED") return;
+            console.error(err);
+            alert("서버 오류가 발생했습니다.");
         }
+    }
 
-        /* ---------- image preview ---------- */
-        async function submitSharedEquipmentForm(e) {
-            e.preventDefault();
-
-            const name = document.querySelector("[name=eqName]").value.trim();
-            const eqId = document.querySelector("[name=eqId]").value.trim();
-            const modelName = document.querySelector("[name=modelName]").value.trim();
-            const loc = document.querySelector("[name=loc]").value.trim();
-
-            const form = document.getElementById("eqForm");
-            const formData = new FormData(form);
-            const accessToken = localStorage.getItem("accessToken");
-
-
-            if (!name) {
-                alert("설비명을 입력해주세요.");
-                return;
-            }
-
-            if (name.length > 20) {
-                alert("설비명은 20자 이내여야 합니다.");
-                return;
-            }
-
-            if (eqId.length > 20) {
-                alert("설비 번호는 20자 이내여야 합니다.");
-                return;
-            }
-
-            if (modelName.length > 20) {
-                alert("모델명은 20자 이내여야 합니다.");
-                return;
-            }
-
-            if (!accessToken) {
-                alert("로그인이 필요합니다.");
-                return;
-            }
-
-            try {
-                const res = await fetch("/api/v1/shared-equipment", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": "Bearer " + accessToken
-                        // ⚠️ Content-Type 지정하면 안 됨
-                    },
-                    body: formData
-                });
-
-                const result = await res.json();
-
-                if (!res.ok) {
-                    console.error(result);
-                    alert(result.message || "등록 실패");
-                    return;
-                }
-
-                alert("공유 설비 등록 성공!");
-                location.href = "/reservation/shared-equipment";
-
-            } catch (err) {
-                console.error(err);
-                alert("서버 오류가 발생했습니다.");
-            }
-        }
-
-        document
-            .getElementById("eqForm")
-            .addEventListener("submit", submitSharedEquipmentForm);
+    document.getElementById("eqForm").addEventListener("submit", submitSharedEquipmentForm);
 </script>
 </body>
 </html>

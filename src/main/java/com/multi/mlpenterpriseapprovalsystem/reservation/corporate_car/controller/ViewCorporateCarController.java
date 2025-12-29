@@ -42,4 +42,16 @@ public class ViewCorporateCarController {
         return "reservation/corporate-cars/corporate-car-edit";
     }
 
+    // 법인 차량 예약 조회 화면
+    @GetMapping("/corporate-car-reservation")
+    public String corporateCarReservation() {
+        return "reservation/corporate-cars/corporate-car-reservation";
+    }
+
+    // 법인 차량 예약 등록 화면
+    @GetMapping("/{carNo}/corporate-car-reservation")
+    public String corporateCarReservation(@PathVariable Long carNo) {
+        return "reservation/corporate-cars/corporate-car-reservation";
+    }
+
 }

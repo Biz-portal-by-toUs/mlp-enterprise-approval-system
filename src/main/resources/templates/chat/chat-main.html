@@ -4,171 +4,30 @@
     <meta charset="UTF-8"/>
     <title>Chat Main</title>
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            overflow: hidden;
-        }
-
-        .app {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-            background: #fff;
-            flex-shrink: 0;
-        }
-
-        .tab {
-            padding: 12px 14px;
-            cursor: pointer;
-            flex: 1;
-            text-align: center;
-        }
-
-        .tab.active {
-            font-weight: 700;
-            border-bottom: 2px solid #007bff;
-            color: #007bff;
-        }
-
-        .content {
-            flex: 1;
-            display: flex;
-            min-height: 0;
-        }
-
-        .panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-
-        .toolbar {
-            display: flex;
-            gap: 8px;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .toolbar input {
-            flex: 1;
-            min-width: 0;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            outline: none;
-        }
-
-        .toolbar button {
-            padding: 10px 12px;
-            cursor: pointer;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            flex-shrink: 0;
-            white-space: nowrap;
-        }
-
-        .list {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .row {
-            padding: 14px 12px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-        }
-
-        .row:hover {
-            background: #fafafa;
-        }
-
-        .row-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 100%;
-        }
-
-        .room-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .row .title {
-            font-weight: 700;
-            font-size: 15px;
-            margin-bottom: 4px;
-            /* ✅ 기존의 overflow, text-overflow, white-space는 제거하거나 무시됩니다. */
-            min-width: 0; /* 중요: flex 자식이 넘칠 때 말줄임표가 작동하게 함 */
-        }
-
-        .row .sub {
-            font-size: 13px;
-            color: #666;
-            display: flex;
-            min-width: 0;
-        }
-
-        .last-msg-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: block;
-            width: 100%;
-        }
-
-        .room-meta {
-            margin-left: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            flex-shrink: 0;
-            min-width: 70px; /* 날짜 포맷이 길어질 수 있어 약간 넓힘 */
-        }
-
-        .last-msg-time {
-            font-size: 11px;
-            color: #999;
-            margin-bottom: 6px;
-            white-space: nowrap;
-        }
-
-        .badge {
-            background: #ff3b30;
-            color: #fff;
-            border-radius: 999px;
-            padding: 2px 8px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .hint {
-            padding: 10px 12px;
-            font-size: 12px;
-            color: #777;
-            border-bottom: 1px solid #f7f7f7;
-            background: #fafafa;
-        }
-
-        .status-dot {
-            display: inline-block;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
+        /* CSS 디자인은 수정하지 않았습니다. */
+        body { font-family: sans-serif; margin: 0; overflow: hidden; }
+        .app { height: 100vh; display: flex; flex-direction: column; }
+        .tabs { display: flex; border-bottom: 1px solid #ddd; background: #fff; flex-shrink: 0; }
+        .tab { padding: 12px 14px; cursor: pointer; flex: 1; text-align: center; }
+        .tab.active { font-weight: 700; border-bottom: 2px solid #007bff; color: #007bff; }
+        .content { flex: 1; display: flex; min-height: 0; }
+        .panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .toolbar { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid #eee; align-items: center; flex-shrink: 0; }
+        .toolbar input { flex: 1; min-width: 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
+        .toolbar button { padding: 10px 12px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }
+        .list { flex: 1; overflow-y: auto; }
+        .row { padding: 14px 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .row:hover { background: #fafafa; }
+        .row-content { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .room-info { flex: 1; min-width: 0; }
+        .row .title { font-weight: 700; font-size: 15px; margin-bottom: 4px; min-width: 0; }
+        .row .sub { font-size: 13px; color: #666; display: flex; min-width: 0; }
+        .last-msg-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; width: 100%; }
+        .room-meta { margin-left: 12px; display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; min-width: 70px; }
+        .last-msg-time { font-size: 11px; color: #999; margin-bottom: 6px; white-space: nowrap; }
+        .badge { background: #ff3b30; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: bold; }
+        .hint { padding: 10px 12px; font-size: 12px; color: #777; border-bottom: 1px solid #f7f7f7; background: #fafafa; }
+        .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
         .status-online { background-color: #28a745; border: 1px solid #28a745; }
         .status-offline { background-color: transparent; border: 1px solid #ccc; }
     </style>
@@ -213,26 +72,26 @@
 
 <script>
     // ---------------- 공통 유틸 ----------------
-    function getAccessToken() { return localStorage.getItem("accessToken"); }
-    function authHeaders() { return {'Authorization': 'Bearer ' + getAccessToken()}; }
+    // ✅ HttpOnly 쿠키 사용을 위해 localStorage 관련 로직 및 Authorization 헤더 명시적 추가 제거
+    function authHeaders() {
+        return { 'Content-Type': 'application/json' };
+    }
+
     function escapeHtml(str) {
         return String(str ?? "").replace(/[&<>"']/g, s => ({
             "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
         }[s]));
     }
 
-    // ✅ 오늘 날짜가 아니면 "M월 D일" 형식으로 반환하도록 수정
     function formatTime(dateStr) {
         if (!dateStr) return "";
         const date = new Date(dateStr);
         const now = new Date();
         const isToday = date.toDateString() === now.toDateString();
-
         if (isToday) {
             return date.getHours().toString().padStart(2, '0') + ":" +
                 date.getMinutes().toString().padStart(2, '0');
         } else {
-            // "10월 20일" 형식
             return (date.getMonth() + 1) + "월 " + date.getDate() + "일";
         }
     }
@@ -243,12 +102,14 @@
 
     function connectWs() {
         if (wsInitialized) return;
-        const token = getAccessToken();
-        if (!token) return;
+
+        // ✅ 브라우저가 HttpOnly 쿠키를 자동으로 전송하므로 별도의 토큰 추출 로직 불필요
         const socket = new SockJS('/ws-chat');
         stompClient = Stomp.over(socket);
         stompClient.debug = null;
-        stompClient.connect({Authorization: 'Bearer ' + token}, function () {
+
+        // ✅ connect 시 헤더에 토큰을 담지 않음 (쿠키가 자동으로 전송됨)
+        stompClient.connect({}, function () {
             wsInitialized = true;
             stompClient.subscribe('/user/sub/chat/room-updates', function (message) {
                 handleRealtimeUpdate(JSON.parse(message.body));
@@ -273,6 +134,7 @@
     let empCursor = null, empHasNext = true, empLoading = false, empKwTimer = null;
     async function initEmployees() { resetEmployees(); await loadMoreEmployees(); }
     function resetEmployees() { empCursor = null; empHasNext = true; document.getElementById("empList").innerHTML = ""; }
+
     async function loadMoreEmployees() {
         if (empLoading || !empHasNext) return;
         empLoading = true;
@@ -280,7 +142,9 @@
         const qs = new URLSearchParams({size: "30", excludeMe: "true"});
         if (keyword) qs.set("keyword", keyword);
         if (empCursor) qs.set("cursor", empCursor);
-        const res = await fetch("/api/v1/employees?" + qs.toString(), {headers: authHeaders()});
+
+        // ✅ 헤더에서 토큰 제거
+        const res = await fetch("/api/v1/employees?" + qs.toString());
         const result = await res.json();
         const payload = result.data || result;
         empCursor = payload.nextCursor;
@@ -298,10 +162,13 @@
         });
         empLoading = false;
     }
+
     function onEmpSearchInput() { clearTimeout(empKwTimer); empKwTimer = setTimeout(initEmployees, 300); }
+
+    // ✅ 사용자 정보는 토큰 대신 /api/v1/employees/me 엔드포인트를 호출하여 가져옴
     async function loadMyInfo() {
         try {
-            const res = await fetch("/api/v1/employees/me", {headers: authHeaders()});
+            const res = await fetch("/api/v1/employees/me");
             const result = await res.json();
             const me = result.data;
             const statusClass = (me.msgStat === 'C') ? 'status-online' : 'status-offline';
@@ -314,6 +181,7 @@
     let roomCursor = null, roomHasNext = true, roomLoading = false, roomKwTimer = null;
     async function initRooms() { resetRooms(); await loadMoreRooms(); }
     function resetRooms() { roomCursor = null; roomHasNext = true; document.getElementById("roomList").innerHTML = ""; }
+
     async function loadMoreRooms() {
         if (roomLoading || !roomHasNext) return;
         roomLoading = true;
@@ -322,7 +190,7 @@
         if (keyword) qs.set("keyword", keyword);
         if (roomCursor) qs.set("lastMessageAt", roomCursor);
         try {
-            const res = await fetch("/api/v1/chat/my?" + qs.toString(), {headers: authHeaders()});
+            const res = await fetch("/api/v1/chat/my?" + qs.toString());
             const result = await res.json();
             const rooms = result.data || [];
             if (rooms.length > 0) {
@@ -356,8 +224,7 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
         </svg>
         ${r.memberCount}
-       </span>`
-            : "";
+       </span>` : "";
 
         div.innerHTML = `
     <div class="row-content">
@@ -378,8 +245,7 @@
             ${timeHtml}
             ${badgeHtml}
         </div>
-    </div>
-`;
+    </div>`;
     }
 
     function onRoomSearchInput() { clearTimeout(roomKwTimer); roomKwTimer = setTimeout(initRooms, 300); }
@@ -427,7 +293,7 @@
         try {
             const res = await fetch("/api/v1/chat", {
                 method: "POST",
-                headers: {"Content-Type": "application/json", ...authHeaders()},
+                headers: authHeaders(), // 토큰 없이 Content-Type만 전달
                 body: JSON.stringify({roomType: "ONE", memberIds: [targetId]})
             });
             const result = await res.json();

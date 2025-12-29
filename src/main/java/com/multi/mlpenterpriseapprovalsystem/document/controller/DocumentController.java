@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * 문서 처리 컨트롤러
  *
@@ -56,7 +58,8 @@ public class DocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, message, resDocumentDtos));
     }
 
-    // 내가 상신한 문서 조회(status = "SUBMITTED"), 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
+    // 임시저장한 문서 조회(status = "UNSUBMITTED), 내가 상신한 문서 조회(status = "SUBMITTED"),
+    // 내가 결재할 문서 조회(status = "AWAITING"), 내가 결재한 문서 조회(status = "PROCESSED")
     @GetMapping("/documents/me")
     public ResponseEntity<ResponseDto<Page<ResDocumentDto>>> getMyDocumentsByStatus(@AuthenticationPrincipal CustomUser customUser,
                                                                                     @ModelAttribute ReqDocumentDto reqDocumentDto,
@@ -67,7 +70,10 @@ public class DocumentController {
         Page<ResDocumentDto> resDocumentDtos = documentService.getMyDocumentsByStatus(customUser.getComId(), customUser.getUsername(), reqDocumentDto, status, page, sort);
 
         String message = "";
-        if ("SUBMITTED".equals(status)) {
+        if("UNSUBMITTED".equals(status)){
+            message = resDocumentDtos.isEmpty() ? "임시저장한 문서가 없습니다" : "임시저장한 문서 조회 성공";
+        }
+        else if ("SUBMITTED".equals(status)) {
             message = resDocumentDtos.isEmpty() ? "내가 상신한 문서가 없습니다" : "내가 상신한 문서 조회 성공";
         }
         else if ("AWAITING".equals(status)) {
@@ -92,7 +98,7 @@ public class DocumentController {
                                                                           @RequestParam(name = "status") String status,
                                                                           @AuthenticationPrincipal CustomUser customUser) {
 
-        if (!"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
+        if (!"UNSUBMITTED".equals(status) && !"SUBMITTED".equals(status) && !"FINALIZED".equals(status) && !"PROCESSED".equals(status) && !"AWAITING".equals(status)) {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
 
@@ -105,17 +111,19 @@ public class DocumentController {
 
     // 문서 상신 및 임시저장
     @PostMapping("/documents")
-    public ResponseEntity<ResponseDto<Void>> createDocument(@AuthenticationPrincipal CustomUser customUser,
+    public ResponseEntity<ResponseDto<Long>> createDocument(@AuthenticationPrincipal CustomUser customUser,
                                                             @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
-        documentService.createDocument(customUser.getComId(), /*empId*/customUser.getUsername(), reqDocumentDto);
+        Long docNo = documentService.createDocument(customUser.getComId(), /*empId*/customUser.getUsername(), reqDocumentDto);
 
         String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
                 ? "문서 임시저장 성공"
                 : "문서 상신 성공";
 
+        log.info("문서 상신 및 임시저장 성공! docNo = {}", docNo);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(HttpStatus.CREATED, message, null));
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, docNo));
     }
 
     // 결재자 없을 시 상신 취소. 상신일 null로 변경, 임시저장상태를 true로 변경, 문서상태를 상신전(US)로 변경.
@@ -145,7 +153,7 @@ public class DocumentController {
 
         documentService.processApproval(comId, myEmpId, docNo, reqApprovalLineDto);
 
-        String message = "A".equals(reqApprovalLineDto.getApprStat()) ? "결재가 승인되었습니다." : "결재가 반려되었습니다.";
+        String message = "A".equals(reqApprovalLineDto.getApprStat()) ? "결재가 승인되었습니다" : "결재가 반려되었습니다";
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -153,8 +161,74 @@ public class DocumentController {
     }
 
 
+    /**
+     * 반려된 문서 재작성 (새 문서로 생성)
+     * - 기존 반려 문서는 유지, 새 문서 생성 (INSERT)
+     */
+    @PostMapping("/documents/{docNo}/resubmit")
+    public ResponseEntity<ResponseDto<Long>> resubmitRejectedDocument(@PathVariable(name = "docNo") Long docNo,
+                                                                      @AuthenticationPrincipal CustomUser customUser,
+                                                                      @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        Long newDocNo = documentService.resubmitRejectedDocument(comId, myEmpId, docNo, reqDocumentDto);
+
+        String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
+                ? "문서가 임시저장되었습니다"
+                : "문서가 재상신되었습니다";
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, message, newDocNo));
+    }
 
 
+    /**
+     * 임시저장 문서 수정
+     * - 기존 문서를 수정 (UPDATE)
+     */
+    @PutMapping("/documents/{docNo}")
+    public ResponseEntity<ResponseDto<Long>> updateTempDocument(@PathVariable(name = "docNo") Long docNo,
+                                                                @AuthenticationPrincipal CustomUser customUser,
+                                                                @Valid @RequestBody ReqDocumentDto reqDocumentDto) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        documentService.updateTempDocument(comId, myEmpId, docNo, reqDocumentDto);
+
+        String message = Boolean.TRUE.equals(reqDocumentDto.getTemp())
+                ? "문서가 임시저장되었습니다"
+                : "문서가 상신되었습니다";
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, message, docNo));
+    }
+
+
+    /**
+     * AI 요약 생성 (문서 내용만 요약)
+     */
+    @PostMapping("/documents/ai-summary")
+    public ResponseEntity<ResponseDto<String>> generateAiSummary(
+            @AuthenticationPrincipal CustomUser customUser,
+            @RequestBody Map<String, String> request) {
+
+        String content = request.get("content");
+
+        // 최소 길이 검증
+        if (content == null || content.trim().length() < 100) {
+            throw new CustomException(ErrorCode.CONTENT_TOO_SHORT_FOR_SUMMARY);
+        }
+
+        // AI 요약 서비스 호출
+        String summary = documentService.generateAiSummary(content);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "AI 요약 생성 성공", summary));
+    }
 
 
 }

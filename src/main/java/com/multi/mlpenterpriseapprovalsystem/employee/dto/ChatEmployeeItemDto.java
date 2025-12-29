@@ -19,6 +19,7 @@ public class ChatEmployeeItemDto {
 
     private String depName;
     private String posName;
+    private Integer posOrder;
 
     private String msgStat; // c/m/d/x/h
     private String atte;    // b/v/c

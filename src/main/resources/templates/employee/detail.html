@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - 사원 상세 조회</title>
+
+    <style>
+        :root{
+            --primary:#2f6fda;
+            --bg:#f3f5f9;
+            --card:#ffffff;
+            --soft:#f6f7fb;
+            --text:#111;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --ok:#1b7f3a;
+            --danger:#c62828;
+            --warn:#f59e0b;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+
+        /* Topbar */
+        .topbar{
+            height:72px;background:var(--primary);color:#fff;
+            display:flex;align-items:center;gap:16px;padding:0 20px;
+            box-shadow:0 10px 25px rgba(0,0,0,.12);
+        }
+        .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;letter-spacing:-.3px;cursor:pointer}
+        .brand .logo{
+            width:38px;height:38px;border-radius:12px;background:#fff;color:var(--primary);
+            display:grid;place-items:center;font-weight:900;
+        }
+        .search{
+            flex:1;display:flex;align-items:center;gap:10px;
+            max-width:720px;background:#fff;border-radius:999px;padding:8px 12px;color:var(--text);
+        }
+        .search select{border:none;outline:none;background:transparent;font-size:14px;color:var(--muted);}
+        .search input{border:none;outline:none;flex:1;font-size:14px;}
+        .top-actions{display:flex;align-items:center;gap:14px;margin-left:auto;}
+        .icon-btn{
+            width:38px;height:38px;border-radius:999px;background:rgba(255,255,255,.18);
+            display:grid;place-items:center;cursor:pointer;
+        }
+        .logout{
+            border:none;cursor:pointer;background:#dbeafe;color:#1e3a8a;
+            padding:10px 16px;border-radius:999px;font-weight:900;
+        }
+
+        /* Layout */
+        .wrap{display:flex;min-height:calc(100vh - 72px)}
+        .sidenav{
+            width:86px;background:#fff;border-right:1px solid var(--line);
+            padding:14px 10px;
+        }
+        .side-item{
+            height:56px;border-radius:14px;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;gap:6px;margin-bottom:10px;
+            color:#1f2937;font-size:12px;
+        }
+        .side-item.active{background:#eef5ff;color:var(--primary);font-weight:900;}
+        .side-ico{width:28px;height:28px;border-radius:10px;border:2px solid currentColor;display:grid;place-items:center;font-size:14px;}
+
+        .subnav{
+            width:220px;background:#f9fafb;border-right:1px solid var(--line);
+            padding:18px 14px;
+        }
+        .subnav .title{font-weight:900;color:#111;margin:8px 0 14px;}
+        .subnav a{
+            display:block;padding:12px 12px;border-radius:12px;color:#374151;margin-bottom:8px;
+            text-decoration:none;
+        }
+        .subnav a.active{background:#eaf2ff;color:var(--primary);font-weight:900;}
+
+        .content{flex:1;padding:34px 42px;}
+        .crumb{font-size:14px;color:var(--muted);margin-bottom:10px;}
+        .page-title{font-size:34px;font-weight:900;margin:0 0 10px;}
+        .page-sub{font-size:18px;font-weight:900;margin:0 0 18px;color:#111}
+
+        .card{
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:26px;
+            padding:28px;
+        }
+        .panel{
+            background:var(--soft);
+            border-radius:26px;
+            padding:28px;
+        }
+
+        /* Detail layout */
+        .detail-grid{
+            display:grid;
+            grid-template-columns: 260px 1fr;
+            gap:26px;
+            align-items:start;
+        }
+        .photo-box{
+            width:220px;height:260px;border-radius:18px;background:#e5e7eb;
+            display:grid;place-items:center;color:#6b7280;font-weight:900;
+            margin:0 auto;
+            border:1px solid #d9dde5;
+            position:relative;
+            overflow:hidden;
+        }
+        .photo-box img{
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:none;
+        }
+        .photo-placeholder{
+            position:absolute; inset:0;
+            display:grid; place-items:center;
+            color:#6b7280; font-weight:900;
+        }
+
+        .kv{
+            display:grid;
+            grid-template-columns: 180px 1fr;
+            row-gap:14px;
+            column-gap:24px;
+            padding:6px 0;
+        }
+        .k{color:#111;font-weight:900;}
+        .v{color:#334155;font-weight:800;}
+        .v.muted{color:var(--muted);font-weight:800;}
+        .v.badge{
+            display:inline-flex;align-items:center;gap:8px;
+        }
+        .pill{
+            display:inline-flex;align-items:center;justify-content:center;
+            padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;
+            border:1px solid var(--line);background:#fff;color:#111;
+        }
+        .pill.ok{background:#eafbf0;border-color:#bfe7c9;color:var(--ok)}
+        .pill.danger{background:#fdecec;border-color:#ffd0cc;color:var(--danger)}
+        .pill.warn{background:#fff5df;border-color:#ffe3b0;color:#92400e}
+        .divider{height:1px;background:var(--line);margin:18px 0}
+
+        .section-title{
+            font-weight:950;font-size:16px;margin:0 0 12px;
+            display:flex;align-items:center;gap:10px;
+        }
+
+        .actions{
+            display:flex;justify-content:center;gap:14px;margin-top:22px;
+        }
+        .btn{
+            min-width:140px;height:52px;border-radius:14px;border:0;
+            font-weight:950;cursor:pointer;
+            padding:0 18px;
+        }
+        .btn.primary{background:#eaf2ff;color:#1d4ed8;border:1px solid #d9e6ff}
+        .btn.warn{background:#ffecec;color:#b42318;border:1px solid #ffd0cc}
+        .btn.gray{background:#d1d5db;color:#111;border:1px solid #cbd5e1}
+
+        .toast{
+            position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+            background:#111;color:#fff;padding:12px 14px;border-radius:12px;
+            font-weight:900;font-size:14px;box-shadow:0 14px 28px rgba(0,0,0,.18);
+            opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
+            z-index:9999;
+        }
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(-2px)}
+        .toast.ok{background:#0f6b2f}
+        .toast.err{background:#c62828}
+
+        @media (max-width: 980px){
+            .detail-grid{grid-template-columns:1fr}
+            .kv{grid-template-columns:140px 1fr}
+            .photo-box{width:100%;height:220px}
+        }
+    </style>
+</head>
+
+<body>
+<header class="topbar">
+    <div class="brand" onclick="location.href='/'">
+        <div class="logo">B</div>
+        <div>Bizportal</div>
+    </div>
+
+    <div class="search">
+        <span style="opacity:.7;">🔍</span>
+        <select>
+            <option>Label</option>
+            <option>Title</option>
+            <option>Content</option>
+        </select>
+        <input type="text" placeholder="Search"/>
+    </div>
+
+    <div class="top-actions">
+        <div class="icon-btn" title="알림">🔔</div>
+        <div class="icon-btn" title="프로필">👤</div>
+        <button class="logout" type="button" onclick="location.href='/logout'">로그아웃</button>
+    </div>
+</header>
+
+<div class="wrap">
+    <!-- Left icon sidebar -->
+    <aside class="sidenav">
+        <div class="side-item"><div class="side-ico">✓</div><div>결재</div></div>
+        <div class="side-item"><div class="side-ico">💬</div><div>회의</div></div>
+        <div class="side-item"><div class="side-ico">✉</div><div>메일</div></div>
+        <div class="side-item"><div class="side-ico">📄</div><div>문서함</div></div>
+        <div class="side-item"><div class="side-ico">☁</div><div>공유함</div></div>
+        <div class="side-item"><div class="side-ico">📅</div><div>캘린더</div></div>
+        <div class="side-item"><div class="side-ico">📝</div><div>게시판</div></div>
+        <div class="side-item"><div class="side-ico">🕒</div><div>예약</div></div>
+        <div class="side-item"><div class="side-ico">💼</div><div>근태</div></div>
+        <div class="side-item"><div class="side-ico">👥</div><div>조직도</div></div>
+        <div class="side-item active"><div class="side-ico">⚙</div><div>관리자</div></div>
+    </aside>
+
+    <!-- Sub navigation -->
+    <nav class="subnav">
+        <div class="title">관리자</div>
+        <a href="/admin/departments/list">부서 편성</a>
+        <a href="/admin/positions/list">직급 편성</a>
+        <a class="active" href="/admin/employees/list">사원 관리</a>
+        <a href="/admin/policies">사내 규정 관리</a>
+    </nav>
+
+    <!-- Content -->
+    <main class="content">
+        <div class="crumb">사원 관리(상세 조회)</div>
+        <div class="page-title">사원 관리</div>
+        <div class="page-sub">사원 상세 조회</div>
+
+        <section class="card">
+            <div class="panel">
+                <div class="detail-grid">
+                    <!-- Left photo -->
+                    <div>
+                        <div class="photo-box">
+                            <img id="empPhoto" alt="사원 사진"/>
+                            <div class="photo-placeholder" id="photoPlaceholder">사진</div>
+                        </div>
+                    </div>
+
+                    <!-- Right details -->
+                    <div>
+                        <div class="section-title">기본 정보</div>
+                        <div class="kv">
+                            <div class="k">이름</div><div class="v" id="empName">-</div>
+                            <div class="k">사번</div><div class="v" id="empId">-</div>
+                            <div class="k">성별</div><div class="v" id="gen">-</div>
+                            <div class="k">권한(Role)</div><div class="v" id="role">-</div>
+
+                            <div class="k">생년월일</div><div class="v" id="birth">-</div>
+                            <div class="k">나이</div><div class="v" id="age">-</div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="section-title">조직 정보</div>
+                        <div class="kv">
+                            <div class="k">회사</div><div class="v" id="company">-</div>
+                            <div class="k">회사코드</div><div class="v muted" id="comId">-</div>
+                            <div class="k">부서</div><div class="v" id="department">-</div>
+                            <div class="k">직급</div><div class="v" id="position">-</div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="section-title">연락처</div>
+                        <div class="kv">
+                            <div class="k">이메일</div><div class="v" id="email">-</div>
+                            <div class="k">전화번호</div><div class="v" id="phone">-</div>
+                            <div class="k">사내번호</div><div class="v" id="workPhone">-</div>
+                            <div class="k">주소</div><div class="v" id="addr">-</div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="section-title">상태</div>
+                        <div class="kv">
+                            <div class="k">입사일</div><div class="v" id="hireDate">-</div>
+                            <div class="k">퇴사일</div><div class="v" id="retDate">-</div>
+                            <div class="k">재직 상태</div><div class="v badge" id="employmentStatus">-</div>
+                            <div class="k">근태(atte)</div><div class="v" id="atte">-</div>
+                            <div class="k">메신저 상태(msgStat)</div><div class="v" id="msgStat">-</div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="section-title">대직자</div>
+                        <div class="kv">
+                            <div class="k">대직자 사번</div><div class="v" id="delegateEmpId">-</div>
+                            <div class="k">대직자 이름</div><div class="v" id="delegateName">-</div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="section-title">시스템 정보</div>
+                        <div class="kv">
+                            <div class="k">empNo</div><div class="v muted" id="empNo">-</div>
+                            <div class="k">createdAt</div><div class="v muted" id="createdAt">-</div>
+                            <div class="k">updatedAt</div><div class="v muted" id="updatedAt">-</div>
+                        </div>
+
+                        <div class="actions">
+                            <button class="btn primary" type="button" onclick="goEdit()">수정</button>
+                            <button class="btn warn" type="button" onclick="retireEmployee()">퇴사</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<script th:inline="javascript">
+    const EMP_NO = /*[[${empNo}]]*/ 0;
+
+    const API_DETAIL = `/api/v1/admin/employees/${EMP_NO}`;
+    const API_ATTACH_LIST = (empNo) => `/api/v1/attachments?domain=EMPLOYEE&entityId=${empNo}`;
+    const API_PREVIEW_URL = (attachmentId) => `/api/v1/attachments/${attachmentId}/preview-url`;
+
+    let toastTimer = null;
+    function showToast(type, text){
+        const el = document.getElementById("toast");
+        el.className = "toast " + (type === "ok" ? "ok" : "err");
+        el.textContent = text;
+        el.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(()=> el.classList.remove("show"), 1800);
+    }
+
+    function fmtDate(v){
+        if(!v) return "-";
+        const s = String(v);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        return s.slice(0, 10);
+    }
+    function fmtDateTime(v){
+        if(!v) return "-";
+        return String(v).replace("T", " ").slice(0, 19);
+    }
+    function safe(v){ return (v === null || v === undefined || v === "") ? "-" : String(v); }
+
+    function mapGen(v){
+        if(!v) return "-";
+        const s = String(v).toUpperCase();
+        if(s === "M") return "남";
+        if(s === "F") return "여";
+        return v;
+    }
+    function mapAtte(v){
+        if(!v) return "-";
+        const s = String(v).toUpperCase();
+        if(s === "B") return "출장";
+        if(s === "V") return "휴가";
+        if(s === "C") return "출근";
+        return v;
+    }
+    function mapMsgStat(v){
+        if(!v) return "-";
+        const s = String(v).toUpperCase();
+        if(s === "C") return "근무 중";
+        if(s === "M") return "회의 중";
+        if(s === "D") return "업무 집중";
+        if(s === "X") return "자리 비움";
+        if(s === "H") return "출근 안함";
+        return v;
+    }
+
+    function setText(id, v){
+        const el = document.getElementById(id);
+        if(!el) return; // ✅ 없는 필드는 무시 (안전)
+        el.textContent = safe(v);
+    }
+
+    function setEmploymentStatus(isDeleted){
+        const el = document.getElementById("employmentStatus");
+        el.innerHTML = "";
+        const pill = document.createElement("span");
+        pill.className = "pill " + (isDeleted ? "danger" : "ok");
+        pill.textContent = isDeleted ? "퇴사" : "재직";
+        el.appendChild(pill);
+    }
+
+    function unwrap(maybe){
+        if(maybe && typeof maybe === "object" && "data" in maybe) return maybe.data;
+        return maybe;
+    }
+
+    function extractUrl(raw){
+        const unwrapped = unwrap(raw);
+        if(!unwrapped) return null;
+        if(typeof unwrapped === "object"){
+            if (unwrapped.url) return unwrapped.url;
+            if (unwrapped.previewUrl) return unwrapped.previewUrl;
+            if (unwrapped.presignedUrl) return unwrapped.presignedUrl;
+            if (unwrapped.data && typeof unwrapped.data === "object"){
+                if (unwrapped.data.url) return unwrapped.data.url;
+                if (unwrapped.data.previewUrl) return unwrapped.data.previewUrl;
+                if (unwrapped.data.presignedUrl) return unwrapped.data.presignedUrl;
+            }
+        }
+        return null;
+    }
+
+    async function loadPhoto(){
+        const img = document.getElementById("empPhoto");
+        const ph  = document.getElementById("photoPlaceholder");
+
+        img.style.display = "none";
+        img.removeAttribute("src");
+        ph.style.display = "grid";
+        ph.textContent = "사진";
+
+        try{
+            const listRes = await fetch(API_ATTACH_LIST(EMP_NO), {
+                method:"GET",
+                credentials:"include",
+                headers:{ "Accept":"application/json" }
+            });
+            if(!listRes.ok) return;
+
+            const listRaw = await listRes.json();
+            const listJson = unwrap(listRaw);
+            const items = Array.isArray(listJson) ? listJson : [];
+
+            const photoItem =
+                items.find(x => String(x.fileType || "").toUpperCase() === "IMAGE") ||
+                items.find(x => String(x.contentType || "").startsWith("image/")) ||
+                items[0];
+
+            if(!photoItem || !photoItem.attachmentId){
+                ph.textContent = "사진 없음";
+                return;
+            }
+
+            const attachmentId = photoItem.attachmentId;
+
+            const prevRes = await fetch(API_PREVIEW_URL(attachmentId), {
+                method:"GET",
+                credentials:"include",
+                headers:{ "Accept":"application/json" }
+            });
+
+            if(!prevRes.ok){
+                ph.textContent = "사진 불러오기 실패";
+                return;
+            }
+
+            const prevRaw = await prevRes.json();
+            console.log("preview raw=", prevRaw);
+
+            const url = extractUrl(prevRaw);
+            console.log("preview url=", url);
+
+            if(!url){
+                ph.textContent = "사진 URL 없음";
+                return;
+            }
+
+            img.onload = () => {
+                img.style.display = "block";
+                ph.style.display = "none";
+            };
+            img.onerror = () => {
+                img.style.display = "none";
+                ph.style.display = "grid";
+                ph.textContent = "사진 로드 실패";
+            };
+
+            img.crossOrigin = "anonymous";
+            img.referrerPolicy = "no-referrer";
+            img.src = url;
+
+        }catch(e){
+            console.error(e);
+            ph.textContent = "사진 로드 실패";
+        }
+    }
+
+    async function loadDetail(){
+        if(!EMP_NO){
+            showToast("err", "empNo가 없습니다.");
+            return;
+        }
+
+        const res = await fetch(API_DETAIL, {
+            method: "GET",
+            credentials: "include",
+            headers: { "Accept":"application/json" }
+        });
+
+        if(res.status === 401){
+            showToast("err", "인증이 필요합니다. 다시 로그인해주세요.");
+            return;
+        }
+        if(res.status === 403){
+            showToast("err", "권한이 없습니다. (COM_ADMIN)");
+            return;
+        }
+        if(!res.ok){
+            showToast("err", `상세 조회 실패 (HTTP ${res.status})`);
+            return;
+        }
+
+        const json = await res.json();
+        const d = unwrap(json);
+
+        setText("empNo", d.empNo);
+        setText("empId", d.empId);
+        setText("empName", d.empName);
+        setText("gen", mapGen(d.gen));
+        setText("role", d.role);
+
+        setText("birth", fmtDate(d.birth));
+        setText("age", (d.age === null || d.age === undefined || d.age === 0) ? "-" : `${d.age}세`);
+
+        setText("comId", d.comId);
+        setText("company", `${safe(d.comName)} (${safe(d.comId)})`);
+
+        setText("department", safe(d.depName));
+        setText("position", safe(d.posName));
+
+        setText("email", d.email);
+        setText("phone", d.phone);
+        setText("workPhone", d.workPhone);
+        setText("addr", d.addr);
+
+        setText("hireDate", fmtDate(d.hireDate));
+        setText("retDate", fmtDate(d.retDate));
+
+        setEmploymentStatus(d.isDeleted);
+
+        setText("atte", mapAtte(d.atte));
+        setText("msgStat", mapMsgStat(d.msgStat));
+
+        setText("delegateEmpId", d.delegateEmpId);
+        setText("delegateName", d.delegateName);
+
+        setText("createdAt", fmtDateTime(d.createdAt));
+        setText("updatedAt", fmtDateTime(d.updatedAt));
+
+        loadPhoto().catch(console.error);
+    }
+
+    function goEdit(){
+        location.href = `/admin/employees/${EMP_NO}/edit`;
+    }
+
+    async function retireEmployee(){
+        const ok = confirm("해당 사원을 퇴사 처리할까요?");
+        if(!ok) return;
+
+        try{
+            const res = await fetch(`/api/v1/admin/employees/${EMP_NO}/retire`, {
+                method: "PATCH",
+                credentials: "include",
+                headers: {"Accept":"application/json"}
+            });
+            if(res.ok){
+                showToast("ok", "퇴사 처리되었습니다.");
+                await loadDetail();
+                return;
+            }
+            showToast("err", `퇴사 처리 실패 (HTTP ${res.status})`);
+        }catch(e){
+            console.error(e);
+            showToast("err", "퇴사 처리 중 오류");
+        }
+    }
+
+    loadDetail().catch(e=>{
+        console.error(e);
+        showToast("err", "상세 조회 중 예외 발생");
+    });
+</script>
+
+</body>
+</html>

@@ -1,12 +1,15 @@
 package com.multi.mlpenterpriseapprovalsystem.meeting.service;
 
+import com.multi.mlpenterpriseapprovalsystem.common.client.MeetingAiClient;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.Meeting;
+import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingDept;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingEmp;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingScope;
 import com.multi.mlpenterpriseapprovalsystem.meeting.dto.*;
@@ -17,6 +20,7 @@ import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Depa
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,6 +40,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MeetingService {
 
     private final MeetingRepository meetingRepository;
@@ -45,6 +50,10 @@ public class MeetingService {
     private final EmployeeRepository employeeRepository;
     private final CompanyRepository companyRepository;
     private final DepartmentRepository departmentRepository;
+
+    private final MeetingAiClient meetingAiClient;
+
+    private final S3UrlService s3UrlService;
 
     private final EntityManager em;
 
@@ -169,14 +178,25 @@ public class MeetingService {
                     .empName(me.getEmployee().getEmpName())
                     .build());
         }
+        List<ResMeetingDepartmentDto> departments = new ArrayList<>();
+        if (meeting.getMeetingDepts() != null) {
+            for (MeetingDept md : meeting.getMeetingDepts()) {
+                Department d = md.getDepartment();
+                if (d == null) continue;
+                departments.add(ResMeetingDepartmentDto.builder()
+                        .depNo(d.getDepNo())
+                        .depName(d.getDepName())
+                        .build());
+            }
+        }
 
 
-        Long depNo = null;
-        String depName = null;
-        if (meeting.getMeetingDepts() != null && !meeting.getMeetingDepts().isEmpty()) {
-            Department d = meeting.getMeetingDepts().get(0).getDepartment();
-            depNo = d.getDepNo();
-            depName = d.getDepName();
+
+        String audioKey = meeting.getAudioObjectKey();
+        String recordUrl = null;
+
+        if (audioKey != null && !audioKey.isBlank()) {
+            recordUrl = s3UrlService.presignGetUrl(audioKey);
         }
 
         return ResMeetingDetailDto.builder()
@@ -185,11 +205,12 @@ public class MeetingService {
                 .sttText(meeting.getSttText())
                 .aiText(meeting.getAiText())
                 .startAt(meeting.getStartedAt())
-                .endAt(meeting.getCreatedAt()) // 너가 endAt을 createdAt로 쓰는 구조면 유지
-                .depNo(depNo)
-                .depName(depName)
+                .endAt(meeting.getCreatedAt())
+                .departments(departments)
                 .writerEmpId(meeting.getWriter().getEmpId())
                 .writerName(meeting.getWriter().getEmpName())
+                .recordUrl(recordUrl)
+                .objectKey(audioKey)
                 .participants(participants)
                 .build();
     }
@@ -327,6 +348,55 @@ public class MeetingService {
         meeting.delete();
         meetingEmpRepository.deleteAllByMeeting_MeetNo(meetNo);
         meetingDeptRepository.deleteAllByMeeting_MeetNo(meetNo);
+
+        return meeting.getMeetNo();
+    }
+
+    // ✅ 프론트가 AI 처리 요청
+    @Transactional
+    public void requestAiPipeline(String empId, Long meetNo, ReqMeetingAiRequestDto req) {
+
+        Meeting meeting = meetingRepository.findByMeetNoAndIsDeletedFalse(meetNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
+
+        // 작성자만 요청 가능(원하면 참석자도 허용으로 바꾸면 됨)
+        if (!meeting.getWriter().getEmpId().equals(empId)) {
+            throw new CustomException(ErrorCode.MEETING_ACCESS_DENIED);
+        }
+
+        // (선택) 처리 상태값 컬럼이 있으면 PROCESSING으로 변경
+         meeting.markAiProcessing();
+
+        // ✅ Spring -> FastAPI 호출 (비동기 권장)
+        meetingAiClient.requestAi(meetNo, req.getObjectKey(),req.getTitle());
+    }
+
+    // MeetingService.java 안에 추가
+    @Transactional
+    public Long applyAiResult(Long meetNo, ReqMeetingAiCallbackDto request) {
+
+        Meeting meeting = meetingRepository.findByMeetNoAndIsDeletedFalse(meetNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
+
+        String status = request.getStatus() == null ? "" : request.getStatus();
+        log.info("CALLBACK sttText len={}, aiText len={}, status={}",
+                request.getSttText() == null ? -1 : request.getSttText().length(),
+                request.getAiText() == null ? -1 : request.getAiText().length(),
+                request.getStatus());
+
+        if ("FAILED".equalsIgnoreCase(status)) {
+            // ⚠️ DTO 필드명이 errorMessage면 여기 맞춰야 함
+            meeting.markAiFailed(request.getErrorMessage());  // request.getError() 쓰면 안 맞을 수 있음
+            return meeting.getMeetNo();
+        }
+
+        // DONE
+        meeting.markAiDone(request.getSttText(), request.getAiText());
+
+        meeting.setAudioObjectKey(request.getObjectKey());
+
+        // 디버깅용: 바로 DB 반영 확인하고 싶으면
+        // meetingRepository.saveAndFlush(meeting);
 
         return meeting.getMeetNo();
     }

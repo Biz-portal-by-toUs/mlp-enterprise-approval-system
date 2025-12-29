@@ -19,9 +19,10 @@ import lombok.NoArgsConstructor;
 @Table(name = "positions")
 public class Positions {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="pos_no")
     private Long posNo;
 
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 10, name="pos_name")
     private String posName;
 
     @Column(name = "pos_order")

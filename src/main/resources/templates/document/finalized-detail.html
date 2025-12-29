@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>문서 상세 - 기업용 전자결재시스템</title>
+
+    <!-- TipTap 번들 -->
+    <script th:src="@{/js/tiptap.min.js}"></script>
+
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 0; padding: 40px; }
         .main-container {
@@ -34,22 +38,11 @@
         }
 
         /* 상단 영역: 문서정보 + 결재라인 */
-        .info-top {
-            display: flex; gap: 30px; align-items: flex-start;
-        }
-        .info-left {
-            flex-shrink: 0;
-            width: 220px;
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .info-right {
-            flex: 1;
-            min-width: 0;
-        }
+        .info-top { display: flex; gap: 30px; align-items: flex-start; }
+        .info-left { flex-shrink: 0; width: 220px; display: flex; flex-direction: column; gap: 12px; }
+        .info-right { flex: 1; min-width: 0; }
         .info-item { display: flex; align-items: center; gap: 12px; }
-        .info-label {
-            font-size: 13px; color: #868e96; font-weight: 600; min-width: 65px;
-        }
+        .info-label { font-size: 13px; color: #868e96; font-weight: 600; min-width: 65px; }
         .info-value { font-size: 14px; color: #333; font-weight: 500; }
         .doc-id { font-size: 15px; font-weight: bold; color: #339af0; }
 
@@ -58,14 +51,9 @@
             font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 12px;
             padding-left: 10px; border-left: 3px solid #339af0;
         }
-        .approval-card-container {
-            display: flex; gap: 8px; flex-wrap: nowrap; align-items: stretch;
-        }
+        .approval-card-container { display: flex; gap: 8px; flex-wrap: nowrap; align-items: stretch; }
         .approval-card {
-            flex: 1 1 0;
-            min-width: 90px;
-            max-width: 150px;
-            padding: 15px 8px;
+            flex: 1 1 0; min-width: 90px; max-width: 150px; padding: 15px 8px;
             border: 2px solid #e9ecef; border-radius: 10px;
             text-align: center; background: #fff; transition: all 0.2s;
         }
@@ -77,17 +65,12 @@
 
         .approval-seq { font-size: 10px; color: #adb5bd; margin-bottom: 6px; font-weight: 600; }
         .approval-name { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .approval-pos { font-size: 11px; color: #868e96; margin-bottom: 4px; }
         .approval-date { font-size: 10px; color: #868e96; line-height: 1.4; }
-
-        .approval-arrow {
-            display: flex; align-items: center; color: #dee2e6; font-size: 16px;
-            flex-shrink: 0; padding: 0 2px;
-        }
+        .approval-arrow { display: flex; align-items: center; color: #dee2e6; font-size: 16px; flex-shrink: 0; padding: 0 2px; }
 
         /* 문서 내용 */
-        .content-card {
-            background: #fff; border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden;
-        }
+        .content-card { background: #fff; border: 1px solid #e9ecef; border-radius: 10px; overflow: hidden; }
         .content-row { display: flex; border-bottom: 1px solid #f1f3f5; }
         .content-row:last-child { border-bottom: none; }
         .content-label {
@@ -95,20 +78,176 @@
             font-size: 13px; font-weight: 600; color: #495057;
             display: flex; align-items: center; flex-shrink: 0;
         }
-        .content-value {
-            flex: 1; padding: 15px 20px; font-size: 14px; color: #333;
-            display: flex; align-items: center;
-        }
+        .content-value { flex: 1; padding: 15px 20px; font-size: 14px; color: #333; display: flex; align-items: center; }
+
+        /* ✅ TipTap 읽기 전용 스타일 */
         .content-body {
-            padding: 25px; font-size: 14px; line-height: 1.8; color: #333;
-            min-height: 150px; white-space: pre-wrap; background: #fff;
+            padding: 25px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+            min-height: 150px;
+            background: #fff;
         }
 
-        /* 파일 배지 */
-        .file-badge {
-            display: inline-block; padding: 6px 14px; background: #e7f5ff;
-            border-radius: 20px; font-size: 13px; color: #339af0; font-weight: 500;
-            margin-right: 8px;
+        /* TipTap 읽기 전용 콘텐츠 스타일 */
+        .ProseMirror {
+            outline: none;
+        }
+
+        .ProseMirror p {
+            margin: 0.5em 0;
+        }
+
+        .ProseMirror table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        .ProseMirror table td,
+        .ProseMirror table th {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            min-width: 50px;
+            vertical-align: top;
+        }
+
+        .ProseMirror table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .ProseMirror ul,
+        .ProseMirror ol {
+            padding-left: 1.5em;
+            margin: 0.5em 0;
+        }
+
+        .ProseMirror h1 {
+            font-size: 2em;
+            margin: 0.67em 0;
+        }
+
+        .ProseMirror h2 {
+            font-size: 1.5em;
+            margin: 0.75em 0;
+        }
+
+        .ProseMirror h3 {
+            font-size: 1.17em;
+            margin: 0.83em 0;
+        }
+
+        .ProseMirror blockquote {
+            border-left: 3px solid #dee2e6;
+            padding-left: 1em;
+            margin-left: 0;
+            color: #868e96;
+        }
+
+        .ProseMirror code {
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .ProseMirror pre {
+            background: #f8f9fa;
+            padding: 1em;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .ProseMirror img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .ProseMirror a {
+            color: #339af0;
+            text-decoration: underline;
+        }
+
+        /* ✅ 첨부파일 스타일 - 가로 스크롤 */
+        .file-attachments {
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .file-attachments::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .file-attachments::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 3px;
+        }
+
+        .file-attachments::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 3px;
+        }
+
+        .file-attachments::-webkit-scrollbar-thumb:hover {
+            background: #adb5bd;
+        }
+
+        .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            min-width: 120px;
+            max-width: 140px;
+            flex-shrink: 0;
+        }
+
+        .file-item:hover {
+            background: #e7f5ff;
+            border-color: #339af0;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(51, 154, 240, 0.15);
+        }
+
+        .file-info {
+            width: 100%;
+            text-align: center;
+        }
+
+        .file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .file-meta {
+            font-size: 11px;
+            color: #868e96;
+        }
+
+        .no-files {
+            color: #adb5bd;
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+            width: 100%;
         }
 
         /* 반려 정보 */
@@ -130,26 +269,8 @@
             background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%);
             border: 1px solid #d0bfff; border-radius: 10px; padding: 25px;
         }
-        .ai-title {
-            font-size: 15px; font-weight: bold; color: #7950f2; margin-bottom: 15px;
-            display: flex; align-items: center; gap: 8px;
-        }
+        .ai-title { font-size: 15px; font-weight: bold; color: #7950f2; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         .ai-content { font-size: 14px; line-height: 1.8; color: #495057; }
-
-        /* 버튼 그룹 */
-        .btn-group { display: flex; justify-content: center; gap: 15px; margin-top: 35px; }
-        .btn-approve {
-            padding: 14px 50px; background: linear-gradient(135deg, #339af0 0%, #228be6 100%);
-            color: white; border: none; border-radius: 8px; cursor: pointer;
-            font-size: 15px; font-weight: bold; transition: all 0.2s;
-        }
-        .btn-approve:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(51,154,240,0.4); }
-        .btn-reject {
-            padding: 14px 50px; background: linear-gradient(135deg, #ff6b6b 0%, #fa5252 100%);
-            color: white; border: none; border-radius: 8px; cursor: pointer;
-            font-size: 15px; font-weight: bold; transition: all 0.2s;
-        }
-        .btn-reject:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(250,82,82,0.4); }
 
         /* 로딩 */
         .loading { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
@@ -171,14 +292,13 @@
         <div class="section">
             <div class="info-card">
                 <div class="info-top">
-                    <!-- 왼쪽: 문서 정보 -->
                     <div class="info-left">
                         <div class="info-item">
                             <span class="info-label">문서번호</span>
                             <span class="info-value doc-id" id="info-docId">-</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">작성일자</span>
+                            <span class="info-label">상신일자</span>
                             <span class="info-value" id="info-createdAt">-</span>
                         </div>
                         <div class="info-item">
@@ -194,7 +314,6 @@
                             <span class="info-value" id="info-phone">-</span>
                         </div>
                     </div>
-                    <!-- 오른쪽: 결재라인 -->
                     <div class="info-right">
                         <div class="approval-section-title">결재라인</div>
                         <div class="approval-card-container" id="approval-line"></div>
@@ -215,15 +334,21 @@
                     <div class="content-label">카테고리</div>
                     <div class="content-value" id="doc-category">-</div>
                 </div>
-                <div class="content-body" id="doc-content">내용이 표시됩니다.</div>
+                <!-- ✅ TipTap 읽기 전용 에디터 -->
+                <div class="content-body" id="doc-content-viewer"></div>
+                <!-- ✅ 첨부파일 영역 -->
                 <div class="content-row">
-                    <div class="content-label">파일 첨부</div>
-                    <div class="content-value" id="doc-files">-</div>
+                    <div class="content-label">첨부파일</div>
+                    <div class="content-value" style="padding: 0;">
+                        <div class="file-attachments" id="file-attachments">
+                            <div class="no-files">첨부된 파일이 없습니다.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 반려 정보 (반려된 경우에만 표시) -->
+        <!-- 반려 정보 -->
         <div class="section" id="reject-section" style="display: none;">
             <div class="section-title">반려 정보</div>
             <div class="reject-card">
@@ -248,17 +373,12 @@
                 <div class="ai-content" id="ai-summary-content"></div>
             </div>
         </div>
-
-        <!-- 결재 버튼 -->
-        <div class="btn-group" id="btn-group" style="display: none;">
-            <button class="btn-approve" onclick="handleApprove()">승인</button>
-            <button class="btn-reject" onclick="handleReject()">반려</button>
-        </div>
     </div>
 </div>
 
 <script>
     let docData = null;
+    let tiptapViewer = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         const pathParts = window.location.pathname.split('/');
@@ -267,11 +387,9 @@
     });
 
     async function loadDocumentDetail(docNo) {
-        const token = localStorage.getItem('accessToken');
-
         try {
             const response = await fetch(`/api/v1/documents/${docNo}?status=FINALIZED`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
 
             const result = await response.json();
@@ -279,6 +397,9 @@
             if (result.status === 200) {
                 docData = result.data;
                 renderDetail(docData);
+
+                // ✅ 첨부파일 로드
+                await loadAttachments(docNo);
             } else {
                 alert('문서를 불러올 수 없습니다.');
                 history.back();
@@ -293,15 +414,11 @@
         document.getElementById('loading').style.display = 'none';
         document.getElementById('doc-detail').style.display = 'block';
 
-        // 양식 제목
         document.getElementById('form-title').textContent = doc.docFormName || '문서 상세';
-
-        // 문서 정보
         document.getElementById('info-docId').textContent = doc.docId || '-';
-        document.getElementById('info-createdAt').textContent = formatDate(doc.submittedAt);
+        document.getElementById('info-createdAt').textContent = formatDateTime(doc.submittedAt);
         document.getElementById('info-dept').textContent = doc.writerDepName || '-';
 
-        // 작성자 (이름 + 사원번호)
         if (doc.writer && doc.writerId) {
             document.getElementById('info-writer').textContent = `${doc.writer} (${doc.writerId})`;
         } else {
@@ -309,30 +426,159 @@
         }
 
         document.getElementById('info-phone').textContent = doc.writerWorkPhone || '-';
-
-        // 결재라인 렌더링
         renderApprovalLine(doc.resApprovalLineDtos);
 
-        // 문서 내용
         document.getElementById('doc-title').textContent = doc.title || '-';
         document.getElementById('doc-category').textContent = doc.docFormCatName || '-';
-        document.getElementById('doc-content').textContent = doc.content || '(내용 없음)';
 
-        // 파일 첨부 (미구현)
-        document.getElementById('doc-files').innerHTML = '-';
+        // ✅ TipTap 읽기 전용 뷰어 초기화
+        initTipTapViewer(doc.content);
 
-        // 반려 정보
         renderRejectInfo(doc.resApprovalLineDtos, doc.docStat);
 
-        // AI 요약
         if (doc.aiSumm) {
             document.getElementById('ai-summary-section').style.display = 'block';
             document.getElementById('ai-summary-content').textContent = doc.aiSumm;
         }
+    }
 
-        // 결재 버튼 (내 순서일 때만)
-        if (doc.myApprStat === 'I') {
-            document.getElementById('btn-group').style.display = 'flex';
+    // ✅ TipTap 읽기 전용 뷰어 초기화
+    function initTipTapViewer(contentJson) {
+        const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader,
+            TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
+
+        let content = '<p>내용이 없습니다.</p>';
+
+        if (contentJson) {
+            try {
+                if (typeof contentJson === 'string') {
+                    content = JSON.parse(contentJson);
+                } else {
+                    content = contentJson;
+                }
+            } catch (e) {
+                console.error('JSON 파싱 실패:', e);
+                content = contentJson;
+            }
+        }
+
+        tiptapViewer = new Editor({
+            element: document.querySelector('#doc-content-viewer'),
+            extensions: [
+                StarterKit,
+                Table.configure({ resizable: false }),
+                TableRow,
+                TableCell,
+                TableHeader,
+                TextAlign.configure({ types: ['heading', 'paragraph'] }),
+                TextStyle,
+                Color,
+                FontFamily,
+                Highlight,
+                Image,
+                Link.configure({ openOnClick: true }),
+                Underline,
+            ],
+            content: content,
+            editable: false,
+            editorProps: {
+                attributes: {
+                    style: 'outline: none;'
+                }
+            }
+        });
+
+        console.log('✅ TipTap 읽기 전용 뷰어 초기화 완료');
+    }
+
+    // ✅ 첨부파일 로드
+    async function loadAttachments(docNo) {
+        try {
+            console.log('📎 [loadAttachments] 시작 - docNo:', docNo);
+
+            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, {
+                credentials: 'include'
+            });
+
+            console.log('📋 [loadAttachments] 응답 상태:', response.status);
+
+            if (!response.ok) {
+                console.error('❌ 첨부파일 조회 실패:', response.status);
+                return;
+            }
+
+            const result = await response.json();
+            console.log('📦 [loadAttachments] 전체 응답:', result);
+            console.log('📦 [loadAttachments] result.data:', result.data);
+
+            let attachments = [];
+            if (result.data) {
+                if (Array.isArray(result.data)) {
+                    attachments = result.data;
+                } else if (result.data.items && Array.isArray(result.data.items)) {
+                    attachments = result.data.items;
+                } else if (result.data.content && Array.isArray(result.data.content)) {
+                    attachments = result.data.content;
+                }
+            }
+
+            console.log('✅ [loadAttachments] 최종 첨부파일 개수:', attachments.length);
+            console.log('✅ [loadAttachments] 첨부파일 목록:', attachments);
+
+            renderAttachments(attachments);
+        } catch (error) {
+            console.error('❌ 첨부파일 로드 오류:', error);
+        }
+    }
+
+    // ✅ 첨부파일 렌더링
+    function renderAttachments(attachments) {
+        const container = document.getElementById('file-attachments');
+
+        if (attachments.length === 0) {
+            container.innerHTML = '<div class="no-files">첨부된 파일이 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = attachments.map(file => {
+            return `
+                <div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')">
+                    <div class="file-info">
+                        <div class="file-name" title="${file.originalName}">${file.originalName}</div>
+                        <div class="file-meta">${formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ✅ 파일 다운로드
+    async function downloadFile(atchNo, originalName) {
+        try {
+            console.log('📥 [downloadFile] 시작 - atchNo:', atchNo, 'originalName:', originalName);
+
+            const response = await fetch(`/api/v1/attachments/${atchNo}/download-url`, {
+                credentials: 'include'
+            });
+
+            console.log('📋 [downloadFile] 응답 상태:', response.status);
+
+            if (!response.ok) {
+                alert('파일 다운로드에 실패했습니다.');
+                return;
+            }
+
+            const result = await response.json();
+            console.log('📦 [downloadFile] 응답 데이터:', result);
+
+            const downloadUrl = result.data?.url || result.data;
+            console.log('🔗 [downloadFile] 다운로드 URL:', downloadUrl);
+
+            window.open(downloadUrl, '_blank');
+
+        } catch (error) {
+            console.error('❌ 파일 다운로드 오류:', error);
+            alert('파일 다운로드 중 오류가 발생했습니다.');
         }
     }
 
@@ -345,12 +591,12 @@
             return;
         }
 
-        // seq 순서로 정렬 + 최대 5명
-        lines.sort((a, b) => a.seq - b.seq);
-        const displayLines = lines.slice(0, 5);
+        const approvers = lines.filter(line => !line.isDelegate);
+
+        approvers.sort((a, b) => a.seq - b.seq);
+        const displayLines = approvers.slice(0, 5);
 
         displayLines.forEach((line, index) => {
-            // 카드
             const card = document.createElement('div');
             card.className = 'approval-card';
 
@@ -359,15 +605,31 @@
             else if (line.apprStat === 'R') card.classList.add('rejected');
             else card.classList.add('waiting');
 
+            let delegateLabel = '';
+            if (line.endedAt) {
+                const delegateApprover = lines.find(l =>
+                    l.seq === line.seq &&
+                    l.isDelegate === true &&
+                    l.isActualAppr === true
+                );
+
+                if (delegateApprover) {
+                    delegateLabel = '<div style="font-size: 10px; color: #fa5252; font-weight: 600; margin-top: 2px;">(대직)</div>';
+                }
+            }
+
             card.innerHTML = `
                 <div class="approval-seq">결재자${line.seq}</div>
                 <div class="approval-name">${line.approverName}</div>
-                ${line.endedAt ? `<div class="approval-date">${formatDateTime(line.endedAt)}</div>` : '<div class="approval-date">-</div>'}
+                ${delegateLabel}
+                <div class="approval-id">${line.approverId || '-'}</div>
+                <div class="approval-dep">${line.approverDepName || '-'}</div>
+                <div class="approval-pos">${line.approverPosName || ''}</div>
+                ${line.endedAt ? `<div class="approval-date">${formatDateTimeInline(line.endedAt)}</div>` : '<div class="approval-date">-</div>'}
             `;
 
             container.appendChild(card);
 
-            // 화살표 (마지막 아님)
             if (index < displayLines.length - 1) {
                 const arrow = document.createElement('div');
                 arrow.className = 'approval-arrow';
@@ -394,6 +656,14 @@
         }
     }
 
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
     function formatDate(str) {
         if (!str) return '-';
         const d = new Date(str);
@@ -403,20 +673,15 @@
     function formatDateTime(str) {
         if (!str) return '-';
         const d = new Date(str);
-        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
     }
 
-    function handleApprove() {
-        if (confirm('이 문서를 승인하시겠습니까?')) {
-            alert('승인 기능은 아직 구현되지 않았습니다.');
-        }
-    }
-
-    function handleReject() {
-        const reason = prompt('반려 사유를 입력해주세요:');
-        if (reason) {
-            alert('반려 기능은 아직 구현되지 않았습니다.');
-        }
+    function formatDateTimeInline(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        return `${date} ${time}`;
     }
 </script>
 </body>

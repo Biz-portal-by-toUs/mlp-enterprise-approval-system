@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.domain;
 
+import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
@@ -9,7 +10,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * 사원 엔티티
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "employee")
-public class Employee {
+public class Employee extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "emp_no")
@@ -64,10 +65,10 @@ public class Employee {
     private String gen;
 
     @Column(name = "hire_date", nullable = false)
-    private LocalDateTime hireDate;
+    private LocalDate hireDate;
 
     @Column(name = "ret_date")
-    private LocalDateTime retDate; // Nullable
+    private LocalDate retDate; // Nullable
 
     @Column(nullable = false, length = 100)
     private String addr;
@@ -91,8 +92,83 @@ public class Employee {
     @JoinColumn(name = "delegate", referencedColumnName = "emp_id")
     private Employee delegate;
 
+    @Column(name = "object_key", nullable = true, length = 255, unique = true)
+    private String objectKey;
+
+
+    @Column(name = "birth", nullable = false)
+    private LocalDate birth;
+
+    /**
+     * 사원 생성 (등록용)
+     * - empId: comId + 4자리 일련번호 (ex. CAA0001)
+     * - pwd: 반드시 인코딩된 값 전달
+     */
+    public static Employee create(
+            String empId,
+            Company company,
+            Department department,
+            Positions positions,
+            String encodedPwd,
+            String empName,
+            String email,
+            String phone,
+            String workPhone,
+            String gen,
+            LocalDate hireDate,
+            RoleType role,
+            String addr,
+            String objectKey,
+            LocalDate birth
+    ) {
+        Employee e = new Employee();
+        e.empId = empId;
+        e.company = company;
+        e.department = department;
+        e.positions = positions;
+        e.pwd = encodedPwd;
+        e.empName = empName;
+        e.email = email;
+        e.phone = phone;
+        e.workPhone = workPhone;
+        e.gen = gen;
+        e.hireDate = hireDate;
+        e.role = role;
+        e.addr = addr;
+        e.objectKey = objectKey;
+        e.birth = birth;
+
+        // 기본값
+        e.isDeleted = false;
+        e.retDate = null;
+        e.atte = "C";
+        e.msgStat = "H";
+
+        return e;
+    }
+
+
     @PrePersist
     public void prePersist() {
-        if (msgStat == null) msgStat = "h";
-    } // 사원 상태 기본 출근 전으로 세팅
+        if (msgStat == null) msgStat = "H";
+        if (atte == null) atte = "C";
+        if (isDeleted == null) isDeleted = false;
+    } // 사원 상태 기본 출근 전(로그인 시 근무 중), 근태 기본 출근, 삭제 여부 기본 false 세팅
+
+    public void updateObjectKey(String objectKey) {
+        this.objectKey = objectKey;
+    }
+
+    public void updateAdminInfo(Department dep, Positions pos,
+                                String email, String phone, String workPhone, String addr,
+                                String gen, RoleType role) {
+        this.department = dep;
+        this.positions = pos;
+        this.email = email;
+        this.phone = phone;
+        this.workPhone = workPhone;
+        this.addr = addr;
+        this.gen = gen;
+        this.role = role;
+    }
 }

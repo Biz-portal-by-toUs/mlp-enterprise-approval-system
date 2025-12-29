@@ -21,6 +21,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Principal;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,14 +71,14 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     private void handleConnect(StompHeaderAccessor acc) {
-        String auth = acc.getFirstNativeHeader("Authorization");
-        if (auth == null) auth = acc.getFirstNativeHeader("authorization");
-
-        if (auth == null || !auth.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("No JWT in CONNECT");
+        Map<String, Object> sessionAttributes = acc.getSessionAttributes();
+        if (sessionAttributes == null || !sessionAttributes.containsKey("token")) {
+            throw new IllegalArgumentException("No Token found in session attributes (Cookie missing)");
         }
 
-        String token = auth.substring(7);
+        String token = (String) sessionAttributes.get("token");
+
+        // 토큰 검증 및 인증 처리 (기존 로직 유지)
         tokenProvider.validateToken(token);
 
         String empId = tokenProvider.getUsername(token);

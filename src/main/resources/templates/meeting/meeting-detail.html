@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>회의 상세</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --panel: #ffffff;
+            --line: #e5e7eb;
+            --text: #111827;
+            --muted: #6b7280;
+            --blue: #2b6ae6;
+            --blueSoft: #e7f1ff;
+            --chip: #f3f4f6;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* Layout */
+        .app {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #fff;
+            border-right: 1px solid var(--line);
+            padding: 24px 0;
+        }
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 20px;
+        }
+        .nav a {
+            display: flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 24px;
+            text-decoration: none;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .nav a.active {
+            background: var(--blueSoft);
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        /* Main Content */
+        .main {
+            padding: 32px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            height: 40px;
+            padding: 0 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--text);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .btn:hover { background: #f9fafb; }
+        .btn.primary {
+            display: none;
+            background: var(--blueSoft);
+            color: var(--blue);
+            border: 2px solid var(--blue);
+        }
+
+        /* 다운로드 버튼 스타일 */
+        .btn.download {
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            height: 32px;
+            font-size: 12px;
+            padding: 0 12px;
+        }
+        .btn.download:hover { background: #1d4ed8; }
+
+        /* Card Design */
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        h1 {
+            margin: 0 0 16px;
+            font-size: 24px;
+            font-weight: 800;
+            color: #111;
+        }
+
+        /* ✅ 메타 정보 행: 주최자/부서/시간(좌) + 다운로드(우) */
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .meta-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .pill {
+            padding: 6px 12px;
+            background: var(--chip);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #111;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 900;
+            color: #111;
+            margin-bottom: 16px;
+        }
+
+        .audio-box {
+            background: #fafafa;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            margin-bottom: 24px;
+        }
+        audio { width: 100%; margin-top: 10px; }
+
+        #participants {
+            font-size: 15px;
+            font-weight: 700;
+            color: #333;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+
+        pre {
+            width: 100%;
+            background: #fafafa;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            margin: 0;
+            color: #374151;
+        }
+
+        .error {
+            padding: 14px;
+            border-radius: 12px;
+            background: rgba(239,68,68,.08);
+            border: 1px solid rgba(239,68,68,.4);
+            color: #7f1d1d;
+            font-weight: 900;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .app { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <aside class="sidebar">
+        <nav class="nav">
+            <a href="/meeting">회의 목록</a>
+            <a href="#" class="active">회의 상세</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div id="error" class="error"></div>
+
+        <div class="topbar">
+            <button class="btn" id="backBtn">← 목록으로</button>
+            <button class="btn primary" id="editBtn">수정하기</button>
+        </div>
+
+        <div class="card">
+            <h1 id="title">회의 제목</h1>
+
+            <div class="meta-row">
+                <div class="meta-group">
+                    <span class="pill" id="writer">주최자: -</span>
+                    <span class="pill" id="dept">부서: -</span>
+                    <span class="pill" id="time">시간: -</span>
+                </div>
+                <button id="downloadBtn" class="btn download" style="display:none;">📥 녹음 파일 다운로드</button>
+            </div>
+
+            <div style="margin-top: 24px;">
+                <div class="section-title">🎤 녹음본</div>
+                <div class="audio-box">
+                    <audio id="audio" controls style="display:none"></audio>
+                    <div id="noAudio" class="pill" style="display:inline-flex">녹음본 없음</div>
+                </div>
+
+                <div class="section-title">👥 참석자</div>
+                <div id="participants">데이터를 불러오는 중...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">📝 STT 텍스트</div>
+            <pre id="sttText">-</pre>
+        </div>
+
+        <div class="card">
+            <div class="section-title">✨ AI 요약</div>
+            <pre id="aiText" style="background:#f5f7ff; border-color:#dbeafe">-</pre>
+        </div>
+    </main>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+    const API_BASE = "http://localhost:8090";
+    let currentRecordUrl = "";
+    let currentTitle = "";
+
+    function unwrapMaybeResponseDto(resJson) {
+        if (resJson && typeof resJson === "object" && "data" in resJson) return resJson.data;
+        return resJson;
+    }
+
+    async function getCurrentUser() {
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/employees/me`, {
+                method: "GET",
+                credentials: "include"
+            });
+            if (!res.ok) return null;
+            const json = await res.json();
+            return unwrapMaybeResponseDto(json);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function formatDateTime(isoLike){
+        if (!isoLike) return "-";
+        const s = String(isoLike).replace("T"," ");
+        return s.length >= 16 ? s.slice(0,16) : s;
+    }
+
+    function formatDepartments(d){
+        const list = d?.departments || [];
+        if (!Array.isArray(list) || list.length === 0) {
+            return d?.depName ? `${d.depName}` : "-";
+        }
+        return list.map(x => x?.depName ?? "-").join(", ");
+    }
+
+    function getMeetNoFromPath(){
+        const parts = location.pathname.split("/").filter(Boolean);
+        const meetNo = parts[parts.length - 1];
+        return meetNo && !isNaN(meetNo) ? Number(meetNo) : null;
+    }
+
+    // 파일 즉시 다운로드 로직
+    async function triggerDownload(url, filename) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            window.open(url, '_blank');
+        }
+    }
+
+    function renderAudio(recordUrl, title){
+        const audio = $("audio");
+        const noAudio = $("noAudio");
+        const downloadBtn = $("downloadBtn");
+
+        if (recordUrl && String(recordUrl).trim() !== "") {
+            currentRecordUrl = recordUrl;
+            currentTitle = title || 'recording';
+
+            audio.style.display = "block";
+            downloadBtn.style.display = "inline-flex";
+            noAudio.style.display = "none";
+            audio.src = recordUrl;
+        } else {
+            audio.style.display = "none";
+            downloadBtn.style.display = "none";
+            noAudio.style.display = "inline-flex";
+            audio.removeAttribute("src");
+        }
+    }
+
+    async function load(){
+        const meetNo = getMeetNoFromPath();
+        if (!meetNo) {
+            $("error").style.display = "block";
+            $("error").textContent = "유효한 회의 번호를 찾을 수 없습니다.";
+            return;
+        }
+
+        try {
+            const [meetingRes, me] = await Promise.all([
+                fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, { credentials: "include" }),
+                getCurrentUser()
+            ]);
+
+            const d = unwrapMaybeResponseDto(await meetingRes.json());
+
+            if (me && d.writerEmpId && String(me.empId) === String(d.writerEmpId)) {
+                $("editBtn").style.display = "inline-flex";
+            }
+
+            $("title").textContent = d.title ?? "-";
+            $("writer").textContent = `주최자: ${d.writerName ?? "-"}`;
+            $("dept").textContent = `부서: ${formatDepartments(d)}`;
+            $("time").textContent = `시간: ${formatDateTime(d.startAt)} ~ ${formatDateTime(d.endAt)}`;
+
+            renderAudio(d.recordUrl, d.title);
+
+            $("participants").textContent = d.participants?.map(p => `${p.empName}${p.jobName ? `(${p.jobName})` : ""}`).join(", ") || "참석자 없음";
+            $("sttText").textContent = d.sttText ?? "(STT 없음)";
+            $("aiText").textContent = d.aiText ?? "(AI 요약 없음)";
+
+        } catch(e) {
+            $("error").style.display = "block";
+            $("error").textContent = "데이터를 불러오는 중 오류가 발생했습니다.";
+        }
+    }
+
+    $("backBtn").onclick = () => location.href = "/meeting";
+    $("editBtn").onclick = () => {
+        const meetNo = getMeetNoFromPath();
+        location.href = `/meeting/${meetNo}/update`;
+    };
+
+    $("downloadBtn").onclick = () => {
+        if (currentRecordUrl) {
+            triggerDownload(currentRecordUrl, `${currentTitle}.webm`);
+        }
+    };
+
+    window.onload = load;
+</script>
+</body>
+</html>

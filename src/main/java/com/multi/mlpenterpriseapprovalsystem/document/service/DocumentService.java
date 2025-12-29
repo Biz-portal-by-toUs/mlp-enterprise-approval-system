@@ -4,10 +4,13 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.config.DocumentOpenAiConfig;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.DocumentOpenAiRequest;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqApprovalLineDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.DocumentOpenAiResponse;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
@@ -26,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -51,6 +55,8 @@ public class DocumentService {
     private final EmployeeRepository employeeRepository;
     private final TempDocumentFormRepository tempDocumentFormRepository;
     private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
+    private final DocumentOpenAiConfig documentOpenAiConfig;
+    private final WebClient documentOpenAiWebClient;
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
@@ -68,7 +74,10 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getMyDocumentsByStatus(String comId, String empId, ReqDocumentDto reqDocumentDto, String status, int page, String sort) {
 
-        if("SUBMITTED".equals(status)){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
+        if("UNSUBMITTED".equals(status)){
+            return getMyUnSubmittedDocuments(comId, empId, page);
+        }
+        else if("SUBMITTED".equals(status)){ // status가 SUBMITTED일때 내가 상신한 모든 문서 반환
             return getMySubmittedDocuments(comId, empId, reqDocumentDto, page, sort);
         }
         else if("AWAITING".equals(status)){ // status가 PENDING일때 내가 결재할 문서 반환
@@ -82,9 +91,29 @@ public class DocumentService {
         }
     }
 
+    // 내 회사의 문서 중 내가 임시저장한 문서 조회
+    @Transactional(readOnly = true)
+    public Page<ResDocumentDto> getMyUnSubmittedDocuments(String comId, String myEmpId, int page) {
+
+        Pageable pageable = PageRequest.of(page, 10);
+
+        // 문서상태가 US(상신전)여야 함
+        DocStat docStatFilter1 = DocStat.US;
+
+        Page<Document> documentPage = documentRepository.searchMyUnSubmittedDocuments(
+                comId,
+                myEmpId,
+                docStatFilter1,
+                pageable
+        );
+
+        return documentPage.map(ResDocumentDto::toDto);
+    }
+
     // 내 회사의 문서 중 내가 상신한 문서 조회
     // 문서상태는 검색창에서 미선택 기준(전체기준) 결재중(AW), 반려(RJ), 최종승인만(RI)조회
     // 내 결재상태는 내가 상신한 문서이기때문에 있을 수 없음. 내가 상신한 문서를 내가 결재하는건 불가능.
+    // ✅ 최근 결재일 기준 최신순(endedAt기준 LATEST인 APPR_LATEST), 오래된순(endedAt기준 OLDEST인 APPR_OLDEST)
     // 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST)
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
@@ -272,7 +301,11 @@ public class DocumentService {
 
         Document document;
 
-        if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
+        if("UNSUBMITTED".equals(status)){
+            document = documentRepository.findUnSubmittedDoc(comId, docNo, myEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+        }
+        else if ("SUBMITTED".equals(status)) { // 상신한 문서 상세 조회
             // 작성자가 나면서 문서상태가 AW or RJ or FI인 문서 조회
             document = documentRepository.findSubmittedDoc(comId, docNo, myEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
@@ -301,7 +334,7 @@ public class DocumentService {
 
 
     // 문서 상신 및 임시저장
-    public void createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
+    public Long createDocument(String comId, String myEmpId, ReqDocumentDto reqDocumentDto) {
 
         // 1. 연관 엔티티 조회
         Company company = companyRepository.findByComId(comId)
@@ -337,6 +370,8 @@ public class DocumentService {
         }
 
         log.info("문서 {} 완료: docNo={}, writer={}", isTemp ? "임시저장" : "상신", document.getDocNo(), myEmpId);
+
+        return document.getDocNo();
     }
 
     /**
@@ -631,6 +666,157 @@ public class DocumentService {
     }
 
 
+    /**
+     * 반려된 문서 재작성 (새 문서 생성)
+     * - 기존 반려 문서는 그대로 유지
+     * - 새 문서를 생성하여 상신 또는 임시저장
+     */
+    public Long resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
+
+        // 1. 원본 문서 조회
+        Document originalDoc = documentRepository.findById(originalDocNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 2. 본인 문서인지 확인
+        if (!originalDoc.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 3. 회사 일치 확인
+        if (!originalDoc.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 4. 반려 상태인지 확인
+        if (originalDoc.getDocStat() != DocStat.RJ) {
+            throw new CustomException(ErrorCode.DOCUMENT_NOT_REJECTED);
+        }
+
+        // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
+        Long newDocNo = createDocument(comId, myEmpId, reqDto);
+
+        log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
+
+        return newDocNo;
+    }
 
 
+    /**
+     * 임시저장 문서 수정 (UPDATE)
+     */
+    public void updateTempDocument(String comId, String myEmpId, Long docNo, ReqDocumentDto reqDto) {
+
+        // 1. 문서 조회
+        Document document = documentRepository.findById(docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 2. 본인 문서인지 확인
+        if (!document.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 3. 회사 일치 확인
+        if (!document.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 4. 임시저장 상태인지 확인
+        if (document.getDocStat() != DocStat.US) {
+            throw new CustomException(ErrorCode.DOCUMENT_NOT_TEMP);
+        }
+
+        // 5. 카테고리 조회
+        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
+
+        // 6. 문서 내용 수정
+        document.update(reqDto.getTitle(), reqDto.getContent(), reqDto.getCnttHtml(), reqDto.getAiSumm(), category);
+
+        boolean isTemp = Boolean.TRUE.equals(reqDto.getTemp());
+
+        if (isTemp) {
+            document.saveAsTemp();
+        } else {
+            document.submit();
+        }
+
+        // 7. 기존 결재라인 삭제 후 새로 생성
+        approvalLineRepository.deleteByDocument_docNo(docNo);
+
+        if (reqDto.getApprovalLines() != null && !reqDto.getApprovalLines().isEmpty()) {
+            validateApproverNotSelf(myEmpId, reqDto.getApprovalLines());
+            validateApprovalLineOrder(reqDto.getApprovalLines());
+
+            Company company = document.getCompany();
+            createApprovalLines(document, company, reqDto.getApprovalLines(), isTemp);
+        }
+
+        log.info("임시저장 문서 수정 완료: docNo={}, temp={}", docNo, isTemp);
+    }
+
+
+    /**
+     * AI 요약 생성 (GPT-4o-mini 사용)
+     */
+    public String generateAiSummary(String content) {
+
+        log.info("AI 요약 생성 시작 - contentLength: {}", content.length());
+
+        try {
+            DocumentOpenAiRequest request = DocumentOpenAiRequest.builder()
+                    .model(documentOpenAiConfig.getModel())
+                    .messages(List.of(
+                            DocumentOpenAiRequest.Message.builder()
+                                    .role("system")
+                                    .content("당신은 기업 결재 문서를 요약하는 전문 AI입니다.\n" +
+                                            "\n" +
+                                            "**입력 형식:**\n" +
+                                            "- HTML 형식의 문서 (표, 리스트 포함 가능)\n" +
+                                            "\n" +
+                                            "**요약 규칙:**\n" +
+                                            "1. HTML 태그는 무시하고 내용만 파악\n" +
+                                            "2. 표(table)의 경우: 각 셀의 내용을 문맥으로 이해하여 핵심만 추출\n" +
+                                            "3. 리스트의 경우: 항목들을 그룹화하여 요약\n" +
+                                            "4. 최종 요약은 100자 이내로 작성\n" +
+                                            "5. 핵심 요청사항, 보고사항, 주요 일정만 포함\n" +
+                                            "6. 명확하고 간결한 한국어 문장\n" +
+                                            "\n" +
+                                            "**좋은 요약 예시:**\n" +
+                                            "- \"어제: 데이터 정리 및 대직자 이슈 해결. 오늘: 화면 검증 및 양식 개선. 내일: 코드리뷰 예정\"\n" +
+                                            "- \"1분기 마케팅 예산 500만원에서 800만원으로 증액 요청 (경쟁사 대응)\"\n" +
+                                            "\n" +
+                                            "**나쁜 요약 예시:**\n" +
+                                            "- \"어제한거 데이터 이쁘게 넣기 임시저장에서...\" (맥락 없음)\n" +
+                                            "- \"표에 항목1, 항목2가 있고...\" (구조 설명)")
+                                    .build(),
+                            DocumentOpenAiRequest.Message.builder()
+                                    .role("user")
+                                    .content("다음 문서를 요약해주세요:\n\n" + content)
+                                    .build()
+                    ))
+                    .maxTokens(documentOpenAiConfig.getMaxTokens())
+                    .temperature(0.3)  // 낮은 temperature = 더 일관된 요약
+                    .build();
+
+            DocumentOpenAiResponse response = documentOpenAiWebClient.post()
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(DocumentOpenAiResponse.class)
+                    .block();
+
+            if (response == null || response.getChoices().isEmpty()) {
+                throw new CustomException(ErrorCode.AI_SUMMARY_GENERATION_FAILED);
+            }
+
+            String summary = response.getChoices().get(0).getMessage().getContent().trim();
+
+            log.info("AI 요약 생성 완료 - summaryLength: {}", summary.length());
+
+            return summary;
+
+        } catch (Exception e) {
+            log.error("AI 요약 생성 실패", e);
+            throw new CustomException(ErrorCode.AI_SUMMARY_GENERATION_FAILED);
+        }
+    }
 }

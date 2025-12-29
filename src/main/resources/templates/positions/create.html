@@ -129,15 +129,6 @@
         select.value = "1"; // 기본값
     })();
 
-    function getAccessToken() {
-        return (
-            localStorage.getItem("accessToken") ||
-            localStorage.getItem("jwt") ||
-            sessionStorage.getItem("accessToken") ||
-            sessionStorage.getItem("jwt")
-        );
-    }
-
     function showMsg(type, text) {
         const el = document.getElementById("msg");
         el.style.display = "block";
@@ -145,15 +136,16 @@
         el.textContent = text;
     }
 
+    async function safeJson(res) {
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     async function submitCreate() {
-        const token = getAccessToken();
         const posName = document.getElementById("posName").value.trim();
         const posOrder = parseInt(document.getElementById("posOrder").value, 10);
 
-        if (!token) {
-            showMsg("err", "로그인이 필요합니다. (토큰 없음)");
-            return;
-        }
         if (!posName) {
             showMsg("err", "직급명을 입력하세요.");
             return;
@@ -163,37 +155,41 @@
             return;
         }
 
-        const res = await fetch("/api/v1/admin/positions", {
-            method: "POST",
-            headers: {
-                "Authorization": "Bearer " + token,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({ posName, posOrder })
-        });
+        try {
+            const res = await fetch("/api/v1/admin/positions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                credentials: "include", // ✅ httpOnly 쿠키(accessToken) 자동 전송
+                body: JSON.stringify({ posName, posOrder })
+            });
 
-        if (res.status === 401) {
-            showMsg("err", "인증이 만료되었습니다. 다시 로그인 해주세요.");
-            return;
-        }
-        if (res.status === 403) {
-            showMsg("err", "권한이 없습니다. (COM_ADMIN만 가능)");
-            return;
-        }
+            if (res.status === 401) {
+                showMsg("err", "로그인이 필요합니다. 다시 로그인 해주세요.");
+                return;
+            }
+            if (res.status === 403) {
+                showMsg("err", "권한이 없습니다. (COM_ADMIN만 가능)");
+                return;
+            }
 
-        if (!res.ok) {
-            let msg = "직급 등록 중 오류가 발생했습니다. (" + res.status + ")";
-            try {
-                const json = await res.json();
+            if (!res.ok) {
+                let msg = "직급 등록 중 오류가 발생했습니다. (" + res.status + ")";
+                const json = await safeJson(res);
                 if (json && (json.message || json.msg)) msg = json.message || json.msg;
-            } catch(e) {}
-            showMsg("err", msg);
-            return;
-        }
+                showMsg("err", msg);
+                return;
+            }
 
-        showMsg("ok", "직급이 등록되었습니다.");
-        setTimeout(() => location.href = "/admin/positions/list", 300);
+            showMsg("ok", "직급이 등록되었습니다.");
+            setTimeout(() => location.href = "/admin/positions/list", 300);
+
+        } catch (e) {
+            console.error(e);
+            showMsg("err", "서버 통신 오류가 발생했습니다.");
+        }
     }
 </script>
 </body>

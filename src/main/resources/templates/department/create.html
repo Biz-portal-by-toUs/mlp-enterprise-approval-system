@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Bizportal - 부서 편성(등록)</title>
 
-<!--    &lt;!&ndash; (선택) CSRF 메타: CSRF 켜져있을 때만 사용 &ndash;&gt;-->
-<!--    <meta name="_csrf" th:content="${_csrf.token}"/>-->
-<!--    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>-->
+    <!--    &lt;!&ndash; (선택) CSRF 메타: CSRF 켜져있을 때만 사용 &ndash;&gt;-->
+    <!--    <meta name="_csrf" th:content="${_csrf.token}"/>-->
+    <!--    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>-->
 
     <style>
         :root{
@@ -209,6 +209,12 @@
         return (token && header) ? { token, header } : null;
     }
 
+    async function safeJson(res) {
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return {};
+        try { return await res.json(); } catch { return {}; }
+    }
+
     $("submitBtn").addEventListener("click", async () => {
         const depId = $("depId").value.trim();
         const depName = $("depName").value.trim();
@@ -220,10 +226,6 @@
 
         const headers = { "Content-Type": "application/json" };
 
-        // (선택) JWT를 localStorage에 저장해 쓰는 구조라면 자동 포함
-        const token = localStorage.getItem("accessToken");
-        if (token) headers["Authorization"] = "Bearer " + token;
-
         // (선택) CSRF 켜져있을 때만 자동 포함
         const csrf = getCsrf();
         if (csrf) headers[csrf.header] = csrf.token;
@@ -232,43 +234,53 @@
             const res = await fetch("/api/v1/admin/departments", {
                 method: "POST",
                 headers,
+                credentials: "include", // ✅ accessToken(httpOnly 쿠키) 자동 전송
                 body: JSON.stringify({ depId, depName })
             });
 
-            // 성공
-            if (res.ok) {
-                // 너희 ResponseDto 구조면 메시지 꺼내서 표시 가능
-                let msg = "부서 등록에 성공했습니다.";
-                setTimeout(() => {
-                    window.location.href = "/admin/departments/list";
-                }, 1000);
-                try {
-                    const data = await res.json();
-                    if (data?.message) msg = data.message;
-                } catch (e) {}
-                alert(msg);
-                // 필요하면 목록 페이지로 이동
-                // location.href = "/admin/departments";
-                $("depId").value = "";
-                $("depName").value = "";
-                showMsg(msg, true);
+            if (res.status === 401) {
+                showMsg("로그인이 필요합니다. 다시 로그인 해주세요.", false);
+                return;
+            }
+            if (res.status === 403) {
+                showMsg("권한이 없습니다. (COM_ADMIN만 가능)", false);
                 return;
             }
 
-            // 실패(권한/검증 등)
-            let errMsg = "요청 처리에 실패했습니다.";
-            try {
-                const data = await res.json();
-                if (data?.message) errMsg = data.message;
-            } catch (e) {
-                errMsg = `요청 실패 (HTTP ${res.status})`;
+            // 성공
+            if (res.ok) {
+                let msg = "부서 등록에 성공했습니다.";
+                const data = await safeJson(res);
+                if (data?.message) msg = data.message;
+
+                alert(msg);
+
+                $("depId").value = "";
+                $("depName").value = "";
+                showMsg(msg, true);
+
+                setTimeout(() => {
+                    window.location.href = "/admin/departments/list";
+                }, 1000);
+
+                return;
             }
+
+            // 실패(검증 등)
+            let errMsg = "요청 처리에 실패했습니다.";
+            const data = await safeJson(res);
+            if (data?.message) errMsg = data.message;
+            else errMsg = `요청 실패 (HTTP ${res.status})`;
+
             showMsg(errMsg, false);
 
         } catch (e) {
+            console.error(e);
             showMsg("서버 통신 오류가 발생했습니다.", false);
         }
     });
 </script>
 </body>
 </html>
+
+<!--sdlfjls-->

@@ -90,19 +90,16 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<ResponseDto<ResTokenDto>> refresh(
-            @RequestHeader("Authorization") String accessToken,
-            HttpServletRequest request
+            HttpServletRequest request,
+            HttpServletResponse response
     ) {
-        ResTokenDto token = tokenService.refreshAccessToken(accessToken, request);
-
+        ResTokenDto token = tokenService.refreshAccessToken(request, response); // (쿠키 기반 버전)
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "AccessToken 재발급 성공", token));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ResponseDto<Void>> logout(@RequestHeader("Authorization") String accessToken, HttpServletResponse response) {
-
-        tokenService.deleteRefreshToken(accessToken, response);
-
-        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto<>(HttpStatus.OK, "로그아웃 성공 및 Refresh Token 삭제 완료", null));
+    public ResponseEntity<ResponseDto<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
+        tokenService.logout(request, response);
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "로그아웃 성공", null));
     }
 }
