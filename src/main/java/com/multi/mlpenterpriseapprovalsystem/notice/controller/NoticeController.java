@@ -140,10 +140,14 @@ public class NoticeController {
         System.out.println("type : " + type + ", keyword : " + keyword + ", from : " + from + ", to : " + to);
         System.out.println("page : " + page + ", size : " + size);
         System.out.println("comId : " + comId);
+
+        if (type != null) type = type.trim();
+        if (keyword != null) keyword = keyword.trim();
         Pageable pageable = PageRequest.of(page, size, Sort.by("noticeNo").descending());
 
         Page<NoticeListItemResDto> result = noticeService.searchNotices(comId, type, keyword, from, to, pageable);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "공지사항 조회 성공", result));
     }
+
 
 }

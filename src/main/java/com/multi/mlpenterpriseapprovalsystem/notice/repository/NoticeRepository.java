@@ -31,4 +31,6 @@ public interface NoticeRepository extends JpaRepository<Notice, Long>, JpaSpecif
     @Query("update Notice n set n.rating = coalesce(n.rating, 0) + 1 where n.noticeNo = :noticeNo")
     int incrementRating(@Param("noticeNo") Long noticeNo);
 
+
+
 }

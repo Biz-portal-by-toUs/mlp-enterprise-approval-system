@@ -282,9 +282,9 @@
 <body>
 
 <div class="container notice-container">
-    <h2>공지사항 목록</h2>
+    <h2>자유게시판 목록</h2>
     <div class="top-bar">
-        <a href="/notice/form" class="btn btn-create">공지사항등록</a>
+        <a href="/board/form" class="btn btn-create">자유게시판등록</a>
     </div>
     <!-- 검색창 -->
     <div class="search-bar">
@@ -327,7 +327,7 @@
 </div>
 
 <script>
-    const API_URL = "/api/v1/notices";
+    const API_URL = "/api/v1/boards";
     const PAGE_SIZE = 10;
 
     // 현재 검색 상태(페이징 이동 시 유지)
@@ -399,7 +399,7 @@
         currentQuery.to = to;
 
         updateHint();
-        loadNotices(0);
+        loadBoards(0);
     }
 
     function resetSearch() {
@@ -411,22 +411,22 @@
 
         setDateInputsVisible(false);
         updateHint();
-        loadNotices(0);
+        loadBoards(0);
     }
 
-    async function loadNotices(page) {
+    async function loadBoards(page) {
         const tbody = document.getElementById("noticeTbody");
         tbody.innerHTML = "";
 
         try {
             const url = buildUrl(page);
-            //const response = await fetch(url);
+
             const token = localStorage.getItem("accessToken");
             const response = await fetch(url ,
                 { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
             const result = await response.json();
             console.log(result);
-            // ResponseDto 형식: { status, message, data }
+
             if (!result || result.status !== 200 || !result.data) {
                 tbody.innerHTML = `<tr><td colspan="6">데이터 오류</td></tr>`;
                 document.getElementById("pagination").innerHTML = "";
@@ -434,30 +434,28 @@
             }
 
             const pageData = result.data;
-            const notices = pageData.content || [];
+            const boards = pageData.content || [];
 
-            if (notices.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6">공지사항이 없습니다.</td></tr>`;
+            if (boards.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6">자유게시판 내용이 없습니다.</td></tr>`;
                 renderPagination(pageData);
                 return;
             }
 
             const startNo = page * PAGE_SIZE;
 
-            notices.forEach((notice, index) => {
+            boards.forEach((board, index) => {
                 const no = startNo + index + 1;
-                //const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
-
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                               <td>${no}</td>
                               <td class="title">
-                                <a href="/notice/${notice.noticeNo}">${notice.title}</a>
+                                <a href="/board/${board.boardNo}">${board.title}</a>
                               </td>
-                              <td>${notice.depName ?? ""}</td>
-                              <td>${notice.empName ?? ""}</td>
-                              <td>${notice.createdAt?.substring(0, 10) ?? "-"}</td>
-                              <td>${notice.rating}</td>
+                              <td>${board.depName ?? ""}</td>
+                              <td>${board.empName ?? ""}</td>
+                              <td>${board.createdAt?.substring(0, 10) ?? "-"}</td>
+                              <td>${board.rating}</td>
                             `;
                 tbody.appendChild(tr);
             });
@@ -480,7 +478,7 @@
         if (page.number > 0) {
             const prev = document.createElement("button");
             prev.textContent = "이전";
-            prev.onclick = () => loadNotices(page.number - 1);
+            prev.onclick = () => loadBoards(page.number - 1);
             pagination.appendChild(prev);
         }
 
@@ -489,7 +487,7 @@
             const btn = document.createElement("button");
             btn.textContent = i + 1;
             if (i === page.number) btn.classList.add("active");
-            btn.onclick = () => loadNotices(i);
+            btn.onclick = () => loadBoards(i);
             pagination.appendChild(btn);
         }
 
@@ -497,7 +495,7 @@
         if (page.number < page.totalPages - 1) {
             const next = document.createElement("button");
             next.textContent = "다음";
-            next.onclick = () => loadNotices(page.number + 1);
+            next.onclick = () => loadBoards(page.number + 1);
             pagination.appendChild(next);
         }
     }
@@ -526,7 +524,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         setDateInputsVisible(false);
         updateHint();
-        loadNotices(0);
+        loadBoards(0);
     });
 </script>
 
