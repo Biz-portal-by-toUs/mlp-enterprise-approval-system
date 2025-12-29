@@ -142,6 +142,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Optional<Employee> findByEmpNoAndCompany_ComId(Long empNo, String comId);
 
+    Optional<Employee> findByEmpNoAndIsDeletedFalse(Long empNo);
+
     interface PosCount {
         Long getPosNo();
         Long getCnt();
