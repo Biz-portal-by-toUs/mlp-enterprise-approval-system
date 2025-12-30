@@ -22,8 +22,8 @@ import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentF
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,7 +47,6 @@ import java.util.OptionalInt;
 @Transactional
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DocumentService {
     private final DocumentRepository documentRepository;
     private final ApprovalLineRepository approvalLineRepository;
@@ -57,6 +56,28 @@ public class DocumentService {
     private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
     private final DocumentOpenAiConfig documentOpenAiConfig;
     private final WebClient documentOpenAiWebClient;
+
+    public DocumentService(
+            DocumentRepository documentRepository,
+            ApprovalLineRepository approvalLineRepository,
+            CompanyRepository companyRepository,
+            EmployeeRepository employeeRepository,
+            TempDocumentFormRepository tempDocumentFormRepository,
+            TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository,
+            DocumentOpenAiConfig documentOpenAiConfig,
+            @Qualifier("documentOpenAiWebClient") WebClient documentOpenAiWebClient
+    ) {
+        this.documentRepository = documentRepository;
+        this.approvalLineRepository = approvalLineRepository;
+        this.companyRepository = companyRepository;
+        this.employeeRepository = employeeRepository;
+        this.tempDocumentFormRepository = tempDocumentFormRepository;
+        this.tempDocumentFormCategoryRepository = tempDocumentFormCategoryRepository;
+        this.documentOpenAiConfig = documentOpenAiConfig;
+        this.documentOpenAiWebClient = documentOpenAiWebClient;
+    }
+
+
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
