@@ -742,6 +742,90 @@
             }
         }
 
+        /* 파일 첨부 영역 */
+        .file-attach-section {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-light);
+        }
+        .file-attach-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .file-upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .file-upload-btn:hover {
+            background: #f8f9fa;
+            border-color: var(--primary-color);
+        }
+        .file-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .file-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        .file-item-name {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+        .file-item-size {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        .file-remove-btn {
+            color: #fa5252;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .file-remove-btn:hover {
+            background: #ffe0e0;
+        }
+
 
     </style>
 </head>
@@ -788,30 +872,36 @@
             </div>
         </div>
 
+        <!-- 파일 첨부 영역 -->
+        <div class="file-attach-section">
+            <div class="file-attach-header">
+                📎 첨부파일 (최대 5개, 개당 10MB)
+            </div>
+            <div class="file-input-wrapper">
+                <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
+                <label for="file-input" class="file-upload-btn">
+                    📁 파일 선택
+                </label>
+            </div>
+            <div class="file-list" id="file-list">
+                <div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>
+            </div>
+        </div>
+
 
         <div class="form-actions">
-            <!-- ✅ 첨부파일 등록 체크박스 -->
-            <label class="attach-check">
-                <input type="checkbox" id="attachAfter" name="attachAfter">
-                <span>첨부파일있는경우</span>
-            </label>
-            <button type="submit" class="btn-submit">공지 등록</button>
+
+            <button type="submit" class="btn-submit">등록</button>
             <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
         </div>
+
     </form>
 </div>
 
 <script>
+    let attachedFiles = [];
     // ✅ 페이지 진입 시 accessToken 유효성 검증 및 사용자 정보 표시
     window.addEventListener("DOMContentLoaded", async () => {
-        // const token = localStorage.getItem("accessToken");
-        //
-        // if (!token) {
-        //     // Spring Security에서 자동 리다이렉트 설정이 되어 있으면 여긴 안탐
-        //     alert("로그인 후 이용해주세요.");
-        //     window.location.href = "/auth/login";
-        //     return;
-        // }
 
         setupPopupToggle();
     });
@@ -844,18 +934,181 @@
         togglePopupDates(select.value);
     }
 
+    //=========================================================
+    function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        const maxSize = 10 * 1024 * 1024;
+        const maxCount = 5;
+
+        for (let file of files) {
+            if (attachedFiles.length >= maxCount) {
+                showAlert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`, "error");
+                break;
+            }
+
+            if (file.size > maxSize) {
+                showAlert(`${file.name}은(는) 10MB를 초과합니다.`, "error");
+                continue;
+            }
+
+            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
+                continue;
+            }
+
+            attachedFiles.push(file);
+        }
+
+        event.target.value = '';
+        renderFileList();
+    }
+
+    function renderFileList() {
+        const container = document.getElementById('file-list');
+
+        if (attachedFiles.length === 0) {
+            container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = attachedFiles.map((file, index) => `
+            <div class="file-item">
+                <div class="file-item-info">
+                    <span style="font-size: 18px;">📄</span>
+                    <div>
+                        <div class="file-item-name">${file.name}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+                <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
+            </div>
+        `).join('');
+    }
+
+    function removeFile(index) {
+        attachedFiles.splice(index, 1);
+        renderFileList();
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function getFileType(mimeType) {
+        if (mimeType.startsWith('image/')) return 'IMAGE';
+        if (mimeType.startsWith('audio/')) return 'AUDIO';
+        return 'DOC';
+    }
+
+    async function uploadFiles(noticeNo) {
+        console.log('📎 [uploadFiles] 시작 - noticeNodocNo:', noticeNo, 'attachedFiles:', attachedFiles);
+
+        if (attachedFiles.length === 0) {
+            console.log('⚠️ [uploadFiles] 첨부된 파일이 없어서 종료');
+            return;
+        }
+
+        console.log(`📤 [uploadFiles] 총 ${attachedFiles.length}개 파일 업로드 시작`);
+
+        for (const file of attachedFiles) {
+            console.log(`\n🔄 [파일 ${file.name}] 업로드 시작...`);
+
+            try {
+                console.log(`  1️⃣ [${file.name}] Presigned URL 요청 중...`);
+                const presignRes = await fetch('/api/v1/attachments/presign', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'NOTICE',
+                        entityId: noticeNo,
+                        fileType: getFileType(file.type),
+                        originalName: file.name,
+                        contentType: file.type,
+                        size: file.size
+                    })
+                });
+
+                console.log(`  📋 [${file.name}] Presign 응답 상태:`, presignRes.status);
+
+                if (!presignRes.ok) {
+                    console.error(`  ❌ [${file.name}] Presign 실패:`, presignRes.status);
+                    continue;
+                }
+
+                const presignData = await presignRes.json();
+                console.log(`  ✅ [${file.name}] Presign 성공:`, presignData);
+
+                const { objectKey, uploadUrl } = presignData.data;
+                console.log(`  🔑 [${file.name}] objectKey:`, objectKey);
+                console.log(`  🔗 [${file.name}] uploadUrl:`, uploadUrl);
+
+                console.log(`  2️⃣ [${file.name}] S3 직접 업로드 중...`);
+                const uploadRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': file.type
+                    },
+                    body: file
+                });
+
+                console.log(`  📋 [${file.name}] S3 업로드 응답 상태:`, uploadRes.status);
+
+                if (!uploadRes.ok) {
+                    console.error(`  ❌ [${file.name}] S3 업로드 실패:`, uploadRes.status);
+                    continue;
+                }
+
+                const etag = uploadRes.headers.get('ETag');
+                console.log(`  ✅ [${file.name}] S3 업로드 성공! ETag:`, etag);
+
+                console.log(`  3️⃣ [${file.name}] Complete 요청 중...`);
+                const completeRes = await fetch('/api/v1/attachments/complete', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'NOTICE',
+                        entityId: noticeNo,
+                        fileType: getFileType(file.type),
+                        objectKey: objectKey,
+                        originalName: file.name,
+                        contentType: file.type,
+                        size: file.size,
+                        etag: etag ? etag.replace(/"/g, '') : null
+                    })
+                });
+
+                console.log(`  📋 [${file.name}] Complete 응답 상태:`, completeRes.status);
+
+                if (!completeRes.ok) {
+                    console.error(`  ❌ [${file.name}] Complete 실패:`, completeRes.status);
+                } else {
+                    console.log(`  ✅ [${file.name}] Complete 성공!`);
+                }
+
+            } catch (e) {
+                console.error(`❌ [${file.name}] 파일 업로드 오류:`, e);
+            }
+        }
+
+        console.log('\n✅ [uploadFiles] 모든 파일 업로드 완료!');
+    }
+
+    //=========================================================
+
 
     // ✅ 공지 등록 fetch
     document.getElementById('noticeForm').addEventListener('submit', async function (e) {
         e.preventDefault();
-
-        // const token = localStorage.getItem("accessToken");
-        //
-        // if (!token) {
-        //     alert("로그인 후 이용해주세요.");
-        //     window.location.href = "/auth/login";
-        //     return;
-        // }
 
 
         const formData = new FormData(e.target);
@@ -896,29 +1149,37 @@
 
             alert('공지 등록 성공!');
 
-            //const noticeNo = result?.data?.notice.noticeNo;
-            const attachChecked = document.getElementById('attachAfter')?.checked;
-
-            // ✅ 체크되어 있으면 새창 오픈(팝업)
-            if (attachChecked && notice) {
-                const w = 1100, h = 800;
-                const left = Math.max(0, (window.screen.width - w) / 2);
-                const top = Math.max(0, (window.screen.height - h) / 2);
-
-                // Thymeleaf의 <a th:href="...">와 같은 URL 구조를 JS에서 그대로 사용:
-                const attachUrl = `/notice/Attachment-notice/${notice.noticeNo}`;
-
-                const popup = window.open(
-                    attachUrl,
-                    "attachPopup",
-                    `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
-                );
-
-                // 팝업 차단 시 안내
-                if (!popup) {
-                    alert("팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해주세요.");
-                }
+            if (attachedFiles.length > 0 && notice.noticeNo) {
+                console.log('🚀 [saveDocument] uploadFiles() 호출!');
+                await uploadFiles(notice.noticeNo);
+                console.log('✅ [saveDocument] uploadFiles() 완료!');
+            } else {
+                console.log('⚠️ [saveDocument] 파일 업로드 건너뜀 - attachedFiles:', attachedFiles.length, 'notice.noticeNo:', notice.noticeNo);
             }
+
+
+            // const attachChecked = document.getElementById('attachAfter')?.checked;
+            //
+            // // ✅ 체크되어 있으면 새창 오픈(팝업)
+            // if (attachChecked && notice) {
+            //     const w = 1100, h = 800;
+            //     const left = Math.max(0, (window.screen.width - w) / 2);
+            //     const top = Math.max(0, (window.screen.height - h) / 2);
+            //
+            //     // Thymeleaf의 <a th:href="...">와 같은 URL 구조를 JS에서 그대로 사용:
+            //     const attachUrl = `/notice/Attachment-notice/${notice.noticeNo}`;
+            //
+            //     const popup = window.open(
+            //         attachUrl,
+            //         "attachPopup",
+            //         `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+            //     );
+            //
+            //     // 팝업 차단 시 안내
+            //     if (!popup) {
+            //         alert("팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해주세요.");
+            //     }
+            // }
 
             // ✅ 부모창은 무조건 리스트로 이동
             window.location.href = "/notice/list";

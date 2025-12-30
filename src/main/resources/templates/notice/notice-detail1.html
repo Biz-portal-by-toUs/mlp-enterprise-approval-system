@@ -6,7 +6,6 @@
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <style>
         :root{
             --bg: #f6f7fb;
@@ -17,7 +16,7 @@
             --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
             --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
 
-            --primary: #3b82f6;
+            --primary: #3b82f6;      /* blue */
             --primary2: #2563eb;
             --danger: #ef4444;
             --danger2: #dc2626;
@@ -30,14 +29,14 @@
 
         body{
             margin: 0;
-            background:
-                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-                    var(--bg);
+            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
+            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
+            var(--bg);
             font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             color: var(--text);
         }
 
+        /* 컨테이너: 가운데 카드 느낌 */
         .container{
             max-width: 920px;
             margin: 64px auto;
@@ -47,6 +46,7 @@
             border: none;
         }
 
+        /* 상단 타이틀 영역(헤더 카드) */
         .notice-detail{
             background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(255,255,255,0));
             border: 1px solid var(--line);
@@ -55,13 +55,14 @@
             overflow: hidden;
         }
 
+        /* 실제 정보 카드 */
         .notice-info{
             background: var(--card);
             padding: 28px 28px 22px;
             border-radius: 18px;
-            position: relative;
         }
 
+        /* 제목/내용 영역 정리 */
         .notice-info p{
             margin: 0;
             padding: 10px 0;
@@ -84,25 +85,115 @@
             color: var(--text);
         }
 
-        /* ✅ 내용: 카드 */
+        #noticeDescription{
+            margin: 0;
+            padding: 12px 0;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        /* 내용 줄은 기존에 <p><strong>내용:</strong><p id="noticeDescription"> 구조가 살짝 깨져있어서
+           #noticeDescription을 카드처럼 보이게 강화 */
         #noticeDescription{
             background: rgba(17,24,39,.03);
             border: 1px solid rgba(17,24,39,.06);
             border-radius: 12px;
             padding: 14px 14px;
-            line-height: 1.75;
-            white-space: normal; /* TipTap/HTML 렌더 고려 */
         }
 
-        /* 3개 항목을 한 줄에 */
-        .notice-info p.triple{
-            grid-template-columns: 120px 1fr 120px 1fr 120px 1fr;
-            gap: 10px 14px;
+        /* 메타 영역을 2열로 보이게 */
+        .notice-info{
+            position: relative;
         }
-        @media (max-width: 720px){
-            .notice-info p.triple{
-                grid-template-columns: 120px 1fr;
-            }
+        .notice-info::after{
+            content:"";
+            display:block;
+            margin-top: 14px;
+        }
+
+
+        /* JS 값이 true/false로 그대로 보이면 아쉬우니,
+           true면 초록/false면 회색으로 보이게 하려면 JS에서 텍스트를 Y/N로 바꾸면 베스트.
+           CSS만으로도 기본 배지 제공 */
+        .notice-info p:last-child{ border-bottom: none; }
+
+        /* 탭 버튼 영역 */
+        .tab-buttons{
+            margin-top: 18px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab-btn{
+            border: 1px solid var(--line);
+            background: var(--card);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            color: var(--muted);
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(17,24,39,.04);
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+
+        .tab-btn.active{
+            background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
+            color: var(--text);
+            border-color: rgba(59,130,246,.25);
+        }
+
+        .tab-btn:hover{
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(17,24,39,.08);
+        }
+
+        /* 첨부파일 카드 */
+        #attach.tab-content{
+            margin-top: 12px;
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            padding: 14px;
+        }
+
+        /* 첨부파일 테이블 */
+        #attachList{
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        #attachList th{
+            text-align: left;
+            font-size: .9rem;
+            color: var(--muted);
+            background: rgba(17,24,39,.03);
+            padding: 12px 12px;
+            border-bottom: 1px solid rgba(17,24,39,.08);
+            font-weight: 800;
+        }
+
+        #attachList td{
+            padding: 12px 12px;
+            border-bottom: 1px solid rgba(17,24,39,.06);
+            font-size: .95rem;
+            color: var(--text);
+        }
+
+        #attachList tr:hover td{
+            background: rgba(59,130,246,.05);
+        }
+
+        /* 하단 버튼 그룹 */
+        .mt-4{
+            margin-top: 16px !important;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .btn{
@@ -118,6 +209,7 @@
             box-shadow: 0 10px 20px rgba(17,24,39,.06);
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
         }
+
         .btn:hover{
             transform: translateY(-1px);
             box-shadow: var(--shadow2);
@@ -125,86 +217,61 @@
             background: rgba(59,130,246,.05);
         }
 
+        /* 수정/삭제 강조 */
         #update-btn.btn{
             background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
             border-color: rgba(59,130,246,.25);
         }
+
         #delete-btn.btn{
             background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
             border-color: rgba(239,68,68,.25);
         }
+
         #delete-btn.btn:hover{
             border-color: rgba(239,68,68,.40);
             background: rgba(239,68,68,.06);
         }
 
-        .mt-4{
-            margin-top: 16px !important;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+        /* 홈 링크 */
+        .home-link{
+            display: inline-flex;
             align-items: center;
-        }
-
-        .tab-buttons{
+            gap: 8px;
             margin-top: 18px;
-            display: flex;
-            gap: 10px;
-        }
-        .tab-btn{
-            border: 1px solid var(--line);
-            background: var(--card);
-            padding: 10px 14px;
+            color: var(--primary2);
+            text-decoration: none;
+            font-weight: 900;
+            padding: 10px 12px;
             border-radius: 12px;
-            font-weight: 800;
-            color: var(--muted);
-            cursor: pointer;
-            box-shadow: 0 6px 14px rgba(17,24,39,.04);
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+            border: 1px solid rgba(59,130,246,.18);
+            background: rgba(59,130,246,.06);
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
         }
-        .tab-btn.active{
-            background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
-            color: var(--text);
-            border-color: rgba(59,130,246,.25);
-        }
-        .tab-btn:hover{
+
+        .home-link:hover{
             transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(17,24,39,.08);
+            border-color: rgba(59,130,246,.35);
+            background: rgba(59,130,246,.10);
         }
 
-        #attach.tab-content{
-            margin-top: 12px;
-            background: var(--card);
-            border-radius: 16px;
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
-            padding: 14px;
+        /* 3개 항목을 한 줄에 */
+        .notice-info p.triple{
+            grid-template-columns: 120px 1fr 120px 1fr 120px 1fr;
+            gap: 10px 14px;
         }
 
-        #attachList{
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
-            border-radius: 12px;
+        /* 작은 화면에서는 2줄로 자연스럽게 */
+        @media (max-width: 720px){
+            .notice-info p.triple{
+                grid-template-columns: 120px 1fr;
+            }
         }
-        #attachList th{
-            text-align: left;
-            font-size: .9rem;
-            color: var(--muted);
-            background: rgba(17,24,39,.03);
-            padding: 12px 12px;
-            border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 800;
-        }
-        #attachList td{
-            padding: 12px 12px;
-            border-bottom: 1px solid rgba(17,24,39,.06);
-            font-size: .95rem;
-            color: var(--text);
-        }
-        #attachList tr:hover td{
-            background: rgba(59,130,246,.05);
+
+        /* (선택) 등록일/변경일/조회건수 줄의 우선순위 튜닝 */
+        .notice-info p.triple.triple-2-1 strong:nth-of-type(3),
+        .notice-info p.triple.triple-2-1 span:nth-of-type(3){
+            /* 필요하면 숨기거나 아래로 내리는 등 조정 가능 */
         }
 
         .btn.btn-sm{
@@ -213,6 +280,7 @@
             box-shadow: 0 6px 14px rgba(17,24,39,.05);
         }
 
+        /* 공통 배지 */
         .badge{
             display: inline-flex;
             align-items: center;
@@ -224,122 +292,37 @@
             line-height: 1;
             border: 1px solid transparent;
         }
+
+        /* 사용 */
         .badge.success{
             background: rgba(16,185,129,.12);
             color: var(--success);
             border-color: rgba(16,185,129,.35);
         }
+
+        /* 미사용 */
         .badge.muted{
             background: rgba(107,114,128,.12);
             color: var(--muted);
             border-color: rgba(107,114,128,.35);
         }
 
-        /* =========================
-           ✅ TipTap/HTML 공통 렌더 스타일
-           (TipTap readOnly는 ProseMirror가 생김)
-        ========================== */
 
-        #noticeDescription .ProseMirror{
-            outline: none;
-            white-space: pre-wrap;
-            line-height: 1.75;
-        }
-
-        #noticeDescription h2{
-            margin: 12px 0 8px;
-            font-size: 1.25rem;
-            font-weight: 900;
-        }
-        #noticeDescription p{
-            margin: 8px 0;
-        }
-        #noticeDescription ul,
-        #noticeDescription ol{
-            padding-left: 22px;
-            margin: 8px 0;
-        }
-        #noticeDescription blockquote{
-            margin: 10px 0;
-            padding: 10px 12px;
-            border-left: 4px solid rgba(59,130,246,.35);
-            background: rgba(59,130,246,.06);
-            border-radius: 12px;
-        }
-        #noticeDescription pre{
-            background: rgba(17,24,39,.06);
-            padding: 12px;
-            border-radius: 14px;
-            overflow: auto;
-        }
-        #noticeDescription code{
-            background: rgba(17,24,39,.06);
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-weight: 800;
-        }
-        #noticeDescription a{
-            color: var(--primary2);
-            font-weight: 900;
-            text-decoration: underline;
-            text-underline-offset: 3px;
-        }
-
-        /* table */
-        #noticeDescription table{
-            border-collapse: collapse;
-            width: 100%;
-            table-layout: fixed;
-            margin: 10px 0;
-            overflow: hidden;
-            border-radius: 12px;
-            border: 1px solid rgba(17,24,39,.10);
-        }
-        #noticeDescription th,
-        #noticeDescription td{
-            border: 1px solid rgba(17,24,39,.10);
-            padding: 10px 12px;
-            vertical-align: top;
-            word-break: break-word;
-        }
-        #noticeDescription th{
-            background: rgba(17,24,39,.03);
-            font-weight: 900;
-            color: var(--muted);
-        }
-
-        /* TipTap selectedCell overlay (readOnly에서도 남을 수 있음) */
-        #noticeDescription .selectedCell:after{
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: rgba(59,130,246,.08);
-            pointer-events: none;
-        }
-        #noticeDescription td, #noticeDescription th{
-            position: relative;
-        }
     </style>
 </head>
-
 <body>
 <div class="header">
-    <!-- <th:block th:replace="~{common/header :: header}"/> -->
+    <!----
+    <th:block th:replace="~{common/header :: header}"/>
+    ---->
 </div>
 
 <div class="container">
     <h2>공지 사항 상세</h2>
-
     <div class="notice-detail">
         <div class="notice-info">
             <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
-
-            <!-- ✅ 내용: JSON이면 TipTap readOnly로, HTML이면 그대로 innerHTML 렌더 -->
-            <p>
-                <strong>내용:</strong>
-                <span id="noticeDescription"></span>
-            </p>
-
+            <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
             <p class="triple">
                 <strong>팝업여부:</strong> <span id="noticePopup"></span>
                 <strong>팝업시작일:</strong> <span id="noticeStarted"></span>
@@ -352,7 +335,7 @@
                 <strong>부서:</strong> <span id="noticeDepart"></span>
             </p>
 
-            <p class="triple">
+            <p class="triple triple-2-1">
                 <strong>등록일:</strong> <span id="noticeCreated"></span>
                 <strong>변경일:</strong> <span id="noticeUpdated"></span>
                 <strong>조회건수:</strong> <span id="noticeRating"></span>
@@ -373,134 +356,11 @@
     <div class="mt-4">
         <a href="/notice/list" class="btn">목록으로</a>
         <button id="update-btn" class="btn ms-2">수정하기</button>
+
         <button id="delete-btn" class="btn ms-2" onclick="deleteNotice()">삭제하기</button>
     </div>
+
 </div>
-
-<!-- ✅ TipTap viewer (CDN / ESM) : JSON 렌더용 -->
-<script type="module">
-    import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
-    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
-    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
-    import Link from "https://esm.sh/@tiptap/extension-link@2.11.5";
-    import TextStyle from "https://esm.sh/@tiptap/extension-text-style@2.11.5";
-    import Color from "https://esm.sh/@tiptap/extension-color@2.11.5";
-    import Highlight from "https://esm.sh/@tiptap/extension-highlight@2.11.5";
-    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
-    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
-    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
-    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
-
-    let viewer = null;
-
-    function ensureViewer() {
-        if (viewer) return viewer;
-        const host = document.querySelector("#noticeDescription");
-        viewer = new Editor({
-            element: host,
-            editable: false,
-            extensions: [
-                StarterKit,
-                Underline,
-                Link.configure({ openOnClick: true }),
-                TextStyle,
-                Color,
-                Highlight.configure({ multicolor: true }),
-                Table.configure({ resizable: true }),
-                TableRow,
-                TableHeader,
-                TableCell,
-            ],
-            content: "<p></p>",
-        });
-        return viewer;
-    }
-
-    function isProbablyJson(str) {
-        if (typeof str !== "string") return false;
-        const s = str.trim();
-        if (!s) return false;
-        if (!(s.startsWith("{") || s.startsWith("["))) return false;
-        try {
-            const obj = JSON.parse(s);
-            // TipTap JSON은 보통 {type:"doc", content:[...]} 형태
-            return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
-        } catch {
-            return false;
-        }
-    }
-
-    function isProbablyHtml(str) {
-        if (typeof str !== "string") return false;
-        const s = str.trim();
-        if (!s) return false;
-        // 간단 휴리스틱: 태그가 있으면 HTML로 판단
-        return /<\/?[a-z][\s\S]*>/i.test(s);
-    }
-
-    function escapeHtml(str) {
-        return (str ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    /**
-     * ✅ contents 자동 감지 렌더
-     * 1) JSON이면 TipTap readOnly setContent(JSON)
-     * 2) HTML이면 innerHTML로 렌더 (주의: XSS는 서버 sanitize 권장)
-     * 3) 그 외 텍스트면 escape 후 <p>로 표시
-     */
-    window.renderNoticeContentsAuto = (contents) => {
-        const host = document.querySelector("#noticeDescription");
-
-        // 0) null/undefined
-        if (contents == null) {
-            host.innerHTML = "<p>-</p>";
-            return;
-        }
-
-        // 1) 객체면 TipTap JSON으로 간주
-        if (typeof contents === "object") {
-            const ed = ensureViewer();
-            ed.commands.setContent(contents);
-            return;
-        }
-
-        // string 처리
-        const raw = String(contents);
-
-        // 2) JSON 문자열
-        if (isProbablyJson(raw)) {
-            const ed = ensureViewer();
-            ed.commands.setContent(JSON.parse(raw));
-            return;
-        }
-
-        // 3) HTML 문자열
-        if (isProbablyHtml(raw)) {
-            // TipTap 뷰어가 이미 만들어졌다면, host를 TipTap이 점유하고 있으니
-            // HTML 렌더할 경우 viewer를 destroy하고 host를 비우는게 안전
-            if (viewer) {
-                viewer.destroy();
-                viewer = null;
-                host.innerHTML = "";
-            }
-            host.innerHTML = raw; // ❗ 서버에서 sanitize 권장
-            return;
-        }
-
-        // 4) 일반 텍스트
-        if (viewer) {
-            viewer.destroy();
-            viewer = null;
-            host.innerHTML = "";
-        }
-        host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n", "<br>")}</p>`;
-    };
-</script>
 
 <script>
     const noticeNo = [[${noticeNo}]];
@@ -508,6 +368,7 @@
 
     async function loadPlaceDetail() {
         try {
+
             const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
                 method: 'GET',
                 credentials: "include",
@@ -518,38 +379,26 @@
 
             if (result.status === 200 && result.data) {
                 const notice = result.data;
-
                 $('#noticeTitle').text(notice.title);
-
-                // ✅ 핵심: JSON/HTML 자동 감지 렌더
-                if (window.renderNoticeContentsAuto) {
-                    window.renderNoticeContentsAuto(notice.contents);
-                } else {
-                    // fallback
-                    $('#noticeDescription').text(notice.contents);
-                }
-
+                $('#noticeDescription').text(notice.contents);
+               // $('#noticePopup').text(notice.isPopup);
                 const isPopup = notice.isPopup === true || notice.isPopup === 'true';
+
                 $('#noticePopup').html(
                     isPopup
                         ? `<span class="badge success">사용</span>`
                         : `<span class="badge muted">미사용</span>`
                 );
-
                 const startedAt = notice.startedAt ? notice.startedAt.substring(0, 10) : "-";
                 $('#noticeStarted').text(startedAt);
-
                 const endedAt = notice.endedAt ? notice.endedAt.substring(0, 10) : "-";
                 $('#noticeEnded').text(endedAt);
-
                 $('#noticeRating').text(notice.rating);
                 $('#noticeWriter').text(notice.empName);
                 $('#noticeWriterId').text(notice.empId);
                 $('#noticeDepart').text(notice.depName);
-
                 const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
                 $('#noticeCreated').text(createdAt);
-
                 const updatedAt = notice.updatedAt ? notice.updatedAt.substring(0, 10) : "-";
                 $('#noticeUpdated').text(updatedAt);
 
@@ -571,6 +420,7 @@
 
     async function initAttach() {
         try {
+
             const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
                 method: 'GET',
                 credentials: "include",
@@ -597,18 +447,19 @@
 
                 attachs.forEach((r, index) => {
                     attachList.append(`
-            <tr>
-              <td>${index+1}</td>
-              <td>${r.originalName}</td>
-              <td>${r.attachmentId}</td>
-              <td>${r.displayOrder}</td>
-              <td>${formatFileSize(r.size)}</td>
-              <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
-              <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
-            </tr>
-          `);
+                        <tr>
+                          <td>${index+1} </td>
+                          <td>${r.originalName}</td>
+                          <td>${r.attachmentId}</td>
+                          <td>${r.displayOrder}</td>
+                          <td>${formatFileSize(r.size)}</td>
+                          <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+                          <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+                        </tr>
+                      `);
                 });
 
+                // ✅ 이벤트 연결 (테이블 다시 그린 뒤에 연결)
                 document.querySelectorAll("button[data-down]").forEach(btn => {
                     btn.addEventListener("click", async (e) => {
                         const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
@@ -624,7 +475,7 @@
                 });
 
             } else {
-                attachList.html('<tr><td colspan="7">관련 첨부파일이 없습니다.</td></tr>');
+                attachList.html('<tr><td colspan="6">관련 첨부파일이 없습니다.</td></tr>');
             }
 
         } catch (error) {
@@ -644,10 +495,14 @@
     }
 
     async function fetchDownloadUrl(attachmentId) {
+
+
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
             method: "GET",
             credentials: "include",
-            headers: { 'Accept': 'application/json' }
+            headers: {
+                'Accept': 'application/json'
+            }
         });
 
         if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
@@ -655,7 +510,9 @@
         const raw = await res.json();
         const data = unwrapMaybeResponseDto(raw);
 
+        // ✅ 너가 준 Postman 응답 구조: data.url
         const url = data.url;
+
         if (typeof url !== "string" || !url.startsWith("http")) {
             console.error("응답:", raw);
             throw new Error("응답에 url이 없습니다. (data.url 확인)");
@@ -664,18 +521,24 @@
     }
 
     async function fetchPreviewloadUrl(attachmentId) {
+
+
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
             method: "GET",
             credentials: "include",
-            headers: { 'Accept': 'application/json' }
+            headers: {
+                'Accept': 'application/json'
+            }
         });
 
-        if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
+        if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
 
         const raw = await res.json();
         const data = unwrapMaybeResponseDto(raw);
 
+        // ✅ 너가 준 Postman 응답 구조: data.url
         const url = data.url;
+
         if (typeof url !== "string" || !url.startsWith("http")) {
             console.error("응답:", raw);
             throw new Error("응답에 url이 없습니다. (data.url 확인)");
@@ -690,9 +553,12 @@
         try {
             const { url, meta } = await fetchDownloadUrl(attachmentId);
 
+            // ✅ 다운로드 트리거
             const a = document.createElement("a");
             a.href = url;
             a.rel = "noopener";
+            // same-origin 아니면 download 속성 무시될 수 있지만,
+            // presigned URL이 attachment disposition을 주면 다운로드 잘 됩니다.
             a.download = meta.originalName || "";
             document.body.appendChild(a);
             a.click();
@@ -709,7 +575,10 @@
 
         try {
             const { url } = await fetchPreviewloadUrl(attachmentId);
+
+            // ✅ 미리보기: 새 탭으로 열기
             window.open(url, "_blank", "noopener");
+
         } catch (e) {
             console.error(e);
             alert("미리보기 중 오류: " + (e?.message ?? e));
@@ -718,6 +587,8 @@
 
     async function deleteNotice() {
         if (!confirm("정말 삭제하시겠습니까?")) return;
+
+       // const reviewId = document.getElementById("reviewId").value;
 
         try {
             const res = await fetch(`/api/v1/notice/${noticeNo}`, {
