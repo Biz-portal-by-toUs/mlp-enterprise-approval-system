@@ -332,6 +332,7 @@ public class BoardService {
 
         return page.map(n -> new BoardListItemResDto(
                 n.getBoardNo(),
+                n.getCatCode(),
                 n.getTitle(),
                 (n.getEmployee() != null) ? n.getEmployee().getEmpId() : null, // ✅ DTO 생성자 유지 때문에 남김(화면에 안 쓰면 됨)
                 (n.getEmployee() != null) ? n.getEmployee().getEmpName() : null,

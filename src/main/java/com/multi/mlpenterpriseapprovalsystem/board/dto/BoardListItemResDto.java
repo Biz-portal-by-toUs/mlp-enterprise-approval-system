@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  */
 public record BoardListItemResDto(
         Long boardNo,
+        Character catCode,
         String title,
         String empId,
         String empName,
