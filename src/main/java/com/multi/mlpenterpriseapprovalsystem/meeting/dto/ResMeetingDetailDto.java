@@ -22,6 +22,7 @@ public class ResMeetingDetailDto {
     private String aiText;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
+    private boolean status;
 
     private String recordUrl;
     private String objectKey;
