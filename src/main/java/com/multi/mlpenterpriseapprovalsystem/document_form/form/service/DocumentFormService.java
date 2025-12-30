@@ -36,7 +36,11 @@ public interface DocumentFormService {
             String writerId
     );
 
-    void deleteDocumentForm(Long docfoNo, String comId);
+    // 삭제 플로우
+    void requestDelete(Long docfoNo, String comId, CustomUser requester);
+    void approveDelete(Long docfoNo, String comId);
+    void rejectDelete(Long docfoNo, String comId, String rejectReason);
 
-    void changeStatus(Long docfoNo, String comId, DocumentFormStats stat, String rejectReason);
+    // 승인/반려
+    void changeApproveOrReject(Long docfoNo, String comId, DocumentFormStats next, String rejectReason);
 }

@@ -33,6 +33,18 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
+        update DocumentForm f
+           set f.docfoStat = :stat,
+               f.rejectReason = :reason
+         where f.docfoNo = :docfoNo
+    """)
+    int updateStatusAndReason(@Param("docfoNo") Long docfoNo,
+                              @Param("stat") DocumentFormStats stat,
+                              @Param("reason") String reason);
+
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
         update DocumentForm d
            set d.docfoStat = :stat
          where d.docfoNo = :docfoNo

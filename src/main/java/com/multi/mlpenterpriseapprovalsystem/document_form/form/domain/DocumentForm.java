@@ -74,7 +74,7 @@ public class DocumentForm {
         f.docfoName = docfoName;
         f.cnttJson = cnttJson;
         f.cnttHtml = cnttHtml;
-        f.docfoStat = DocumentFormStats.P; // 승인 로직 개발 후 T로 수정
+        f.docfoStat = DocumentFormStats.P;
         return f;
     }
 
