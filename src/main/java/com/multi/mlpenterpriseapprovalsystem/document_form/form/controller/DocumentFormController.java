@@ -69,14 +69,16 @@ public class DocumentFormController {
     @GetMapping
     public ResponseEntity<Page<ResDocumentFormListDto>> getForms(
             @AuthenticationPrincipal CustomUser customUser,
-            @RequestParam(name = "stat", defaultValue = "A") DocumentFormStats stat,
+            @RequestParam(name = "stat", defaultValue = "A") java.util.List<DocumentFormStats> stat,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "docfoName", required = false) String docfoName,
             @PageableDefault(size = 15) Pageable pageable
     ) {
         String keyword = (q != null && !q.isBlank()) ? q : docfoName;
+
+        // stat=A,X 처럼 오면 List로 자동 바인딩됨 (Spring MVC 기본 동작)
         return ResponseEntity.ok(
-                documentFormService.findListByStatus(stat, customUser.getComId(), keyword, pageable)
+                documentFormService.findListByStatuses(stat, customUser.getComId(), keyword, pageable)
         );
     }
 

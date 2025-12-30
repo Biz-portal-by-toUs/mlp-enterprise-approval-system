@@ -18,8 +18,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface DocumentFormService {
 
-    Page<ResDocumentFormListDto> findListByStatus(
-            DocumentFormStats stat,
+    Page<ResDocumentFormListDto> findListByStatuses(
+            java.util.List<DocumentFormStats> stats,
             String comId,
             String keyword,
             Pageable pageable

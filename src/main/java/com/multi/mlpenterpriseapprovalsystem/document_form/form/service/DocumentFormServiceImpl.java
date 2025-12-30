@@ -41,18 +41,23 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResDocumentFormListDto> findListByStatus(
-            DocumentFormStats stat, String comId, String keyword, Pageable pageable
+    public Page<ResDocumentFormListDto> findListByStatuses(
+            List<DocumentFormStats> stats, String comId, String keyword, Pageable pageable
     ) {
+        // 비어있으면 기본값 A (안전장치)
+        List<DocumentFormStats> safeStats =
+                (stats == null || stats.isEmpty()) ? List.of(DocumentFormStats.A) : stats;
+
         boolean hasKeyword = (keyword != null && !keyword.isBlank());
+        String kw = hasKeyword ? keyword.trim() : null;
 
         Page<DocumentForm> page = hasKeyword
-                ? documentFormRepository
-                .findByDocfoStatAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
-                        stat, comId, keyword.trim(), pageable
-                )
-                : documentFormRepository
-                .findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(stat, comId, pageable);
+                ? documentFormRepository.findByDocfoStatInAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+                safeStats, comId, kw, pageable
+        )
+                : documentFormRepository.findByDocfoStatInAndCompany_ComIdOrderByDocfoNoAsc(
+                safeStats, comId, pageable
+        );
 
         return page.map(f -> new ResDocumentFormListDto(
                 f.getDocfoNo(),

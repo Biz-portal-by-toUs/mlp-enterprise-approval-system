@@ -6,8 +6,11 @@
     const API_BASE = '/api/v1/forms';
     const VIEW_BASE = '/form';
 
-    // "목록은 승인(A)만" 정책이면 true
+    // "목록은 승인(A)만(+ X 포함)" 정책이면 true
     const ONLY_APPROVED = true;
+
+    // ✅ 백엔드가 복수 상태(stat=A,X)를 지원하도록 바뀌었으니 여기서만 관리
+    const APPROVED_STATS = ['A', 'X']; // 필요 시 ['A','X','...']로 확장
 
     // 권한(쿠키 인증일 때는 JS가 JWT를 못 읽으므로, 서버가 붙여준 class로 판단)
     function isEmployee() {
@@ -77,7 +80,9 @@
     function openDetail(docfoNo) {
         if (docfoNo == null) return;
         const id = String(docfoNo);
-        window.open(`${VIEW_BASE}/${encodeURIComponent(id)}`, '_blank',
+        window.open(
+            `${VIEW_BASE}/${encodeURIComponent(id)}`,
+            '_blank',
             'width=1100,height=820,resizable=yes,scrollbars=yes'
         );
     }
@@ -124,22 +129,22 @@
         return { items: [], page: 0, size: Number(elSize?.value || 15), totalPages: 1, totalElements: 0 };
     }
 
-    function buildUrl() {
+    // ✅ 백엔드 복수 상태 지원(stat=A,X) 반영
+    function buildUrl(statsCsvOrNull) {
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('size', String(Number(elSize?.value || 15)));
 
         const q = (elQ?.value || '').trim();
         if (q) {
-            // 백엔드가 뭐로 받든 최대한 맞춰주기
             params.set('q', q);
             params.set('docfoName', q);
             params.set('keyword', q);
         }
 
-        if (ONLY_APPROVED) {
-            params.set('stat', 'A');
-            params.set('docfoStat', 'A');
+        if (statsCsvOrNull) {
+            params.set('stat', statsCsvOrNull);       // 컨트롤러가 List로 받는 param
+            params.set('docfoStat', statsCsvOrNull);  // 혹시 다른 구현/레거시 대비
         }
 
         return `${API_BASE}?${params.toString()}`;
@@ -235,16 +240,16 @@
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
-            const url = buildUrl();
-            const res = await apiFetch(url, { method: 'GET' });
+            // ✅ ONLY_APPROVED=true면 A,X를 한 번에 조회(페이징/정렬/총개수 모두 서버 기준으로 정상)
+            const statsCsv = ONLY_APPROVED ? APPROVED_STATS.join(',') : null;
 
+            const res = await apiFetch(buildUrl(statsCsv), { method: 'GET' });
             if (!res.ok) {
                 const t = await res.text().catch(() => '');
                 throw new Error(`HTTP ${res.status} ${t}`);
             }
 
-            const json = await res.json();
-            const pg = normalizePage(json);
+            const pg = normalizePage(await res.json());
 
             totalPages = pg.totalPages ?? 1;
             totalElements = pg.totalElements ?? 0;
@@ -349,7 +354,9 @@
     btnCreate?.addEventListener('click', () => {
         if (isEmployee()) { toast('권한이 없습니다.'); return; }
 
-        window.open(`${VIEW_BASE}/new`, '_blank',
+        window.open(
+            `${VIEW_BASE}/new`,
+            '_blank',
             'width=1100,height=820,resizable=yes,scrollbars=yes'
         );
     });
