@@ -37,9 +37,7 @@ public class DocumentFormController {
             @RequestBody ReqDocumentFormCreateDto req
     ) {
         Long docfoNo = documentFormService.createDocumentForm(
-                req,
-                customUser.getComId(),
-                customUser.getUsername()
+                req, customUser.getComId(), customUser.getUsername()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
     }
@@ -52,78 +50,90 @@ public class DocumentFormController {
             @RequestBody ReqDocumentFormCreateDto req
     ) {
         Long newDocfoNo = documentFormService.updateDocumentForm(
-                docfoNo,
-                req,
-                customUser.getComId(),
-                customUser.getUsername()
+                docfoNo, req, customUser.getComId(), customUser.getUsername()
         );
         return ResponseEntity.ok(newDocfoNo);
     }
 
+    // 삭제 "요청" (W로 전환)
     @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @DeleteMapping("/{docfoNo}")
-    public ResponseEntity<Void> deleteDocumentForm(
+    public ResponseEntity<Void> requestDelete(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable Long docfoNo
     ) {
-        documentFormService.deleteDocumentForm(docfoNo, customUser.getComId());
+        documentFormService.requestDelete(docfoNo, customUser.getComId(), customUser);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 회사별 + 상태별 목록 조회 (+ 제목 검색)
-     * - stat: A/P/R/T/D 등
-     * - q 또는 docfoName: 제목 키워드 검색(Containing)
-     */
     @GetMapping
     public ResponseEntity<Page<ResDocumentFormListDto>> getForms(
             @AuthenticationPrincipal CustomUser customUser,
-            @RequestParam(name = "stat", defaultValue = "A") DocumentFormStats stat,
+            @RequestParam(name = "stat", defaultValue = "A") java.util.List<DocumentFormStats> stat,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "docfoName", required = false) String docfoName,
             @PageableDefault(size = 15) Pageable pageable
     ) {
         String keyword = (q != null && !q.isBlank()) ? q : docfoName;
 
+        // stat=A,X 처럼 오면 List로 자동 바인딩됨 (Spring MVC 기본 동작)
         return ResponseEntity.ok(
-                documentFormService.findListByStatus(stat, customUser.getComId(), keyword, pageable)
+                documentFormService.findListByStatuses(stat, customUser.getComId(), keyword, pageable)
         );
     }
 
     @GetMapping("/{docfoNo}")
     public ResponseEntity<ResDocumentFormDetailDto> getDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable(name = "docfoNo") Long docfoNo
+            @PathVariable Long docfoNo
     ) {
-        ResDocumentFormDetailDto result =
-                documentFormService.findDetailById(docfoNo, customUser.getComId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+                documentFormService.findDetailById(docfoNo, customUser.getComId())
+        );
     }
 
-    /**
-     * 승인/반려 상태 변경
-     * - PATCH /api/v1/forms/{docfoNo}/status
-     * - body: { "docfoStat":"A" }
-     * - body: { "docfoStat":"R", "rejectReason":"..." }
-     */
+    // 상태 변경
     @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/status")
     public ResponseEntity<Void> changeStatus(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable(name = "docfoNo") Long docfoNo,
+            @PathVariable Long docfoNo,
             @RequestBody ReqDocumentFormStatusDto req
     ) {
-        if (req == null || req.docfoStat() == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        if (req == null || req.docfoStat() == null) return ResponseEntity.badRequest().build();
 
-        documentFormService.changeStatus(
+        documentFormService.changeApproveOrReject(
                 docfoNo,
                 customUser.getComId(),
                 req.docfoStat(),
                 req.rejectReason()
         );
+        return ResponseEntity.noContent().build();
+    }
 
+    // 삭제 승인
+    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN')")
+    @PatchMapping("/{docfoNo}/delete-approve")
+    public ResponseEntity<Void> approveDelete(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable Long docfoNo
+    ) {
+        documentFormService.approveDelete(docfoNo, customUser.getComId());
+        return ResponseEntity.noContent().build();
+    }
+
+    // 삭제 반려
+    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN')")
+    @PatchMapping("/{docfoNo}/delete-reject")
+    public ResponseEntity<Void> rejectDelete(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable Long docfoNo,
+            @RequestBody ReqDocumentFormStatusDto req
+    ) {
+        if (req == null || req.rejectReason() == null || req.rejectReason().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        documentFormService.rejectDelete(docfoNo, customUser.getComId(), req.rejectReason());
         return ResponseEntity.noContent().build();
     }
 }

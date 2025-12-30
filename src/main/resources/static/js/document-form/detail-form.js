@@ -333,6 +333,8 @@ async function deleteForm(docfoNo) {
         bodyBox.className = 'tpl-bodyBox'
         elTemplateMount.appendChild(bodyBox)
 
+        console.log('ROLE=', ROLE, 'token?', !!localStorage.getItem('accessToken'))
+
         bootViewer(bodyBox, json)
 
         // ✅ Employee면 수정/삭제 비활성화 (UI만 막지 말고 서버 권한도 꼭 막아야 안전)
