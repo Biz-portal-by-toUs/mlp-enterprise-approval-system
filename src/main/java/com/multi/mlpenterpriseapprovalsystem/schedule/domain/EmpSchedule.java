@@ -6,7 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 개인 일정 엔티티
@@ -32,9 +32,9 @@ public class EmpSchedule {
     private String content;
 
     @Column(name="start_at")
-    private LocalDate startAt;
+    private LocalDateTime startAt;
     @Column(name="end_at")
-    private LocalDate endedAt;
+    private LocalDateTime endedAt;
 
     private String color;
 }
