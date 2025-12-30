@@ -8,8 +8,8 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
-import com.multi.mlpenterpriseapprovalsystem.common.storage.service.StorageService;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.StoredFile;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.service.StorageService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -35,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class AuthService {
 
     private final CompanyUserDetailService companyUserDetailService;
@@ -46,10 +48,13 @@ public class AuthService {
     private final SubscriptionRepository subscriptionRepository;
     private final BusinessVerificationService businessVerificationService;
 
+    private static final String DEFAULT_PASSWORD = "1234";
+
+    @Transactional(readOnly = true)
     public boolean isRegisteredBusiness(String brn) {
         if (!businessVerificationService.isRegisteredBusiness(brn)) {
             throw new CustomException(ErrorCode.INVALID_BRN);
-        } else if(companyRepository.existsByBrn(brn)) {
+        } else if (companyRepository.existsByBrn(brn)) {
             throw new CustomException(ErrorCode.BRN_DUPLICATE);
         }
         return true;
@@ -82,7 +87,7 @@ public class AuthService {
         }
 
         // 5) sub_no=1 연결 (회원가입 시 기본 요금제)
-        Subscription basic = subscriptionRepository.findById((long)1)
+        Subscription basic = subscriptionRepository.findById((long) 1)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
         // 6) Company 생성 + 저장
@@ -135,21 +140,29 @@ public class AuthService {
         }
 
         // 3) 토큰 발급 + refresh 쿠키 세팅
-        return tokenService.createToken(user, response);
+        ResTokenDto res = tokenService.createToken(user, response);
+
+        boolean mustChange = passwordEncoder.matches(DEFAULT_PASSWORD, user.getPassword());
+
+        return res.toBuilder()
+                .mustChangePassword(mustChange)
+                .build();
     }
 
 
+    @Transactional(readOnly = true)
     public boolean checkComId(String comId) {
 
         // comId 무조건 대문자 처리
         comId = comId.trim().toUpperCase();
 
-        if(companyRepository.existsByComId(comId)) {
+        if (companyRepository.existsByComId(comId)) {
             throw new CustomException(ErrorCode.DUPLICATE_COMID);
         }
         return true;
     }
 
+    @Transactional(readOnly = true)
     public boolean checkEmail(String email) {
 
         if (companyRepository.existsByEmail(email)) {
@@ -158,4 +171,6 @@ public class AuthService {
 
         return true;
     }
+
+
 }

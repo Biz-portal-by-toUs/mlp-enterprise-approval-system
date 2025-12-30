@@ -10,6 +10,7 @@ import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
  * @since       : 2025-12-22 월요일
  */
 
-public record ReqDocumentFormStatusReqDto(
-        DocumentFormStats docfoStat
+public record ReqDocumentFormStatusDto(
+        DocumentFormStats docfoStat,
+        String rejectReason
 ) {}

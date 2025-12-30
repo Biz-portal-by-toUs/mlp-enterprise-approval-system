@@ -10,8 +10,6 @@
             --text:#111;
             --border:#d7d7d7;
             --primary:#2f66d7;
-
-            /* ✅ 성공 포인트 컬러 */
             --success:#16a34a;
             --successBorder: rgba(22,163,74,.35);
         }
@@ -109,7 +107,6 @@
             border-radius:10px;
         }
 
-        /* ✅ 토스트(기본은 모노톤) */
         .toast{
             position:fixed;
             left:50%;
@@ -135,15 +132,13 @@
             width:4px;
             height:18px;
             border-radius:999px;
-            background:#bbb; /* 기본 */
+            background:#bbb;
             flex:0 0 auto;
         }
         .toast.show{
             opacity:1;
             transform:translateX(-50%) translateY(-4px);
         }
-
-        /* ✅ 성공(초록)만 살짝 */
         .toast.success{
             border-color: var(--successBorder);
             color: var(--success);
@@ -174,7 +169,6 @@
     </main>
 </div>
 
-<!-- ✅ 토스트 컨테이너 -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -184,16 +178,11 @@
     const mainDesc = document.getElementById('mainDesc');
     const toastEl = document.getElementById('toast');
 
-    function goCompanyLogin() { window.location.href = '/auth/companies/login'; }
+    function goCompanyLogin()  { window.location.href = '/auth/companies/login'; }
     function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
     function goCompanySignup() { window.location.href = '/auth/companies/signup'; }
+    function goCompanyDashboard(){ window.location.href = '/company'; }
 
-    function goDashboard(loginType) {
-        if (loginType === 'employee') window.location.href = '/employee';
-        else window.location.href = '/company';
-    }
-
-    // ✅ 토스트
     function showToast(message, type = 'success', ms = 1000) {
         toastEl.textContent = message;
         toastEl.classList.remove('success');
@@ -201,37 +190,32 @@
         toastEl.classList.add('show');
         window.setTimeout(() => toastEl.classList.remove('show'), ms);
     }
-    function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
 
-    // ✅ 로그아웃 (POST /auth/logout)
     async function doLogout() {
-        const token = localStorage.getItem('accessToken');
-
         try {
-            if (token) {
-                const res = await fetch('/auth/logout', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                    // 쿠키 기반이면 필요할 수 있음:
-                    // credentials: 'include'
-                });
-
-                // 401이어도 성공처럼 처리
-                if (!res.ok && res.status !== 401) {
-                    console.warn('logout response not ok:', res.status);
-                }
-            }
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' });
         } catch (e) {
             console.warn('logout request failed:', e);
         } finally {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('loginType');
-            localStorage.removeItem('loginId');
-
-            showToast('로그아웃 성공', 'success', 1000);
-            await sleep(1000);
-            window.location.href = '/';
+            showToast('로그아웃 성공', 'success', 900);
+            setTimeout(() => window.location.href = '/', 900);
         }
+    }
+
+    function toStr(v){ return (v == null) ? '' : String(v).trim(); }
+    function toUpper(v){ return toStr(v).toUpperCase(); }
+
+    // ✅ boolean/문자열 모두 처리
+    function parseBoolean(v){
+        if (v === true) return true;
+        if (v === false || v == null) return false;
+        const s = toUpper(v);
+        return s === 'TRUE' || s === '1' || s === 'Y' || s === 'YES';
+    }
+
+    function isCompanySubjectType(st){
+        const t = toUpper(st);
+        return t === 'COMPANY' || t.includes('COMPANY') || t.startsWith('COM');
     }
 
     function renderLoggedOut() {
@@ -256,35 +240,72 @@
         document.getElementById('btnCompanySignupMain').addEventListener('click', goCompanySignup);
     }
 
-    function renderLoggedIn(loginType, loginId) {
-        const whoText = (loginType === 'employee') ? '사원' : '회사';
-        const idText = loginId ? ` · ${loginId}` : '';
+    function renderCompanyLoggedIn(username) {
+        const whoLine = username ? `${username}이 로그인했습니다.` : '회사 계정이 로그인했습니다.';
 
         navRight.innerHTML = `
-            <span class="who">${whoText} 로그인됨${idText}</span>
+            <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
+            <span class="who">${whoLine}</span>
             <button class="btn primary" type="button" id="btnDashboard">대시보드</button>
             <button class="btn" type="button" id="btnLogout">로그아웃</button>
         `;
-        document.getElementById('btnDashboard').addEventListener('click', () => goDashboard(loginType));
+        document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
+        document.getElementById('btnDashboard').addEventListener('click', goCompanyDashboard);
         document.getElementById('btnLogout').addEventListener('click', doLogout);
 
         mainTitle.textContent = 'Hello';
-        mainDesc.textContent = `${whoText} 계정으로 로그인되어 있습니다. 계속 진행해 주세요.`;
+        mainDesc.textContent = whoLine + ' 계속 진행해 주세요.';
         mainActions.innerHTML = `
-            <button class="btn primary" type="button" id="btnDashboardMain">대시보드로 이동</button>
+            <button class="btn primary" type="button" id="btnDashboardMain">회사 대시보드로 이동</button>
+            <button class="btn" type="button" id="btnEmployeeMain">사원 로그인 페이지로</button>
             <button class="btn" type="button" id="btnLogoutMain">로그아웃</button>
         `;
-        document.getElementById('btnDashboardMain').addEventListener('click', () => goDashboard(loginType));
+        document.getElementById('btnDashboardMain').addEventListener('click', goCompanyDashboard);
+        document.getElementById('btnEmployeeMain').addEventListener('click', goEmployeeLogin);
         document.getElementById('btnLogoutMain').addEventListener('click', doLogout);
     }
 
-    function boot() {
-        const accessToken = localStorage.getItem('accessToken');
-        const loginType = localStorage.getItem('loginType');
-        const loginId = localStorage.getItem('loginId');
+    function extractData(json){
+        if (!json || typeof json !== 'object') return null;
+        // 네 응답 구조: { data: {...}, message, status }
+        return json.data ?? json.result ?? json.body ?? json.response ?? null;
+    }
 
-        if (accessToken && loginType) renderLoggedIn(loginType, loginId);
-        else renderLoggedOut();
+    async function fetchMe() {
+        const res = await fetch('/auth/me', {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store'
+        });
+        if (!res.ok) return null;
+
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) return null;
+
+        const json = await res.json().catch(() => null);
+        return extractData(json);
+    }
+
+    async function boot() {
+        try {
+            const me = await fetchMe();
+
+            // ✅ 여기! 네 응답은 authenticated로 내려옴
+            const authenticated = parseBoolean(me?.authenticated);
+
+            const subjectType = me?.subjectType;
+            const username = me?.username;
+
+            // ✅ 회사 로그인만 표시
+            if (authenticated && isCompanySubjectType(subjectType)) {
+                renderCompanyLoggedIn(username);
+            } else {
+                renderLoggedOut();
+            }
+        } catch (e) {
+            console.warn('boot failed:', e);
+            renderLoggedOut();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', boot);

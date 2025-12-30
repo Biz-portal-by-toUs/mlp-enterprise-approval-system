@@ -11,7 +11,7 @@ import lombok.Getter;
  * @since : 2025. 12. 17. 수요일
  */
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class ResTokenDto {
 
     private String accessToken;
@@ -23,4 +23,6 @@ public class ResTokenDto {
 
     // 예: "ROLE_SYS_ADMIN", "ROLE_EMPLOYEE"
     private String role;
+
+    private boolean mustChangePassword;
 }

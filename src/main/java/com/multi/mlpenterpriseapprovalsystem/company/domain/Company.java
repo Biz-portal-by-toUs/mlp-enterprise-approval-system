@@ -78,4 +78,8 @@ public class Company extends BaseEntity {
         c.role = role;
         return c;
     }
+
+    public void changePassword(String encodedPwd) {
+        this.pwd = encodedPwd;
+    }
 }

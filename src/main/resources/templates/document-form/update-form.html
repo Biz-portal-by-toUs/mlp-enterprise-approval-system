@@ -2,18 +2,23 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8"/>
-    <title>Template Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <!-- ViewDocumentFormController에서 model로 docfoNo 내려줌 -->
+    <meta name="template-id" th:content="${docfoNo}"/>
+
+    <title>문서양식 수정</title>
 
     <!-- ProseMirror 기본 스타일 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prosemirror-view/style/prosemirror.css"/>
 
     <style>
+        /* make-form.html 스타일 기반 (동일 UX 유지) */
         body {
             margin: 0;
             font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
             background: #f4f6fb;
         }
-
         .wrap {
             width: 1100px;
             margin: 30px auto;
@@ -22,21 +27,8 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
             padding: 24px;
         }
-
-        .topbar {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 18px;
-        }
-
-        .title-area {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
+        .topbar { margin-bottom: 12px; }
+        .title-area { display: flex; align-items: center; gap: 12px; }
         #docTitle {
             width: 420px;
             padding: 10px 12px;
@@ -44,20 +36,21 @@
             border-radius: 8px;
             font-size: 16px;
         }
+        #statusLine { color: #666; font-size: 13px; user-select: none; }
 
-        .type-area {
+        /* 카테고리 영역 */
+        .category-bar {
             display: flex;
             align-items: center;
             gap: 10px;
+            margin: 12px 0 18px;
         }
-
-        #typeRadios {
+        .category-bar #typeRadios {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             align-items: center;
         }
-
         .radio-item {
             display: inline-flex;
             align-items: center;
@@ -67,15 +60,13 @@
             border-radius: 999px;
             background: #fafbff;
         }
-
         .radio-item input[type="text"] {
-            width: 80px;
+            width: 90px;
             border: none;
             background: transparent;
             outline: none;
             font-size: 13px;
         }
-
         .radio-del {
             border: none;
             background: transparent;
@@ -83,7 +74,6 @@
             color: #ff4d4f;
             font-weight: 700;
         }
-
         #addRadioBtn {
             border: 1px dashed #8aa3ff;
             background: #f0f4ff;
@@ -92,6 +82,8 @@
             border-radius: 10px;
             cursor: pointer;
             font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* 툴바 */
@@ -105,7 +97,6 @@
             background: #fafbff;
             margin-bottom: 14px;
         }
-
         #toolbar button {
             border: 1px solid #dcdfe6;
             background: #fff;
@@ -114,11 +105,7 @@
             cursor: pointer;
             font-size: 13px;
         }
-
-        #toolbar button:hover {
-            background: #f0f4ff;
-        }
-
+        #toolbar button:hover { background: #f0f4ff; }
         #fontSizeSelect {
             border: 1px solid #dcdfe6;
             background: #fff;
@@ -135,7 +122,6 @@
             padding: 14px;
             background: #fff;
         }
-
         #editor .ProseMirror {
             min-height: 520px;
             outline: none;
@@ -143,13 +129,35 @@
             line-height: 1.6;
         }
 
+        /* 작성/수정 화면에서는 프리셋 헤더표 숨김 */
+        #editor .preset-no-col-resize { display: none !important; }
+
+        /* 테이블 테두리 */
+        #editor .ProseMirror table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
+        }
+        #editor .ProseMirror td,
+        #editor .ProseMirror th {
+            border: 1px solid #c9cdd4;
+            padding: 8px 10px;
+            min-width: 40px;
+            vertical-align: top;
+        }
+        #editor .ProseMirror th {
+            background: #f4f6fb;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        /* 하단 버튼 */
         .bottom-actions {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
             margin-top: 16px;
         }
-
         #saveBtn {
             background: #2c5cff;
             color: #fff;
@@ -159,7 +167,6 @@
             cursor: pointer;
             font-weight: 800;
         }
-
         #closeBtn {
             background: #f1f2f5;
             color: #222;
@@ -169,67 +176,24 @@
             cursor: pointer;
             font-weight: 800;
         }
-
-        /* 작성 화면에서는 프리셋 헤더표(템플릿 테이블) 숨김 */
-        #editor .preset-no-col-resize { display:none !important; }
-
-        /* 표 전체 */
-        #editor .ProseMirror table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 8px 0;
-        }
-
-        /* 셀 공통 */
-        #editor .ProseMirror td,
-        #editor .ProseMirror th {
-            border: 1px solid #c9cdd4;
-            padding: 8px 10px;
-            min-width: 40px;
-            vertical-align: top;
-        }
-
-        /* 헤더 셀 */
-        #editor .ProseMirror th {
-            background: #f4f6fb;
-            font-weight: 700;
-            text-align: center;
-        }
-
-        /* 선택된 셀(커서가 있는 셀) */
-        #editor .ProseMirror .selectedCell {
-            background: rgba(44, 92, 255, 0.08);
-        }
-
-        /* 컬럼 리사이즈 핸들(있다면) */
-        #editor .ProseMirror .column-resize-handle {
-            background-color: #2c5cff;
-        }
     </style>
 </head>
 <body>
 
 <div class="wrap">
-
     <div class="topbar">
         <div class="title-area">
-            <input id="docTitle" placeholder="양식 제목(docfo_name)을 입력하세요" />
-        </div>
-
-        <div class="type-area">
-            <div id="typeRadios">
-                <div class="radio-item">
-                    <input class="radio-choice" name="templateType" type="radio"/>
-                    <input class="radio-value-input" type="text" value="type1"/>
-                    <button class="radio-del" title="삭제" type="button">✕</button>
-                </div>
-            </div>
-            <button id="addRadioBtn" type="button">+ 카테고리</button>
+            <input id="docTitle" placeholder="양식 제목(docfo_name)을 입력하세요"/>
+            <span id="statusLine"></span>
         </div>
     </div>
 
+    <div class="category-bar">
+        <div id="typeRadios"></div>
+        <button id="addRadioBtn" type="button">+ 카테고리</button>
+    </div>
+
     <div id="toolbar">
-        <!-- 글자크기: value는 숫자만(네 JS가 px를 붙임) -->
         <select id="fontSizeSelect" title="글자 크기">
             <option value="">Font</option>
             <option value="12">12</option>
@@ -242,41 +206,32 @@
             <option value="32">32</option>
         </select>
 
-        <!-- 제목/문단 -->
-        <button data-act="h1">H1</button>
-        <button data-act="h2">H2</button>
-        <button data-act="h3">H3</button>
-        <button data-act="p">P</button>
+        <button data-act="h1" type="button">H1</button>
+        <button data-act="h2" type="button">H2</button>
+        <button data-act="h3" type="button">H3</button>
+        <button data-act="p" type="button">P</button>
 
-        <!-- 기본 서식 -->
-        <button data-act="bold">Bold</button>
-        <button data-act="italic">Italic</button>
-        <button data-act="underline">Underline</button>
-        <button data-act="strike">Strike</button>
+        <button data-act="bold" type="button">Bold</button>
+        <button data-act="italic" type="button">Italic</button>
+        <button data-act="underline" type="button">Underline</button>
+        <button data-act="strike" type="button">Strike</button>
 
-        <!-- 정렬 -->
-        <button data-act="alignLeft">좌</button>
-        <button data-act="alignCenter">중</button>
-        <button data-act="alignRight">우</button>
+        <button data-act="alignLeft" type="button">좌</button>
+        <button data-act="alignCenter" type="button">중</button>
+        <button data-act="alignRight" type="button">우</button>
 
-        <!-- 리스트 -->
-        <button data-act="bullet">Bullet</button>
-        <button data-act="ordered">Ordered</button>
+        <button data-act="bullet" type="button">Bullet</button>
+        <button data-act="ordered" type="button">Ordered</button>
 
-        <!-- 입력창 -->
-        <button data-act="inputField">입력창</button>
+        <button data-act="table" type="button">표 생성</button>
+        <button data-act="addColumnAfter" type="button">열 추가</button>
+        <button data-act="addRowAfter" type="button">행 추가</button>
+        <button data-act="deleteColumn" type="button">열 삭제</button>
+        <button data-act="deleteRow" type="button">행 삭제</button>
+        <button data-act="tableDelete" type="button">표 삭제</button>
 
-        <!-- 테이블 -->
-        <button data-act="table">표 생성</button>
-        <button data-act="addColumnAfter">열 추가</button>
-        <button data-act="addRowAfter">행 추가</button>
-        <button data-act="deleteColumn">열 삭제</button>
-        <button data-act="deleteRow">행 삭제</button>
-        <button data-act="tableDelete">표 삭제</button>
-
-        <!-- 히스토리 -->
-        <button data-act="undo">Undo</button>
-        <button data-act="redo">Redo</button>
+        <button data-act="undo" type="button">Undo</button>
+        <button data-act="redo" type="button">Redo</button>
     </div>
 
     <div id="editorWrap">
@@ -284,10 +239,9 @@
     </div>
 
     <div class="bottom-actions">
-        <button id="saveBtn">저장하기</button>
-        <button id="closeBtn">닫기</button>
+        <button id="saveBtn" type="button">수정 저장</button>
+        <button id="closeBtn" type="button">닫기</button>
     </div>
-
 </div>
 
 <!-- ===== 프리셋 헤더표 템플릿(고정) ===== -->
@@ -305,12 +259,7 @@
 <template id="presetRightTemplate">
     <table class="preset-no-col-resize preset-right">
         <tr>
-            <th>결재자</th>
-            <th>결재자1</th>
-            <th>결재자2</th>
-            <th>결재자3</th>
-            <th>결재자4</th>
-            <th>결재자5</th>
+            <th>결재자</th><th>결재자1</th><th>결재자2</th><th>결재자3</th><th>결재자4</th><th>결재자5</th>
         </tr>
         <tr>
             <th>서명</th>
@@ -322,20 +271,21 @@
 <script type="importmap">
     {
       "imports": {
-        "prosemirror-model": "https://esm.sh/prosemirror-model?target=es2020",
-        "prosemirror-state": "https://esm.sh/prosemirror-state?target=es2020",
-        "prosemirror-view": "https://esm.sh/prosemirror-view?target=es2020",
-        "prosemirror-transform": "https://esm.sh/prosemirror-transform?target=es2020",
-        "prosemirror-commands": "https://esm.sh/prosemirror-commands?target=es2020",
-        "prosemirror-keymap": "https://esm.sh/prosemirror-keymap?target=es2020",
-        "prosemirror-history": "https://esm.sh/prosemirror-history?target=es2020",
-        "prosemirror-schema-list": "https://esm.sh/prosemirror-schema-list?target=es2020",
-        "prosemirror-dropcursor": "https://esm.sh/prosemirror-dropcursor?target=es2020",
-        "prosemirror-gapcursor": "https://esm.sh/prosemirror-gapcursor?target=es2020"
+        "@tiptap/core": "https://esm.sh/@tiptap/core@2.11.2?target=es2020",
+        "@tiptap/starter-kit": "https://esm.sh/@tiptap/starter-kit@2.11.2?target=es2020",
+
+        "@tiptap/extension-table": "https://esm.sh/@tiptap/extension-table@2.11.2?target=es2020",
+        "@tiptap/extension-table-row": "https://esm.sh/@tiptap/extension-table-row@2.11.2?target=es2020",
+        "@tiptap/extension-table-cell": "https://esm.sh/@tiptap/extension-table-cell@2.11.2?target=es2020",
+        "@tiptap/extension-table-header": "https://esm.sh/@tiptap/extension-table-header@2.11.2?target=es2020",
+
+        "@tiptap/extension-underline": "https://esm.sh/@tiptap/extension-underline@2.11.2?target=es2020",
+        "@tiptap/extension-text-align": "https://esm.sh/@tiptap/extension-text-align@2.11.2?target=es2020",
+        "@tiptap/extension-text-style": "https://esm.sh/@tiptap/extension-text-style@2.11.2?target=es2020"
       }
     }
 </script>
 
-<script type="module" src="/js/document-form/make-form.js"></script>
+<script type="module" src="/js/document-form/update-form.js"></script>
 </body>
 </html>
