@@ -19,6 +19,17 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
     // 특정 메일에서 특정 유저의 상태 row 단건 조회
     Optional<MailUserState> findByMail_MailIdAndUser_EmpId(String mailId, String userEmpId);
 
+    @Query("""
+    select mus
+    from MailUserState mus
+    where mus.mail.mailId = :mailId
+      and mus.user.empId = :userEmpId
+""")
+    Optional<MailUserState> findState(
+            @Param("mailId") String mailId,
+            @Param("userEmpId") String userEmpId
+    );
+
     // 특정 메일 전체 참여자 상태들 조회
     List<MailUserState> findAllByMail_MailId(String mailId);
 
@@ -118,4 +129,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
                     """
     )
     Page<MailUserState> findTrash(@Param("userEmpId") String userEmpId, Pageable pageable);
+
+    @Query(value = "select database()", nativeQuery = true)
+    String currentDatabase();
 }

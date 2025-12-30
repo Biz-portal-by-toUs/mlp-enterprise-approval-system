@@ -98,7 +98,7 @@ public class MailServiceImpl implements MailService{
         Mail mail = mailRepository.findDetailByMailId(mailId)
                 .orElseThrow(() -> new NoSuchElementException("메일 없음: " + mailId));
 
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, viewerEmpId)
+        MailUserState mus = mailUserStateRepository.findState(mailId, viewerEmpId)
                 .orElseThrow(() -> new NoSuchElementException("메일 상태 없음. mailId=" + mailId + ", viewer=" + viewerEmpId));
 
         return new ResMailDetailDto(

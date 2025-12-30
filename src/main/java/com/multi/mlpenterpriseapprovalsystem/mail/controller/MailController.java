@@ -69,16 +69,16 @@ public class MailController {
     // 메일 상세 조회
     @GetMapping("/{mailId}")
     public ResponseEntity<ResMailDetailDto> detail(
-            @PathVariable String mailId,
+            @PathVariable(name = "mailId") String mailId,
             @RequestParam("viewerEmpId") String viewerEmpId
     ) {
-        return ResponseEntity.ok(mailService.getDetail(mailId, viewerEmpId));
+        return ResponseEntity.ok(mailService.getDetail(mailId, viewerEmpId.trim()));
     }
 
     // 읽음 처리
     @PatchMapping("/{mailId}/read")
     public ResponseEntity<Void> markRead(
-            @PathVariable String mailId,
+            @PathVariable(name = "mailId") String mailId,
             @RequestParam("userEmpId") String userEmpId
     ) {
         mailService.markAsRead(mailId, userEmpId);
@@ -88,7 +88,7 @@ public class MailController {
     // 휴지통 이동
     @PatchMapping("/{mailId}/trash")
     public ResponseEntity<Void> moveToTrash(
-            @PathVariable String mailId,
+            @PathVariable(name = "mailId") String mailId,
             @RequestParam("userEmpId") String userEmpId
     ) {
         mailService.moveToTrash(mailId, userEmpId);

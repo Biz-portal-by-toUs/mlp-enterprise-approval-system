@@ -46,8 +46,6 @@ public class MailUserState extends BaseEntity {
     private Boolean isPrior = false;
 
     private LocalDateTime deletedAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     public void markRead() {
         this.isRead = true;
