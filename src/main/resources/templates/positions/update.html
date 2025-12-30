@@ -1,221 +1,222 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Bizportal - 직급 수정</title>
-    <style>
-        :root {
-            --primary: #2f6fdb;
-            --primary-dark: #2151a5;
-            --bg-light: #f7f9fc;
-            --border: #e6e6e6;
-            --text-main: #111;
-            --text-muted: #777;
-            --radius: 12px;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
+    <title>직급 수정</title>
 
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-            background: #fff;
-            color: var(--text-main);
-        }
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .pos-edit .title-group{ margin: 6px 0 22px; }
+            .pos-edit .title-group h1{ font-size:34px; margin:0 0 8px; font-weight:900; letter-spacing:-.2px; }
+            .pos-edit .title-group h2{ font-size:18px; margin:0; font-weight:800; color:#555; }
 
-        /* 상단바 */
-        .topbar {
-            height: 72px; background: var(--primary); display: flex; align-items: center;
-            padding: 0 24px; color: #fff; position: sticky; top: 0; z-index: 100;
-            justify-content: space-between;
-        }
-        .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; cursor: pointer; }
-        .logo-box { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .user-info { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+            .pos-edit .edit-card{
+                max-width: 760px;
+                background: #f9fbff;
+                border-radius: 24px;
+                padding: 40px;
+                border: 1px solid #e1e8f5;
+                box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            }
 
-        /* 레이아웃 */
-        .container { display: flex; min-height: calc(100vh - 72px); }
+            .pos-edit .meta-info{
+                margin-bottom: 26px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .pos-edit .label-sm{ font-weight: 800; color: var(--muted); font-size: 13px; }
+            .pos-edit .chip{
+                background: #eef4ff;
+                color: var(--primary);
+                padding: 6px 14px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 900;
+                border: 1px solid rgba(59,130,246,.18);
+            }
 
-        /* 좌측 사이드바 */
-        .sidenav { width: 72px; border-right: 1px solid var(--border); padding: 15px 0; display: flex; flex-direction: column; align-items: center; gap: 20px; flex-shrink: 0;}
-        .nav-icon { font-size: 24px; cursor: pointer; opacity: 0.6; }
-        .nav-icon.active { opacity: 1; color: var(--primary); }
+            .pos-edit .input-group{ margin-bottom: 22px; }
+            .pos-edit .input-label{ font-weight: 900; margin-bottom: 10px; display: block; color: #222; }
+            .pos-edit .form-control{
+                width: 100%;
+                height: 54px;
+                border-radius: 14px;
+                border: 1px solid var(--line);
+                padding: 0 18px;
+                font-size: 15px;
+                outline: none;
+                background: #fff;
+            }
+            .pos-edit .form-control:focus{
+                border-color: rgba(59,130,246,.55);
+                box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+            }
+            .pos-edit .helper-text{
+                font-size: 12px;
+                color: var(--muted);
+                margin-top: 8px;
+                font-weight: 800;
+            }
 
-        .subnav { width: 220px; background: var(--bg-light); border-right: 1px solid var(--border); padding: 20px; flex-shrink: 0;}
-        .subnav-title { font-weight: 800; margin: 10px 0 15px; color: #333; }
-        .menu-list { list-style: none; padding: 0; margin: 0; background: #fff; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
-        .menu-item { display: block; padding: 15px 20px; text-decoration: none; color: #444; font-weight: 600; border-bottom: 1px solid var(--border); }
-        .menu-item:last-child { border-bottom: none; }
-        .menu-item.active { background: #eef4ff; color: var(--primary); }
+            .pos-edit .form-actions{
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                margin-top: 28px;
+            }
+            .pos-edit .btn{
+                height: 52px;
+                min-width: 140px;
+                border: none;
+                border-radius: 14px;
+                font-size: 15px;
+                font-weight: 900;
+                cursor: pointer;
+                transition: transform .08s ease;
+            }
+            .pos-edit .btn:active{ transform: translateY(1px); }
+            .pos-edit .btn-submit{
+                background: var(--primary);
+                color: #fff;
+                box-shadow: 0 10px 22px rgba(59,130,246,.22);
+            }
+            .pos-edit .btn-cancel{
+                background: #eef2f7;
+                color: #374151;
+                border: 1px solid rgba(17,24,39,.10);
+            }
 
-        /* 메인 컨텐츠 */
-        .content { flex: 1; padding: 40px 60px; overflow-y: auto; }
-        .title-group { margin-bottom: 30px; }
-        .title-group h1 { font-size: 32px; margin: 0 0 10px; letter-spacing: -1px; }
-        .title-group h2 { font-size: 20px; color: #666; margin: 0; font-weight: 500; }
-
-        /* 수정 카드 */
-        .edit-card { max-width: 700px; background: #f9fbff; border-radius: 24px; padding: 40px; border: 1px solid #e1e8f5; box-shadow: var(--shadow); }
-        .meta-info { margin-bottom: 30px; display: flex; align-items: center; gap: 12px; }
-        .label-sm { font-weight: 700; color: var(--text-muted); font-size: 14px; }
-        .chip { background: #eef4ff; color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 800; border: 1px solid #d8e6ff; }
-
-        .input-group { margin-bottom: 25px; }
-        .input-label { font-weight: 800; margin-bottom: 12px; display: block; color: #222; }
-        .form-control {
-            width: 100%; height: 56px; border-radius: 14px; border: 1px solid #ddd;
-            padding: 0 20px; font-size: 16px; transition: all 0.2s ease;
-            background: #fff; appearance: none;
-        }
-        select.form-control {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23777' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: calc(100% - 20px) center;
-        }
-        .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(47, 111, 219, 0.1); }
-        .helper-text { font-size: 13px; color: var(--text-muted); margin-top: 8px; font-weight: 500; }
-
-        /* 버튼 그룹 */
-        .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 40px; }
-        .btn { height: 56px; min-width: 140px; border: none; border-radius: 15px; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-        .btn-submit { background: var(--primary); color: #fff; box-shadow: 0 8px 15px rgba(47, 111, 219, 0.2); }
-        .btn-submit:hover { background: var(--primary-dark); transform: translateY(-2px); }
-        .btn-cancel { background: #e9ecef; color: #495057; }
-        .btn-cancel:hover { background: #dee2e6; }
-
-        /* 결과 알림 */
-        .status-msg { margin-top: 20px; text-align: center; font-weight: 700; display: none; padding: 15px; border-radius: 12px; }
-        .status-msg.ok { background: #e7f5ea; color: #1e7e34; }
-        .status-msg.err { background: #fdf2f2; color: #d32f2f; }
-    </style>
+            .pos-edit .status-msg{
+                margin-top: 18px;
+                text-align: center;
+                font-weight: 900;
+                display: none;
+                padding: 12px 14px;
+                border-radius: 12px;
+                border: 1px solid var(--line);
+                background: #fff;
+            }
+            .pos-edit .status-msg.ok{ background:#f3fff6; border-color:#bfe7c9; color:#1b7f3a; }
+            .pos-edit .status-msg.err{ background:#fff5f4; border-color:#ffd0cc; color:#b42318; }
+        </style>
+    </th:block>
 </head>
+
 <body>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- ✅ 관리자 사이드바(fragment) -->
+        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('pos')}"></div>
 
-<header class="topbar">
-    <div class="brand" onclick="location.href='/'"><div class="logo-box">B</div> Bizportal</div>
-    <div class="user-info">
-        <span th:text="${comId}">COMPANY</span> | <span th:text="${username}">ADMIN</span>님 환영합니다
+        <main class="pos-edit" style="padding: 0 26px;">
+            <div class="title-group">
+                <h1>직급 편성</h1>
+                <h2>직급 정보 수정</h2>
+            </div>
+
+            <div class="edit-card">
+                <input type="hidden" id="posNo" th:value="${posNo}"/>
+
+                <div class="meta-info">
+                    <span class="label-sm">고유 번호</span>
+                    <span class="chip" th:text="'No. ' + ${posNo}">No. -</span>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" for="posName">직급명</label>
+                    <input type="text" id="posName" class="form-control"
+                           th:value="${posName}" placeholder="수정할 직급명을 입력하세요" maxlength="30" />
+                    <p class="helper-text">조직도에 표시될 직급의 이름입니다.</p>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label" for="posOrder">직급 순서 (정렬)</label>
+                    <select id="posOrder" class="form-control">
+                        <option th:each="i : ${#numbers.sequence(1, 50)}"
+                                th:value="${i}"
+                                th:text="${i}"
+                                th:selected="${i == posOrder}"></option>
+                    </select>
+                    <p class="helper-text">낮은 숫자일수록 상위 직급으로 정렬됩니다.</p>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-cancel"
+                            onclick="location.href='/admin/positions/list'">취소 및 목록</button>
+                    <button type="button" class="btn btn-submit" id="saveBtn">수정 사항 저장</button>
+                </div>
+
+                <div id="statusMsg" class="status-msg"></div>
+            </div>
+        </main>
     </div>
-</header>
-
-<div class="container">
-    <nav class="sidenav">
-        <div class="nav-icon">📄</div><div class="nav-icon">💬</div><div class="nav-icon">✉️</div>
-        <div class="nav-icon active">⚙️</div>
-    </nav>
-
-    <aside class="subnav">
-        <div class="subnav-title">관리자 설정</div>
-        <div class="menu-list">
-            <a href="/admin/departments" class="menu-item">부서 편성</a>
-            <a href="/admin/positions/list" class="menu-item active">직급 편성</a>
-            <a href="/admin/employees" class="menu-item">사원 관리</a>
-        </div>
-    </aside>
-
-    <main class="content">
-        <div class="title-group">
-            <h1>직급 편성</h1>
-            <h2>직급 정보 수정</h2>
-        </div>
-
-        <div class="edit-card">
-            <input type="hidden" id="posNo" th:value="${posNo}"/>
-
-            <div class="meta-info">
-                <span class="label-sm">고유 번호</span>
-                <span class="chip" th:text="'No. ' + ${posNo}">No. -</span>
-            </div>
-
-            <div class="input-group">
-                <label class="input-label" for="posName">직급명</label>
-                <input type="text" id="posName" class="form-control"
-                       th:value="${posName}" placeholder="수정할 직급명을 입력하세요" maxlength="30" />
-                <p class="helper-text">조직도에 표시될 직급의 이름입니다.</p>
-            </div>
-
-            <div class="input-group">
-                <label class="input-label" for="posOrder">직급 순서 (정렬)</label>
-                <select id="posOrder" class="form-control">
-                    <option th:each="i : ${#numbers.sequence(1, 20)}"
-                            th:value="${i}"
-                            th:text="${i} + '순위'"
-                            th:selected="${i == posOrder}"></option>
-                </select>
-                <p class="helper-text">낮은 숫자일수록 상위 직급으로 정렬됩니다.</p>
-            </div>
-
-            <div class="form-actions">
-                <button type="button" class="btn btn-cancel" onclick="location.href='/admin/positions/list'">취소 및 목록</button>
-                <button type="button" class="btn btn-submit" onclick="submitUpdate()">수정 사항 저장</button>
-            </div>
-
-            <div id="statusMsg" class="status-msg"></div>
-        </div>
-    </main>
 </div>
 
-<script th:inline="javascript">
-    const API_BASE = "/api/v1/admin/positions";
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const API_BASE = "/api/v1/admin/positions";
 
-    function showStatus(isOk, text) {
-        const el = document.getElementById("statusMsg");
-        el.textContent = text;
-        el.className = `status-msg ${isOk ? 'ok' : 'err'}`;
-        el.style.display = "block";
-    }
-
-    async function safeJson(res) {
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) return {};
-        try { return await res.json(); } catch { return {}; }
-    }
-
-    async function submitUpdate() {
-        const posNo = document.getElementById("posNo").value;
-        const posName = document.getElementById("posName").value.trim();
-        const posOrder = document.getElementById("posOrder").value; // 드롭다운 값
-        if (!posNo) { showStatus(false, "직급 번호를 찾을 수 없습니다."); return; }
-        if (!posName) { showStatus(false, "직급명을 입력해주세요."); return; }
-
-        const payload = {
-            posName: posName,
-            posOrder: parseInt(posOrder, 10)
-        };
-
-        try {
-            const response = await fetch(`${API_BASE}/${posNo}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",          // ✅ httpOnly 쿠키(accessToken) 자동 전송
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showStatus(true, "성공적으로 반영되었습니다. 목록으로 이동합니다.");
-                setTimeout(() => {
-                    location.href = "/admin/positions/list";
-                }, 1000);
-                return;
-            }
-
-            if (response.status === 401) {
-                showStatus(false, "로그인이 필요합니다. 다시 로그인 해주세요.");
-                return;
-            }
-            if (response.status === 403) {
-                showStatus(false, "수정 권한이 없습니다 (관리자 전용).");
-                return;
-            }
-
-            const data = await safeJson(response);
-            showStatus(false, data.message || data.msg || "수정 처리 중 오류가 발생했습니다.");
-        } catch (error) {
-            console.error("Fetch Error:", error);
-            showStatus(false, "서버 연결 실패. 네트워크를 확인하세요.");
+        function showStatus(isOk, text) {
+            const el = document.getElementById("statusMsg");
+            el.textContent = text;
+            el.className = "status-msg " + (isOk ? "ok" : "err");
+            el.style.display = "block";
+            clearTimeout(window.__posStatusTimer);
+            window.__posStatusTimer = setTimeout(() => { el.style.display = "none"; }, 2500);
         }
-    }
-</script>
+
+        async function safeJson(res) {
+            const ct = res.headers.get("content-type") || "";
+            if (!ct.includes("application/json")) return {};
+            try { return await res.json(); } catch { return {}; }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const btn = document.getElementById("saveBtn");
+            if (!btn) return;
+
+            btn.addEventListener("click", async () => {
+                const posNo = document.getElementById("posNo")?.value;
+                const posName = document.getElementById("posName")?.value?.trim() || "";
+                const posOrder = parseInt(document.getElementById("posOrder")?.value || "0", 10);
+
+                if (!posNo) return showStatus(false, "직급 번호를 찾을 수 없습니다.");
+                if (!posName) return showStatus(false, "직급명을 입력해주세요.");
+                if (!Number.isInteger(posOrder) || posOrder < 1 || posOrder > 50) return showStatus(false, "직급 순서는 1~50 사이로 선택해주세요.");
+
+                const payload = { posName, posOrder };
+
+                try {
+                    const response = await fetch(`${API_BASE}/${posNo}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", "Accept":"application/json" },
+                        credentials: "include",
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        showStatus(true, "성공적으로 반영되었습니다. 목록으로 이동합니다.");
+                        setTimeout(() => location.href = "/admin/positions/list", 800);
+                        return;
+                    }
+
+                    if (response.status === 401) return showStatus(false, "로그인이 필요합니다. 다시 로그인 해주세요.");
+                    if (response.status === 403) return showStatus(false, "수정 권한이 없습니다 (관리자 전용).");
+
+                    const data = await safeJson(response);
+                    showStatus(false, data.message || data.msg || `수정 실패 (HTTP ${response.status})`);
+
+                } catch (error) {
+                    console.error("Fetch Error:", error);
+                    showStatus(false, "서버 연결 실패. 네트워크를 확인하세요.");
+                }
+            });
+        });
+    </script>
+</th:block>
 </body>
 </html>

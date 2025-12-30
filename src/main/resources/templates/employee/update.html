@@ -1,966 +1,725 @@
+<!-- templates/employee/update.html -->
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>사원 관리 - 사원 수정</title>
-    <style>
-        :root{
-            --primary:#2f6fda;
-            --bg:#f3f5f9;
-            --panel:#f7f8fb;
-            --card:#ffffff;
-            --text:#111827;
-            --muted:#6b7280;
-            --line:#e5e7eb;
-            --shadow: 0 14px 36px rgba(0,0,0,.08);
-            --radius:18px;
-            --danger:#c62828;
-        }
-        *{box-sizing:border-box}
-        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
-        a{color:inherit;text-decoration:none}
-        button{font-family:inherit}
+    <title>사원 수정</title>
 
-        /* ===== Layout ===== */
-        .topbar{
-            height:76px;background:var(--primary);color:#fff;
-            display:flex;align-items:center;justify-content:space-between;
-            padding:0 18px; box-shadow: 0 10px 24px rgba(47,111,218,.25);
-        }
-        .top-left{display:flex;align-items:center;gap:14px}
-        .app-grid{
-            width:44px;height:44px;border-radius:12px;
-            display:grid;place-items:center;cursor:pointer;
-        }
-        .logo{
-            display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;letter-spacing:.2px;
-        }
-        .logo .mark{
-            width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.18);
-            display:grid;place-items:center;font-weight:900;
-        }
-        .search{
-            width:min(520px, 46vw);
-            background:rgba(255,255,255,.18);
-            border:1px solid rgba(255,255,255,.25);
-            border-radius:999px;
-            display:flex;align-items:center;gap:10px;
-            padding:10px 14px;
-            backdrop-filter: blur(6px);
-        }
-        .search input{
-            width:100%; border:0; outline:0; background:transparent; color:#fff;
-            font-size:14px;
-        }
-        .search input::placeholder{color:rgba(255,255,255,.8)}
-        .top-right{display:flex;align-items:center;gap:12px}
-        .pill-btn{
-            border:0;cursor:pointer;color:#0f172a;background:rgba(255,255,255,.85);
-            padding:10px 16px;border-radius:999px;font-weight:700;
-        }
-        .icon-btn{
-            width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
-            background:rgba(255,255,255,.12); display:grid;place-items:center; cursor:pointer;
-        }
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .page-title{font-size:28px;font-weight:900;margin:4px 0 6px;letter-spacing:-.2px;}
+            .page-sub{margin:0 0 16px;color:var(--muted);font-weight:700;}
 
-        .layout{
-            display:grid;
-            grid-template-columns: 78px 220px 1fr;
-            min-height: calc(100vh - 76px);
-        }
+            .card{
+                width:min(980px, 100%);
+                background: rgba(255,255,255,.55);
+                border:1px solid var(--line);
+                border-radius:18px;
+                box-shadow: var(--shadow2);
+                padding:18px;
+            }
 
-        /* ===== Left icon rail ===== */
-        .rail{
-            background:#fff;border-right:1px solid var(--line);
-            padding:12px 10px;
-            display:flex;flex-direction:column;align-items:center;gap:12px;
-        }
-        .rail .r-item{
-            width:48px;height:48px;border-radius:14px;border:1px solid var(--line);
-            display:grid;place-items:center;background:#fff; cursor:pointer;
-        }
-        .rail .r-item.active{border-color:rgba(47,111,218,.45); box-shadow: 0 0 0 4px rgba(47,111,218,.12)}
-        .rail svg{opacity:.85}
+            .grid{
+                display:grid;
+                grid-template-columns: 300px 1fr;
+                gap:18px;
+                align-items:start;
+            }
 
-        /* ===== Side menu ===== */
-        .sidemenu{
-            background:#fff;border-right:1px solid var(--line);
-            padding:18px 14px;
-        }
-        .sidemenu h4{margin:8px 10px 14px;font-size:14px;color:#111827}
-        .menu{
-            display:flex;flex-direction:column;gap:6px;
-            padding:0;margin:0;list-style:none;
-        }
-        .menu a{
-            display:flex;align-items:center;gap:10px;
-            padding:12px 12px;border-radius:14px;color:#111827;
-        }
-        .menu a.active{
-            background:rgba(47,111,218,.10);
-            color:var(--primary); font-weight:800;
-        }
-        .menu a:hover{background:#f3f4f6}
+            /* Upload */
+            .upload-label{font-size:13px;color:#374151;font-weight:900;margin:0 0 10px 0}
+            .uploader{
+                width:100%;
+                background:#fff;
+                border-radius:16px;
+                padding:14px;
+                border:1px solid var(--line);
+            }
+            .drop{
+                border:2px dashed rgba(59,130,246,.35);
+                border-radius:16px;
+                height:210px;
+                display:grid;place-items:center;
+                cursor:pointer;
+                position:relative;
+                overflow:hidden;
+                background:#fff;
+            }
+            .drop:hover{background:rgba(59,130,246,.04)}
+            .drop .hint{
+                text-align:center;color:#374151;
+                display:flex;flex-direction:column;gap:8px;align-items:center;
+                font-weight:900;
+            }
+            .drop small{display:block;color:var(--muted);font-weight:700}
+            .preview{
+                position:absolute;inset:0;
+                width:100%;height:100%;
+                object-fit:cover;
+                display:none;
+            }
+            .file-meta{margin-top:10px;font-size:12px;color:var(--muted);font-weight:700}
+            .file-meta b{color:#111827}
+            .remove-file{
+                margin-top:10px;
+                width:100%;
+                height:38px;
+                border-radius:12px;
+                border:1px solid var(--line);
+                background:#fff;
+                cursor:pointer;
+                font-weight:900;
+            }
 
-        /* ===== Main ===== */
-        .main{
-            padding:26px 24px;
-        }
-        .page-title{
-            text-align:center;
-            margin:6px 0 16px;
-        }
-        .page-title h1{margin:0;font-size:28px;font-weight:900}
-        .page-title .sub{margin-top:6px;color:#111827;font-weight:800}
+            /* Form */
+            .form{
+                display:grid;
+                grid-template-columns: 1fr 1fr;
+                gap:14px 14px;
+            }
+            .field{display:flex;flex-direction:column;gap:8px}
+            .label{font-size:13px;color:#111827;font-weight:900}
+            input, select{
+                height:42px;
+                border-radius:12px;
+                border:1px solid var(--line);
+                padding:0 12px;
+                outline:none;
+                background:#fff;
+                font-size:14px;
+            }
+            input:focus, select:focus{
+                border-color: rgba(59,130,246,.55);
+                box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+            }
+            .full{grid-column:1 / -1}
+            .readonly{ background:#f8fafc; color:#475569; }
+            .help{font-size:12px;color:var(--muted);margin-top:-4px;font-weight:700}
 
-        .card{
-            width:min(920px, 100%);
-            margin: 18px auto 0;
-            background:var(--panel);
-            border-radius:22px;
-            padding:26px;
-            box-shadow: var(--shadow);
-            border:1px solid rgba(255,255,255,.35);
-        }
+            .actions{
+                display:flex;justify-content:flex-end;gap:10px;
+                margin-top:16px;
+            }
+            .btn{
+                height:42px; min-width:110px;
+                border-radius:12px; border:0; cursor:pointer;
+                font-weight:900;
+                padding:0 14px;
+            }
+            .btn.primary{background:var(--primary2);color:#fff}
+            .btn.ghost{background: rgba(59,130,246,.10); color: var(--primary2); border:1px solid rgba(59,130,246,.18);}
 
-        .grid{
-            display:grid;
-            grid-template-columns: 300px 1fr;
-            gap:22px;
-            align-items:start;
-        }
+            .toast{
+                margin-top:10px;
+                padding:12px 14px;
+                border-radius:14px;
+                display:none;
+                font-size:13px;
+                border:1px solid var(--line);
+                background:#fff;
+                font-weight:900;
+            }
+            .toast.ok{display:block;border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.07)}
+            .toast.bad{display:block;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.07)}
+            .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
-        /* ===== Upload ===== */
-        .upload-label{font-size:13px;color:#374151;font-weight:800;margin:0 0 10px 0}
-        .uploader{
-            width:100%;
-            background:#fff;
-            border-radius:16px;
-            padding:14px;
-            border:1px solid var(--line);
-        }
-        .drop{
-            border:2px dashed rgba(47,111,218,.35);
-            border-radius:16px;
-            height:210px;
-            display:grid;place-items:center;
-            cursor:pointer;
-            position:relative;
-            overflow:hidden;
-        }
-        .drop:hover{background:rgba(47,111,218,.04)}
-        .drop .hint{
-            text-align:center;color:#374151;
-            display:flex;flex-direction:column;gap:8px;align-items:center;
-            font-weight:800;
-        }
-        .drop small{display:block;color:var(--muted);font-weight:600}
-        .preview{
-            position:absolute;inset:0;
-            width:100%;height:100%;
-            object-fit:cover;
-            display:none;
-        }
-        .file-meta{margin-top:10px;font-size:12px;color:var(--muted)}
-        .file-meta b{color:#111827}
-        .remove-file{
-            margin-top:10px;
-            width:100%;
-            height:38px;
-            border-radius:12px;
-            border:1px solid var(--line);
-            background:#fff;
-            cursor:pointer;
-            font-weight:800;
-        }
+            /* Done modal */
+            .modal-backdrop{
+                position:fixed; inset:0;
+                background:rgba(17,24,39,.55);
+                display:none;
+                align-items:center; justify-content:center;
+                z-index:9999;
+            }
+            .modal{
+                width:min(520px, calc(100vw - 40px));
+                background:#fff;
+                border-radius:18px;
+                border:1px solid rgba(0,0,0,.08);
+                box-shadow: 0 20px 60px rgba(0,0,0,.25);
+                overflow:hidden;
+            }
+            .modal-head{
+                padding:16px 18px;
+                display:flex; align-items:center; justify-content:space-between;
+                border-bottom:1px solid var(--line);
+            }
+            .modal-title{font-weight:950}
+            .modal-close{
+                width:38px;height:38px;border-radius:12px;
+                border:1px solid var(--line);
+                background:#fff; cursor:pointer; font-weight:900;
+            }
+            .modal-body{padding:18px}
+            .modal-body p{margin:0;color:#111827;font-weight:900}
+            .modal-actions{
+                padding:16px 18px;
+                border-top:1px solid var(--line);
+                display:flex; justify-content:flex-end; gap:10px;
+            }
+            .btn2{
+                height:42px; min-width:110px;
+                border-radius:14px; border:0; cursor:pointer;
+                font-weight:950;
+                padding:0 14px;
+            }
+            .btn2.primary{background:var(--primary2);color:#fff}
+            .btn2.ghost{background:#eef2ff;color:#1f3b7a}
 
-        /* ===== Form ===== */
-        .form{
-            display:grid;
-            grid-template-columns: 1fr 1fr;
-            gap:14px 16px;
-        }
-        .field{display:flex;flex-direction:column;gap:8px}
-        .label{font-size:13px;color:#111827;font-weight:900}
-        .req{color:#ef4444;margin-left:4px}
-        input, select{
-            height:44px;
-            border-radius:12px;
-            border:1px solid var(--line);
-            padding:0 12px;
-            outline:none;
-            background:#fff;
-            font-size:14px;
-        }
-        input:focus, select:focus{
-            border-color: rgba(47,111,218,.55);
-            box-shadow: 0 0 0 4px rgba(47,111,218,.12);
-        }
-        .full{grid-column:1 / -1}
-        .readonly{
-            background:#f8fafc;
-            color:#475569;
-        }
-        .help{
-            font-size:12px;color:var(--muted);margin-top:-4px;
-        }
-
-        .actions{
-            display:flex;justify-content:flex-end;gap:12px;
-            margin-top:18px;
-        }
-        .btn{
-            height:44px; min-width:120px;
-            border-radius:14px; border:0; cursor:pointer;
-            font-weight:900;
-        }
-        .btn.primary{background:var(--primary);color:#fff}
-        .btn.ghost{background:#eaf1ff;color:#1f3b7a}
-        .btn:disabled{opacity:.6;cursor:not-allowed}
-
-        .toast{
-            margin-top:14px;
-            padding:12px 14px;
-            border-radius:14px;
-            display:none;
-            font-size:13px;
-            border:1px solid var(--line);
-            background:#fff;
-        }
-        .toast.ok{display:block;border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.07)}
-        .toast.bad{display:block;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.07)}
-        .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-
-        /* ===== Done Modal ===== */
-        .modal-backdrop{
-            position:fixed; inset:0;
-            background:rgba(17,24,39,.55);
-            display:none;
-            align-items:center; justify-content:center;
-            z-index:9999;
-        }
-        .modal{
-            width:min(520px, calc(100vw - 40px));
-            background:#fff;
-            border-radius:18px;
-            border:1px solid rgba(0,0,0,.08);
-            box-shadow: 0 20px 60px rgba(0,0,0,.25);
-            overflow:hidden;
-        }
-        .modal-head{
-            padding:16px 18px;
-            display:flex; align-items:center; justify-content:space-between;
-            border-bottom:1px solid var(--line);
-        }
-        .modal-title{font-weight:950}
-        .modal-close{
-            width:38px;height:38px;border-radius:12px;
-            border:1px solid var(--line);
-            background:#fff; cursor:pointer; font-weight:900;
-        }
-        .modal-body{padding:18px}
-        .modal-body p{margin:0;color:#111827;font-weight:900}
-        .modal-actions{
-            padding:16px 18px;
-            border-top:1px solid var(--line);
-            display:flex; justify-content:flex-end; gap:10px;
-        }
-        .btn2{
-            height:42px; min-width:110px;
-            border-radius:14px; border:0; cursor:pointer;
-            font-weight:950;
-            padding:0 14px;
-        }
-        .btn2.primary{background:var(--primary);color:#fff}
-        .btn2.ghost{background:#eef2ff;color:#1f3b7a}
-    </style>
+            @media (max-width: 980px){
+                .grid{ grid-template-columns: 1fr; }
+            }
+        </style>
+    </th:block>
 </head>
 
 <body>
-<header class="topbar">
-    <div class="top-left">
-        <div class="app-grid" title="앱">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <g fill="rgba(255,255,255,.95)">
-                    <circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/>
-                    <circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>
-                    <circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/>
-                </g>
-            </svg>
-        </div>
+<div layout:fragment="content">
 
-        <div class="logo">
-            <div class="mark">B</div>
-            Bizportal
-        </div>
-    </div>
+    <section class="page-with-subbar">
+        <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('emp')}"></aside>
 
-    <div class="search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="rgba(255,255,255,.95)" stroke-width="2"/>
-            <path d="M16.2 16.2 21 21" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <input placeholder="Search"/>
-    </div>
+        <div>
+            <div class="page-title">사원 관리</div>
+            <div class="page-sub">사원 수정</div>
 
-    <div class="top-right">
-        <div class="icon-btn" title="알림">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7Z" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-        <div class="icon-btn" title="프로필">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M20 21a8 8 0 1 0-16 0" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="rgba(255,255,255,.95)" stroke-width="2"/>
-            </svg>
-        </div>
-        <button class="pill-btn" type="button">로그아웃</button>
-    </div>
-</header>
+            <section class="card">
+                <div class="grid">
+                    <!-- Upload -->
+                    <div>
+                        <div class="upload-label">사원 사진</div>
 
-<div class="layout">
-    <aside class="rail">
-        <div class="r-item active" title="결재">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M7 3h10v18H7z" stroke="#2563eb" stroke-width="2" />
-                <path d="M9 7h6M9 11h6M9 15h6" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-        <div class="r-item" title="메일">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M4 7h16v10H4z" stroke="#111827" stroke-width="2"/>
-                <path d="m4 8 8 6 8-6" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </div>
-        <div class="r-item" title="캘린더">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M7 3v3M17 3v3" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
-                <path d="M4 7h16v14H4z" stroke="#111827" stroke-width="2"/>
-                <path d="M8 11h4" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-    </aside>
-
-    <aside class="sidemenu">
-        <h4>조직 관리</h4>
-        <ul class="menu">
-            <li><a href="/admin/departments/list">부서 편성</a></li>
-            <li><a href="/admin/positions/list">직급 편성</a></li>
-            <li><a class="active" href="/admin/employees/list">사원 관리</a></li>
-            <li><a href="#">사내 규정 관리</a></li>
-        </ul>
-    </aside>
-
-    <main class="main">
-        <div class="page-title">
-            <h1>사원 관리</h1>
-            <div class="sub">사원 수정</div>
-        </div>
-
-        <section class="card">
-            <div class="grid">
-                <!-- Upload -->
-                <div>
-                    <div class="upload-label">사원 사진</div>
-
-                    <div class="uploader">
-                        <div class="drop" id="drop">
-                            <img id="preview" class="preview" alt="preview"/>
-                            <div class="hint" id="dropHint">
-                                <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 3v12" stroke="#2f6fda" stroke-width="2" stroke-linecap="round"/>
-                                    <path d="m7 8 5-5 5 5" stroke="#2f6fda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M5 21h14" stroke="#2f6fda" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                                <span id="hintTitle">사진 불러오는 중...</span>
-                                <small id="hintDesc">클릭하여 업로드 (JPG/PNG, 최대 5MB)</small>
+                        <div class="uploader">
+                            <div class="drop" id="drop">
+                                <img id="preview" class="preview" alt="preview"/>
+                                <div class="hint" id="dropHint">
+                                    <span id="hintTitle">사진 불러오는 중...</span>
+                                    <small id="hintDesc">클릭하여 업로드 (JPG/PNG, 최대 5MB)</small>
+                                </div>
+                                <input id="photo" type="file" accept="image/*" hidden />
                             </div>
-                            <input id="photo" type="file" accept="image/*" hidden />
+
+                            <div class="file-meta" id="fileMeta">선택된 파일: <b>불러오는 중...</b></div>
+                            <button class="remove-file" id="removeFile" type="button">사진 제거</button>
                         </div>
 
-                        <div class="file-meta" id="fileMeta">선택된 파일: <b>불러오는 중...</b></div>
-                        <button class="remove-file" id="removeFile" type="button">사진 제거</button>
+                        <div class="toast" id="toast"></div>
                     </div>
 
-                    <div class="toast" id="toast"></div>
+                    <!-- Form -->
+                    <div>
+                        <form id="empForm" autocomplete="off">
+                            <div class="form">
+                                <div class="field">
+                                    <div class="label">이름</div>
+                                    <input id="empName" type="text" class="readonly" readonly />
+                                    <div class="help">이름은 수정 불가</div>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">사번</div>
+                                    <input id="empId" type="text" class="readonly mono" readonly />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">생년월일</div>
+                                    <input id="birth" type="date" class="readonly" readonly />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">입사일</div>
+                                    <input id="hireDate" type="date" class="readonly" readonly />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">주소</div>
+                                    <input id="addr" type="text" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">이메일</div>
+                                    <input id="email" type="email" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">사내번호</div>
+                                    <input id="workPhone" type="text" maxlength="10" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">전화번호</div>
+                                    <input id="phone" type="tel" maxlength="13" required />
+                                    <div class="help">입력하면 자동 하이픈</div>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">성별</div>
+                                    <select id="gen" required>
+                                        <option value="" selected disabled>성별 선택</option>
+                                        <option value="M">남</option>
+                                        <option value="F">여</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">부서</div>
+                                    <select id="depNo" required>
+                                        <option value="" selected disabled>부서 선택</option>
+                                        <option th:each="d : ${departments}" th:value="${d.depNo}" th:text="${d.depName}">부서</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">직급</div>
+                                    <select id="posNo" required>
+                                        <option value="" selected disabled>직급 선택</option>
+                                        <option th:each="p : ${positions}" th:value="${p.posNo}" th:text="${p.posName}">직급</option>
+                                    </select>
+                                </div>
+
+                                <div class="field full">
+                                    <div class="label">권한</div>
+                                    <select id="role" required>
+                                        <option value="" selected disabled>권한 선택</option>
+                                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="actions">
+                                <button class="btn primary" id="submitBtn" type="submit">수정</button>
+                                <button class="btn ghost" id="cancelBtn" type="button">취소</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
+            </section>
 
-                <!-- Form -->
-                <div>
-                    <form id="empForm" autocomplete="off">
-                        <div class="form">
-                            <div class="field">
-                                <div class="label">이름</div>
-                                <input id="empName" type="text" class="readonly" readonly />
-                                <div class="help">이름은 상세 조회 값이 표시돼 (수정 불가)</div>
-                            </div>
+        </div>
+    </section>
 
-                            <div class="field">
-                                <div class="label">사번</div>
-                                <input id="empId" type="text" class="readonly mono" readonly />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">생년월일</div>
-                                <input id="birth" type="date" class="readonly" readonly />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">입사일</div>
-                                <input id="hireDate" type="date" class="readonly" readonly />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">주소<span class="req">*</span></div>
-                                <input id="addr" type="text" placeholder="예) 서울시 ○○구 ○○로" required />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">이메일<span class="req">*</span></div>
-                                <input id="email" type="email" placeholder="예) user@corp.com" required />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">사내번호<span class="req">*</span></div>
-                                <input id="workPhone" type="text" placeholder="예) 1234" maxlength="10" required />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">전화번호<span class="req">*</span></div>
-                                <input id="phone" type="tel" placeholder="예) 010-1234-5678" maxlength="13" required />
-                                <div class="help">입력하면 자동으로 010-1234-5678 형태로 맞춰줘</div>
-                            </div>
-
-                            <div class="field">
-                                <div class="label">성별<span class="req">*</span></div>
-                                <select id="gen" required>
-                                    <option value="" selected disabled>성별 선택</option>
-                                    <option value="M">남</option>
-                                    <option value="F">여</option>
-                                </select>
-                            </div>
-
-                            <div class="field">
-                                <div class="label">부서<span class="req">*</span></div>
-                                <select id="depNo" required>
-                                    <option value="" selected disabled>부서 선택</option>
-                                    <option th:each="d : ${departments}" th:value="${d.depNo}" th:text="${d.depName}">부서</option>
-                                </select>
-                            </div>
-
-                            <div class="field">
-                                <div class="label">직급<span class="req">*</span></div>
-                                <select id="posNo" required>
-                                    <option value="" selected disabled>직급 선택</option>
-                                    <option th:each="p : ${positions}" th:value="${p.posNo}" th:text="${p.posName}">직급</option>
-                                </select>
-                            </div>
-
-                            <div class="field full">
-                                <div class="label">권한<span class="req">*</span></div>
-                                <select id="role" required>
-                                    <option value="" selected disabled>권한 선택 (예: 일반/관리자)</option>
-                                    <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
-                                </select>
-                                <div class="help">서버 enum(RoleType) 값 그대로 내려보내야 해</div>
-                            </div>
-                        </div>
-
-                        <div class="actions">
-                            <button class="btn primary" id="submitBtn" type="submit">수정</button>
-                            <button class="btn ghost" id="cancelBtn" type="button">취소</button>
-                        </div>
-                    </form>
-                </div>
+    <!-- ✅ 수정 완료 모달 -->
+    <div class="modal-backdrop" id="doneBackdrop" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-title" id="doneTitle">✅ 수정 완료</div>
+                <button class="modal-close" type="button" id="doneCloseBtn">✕</button>
             </div>
-        </section>
-    </main>
-</div>
-
-<!-- ✅ 수정 완료 모달 -->
-<div class="modal-backdrop" id="doneBackdrop" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
-    <div class="modal">
-        <div class="modal-head">
-            <div class="modal-title" id="doneTitle">✅ 수정 완료</div>
-            <button class="modal-close" type="button" id="doneCloseBtn">✕</button>
-        </div>
-        <div class="modal-body">
-            <p>사원 정보가 수정되었습니다.</p>
-        </div>
-        <div class="modal-actions">
-            <button class="btn2 ghost" type="button" id="stayBtn">계속 수정</button>
-            <button class="btn2 primary" type="button" id="goListBtn">목록으로</button>
+            <div class="modal-body">
+                <p>사원 정보가 수정되었습니다.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn2 ghost" type="button" id="stayBtn">계속 수정</button>
+                <button class="btn2 primary" type="button" id="goListBtn">목록으로</button>
+            </div>
         </div>
     </div>
+
 </div>
 
-<script th:inline="javascript">
-    const API_BASE = "";
-    const LIST_URL = "/admin/employees/list";
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const API_BASE = "";
+        const LIST_URL = "/admin/employees/list";
 
-    // ✅ empNo (모델 우선, 없으면 URL에서 추출)
-    let EMP_NO = /*[[${empNo}]]*/ 0;
-    if (!EMP_NO || EMP_NO === 0){
-        const m = location.pathname.match(/\/employees\/(\d+)/);
-        if (m) EMP_NO = Number(m[1]);
-    }
+        let EMP_NO = /*[[${empNo}]]*/ 0;
+        if (!EMP_NO || EMP_NO === 0){
+            const m = location.pathname.match(/\/employees\/(\d+)/);
+            if (m) EMP_NO = Number(m[1]);
+        }
 
-    const API_DETAIL = `/api/v1/admin/employees/${EMP_NO}`;
-    const API_UPDATE = `/api/v1/admin/employees/${EMP_NO}`;
+        const API_DETAIL = `/api/v1/admin/employees/${EMP_NO}`;
+        const API_UPDATE = `/api/v1/admin/employees/${EMP_NO}`;
 
-    // ✅ 첨부 조회/미리보기
-    const API_ATTACH_LIST = (empNo) => `/api/v1/attachments?domain=EMPLOYEE&entityId=${empNo}`;
-    const API_PREVIEW_URL = (attachmentId) => `/api/v1/attachments/${attachmentId}/preview-url`;
+        const API_ATTACH_LIST = (empNo) => `/api/v1/attachments?domain=EMPLOYEE&entityId=${empNo}`;
+        const API_PREVIEW_URL = (attachmentId) => `/api/v1/attachments/${attachmentId}/preview-url`;
+        const API_DELETE_ATTACHMENT = (attachmentId) => `/api/v1/attachments/${attachmentId}`;
 
-    // ✅ 첨부 삭제(attachmentId로 삭제) - 너가 준 API
-    const API_DELETE_ATTACHMENT = (attachmentId) => `/api/v1/attachments/${attachmentId}`;
+        const API_PRESIGN = `/api/v1/attachments/presign`;
+        const API_COMPLETE = `/api/v1/attachments/complete`;
+        const API_PATCH_OBJECT_KEY = (empNo) => `/api/v1/admin/employees/${empNo}/object-key`;
 
-    // ✅ 등록 화면 업로드 플로우
-    const API_PRESIGN = `/api/v1/attachments/presign`;
-    const API_COMPLETE = `/api/v1/attachments/complete`;
-    const API_PATCH_OBJECT_KEY = (empNo) => `/api/v1/admin/employees/${empNo}/object-key`;
+        const $drop = document.getElementById("drop");
+        const $photo = document.getElementById("photo");
+        const $preview = document.getElementById("preview");
+        const $dropHint = document.getElementById("dropHint");
+        const $hintTitle = document.getElementById("hintTitle");
+        const $hintDesc = document.getElementById("hintDesc");
+        const $fileMeta = document.getElementById("fileMeta");
+        const $removeFile = document.getElementById("removeFile");
+        const $toast = document.getElementById("toast");
 
-    const $drop = document.getElementById("drop");
-    const $photo = document.getElementById("photo");
-    const $preview = document.getElementById("preview");
-    const $dropHint = document.getElementById("dropHint");
-    const $hintTitle = document.getElementById("hintTitle");
-    const $hintDesc = document.getElementById("hintDesc");
-    const $fileMeta = document.getElementById("fileMeta");
-    const $removeFile = document.getElementById("removeFile");
-    const $toast = document.getElementById("toast");
+        const $form = document.getElementById("empForm");
+        const $submitBtn = document.getElementById("submitBtn");
+        const $cancelBtn = document.getElementById("cancelBtn");
 
-    const $form = document.getElementById("empForm");
-    const $submitBtn = document.getElementById("submitBtn");
-    const $cancelBtn = document.getElementById("cancelBtn");
+        const $doneBackdrop = document.getElementById("doneBackdrop");
+        const $doneCloseBtn = document.getElementById("doneCloseBtn");
+        const $goListBtn = document.getElementById("goListBtn");
+        const $stayBtn = document.getElementById("stayBtn");
 
-    const $doneBackdrop = document.getElementById("doneBackdrop");
-    const $doneCloseBtn = document.getElementById("doneCloseBtn");
-    const $goListBtn = document.getElementById("goListBtn");
-    const $stayBtn = document.getElementById("stayBtn");
+        let existingAttachmentId = null;
+        let removePhotoRequested = false;
+        let currentObjectKey = null;
 
-    let existingAttachmentId = null;   // 현재 서버에 붙어있는 사진 attachmentId(대표 1개)
-    let removePhotoRequested = false;  // 사진 제거 눌렀는지
-    let currentObjectKey = null;       // (선택) 서버에 저장된 objectKey
+        function toast(type, msg){
+            $toast.className = "toast " + (type === "ok" ? "ok" : "bad");
+            $toast.textContent = msg;
+            $toast.style.display = "block";
+        }
+        function clearToast(){
+            $toast.style.display = "none";
+            $toast.className = "toast";
+            $toast.textContent = "";
+        }
 
-    function toast(type, msg){
-        $toast.className = "toast " + (type === "ok" ? "ok" : "bad");
-        $toast.textContent = msg;
-        $toast.style.display = "block";
-    }
-    function clearToast(){
-        $toast.style.display = "none";
-        $toast.className = "toast";
-        $toast.textContent = "";
-    }
+        function openDoneModal(){ $doneBackdrop.style.display = "flex"; }
+        function closeDoneModal(){ $doneBackdrop.style.display = "none"; }
+        $doneCloseBtn.addEventListener("click", closeDoneModal);
+        $doneBackdrop.addEventListener("click", (e)=>{ if(e.target === $doneBackdrop) closeDoneModal(); });
+        $goListBtn.addEventListener("click", ()=> window.location.href = LIST_URL);
+        $stayBtn.addEventListener("click", ()=> closeDoneModal());
 
-    function openDoneModal(){ $doneBackdrop.style.display = "flex"; }
-    function closeDoneModal(){ $doneBackdrop.style.display = "none"; }
-    $doneCloseBtn.addEventListener("click", closeDoneModal);
-    $doneBackdrop.addEventListener("click", (e)=>{ if(e.target === $doneBackdrop) closeDoneModal(); });
-    $goListBtn.addEventListener("click", ()=> window.location.href = LIST_URL);
-    $stayBtn.addEventListener("click", ()=> closeDoneModal());
+        function formatKoreanMobile(raw){
+            const digits = String(raw||"").replace(/\D/g, "").slice(0, 11);
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 7) return `${digits.slice(0,3)}-${digits.slice(3)}`;
+            return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+        }
+        document.getElementById("phone").addEventListener("input", (e)=>{ e.target.value = formatKoreanMobile(e.target.value); });
+        document.getElementById("email").addEventListener("input", (e)=>{ e.target.value = e.target.value.replace(/\s/g, ""); });
 
-    // ✅ 전화번호: 검증 제거 + 자동 하이픈만
-    function formatKoreanMobile(raw){
-        const digits = String(raw||"").replace(/\D/g, "").slice(0, 11);
-        if (digits.length <= 3) return digits;
-        if (digits.length <= 7) return `${digits.slice(0,3)}-${digits.slice(3)}`;
-        return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
-    }
-    document.getElementById("phone").addEventListener("input", (e)=>{
-        e.target.value = formatKoreanMobile(e.target.value);
-    });
-    document.getElementById("email").addEventListener("input", (e)=>{
-        e.target.value = e.target.value.replace(/\s/g, "");
-    });
+        async function requestJson(method, url, body){
+            const res = await fetch(`${API_BASE}${url}`, {
+                method,
+                headers: { "Content-Type": "application/json", "Accept":"application/json" },
+                credentials: "include",
+                body: body ? JSON.stringify(body) : null
+            });
 
-    async function requestJson(method, url, body){
-        const res = await fetch(`${API_BASE}${url}`, {
-            method,
-            headers: { "Content-Type": "application/json", "Accept":"application/json" },
-            credentials: "include",
-            body: body ? JSON.stringify(body) : null
-        });
+            const text = await res.text();
+            let json = null;
+            try { json = text ? JSON.parse(text) : null; } catch(e){}
+            if (!res.ok) throw new Error(`HTTP ${res.status} ${text || ""}`.trim());
+            return json;
+        }
+        const getJson = (u)=>requestJson("GET", u, null);
+        const patchJson = (u,b)=>requestJson("PATCH", u, b);
+        const postJson = (u,b)=>requestJson("POST", u, b);
 
-        const text = await res.text();
-        let json = null;
-        try { json = text ? JSON.parse(text) : null; } catch(e){}
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${text || ""}`.trim());
-        return json;
-    }
-    const getJson = (u)=>requestJson("GET", u, null);
-    const patchJson = (u,b)=>requestJson("PATCH", u, b);
-    const postJson = (u,b)=>requestJson("POST", u, b);
+        function unwrap(maybe){
+            if(maybe && typeof maybe === "object" && "data" in maybe) return maybe.data;
+            return maybe;
+        }
 
-    function unwrap(maybe){
-        if(maybe && typeof maybe === "object" && "data" in maybe) return maybe.data;
-        return maybe;
-    }
+        function extractUrl(raw){
+            const unwrapped = unwrap(raw);
+            if(!unwrapped) return null;
+            if(typeof unwrapped === "object"){
+                if (unwrapped.url) return unwrapped.url;
+                if (unwrapped.previewUrl) return unwrapped.previewUrl;
+                if (unwrapped.presignedUrl) return unwrapped.presignedUrl;
+                if (unwrapped.data && typeof unwrapped.data === "object"){
+                    if (unwrapped.data.url) return unwrapped.data.url;
+                    if (unwrapped.data.previewUrl) return unwrapped.data.previewUrl;
+                    if (unwrapped.data.presignedUrl) return unwrapped.data.presignedUrl;
+                }
+            }
+            return null;
+        }
 
-    function extractUrl(raw){
-        const unwrapped = unwrap(raw);
-        if(!unwrapped) return null;
-        if(typeof unwrapped === "object"){
-            if (unwrapped.url) return unwrapped.url;
-            if (unwrapped.previewUrl) return unwrapped.previewUrl;
-            if (unwrapped.presignedUrl) return unwrapped.presignedUrl;
-            if (unwrapped.data && typeof unwrapped.data === "object"){
-                if (unwrapped.data.url) return unwrapped.data.url;
-                if (unwrapped.data.previewUrl) return unwrapped.data.previewUrl;
-                if (unwrapped.data.presignedUrl) return unwrapped.data.presignedUrl;
+        function showNoPhoto(){
+            $preview.src = "";
+            $preview.style.display = "none";
+            $dropHint.style.display = "flex";
+            $hintTitle.textContent = "사진 없음";
+            $hintDesc.textContent = "클릭하여 업로드 (JPG/PNG, 최대 5MB)";
+            $fileMeta.innerHTML = `선택된 파일: <b>없음</b>`;
+        }
+
+        function showLoadingPhoto(){
+            $preview.src = "";
+            $preview.style.display = "none";
+            $dropHint.style.display = "flex";
+            $hintTitle.textContent = "사진 불러오는 중...";
+            $hintDesc.textContent = "클릭하여 업로드 (JPG/PNG, 최대 5MB)";
+            $fileMeta.innerHTML = `선택된 파일: <b>불러오는 중...</b>`;
+        }
+
+        function showPreview(url, label){
+            $preview.onload = () => { $preview.style.display = "block"; $dropHint.style.display = "none"; };
+            $preview.onerror = () => { showNoPhoto(); };
+
+            $fileMeta.innerHTML = `선택된 파일: <b>${label || "(기존 사진)"}</b>`;
+            $preview.crossOrigin = "anonymous";
+            $preview.referrerPolicy = "no-referrer";
+            $preview.src = url;
+        }
+
+        async function loadPhotoByAttachmentApi(preferObjectKey){
+            showLoadingPhoto();
+            existingAttachmentId = null;
+
+            try{
+                const listRes = await fetch(API_ATTACH_LIST(EMP_NO), {
+                    method:"GET",
+                    credentials:"include",
+                    headers:{ "Accept":"application/json" }
+                });
+                if(!listRes.ok){ showNoPhoto(); return; }
+
+                const listRaw = await listRes.json();
+                const listJson = unwrap(listRaw);
+                const items = Array.isArray(listJson) ? listJson : [];
+
+                const imageItems = items.filter(x =>
+                    String(x.fileType || "").toUpperCase() === "IMAGE" ||
+                    String(x.contentType || "").startsWith("image/")
+                );
+
+                let photoItem = null;
+                if (preferObjectKey){
+                    photoItem = imageItems.find(x => x.objectKey && String(x.objectKey) === String(preferObjectKey)) || null;
+                }
+                if (!photoItem) photoItem = imageItems[0] || null;
+
+                if(!photoItem || !photoItem.attachmentId){ showNoPhoto(); return; }
+
+                existingAttachmentId = photoItem.attachmentId;
+
+                const prevRes = await fetch(API_PREVIEW_URL(existingAttachmentId), {
+                    method:"GET",
+                    credentials:"include",
+                    headers:{ "Accept":"application/json" }
+                });
+                if(!prevRes.ok){ showNoPhoto(); return; }
+
+                const prevRaw = await prevRes.json();
+                const url = extractUrl(prevRaw);
+                if(!url){ showNoPhoto(); return; }
+
+                showPreview(url, "(기존 사진)");
+            }catch(e){
+                console.error(e);
+                showNoPhoto();
             }
         }
-        return null;
-    }
 
-    function showNoPhoto(){
-        $preview.src = "";
-        $preview.style.display = "none";
-        $dropHint.style.display = "flex";
-        $hintTitle.textContent = "사진 없음";
-        $hintDesc.textContent = "클릭하여 업로드 (JPG/PNG, 최대 5MB)";
-        $fileMeta.innerHTML = `선택된 파일: <b>없음</b>`;
-    }
-
-    function showLoadingPhoto(){
-        $preview.src = "";
-        $preview.style.display = "none";
-        $dropHint.style.display = "flex";
-        $hintTitle.textContent = "사진 불러오는 중...";
-        $hintDesc.textContent = "클릭하여 업로드 (JPG/PNG, 최대 5MB)";
-        $fileMeta.innerHTML = `선택된 파일: <b>불러오는 중...</b>`;
-    }
-
-    function showPreview(url, label){
-        $preview.onload = () => {
-            $preview.style.display = "block";
-            $dropHint.style.display = "none";
-        };
-        $preview.onerror = () => {
-            showNoPhoto();
-        };
-
-        $fileMeta.innerHTML = `선택된 파일: <b>${label || "(기존 사진)"}</b>`;
-        $preview.crossOrigin = "anonymous";
-        $preview.referrerPolicy = "no-referrer";
-        $preview.src = url;
-    }
-
-    // ✅ (핵심) 서버에 붙어있는 사진을 "상세조회 방식"으로 로딩
-    // - objectKey가 있으면: 그 objectKey와 일치하는 attachment를 우선 선택
-    // - 없으면: 이미지 중 첫 번째
-    async function loadPhotoByAttachmentApi(preferObjectKey){
-        showLoadingPhoto();
-        existingAttachmentId = null;
-
-        try{
+        async function deleteAllEmployeeImageAttachments(){
             const listRes = await fetch(API_ATTACH_LIST(EMP_NO), {
                 method:"GET",
                 credentials:"include",
                 headers:{ "Accept":"application/json" }
             });
-            if(!listRes.ok){
-                showNoPhoto();
-                return;
-            }
+            if(!listRes.ok) return;
 
-            const listRaw = await listRes.json();
+            const listRaw  = await listRes.json();
             const listJson = unwrap(listRaw);
-            const items = Array.isArray(listJson) ? listJson : [];
+            const items    = Array.isArray(listJson) ? listJson : [];
 
             const imageItems = items.filter(x =>
                 String(x.fileType || "").toUpperCase() === "IMAGE" ||
                 String(x.contentType || "").startsWith("image/")
             );
+            if(imageItems.length === 0) return;
 
-            let photoItem = null;
+            await Promise.allSettled(
+                imageItems
+                    .filter(x => x.attachmentId)
+                    .map(x => fetch(API_DELETE_ATTACHMENT(x.attachmentId), {
+                        method:"DELETE",
+                        credentials:"include",
+                        headers:{ "Accept":"application/json" }
+                    }))
+            );
 
-            // ✅ objectKey로 우선 매칭
-            if (preferObjectKey){
-                photoItem = imageItems.find(x => x.objectKey && String(x.objectKey) === String(preferObjectKey)) || null;
-            }
-
-            // ✅ fallback: 첫 이미지
-            if (!photoItem){
-                photoItem = imageItems[0] || null;
-            }
-
-            if(!photoItem || !photoItem.attachmentId){
-                showNoPhoto();
-                return;
-            }
-
-            existingAttachmentId = photoItem.attachmentId;
-
-            const prevRes = await fetch(API_PREVIEW_URL(existingAttachmentId), {
-                method:"GET",
-                credentials:"include",
-                headers:{ "Accept":"application/json" }
-            });
-            if(!prevRes.ok){
-                showNoPhoto();
-                return;
-            }
-
-            const prevRaw = await prevRes.json();
-            const url = extractUrl(prevRaw);
-            if(!url){
-                showNoPhoto();
-                return;
-            }
-
-            showPreview(url, "(기존 사진)");
-        }catch(e){
-            console.error(e);
-            showNoPhoto();
-        }
-    }
-
-    // ✅ (핵심) "기존 이미지들 전부 삭제" (중복 업로드까지 정리)
-    async function deleteAllEmployeeImageAttachments(){
-        const listRes = await fetch(API_ATTACH_LIST(EMP_NO), {
-            method:"GET",
-            credentials:"include",
-            headers:{ "Accept":"application/json" }
-        });
-        if(!listRes.ok) return;
-
-        const listRaw  = await listRes.json();
-        const listJson = unwrap(listRaw);
-        const items    = Array.isArray(listJson) ? listJson : [];
-
-        const imageItems = items.filter(x =>
-            String(x.fileType || "").toUpperCase() === "IMAGE" ||
-            String(x.contentType || "").startsWith("image/")
-        );
-
-        if(imageItems.length === 0) return;
-
-        await Promise.allSettled(
-            imageItems
-                .filter(x => x.attachmentId)
-                .map(x => fetch(API_DELETE_ATTACHMENT(x.attachmentId), {
-                    method:"DELETE",
-                    credentials:"include",
-                    headers:{ "Accept":"application/json" }
-                }))
-        );
-
-        existingAttachmentId = null;
-    }
-
-    async function loadPrefill(){
-        const raw = await getJson(API_DETAIL);
-        const d = unwrap(raw) || {};
-
-        document.getElementById("empName").value = d.empName ?? "";
-        document.getElementById("empId").value = d.empId ?? "";
-        document.getElementById("birth").value = (d.birth ?? "").toString().slice(0,10);
-        document.getElementById("hireDate").value = (d.hireDate ?? "").toString().slice(0,10);
-
-        document.getElementById("addr").value = d.addr ?? "";
-        document.getElementById("email").value = d.email ?? "";
-        document.getElementById("phone").value = d.phone ?? "";
-        document.getElementById("workPhone").value = d.workPhone ?? "";
-        document.getElementById("gen").value = d.gen ?? "";
-        document.getElementById("depNo").value = d.depNo ?? "";
-        document.getElementById("posNo").value = d.posNo ?? "";
-        document.getElementById("role").value = d.role ?? "";
-
-        currentObjectKey = d.objectKey ?? null;
-
-        removePhotoRequested = false;
-        await loadPhotoByAttachmentApi(currentObjectKey);
-    }
-
-    // ===== Photo UI (선택 시 로컬 미리보기) =====
-    $drop.addEventListener("click", () => $photo.click());
-
-    $photo.addEventListener("change", () => {
-        const file = ($photo.files && $photo.files[0]) ? $photo.files[0] : null;
-        if (!file) return;
-
-        removePhotoRequested = false;
-
-        if (!/^image\//.test(file.type)) {
-            toast("bad", "이미지 파일만 업로드할 수 있어.");
-            $photo.value = "";
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            toast("bad", "최대 5MB까지만 업로드 가능해.");
-            $photo.value = "";
-            return;
+            existingAttachmentId = null;
         }
 
-        $fileMeta.innerHTML = `선택된 파일: <b>${file.name}</b>`;
-        const url = URL.createObjectURL(file);
-        $preview.src = url;
-        $preview.style.display = "block";
-        $dropHint.style.display = "none";
-    });
+        async function loadPrefill(){
+            const raw = await getJson(API_DETAIL);
+            const d = unwrap(raw) || {};
 
-    $removeFile.addEventListener("click", () => {
-        $photo.value = "";
-        removePhotoRequested = true;
-        showNoPhoto();
-        toast("ok", "사진 제거 요청됨 (수정 버튼 누르면 반영돼)");
-    });
+            document.getElementById("empName").value = d.empName ?? "";
+            document.getElementById("empId").value = d.empId ?? "";
+            document.getElementById("birth").value = (d.birth ?? "").toString().slice(0,10);
+            document.getElementById("hireDate").value = (d.hireDate ?? "").toString().slice(0,10);
 
-    // ✅ 사원 정보 수정
-    async function updateEmployee(){
-        const body = {
-            depNo: Number(document.getElementById("depNo").value),
-            posNo: Number(document.getElementById("posNo").value),
-            email: document.getElementById("email").value.trim(),
-            phone: document.getElementById("phone").value.trim(),
-            workPhone: document.getElementById("workPhone").value.trim(),
-            addr: document.getElementById("addr").value.trim(),
-            gen: document.getElementById("gen").value,
-            role: document.getElementById("role").value
-        };
-        const raw = await patchJson(API_UPDATE, body);
-        return unwrap(raw);
-    }
+            document.getElementById("addr").value = d.addr ?? "";
+            document.getElementById("email").value = d.email ?? "";
+            document.getElementById("phone").value = d.phone ?? "";
+            document.getElementById("workPhone").value = d.workPhone ?? "";
+            document.getElementById("gen").value = d.gen ?? "";
+            document.getElementById("depNo").value = d.depNo ?? "";
+            document.getElementById("posNo").value = d.posNo ?? "";
+            document.getElementById("role").value = d.role ?? "";
 
-    // ===== ✅ S3 업로드 플로우 (등록 페이지와 동일) =====
-    async function presignForEmployee(empNo, file){
-        const raw = await postJson(API_PRESIGN, {
-            domain: "EMPLOYEE",
-            entityId: empNo,
-            fileType: "IMAGE",
-            originalName: file.name,
-            contentType: file.type || "application/octet-stream",
-            size: file.size
-        });
-        const data = unwrap(raw);
-        if (!data?.objectKey || !data?.uploadUrl) throw new Error("presign 응답에 objectKey/uploadUrl 없음");
-        return data; // {objectKey, uploadUrl, ...}
-    }
+            currentObjectKey = d.objectKey ?? null;
 
-    async function uploadToS3(uploadUrl, file){
-        const res = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type || "application/octet-stream" },
-            body: file
-        });
-        if (!res.ok) throw new Error("S3 업로드 실패: " + res.status);
-        return { etag: res.headers.get("ETag") };
-    }
-
-    async function completeEmployee(empNo, file, objectKey, etag){
-        const raw = await postJson(API_COMPLETE, {
-            domain: "EMPLOYEE",
-            entityId: empNo,
-            fileType: "IMAGE",
-            objectKey,
-            originalName: file.name,
-            contentType: file.type || "application/octet-stream",
-            size: file.size,
-            etag: etag || null
-        });
-        return unwrap(raw);
-    }
-
-    async function updateEmployeeObjectKey(empNo, objectKey){
-        await patchJson(API_PATCH_OBJECT_KEY(empNo), { objectKey });
-    }
-
-    async function clearEmployeeObjectKey(empNo){
-        await patchJson(API_PATCH_OBJECT_KEY(empNo), { objectKey: null });
-    }
-
-    // ===== Submit =====
-    $form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        clearToast();
-
-        if (!$form.checkValidity()) {
-            $form.reportValidity();
-            return;
+            removePhotoRequested = false;
+            await loadPhotoByAttachmentApi(currentObjectKey);
         }
 
-        try{
-            $submitBtn.disabled = true;
-            toast("ok", "수정 중...");
+        // Photo UI
+        $drop.addEventListener("click", () => $photo.click());
 
-            // 1) 기본 정보 수정
-            await updateEmployee();
-
-            // 2) 사진 처리
+        $photo.addEventListener("change", () => {
             const file = ($photo.files && $photo.files[0]) ? $photo.files[0] : null;
+            if (!file) return;
 
-            // 2-A) 사진 제거만 요청(새 파일 없음) -> 기존 이미지 전부 삭제 + objectKey null
-            if (!file && removePhotoRequested){
-                toast("ok", "사진 제거 중...");
-                await deleteAllEmployeeImageAttachments();
-                await clearEmployeeObjectKey(EMP_NO);
+            removePhotoRequested = false;
 
-                currentObjectKey = null;
-                removePhotoRequested = false;
+            if (!/^image\//.test(file.type)) { toast("bad", "이미지 파일만 업로드할 수 있어."); $photo.value = ""; return; }
+            if (file.size > 5 * 1024 * 1024) { toast("bad", "최대 5MB까지만 업로드 가능해."); $photo.value = ""; return; }
 
-                // 서버 상태 기준으로 다시 미리보기 갱신
-                await loadPhotoByAttachmentApi(null);
-            }
+            $fileMeta.innerHTML = `선택된 파일: <b>${file.name}</b>`;
+            const url = URL.createObjectURL(file);
+            $preview.src = url;
+            $preview.style.display = "block";
+            $dropHint.style.display = "none";
+        });
 
-            // 2-B) 새 파일이 있으면 -> 기존 이미지 전부 삭제(중복 정리) + objectKey null -> 업로드 -> complete -> objectKey patch -> 즉시 미리보기 갱신
-            if (file){
-                toast("ok", "기존 사진 삭제 중...");
-                await deleteAllEmployeeImageAttachments();
+        $removeFile.addEventListener("click", () => {
+            $photo.value = "";
+            removePhotoRequested = true;
+            showNoPhoto();
+            toast("ok", "사진 제거 요청됨 (수정 버튼 누르면 반영)");
+        });
 
-                toast("ok", "새 사진 업로드 중...");
+        async function updateEmployee(){
+            const body = {
+                depNo: Number(document.getElementById("depNo").value),
+                posNo: Number(document.getElementById("posNo").value),
+                email: document.getElementById("email").value.trim(),
+                phone: document.getElementById("phone").value.trim(),
+                workPhone: document.getElementById("workPhone").value.trim(),
+                addr: document.getElementById("addr").value.trim(),
+                gen: document.getElementById("gen").value,
+                role: document.getElementById("role").value
+            };
+            const raw = await patchJson(API_UPDATE, body);
+            return unwrap(raw);
+        }
 
-                const { objectKey, uploadUrl } = await presignForEmployee(EMP_NO, file);
-                const { etag } = await uploadToS3(uploadUrl, file);
-                await completeEmployee(EMP_NO, file, objectKey, etag);
-                await updateEmployeeObjectKey(EMP_NO, objectKey);
+        async function presignForEmployee(empNo, file){
+            const raw = await postJson(API_PRESIGN, {
+                domain: "EMPLOYEE",
+                entityId: empNo,
+                fileType: "IMAGE",
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size
+            });
+            const data = unwrap(raw);
+            if (!data?.objectKey || !data?.uploadUrl) throw new Error("presign 응답에 objectKey/uploadUrl 없음");
+            return data;
+        }
 
-                // ✅ 저장 누르면 "바로" 바뀌게: objectKey로 해당 attachment를 우선 선택해서 preview 갱신
-                currentObjectKey = objectKey;
-                removePhotoRequested = false;
+        async function uploadToS3(uploadUrl, file){
+            const res = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: { "Content-Type": file.type || "application/octet-stream" },
+                body: file
+            });
+            if (!res.ok) throw new Error("S3 업로드 실패: " + res.status);
+            return { etag: res.headers.get("ETag") };
+        }
 
-                // 서버 기준 미리보기로 갱신 (로컬 URL 말고)
-                await loadPhotoByAttachmentApi(currentObjectKey);
+        async function completeEmployee(empNo, file, objectKey, etag){
+            const raw = await postJson(API_COMPLETE, {
+                domain: "EMPLOYEE",
+                entityId: empNo,
+                fileType: "IMAGE",
+                objectKey,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+                etag: etag || null
+            });
+            return unwrap(raw);
+        }
 
-                // 필요하면 선택파일 초기화(원하면 주석 해제)
-                // $photo.value = "";
-            }
+        async function updateEmployeeObjectKey(empNo, objectKey){
+            await patchJson(API_PATCH_OBJECT_KEY(empNo), { objectKey });
+        }
 
+        async function clearEmployeeObjectKey(empNo){
+            await patchJson(API_PATCH_OBJECT_KEY(empNo), { objectKey: null });
+        }
+
+        $form.addEventListener("submit", async (e) => {
+            e.preventDefault();
             clearToast();
-            openDoneModal();
 
-        }catch(err){
-            console.error(err);
-            toast("bad", "수정 실패: " + (err.message || err));
-        }finally{
-            $submitBtn.disabled = false;
-        }
-    });
+            if (!$form.checkValidity()) {
+                $form.reportValidity();
+                return;
+            }
 
-    $cancelBtn.addEventListener("click", () => {
-        window.location.href = LIST_URL;
-    });
+            try{
+                $submitBtn.disabled = true;
+                toast("ok", "수정 중...");
 
-    // init
-    (async ()=>{
-        if (!EMP_NO || EMP_NO === 0){
-            toast("bad", "empNo를 못 찾았어. (모델로 empNo 내려주거나 URL이 /admin/employees/{empNo}/edit 여야 함)");
-            showNoPhoto();
-            return;
-        }
+                await updateEmployee();
 
-        try{
-            await loadPrefill();
-        }catch(e){
-            console.error(e);
-            toast("bad", "상세 조회 실패: " + (e.message || e));
-            showNoPhoto();
-        }
-    })();
-</script>
+                const file = ($photo.files && $photo.files[0]) ? $photo.files[0] : null;
+
+                // remove only
+                if (!file && removePhotoRequested){
+                    toast("ok", "사진 제거 중...");
+                    await deleteAllEmployeeImageAttachments();
+                    await clearEmployeeObjectKey(EMP_NO);
+
+                    currentObjectKey = null;
+                    removePhotoRequested = false;
+
+                    await loadPhotoByAttachmentApi(null);
+                }
+
+                // new file
+                if (file){
+                    toast("ok", "기존 사진 삭제 중...");
+                    await deleteAllEmployeeImageAttachments();
+
+                    toast("ok", "새 사진 업로드 중...");
+                    const { objectKey, uploadUrl } = await presignForEmployee(EMP_NO, file);
+                    const { etag } = await uploadToS3(uploadUrl, file);
+                    await completeEmployee(EMP_NO, file, objectKey, etag);
+                    await updateEmployeeObjectKey(EMP_NO, objectKey);
+
+                    currentObjectKey = objectKey;
+                    removePhotoRequested = false;
+
+                    await loadPhotoByAttachmentApi(currentObjectKey);
+                }
+
+                clearToast();
+                openDoneModal();
+
+            }catch(err){
+                console.error(err);
+                toast("bad", "수정 실패: " + (err.message || err));
+            }finally{
+                $submitBtn.disabled = false;
+            }
+        });
+
+        $cancelBtn.addEventListener("click", () => { window.location.href = LIST_URL; });
+
+        (async ()=>{
+            if (!EMP_NO || EMP_NO === 0){
+                toast("bad", "empNo를 못 찾았어. (모델로 내려주거나 URL이 /admin/employees/{empNo}/edit 여야 함)");
+                showNoPhoto();
+                return;
+            }
+
+            try{ await loadPrefill(); }
+            catch(e){ console.error(e); toast("bad", "상세 조회 실패: " + (e.message || e)); showNoPhoto(); }
+        })();
+    </script>
+</th:block>
 </body>
 </html>

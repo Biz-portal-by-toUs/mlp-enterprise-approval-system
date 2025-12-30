@@ -1,850 +1,662 @@
+<!-- templates/employee/create.html -->
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>사원 관리 - 사원 등록</title>
-    <style>
-        :root{
-            --primary:#2f6fda;
-            --bg:#f3f5f9;
-            --panel:#f7f8fb;
-            --card:#ffffff;
-            --text:#111827;
-            --muted:#6b7280;
-            --line:#e5e7eb;
-            --shadow: 0 14px 36px rgba(0,0,0,.08);
-            --radius:18px;
-            --danger:#c62828;
-        }
-        *{box-sizing:border-box}
-        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
-        a{color:inherit;text-decoration:none}
-        button{font-family:inherit}
+    <title>사원 등록</title>
 
-        /* ===== Layout ===== */
-        .topbar{
-            height:76px;background:var(--primary);color:#fff;
-            display:flex;align-items:center;justify-content:space-between;
-            padding:0 18px; box-shadow: 0 10px 24px rgba(47,111,218,.25);
-        }
-        .top-left{display:flex;align-items:center;gap:14px}
-        .app-grid{
-            width:44px;height:44px;border-radius:12px;
-            display:grid;place-items:center;cursor:pointer;
-        }
-        .logo{
-            display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;letter-spacing:.2px;
-        }
-        .logo .mark{
-            width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.18);
-            display:grid;place-items:center;font-weight:900;
-        }
-        .search{
-            width:min(520px, 46vw);
-            background:rgba(255,255,255,.18);
-            border:1px solid rgba(255,255,255,.25);
-            border-radius:999px;
-            display:flex;align-items:center;gap:10px;
-            padding:10px 14px;
-            backdrop-filter: blur(6px);
-        }
-        .search input{
-            width:100%; border:0; outline:0; background:transparent; color:#fff;
-            font-size:14px;
-        }
-        .search input::placeholder{color:rgba(255,255,255,.8)}
-        .top-right{display:flex;align-items:center;gap:12px}
-        .pill-btn{
-            border:0;cursor:pointer;color:#0f172a;background:rgba(255,255,255,.85);
-            padding:10px 16px;border-radius:999px;font-weight:700;
-        }
-        .icon-btn{
-            width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
-            background:rgba(255,255,255,.12); display:grid;place-items:center; cursor:pointer;
-        }
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .page-title{
+                font-size:28px;
+                font-weight:900;
+                margin:4px 0 6px;
+                letter-spacing:-.2px;
+            }
+            .page-sub{
+                margin:0 0 16px;
+                color:var(--muted);
+                font-weight:700;
+            }
 
-        .layout{
-            display:grid;
-            grid-template-columns: 78px 220px 1fr;
-            min-height: calc(100vh - 76px);
-        }
+            .card{
+                width:min(980px, 100%);
+                background: rgba(255,255,255,.55);
+                border:1px solid var(--line);
+                border-radius:18px;
+                box-shadow: var(--shadow2);
+                padding:18px;
+            }
 
-        /* ===== Left icon rail ===== */
-        .rail{
-            background:#fff;border-right:1px solid var(--line);
-            padding:12px 10px;
-            display:flex;flex-direction:column;align-items:center;gap:12px;
-        }
-        .rail .r-item{
-            width:48px;height:48px;border-radius:14px;border:1px solid var(--line);
-            display:grid;place-items:center;background:#fff; cursor:pointer;
-        }
-        .rail .r-item.active{border-color:rgba(47,111,218,.45); box-shadow: 0 0 0 4px rgba(47,111,218,.12)}
-        .rail svg{opacity:.85}
+            .grid{
+                display:grid;
+                grid-template-columns: 300px 1fr;
+                gap:18px;
+                align-items:start;
+            }
 
-        /* ===== Side menu ===== */
-        .sidemenu{
-            background:#fff;border-right:1px solid var(--line);
-            padding:18px 14px;
-        }
-        .sidemenu h4{margin:8px 10px 14px;font-size:14px;color:#111827}
-        .menu{
-            display:flex;flex-direction:column;gap:6px;
-            padding:0;margin:0;list-style:none;
-        }
-        .menu a{
-            display:flex;align-items:center;gap:10px;
-            padding:12px 12px;border-radius:14px;color:#111827;
-        }
-        .menu a.active{
-            background:rgba(47,111,218,.10);
-            color:var(--primary); font-weight:800;
-        }
-        .menu a:hover{background:#f3f4f6}
+            /* Upload */
+            .upload-label{font-size:13px;color:#374151;font-weight:900;margin:0 0 10px 0}
+            .uploader{
+                width:100%;
+                background:#fff;
+                border-radius:16px;
+                padding:14px;
+                border:1px solid var(--line);
+            }
+            .drop{
+                border:2px dashed rgba(59,130,246,.35);
+                border-radius:16px;
+                height:210px;
+                display:grid;place-items:center;
+                cursor:pointer;
+                position:relative;
+                overflow:hidden;
+                background:#fff;
+            }
+            .drop:hover{background:rgba(59,130,246,.04)}
+            .drop .hint{
+                text-align:center;color:#374151;
+                display:flex;flex-direction:column;gap:8px;align-items:center;
+                font-weight:900;
+            }
+            .drop small{display:block;color:var(--muted);font-weight:700}
+            .preview{
+                position:absolute;inset:0;
+                width:100%;height:100%;
+                object-fit:cover;
+                display:none;
+            }
+            .file-meta{margin-top:10px;font-size:12px;color:var(--muted);font-weight:700}
+            .file-meta b{color:#111827}
+            .remove-file{
+                margin-top:10px;
+                width:100%;
+                height:38px;
+                border-radius:12px;
+                border:1px solid var(--line);
+                background:#fff;
+                cursor:pointer;
+                font-weight:900;
+            }
 
-        /* ===== Main ===== */
-        .main{
-            padding:26px 24px;
-        }
-        .page-title{
-            text-align:center;
-            margin:6px 0 16px;
-        }
-        .page-title h1{margin:0;font-size:28px;font-weight:900}
-        .page-title .sub{margin-top:6px;color:#111827;font-weight:800}
+            /* Form */
+            .form{
+                display:grid;
+                grid-template-columns: 1fr 1fr;
+                gap:14px 14px;
+            }
+            .field{display:flex;flex-direction:column;gap:8px}
+            .label{font-size:13px;color:#111827;font-weight:900}
+            .req{color:#ef4444;margin-left:4px}
+            input, select{
+                height:42px;
+                border-radius:12px;
+                border:1px solid var(--line);
+                padding:0 12px;
+                outline:none;
+                background:#fff;
+                font-size:14px;
+            }
+            input:focus, select:focus{
+                border-color: rgba(59,130,246,.55);
+                box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+            }
+            .full{grid-column:1 / -1}
+            .readonly{ background:#f8fafc; color:#475569; }
+            .help{font-size:12px;color:var(--muted);margin-top:-4px;font-weight:700}
 
-        .card{
-            width:min(920px, 100%);
-            margin: 18px auto 0;
-            background:var(--panel);
-            border-radius:22px;
-            padding:26px;
-            box-shadow: var(--shadow);
-            border:1px solid rgba(255,255,255,.35);
-        }
+            .actions{
+                display:flex;justify-content:flex-end;gap:10px;
+                margin-top:16px;
+            }
+            .btn{
+                height:42px; min-width:110px;
+                border-radius:12px; border:0; cursor:pointer;
+                font-weight:900;
+                padding:0 14px;
+            }
+            .btn.primary{background:var(--primary2);color:#fff}
+            .btn.ghost{background: rgba(59,130,246,.10); color: var(--primary2); border:1px solid rgba(59,130,246,.18);}
 
-        .grid{
-            display:grid;
-            grid-template-columns: 300px 1fr;
-            gap:22px;
-            align-items:start;
-        }
+            .toast{
+                margin-top:10px;
+                padding:12px 14px;
+                border-radius:14px;
+                display:none;
+                font-size:13px;
+                border:1px solid var(--line);
+                background:#fff;
+                font-weight:900;
+            }
+            .toast.ok{display:block;border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.07)}
+            .toast.bad{display:block;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.07)}
+            .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
-        /* ===== Upload ===== */
-        .upload-label{font-size:13px;color:#374151;font-weight:800;margin:0 0 10px 0}
-        .uploader{
-            width:100%;
-            background:#fff;
-            border-radius:16px;
-            padding:14px;
-            border:1px solid var(--line);
-        }
-        .drop{
-            border:2px dashed rgba(47,111,218,.35);
-            border-radius:16px;
-            height:210px;
-            display:grid;place-items:center;
-            cursor:pointer;
-            position:relative;
-            overflow:hidden;
-        }
-        .drop:hover{background:rgba(47,111,218,.04)}
-        .drop .hint{
-            text-align:center;color:#374151;
-            display:flex;flex-direction:column;gap:8px;align-items:center;
-            font-weight:800;
-        }
-        .drop small{display:block;color:var(--muted);font-weight:600}
-        .preview{
-            position:absolute;inset:0;
-            width:100%;height:100%;
-            object-fit:cover;
-            display:none;
-        }
-        .file-meta{margin-top:10px;font-size:12px;color:var(--muted)}
-        .file-meta b{color:#111827}
-        .remove-file{
-            margin-top:10px;
-            width:100%;
-            height:38px;
-            border-radius:12px;
-            border:1px solid var(--line);
-            background:#fff;
-            cursor:pointer;
-            font-weight:800;
-        }
+            /* Modal */
+            .modal-backdrop{
+                position:fixed; inset:0;
+                background:rgba(17,24,39,.55);
+                display:none;
+                align-items:center; justify-content:center;
+                z-index:9999;
+            }
+            .modal{
+                width:min(520px, calc(100vw - 40px));
+                background:#fff;
+                border-radius:18px;
+                border:1px solid rgba(0,0,0,.08);
+                box-shadow: 0 20px 60px rgba(0,0,0,.25);
+                overflow:hidden;
+            }
+            .modal-head{
+                padding:16px 18px;
+                display:flex; align-items:center; justify-content:space-between;
+                border-bottom:1px solid var(--line);
+            }
+            .modal-title{
+                font-weight:950;
+                display:flex; align-items:center; gap:10px;
+            }
+            .modal-close{
+                width:38px;height:38px;border-radius:12px;
+                border:1px solid var(--line);
+                background:#fff; cursor:pointer; font-weight:900;
+            }
+            .modal-body{padding:18px}
+            .modal-body p{margin:0 0 12px;color:#111827;font-weight:900}
+            .kv2{
+                display:grid;
+                grid-template-columns: 120px 1fr;
+                gap:10px 12px;
+                align-items:center;
+                padding:12px;
+                background:#f8fafc;
+                border:1px solid var(--line);
+                border-radius:14px;
+                font-weight:900;
+            }
+            .kv2 .k{color:#334155}
+            .kv2 .v{font-weight:950}
+            .modal-actions{
+                padding:16px 18px;
+                border-top:1px solid var(--line);
+                display:flex; justify-content:flex-end; gap:10px;
+            }
+            .btn2{
+                height:42px; min-width:110px;
+                border-radius:14px; border:0; cursor:pointer;
+                font-weight:950;
+                padding:0 14px;
+            }
+            .btn2.primary{background:var(--primary2);color:#fff}
+            .btn2.ghost{background:#eef2ff;color:#1f3b7a}
+            .copy-btn{
+                height:34px;
+                border-radius:12px;
+                border:1px solid var(--line);
+                background:#fff;
+                cursor:pointer;
+                font-weight:900;
+                padding:0 10px;
+                margin-left:8px;
+            }
 
-        /* ===== Form ===== */
-        .form{
-            display:grid;
-            grid-template-columns: 1fr 1fr;
-            gap:14px 16px;
-        }
-        .field{display:flex;flex-direction:column;gap:8px}
-        .label{font-size:13px;color:#111827;font-weight:900}
-        .req{color:#ef4444;margin-left:4px}
-        input, select{
-            height:44px;
-            border-radius:12px;
-            border:1px solid var(--line);
-            padding:0 12px;
-            outline:none;
-            background:#fff;
-            font-size:14px;
-        }
-        input:focus, select:focus{
-            border-color: rgba(47,111,218,.55);
-            box-shadow: 0 0 0 4px rgba(47,111,218,.12);
-        }
-        .full{grid-column:1 / -1}
-        .readonly{
-            background:#f8fafc;
-            color:#475569;
-        }
-        .help{
-            font-size:12px;color:var(--muted);margin-top:-4px;
-        }
-
-        .actions{
-            display:flex;justify-content:flex-end;gap:12px;
-            margin-top:18px;
-        }
-        .btn{
-            height:44px; min-width:120px;
-            border-radius:14px; border:0; cursor:pointer;
-            font-weight:900;
-        }
-        .btn.primary{background:var(--primary);color:#fff}
-        .btn.ghost{background:#eaf1ff;color:#1f3b7a}
-        .btn:disabled{opacity:.6;cursor:not-allowed}
-
-        .toast{
-            margin-top:14px;
-            padding:12px 14px;
-            border-radius:14px;
-            display:none;
-            font-size:13px;
-            border:1px solid var(--line);
-            background:#fff;
-        }
-        .toast.ok{display:block;border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.07)}
-        .toast.bad{display:block;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.07)}
-        .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-
-        /* ===== Success Modal ===== */
-        .modal-backdrop{
-            position:fixed; inset:0;
-            background:rgba(17,24,39,.55);
-            display:none;
-            align-items:center; justify-content:center;
-            z-index:9999;
-        }
-        .modal{
-            width:min(520px, calc(100vw - 40px));
-            background:#fff;
-            border-radius:18px;
-            border:1px solid rgba(0,0,0,.08);
-            box-shadow: 0 20px 60px rgba(0,0,0,.25);
-            overflow:hidden;
-        }
-        .modal-head{
-            padding:16px 18px;
-            display:flex; align-items:center; justify-content:space-between;
-            border-bottom:1px solid var(--line);
-        }
-        .modal-title{
-            font-weight:950;
-            display:flex; align-items:center; gap:10px;
-        }
-        .modal-close{
-            width:38px;height:38px;border-radius:12px;
-            border:1px solid var(--line);
-            background:#fff; cursor:pointer; font-weight:900;
-        }
-        .modal-body{padding:18px}
-        .modal-body p{margin:0 0 12px;color:#111827;font-weight:800}
-        .kv2{
-            display:grid;
-            grid-template-columns: 120px 1fr;
-            gap:10px 12px;
-            align-items:center;
-            padding:12px;
-            background:#f8fafc;
-            border:1px solid var(--line);
-            border-radius:14px;
-        }
-        .kv2 .k{color:#334155;font-weight:900}
-        .kv2 .v{font-weight:950}
-        .modal-actions{
-            padding:16px 18px;
-            border-top:1px solid var(--line);
-            display:flex; justify-content:flex-end; gap:10px;
-        }
-        .btn2{
-            height:42px; min-width:110px;
-            border-radius:14px; border:0; cursor:pointer;
-            font-weight:950;
-            padding:0 14px;
-        }
-        .btn2.primary{background:var(--primary);color:#fff}
-        .btn2.ghost{background:#eef2ff;color:#1f3b7a}
-        .copy-btn{
-            height:34px;
-            border-radius:12px;
-            border:1px solid var(--line);
-            background:#fff;
-            cursor:pointer;
-            font-weight:900;
-            padding:0 10px;
-            margin-left:8px;
-        }
-    </style>
+            @media (max-width: 980px){
+                .grid{ grid-template-columns: 1fr; }
+            }
+        </style>
+    </th:block>
 </head>
 
 <body>
-<header class="topbar">
-    <div class="top-left">
-        <div class="app-grid" title="앱">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <g fill="rgba(255,255,255,.95)">
-                    <circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/>
-                    <circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>
-                    <circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/>
-                </g>
-            </svg>
-        </div>
+<div layout:fragment="content">
 
-        <div class="logo">
-            <div class="mark">B</div>
-            Bizportal
-        </div>
-    </div>
+    <section class="page-with-subbar">
+        <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('emp')}"></aside>
 
-    <div class="search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="rgba(255,255,255,.95)" stroke-width="2"/>
-            <path d="M16.2 16.2 21 21" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <input placeholder="Search"/>
-    </div>
+        <div>
+            <div class="page-title">사원 관리</div>
+            <div class="page-sub">사원 등록</div>
 
-    <div class="top-right">
-        <div class="icon-btn" title="알림">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7Z" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-        <div class="icon-btn" title="프로필">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M20 21a8 8 0 1 0-16 0" stroke="rgba(255,255,255,.95)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="rgba(255,255,255,.95)" stroke-width="2"/>
-            </svg>
-        </div>
-        <button class="pill-btn" type="button">로그아웃</button>
-    </div>
-</header>
+            <section class="card">
+                <div class="grid">
+                    <!-- Upload -->
+                    <div>
+                        <div class="upload-label">사원 사진</div>
 
-<div class="layout">
-    <aside class="rail">
-        <div class="r-item active" title="결재">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M7 3h10v18H7z" stroke="#2563eb" stroke-width="2" />
-                <path d="M9 7h6M9 11h6M9 15h6" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-        <div class="r-item" title="메일">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M4 7h16v10H4z" stroke="#111827" stroke-width="2"/>
-                <path d="m4 8 8 6 8-6" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </div>
-        <div class="r-item" title="캘린더">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M7 3v3M17 3v3" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
-                <path d="M4 7h16v14H4z" stroke="#111827" stroke-width="2"/>
-                <path d="M8 11h4" stroke="#111827" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-        </div>
-    </aside>
-
-    <aside class="sidemenu">
-        <h4>조직 관리</h4>
-        <ul class="menu">
-            <li><a href="/admin/departments/list">부서 편성</a></li>
-            <li><a href="/admin/positions/list">직급 편성</a></li>
-            <li><a class="active" href="/admin/employees/list">사원 관리</a></li>
-            <li><a href="#">사내 규정 관리</a></li>
-        </ul>
-    </aside>
-
-    <main class="main">
-        <div class="page-title">
-            <h1>사원 관리</h1>
-            <div class="sub">사원 등록</div>
-        </div>
-
-        <section class="card">
-            <div class="grid">
-                <!-- Upload -->
-                <div>
-                    <div class="upload-label">사원 사진</div>
-
-                    <div class="uploader">
-                        <div class="drop" id="drop">
-                            <img id="preview" class="preview" alt="preview"/>
-                            <div class="hint" id="dropHint">
-                                <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 3v12" stroke="#2f6fda" stroke-width="2" stroke-linecap="round"/>
-                                    <path d="m7 8 5-5 5 5" stroke="#2f6fda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M5 21h14" stroke="#2f6fda" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                                클릭하여 업로드
-                                <small>JPG/PNG, 최대 5MB</small>
+                        <div class="uploader">
+                            <div class="drop" id="drop">
+                                <img id="preview" class="preview" alt="preview"/>
+                                <div class="hint" id="dropHint">
+                                    <svg width="46" height="46" viewBox="0 0 24 24" fill="none">
+                                        <path d="M12 3v12" stroke="var(--primary2)" stroke-width="2" stroke-linecap="round"/>
+                                        <path d="m7 8 5-5 5 5" stroke="var(--primary2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M5 21h14" stroke="var(--primary2)" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    클릭하여 업로드
+                                    <small>JPG/PNG, 최대 5MB</small>
+                                </div>
+                                <input id="photo" type="file" accept="image/*" hidden />
                             </div>
-                            <input id="photo" type="file" accept="image/*" hidden />
+
+                            <div class="file-meta" id="fileMeta">선택된 파일: <b>-</b></div>
+                            <button class="remove-file" id="removeFile" type="button">사진 제거</button>
                         </div>
 
-                        <div class="file-meta" id="fileMeta">선택된 파일: <b>-</b></div>
-                        <button class="remove-file" id="removeFile" type="button">사진 제거</button>
+                        <div class="toast" id="toast"></div>
                     </div>
 
-                    <div class="toast" id="toast"></div>
+                    <!-- Form -->
+                    <div>
+                        <form id="empForm" autocomplete="off">
+                            <div class="form">
+                                <div class="field">
+                                    <div class="label">이름<span class="req">*</span></div>
+                                    <input id="empName" type="text" placeholder="예) 김지영" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">사번(자동 생성)</div>
+                                    <input id="empId" type="text" class="readonly mono" placeholder="등록 후 자동 생성" readonly />
+                                    <div class="help">등록 완료 후 자동으로 표시</div>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">생년월일<span class="req">*</span></div>
+                                    <input id="birth" type="date" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">입사일<span class="req">*</span></div>
+                                    <input id="hireDate" type="date" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">주소<span class="req">*</span></div>
+                                    <input id="addr" type="text" placeholder="예) 서울시 ○○구 ○○로" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">이메일<span class="req">*</span></div>
+                                    <input id="email"
+                                           type="email"
+                                           placeholder="예) user@corp.com"
+                                           required
+                                           pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+                                           title="이메일 형식이 올바르지 않습니다. (예: user@corp.com)" />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">사내번호<span class="req">*</span></div>
+                                    <input id="workPhone" type="text" placeholder="예) 1234" maxlength="10" required />
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">전화번호<span class="req">*</span></div>
+                                    <input id="phone"
+                                           type="tel"
+                                           placeholder="예) 010-1234-5678"
+                                           maxlength="13"
+                                           required
+                                           pattern="^01[0-9]-\d{3,4}-\d{4}$"
+                                           title="전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)" />
+                                    <div class="help">010-1234-5678 형식</div>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">성별<span class="req">*</span></div>
+                                    <select id="gen" required>
+                                        <option value="" selected disabled>성별 선택</option>
+                                        <option value="M">남</option>
+                                        <option value="F">여</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">부서<span class="req">*</span></div>
+                                    <select id="depNo" required>
+                                        <option value="" selected disabled>부서 선택</option>
+                                        <option th:each="d : ${departments}"
+                                                th:value="${d.depNo}"
+                                                th:text="${d.depName}">부서</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <div class="label">직급<span class="req">*</span></div>
+                                    <select id="posNo" required>
+                                        <option value="" selected disabled>직급 선택</option>
+                                        <option th:each="p : ${positions}"
+                                                th:value="${p.posNo}"
+                                                th:text="${p.posName}">직급</option>
+                                    </select>
+                                </div>
+
+                                <div class="field full">
+                                    <div class="label">권한<span class="req">*</span></div>
+                                    <select id="role" required>
+                                        <option value="" selected disabled>권한 선택</option>
+                                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
+                                    </select>
+                                    <div class="help">서버 enum(RoleType) 값 그대로</div>
+                                </div>
+                            </div>
+
+                            <div class="actions">
+                                <button class="btn primary" id="submitBtn" type="submit">등록</button>
+                                <button class="btn ghost" id="cancelBtn" type="button">취소</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
+            </section>
 
-                <!-- Form -->
-                <div>
-                    <form id="empForm" autocomplete="off">
-                        <div class="form">
-                            <div class="field">
-                                <div class="label">이름<span class="req">*</span></div>
-                                <input id="empName" type="text" placeholder="예) 김지영" required />
-                            </div>
+        </div>
+    </section>
 
-                            <div class="field">
-                                <div class="label">사번(자동 생성)</div>
-                                <input id="empId" type="text" class="readonly mono" placeholder="등록 후 자동 생성" readonly />
-                                <div class="help">등록 완료 후 자동으로 표시돼</div>
-                            </div>
+    <!-- ✅ 등록 성공 모달 -->
+    <div class="modal-backdrop" id="successBackdrop" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-title" id="successTitle">✅ 등록 성공</div>
+                <button class="modal-close" type="button" id="successCloseBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>사원이 등록되었습니다. 아래 정보를 꼭 전달해주세요.</p>
 
-                            <div class="field">
-                                <div class="label">생년월일<span class="req">*</span></div>
-                                <input id="birth" type="date" required />
-                                <div class="help">예) 2001-10-03</div>
-                            </div>
+                <div class="kv2">
+                    <div class="k">사번</div>
+                    <div class="v">
+                        <span id="modalEmpId">-</span>
+                        <button class="copy-btn" type="button" id="copyEmpId">복사</button>
+                    </div>
 
-                            <div class="field">
-                                <div class="label">입사일<span class="req">*</span></div>
-                                <input id="hireDate" type="date" required />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">주소<span class="req">*</span></div>
-                                <input id="addr" type="text" placeholder="예) 서울시 ○○구 ○○로" required />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">이메일<span class="req">*</span></div>
-                                <input id="email"
-                                       type="email"
-                                       placeholder="예) user@corp.com"
-                                       required
-                                       pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
-                                       title="이메일 형식이 올바르지 않습니다. (예: user@corp.com)" />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">사내번호<span class="req">*</span></div>
-                                <input id="workPhone" type="text" placeholder="예) 1234" maxlength="10" required />
-                            </div>
-
-                            <div class="field">
-                                <div class="label">전화번호<span class="req">*</span></div>
-                                <input id="phone"
-                                       type="tel"
-                                       placeholder="예) 010-1234-5678"
-                                       maxlength="13"
-                                       required
-                                       pattern="^01[0-9]-\d{3,4}-\d{4}$"
-                                       title="전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)" />
-                                <div class="help">010-1234-5678 형식으로 입력돼</div>
-                            </div>
-
-                            <div class="field">
-                                <div class="label">성별<span class="req">*</span></div>
-                                <select id="gen" required>
-                                    <option value="" selected disabled>성별 선택</option>
-                                    <option value="M">남</option>
-                                    <option value="F">여</option>
-                                </select>
-                            </div>
-
-                            <div class="field">
-                                <div class="label">부서<span class="req">*</span></div>
-                                <select id="depNo" required>
-                                    <option value="" selected disabled>부서 선택</option>
-                                    <option th:each="d : ${departments}"
-                                            th:value="${d.depNo}"
-                                            th:text="${d.depName}">부서</option>
-                                </select>
-                            </div>
-
-                            <div class="field">
-                                <div class="label">직급<span class="req">*</span></div>
-                                <select id="posNo" required>
-                                    <option value="" selected disabled>직급 선택</option>
-                                    <option th:each="p : ${positions}"
-                                            th:value="${p.posNo}"
-                                            th:text="${p.posName}">직급</option>
-                                </select>
-                            </div>
-
-                            <div class="field full">
-                                <div class="label">권한<span class="req">*</span></div>
-                                <select id="role" required>
-                                    <option value="" selected disabled>권한 선택 (예: 일반/관리자)</option>
-                                    <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
-                                </select>
-                                <div class="help">서버 enum(RoleType) 값 그대로 내려보내야 해</div>
-                            </div>
-                        </div>
-
-                        <div class="actions">
-                            <button class="btn primary" id="submitBtn" type="submit">등록</button>
-                            <button class="btn ghost" id="cancelBtn" type="button">취소</button>
-                        </div>
-                    </form>
+                    <div class="k">초기 비밀번호</div>
+                    <div class="v">
+                        <span id="modalPwd">-</span>
+                        <button class="copy-btn" type="button" id="copyPwd">복사</button>
+                    </div>
                 </div>
             </div>
-        </section>
-    </main>
-</div>
-
-<!-- ✅ 등록 성공 모달 -->
-<div class="modal-backdrop" id="successBackdrop" role="dialog" aria-modal="true" aria-labelledby="successTitle">
-    <div class="modal">
-        <div class="modal-head">
-            <div class="modal-title" id="successTitle">✅ 등록 성공</div>
-            <button class="modal-close" type="button" id="successCloseBtn">✕</button>
-        </div>
-        <div class="modal-body">
-            <p>사원이 등록되었습니다. 아래 정보를 꼭 전달해주세요.</p>
-
-            <div class="kv2">
-                <div class="k">사번</div>
-                <div class="v">
-                    <span id="modalEmpId">-</span>
-                    <button class="copy-btn" type="button" id="copyEmpId">복사</button>
-                </div>
-
-                <div class="k">초기 비밀번호</div>
-                <div class="v">
-                    <span id="modalPwd">-</span>
-                    <button class="copy-btn" type="button" id="copyPwd">복사</button>
-                </div>
+            <div class="modal-actions">
+                <button class="btn2 ghost" type="button" id="stayBtn">계속 등록</button>
+                <button class="btn2 primary" type="button" id="goListBtn">목록으로</button>
             </div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn2 ghost" type="button" id="stayBtn">계속 등록</button>
-            <button class="btn2 primary" type="button" id="goListBtn">목록으로</button>
         </div>
     </div>
+
 </div>
 
-<script>
-    const API_BASE = ""; // 같은 도메인/포트면 "" 유지
-    const LIST_URL = "/admin/employees/list"; // 성공/취소 후 이동 경로
+<th:block layout:fragment="pageScripts">
+    <script>
+        const API_BASE = "";
+        const LIST_URL = "/admin/employees/list";
 
-    const $drop = document.getElementById("drop");
-    const $photo = document.getElementById("photo");
-    const $preview = document.getElementById("preview");
-    const $dropHint = document.getElementById("dropHint");
-    const $fileMeta = document.getElementById("fileMeta");
-    const $removeFile = document.getElementById("removeFile");
-    const $toast = document.getElementById("toast");
+        const $drop = document.getElementById("drop");
+        const $photo = document.getElementById("photo");
+        const $preview = document.getElementById("preview");
+        const $dropHint = document.getElementById("dropHint");
+        const $fileMeta = document.getElementById("fileMeta");
+        const $removeFile = document.getElementById("removeFile");
+        const $toast = document.getElementById("toast");
 
-    const $form = document.getElementById("empForm");
-    const $submitBtn = document.getElementById("submitBtn");
-    const $cancelBtn = document.getElementById("cancelBtn");
+        const $form = document.getElementById("empForm");
+        const $submitBtn = document.getElementById("submitBtn");
+        const $cancelBtn = document.getElementById("cancelBtn");
 
-    const $empId = document.getElementById("empId");
-    const $email = document.getElementById("email");
-    const $phone = document.getElementById("phone");
+        const $empId = document.getElementById("empId");
+        const $email = document.getElementById("email");
+        const $phone = document.getElementById("phone");
 
-    // ✅ success modal refs
-    const $successBackdrop = document.getElementById("successBackdrop");
-    const $successCloseBtn = document.getElementById("successCloseBtn");
-    const $goListBtn = document.getElementById("goListBtn");
-    const $stayBtn = document.getElementById("stayBtn");
-    const $modalEmpId = document.getElementById("modalEmpId");
-    const $modalPwd = document.getElementById("modalPwd");
-    const $copyEmpId = document.getElementById("copyEmpId");
-    const $copyPwd = document.getElementById("copyPwd");
+        // success modal
+        const $successBackdrop = document.getElementById("successBackdrop");
+        const $successCloseBtn = document.getElementById("successCloseBtn");
+        const $goListBtn = document.getElementById("goListBtn");
+        const $stayBtn = document.getElementById("stayBtn");
+        const $modalEmpId = document.getElementById("modalEmpId");
+        const $modalPwd = document.getElementById("modalPwd");
+        const $copyEmpId = document.getElementById("copyEmpId");
+        const $copyPwd = document.getElementById("copyPwd");
 
-    function toast(type, msg){
-        $toast.className = "toast " + (type === "ok" ? "ok" : "bad");
-        $toast.textContent = msg;
-        $toast.style.display = "block";
-    }
-    function clearToast(){
-        $toast.style.display = "none";
-        $toast.className = "toast";
-        $toast.textContent = "";
-    }
-
-    function openSuccessModal(empId, pwd){
-        $modalEmpId.textContent = empId || "-";
-        $modalPwd.textContent = pwd || "-";
-        $successBackdrop.style.display = "flex";
-    }
-    function closeSuccessModal(){
-        $successBackdrop.style.display = "none";
-    }
-
-    async function copyText(t){
-        try{
-            await navigator.clipboard.writeText(String(t || ""));
-            toast("ok", "복사 완료!");
-        }catch(e){
-            toast("bad", "복사 실패 (브라우저 권한 확인)");
+        function toast(type, msg){
+            $toast.className = "toast " + (type === "ok" ? "ok" : "bad");
+            $toast.textContent = msg;
+            $toast.style.display = "block";
         }
-    }
+        function clearToast(){
+            $toast.style.display = "none";
+            $toast.className = "toast";
+            $toast.textContent = "";
+        }
 
-    $copyEmpId.addEventListener("click", ()=> copyText($modalEmpId.textContent));
-    $copyPwd.addEventListener("click", ()=> copyText($modalPwd.textContent));
+        function openSuccessModal(empId, pwd){
+            $modalEmpId.textContent = empId || "-";
+            $modalPwd.textContent = pwd || "-";
+            $successBackdrop.style.display = "flex";
+        }
+        function closeSuccessModal(){ $successBackdrop.style.display = "none"; }
 
-    $goListBtn.addEventListener("click", ()=> window.location.href = LIST_URL);
+        async function copyText(t){
+            try{
+                await navigator.clipboard.writeText(String(t || ""));
+                toast("ok", "복사 완료!");
+            }catch(e){
+                toast("bad", "복사 실패 (브라우저 권한 확인)");
+            }
+        }
+        $copyEmpId.addEventListener("click", ()=> copyText($modalEmpId.textContent));
+        $copyPwd.addEventListener("click", ()=> copyText($modalPwd.textContent));
+        $goListBtn.addEventListener("click", ()=> window.location.href = LIST_URL);
 
-    // 계속 등록: 모달 닫고 폼 리셋
-    $stayBtn.addEventListener("click", ()=>{
-        closeSuccessModal();
-        $form.reset();
-        $empId.value = "";
-        $photo.value = "";
-        $preview.src = "";
-        $preview.style.display = "none";
-        $dropHint.style.display = "flex";
-        $fileMeta.innerHTML = `선택된 파일: <b>-</b>`;
-        clearToast();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    $successCloseBtn.addEventListener("click", closeSuccessModal);
-    $successBackdrop.addEventListener("click", (e)=>{
-        if(e.target === $successBackdrop) closeSuccessModal();
-    });
-
-    // ===== Photo UI =====
-    $drop.addEventListener("click", () => $photo.click());
-
-    $photo.addEventListener("change", () => {
-        const file = ($photo.files && $photo.files[0]) ? $photo.files[0] : null;
-        if (!file) return;
-
-        if (!/^image\//.test(file.type)) {
-            toast("bad", "이미지 파일만 업로드할 수 있어.");
+        $stayBtn.addEventListener("click", ()=>{
+            closeSuccessModal();
+            $form.reset();
+            $empId.value = "";
             $photo.value = "";
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            toast("bad", "최대 5MB까지만 업로드 가능해.");
-            $photo.value = "";
-            return;
-        }
-
-        $fileMeta.innerHTML = `선택된 파일: <b>${file.name}</b>`;
-
-        const url = URL.createObjectURL(file);
-        $preview.src = url;
-        $preview.style.display = "block";
-        $dropHint.style.display = "none";
-    });
-
-    $removeFile.addEventListener("click", () => {
-        $photo.value = "";
-        $preview.src = "";
-        $preview.style.display = "none";
-        $dropHint.style.display = "flex";
-        $fileMeta.innerHTML = `선택된 파일: <b>-</b>`;
-    });
-
-    // ===== 입력값 포맷/검증 =====
-    function isValidEmail(v){
-        return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(String(v||"").trim());
-    }
-    function isValidPhone(v){
-        return /^01[0-9]-\d{3,4}-\d{4}$/.test(String(v||"").trim());
-    }
-    function formatKoreanMobile(raw){
-        const digits = String(raw||"").replace(/\D/g, "").slice(0, 11);
-        if (digits.length <= 3) return digits;
-        if (digits.length <= 7) return `${digits.slice(0,3)}-${digits.slice(3)}`;
-        return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
-    }
-
-    $email.addEventListener("input", () => {
-        $email.value = $email.value.replace(/\s/g, "");
-    });
-
-    $phone.addEventListener("input", () => {
-        $phone.value = formatKoreanMobile($phone.value);
-    });
-
-    // ===== API helpers (쿠키 인증) =====
-    async function requestJson(method, path, body){
-        const res = await fetch(`${API_BASE}${path}`, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: body ? JSON.stringify(body) : null
+            $preview.src = "";
+            $preview.style.display = "none";
+            $dropHint.style.display = "flex";
+            $fileMeta.innerHTML = `선택된 파일: <b>-</b>`;
+            clearToast();
+            window.scrollTo({ top: 0, behavior: "smooth" });
         });
+        $successCloseBtn.addEventListener("click", closeSuccessModal);
+        $successBackdrop.addEventListener("click", (e)=>{ if(e.target === $successBackdrop) closeSuccessModal(); });
 
-        const text = await res.text();
-        let json = null;
-        try { json = text ? JSON.parse(text) : null; } catch(e){}
+        // Upload UI
+        $drop.addEventListener("click", () => $photo.click());
 
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${text || ""}`.trim());
-        return json;
-    }
-
-    async function postJson(path, body){ return requestJson("POST", path, body); }
-    async function patchJson(path, body){ return requestJson("PATCH", path, body); }
-
-    function unwrapResponseDto(maybe){
-        if (maybe && typeof maybe === "object" && "data" in maybe) return maybe.data;
-        return maybe;
-    }
-
-    // ===== S3 upload flow =====
-    async function presignForEmployee(empNo, file){
-        const raw = await postJson("/api/v1/attachments/presign", {
-            domain: "EMPLOYEE",
-            entityId: empNo,
-            fileType: "IMAGE",
-            originalName: file.name,
-            contentType: file.type || "application/octet-stream",
-            size: file.size
-        });
-        const data = unwrapResponseDto(raw);
-        if (!data?.objectKey || !data?.uploadUrl) throw new Error("presign 응답에 objectKey/uploadUrl 없음");
-        return data;
-    }
-
-    async function uploadToS3(uploadUrl, file){
-        const res = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type || "application/octet-stream" },
-            body: file
-        });
-        if (!res.ok) throw new Error("S3 업로드 실패: " + res.status);
-        return { etag: res.headers.get("ETag") };
-    }
-
-    async function completeEmployee(empNo, file, objectKey, etag){
-        const raw = await postJson("/api/v1/attachments/complete", {
-            domain: "EMPLOYEE",
-            entityId: empNo,
-            fileType: "IMAGE",
-            objectKey,
-            originalName: file.name,
-            contentType: file.type || "application/octet-stream",
-            size: file.size,
-            etag: etag || null
-        });
-        return unwrapResponseDto(raw);
-    }
-
-    async function updateEmployeeObjectKey(empNo, objectKey){
-        await patchJson(`/api/v1/admin/employees/${empNo}/object-key`, { objectKey });
-    }
-
-    // ===== Create employee =====
-    async function createEmployee(){
-        const body = {
-            depNo: Number(document.getElementById("depNo").value),
-            posNo: Number(document.getElementById("posNo").value),
-            empName: document.getElementById("empName").value.trim(),
-            birth: document.getElementById("birth").value,
-            email: document.getElementById("email").value.trim(),
-            phone: document.getElementById("phone").value.trim(),
-            workPhone: document.getElementById("workPhone").value.trim(),
-            addr: document.getElementById("addr").value.trim(),
-            gen: document.getElementById("gen").value,
-            role: document.getElementById("role").value,
-            hireDate: document.getElementById("hireDate").value
-        };
-
-        const raw = await postJson("/api/v1/admin/employees", body);
-        return unwrapResponseDto(raw); // {empNo, empId, pwd}
-    }
-
-    // ===== Submit =====
-    $form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        clearToast();
-
-        if (!$form.checkValidity()) {
-            $form.reportValidity();
-            return;
-        }
-
-        const emailVal = $email.value.trim();
-        const phoneVal = $phone.value.trim();
-
-        if (!isValidEmail(emailVal)) {
-            toast("bad", "이메일 형식이 올바르지 않아. (예: user@corp.com)");
-            $email.focus();
-            return;
-        }
-        if (!isValidPhone(phoneVal)) {
-            toast("bad", "전화번호 형식이 올바르지 않아. (예: 010-1234-5678)");
-            $phone.focus();
-            return;
-        }
-
-        try{
-            $submitBtn.disabled = true;
-            toast("ok", "등록 중...");
-
-            // 1) 사원 생성
-            const created = await createEmployee();
-
-            const empNo = created?.empNo ?? created?.id ?? null;
-            const empId = created?.empId ?? null;
-            const pwd  = created?.pwd ?? "1234";
-
-            if (!empNo) throw new Error("사원 생성 응답에 empNo가 없음 (ResAdminEmployeeCreateDto에 empNo 포함 필요)");
-
-            if (empId) $empId.value = empId;
-
-            // 2) 사진 선택했으면 업로드 + complete + employee.object_key 업데이트
+        $photo.addEventListener("change", () => {
             const file = ($photo.files && $photo.files[0]) ? $photo.files[0] : null;
+            if (!file) return;
 
-            if (file){
-                toast("ok", "사진 업로드 중...");
-
-                const { objectKey, uploadUrl } = await presignForEmployee(empNo, file);
-                const { etag } = await uploadToS3(uploadUrl, file);
-                await completeEmployee(empNo, file, objectKey, etag);
-                await updateEmployeeObjectKey(empNo, objectKey);
+            if (!/^image\//.test(file.type)) {
+                toast("bad", "이미지 파일만 업로드할 수 있어.");
+                $photo.value = "";
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                toast("bad", "최대 5MB까지만 업로드 가능해.");
+                $photo.value = "";
+                return;
             }
 
-            clearToast();
-            // ✅ 여기서 팝업 띄우고, 사용자가 버튼 누르면 이동
-            openSuccessModal(empId ?? "(확인 필요)", pwd);
+            $fileMeta.innerHTML = `선택된 파일: <b>${file.name}</b>`;
 
-        }catch(err){
-            console.error(err);
-            toast("bad", "등록 실패: " + (err.message || err));
-        }finally{
-            $submitBtn.disabled = false;
+            const url = URL.createObjectURL(file);
+            $preview.src = url;
+            $preview.style.display = "block";
+            $dropHint.style.display = "none";
+        });
+
+        $removeFile.addEventListener("click", () => {
+            $photo.value = "";
+            $preview.src = "";
+            $preview.style.display = "none";
+            $dropHint.style.display = "flex";
+            $fileMeta.innerHTML = `선택된 파일: <b>-</b>`;
+        });
+
+        // Validation helpers
+        function isValidEmail(v){
+            return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(String(v||"").trim());
         }
-    });
+        function isValidPhone(v){
+            return /^01[0-9]-\d{3,4}-\d{4}$/.test(String(v||"").trim());
+        }
+        function formatKoreanMobile(raw){
+            const digits = String(raw||"").replace(/\D/g, "").slice(0, 11);
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 7) return `${digits.slice(0,3)}-${digits.slice(3)}`;
+            return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+        }
 
-    $cancelBtn.addEventListener("click", () => {
-        window.location.href = LIST_URL;
-    });
-</script>
+        $email.addEventListener("input", () => { $email.value = $email.value.replace(/\s/g, ""); });
+        $phone.addEventListener("input", () => { $phone.value = formatKoreanMobile($phone.value); });
+
+        // API helpers
+        async function requestJson(method, path, body){
+            const res = await fetch(`${API_BASE}${path}`, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: body ? JSON.stringify(body) : null
+            });
+
+            const text = await res.text();
+            let json = null;
+            try { json = text ? JSON.parse(text) : null; } catch(e){}
+
+            if (!res.ok) throw new Error(`HTTP ${res.status} ${text || ""}`.trim());
+            return json;
+        }
+        const postJson = (p,b)=>requestJson("POST", p, b);
+        const patchJson = (p,b)=>requestJson("PATCH", p, b);
+
+        function unwrapResponseDto(maybe){
+            if (maybe && typeof maybe === "object" && "data" in maybe) return maybe.data;
+            return maybe;
+        }
+
+        // S3 upload flow
+        async function presignForEmployee(empNo, file){
+            const raw = await postJson("/api/v1/attachments/presign", {
+                domain: "EMPLOYEE",
+                entityId: empNo,
+                fileType: "IMAGE",
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size
+            });
+            const data = unwrapResponseDto(raw);
+            if (!data?.objectKey || !data?.uploadUrl) throw new Error("presign 응답에 objectKey/uploadUrl 없음");
+            return data;
+        }
+
+        async function uploadToS3(uploadUrl, file){
+            const res = await fetch(uploadUrl, {
+                method: "PUT",
+                headers: { "Content-Type": file.type || "application/octet-stream" },
+                body: file
+            });
+            if (!res.ok) throw new Error("S3 업로드 실패: " + res.status);
+            return { etag: res.headers.get("ETag") };
+        }
+
+        async function completeEmployee(empNo, file, objectKey, etag){
+            const raw = await postJson("/api/v1/attachments/complete", {
+                domain: "EMPLOYEE",
+                entityId: empNo,
+                fileType: "IMAGE",
+                objectKey,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+                etag: etag || null
+            });
+            return unwrapResponseDto(raw);
+        }
+
+        async function updateEmployeeObjectKey(empNo, objectKey){
+            await patchJson(`/api/v1/admin/employees/${empNo}/object-key`, { objectKey });
+        }
+
+        async function createEmployee(){
+            const body = {
+                depNo: Number(document.getElementById("depNo").value),
+                posNo: Number(document.getElementById("posNo").value),
+                empName: document.getElementById("empName").value.trim(),
+                birth: document.getElementById("birth").value,
+                email: document.getElementById("email").value.trim(),
+                phone: document.getElementById("phone").value.trim(),
+                workPhone: document.getElementById("workPhone").value.trim(),
+                addr: document.getElementById("addr").value.trim(),
+                gen: document.getElementById("gen").value,
+                role: document.getElementById("role").value,
+                hireDate: document.getElementById("hireDate").value
+            };
+            const raw = await postJson("/api/v1/admin/employees", body);
+            return unwrapResponseDto(raw); // {empNo, empId, pwd}
+        }
+
+        $form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            clearToast();
+
+            if (!$form.checkValidity()) {
+                $form.reportValidity();
+                return;
+            }
+
+            const emailVal = $email.value.trim();
+            const phoneVal = $phone.value.trim();
+
+            if (!isValidEmail(emailVal)) { toast("bad", "이메일 형식이 올바르지 않아."); $email.focus(); return; }
+            if (!isValidPhone(phoneVal)) { toast("bad", "전화번호 형식이 올바르지 않아."); $phone.focus(); return; }
+
+            try{
+                $submitBtn.disabled = true;
+                toast("ok", "등록 중...");
+
+                // 1) 사원 생성
+                const created = await createEmployee();
+
+                const empNo = created?.empNo ?? created?.id ?? null;
+                const empId = created?.empId ?? null;
+                const pwd  = created?.pwd ?? "1234";
+
+                if (!empNo) throw new Error("사원 생성 응답에 empNo가 없음");
+
+                if (empId) $empId.value = empId;
+
+                // 2) 사진 업로드
+                const file = ($photo.files && $photo.files[0]) ? $photo.files[0] : null;
+                if (file){
+                    toast("ok", "사진 업로드 중...");
+
+                    const { objectKey, uploadUrl } = await presignForEmployee(empNo, file);
+                    const { etag } = await uploadToS3(uploadUrl, file);
+                    await completeEmployee(empNo, file, objectKey, etag);
+                    await updateEmployeeObjectKey(empNo, objectKey);
+                }
+
+                clearToast();
+                openSuccessModal(empId ?? "(확인 필요)", pwd);
+
+            }catch(err){
+                console.error(err);
+                toast("bad", "등록 실패: " + (err.message || err));
+            }finally{
+                $submitBtn.disabled = false;
+            }
+        });
+
+        $cancelBtn.addEventListener("click", () => { window.location.href = LIST_URL; });
+    </script>
+</th:block>
 </body>
 </html>
