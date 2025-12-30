@@ -133,6 +133,9 @@ public enum ErrorCode {
     MEETING_PARTICIPANT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_PARTICIPANT_REQUIRED","참석자는 한명 이상 선택해야합니다"),
     INVALID_REQUEST(HttpStatus.BAD_REQUEST,"INVALID_REQUEST","유효하지 않는 요청입니다"),
 
+    // 챗봇 관련
+    PROV_DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND,"PROV_DOCUMENT_NOT_FOUND","없거나 삭제된 사내 규정 문서입니다"),
+
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),
     COMPANY_MISMATCH(HttpStatus.BAD_REQUEST,"COMPANY_MISMATCH","맞지 않는 회사타입입니다"),

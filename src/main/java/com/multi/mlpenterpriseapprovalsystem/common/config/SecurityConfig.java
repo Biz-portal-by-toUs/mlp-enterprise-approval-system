@@ -56,6 +56,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/meetings/*/ai").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/prov-documents/**").permitAll()
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
