@@ -131,6 +131,7 @@ public class MeetingService {
                         .endAt(m.getCreatedAt())
                         .writerEmpId(m.getWriter().getEmpId())
                         .writerName(m.getWriter().getEmpName())
+                        .participantCount(m.getMeetingEmps().size())
                         .build())
                 .toList();
 

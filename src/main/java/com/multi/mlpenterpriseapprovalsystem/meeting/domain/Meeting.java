@@ -73,6 +73,9 @@ public class Meeting extends BaseEntity {
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MeetingDept> meetingDepts = new ArrayList<>();
 
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MeetingEmp> meetingEmps = new ArrayList<>();
+
     public static Meeting create(@NotBlank String title,
                                  @NotNull LocalDateTime startedAt,
                                  Company company,
