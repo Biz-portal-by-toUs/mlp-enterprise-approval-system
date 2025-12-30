@@ -21,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 /**
  * 회의 등록, 수정, 삭제 컨트롤러
@@ -77,7 +78,7 @@ public class MeetingController {
 
     // 회의 등록
     @PostMapping
-    public ResponseEntity<ResponseDto<Long>> createMeeting(
+    public ResponseEntity<ResponseDto<Map<String,Long>>> createMeeting(
             @RequestBody @Valid ReqMeetingCreateDto request,
             @AuthenticationPrincipal CustomUser user
     ) {
@@ -85,7 +86,7 @@ public class MeetingController {
         Long meetNo = meetingService.createMeeting(empId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(HttpStatus.CREATED, "회의 등록 성공", meetNo));
+                .body(new ResponseDto<>(HttpStatus.CREATED, "회의 등록 성공", Map.of("meetNo", meetNo)));
     }
 
     // 회의 수정
