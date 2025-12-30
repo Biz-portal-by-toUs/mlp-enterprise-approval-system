@@ -25,13 +25,13 @@ import java.util.List;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/admin/departments")
+@RequestMapping("/api/v1")
 public class DepartmentController {
 
     private final DepartmentService departmentService;
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @PostMapping
+    @PostMapping("/admin/departments")
     public ResponseEntity<ResponseDto<Void>> addDepartment(@Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
 
         departmentService.addDepartment(user.getComId(), reqDepartmentDto);
@@ -40,8 +40,7 @@ public class DepartmentController {
                 .body(new ResponseDto<>(HttpStatus.OK, "부서 등록에 성공했습니다.", null));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
-    @GetMapping
+    @GetMapping("/departments")
     public ResponseEntity<ResponseDto<List<ResDepartmentDto>>> readDepartment(@AuthenticationPrincipal CustomUser user) {
 
         List<ResDepartmentDto> list = departmentService.getDepartmentsWithEmpCount(user.getComId());
@@ -52,7 +51,7 @@ public class DepartmentController {
     }
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @PutMapping("/{depNo}")
+    @PutMapping("/admin/departments/{depNo}")
     public ResponseEntity<ResponseDto<Void>> updateDepartment(@PathVariable(name="depNo") Long depNo, @Valid @RequestBody ReqDepartmentDto reqDepartmentDto, @AuthenticationPrincipal CustomUser user) {
 
         departmentService.updateDepartment(user.getComId(), depNo, reqDepartmentDto);
@@ -62,7 +61,7 @@ public class DepartmentController {
     }
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @DeleteMapping("/{depNo}")
+    @DeleteMapping("/admin/departments/{depNo}")
     public ResponseEntity<ResponseDto<Void>> deleteDepartment(@PathVariable(name="depNo") Long depNo, @AuthenticationPrincipal CustomUser user) {
 
         departmentService.deleteDepartment(user.getComId(), depNo);

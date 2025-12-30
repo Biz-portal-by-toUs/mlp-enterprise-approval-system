@@ -25,13 +25,13 @@ import java.util.List;
  */
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/admin/positions")
+@RequestMapping("/api/v1")
 public class PositionsController {
 
     private final PositionsService positionsService;
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @PostMapping
+    @PostMapping("/admin/positions")
     public ResponseEntity<ResponseDto<Void>> addDepartment(@Valid @RequestBody ReqPositionsDto reqPositionsDto, @AuthenticationPrincipal CustomUser user) {
 
         positionsService.addPositions(user.getComId(), reqPositionsDto);
@@ -40,8 +40,7 @@ public class PositionsController {
                 .body(new ResponseDto<>(HttpStatus.OK, "직급 등록에 성공했습니다.", null));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
-    @GetMapping
+    @GetMapping("/positions")
     public ResponseEntity<ResponseDto<List<ResPositionsDto>>> readDepartment(@AuthenticationPrincipal CustomUser user) {
 
         List<ResPositionsDto> list = positionsService.getPositions(user.getComId());
@@ -52,7 +51,7 @@ public class PositionsController {
     }
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @PutMapping("/{posNo}")
+    @PutMapping("/admin/positions/{posNo}")
     public ResponseEntity<ResponseDto<Void>> updateDepartment(@PathVariable(name="posNo") Long posNo, @Valid @RequestBody ReqPositionsDto reqPositionsDto, @AuthenticationPrincipal CustomUser user) {
 
         positionsService.updatePositions(user.getComId(), posNo, reqPositionsDto);
@@ -62,7 +61,7 @@ public class PositionsController {
     }
 
     @PreAuthorize("hasRole('COM_ADMIN')")
-    @DeleteMapping("/{posNo}")
+    @DeleteMapping("/admin/positions/{posNo}")
     public ResponseEntity<ResponseDto<Void>> deletePositions(@PathVariable(name="posNo") Long posNo, @AuthenticationPrincipal CustomUser user) {
 
         positionsService.deletePositions(user.getComId(), posNo);
