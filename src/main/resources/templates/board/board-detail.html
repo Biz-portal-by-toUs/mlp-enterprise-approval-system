@@ -6,6 +6,7 @@
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <style>
         :root{
             --bg: #f6f7fb;
@@ -16,11 +17,10 @@
             --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
             --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
 
-            --primary: #3b82f6;      /* blue */
+            --primary: #3b82f6;
             --primary2: #2563eb;
             --danger: #ef4444;
             --danger2: #dc2626;
-            --chip: rgba(59, 130, 246, 0.10);
             --success: #10b981;
             --warn: #f59e0b;
         }
@@ -29,24 +29,25 @@
 
         body{
             margin: 0;
-            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-            var(--bg);
+            background:
+                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
+                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
+                    var(--bg);
             font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             color: var(--text);
         }
 
-        /* 컨테이너: 가운데 카드 느낌 */
+        /* 컨테이너 */
         .container{
-            max-width: 920px;
+            max-width: 1280px;
             margin: 64px auto;
-            padding: 0;
+            padding: 0 14px;
             background: transparent;
             box-shadow: none;
             border: none;
         }
 
-        /* 상단 타이틀 영역(헤더 카드) */
+        /* 상단 카드 */
         .notice-detail{
             background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(255,255,255,0));
             border: 1px solid var(--line);
@@ -55,93 +56,200 @@
             overflow: hidden;
         }
 
-        /* 실제 정보 카드 */
         .notice-info{
             background: var(--card);
-            padding: 28px 28px 22px;
+            padding: 18px 18px 16px;
             border-radius: 18px;
         }
 
-        /* 제목/내용 영역 정리 */
-        .notice-info p{
-            margin: 0;
-            padding: 10px 0;
+        /* 제목 */
+        .title-area{
+            padding: 6px 6px 12px;
             border-bottom: 1px dashed rgba(17,24,39,.12);
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            gap: 14px;
-            align-items: start;
+        }
+        #noticeTitle{
+            font-size: 1.35rem;
+            font-weight: 1000;
+            color: var(--text);
+            line-height: 1.25;
         }
 
-        .notice-info p strong{
-            color: var(--muted);
-            font-weight: 700;
+        /* ✅ 제목 아래 메타/카테고리/작성자/등록일/조회수: 테이블 */
+        .meta-card{
+            margin-top: 12px;
+            border: 1px solid rgba(17,24,39,.08);
+            border-radius: 14px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+        }
+        .meta-table{
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .meta-table th,
+        .meta-table td{
+            border-top: 1px solid rgba(17,24,39,.08);
+            border-right: 1px solid rgba(17,24,39,.08);
+            padding: 12px 12px;
+            vertical-align: middle;
+        }
+        .meta-table tr:first-child th,
+        .meta-table tr:first-child td{ border-top: 0; }
+        .meta-table th{
+            width: 150px;
+            background: rgba(17,24,39,.02);
+            font-weight: 1000;
+            color:#111827;
+            text-align: center;
             letter-spacing: -0.2px;
         }
+        .meta-table td{ border-right: 0; font-weight: 900; }
 
-        #noticeTitle{
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: var(--text);
+        /* 작성자 + 풍선(tooltip) */
+        .author-line{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex-wrap: wrap;
+        }
+        .author-name{
+            font-weight: 1000;
+            color:#111827;
+        }
+        .pill{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(17,24,39,.14);
+            background: rgba(17,24,39,.02);
+            font-weight: 1000;
+            color: var(--muted);
+            font-size: 12px;
+            position: relative;
+            cursor: help;
+            user-select:none;
+        }
+        .pill[data-tip]::after{
+            content: attr(data-tip);
+            position:absolute;
+            left: 50%;
+            top: calc(100% + 8px);
+            transform: translateX(-50%);
+            background: #111827;
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 1000;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events:none;
+            transition: .15s ease;
+            box-shadow: 0 12px 24px rgba(17,24,39,.22);
+            z-index: 50;
+        }
+        .pill[data-tip]::before{
+            content:"";
+            position:absolute;
+            left:50%;
+            top: 100%;
+            transform: translateX(-50%);
+            border: 7px solid transparent;
+            border-top-color: #111827;
+            opacity: 0;
+            transition: .15s ease;
+            z-index: 50;
+        }
+        .pill:hover::after,
+        .pill:hover::before{
+            opacity: 1;
         }
 
-        #noticeDescription{
-            margin: 0;
-            padding: 12px 0;
-            line-height: 1.7;
-            white-space: pre-wrap;
+        /* ✅ 등록일/조회수 한 줄 */
+        .meta-inline{
+            display:flex;
+            gap: 16px;
+            align-items:center;
+            flex-wrap: wrap;
+            font-weight: 900;
+        }
+        .meta-inline b{
+            color: var(--muted);
+            font-weight: 1000;
+            margin-right: 6px;
+        }
+        .sep{
+            color: rgba(17,24,39,.25);
+            font-weight: 1000;
         }
 
-        /* 내용 줄은 기존에 <p><strong>내용:</strong><p id="noticeDescription"> 구조가 살짝 깨져있어서
-           #noticeDescription을 카드처럼 보이게 강화 */
+        /* ✅ JSON 내용 출력 영역 */
+        .content-card{
+            margin-top: 14px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 14px;
+        }
         #noticeDescription{
             background: rgba(17,24,39,.03);
             border: 1px solid rgba(17,24,39,.06);
             border-radius: 12px;
             padding: 14px 14px;
+            line-height: 1.75;
+            white-space: normal;
+            min-height: 220px;
+            font-weight: 700;
         }
 
-        /* 메타 영역을 2열로 보이게 */
-        .notice-info{
-            position: relative;
+        /* TipTap 렌더 테이블 스타일 */
+        #noticeDescription table{
+            width:100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 10px 0;
+            background:#fff;
         }
-        .notice-info::after{
-            content:"";
-            display:block;
-            margin-top: 14px;
+        #noticeDescription td,
+        #noticeDescription th{
+            border:1px solid rgba(17,24,39,.18);
+            padding:10px;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        #noticeDescription th{
+            background: rgba(17,24,39,.03);
+            font-weight:1000;
+            color: var(--muted);
         }
 
-
-        /* JS 값이 true/false로 그대로 보이면 아쉬우니,
-           true면 초록/false면 회색으로 보이게 하려면 JS에서 텍스트를 Y/N로 바꾸면 베스트.
-           CSS만으로도 기본 배지 제공 */
-        .notice-info p:last-child{ border-bottom: none; }
-
-        /* 탭 버튼 영역 */
+        /* 탭 버튼 */
         .tab-buttons{
             margin-top: 18px;
             display: flex;
             gap: 10px;
         }
-
         .tab-btn{
             border: 1px solid var(--line);
             background: var(--card);
             padding: 10px 14px;
             border-radius: 12px;
-            font-weight: 800;
+            font-weight: 900;
             color: var(--muted);
             cursor: pointer;
             box-shadow: 0 6px 14px rgba(17,24,39,.04);
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
         }
-
         .tab-btn.active{
             background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
             color: var(--text);
             border-color: rgba(59,130,246,.25);
         }
-
         .tab-btn:hover{
             transform: translateY(-1px);
             box-shadow: 0 10px 20px rgba(17,24,39,.08);
@@ -156,8 +264,6 @@
             box-shadow: var(--shadow);
             padding: 14px;
         }
-
-        /* 첨부파일 테이블 */
         #attachList{
             width: 100%;
             border-collapse: separate;
@@ -165,7 +271,6 @@
             overflow: hidden;
             border-radius: 12px;
         }
-
         #attachList th{
             text-align: left;
             font-size: .9rem;
@@ -173,21 +278,18 @@
             background: rgba(17,24,39,.03);
             padding: 12px 12px;
             border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 800;
+            font-weight: 1000;
         }
-
         #attachList td{
             padding: 12px 12px;
             border-bottom: 1px solid rgba(17,24,39,.06);
             font-size: .95rem;
             color: var(--text);
+            font-weight: 800;
         }
+        #attachList tr:hover td{ background: rgba(59,130,246,.05); }
 
-        #attachList tr:hover td{
-            background: rgba(59,130,246,.05);
-        }
-
-        /* 하단 버튼 그룹 */
+        /* 버튼 */
         .mt-4{
             margin-top: 16px !important;
             display: flex;
@@ -195,119 +297,40 @@
             flex-wrap: wrap;
             align-items: center;
         }
-
         .btn{
             appearance: none;
             border: 1px solid rgba(17,24,39,.10);
             background: var(--card);
             padding: 11px 14px;
             border-radius: 12px;
-            font-weight: 900;
+            font-weight: 1000;
             color: var(--text);
             text-decoration: none;
             cursor: pointer;
             box-shadow: 0 10px 20px rgba(17,24,39,.06);
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
         }
-
         .btn:hover{
             transform: translateY(-1px);
             box-shadow: var(--shadow2);
             border-color: rgba(59,130,246,.25);
             background: rgba(59,130,246,.05);
         }
-
-        /* 수정/삭제 강조 */
-        #update-btn.btn{
-            background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
-            border-color: rgba(59,130,246,.25);
-        }
-
         #delete-btn.btn{
             background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
             border-color: rgba(239,68,68,.25);
         }
-
         #delete-btn.btn:hover{
             border-color: rgba(239,68,68,.40);
             background: rgba(239,68,68,.06);
         }
-
-        /* 홈 링크 */
-        .home-link{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 18px;
-            color: var(--primary2);
-            text-decoration: none;
-            font-weight: 900;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(59,130,246,.18);
-            background: rgba(59,130,246,.06);
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-        }
-
-        .home-link:hover{
-            transform: translateY(-1px);
-            border-color: rgba(59,130,246,.35);
-            background: rgba(59,130,246,.10);
-        }
-
-        /* 3개 항목을 한 줄에 */
-        .notice-info p.triple{
-            grid-template-columns: 120px 1fr 120px 1fr 120px 1fr;
-            gap: 10px 14px;
-        }
-
-        /* 작은 화면에서는 2줄로 자연스럽게 */
-        @media (max-width: 720px){
-            .notice-info p.triple{
-                grid-template-columns: 120px 1fr;
-            }
-        }
-
-        /* (선택) 등록일/변경일/조회건수 줄의 우선순위 튜닝 */
-        .notice-info p.triple.triple-2-1 strong:nth-of-type(3),
-        .notice-info p.triple.triple-2-1 span:nth-of-type(3){
-            /* 필요하면 숨기거나 아래로 내리는 등 조정 가능 */
-        }
-
         .btn.btn-sm{
             padding: 8px 10px;
-            font-weight: 800;
+            font-weight: 900;
             box-shadow: 0 6px 14px rgba(17,24,39,.05);
         }
 
-        /* 공통 배지 */
-        .badge{
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: .8rem;
-            font-weight: 900;
-            line-height: 1;
-            border: 1px solid transparent;
-        }
-
-        /* 사용 */
-        .badge.success{
-            background: rgba(16,185,129,.12);
-            color: var(--success);
-            border-color: rgba(16,185,129,.35);
-        }
-
-        /* 미사용 */
-        .badge.muted{
-            background: rgba(107,114,128,.12);
-            color: var(--muted);
-            border-color: rgba(107,114,128,.35);
-        }
-
-        /* ✅ 댓글 등록 UI */
+        /* ✅ 댓글 등록 UI + 댓글 리스트(원본 유지) */
         .comment-editor{
             margin-top: 14px;
             background: var(--card);
@@ -316,7 +339,6 @@
             box-shadow: var(--shadow);
             padding: 12px;
         }
-
         .comment-editor textarea{
             width: 100%;
             border: 1px solid rgba(17,24,39,.10);
@@ -326,12 +348,10 @@
             resize: vertical;
             outline: none;
         }
-
         .comment-editor textarea:focus{
             border-color: rgba(59,130,246,.45);
             box-shadow: 0 0 0 4px rgba(59,130,246,.12);
         }
-
         .comment-editor__footer{
             margin-top: 8px;
             display: flex;
@@ -339,21 +359,13 @@
             justify-content: space-between;
             gap: 10px;
         }
-
         .comment-editor__counter{
             color: var(--muted);
-            font-weight: 800;
+            font-weight: 900;
             font-size: 12px;
         }
+        .comment-editor__actions{ display: flex; gap: 8px; }
 
-        .comment-editor__actions{
-            display: flex;
-            gap: 8px;
-        }
-
-        /* =========================
-   ✅ 댓글(관련 댓글) 영역만 세련되게
-   ========================= */
         #comment{
             margin-top: 12px;
             background: var(--card);
@@ -362,7 +374,6 @@
             box-shadow: var(--shadow);
             padding: 14px;
         }
-
         #commentList{
             width: 100%;
             border-collapse: separate;
@@ -370,8 +381,6 @@
             overflow: hidden;
             border-radius: 12px;
         }
-
-        /* 헤더 */
         #commentList thead th{
             text-align: left;
             font-size: .9rem;
@@ -379,23 +388,17 @@
             background: rgba(17,24,39,.03);
             padding: 12px 12px;
             border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 900;
+            font-weight: 1000;
         }
-
-        /* 바디 */
         #commentList tbody td{
             padding: 14px 12px;
             border-bottom: 1px solid rgba(17,24,39,.06);
             font-size: .95rem;
             color: var(--text);
             vertical-align: top;
+            font-weight: 800;
         }
-
-        #commentList tbody tr:hover td{
-            background: rgba(59,130,246,.05);
-        }
-
-        /* 내용 칸을 “말풍선/카드”처럼 */
+        #commentList tbody tr:hover td{ background: rgba(59,130,246,.05); }
         .comment-content{
             display: inline-block;
             max-width: 100%;
@@ -405,51 +408,20 @@
             padding: 10px 12px;
             line-height: 1.6;
             white-space: pre-wrap;
+            font-weight: 800;
         }
-
-        /* 작성자/부서 텍스트 정리 */
         .comment-meta{
             display: inline-flex;
             flex-direction: column;
             gap: 4px;
         }
+        .comment-meta .name{ font-weight: 1000; color: var(--text); }
+        .comment-meta .dept{ font-size: .85rem; font-weight: 900; color: var(--muted); }
+        .comment-date{ font-size: .85rem; font-weight: 900; color: var(--muted); white-space: nowrap; }
+        .comment-no{ font-weight: 1000; color: var(--muted); width: 80px; }
 
-        .comment-meta .name{
-            font-weight: 900;
-            color: var(--text);
-        }
-
-        .comment-meta .dept{
-            font-size: .85rem;
-            font-weight: 800;
-            color: var(--muted);
-        }
-
-        /* 날짜 */
-        .comment-date{
-            font-size: .85rem;
-            font-weight: 800;
-            color: var(--muted);
-            white-space: nowrap;
-        }
-
-        /* 일련번호 */
-        .comment-no{
-            font-weight: 900;
-            color: var(--muted);
-            width: 80px;
-        }
-
-        /* 댓글이 없을 때 */
-        .comment-empty{
-            padding: 18px 10px;
-            color: var(--muted);
-            font-weight: 900;
-            text-align: center;
-        }
-
-        /* 반응형: 작은 화면에서 내용 위주로 */
         @media (max-width: 720px){
+            .meta-table th{ width: 120px; }
             #commentList thead{ display: none; }
             #commentList, #commentList tbody, #commentList tr, #commentList td{
                 display: block;
@@ -461,42 +433,67 @@
                 margin-bottom: 10px;
                 overflow: hidden;
             }
-            #commentList tbody td{
-                border-bottom: 1px solid rgba(17,24,39,.06);
-            }
-            #commentList tbody td:last-child{
-                border-bottom: none;
-            }
+            #commentList tbody td{ border-bottom: 1px solid rgba(17,24,39,.06); }
+            #commentList tbody td:last-child{ border-bottom: none; }
             .comment-no{ width: auto; }
         }
-
-
     </style>
 </head>
+
 <body>
 <div class="header">
-    <!----
-    <th:block th:replace="~{common/header :: header}"/>
-    ---->
+    <!-- <th:block th:replace="~{common/header :: header}"/> -->
 </div>
 
 <div class="container">
     <h2>자유게시판내용 및 댓글</h2>
+
     <div class="notice-detail">
         <div class="notice-info">
-            <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
-            <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
-            <p><strong>카테고리:</strong> <span id="noticeCategory"></span></p>
-            <p class="triple">
-                <strong>작성자:</strong> <span id="noticeWriter"></span>
-                <strong>직번:</strong> <span id="noticeWriterId"></span>
-                <strong>부서:</strong> <span id="noticeDepart"></span>
-            </p>
 
-            <p class="triple triple-2-1">
-                <strong>등록일:</strong> <span id="noticeCreated"></span>
-                <strong>조회건수:</strong> <span id="noticeRating"></span>
-            </p>
+            <!-- ✅ 제목만 크게 -->
+            <div class="title-area">
+                <div id="noticeTitle">제목</div>
+            </div>
+
+            <!-- ✅ 제목 아래 테이블(카테고리/작성자/등록일/조회) -->
+            <div class="meta-card">
+                <table class="meta-table">
+                    <tr>
+                        <th>카테고리</th>
+                        <td><span id="noticeCategory"></span></td>
+                    </tr>
+                    <tr>
+                        <th>작성자</th>
+                        <td>
+                            <div class="author-line">
+                                <span class="author-name" id="noticeWriter"></span>
+
+                                <!-- 직번/부서는 풍선(hover) -->
+                                <span class="pill" id="pillEmpId" data-tip="">직번</span>
+                                <span class="pill" id="pillDept" data-tip="">부서</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>등록/조회</th>
+                        <td>
+                            <div class="meta-inline">
+                                <span><b>등록일</b><span id="noticeCreated"></span></span>
+                                <span class="sep">|</span>
+                                <span><b>조회</b><span id="noticeRating"></span></span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- ✅ 내용(JSON 렌더 결과) -->
+            <div class="content-card">
+                <div style="font-weight:1000; color:var(--muted); margin-bottom:10px;">📝 내용</div>
+                <div id="noticeDescription"></div>
+            </div>
+
         </div>
     </div>
 
@@ -510,36 +507,73 @@
         <table id="attachList"></table>
     </div>
 
-    <h2>관련 댓글</h2>
-    <div id="comment" >
+    <h2 style="margin-top:18px;">관련 댓글</h2>
+    <div id="comment">
         <table id="commentList"></table>
     </div>
 
     <!-- ✅ 댓글 등록 입력란 -->
     <div id="commentEditor" class="comment-editor">
-      <textarea id="commentContents"
-                placeholder="의견입력"
-                rows="5"></textarea>
-
-            <div class="comment-editor__footer">
-                <div class="comment-editor__counter">
-                    <span id="commentByte">0</span>/600bytes
-                </div>
-
-                <div class="comment-editor__actions">
-                    <button type="button" class="btn btn-sm" id="commentSubmitBtn">등록</button>
-                    <button type="button" class="btn btn-sm" id="commentCancelBtn">취소</button>
-                </div>
+        <textarea id="commentContents" placeholder="의견입력" rows="5"></textarea>
+        <div class="comment-editor__footer">
+            <div class="comment-editor__counter">
+                <span id="commentByte">0</span>/600bytes
             </div>
-      </div>
-
+            <div class="comment-editor__actions">
+                <button type="button" class="btn btn-sm" id="commentSubmitBtn">등록</button>
+                <button type="button" class="btn btn-sm" id="commentCancelBtn">취소</button>
+            </div>
+        </div>
+    </div>
 
     <div class="mt-4">
         <a href="/board/list" class="btn">목록으로</a>
         <button id="delete-btn" class="btn ms-2" onclick="deleteBoard()">삭제하기</button>
     </div>
-
 </div>
+
+<!-- ✅ TipTap JSON -> HTML 변환(상세조회에서 contents를 JSON으로 렌더) -->
+<script type="module">
+    import { generateHTML } from "https://esm.sh/@tiptap/html@2.11.5";
+    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+    import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
+
+    // window.__renderBoardContentsJson(jsonStringOrObj)
+    window.__renderBoardContentsJson = function(raw){
+        const target = document.getElementById("noticeDescription");
+        let json;
+
+        try{
+            if (!raw) {
+                json = { type:"doc", content:[{ type:"paragraph" }] };
+            } else if (typeof raw === "string") {
+                json = JSON.parse(raw);
+            } else {
+                json = raw;
+            }
+        }catch(e){
+            console.error("contents JSON 파싱 실패:", e);
+            json = { type:"doc", content:[{ type:"paragraph", content:[{ type:"text", text:"(내용을 불러오지 못했습니다.)" }] }] };
+        }
+
+        const html = generateHTML(json, [
+            StarterKit,
+            Underline,
+            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            Table.configure({ resizable: true }),
+            TableRow,
+            TableHeader,
+            TableCell,
+        ]);
+
+        target.innerHTML = html;
+    };
+</script>
 
 <script>
     const boardNo = [[${boardNo}]];
@@ -547,7 +581,6 @@
 
     async function loadBoardDetail() {
         try {
-
             const response = await fetch(`${API_BASE}/api/v1/board/${boardNo}`, {
                 method: 'GET',
                 credentials: "include",
@@ -558,14 +591,36 @@
 
             if (result.status === 200 && result.data) {
                 const board = result.data;
-                $('#noticeTitle').text(board.title);
-                $('#noticeDescription').text(board.contents);
-                $('#noticeCategory').text(board.catDescript);
-                $('#noticeRating').text(board.rating);
-                $('#noticeWriter').text(board.empName);
-                $('#noticeWriterId').text(board.empId);
-                $('#noticeDepart').text(board.depName);
-                const createdAt = board.createdAt ? board.createdAt.substring(0, 10) : "-";
+
+                // ✅ 제목
+                $('#noticeTitle').text(board.title ?? "");
+
+                // ✅ 내용(JSON 렌더)
+                // board.contents가 JSON 문자열이어야 함 (등록화면에서 JSON.stringify(editor.getJSON()) 저장한 값)
+                if (window.__renderBoardContentsJson) {
+                    window.__renderBoardContentsJson(board.contents);
+                } else {
+                    // 혹시 모듈 로드 타이밍 이슈 대비
+                    $('#noticeDescription').text(board.contents ?? "");
+                }
+
+                // ✅ 카테고리
+                $('#noticeCategory').text(board.catDescript ?? "-");
+
+                // ✅ 조회수
+                $('#noticeRating').text(board.rating ?? 0);
+
+                // ✅ 작성자(이름만)
+                $('#noticeWriter').text(board.empName ?? "-");
+
+                // ✅ 직번/부서: 풍선으로
+                const empId = board.empId ?? "-";
+                const depName = board.depName ?? "-";
+                $('#pillEmpId').attr('data-tip', `직번: ${empId}`);
+                $('#pillDept').attr('data-tip', `부서: ${depName}`);
+
+                // ✅ 등록일(기존 substring 대신 조금 더 안전)
+                const createdAt = board.createdAt ? String(board.createdAt).substring(0, 10) : "-";
                 $('#noticeCreated').text(createdAt);
 
                 initAttach();
@@ -576,7 +631,6 @@
         }
     }
 
-
     function unwrapMaybeResponseDto(obj) {
         if (obj && typeof obj === "object" && "data" in obj) return obj.data;
         return obj;
@@ -584,7 +638,6 @@
 
     async function initAttach() {
         try {
-
             const response = await fetch(`${API_BASE}/api/v1/attachments?domain=BOARD&entityId=${boardNo}`, {
                 method: 'GET',
                 credentials: "include",
@@ -598,32 +651,31 @@
                 const attachs = result.data;
 
                 attachList.append(`
-                          <tr>
-                            <th>일련번호</th>
-                            <th>파일명</th>
-                            <th>attachmentId</th>
-                            <th>displayOrder</th>
-                            <th>size</th>
-                            <th>미리보기</th>
-                            <th>다운로드</th>
-                          </tr>
-                `);
+          <tr>
+            <th>일련번호</th>
+            <th>파일명</th>
+            <th>attachmentId</th>
+            <th>displayOrder</th>
+            <th>size</th>
+            <th>미리보기</th>
+            <th>다운로드</th>
+          </tr>
+        `);
 
                 attachs.forEach((r, index) => {
                     attachList.append(`
-                        <tr>
-                          <td>${index+1} </td>
-                          <td>${r.originalName}</td>
-                          <td>${r.attachmentId}</td>
-                          <td>${r.displayOrder}</td>
-                          <td>${formatFileSize(r.size)}</td>
-                          <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
-                          <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
-                        </tr>
-                      `);
+            <tr>
+              <td>${index+1}</td>
+              <td>${escapeHtml(r.originalName)}</td>
+              <td>${r.attachmentId}</td>
+              <td>${r.displayOrder}</td>
+              <td>${formatFileSize(r.size)}</td>
+              <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+              <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+            </tr>
+          `);
                 });
 
-                // ✅ 이벤트 연결 (테이블 다시 그린 뒤에 연결)
                 document.querySelectorAll("button[data-down]").forEach(btn => {
                     btn.addEventListener("click", async (e) => {
                         const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
@@ -639,12 +691,21 @@
                 });
 
             } else {
-                attachList.html('<tr><td colspan="6">관련 첨부파일이 없습니다.</td></tr>');
+                attachList.html('<tr><td colspan="7">관련 첨부파일이 없습니다.</td></tr>');
             }
 
         } catch (error) {
             console.error('Failed to load attachment file:', error);
         }
+    }
+
+    function escapeHtml(str){
+        return String(str || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
     }
 
     function formatFileSize(bytes) {
@@ -659,21 +720,16 @@
     }
 
     async function fetchDownloadUrl(attachmentId) {
-
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
             method: "GET",
             credentials: "include",
-            headers: {
-                'Accept': 'application/json'
-            }
+            headers: { 'Accept': 'application/json' }
         });
 
         if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
 
         const raw = await res.json();
         const data = unwrapMaybeResponseDto(raw);
-
-        // ✅ 너가 준 Postman 응답 구조: data.url
         const url = data.url;
 
         if (typeof url !== "string" || !url.startsWith("http")) {
@@ -684,22 +740,16 @@
     }
 
     async function fetchPreviewloadUrl(attachmentId) {
-
-
         const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
             method: "GET",
             credentials: "include",
-            headers: {
-                'Accept': 'application/json'
-            }
+            headers: { 'Accept': 'application/json' }
         });
 
-        if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
+        if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
 
         const raw = await res.json();
         const data = unwrapMaybeResponseDto(raw);
-
-        // ✅ 너가 준 Postman 응답 구조: data.url
         const url = data.url;
 
         if (typeof url !== "string" || !url.startsWith("http")) {
@@ -715,18 +765,13 @@
 
         try {
             const { url, meta } = await fetchDownloadUrl(attachmentId);
-
-            // ✅ 다운로드 트리거
             const a = document.createElement("a");
             a.href = url;
             a.rel = "noopener";
-            // same-origin 아니면 download 속성 무시될 수 있지만,
-            // presigned URL이 attachment disposition을 주면 다운로드 잘 됩니다.
             a.download = meta.originalName || "";
             document.body.appendChild(a);
             a.click();
             a.remove();
-
         } catch (e) {
             console.error(e);
             alert("다운로드 중 오류: " + (e?.message ?? e));
@@ -738,10 +783,7 @@
 
         try {
             const { url } = await fetchPreviewloadUrl(attachmentId);
-
-            // ✅ 미리보기: 새 탭으로 열기
             window.open(url, "_blank", "noopener");
-
         } catch (e) {
             console.error(e);
             alert("미리보기 중 오류: " + (e?.message ?? e));
@@ -751,18 +793,14 @@
     async function deleteBoard() {
         if (!confirm("정말 삭제하시겠습니까?")) return;
 
-       // const reviewId = document.getElementById("reviewId").value;
-
-
         try {
             const res = await fetch(`/api/v1/board/${boardNo}`, {
                 method: "DELETE",
                 credentials: "include"
-
             });
 
             if (res.ok) {
-                alert("공지사항이 삭제되었습니다.");
+                alert("게시글이 삭제되었습니다.");
                 window.location.href = "/board/list";
             } else {
                 alert("삭제 실패했습니다.");
@@ -775,16 +813,12 @@
 
     async function initComment() {
         try {
-
-            const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`, {
+            const response = await fetch(`${API_BASE}/api/v1/boards/${boardNo}/comments`, {
                 method: 'GET',
                 credentials: "include"
-
             });
-            console.log("comments status:", response.status);
 
             const result = await response.json();
-
             const commentList = $('#commentList').empty();
 
             if (!result.data || result.data.length === 0) {
@@ -794,63 +828,59 @@
 
             if (result.status === 200 && result.data) {
                 const comments = result.data;
-                console.log(comments);
+
                 commentList.append(`
-                    <thead>
-                        <tr>
-                          <th>일련번호</th>
-                          <th>내용</th>
-                          <th>작성자</th>
-                          <th>부서</th>
-                          <th>등록일자</th>
-                        </tr>
-                      </thead>
-                      <tbody></tbody>
-                `);
+          <thead>
+            <tr>
+              <th>일련번호</th>
+              <th>내용</th>
+              <th>작성자</th>
+              <th>부서</th>
+              <th>등록일자</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `);
 
                 const tbody = commentList.find("tbody");
-                comments.forEach((r,index) => {
-
-                    const createdAt = r.createdAt ? r.createdAt.substring(0, 10) : "-";
+                comments.forEach((r, index) => {
+                    const createdAt = r.createdAt ? String(r.createdAt).substring(0, 10) : "-";
                     tbody.append(`
-                        <tr>
-                              <td class="comment-no">${index + 1}</td>
-                              <td><div class="comment-content">${r.contents ?? ""}</div></td>
-                              <td>
-                                <div class="comment-meta">
-                                  <div class="name">${r.empName ?? "-"}</div>
-                                </div>
-                              </td>
-                              <td>
-                                <div class="comment-meta">
-                                  <div class="dept">${r.depName ?? "-"}</div>
-                                </div>
-                              </td>
-                              <td class="comment-date">${createdAt}</td>
-                        </tr>
-                    `);
+            <tr>
+              <td class="comment-no">${index + 1}</td>
+              <td><div class="comment-content">${escapeHtml(r.contents ?? "")}</div></td>
+              <td>
+                <div class="comment-meta">
+                  <div class="name">${escapeHtml(r.empName ?? "-")}</div>
+                </div>
+              </td>
+              <td>
+                <div class="comment-meta">
+                  <div class="dept">${escapeHtml(r.depName ?? "-")}</div>
+                </div>
+              </td>
+              <td class="comment-date">${createdAt}</td>
+            </tr>
+          `);
                 });
 
             } else {
-                commentList.html('<tr><td colspan="4">관련 댓글이 없습니다.</td></tr>');
+                commentList.html('<tr><td colspan="5">관련 댓글이 없습니다.</td></tr>');
             }
         } catch (error) {
             console.error('Failed to load board comments :', error);
         }
     }
 
-    //=====================================================================================
-    // ✅ UTF-8 기준 bytes 계산
+    // ===== 댓글 bytes 제한(원본 유지) =====
     function getUtf8Bytes(str) {
         return new Blob([str ?? ""], { type: "text/plain; charset=UTF-8" }).size;
     }
 
-    // ✅ 600 bytes 제한(초과 시 잘라내기)
     function enforceByteLimit(text, limitBytes = 600) {
         if (!text) return "";
 
         let lo = 0, hi = text.length;
-        // 이진 탐색으로 limitBytes에 맞는 최대 길이 찾기
         while (lo < hi) {
             const mid = Math.ceil((lo + hi) / 2);
             const sliced = text.slice(0, mid);
@@ -870,9 +900,7 @@
         counter.textContent = String(getUtf8Bytes(ta.value));
     }
 
-    // ✅ 댓글 등록
     async function submitComment() {
-
         const contentsEl = document.getElementById("commentContents");
         const contents = (contentsEl.value ?? "").trim();
 
@@ -882,7 +910,6 @@
             return;
         }
 
-        // FormData로 multipart/form-data 전송 (@ModelAttribute 매핑)
         const fd = new FormData();
         fd.append("boardNo", String(boardNo));
         fd.append("contents", contents);
@@ -891,7 +918,6 @@
             const res = await fetch(`${API_BASE}/api/v1/comment`, {
                 method: "POST",
                 credentials: "include",
-
                 body: fd
             });
 
@@ -903,12 +929,9 @@
                 return;
             }
 
-            // 성공 처리
             alert(json?.message ?? "댓글 등록 성공");
             contentsEl.value = "";
             updateCommentByteCounter();
-
-            // ✅ 댓글 목록 다시 불러오기
             await initComment();
 
         } catch (e) {
@@ -923,9 +946,9 @@
         updateCommentByteCounter();
     }
 
-
     document.addEventListener('DOMContentLoaded', () => {
         loadBoardDetail();
+
         const ta = document.getElementById("commentContents");
         const submitBtn = document.getElementById("commentSubmitBtn");
         const cancelBtn = document.getElementById("commentCancelBtn");
