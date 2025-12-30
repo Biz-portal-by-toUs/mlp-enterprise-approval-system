@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.common.client;
 
 import com.multi.mlpenterpriseapprovalsystem.prov_document.dto.ReqFastApiProvEmbeddingDto;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -14,10 +14,13 @@ import org.springframework.web.reactive.function.client.WebClient;
  * @since : 2025. 12. 29. 월요일
  */
 @Component
-@RequiredArgsConstructor
 public class EmbeddingClient {
 
     private final WebClient fastApiWebClient;
+
+    public EmbeddingClient(@Qualifier("fastApiWebClient") WebClient fastApiWebClient) {
+        this.fastApiWebClient = fastApiWebClient;
+    }
 
     @Value("${ai.fastapi.callback-secret}")
     private String callbackSecret;
