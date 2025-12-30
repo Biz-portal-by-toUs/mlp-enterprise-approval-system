@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>사내 규정 등록</title>
+    <style>
+        :root{
+            --bg:#0b1220; --card:#111a2e; --muted:#9aa4b2; --text:#e6eaf2;
+            --border:rgba(255,255,255,.10); --blue:#4f8cff; --danger:#ff4d6d; --ok:#3ddc97;
+        }
+        body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+            background:linear-gradient(180deg,#0b1220,#070b14); color:var(--text);
+        }
+        .wrap{ max-width:920px; margin:40px auto; padding:0 16px; }
+        .card{ background:rgba(17,26,46,.85); border:1px solid var(--border);
+            border-radius:18px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+            backdrop-filter: blur(8px);
+        }
+        h1{ margin:0 0 14px; font-size:22px; letter-spacing:-.2px; }
+        .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+        .col-span{ grid-column: 1 / -1; }
+        label{ display:block; font-size:12px; color:var(--muted); margin:4px 0 6px; }
+        input, textarea, select{
+            width:100%; box-sizing:border-box; padding:12px 12px; border-radius:12px;
+            border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--text);
+            outline:none;
+        }
+        textarea{ min-height:170px; resize:vertical; }
+        input:focus, textarea:focus, select:focus{ border-color:rgba(79,140,255,.55); }
+        .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .btn{
+            border:0; border-radius:12px; padding:11px 14px; cursor:pointer;
+            background:var(--blue); color:white; font-weight:700;
+        }
+        .btn:disabled{ opacity:.55; cursor:not-allowed; }
+        .btn.secondary{ background:rgba(255,255,255,.08); color:var(--text); }
+        .tell{ font-size:12px; color:var(--muted); }
+        .filebox{ display:flex; gap:10px; align-items:center; }
+        .filebox input[type=file]{ padding:10px; }
+        .progress{ width:100%; display:none; margin-top:10px; }
+        .status{ margin-top:10px; font-size:13px; color:var(--muted); white-space:pre-line; }
+        .ok{ color:var(--ok); }
+        .err{ color:var(--danger); }
+        .pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+            border-radius:999px; border:1px solid var(--border); color:var(--muted); font-size:12px;
+        }
+        .divider{ height:1px; background:var(--border); margin:14px 0; }
+    </style>
+</head>
+
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>사내 규정 등록</h1>
+        <div class="tell">규정 제목/내용 입력 후 파일을 첨부하고 등록하면, S3 업로드 → 임베딩 처리까지 자동으로 진행됩니다.</div>
+        <div class="divider"></div>
+
+        <div class="grid">
+            <div class="col-span">
+                <label for="docTitle">규정 제목</label>
+                <input id="docTitle" placeholder="예) 보안 규정(USB 사용 금지)"/>
+            </div>
+
+            <div class="col-span">
+                <label for="description">규정 내용</label>
+                <textarea id="description" placeholder="규정 내용을 입력하세요. (파일 내용과 함께 RAG에 사용될 수 있어요)"></textarea>
+            </div>
+
+            <div>
+                <label for="isPublic">공개 여부</label>
+                <select id="isPublic">
+                    <option value="true" selected>공개</option>
+                    <option value="false">비공개</option>
+                </select>
+            </div>
+
+            <div>
+                <label>첨부파일</label>
+                <div class="filebox">
+                    <input id="file" type="file" />
+                </div>
+                <div class="tell" id="fileInfo">선택된 파일 없음</div>
+            </div>
+
+            <div class="col-span row" style="justify-content:space-between; margin-top:6px;">
+                <div class="row">
+                    <button class="btn" id="submitBtn">등록</button>
+                    <button class="btn secondary" id="resetBtn" type="button">초기화</button>
+                </div>
+                <div class="row">
+                    <span class="pill" id="hintPill">API: /api/v1/prov-documents</span>
+                </div>
+            </div>
+
+            <div class="col-span">
+                <progress id="progress" class="progress" value="0" max="100"></progress>
+                <div id="statusMsg" class="status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+    const progEl = $("progress");
+    const statusMsg = $("statusMsg");
+
+    function setStatus(msg, cls="") {
+        statusMsg.className = "status " + cls;
+        statusMsg.textContent = msg;
+    }
+
+    function must(v, msg) {
+        if (!v) throw new Error(msg);
+        return v;
+    }
+
+    let pickedFile = null;
+
+    $("file").addEventListener("change", (e) => {
+        pickedFile = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+        $("fileInfo").textContent = pickedFile
+            ? `선택됨: ${pickedFile.name} (${(pickedFile.size/1024).toFixed(1)} KB) / ${pickedFile.type || "unknown"}`
+            : "선택된 파일 없음";
+    });
+
+    $("resetBtn").onclick = () => {
+        $("docTitle").value = "";
+        $("description").value = "";
+        $("isPublic").value = "true";
+        $("file").value = "";
+        pickedFile = null;
+        $("fileInfo").textContent = "선택된 파일 없음";
+        progEl.style.display = "none";
+        progEl.value = 0;
+        setStatus("");
+    };
+
+    $("submitBtn").onclick = async () => {
+        try {
+            const docTitle = $("docTitle").value.trim();
+            const description = $("description").value.trim();
+            const isPublic = $("isPublic").value === "true";
+
+            must(docTitle, "규정 제목을 입력하세요.");
+            must(description, "규정 내용을 입력하세요.");
+            must(pickedFile, "첨부파일을 선택하세요.");
+
+            $("submitBtn").disabled = true;
+            progEl.style.display = "block";
+            progEl.value = 10;
+
+            setStatus("1) 규정 메타데이터 생성 및 업로드 URL 발급 중...");
+
+            // 1) create (메타 + presign PUT)
+            const createRes = await fetch("http://localhost:8090/api/v1/prov-documents", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    docTitle,
+                    description,
+                    isPublic,
+                    originalName: pickedFile.name,
+                    contentType: pickedFile.type || "application/octet-stream",
+                    size: pickedFile.size
+                })
+            });
+
+            if (!createRes.ok) throw new Error("규정 등록(create) 요청 실패");
+            const createJson = await createRes.json();
+            const createData = createJson.data || createJson;
+
+            const provNo = createData.provNo;
+            const objectKey = createData.objectKey;
+            const uploadUrl = createData.uploadUrl;
+
+            if (!provNo || !objectKey || !uploadUrl) throw new Error("create 응답 데이터가 올바르지 않습니다.");
+
+            progEl.value = 40;
+            setStatus("2) S3로 파일 업로드 중...");
+
+            // 2) S3 PUT 업로드 (presigned)
+            const putRes = await fetch(uploadUrl, {
+                method: "PUT",
+                body: pickedFile,
+                headers: { "Content-Type": pickedFile.type || "application/octet-stream" }
+            });
+
+            if (!putRes.ok) {
+                const txt = await putRes.text().catch(() => "");
+                throw new Error("S3 업로드 실패 (CORS/Content-Type/권한 확인 필요)\n" + txt);
+            }
+
+            progEl.value = 75;
+            setStatus("3) 업로드 완료 처리 + 임베딩 요청 중...");
+
+            // 3) complete (DB 확정 + FastAPI 임베딩 요청)
+            const completeRes = await fetch("http://localhost:8090/api/v1/prov-documents/complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    provNo,
+                    objectKey,
+                    originalName: pickedFile.name,
+                    contentType: pickedFile.type || "application/octet-stream",
+                    size: pickedFile.size
+                })
+            });
+
+            if (!completeRes.ok) throw new Error("complete 요청 실패");
+            progEl.value = 100;
+
+            setStatus(
+                `🎉 등록 완료!\n- provNo: ${provNo}\n- objectKey: ${objectKey}\n\n임베딩은 백그라운드로 진행되며, 완료되면 서버 상태(procStat)가 DONE/FAILED로 변경됩니다.`,
+                "ok"
+            );
+
+            // 원하면 목록 이동
+            // setTimeout(() => location.href = "/prov-documents", 800);
+
+        } catch (e) {
+            console.error(e);
+            setStatus("❌ " + (e.message || "처리 중 오류가 발생했습니다."), "err");
+            alert(e.message || "처리 중 오류가 발생했습니다.");
+            $("submitBtn").disabled = false;
+            progEl.value = 0;
+            progEl.style.display = "none";
+        }
+    };
+</script>
+</body>
+</html>
