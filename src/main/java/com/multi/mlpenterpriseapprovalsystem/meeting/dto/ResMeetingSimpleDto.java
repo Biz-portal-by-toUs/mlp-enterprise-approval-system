@@ -21,4 +21,5 @@ public class ResMeetingSimpleDto {
     private LocalDateTime endAt;
     private String writerEmpId;
     private String writerName;
+    private int participantCount;
 }
