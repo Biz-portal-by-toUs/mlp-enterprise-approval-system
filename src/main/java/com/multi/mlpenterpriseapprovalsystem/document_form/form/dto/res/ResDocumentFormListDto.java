@@ -17,7 +17,7 @@ public record ResDocumentFormListDto(
         Long docfoNo,
         Company company,
         @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
-        Employee writer,          // ✅ Employee 그대로
+        Employee writer,
         String docfoName,
         DocumentFormStats docfoStat,
         String rejectReason
