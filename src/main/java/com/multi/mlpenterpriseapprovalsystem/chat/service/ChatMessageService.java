@@ -82,12 +82,12 @@ public class ChatMessageService {
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
-        // 2. 1:1인 경우 상대방도 자동으로 활성화(복귀) 처리
         if (chatRoom.getRoomType() == RoomType.ONE) {
             chatRoomMemberRepository.reactivateOthersForOneToOne(request.getRoomNo(), empId, now);
-            // ✅ 상대방 메모리 객체 상태도 활성화로 업데이트하여 카운트에 반영
             chatRoom.getMembers().forEach(m -> {
-                if (!m.getEmployee().getEmpId().equals(empId)) m.reactivateNow(now);
+                if (!m.getEmployee().getEmpId().equals(empId) && !m.isActive()) {
+                    m.reactivateNow(now);
+                }
             });
         }
 

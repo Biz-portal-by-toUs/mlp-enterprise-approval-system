@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ResChatRoomDto {
     private Long roomNo;
+    @Setter
     private String roomName;
     private RoomType roomType;
     private List<ResChatRoomMemberDto> members;
@@ -37,4 +39,5 @@ public class ResChatRoomDto {
                         .collect(Collectors.toList())
         );
     }
+
 }

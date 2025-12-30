@@ -63,9 +63,15 @@ public class ChatRoomService {
             throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
         }
 
+        String targetNameForOneToOne = null;
+
         for (String targetEmpId : targets) {
             Employee target = employeeRepository.findByEmpId(targetEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            if (targets.size() == 1) {
+                targetNameForOneToOne = target.getEmpName();
+            }
 
             String targetComId = target.getCompany().getComId();
             if (!Objects.equals(creatorComId, targetComId)) {
@@ -73,80 +79,54 @@ public class ChatRoomService {
             }
         }
 
-
         int memberCount = targets.size();
-        RoomType roomType;
-
-        if (memberCount == 1) {
-            roomType = RoomType.ONE;
-        } else if (memberCount >= 2) {
-            roomType = RoomType.GROUP;
-        } else {
-            throw new CustomException(ErrorCode.INVALID_MEMBER_COUNT);
-        }
-
-        String roomName;
-
+        RoomType roomType = (memberCount == 1) ? RoomType.ONE : RoomType.GROUP;
 
         if (roomType == RoomType.ONE) {
+            String targetEmpId = targets.iterator().next();
 
-            String targetEmpId = request.getMemberIds().get(0);
-
-            Optional<ChatRoom> existingRoom =
-                    chatRoomRepository.findOneToOneRoom(
-                            RoomType.ONE,
-                            empId,
-                            targetEmpId
-                    );
+            Optional<ChatRoom> existingRoom = chatRoomRepository.findOneToOneRoom(RoomType.ONE, empId, targetEmpId);
 
             if (existingRoom.isPresent()) {
                 ChatRoom room = existingRoom.get();
-
                 chatRoomMemberRepository.reactivateMe(room.getRoomNo(), empId, LocalDateTime.now());
 
-                return ResChatRoomDto.from(room);
+                ResChatRoomDto res = ResChatRoomDto.from(room);
+                res.setRoomName(targetNameForOneToOne);
+                return res;
             }
-
-
-            roomName = null;
         }
 
-        else {
+        String roomName = null;
+        if (roomType == RoomType.GROUP) {
             if (request.getRoomName() == null || request.getRoomName().isBlank()) {
-
                 List<String> empNames = new ArrayList<>();
-
-                Employee me = employeeRepository.findByEmpId(empId)
-                        .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-                empNames.add(me.getEmpName());
-
-                for (String id : request.getMemberIds()) {
+                empNames.add(creator.getEmpName());
+                for (String id : targets) {
                     if (empNames.size() >= 5) break;
-                    Employee emp = employeeRepository.findByEmpId(id)
-                            .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-                    empNames.add(emp.getEmpName());
+                    employeeRepository.findByEmpId(id).ifPresent(e -> empNames.add(e.getEmpName()));
                 }
-
                 roomName = String.join(", ", empNames);
-                if (roomName.length() > 45) {
-                    roomName = roomName.substring(0, 45) + "...";
-                }
+                if (roomName.length() > 45) roomName = roomName.substring(0, 45) + "...";
             } else {
                 roomName = request.getRoomName();
-                if (roomName.length() > 50) {
-                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
-                }
+                if (roomName.length() > 50) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
             }
         }
 
         ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create(roomName, roomType));
 
         addMember(chatRoom, empId);
-        for (String id : request.getMemberIds()) {
+        for (String id : targets) {
             addMember(chatRoom, id);
         }
 
-        return ResChatRoomDto.from(chatRoom);
+        ResChatRoomDto result = ResChatRoomDto.from(chatRoom);
+        if (roomType == RoomType.ONE) {
+            result.setRoomName(targetNameForOneToOne);
+        }
+
+        return result;
     }
 
     /**
@@ -192,23 +172,18 @@ public class ChatRoomService {
         chatRoomMemberRepository.save(member);
     }
 
-    /**
-     * 읽음 처리 (active=true 멤버만)
-     */
+
     @Transactional
     public void markAsRead(Long roomNo, String empId) {
-        // 1. 해당 멤버 정보 조회
         ChatRoomMember member = chatRoomMemberRepository
                 .findByChatRoom_RoomNoAndEmployee_EmpIdAndIsActiveTrue(roomNo, empId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ACCESS_DENIED));
 
-        // 읽음 처리 (unreadCount = 0)
         member.markReadNow();
 
         ChatRoom room = member.getChatRoom();
         String roomName;
 
-        // ✅ [수정 포인트] 1:1 채팅방일 경우 상대방 이름을 실시간으로 추출
         if (room.getRoomType() == RoomType.ONE) {
             roomName = room.getMembers().stream()
                     .filter(m -> !m.getEmployee().getEmpId().equals(empId)) // 내가 아닌 멤버 찾기
@@ -216,7 +191,6 @@ public class ChatRoomService {
                     .findFirst()
                     .orElse("알 수 없는 사용자");
         } else {
-            // 그룹 채팅은 DB에 저장된 방 이름을 사용 (없으면 기본값 처리 가능)
             roomName = room.getRoomName() != null ? room.getRoomName() : "그룹 채팅";
         }
 
@@ -236,8 +210,8 @@ public class ChatRoomService {
                 roomNo,
                 content,
                 createdAt,
-                0, // 읽음 처리되었으므로 0
-                roomName // ✅ 이제 내가 아닌 상대방의 이름이 전달됨
+                0,
+                roomName
                 ,false
                 ,room.getRoomType()
                 ,activeMemberCount
