@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.common.client;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -18,36 +18,30 @@ import java.util.Map;
  * @since : 2025. 12. 26. 금요일
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class MeetingAiClient {
 
-    private final WebClient.Builder webClientBuilder;
+    private final WebClient fastApiWebClient; // 전역 Bean 사용
 
-    @Value("${ai.fastapi.base-url}")
-    private String fastApiBaseUrl;
+    public MeetingAiClient(@Qualifier("fastApiWebClient") WebClient fastApiWebClient) {
+        this.fastApiWebClient = fastApiWebClient;
+    }
 
-    @Value("${internal.ai.callback-url}") // FastAPI가 결과를 PATCH로 호출할 Spring 주소
+    @Value("${internal.ai.callback-url}")
     private String callbackUrl;
 
     @Value("${internal.ai.callback-key}")
     private String callbackKey;
 
     public void requestAi(Long meetNo, String objectKey, String title) {
-
-        WebClient wc = webClientBuilder.baseUrl(fastApiBaseUrl).build();
-
         Map<String, Object> body = new HashMap<>();
         body.put("meetNo", meetNo);
         body.put("objectKey", objectKey);
         body.put("callbackUrl", callbackUrl);
         body.put("callbackKey", callbackKey);
-
-
         body.put("meetingTitle", title.trim());
 
-
-        wc.post()
+        fastApiWebClient.post()
                 .uri("/ai/meetings/run")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)

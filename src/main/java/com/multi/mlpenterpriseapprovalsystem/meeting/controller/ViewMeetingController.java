@@ -5,6 +5,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * Please explain the class!!!
@@ -23,7 +24,13 @@ public class ViewMeetingController {
     }
 
     @GetMapping
-    public String selectMeeting(){
+    public String meetingList(@RequestParam(name="scope", defaultValue="ALL") String scope, Model model) {
+        // scope 값에 따라 사이드바에 전달할 active 키워드 결정
+        String activeMenu = "all"; // 기본값
+        if ("MY_DEPT".equals(scope)) activeMenu = "dept";
+        else if ("MY".equals(scope)) activeMenu = "my";
+
+        model.addAttribute("active", activeMenu); // ✅ HTML의 ${active}로 전달됨
         return "meeting/meeting-list";
     }
 
