@@ -965,3 +965,11 @@ UPDATE employee SET birth = '2000-01-01' WHERE birth IS NULL;
 ALTER TABLE employee MODIFY birth DATE NOT NULL;
 
 ALTER TABLE employee MODIFY COLUMN object_key VARCHAR(255) NULL;
+
+
+
+-- 일정 관련 변경 --
+-- 1) 부서+회사 스케줄 테이블에서 dep_no nullable로 변경
+ALTER TABLE schedule
+    MODIFY dep_no BIGINT NULL;
+
