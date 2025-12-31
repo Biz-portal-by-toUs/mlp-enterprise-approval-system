@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 
 @Controller
-@RequestMapping("/reservation/meeting-rooms")
+@RequestMapping("/meeting-rooms")
 @RequiredArgsConstructor
 public class ViewMeetingRoomController {
 
@@ -33,26 +33,26 @@ public class ViewMeetingRoomController {
     }
 
     // 회의실 등록
-    @GetMapping("/meeting-room-register")
+    @GetMapping("/register")
     public String addMeetingRoom() {
         return "reservation/meeting-rooms/meeting-room-register";
     }
 
     // 회의실 수정
-    @GetMapping("/{roomNo}/meeting-room-edit")
+    @GetMapping("/{roomNo}/edit")
     public String editMeetingRoom(@PathVariable Long roomNo, Model model) {
         model.addAttribute("roomNo", roomNo);
         return "reservation/meeting-rooms/meeting-room-edit";
     }
 
     // 회의실 예약 화면
-    @GetMapping("/meeting-room-reservation")
+    @GetMapping("/resevation")
     public String meetingRoomReservation() {
         return "reservation/meeting-rooms/meeting-room-reservation";
     }
 
     // 회의실 예약 등록 화면
-    @GetMapping("/{roomNo}/meeting-room-reservation")
+    @GetMapping("/{roomNo}/reservation")
     public String meetingRoomReservation(@PathVariable Long roomNo) {
         return "reservation/meeting-rooms/meeting-room-reservation";
     }
