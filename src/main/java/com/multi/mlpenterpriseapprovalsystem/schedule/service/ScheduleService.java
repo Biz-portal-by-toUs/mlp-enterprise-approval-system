@@ -3,10 +3,15 @@ package com.multi.mlpenterpriseapprovalsystem.schedule.service;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import com.multi.mlpenterpriseapprovalsystem.schedule.domain.EmpSchedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.domain.Schedule;
+import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ReqCreateScheduleDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ReqScheduleDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ResScheduleDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ResScheduleListDto;
@@ -39,6 +44,8 @@ public class ScheduleService {
     private final EmpScheduleRepository empScheduleRepository;
     private final ScheduleRepository scheduleRepository;
     private final EmployeeRepository employeeRepository;
+    private final CompanyRepository companyRepository;
+    private final DepartmentRepository departmentRepository;
 
     public ResScheduleListDto getItems(CustomUser user, ReqScheduleDto req) {
         Range range = switch (req.getView()) {
@@ -103,6 +110,90 @@ public class ScheduleService {
         LocalDate lastDay = nextMonthStart.minusDays(1);
         LocalDate toDate = lastDay.with(TemporalAdjusters.next(weekStart));
         return new Range(fromDate.atStartOfDay(), toDate.atStartOfDay());
+    }
+
+    @Transactional
+    public ResScheduleDto createItem(CustomUser user, ReqCreateScheduleDto req) {
+        validate(req);
+
+        String empId = user.getUsername();
+        String comId = user.getComId();
+
+        Employee employee = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        return switch (req.getScope()) {
+            case PERSONAL -> createPersonal(employee, req);
+            case COMPANY -> createCompany(employee, comId, req);
+            case DEPARTMENT -> createDepartment(employee, comId, req);
+        };
+    }
+
+    private ResScheduleDto createPersonal(Employee employee, ReqCreateScheduleDto req) {
+        EmpSchedule saved = empScheduleRepository.save(
+                EmpSchedule.create(employee, req.getTitle(), req.getContent(),
+                        req.getStartAt(), req.getEndedAt(), req.getColor())
+        );
+
+        return ResScheduleDto.builder()
+                .schNo(saved.getSchNo())
+                .scope(CalendarScope.PERSONAL)
+                .title(saved.getTitle())
+                .content(saved.getContent())
+                .startAt(saved.getStartAt())
+                .endedAt(saved.getEndedAt())
+                .color(saved.getColor())
+                .build();
+    }
+
+    private ResScheduleDto createCompany(Employee register, String comId, ReqCreateScheduleDto req) {
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        Schedule saved = scheduleRepository.save(
+                Schedule.create(company, null, register,
+                        req.getTitle(), req.getContent(),
+                        req.getStartAt(), req.getEndedAt(), req.getColor())
+        );
+
+        return ResScheduleDto.builder()
+                .schNo(saved.getSchNo())
+                .scope(CalendarScope.COMPANY)
+                .title(saved.getTitle())
+                .content(saved.getContent())
+                .startAt(saved.getStartAt())
+                .endedAt(saved.getEndedAt())
+                .color(saved.getColor())
+                .build();
+    }
+
+    private ResScheduleDto createDepartment(Employee register, String comId, ReqCreateScheduleDto req) {
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        Department department = register.getDepartment();
+
+        Schedule saved = scheduleRepository.save(
+                Schedule.create(company, department, register,
+                        req.getTitle(), req.getContent(),
+                        req.getStartAt(), req.getEndedAt(), req.getColor())
+        );
+
+        return ResScheduleDto.builder()
+                .schNo(saved.getSchNo())
+                .scope(CalendarScope.DEPARTMENT)
+                .title(saved.getTitle())
+                .content(saved.getContent())
+                .startAt(saved.getStartAt())
+                .endedAt(saved.getEndedAt())
+                .color(saved.getColor())
+                .build();
+    }
+
+    private void validate(ReqCreateScheduleDto req) {
+        if (!req.getEndedAt().isAfter(req.getStartAt())) {
+            throw new CustomException(ErrorCode.START_MUST_BEFORE_END);
+        }
     }
 
     private record Range(LocalDateTime fromInclusive, LocalDateTime toExclusive) {}
