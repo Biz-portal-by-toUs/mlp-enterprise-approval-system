@@ -28,12 +28,14 @@ public class EmpSchedule {
     @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
     private Employee employee;
 
+    @Column(nullable = false)
     private String title;
+    @Column
     private String content;
 
-    @Column(name="start_at")
+    @Column(name="start_at", nullable = false)
     private LocalDateTime startAt;
-    @Column(name="end_at")
+    @Column(name="ended_at", nullable = false)
     private LocalDateTime endedAt;
 
     private String color;

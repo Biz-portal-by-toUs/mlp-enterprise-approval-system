@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "schedule")
 public class Schedule {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="sch_no")
     private Long schNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,10 +36,17 @@ public class Schedule {
     @JoinColumn(name = "dep_no")
     private Department department;
 
+    @Column(nullable = false)
     private String title;
+    @Column
     private String content;
+
+    @Column(name="start_at", nullable = false)
     private LocalDateTime startAt;
+    @Column(name="ended_at", nullable = false)
     private LocalDateTime endedAt;
+
+    @Column
     private String color;
 
     @ManyToOne(fetch = FetchType.LAZY)
