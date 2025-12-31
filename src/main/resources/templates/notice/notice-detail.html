@@ -1,44 +1,32 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>공지 내용 상세</title>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layout">
+
+<th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
-        :root{
-            --bg:#f6f7fb;
-            --card:#ffffff;
-            --text:#1f2937;
-            --muted:#6b7280;
-            --line:rgba(17,24,39,.10);
-            --shadow:0 10px 30px rgba(17,24,39,.08);
-
-            --primary:#3b82f6;
-            --primary2:#2563eb;
-            --danger:#dc2626;
-            --success:#10b981;
-        }
+        /* ❌ 기존 notice-detail의 :root, body는 layout이 담당하므로 제거 권장 (겹치면 전체 레이아웃 덮임)
+           필요한 스타일만(컨텐츠 영역 클래스들) 유지 */
 
         *{ box-sizing:border-box; }
 
-        body{
-            margin:0;
-            background:
-                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-                    var(--bg);
-            font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color: var(--text);
+        .subbar-main{
+            flex: 1;
+            min-width: 0;
+            padding: 24px; /* meeting 톤 */
         }
 
-        .container{
-            max-width: 980px;
-            margin: 48px auto;
-            padding: 0 14px;
+        .notice-detail-wrap{
+            width: 100%;
+            max-width: none;   /* ✅ 제한 해제 */
+            margin: 0;         /* ✅ auto 제거 */
+            padding: 0;        /* ✅ main이 padding 갖고 있음 */
         }
+
 
         h2{
             margin: 0 0 14px;
@@ -47,8 +35,8 @@
         }
 
         .card{
-            background: var(--card);
-            border: 1px solid var(--line);
+            background: var(--white, #fff);
+            border: 1px solid rgba(17,24,39,.10);
             border-radius: 10px;
             box-shadow: 0 10px 24px rgba(17,24,39,.06);
             overflow: hidden;
@@ -78,7 +66,7 @@
         }
         .summary-table td{
             font-weight: 800;
-            color: var(--text);
+            color: var(--text, #1f2937);
         }
 
         .badge{
@@ -94,12 +82,12 @@
         }
         .badge.success{
             background: rgba(16,185,129,.12);
-            color: var(--success);
+            color: var(--success, #10b981);
             border-color: rgba(16,185,129,.30);
         }
         .badge.muted{
             background: rgba(107,114,128,.12);
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             border-color: rgba(107,114,128,.30);
         }
 
@@ -108,15 +96,14 @@
             align-items:center;
             gap:10px;
             flex-wrap: wrap;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             font-weight: 900;
         }
-        .period-inline .sep{ color: var(--muted); }
+        .period-inline .sep{ color: var(--muted, #6b7280); }
 
-        /* ===== Contents viewer card ===== */
         .contents-card{
-            background: var(--card);
-            border: 1px solid var(--line);
+            background: var(--white, #fff);
+            border: 1px solid rgba(17,24,39,.10);
             border-radius: 10px;
             box-shadow: 0 10px 24px rgba(17,24,39,.06);
             overflow: hidden;
@@ -127,7 +114,6 @@
             background:#fff;
         }
 
-        /* ✅ TipTap/HTML 공통 렌더 스타일 */
         #noticeDescription{
             white-space: normal;
             line-height: 1.75;
@@ -167,7 +153,7 @@
             font-weight: 800;
         }
         #noticeDescription a{
-            color: var(--primary2);
+            color: var(--primary2, #2563eb);
             font-weight: 900;
             text-decoration: underline;
             text-underline-offset: 3px;
@@ -189,7 +175,7 @@
         #noticeDescription th{
             background: rgba(17,24,39,.03);
             font-weight: 900;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
         }
         #noticeDescription .selectedCell:after{
             content:"";
@@ -199,7 +185,6 @@
             pointer-events:none;
         }
 
-        /* ===== Writer tooltip ===== */
         .writer-wrap{
             display: inline-flex;
             align-items: center;
@@ -212,7 +197,7 @@
             background: transparent;
             padding: 0;
             cursor: pointer;
-            color: var(--primary2);
+            color: var(--primary2, #2563eb);
             font-weight: 900;
             text-decoration: underline;
             text-underline-offset: 3px;
@@ -262,7 +247,6 @@
         }
         .tooltip-row span:first-child{ color: rgba(255,255,255,.70); }
 
-        /* 툴팁 컨테이너 */
         .tooltip-host{
             position: relative;
             display: inline-flex;
@@ -274,13 +258,12 @@
             pointer-events: auto;
         }
 
-        /* ===== meta row (등록/변경/조회 한 줄) ===== */
         .meta-inline{
             display:flex;
             align-items:center;
             gap: 14px;
             flex-wrap: wrap;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             font-weight: 900;
         }
         .meta-inline .meta-item{
@@ -298,10 +281,9 @@
             font-weight: 1000;
         }
 
-        /* ===== Attach card ===== */
         .attach-card{
-            background: var(--card);
-            border: 1px solid var(--line);
+            background: var(--white, #fff);
+            border: 1px solid rgba(17,24,39,.10);
             border-radius: 10px;
             box-shadow: 0 10px 24px rgba(17,24,39,.06);
             padding: 14px;
@@ -331,7 +313,7 @@
         #attachList th{
             text-align:left;
             font-size: .9rem;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             background: rgba(17,24,39,.03);
             padding: 12px;
             border-bottom: 1px solid rgba(17,24,39,.08);
@@ -341,7 +323,7 @@
             padding: 12px;
             border-bottom: 1px solid rgba(17,24,39,.06);
             font-size: .95rem;
-            color: var(--text);
+            color: var(--text, #1f2937);
             font-weight: 700;
         }
         #attachList tr:hover td{ background: rgba(59,130,246,.05); }
@@ -353,7 +335,7 @@
             padding: 12px 18px;
             border-radius: 10px;
             font-weight: 900;
-            color: var(--text);
+            color: var(--text, #1f2937);
             text-decoration:none;
             cursor:pointer;
             box-shadow: 0 8px 18px rgba(17,24,39,.06);
@@ -408,424 +390,425 @@
             .tooltip-bubble{ left: 0 !important; right: auto !important; }
         }
     </style>
-</head>
+</th:block>
 
-<body>
-<div class="container">
-    <h2>공지사항 상세</h2>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- ✅ notice-list와 동일하게 게시판 서브바 도킹 -->
+        <div th:replace="~{sidebar/board-sidebar :: boardSidebar('notice')}"></div>
+        <main class="subbar-main">
+        <!-- ✅ 상세 본문 -->
+        <div class="notice-detail-wrap">
+            <h2>공지사항 상세</h2>
 
-    <!-- ✅ 요약 테이블 -->
-    <div class="card">
-        <table class="summary-table">
-            <tr>
-                <th>제목</th>
-                <td><span id="noticeTitle"></span></td>
-            </tr>
-            <tr>
-                <th>팝업여부</th>
-                <td><span id="noticePopup"></span></td>
-            </tr>
-            <tr>
-                <th>팝업기간</th>
-                <td>
-                    <div class="period-inline">
-                        <span id="noticeStarted">-</span>
-                        <span class="sep">~</span>
-                        <span id="noticeEnded">-</span>
-                    </div>
-                </td>
-            </tr>
-        </table>
-    </div>
+            <div class="card">
+                <table class="summary-table">
+                    <tr>
+                        <th>제목</th>
+                        <td><span id="noticeTitle"></span></td>
+                    </tr>
+                    <tr>
+                        <th>팝업여부</th>
+                        <td><span id="noticePopup"></span></td>
+                    </tr>
+                    <tr>
+                        <th>팝업기간</th>
+                        <td>
+                            <div class="period-inline">
+                                <span id="noticeStarted">-</span>
+                                <span class="sep">~</span>
+                                <span id="noticeEnded">-</span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
-    <!-- ✅ 내용 카드 (라벨 제거) -->
-    <div class="contents-card">
-        <div class="contents-body">
-            <div id="noticeDescription"></div>
+            <div class="contents-card">
+                <div class="contents-body">
+                    <div id="noticeDescription"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <table class="summary-table">
+                    <tr>
+                        <th>작성자</th>
+                        <td>
+                          <span class="writer-wrap">
+                            <span class="tooltip-host" id="writerTooltipHost">
+                              <button type="button" class="writer-btn" id="noticeWriterBtn">
+                                <span id="noticeWriter">-</span>
+                              </button>
+
+                              <div class="tooltip-bubble" id="writerTooltip">
+                                <div class="tooltip-title">작성자 정보</div>
+                                <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
+                                <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
+                              </div>
+                            </span>
+                          </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>정보</th>
+                        <td>
+                            <div class="meta-inline">
+                              <span class="meta-item">
+                                <span class="k">등록일</span><span class="v" id="noticeCreated">-</span>
+                              </span>
+                                <span class="meta-item">
+                                <span class="k">변경일</span><span class="v" id="noticeUpdated">-</span>
+                              </span>
+                                <span class="meta-item">
+                                <span class="k">조회</span><span class="v" id="noticeRating">-</span>
+                              </span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="attach-card">
+                <div class="attach-head">
+                    <h3 class="attach-title">첨부 파일</h3>
+                </div>
+                <table id="attachList"></table>
+            </div>
+
+            <div class="actions">
+                <a href="/notice/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
+                <button id="update-btn" class="btn btn-primary" type="button"><i class="fa-solid fa-pen"></i> 수정</button>
+                <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteNotice()"><i class="fa-solid fa-trash"></i> 삭제</button>
+            </div>
         </div>
-    </div>
-
-    <!-- ✅ 작성자(툴팁) + 등록/변경/조회 한줄 -->
-    <div class="card">
-        <table class="summary-table">
-            <tr>
-                <th>작성자</th>
-                <td>
-          <span class="writer-wrap">
-            <span class="tooltip-host" id="writerTooltipHost">
-              <button type="button" class="writer-btn" id="noticeWriterBtn">
-                <span id="noticeWriter">-</span>
-              </button>
-
-                <!-- 풍선 툴팁 -->
-              <div class="tooltip-bubble" id="writerTooltip">
-                <div class="tooltip-title">작성자 정보</div>
-                <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
-                <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
-              </div>
-            </span>
-          </span>
-                </td>
-            </tr>
-            <tr>
-                <th>정보</th>
-                <td>
-                    <div class="meta-inline">
-            <span class="meta-item">
-              <span class="k">등록일</span><span class="v" id="noticeCreated">-</span>
-            </span>
-                        <span class="meta-item">
-              <span class="k">변경일</span><span class="v" id="noticeUpdated">-</span>
-            </span>
-                        <span class="meta-item">
-              <span class="k">조회</span><span class="v" id="noticeRating">-</span>
-            </span>
-                    </div>
-                </td>
-            </tr>
-        </table>
-    </div>
-
-    <!-- ✅ 첨부 -->
-    <div class="attach-card">
-        <div class="attach-head">
-            <h3 class="attach-title">첨부 파일</h3>
-        </div>
-        <table id="attachList"></table>
-    </div>
-
-    <div class="actions">
-        <a href="/notice/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
-        <button id="update-btn" class="btn btn-primary" type="button"><i class="fa-solid fa-pen"></i> 수정</button>
-        <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteNotice()"><i class="fa-solid fa-trash"></i> 삭제</button>
+        </main>
     </div>
 </div>
 
-<!-- ✅ TipTap viewer (JSON 렌더용) -->
-<script type="module">
-    import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
-    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
-    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
-    import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
-    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
-    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
-    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
-    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
+<th:block layout:fragment="pageScripts">
+    <!-- ✅ 기존에 head에 있던 jQuery 포함(생략 X) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    let viewer = null;
+    <!-- ✅ TipTap viewer (원본 그대로) -->
+    <script type="module">
+        import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+        import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+        import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+        import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+        import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+        import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+        import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+        import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
 
-    function ensureViewer(){
-        if (viewer) return viewer;
-        const host = document.querySelector("#noticeDescription");
-        viewer = new Editor({
-            element: host,
-            editable: false,
-            extensions: [
-                StarterKit,
-                Underline,
-                TextAlign.configure({ types: ["heading","paragraph"] }),
-                Table.configure({ resizable: true }),
-                TableRow, TableHeader, TableCell,
-            ],
-            content: { type:"doc", content:[{ type:"paragraph" }] },
-        });
-        return viewer;
-    }
+        let viewer = null;
 
-    function isProbablyJson(str){
-        if (typeof str !== "string") return false;
-        const s = str.trim();
-        if (!s) return false;
-        if (!(s.startsWith("{") || s.startsWith("["))) return false;
-        try{
-            const obj = JSON.parse(s);
-            return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
-        }catch{ return false; }
-    }
-
-    function isProbablyHtml(str){
-        if (typeof str !== "string") return false;
-        const s = str.trim();
-        if (!s) return false;
-        return /<\/?[a-z][\s\S]*>/i.test(s);
-    }
-
-    function escapeHtml(str){
-        return String(str ?? "")
-            .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-            .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-    }
-
-    window.renderNoticeContentsAuto = (contents)=>{
-        const host = document.querySelector("#noticeDescription");
-
-        if (contents == null) {
-            host.innerHTML = "<p>-</p>";
-            return;
+        function ensureViewer(){
+            if (viewer) return viewer;
+            const host = document.querySelector("#noticeDescription");
+            viewer = new Editor({
+                element: host,
+                editable: false,
+                extensions: [
+                    StarterKit,
+                    Underline,
+                    TextAlign.configure({ types: ["heading","paragraph"] }),
+                    Table.configure({ resizable: true }),
+                    TableRow, TableHeader, TableCell,
+                ],
+                content: { type:"doc", content:[{ type:"paragraph" }] },
+            });
+            return viewer;
         }
 
-        if (typeof contents === "object") {
-            const ed = ensureViewer();
-            ed.commands.setContent(contents);
-            return;
+        function isProbablyJson(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            if (!(s.startsWith("{") || s.startsWith("["))) return false;
+            try{
+                const obj = JSON.parse(s);
+                return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
+            }catch{ return false; }
         }
 
-        const raw = String(contents);
-
-        if (isProbablyJson(raw)) {
-            const ed = ensureViewer();
-            ed.commands.setContent(JSON.parse(raw));
-            return;
+        function isProbablyHtml(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            return /<\/?[a-z][\s\S]*>/i.test(s);
         }
 
-        if (isProbablyHtml(raw)) {
+        function escapeHtml(str){
+            return String(str ?? "")
+                .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+        }
+
+        window.renderNoticeContentsAuto = (contents)=>{
+            const host = document.querySelector("#noticeDescription");
+
+            if (contents == null) {
+                host.innerHTML = "<p>-</p>";
+                return;
+            }
+
+            if (typeof contents === "object") {
+                const ed = ensureViewer();
+                ed.commands.setContent(contents);
+                return;
+            }
+
+            const raw = String(contents);
+
+            if (isProbablyJson(raw)) {
+                const ed = ensureViewer();
+                ed.commands.setContent(JSON.parse(raw));
+                return;
+            }
+
+            if (isProbablyHtml(raw)) {
+                if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
+                host.innerHTML = raw; // ❗ 서버 sanitize 권장
+                return;
+            }
+
             if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
-            host.innerHTML = raw; // ❗ 서버 sanitize 권장
-            return;
-        }
+            host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`;
+        };
+    </script>
 
-        if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
-        host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`;
-    };
-</script>
+    <!-- ✅ 기존 script(원본 그대로) -->
+    <script>
+        const noticeNo = [[${noticeNo}]];
+        const API_BASE = "http://localhost:8090";
 
-<script>
-    const noticeNo = [[${noticeNo}]];
-    const API_BASE = "http://localhost:8090";
+        function setupWriterTooltip() {
+            const host = document.getElementById("writerTooltipHost");
+            const btn = document.getElementById("noticeWriterBtn");
 
-    // ===== 작성자 툴팁(클릭/호버) =====
-    function setupWriterTooltip() {
-        const host = document.getElementById("writerTooltipHost");
-        const btn = document.getElementById("noticeWriterBtn");
+            function show() { host.classList.add("show"); }
+            function hide() { host.classList.remove("show"); }
+            function toggle() { host.classList.toggle("show"); }
 
-        function show() { host.classList.add("show"); }
-        function hide() { host.classList.remove("show"); }
-        function toggle() { host.classList.toggle("show"); }
+            host.addEventListener("mouseenter", show);
+            host.addEventListener("mouseleave", hide);
 
-        // hover
-        host.addEventListener("mouseenter", show);
-        host.addEventListener("mouseleave", hide);
-
-        // click toggle
-        btn.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggle();
-        });
-
-        // 바깥 클릭 시 닫기
-        document.addEventListener("click", (e) => {
-            if (!host.contains(e.target)) hide();
-        });
-
-        // ESC 닫기
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") hide();
-        });
-    }
-
-    async function loadPlaceDetail(){
-        try{
-            const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
-                method: 'GET',
-                credentials: "include",
-                headers: { 'Content-Type': 'application/json' }
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggle();
             });
 
-            const result = await response.json();
+            document.addEventListener("click", (e) => {
+                if (!host.contains(e.target)) hide();
+            });
 
-            if (result.status === 200 && result.data) {
-                const notice = result.data;
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") hide();
+            });
+        }
 
-                $('#noticeTitle').text(notice.title ?? "-");
+        async function loadPlaceDetail(){
+            try{
+                const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
+                    method: 'GET',
+                    credentials: "include",
+                    headers: { 'Content-Type': 'application/json' }
+                });
 
-                // ✅ JSON/HTML 자동 렌더
-                if (window.renderNoticeContentsAuto) window.renderNoticeContentsAuto(notice.contents);
-                else $('#noticeDescription').text(notice.contents ?? "");
+                const result = await response.json();
 
-                const isPopup = notice.isPopup === true || notice.isPopup === 'true';
-                $('#noticePopup').html(
-                    isPopup ? `<span class="badge success">사용</span>` : `<span class="badge muted">미사용</span>`
-                );
+                if (result.status === 200 && result.data) {
+                    const notice = result.data;
 
-                $('#noticeStarted').text(notice.startedAt ? notice.startedAt.substring(0,10) : "-");
-                $('#noticeEnded').text(notice.endedAt ? notice.endedAt.substring(0,10) : "-");
+                    $('#noticeTitle').text(notice.title ?? "-");
 
-                // 작성자 + 툴팁 데이터
-                $('#noticeWriter').text(notice.empName ?? "-");
-                $('#noticeWriterId').text(notice.empId ?? "-");
-                $('#noticeDepart').text(notice.depName ?? "-");
+                    if (window.renderNoticeContentsAuto) window.renderNoticeContentsAuto(notice.contents);
+                    else $('#noticeDescription').text(notice.contents ?? "");
 
-                // 한 줄 메타
-                $('#noticeCreated').text(notice.createdAt ? notice.createdAt.substring(0,10) : "-");
-                $('#noticeUpdated').text(notice.updatedAt ? notice.updatedAt.substring(0,10) : "-");
-                $('#noticeRating').text(notice.rating ?? "-");
+                    const isPopup = notice.isPopup === true || notice.isPopup === 'true';
+                    $('#noticePopup').html(
+                        isPopup ? `<span class="badge success">사용</span>` : `<span class="badge muted">미사용</span>`
+                    );
 
-                initAttach();
-                setupWriterTooltip();
+                    $('#noticeStarted').text(notice.startedAt ? notice.startedAt.substring(0,10) : "-");
+                    $('#noticeEnded').text(notice.endedAt ? notice.endedAt.substring(0,10) : "-");
+
+                    $('#noticeWriter').text(notice.empName ?? "-");
+                    $('#noticeWriterId').text(notice.empId ?? "-");
+                    $('#noticeDepart').text(notice.depName ?? "-");
+
+                    $('#noticeCreated').text(notice.createdAt ? notice.createdAt.substring(0,10) : "-");
+                    $('#noticeUpdated').text(notice.updatedAt ? notice.updatedAt.substring(0,10) : "-");
+                    $('#noticeRating').text(notice.rating ?? "-");
+
+                    initAttach();
+                    setupWriterTooltip();
+                }
+            }catch(e){
+                console.error(e);
+                alert("상세 로딩 중 오류가 발생했습니다.");
             }
-        }catch(e){
-            console.error(e);
-            alert("상세 로딩 중 오류가 발생했습니다.");
         }
-    }
 
-    document.getElementById('update-btn').onclick = () => {
-        location.href = `/notice/update/${noticeNo}`;
-    };
+        document.getElementById('update-btn').onclick = () => {
+            location.href = `/notice/update/${noticeNo}`;
+        };
 
-    function unwrapMaybeResponseDto(obj) {
-        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
-        return obj;
-    }
+        function unwrapMaybeResponseDto(obj) {
+            if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+            return obj;
+        }
 
-    async function initAttach(){
-        try{
-            const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
-                method:'GET',
-                credentials:"include",
-                headers:{ 'Content-Type': 'application/json' }
-            });
+        async function initAttach(){
+            try{
+                const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
+                    method:'GET',
+                    credentials:"include",
+                    headers:{ 'Content-Type': 'application/json' }
+                });
 
-            const result = await response.json();
-            const attachList = $('#attachList').empty();
+                const result = await response.json();
+                const attachList = $('#attachList').empty();
 
-            if (result.status === 200 && result.data?.length) {
-                const attachs = result.data;
+                if (result.status === 200 && result.data?.length) {
+                    const attachs = result.data;
 
-                attachList.append(`
-          <tr>
-            <th style="width:90px;">일련번호</th>
-            <th>파일명</th>
-            <th style="width:120px;">size</th>
-            <th style="width:110px;">미리보기</th>
-            <th style="width:110px;">다운로드</th>
-          </tr>
-        `);
-
-                attachs.forEach((r, index) => {
                     attachList.append(`
-            <tr>
-              <td>${index+1}</td>
-              <td>${r.originalName}</td>
-              <td>${formatFileSize(r.size)}</td>
-              <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
-              <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
-            </tr>
-          `);
-                });
+                      <tr>
+                        <th style="width:90px;">일련번호</th>
+                        <th>파일명</th>
+                        <th style="width:120px;">size</th>
+                        <th style="width:110px;">미리보기</th>
+                        <th style="width:110px;">다운로드</th>
+                      </tr>
+                    `);
 
-                document.querySelectorAll("button[data-down]").forEach(btn => {
-                    btn.addEventListener("click", async (e) => {
-                        const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
-                        await downAttachment(attachmentId);
+                    attachs.forEach((r, index) => {
+                        attachList.append(`
+                          <tr>
+                            <td>${index+1}</td>
+                            <td>${r.originalName}</td>
+                            <td>${formatFileSize(r.size)}</td>
+                            <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+                            <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+                          </tr>
+                        `);
                     });
-                });
 
-                document.querySelectorAll("button[data-view]").forEach(btn => {
-                    btn.addEventListener("click", async (e) => {
-                        const attachmentId = Number(e.currentTarget.getAttribute("data-view"));
-                        await viewAttachment(attachmentId);
+                    document.querySelectorAll("button[data-down]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
+                            await downAttachment(attachmentId);
+                        });
                     });
-                });
 
-            } else {
-                attachList.html('<tr><td colspan="5">관련 첨부파일이 없습니다.</td></tr>');
+                    document.querySelectorAll("button[data-view]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-view"));
+                            await viewAttachment(attachmentId);
+                        });
+                    });
+
+                } else {
+                    attachList.html('<tr><td colspan="5">관련 첨부파일이 없습니다.</td></tr>');
+                }
+            }catch(e){
+                console.error(e);
             }
-        }catch(e){
-            console.error(e);
         }
-    }
 
-    function formatFileSize(bytes) {
-        if (bytes == null || isNaN(bytes)) return "-";
-        if (bytes < 1024) return `${bytes} B`;
-        const kb = bytes / 1024;
-        if (kb < 1024) return `${kb.toFixed(1)} KB`;
-        const mb = kb / 1024;
-        return `${mb.toFixed(1)} MB`;
-    }
-
-    async function fetchDownloadUrl(attachmentId) {
-        const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
-            method:"GET",
-            credentials:"include",
-            headers:{ 'Accept': 'application/json' }
-        });
-        if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
-        const raw = await res.json();
-        const data = unwrapMaybeResponseDto(raw);
-        const url = data.url;
-        if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
-        return { url, meta: data };
-    }
-
-    async function fetchPreviewUrl(attachmentId) {
-        const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
-            method:"GET",
-            credentials:"include",
-            headers:{ 'Accept': 'application/json' }
-        });
-        if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
-        const raw = await res.json();
-        const data = unwrapMaybeResponseDto(raw);
-        const url = data.url;
-        if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
-        return { url, meta: data };
-    }
-
-    async function downAttachment(attachmentId){
-        if (!attachmentId) return;
-        if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
-
-        try{
-            const { url, meta } = await fetchDownloadUrl(attachmentId);
-            const a = document.createElement("a");
-            a.href = url;
-            a.rel = "noopener";
-            a.download = meta.originalName || "";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        }catch(e){
-            console.error(e);
-            alert("다운로드 중 오류: " + (e?.message ?? e));
+        function formatFileSize(bytes) {
+            if (bytes == null || isNaN(bytes)) return "-";
+            if (bytes < 1024) return `${bytes} B`;
+            const kb = bytes / 1024;
+            if (kb < 1024) return `${kb.toFixed(1)} KB`;
+            const mb = kb / 1024;
+            return `${mb.toFixed(1)} MB`;
         }
-    }
 
-    async function viewAttachment(attachmentId){
-        if (!attachmentId) return;
-        try{
-            const { url } = await fetchPreviewUrl(attachmentId);
-            window.open(url, "_blank", "noopener");
-        }catch(e){
-            console.error(e);
-            alert("미리보기 중 오류: " + (e?.message ?? e));
-        }
-    }
-
-    async function deleteNotice(){
-        if (!confirm("정말 삭제하시겠습니까?")) return;
-
-        try{
-            const res = await fetch(`/api/v1/notice/${noticeNo}`, {
-                method:"DELETE",
-                credentials:"include"
+        async function fetchDownloadUrl(attachmentId) {
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
+                method:"GET",
+                credentials:"include",
+                headers:{ 'Accept': 'application/json' }
             });
-
-            if (res.ok) {
-                alert("공지사항이 삭제되었습니다.");
-                window.location.href = "/notice/list";
-            } else {
-                alert("삭제 실패했습니다.");
-            }
-        }catch(e){
-            console.error(e);
-            alert("삭제 중 오류 발생");
+            if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const url = data.url;
+            if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
+            return { url, meta: data };
         }
-    }
 
-    document.addEventListener('DOMContentLoaded', loadPlaceDetail);
-</script>
-</body>
+        async function fetchPreviewUrl(attachmentId) {
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
+                method:"GET",
+                credentials:"include",
+                headers:{ 'Accept': 'application/json' }
+            });
+            if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const url = data.url;
+            if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
+            return { url, meta: data };
+        }
+
+        async function downAttachment(attachmentId){
+            if (!attachmentId) return;
+            if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+
+            try{
+                const { url, meta } = await fetchDownloadUrl(attachmentId);
+                const a = document.createElement("a");
+                a.href = url;
+                a.rel = "noopener";
+                a.download = meta.originalName || "";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }catch(e){
+                console.error(e);
+                alert("다운로드 중 오류: " + (e?.message ?? e));
+            }
+        }
+
+        async function viewAttachment(attachmentId){
+            if (!attachmentId) return;
+            try{
+                const { url } = await fetchPreviewUrl(attachmentId);
+                window.open(url, "_blank", "noopener");
+            }catch(e){
+                console.error(e);
+                alert("미리보기 중 오류: " + (e?.message ?? e));
+            }
+        }
+
+        async function deleteNotice(){
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            try{
+                const res = await fetch(`/api/v1/notice/${noticeNo}`, {
+                    method:"DELETE",
+                    credentials:"include"
+                });
+
+                if (res.ok) {
+                    alert("공지사항이 삭제되었습니다.");
+                    window.location.href = "/notice/list";
+                } else {
+                    alert("삭제 실패했습니다.");
+                }
+            }catch(e){
+                console.error(e);
+                alert("삭제 중 오류 발생");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPlaceDetail);
+    </script>
+</th:block>
+
 </html>
