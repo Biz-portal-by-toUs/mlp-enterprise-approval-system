@@ -1,453 +1,206 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>직급 편성</title>
-    <style>
-        :root{
-            --primary:#2f6fda;
-            --bg:#f3f5f9;
-            --card:#f1f3f6;
-            --text:#111;
-            --muted:#6b7280;
-            --line:#e5e7eb;
-            --white:#fff;
-        }
-        *{box-sizing:border-box}
-        body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
-        .topbar{
-            height:64px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;
-            padding:0 20px; box-shadow:0 10px 25px rgba(0,0,0,.12);
-        }
-        .brand{font-weight:800;font-size:24px;letter-spacing:.3px}
-        .wrap{display:flex;min-height:calc(100vh - 64px)}
-        .sidenav{width:84px;background:#fff;border-right:1px solid var(--line);padding:14px 10px}
-        .sidenav .item{height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:8px 0;color:var(--muted);font-size:12px}
-        .sidenav .item.active{background:#eef4ff;color:var(--primary);font-weight:700}
-        .subnav{width:220px;background:#fbfcfe;border-right:1px solid var(--line);padding:18px}
-        .subnav .title{font-weight:800;margin:10px 0 18px 0}
-        .subnav a{display:block;padding:12px 10px;border-radius:10px;color:#2b5db8;text-decoration:none;margin:6px 0}
-        .subnav a.active{background:#eef4ff;font-weight:700}
-        .content{flex:1;padding:30px 32px}
-        .page-title{font-size:34px;font-weight:900;margin:10px 0 8px}
-        .page-sub{font-size:18px;font-weight:800;margin:0 0 20px;color:#111}
-        .actions{display:flex;justify-content:flex-end;margin:0 0 14px}
-        .btn{
-            border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer;
-            background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(47,111,218,.25);
-        }
 
-        .card{ background:var(--card); border-radius:18px; padding:22px; min-height:520px; }
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .pos-page .page-title{font-size:34px;font-weight:900;margin:10px 0 8px}
+            .pos-page .page-sub{font-size:18px;font-weight:800;margin:0 0 20px;color:#111}
+            .pos-page .actions{display:flex;justify-content:flex-end;margin:0 0 14px}
 
-        /* ✅ 고정 레이아웃 + colgroup 폭 고정 */
-        .table{
-            width:100%;
-            border-collapse:separate;
-            border-spacing:0 14px;
-            table-layout:fixed;
-        }
+            .pos-page .btn{
+                border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;
+                background:var(--primary);color:#fff;box-shadow:0 10px 20px rgba(59,130,246,.22);
+            }
 
-        .thead th{
-            background:#fff;
-            text-align:left;
-            padding:14px 18px;
-            font-size:14px;
-            color:#111;
-            white-space:nowrap;
-        }
-        .thead th:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
-        .thead th:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+            .pos-page .card{
+                background:#f1f3f6; border-radius:18px; padding:22px; min-height:520px;
+            }
 
-        .row td{
-            background:#fff;
-            padding:18px;
-            font-size:14px;
-            color:#111;
-            vertical-align:middle;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-        }
-        .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
-        .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+            .pos-page .table{
+                width:100%; border-collapse:separate; border-spacing:0 14px;
+            }
+            .pos-page .thead{background:#fff;border-radius:14px;}
+            .pos-page .thead th{ text-align:left; padding:14px 18px; font-size:14px; color:#111; }
 
-        .muted{color:var(--muted)}
+            .pos-page .row{background:#fff;border-radius:14px;}
+            .pos-page .row td{ padding:18px; font-size:14px; color:#111; }
+            .pos-page .row td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
+            .pos-page .row td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
 
-        .pill-btn{
-            padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;font-size:13px;
-            white-space:nowrap;
-        }
-        .pill-edit{background:#eaf2ff;color:#2b5db8}
-        .pill-del{background:#fdecec;color:#c62828}
+            .pos-page .pill-btn{
+                padding:8px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:900;font-size:13px;
+            }
+            .pos-page .pill-edit{background:#eaf2ff;color:#2b5db8}
+            .pos-page .pill-del{background:#fdecec;color:#c62828;margin-left:10px}
 
-        .empty{ padding:40px 10px;text-align:center;color:var(--muted);font-weight:700 }
+            .pos-page .empty{
+                padding:40px 10px;text-align:center;color:var(--muted);font-weight:800
+            }
 
-        .center{text-align:center}
-        .manage-wrap{
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            gap:10px;
-        }
-
-        /* ✅ Toast */
-        .toast{
-            position:fixed;
-            left:50%;
-            bottom:22px;
-            transform:translateX(-50%);
-            background:#111;
-            color:#fff;
-            padding:12px 14px;
-            border-radius:12px;
-            font-weight:800;
-            font-size:14px;
-            box-shadow:0 14px 28px rgba(0,0,0,.18);
-            opacity:0;
-            pointer-events:none;
-            transition:opacity .18s ease, transform .18s ease;
-            z-index:9999;
-        }
-        .toast.show{
-            opacity:1;
-            transform:translateX(-50%) translateY(-2px);
-        }
-        .toast.ok{ background:#0f6b2f; }
-        .toast.err{ background:#c62828; }
-
-        /* ✅ Confirm Modal */
-        .modal-backdrop{
-            position:fixed; inset:0;
-            background:rgba(17,24,39,.45);
-            display:none;
-            align-items:center;
-            justify-content:center;
-            z-index:9998;
-            padding:18px;
-        }
-        .modal{
-            width:min(520px, 100%);
-            background:#fff;
-            border-radius:18px;
-            box-shadow:0 18px 45px rgba(0,0,0,.22);
-            border:1px solid var(--line);
-            overflow:hidden;
-        }
-        .modal-head{
-            padding:18px 20px;
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            background:#fff;
-        }
-        .modal-title{
-            font-size:16px;
-            font-weight:900;
-        }
-        .modal-body{
-            padding:0 20px 18px 20px;
-            color:#111;
-        }
-        .modal-warning{
-            margin-top:10px;
-            padding:12px 14px;
-            border-radius:12px;
-            background:#fff2f2;
-            color:#b91c1c;
-            font-weight:900;
-            font-size:13px;
-            line-height:1.35;
-            border:1px solid #ffd1d1;
-        }
-        .modal-actions{
-            padding:16px 20px;
-            display:flex;
-            justify-content:flex-end;
-            gap:10px;
-            background:#fbfbfd;
-            border-top:1px solid var(--line);
-        }
-        .btn2{
-            border:0;border-radius:12px;padding:12px 16px;font-weight:900;cursor:pointer;
-        }
-        .btn2.ghost{
-            background:#eef4ff;color:#2b5db8;border:1px solid #d9e6ff;
-        }
-        .btn2.danger{
-            background:#c62828;color:#fff;
-        }
-        .xbtn{
-            border:0;background:transparent;cursor:pointer;
-            font-size:20px;line-height:1;color:#6b7280;
-            padding:6px 10px;border-radius:10px;
-        }
-        .xbtn:hover{background:#f3f4f6}
-    </style>
+            .pos-page .toast{
+                display:none;
+                margin-top:14px;
+                padding:12px 14px;
+                border-radius:12px;
+                background:#fff;
+                border:1px solid var(--line);
+                font-weight:900;
+            }
+            .pos-page .toast.ok{color:#1b7f3a;border-color:#bfe7c9;background:#f3fff6}
+            .pos-page .toast.err{color:#b42318;border-color:#ffd0cc;background:#fff5f4}
+        </style>
+    </th:block>
 </head>
+
 <body>
-<header class="topbar">
-    <div class="brand">Bizportal</div>
-    <div class="muted" style="color:#eaf2ff;font-weight:700;">직급 편성</div>
-</header>
+<div layout:fragment="content" class="pos-page">
+    <div class="page-with-subbar">
+        <!-- ✅ 관리자 사이드바(fragment) -->
+        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('pos')}"></div>
 
-<div class="wrap">
-    <aside class="sidenav">
-        <div class="item">결재</div>
-        <div class="item">회의</div>
-        <div class="item">메일</div>
-        <div class="item">문서함</div>
-        <div class="item">공유함</div>
-        <div class="item">캘린더</div>
-        <div class="item">게시판</div>
-        <div class="item">예약</div>
-        <div class="item">근태</div>
-        <div class="item">조직도</div>
-        <div class="item active">관리자</div>
-    </aside>
+        <!-- ✅ 페이지 본문 -->
+        <main style="padding: 0 26px;">
+            <div class="page-title">직급 편성</div>
+            <div class="page-sub">직급 조회</div>
 
-    <aside class="subnav">
-        <div class="title">직급 편성</div>
-        <a href="/admin/departments/list">부서 편성</a>
-        <a class="active" href="/admin/positions/list">직급 편성</a>
-        <a href="/admin/employees/list">사원 관리</a>
-        <a href="/admin/rules">사내 규정 관리</a>
-    </aside>
-
-    <main class="content">
-        <div class="page-title">직급 편성</div>
-        <div class="page-sub">직급 조회</div>
-
-        <div class="actions">
-            <button class="btn" type="button" onclick="location.href='/admin/positions/create'">직급 등록</button>
-        </div>
-
-        <section class="card">
-            <table class="table">
-                <colgroup>
-                    <col style="width:10%;">  <!-- No -->
-                    <col style="width:40%;">  <!-- 직급명 -->
-                    <col style="width:12%;">  <!-- 순서 -->
-                    <col style="width:13%;">  <!-- 사원 수 -->
-                    <col style="width:25%;">  <!-- 관리 -->
-                </colgroup>
-
-                <thead>
-                <tr class="thead">
-                    <th>No</th>
-                    <th>직급명</th>
-                    <th class="center">순서</th>
-                    <th class="center">사원 수</th>
-                    <th class="center">관리</th>
-                </tr>
-                </thead>
-
-                <tbody id="posTbody"></tbody>
-            </table>
-
-            <div id="emptyBox" class="empty" style="display:none;">등록된 직급이 없습니다.</div>
-        </section>
-    </main>
-</div>
-
-<!-- ✅ Confirm Modal -->
-<div id="confirmBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal">
-        <div class="modal-head">
-            <div class="modal-title">직급 삭제</div>
-            <button class="xbtn" type="button" onclick="closeConfirm()">×</button>
-        </div>
-        <div class="modal-body">
-            <div id="confirmText" style="font-weight:900; font-size:14px; line-height:1.4;"></div>
-            <div class="modal-warning">
-                ⚠️ 삭제 후에는 <b>복구가 불가능</b>합니다.<br/>
-                해당 직급을 사용하는 사원/데이터가 있다면 삭제가 실패할 수 있습니다.
+            <div class="actions">
+                <button class="btn" type="button"
+                        onclick="location.href='/admin/positions/create'">직급 등록</button>
             </div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn2 ghost" type="button" onclick="closeConfirm()">취소</button>
-            <button class="btn2 danger" type="button" onclick="confirmDelete()">삭제하기</button>
-        </div>
+
+            <section class="card">
+                <table class="table">
+                    <thead class="thead">
+                    <tr>
+                        <th style="width:20%;">번호</th>
+                        <th style="width:45%;">직급명</th>
+                        <th style="width:15%;">순서</th>
+                        <th style="width:20%;">관리</th>
+                    </tr>
+                    </thead>
+                    <tbody id="posTbody"></tbody>
+                </table>
+
+                <div id="emptyBox" class="empty" style="display:none;">등록된 직급이 없습니다.</div>
+                <div id="toast" class="toast"></div>
+            </section>
+        </main>
     </div>
 </div>
 
-<!-- ✅ Toast -->
-<div id="toast" class="toast" aria-live="polite"></div>
-
-<script>
-    // ===== Toast =====
-    let toastTimer = null;
-    function showToast(type, text) {
-        const el = document.getElementById("toast");
-        el.className = "toast " + (type === "ok" ? "ok" : "err");
-        el.textContent = text;
-        el.classList.add("show");
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
-    }
-
-    // ===== Confirm Modal =====
-    let pendingDelete = null; // { posNo, posName }
-    function openConfirm(posNo, posName) {
-        pendingDelete = { posNo, posName };
-        document.getElementById("confirmText").textContent =
-            `정말로 "${posName}" 직급을 삭제할까요?`;
-        const bd = document.getElementById("confirmBackdrop");
-        bd.style.display = "flex";
-        bd.setAttribute("aria-hidden", "false");
-    }
-    function closeConfirm() {
-        pendingDelete = null;
-        const bd = document.getElementById("confirmBackdrop");
-        bd.style.display = "none";
-        bd.setAttribute("aria-hidden", "true");
-    }
-    // 바깥 클릭 시 닫기
-    document.getElementById("confirmBackdrop").addEventListener("click", (e) => {
-        if (e.target.id === "confirmBackdrop") closeConfirm();
-    });
-
-    async function safeJson(res) {
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) return {};
-        try { return await res.json(); } catch { return {}; }
-    }
-
-    async function loadPositions() {
-        const tbody = document.getElementById("posTbody");
-        const emptyBox = document.getElementById("emptyBox");
-
-        tbody.innerHTML = "";
-        emptyBox.style.display = "none";
-
-        const res = await fetch("/api/v1/admin/positions", {
-            method: "GET",
-            headers: { "Accept": "application/json" },
-            credentials: "include" // ✅ httpOnly 쿠키(accessToken) 자동 전송
-        });
-
-        if (res.status === 401) {
-            emptyBox.style.display = "block";
-            emptyBox.textContent = "로그인이 필요합니다. 다시 로그인 해주세요.";
-            return;
-        }
-        if (res.status === 403) {
-            emptyBox.style.display = "block";
-            emptyBox.textContent = "권한이 없습니다. (COM_ADMIN만 가능)";
-            return;
-        }
-        if (!res.ok) {
-            emptyBox.style.display = "block";
-            emptyBox.textContent = "직급 조회 중 오류가 발생했습니다. (" + res.status + ")";
-            return;
+<th:block layout:fragment="pageScripts">
+    <script>
+        function showToast(msg, type) {
+            const toast = document.getElementById("toast");
+            toast.className = "toast " + (type || "");
+            toast.textContent = msg;
+            toast.style.display = "block";
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => toast.style.display = "none", 2500);
         }
 
-        const json = await safeJson(res);
-        const list = json.data || [];
-
-        if (!list.length) {
-            emptyBox.style.display = "block";
-            emptyBox.textContent = "등록된 직급이 없습니다.";
-            return;
+        async function safeJson(res) {
+            const ct = res.headers.get("content-type") || "";
+            if (!ct.includes("application/json")) return {};
+            try { return await res.json(); } catch { return {}; }
         }
 
-        list.forEach((p, idx) => {
-            const tr = document.createElement("tr");
-            tr.className = "row";
-            const displayNo = idx + 1;
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&","&amp;")
+                .replaceAll("<","&lt;")
+                .replaceAll(">","&gt;")
+                .replaceAll("\"","&quot;")
+                .replaceAll("'","&#039;");
+        }
+        function escapeJs(str) { return String(str).replaceAll("\\","\\\\").replaceAll("'","\\'"); }
 
-            const posName = escapeHtml(p.posName ?? "");
+        function onEdit(posNo){ location.href = `/admin/positions/${posNo}/edit`; }
 
-            // 숫자 0도 표시되게 (null/undefined만 "-" 처리)
-            const posOrderVal = (p.posOrder === null || p.posOrder === undefined) ? "-" : String(p.posOrder);
-            const posOrder = escapeHtml(posOrderVal);
+        async function onDelete(posNo, posName) {
+            const ok = confirm(`정말로 '${posName}' 직급을 삭제할까요?\n(삭제 후 복구 불가)`);
+            if (!ok) return;
 
-            const empCount = Number(p.empCount ?? 0).toLocaleString();
-            const posNo = Number(p.posNo);
+            try {
+                const res = await fetch(`/api/v1/admin/positions/${posNo}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                    headers: { "Accept": "application/json" }
+                });
 
-            tr.innerHTML = `
-              <td>${displayNo}</td>
-              <td>${posName}</td>
-              <td class="center">${posOrder}</td>
-              <td class="center">${empCount}</td>
-              <td class="center">
-                <div class="manage-wrap">
-                  <button class="pill-btn pill-edit" type="button" onclick="onEdit(${posNo})">수정</button>
-                  <button class="pill-btn pill-del" type="button" onclick="onDeleteClick(${posNo}, '${posName.replaceAll("'", "\\'")}')">삭제</button>
-                </div>
-              </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
+                if (res.status === 401) return showToast("로그인이 필요합니다. 다시 로그인 해주세요.", "err");
+                if (res.status === 403) return showToast("권한이 없습니다. (COM_ADMIN만 가능)", "err");
 
-    function onEdit(posNo) {
-        location.href = "/admin/positions/" + posNo + "/edit";
-    }
+                if (!res.ok) {
+                    let msg = `삭제 실패 (${res.status})`;
+                    const json = await safeJson(res);
+                    if (json && (json.message || json.error || json.msg)) msg = json.message || json.error || json.msg;
+                    return showToast(msg, "err");
+                }
 
-    // ✅ 삭제 버튼 클릭 -> 모달 오픈
-    function onDeleteClick(posNo, posName) {
-        openConfirm(posNo, posName);
-    }
+                showToast("삭제되었습니다.", "ok");
+                await loadPositions();
+            } catch (e) {
+                console.error(e);
+                showToast("삭제 중 예외가 발생했습니다.", "err");
+            }
+        }
 
-    // ✅ 모달에서 "삭제하기" 눌렀을 때 실제 DELETE 호출
-    async function confirmDelete() {
-        if (!pendingDelete) return;
+        async function loadPositions() {
+            const tbody = document.getElementById("posTbody");
+            const emptyBox = document.getElementById("emptyBox");
+            tbody.innerHTML = "";
+            emptyBox.style.display = "none";
 
-        const { posNo, posName } = pendingDelete;
-
-        try {
-            const res = await fetch(`/api/v1/admin/positions/${posNo}`, {
-                method: "DELETE",
-                headers: { "Accept": "application/json" },
-                credentials: "include" // ✅ httpOnly 쿠키(accessToken) 자동 전송
+            const res = await fetch("/api/v1/positions", {
+                method: "GET",
+                credentials: "include",
+                headers: { "Accept": "application/json" }
             });
 
-            if (res.status === 401) {
-                closeConfirm();
-                showToast("err", "로그인이 필요합니다. 다시 로그인 해주세요.");
-                return;
-            }
-            if (res.status === 403) {
-                closeConfirm();
-                showToast("err", "권한이 없습니다. (COM_ADMIN만 가능)");
-                return;
-            }
+            if (res.status === 401) { emptyBox.style.display="block"; emptyBox.textContent="로그인이 필요합니다. 다시 로그인 해주세요."; return; }
+            if (res.status === 403) { emptyBox.style.display="block"; emptyBox.textContent="권한이 없습니다. (COM_ADMIN만 가능)"; return; }
+            if (!res.ok) { emptyBox.style.display="block"; emptyBox.textContent="직급 조회 중 오류가 발생했습니다. ("+res.status+")"; return; }
 
-            if (!res.ok) {
-                let msg = `직급 삭제 중 오류가 발생했습니다. (${res.status})`;
-                const json = await safeJson(res);
-                if (json && (json.message || json.msg)) msg = json.message || json.msg;
-                closeConfirm();
-                showToast("err", msg);
-                return;
-            }
+            const json = await safeJson(res);
+            const list = json.data || [];
+            if (!list.length) { emptyBox.style.display="block"; emptyBox.textContent="등록된 직급이 없습니다."; return; }
 
-            closeConfirm();
-            showToast("ok", `"${posName}" 직급이 삭제되었습니다.`);
-            await loadPositions();
-        } catch (err) {
-            console.error(err);
-            closeConfirm();
-            showToast("err", "직급 삭제 중 예외가 발생했습니다.");
+            list.forEach(p => {
+                const posNo = p.posNo ?? p.id ?? "";
+                const posName = p.posName ?? "";
+                const posOrder = p.posOrder ?? p.order ?? "";
+
+                const tr = document.createElement("tr");
+                tr.className = "row";
+                tr.innerHTML = `
+                    <td>${escapeHtml(posNo)}</td>
+                    <td>${escapeHtml(posName)}</td>
+                    <td>${escapeHtml(posOrder)}</td>
+                    <td>
+                      <button class="pill-btn pill-edit" type="button" onclick="onEdit(${posNo})">수정</button>
+                      <button class="pill-btn pill-del" type="button" onclick="onDelete(${posNo}, '${escapeJs(posName)}')">삭제</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
-    }
 
-    function escapeHtml(str) {
-        return String(str)
-            .replaceAll("&","&amp;")
-            .replaceAll("<","&lt;")
-            .replaceAll(">","&gt;")
-            .replaceAll("\"","&quot;")
-            .replaceAll("'","&#039;");
-    }
-
-    loadPositions().catch(err => {
-        console.error(err);
-        const emptyBox = document.getElementById("emptyBox");
-        emptyBox.style.display = "block";
-        emptyBox.textContent = "직급 조회 중 예외가 발생했습니다.";
-    });
-</script>
+        window.addEventListener("DOMContentLoaded", () => {
+            loadPositions().catch(err => {
+                console.error(err);
+                const emptyBox = document.getElementById("emptyBox");
+                emptyBox.style.display = "block";
+                emptyBox.textContent = "직급 조회 중 예외가 발생했습니다.";
+            });
+        });
+    </script>
+</th:block>
 </body>
 </html>

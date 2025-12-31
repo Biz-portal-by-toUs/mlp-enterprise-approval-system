@@ -25,7 +25,10 @@ public class BoardResAllDto {
     private String title;
     private String contents;
     private Character catCode;
+    private String catDescript;
     private String empId;
+    private String empName;
+    private String depName;
     private Integer rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

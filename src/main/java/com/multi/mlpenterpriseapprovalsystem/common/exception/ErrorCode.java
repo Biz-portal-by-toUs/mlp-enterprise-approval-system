@@ -22,6 +22,9 @@ public enum ErrorCode {
     INVALID_BRN(HttpStatus.BAD_REQUEST, "INVALID_BRN", "유효하지 않은 사업자등록번호입니다"),
     BRN_DUPLICATE(HttpStatus.CONFLICT, "BRN_DUPLICATE", "이미 존재하는 사업자등록번호입니다"),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다"),
+    ALREADY_USE_PASSWORD(HttpStatus.BAD_REQUEST, "ALREADY_USE_PASSWORD", "이미 사용중인 비밀번호입니다"),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "입력정보가 일치하지 않습니다"),
+    NOT_BLANK(HttpStatus.BAD_REQUEST, "NOT_BLANK", "입력이 필수인 칸 입니다"),
 
     //요금제 관련
     SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND", "요금제를 찾을 수 없습니다"),
@@ -56,6 +59,7 @@ public enum ErrorCode {
 
     // 회사 관련
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUNT", "회사를 찾을 수 없습니다"),
+    ONLY_COMPANY(HttpStatus.BAD_REQUEST,"ONLY_COMPANY","회사 계정만 접근 가능합니다"),
 
     // 예약 관련
     MEETING_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "MEETING_ROOM_NOT_FOUND", "회의실을 찾을 수 없습니다"),
@@ -114,6 +118,7 @@ public enum ErrorCode {
     // 사원 관련 (기존 USER_NOT_FOUND와 구분하거나 통합하여 사용)
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
     EMPLOYEE_ALREADY_RETIRED(HttpStatus.BAD_REQUEST,"EMPLOYEE_ALREADY_RETIRED","이미 퇴사 처리된 사원입니다"),
+    ONLY_EMPLOYEE(HttpStatus.BAD_REQUEST,"ONLY_EMPLOYEE","사원 계정만 접근 가능합니다"),
 
 
     // 웹소켓 관련
@@ -130,6 +135,9 @@ public enum ErrorCode {
     MEETING_DEPT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_DEPT_REQUIRED","부서는 한개 이상 선택해야 합니다"),
     MEETING_PARTICIPANT_REQUIRED(HttpStatus.NO_CONTENT,"MEETING_PARTICIPANT_REQUIRED","참석자는 한명 이상 선택해야합니다"),
     INVALID_REQUEST(HttpStatus.BAD_REQUEST,"INVALID_REQUEST","유효하지 않는 요청입니다"),
+
+    // 챗봇 관련
+    PROV_DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND,"PROV_DOCUMENT_NOT_FOUND","없거나 삭제된 사내 규정 문서입니다"),
 
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),

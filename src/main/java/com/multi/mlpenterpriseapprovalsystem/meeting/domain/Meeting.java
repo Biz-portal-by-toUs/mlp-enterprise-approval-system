@@ -33,7 +33,7 @@ public class Meeting extends BaseEntity {
     @Column(name = "meet_no")
     private Long meetNo;
 
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", nullable = false, length = 30)
     private String title;
 
     @Lob
@@ -72,6 +72,9 @@ public class Meeting extends BaseEntity {
 
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MeetingDept> meetingDepts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MeetingEmp> meetingEmps = new ArrayList<>();
 
     public static Meeting create(@NotBlank String title,
                                  @NotNull LocalDateTime startedAt,

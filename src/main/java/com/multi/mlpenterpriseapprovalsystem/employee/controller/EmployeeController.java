@@ -61,7 +61,6 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK, "내 정보 조회 성공", myInfo));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
     @GetMapping("/admin/employees")
     public ResponseEntity<ResponseDto<List<ResEmployeeListDto>>> getEmployees(
             @AuthenticationPrincipal CustomUser user,

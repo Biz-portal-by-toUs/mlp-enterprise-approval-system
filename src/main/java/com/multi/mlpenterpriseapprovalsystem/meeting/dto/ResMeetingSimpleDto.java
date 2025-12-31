@@ -19,6 +19,8 @@ public class ResMeetingSimpleDto {
     private String title;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
+    private String aiStatus;
     private String writerEmpId;
     private String writerName;
+    private int participantCount;
 }

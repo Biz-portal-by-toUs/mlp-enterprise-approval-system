@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
 
@@ -110,7 +110,7 @@ public class EmployeeService {
     }
 
     public void retireEmployee(String comId, Long empNo) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate now = LocalDate.now();
 
         int updated = employeeRepository.retireEmployee(comId, empNo, now);
         if (updated == 1) return; // 정상적으로 퇴사 처리됨

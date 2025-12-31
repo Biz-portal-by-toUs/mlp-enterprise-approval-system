@@ -37,13 +37,13 @@
         /* 전체 레이아웃 */
         .notice-container{
             max-width: 980px;
-            margin: 64px auto;
+            margin: 24px auto 40px; /* 상단 줄이고 하단은 유지 */
             padding: 0;
         }
 
         /* 상단 헤더 카드 */
         .notice-container > h2{
-            margin: 0 0 14px;
+            margin: 0 0 6px;
             font-size: 1.4rem;
             font-weight: 900;
             letter-spacing: -0.3px;
@@ -58,7 +58,7 @@
         .top-bar{
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
         }
 
         /* 공통 버튼(상세조회 톤과 동일) */
@@ -99,7 +99,7 @@
             flex-wrap: wrap;
             gap: 10px;
             align-items: center;
-            margin-bottom: 14px;
+            margin-bottom: 8px;
         }
 
         .search-bar select,
@@ -276,6 +276,61 @@
             padding: 20px 14px;
         }
 
+        /* ===== 공지사항 테이블 컬럼 비율 조정 ===== */
+
+        /* 번호 */
+        .notice-table th:nth-child(1),
+        .notice-table td:nth-child(1){
+            width: 70px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* 제목 (최대 확장) */
+        .notice-table th:nth-child(2),
+        .notice-table td:nth-child(2){
+            width: 55%;          /* ⭐ 핵심 */
+        }
+
+        /* 부서 */
+        .notice-table th:nth-child(3),
+        .notice-table td:nth-child(3){
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        /* 작성자 */
+        .notice-table th:nth-child(4),
+        .notice-table td:nth-child(4){
+            width: 90px;
+            white-space: nowrap;
+        }
+
+        /* 등록일 */
+        .notice-table th:nth-child(5),
+        .notice-table td:nth-child(5){
+            width: 110px;
+            white-space: nowrap;
+        }
+
+        /* 조회건수 */
+        .notice-table th:nth-child(6),
+        .notice-table td:nth-child(6){
+            width: 90px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .notice-table td.title a{
+            display: inline-block;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+
     </style>
 
 </head>
@@ -284,18 +339,19 @@
 <div class="container notice-container">
     <h2>공지사항 목록</h2>
     <div class="top-bar">
-        <a href="/notice/form" class="btn btn-create">공지내용등록</a>
+        <a href="/notice/form" class="btn btn-create">공지사항작성</a>
     </div>
     <!-- 검색창 -->
     <div class="search-bar">
         <select id="searchType">
             <option value="">전체</option>
             <option value="title">제목</option>
-            <option value="writer">작성자</option>
+            <option value="empName">작성자</option>
+            <option value="depName">부서</option>
             <option value="date">작성일</option>
         </select>
 
-        <input id="keyword" type="text" placeholder="제목/작성자 검색어" />
+        <input id="keyword" type="text" placeholder="키워드를 입력하세요" />
 
         <input id="fromDate" type="date" class="hidden" />
         <span id="dateTilde" class="hidden">~</span>
@@ -313,6 +369,7 @@
         <tr>
             <th>번호</th>
             <th>제목</th>
+            <th>부서</th>
             <th>작성자</th>
             <th>등록일</th>
             <th>조회건수</th>
@@ -358,11 +415,12 @@
     function updateHint() {
         const hint = document.getElementById("searchHint");
         if (!currentQuery.type) {
-            hint.textContent = "전체 공지사항을 조회합니다.";
+            hint.textContent = "전체(제목+내용)에서 키워드로 검색합니다.";
             return;
         }
         if (currentQuery.type === "title") hint.textContent = "제목에 포함된 키워드로 검색합니다.";
-        if (currentQuery.type === "writer") hint.textContent = "작성자(empId)에 포함된 키워드로 검색합니다.";
+        if (currentQuery.type === "empName") hint.textContent = "작성자(사원명)에 포함된 키워드로 검색합니다.";
+        if (currentQuery.type === "depName") hint.textContent = "부서명에 포함된 키워드로 검색합니다.";
         if (currentQuery.type === "date") hint.textContent = "작성일 범위(from~to)로 검색합니다.";
     }
 
@@ -373,13 +431,12 @@
 
         if (currentQuery.type) params.set("type", currentQuery.type);
 
-        if (currentQuery.type === "title" || currentQuery.type === "writer") {
-            if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
-        }
-
         if (currentQuery.type === "date") {
             if (currentQuery.from) params.set("from", currentQuery.from);
             if (currentQuery.to) params.set("to", currentQuery.to);
+        } else {
+            // ✅ 핵심: date가 아니면(전체/제목/작성자/부서) keyword를 항상 전송
+            if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
         }
 
         return `${API_URL}?${params.toString()}`;
@@ -418,15 +475,15 @@
 
         try {
             const url = buildUrl(page);
-            //const response = await fetch(url);
-            const token = localStorage.getItem("accessToken");
+
             const response = await fetch(url ,
-                { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+                { credentials: "include",
+                   headers: { 'Content-Type': 'application/json' } });
             const result = await response.json();
             console.log(result);
             // ResponseDto 형식: { status, message, data }
             if (!result || result.status !== 200 || !result.data) {
-                tbody.innerHTML = `<tr><td colspan="4">데이터 오류</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6">데이터 오류</td></tr>`;
                 document.getElementById("pagination").innerHTML = "";
                 return;
             }
@@ -435,31 +492,35 @@
             const notices = pageData.content || [];
 
             if (notices.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4">공지사항이 없습니다.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6">공지사항이 없습니다.</td></tr>`;
                 renderPagination(pageData);
                 return;
             }
 
-            notices.forEach((notice) => {
-                const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
+            const startNo = page * PAGE_SIZE;
+
+            notices.forEach((notice, index) => {
+                const no = startNo + index + 1;
+                //const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-          <td>${notice.noticeNo}</td>
-          <td class="title">
-            <a href="/notice/${notice.noticeNo}">${notice.title}</a>
-          </td>
-          <td>${notice.empId ?? ""}</td>
-          <td>${createdAt}</td>
-          <td>${notice.rating}</td>
-        `;
+                              <td>${no}</td>
+                              <td class="title">
+                                <a href="/notice/${notice.noticeNo}">${notice.title}</a>
+                              </td>
+                              <td>${notice.depName ?? ""}</td>
+                              <td>${notice.empName ?? ""}</td>
+                              <td>${notice.createdAt?.substring(0, 10) ?? "-"}</td>
+                              <td>${notice.rating}</td>
+                            `;
                 tbody.appendChild(tr);
             });
 
             renderPagination(pageData);
 
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="4">서버 오류</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6">서버 오류</td></tr>`;
             document.getElementById("pagination").innerHTML = "";
         }
     }

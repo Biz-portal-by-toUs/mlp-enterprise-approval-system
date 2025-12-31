@@ -23,5 +23,7 @@ public class CommentDto {
     private Long boardNo;
     private String contents;
     private String empId;
+    private String empName;
+    private String depName;
     private LocalDateTime createdAt;
 }

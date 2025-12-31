@@ -6,176 +6,233 @@
     <title>Bizportal - Employee Login</title>
     <style>
         :root{
-            --bg:#f3f3f3;
-            --text:#111;
-            --border:#d7d7d7;
-            --primary:#2f66d7;
-            --input-bg:#fff;
+            --blue:#356fda;          /* 배경 블루 */
+            --blue2:#2f66d7;         /* 포인트 블루 */
+            --text:#ffffff;
+            --muted:rgba(255,255,255,.75);
+            --line:rgba(255,255,255,.35);
+            --shadow:0 14px 30px rgba(0,0,0,.18);
+            --danger:#ffd1d1;
+            --dangerLine:rgba(255,255,255,.35);
         }
         *{box-sizing:border-box}
         body{
             margin:0;
             font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
             "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background:var(--bg);
-            color:var(--text);
+            background:var(--blue); /* ✅ 바깥까지 파랑 */
+            color:#111;
         }
+
+        /* ✅ 페이지 테두리/마진 제거해서 파랑으로 꽉 채움 */
         .page{
             min-height:100vh;
-            border:2px solid #222;
-            margin:12px;
-            background:var(--bg);
+            background:var(--blue);
+            position:relative;
+            overflow:hidden;
+            margin:0;
+            border:0;
         }
-        header{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            padding:26px 28px;
-            gap:12px;
-            flex-wrap:wrap;
-        }
-        .brand{
-            font-family: Georgia, "Times New Roman", Times, serif;
-            font-weight:700;
-            font-size:40px;
-            letter-spacing:-0.5px;
-        }
-        .nav-right{ display:flex; gap:14px; align-items:center; }
-        .btn{
-            appearance:none;
-            border:1px solid #cfcfcf;
-            background:#f7f7f7;
-            padding:10px 18px;
-            border-radius:10px;
-            font-weight:700;
-            cursor:pointer;
-            color:#222;
-        }
+
+        /* ✅ 기존 header는 숨김 */
+        header{ display:none; }
+
         main{
-            min-height:calc(100vh - 110px);
+            min-height:100vh; /* ✅ 꽉 채우기 */
             display:flex;
             align-items:center;
             justify-content:center;
             padding:24px;
         }
+
         .card{
-            width:min(620px, 92vw);
+            width:min(520px, 92vw);
             text-align:center;
+            color:var(--text);
         }
-        .title{
-            font-size:52px;
+
+        .logoRow{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:14px;
+            margin-bottom:22px;
+        }
+        .logoMark{
+            font-family: Georgia, "Times New Roman", Times, serif;
             font-weight:900;
-            margin:0 0 18px;
-            letter-spacing:-0.5px;
+            font-size:56px;
+            line-height:1;
+            transform:skewX(-12deg);
+            letter-spacing:-2px;
         }
+        .brandText{
+            font-weight:900;
+            font-size:44px;
+            letter-spacing:-1px;
+        }
+
         .form{
-            width:min(560px, 92vw);
+            width:min(380px, 92vw);
             margin:0 auto;
             display:flex;
             flex-direction:column;
-            gap:16px;
-        }
-        .field{ text-align:left; }
-        .label{
-            font-size:13px;
-            font-weight:800;
-            color:#777;
-            margin:0 0 6px 10px;
-            letter-spacing:0.6px;
+            gap:14px;
         }
         .input-wrap{
-            background:var(--input-bg);
-            border:1px solid var(--border);
-            border-radius:6px;
-            padding:14px;
             display:flex;
             align-items:center;
+            gap:10px;
+            height:44px;
+            padding:0 12px;
+            border:1px solid var(--line);
+            border-radius:3px;
+            background:rgba(255,255,255,.06);
+            backdrop-filter: blur(2px);
+        }
+        .icon{
+            width:18px;height:18px;
+            opacity:.85;
+            flex:0 0 auto;
+            color:#fff;
         }
         input{
             border:0;
             outline:none;
             width:100%;
-            font-size:18px;
+            font-size:13px;
             background:transparent;
+            color:var(--text);
         }
-        .login-btn{
-            margin-top:6px;
-            border:0;
-            background:var(--primary);
-            color:#fff;
-            font-size:18px;
+        input::placeholder{
+            color:rgba(255,255,255,.78);
+            letter-spacing:.5px;
+            text-transform:uppercase;
+            font-size:11px;
             font-weight:800;
-            padding:16px 18px;
-            border-radius:4px;
-            cursor:pointer;
         }
+
+        /* ✅ 눈 버튼 */
+        .eye-btn{
+            width:38px;
+            height:38px;
+            border:0;
+            background:transparent;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            opacity:.85;
+            flex:0 0 auto;
+            color:#fff;
+        }
+        .eye-btn:hover{opacity:1}
+        .eye-btn svg{width:18px;height:18px}
+
+        .login-btn{
+            margin-top:10px;
+            height:44px;
+            border:0;
+            background:#fff;
+            color:var(--blue2);
+            font-size:12px;
+            font-weight:900;
+            letter-spacing:.8px;
+            border-radius:3px;
+            cursor:pointer;
+            box-shadow:var(--shadow);
+        }
+
+        .hint{
+            margin-top:10px;
+            font-size:13px;
+            color:var(--muted);
+        }
+        .hint a{
+            color:#fff;
+            text-decoration:none;
+            border-bottom:1px solid rgba(255,255,255,.55);
+            padding-bottom:1px;
+        }
+
         .error{
             display:none;
-            color:#e74c3c;
-            border:1px solid #f5c6cb;
-            background-color:#f8d7da;
-            padding:10px;
-            margin:0 auto 14px;
+            color:#111;
+            border:1px solid var(--dangerLine);
+            background:rgba(255,255,255,.18);
+            padding:10px 12px;
+            margin:0 auto 12px;
             border-radius:6px;
-            width:min(560px, 92vw);
+            width:min(380px, 92vw);
             text-align:left;
-            font-weight:700;
+            font-weight:900;
         }
-        .hint{
-            margin-top:14px;
-            font-size:14px;
-            color:#555;
-        }
-        .hint a{color:#555;text-decoration:underline}
+
         @media (max-width:768px){
-            .brand{font-size:32px}
-            .title{font-size:40px}
+            .logoMark{font-size:48px}
+            .brandText{font-size:38px}
         }
     </style>
 </head>
 
 <body>
 <div class="page">
-    <header>
-        <div class="brand">Bizportal</div>
-        <div class="nav-right">
-            <button class="btn" type="button" th:onclick="|location.href='@{/}'|">메인</button>
-            <button class="btn" type="button" th:onclick="|location.href='@{/auth/companies/login}'|">회사 로그인</button>
-        </div>
-    </header>
-
     <main>
         <section class="card">
-            <h1 class="title">Employee Login</h1>
+            <div class="logoRow" aria-label="Bizportal">
+                <div class="logoMark">B</div>
+                <div class="brandText">Bizportal</div>
+            </div>
 
             <div id="serverError" class="error"></div>
 
             <form id="employee-login-form" class="form">
-                <div class="field">
-                    <div class="label">EMPId</div>
-                    <div class="input-wrap">
-                        <input id="empId" type="text" placeholder="empId" autocomplete="username" required />
-                    </div>
+                <div class="input-wrap">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21a8 8 0 0 0-16 0"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <input id="empId" type="text" placeholder="USERNAME" autocomplete="username" required />
                 </div>
 
-                <div class="field">
-                    <div class="label">PASSWORD</div>
-                    <div class="input-wrap">
-                        <input id="password" type="password" placeholder="••••" autocomplete="current-password" required />
-                    </div>
+                <div class="input-wrap">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="11" width="16" height="10" rx="2"></rect>
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+                    </svg>
+
+                    <input id="password" type="password" placeholder="PASSWORD" autocomplete="current-password" required />
+
+                    <!-- ✅ 눈 버튼 추가 -->
+                    <button class="eye-btn" type="button" aria-label="toggle password" data-target="password">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
                 </div>
 
-                <button class="login-btn" type="submit">Login</button>
+                <button class="login-btn" type="submit">LOGIN</button>
             </form>
 
             <div class="hint">
-                회사 계정이신가요? <a th:href="@{/auth/companies/login}">회사 로그인으로 이동</a>
+                <a th:href="@{/auth/employee/verify}">비밀번호 변경하기</a>
             </div>
         </section>
     </main>
 </div>
 
 <script>
+    // ✅ 비밀번호 보기/숨기기
+    document.querySelectorAll('.eye-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-target');
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.type = (input.type === 'password') ? 'text' : 'password';
+        });
+    });
+
     const form = document.getElementById('employee-login-form');
     const serverError = document.getElementById('serverError');
 
@@ -183,6 +240,13 @@
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('application/json')) return {};
         try { return await res.json(); } catch { return {}; }
+    }
+
+    function getMustChangePassword(result){
+        // ✅ ResponseDto 형태(data 안에 있을 수도, 루트에 있을 수도 있어서 둘 다 대응)
+        // 예) { message, data: { mustChangePassword: true, ... } }
+        // 예) { mustChangePassword: true, ... }
+        return Boolean(result?.data?.mustChangePassword ?? result?.mustChangePassword);
     }
 
     form.addEventListener('submit', async (e) => {
@@ -197,17 +261,24 @@
             const res = await fetch('/auth/employee/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', // ✅ Set-Cookie(AT/RT)를 저장/전송하기 위해
+                credentials: 'include',
                 body: JSON.stringify({ empId, password })
             });
 
             const result = await safeJson(res);
 
             if (res.ok) {
-                // ✅ accessToken/refreshToken은 서버가 Set-Cookie로 내려주면
-                // 브라우저가 httpOnly 쿠키로 자동 저장함 (localStorage 저장 X)
+                const mustChangePassword = getMustChangePassword(result);
+
+                if (mustChangePassword) {
+                    alert('초기 비밀번호입니다. 보안을 위해 비밀번호를 변경해주세요.');
+                    // ✅ 인증부터 진행
+                    window.location.href = '/auth/employee/verify';
+                    return;
+                }
+
                 alert(result?.message || '로그인 성공!');
-                window.location.href = '/';
+                window.location.href = '/employees';
             } else {
                 serverError.textContent = result?.message || `로그인에 실패했습니다. (${res.status})`;
                 serverError.style.display = 'block';

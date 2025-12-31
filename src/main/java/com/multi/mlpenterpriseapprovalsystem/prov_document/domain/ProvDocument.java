@@ -30,9 +30,61 @@ public class ProvDocument extends BaseEntity {
     private String description;
     private Boolean isPublic;
     private String fileName;
-    private String fileUrl;
+    private String objectKey;
     private Long fileSize;
     private Integer chunkCnt;
-    private String procStat;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ProvProcStat procStat;
     private String errorMsg;
+
+
+
+    public void markUploaded(String fileName, String objectKey, Long fileSize) {
+        this.fileName = fileName;
+        this.objectKey = objectKey;
+        this.fileSize = fileSize;
+        this.procStat = ProvProcStat.UPLOADED;
+        this.errorMsg = null;
+    }
+
+    public void markProcessing() {
+        this.procStat = ProvProcStat.PROCESSING;
+        this.errorMsg = null;
+    }
+
+    public void markDone(Integer chunkCnt) {
+        this.procStat = ProvProcStat.DONE;
+        this.chunkCnt = chunkCnt;
+        this.errorMsg = null;
+    }
+
+    public void markFailed(String errorMsg) {
+        this.procStat = ProvProcStat.FAILED;
+        this.errorMsg = errorMsg;
+    }
+
+    public static ProvDocument create(Company company, String docTitle, String description, Boolean isPublic,
+                                      String fileName, Long fileSize) {
+
+        ProvDocument d = new ProvDocument();
+        d.company = company;
+        d.docTitle = docTitle;
+        d.description = description;
+        d.isPublic = (isPublic != null ? isPublic : Boolean.TRUE);
+
+        d.fileName = fileName;
+        d.fileSize = fileSize;
+
+        d.chunkCnt = 0;
+        d.procStat = ProvProcStat.CREATED;
+        return d;
+    }
+
+    public void assignObjectKey(String objectKey) {
+        this.objectKey = objectKey;
+    }
+
+
 }
+

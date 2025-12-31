@@ -171,4 +171,8 @@ public class Employee extends BaseEntity {
         this.gen = gen;
         this.role = role;
     }
+
+    public void changePassword(String encodedPwd) {
+        this.pwd = encodedPwd;
+    }
 }

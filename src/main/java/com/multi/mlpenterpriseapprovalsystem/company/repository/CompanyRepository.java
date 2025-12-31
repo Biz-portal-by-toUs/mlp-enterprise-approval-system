@@ -31,4 +31,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Company c where c.comId = :comId")
     Optional<Company> findByComIdForUpdate(@Param("comId") String comId);
+
+    Optional<Company> findByEmailAndBrn(String email, String brn);
 }

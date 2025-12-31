@@ -221,10 +221,11 @@
     }
 
     function authHeadersJson() {
-        const auth = refreshTokenPreview();
-        const headers = { "Content-Type": "application/json" };
-        if (auth) headers["Authorization"] = auth;
-        return headers;
+        // const auth = refreshTokenPreview();
+        // const headers = { "Content-Type": "application/json" };
+        // if (auth) headers["Authorization"] = auth;
+        // return headers;
+        return { "Content-Type": "application/json" };
     }
 
     $refreshTokenBtn.addEventListener("click", refreshTokenPreview);
@@ -442,6 +443,29 @@
 
             setStatus("ok", "업로드 완료");
             logLine("전체 업로드 완료");
+
+            alert('첨부파일이 등록되었습니다.');
+            console.log('child origin:', location.origin);
+            console.log('opener:', window.opener);
+            console.log('opener origin try:', window.opener?.location?.origin);
+
+
+            // ✅ 부모 창(공지 수정 화면) 갱신
+            try {
+                console.log("child origin:", location.origin);
+                console.log("opener exists:", !!window.opener);
+                if (window.opener && !window.opener.closed) {
+                    // 부모에서 initAttach가 전역에 있어야 함
+                    //window.opener.initAttach?.();
+                    window.opener.postMessage({ type: 'ATTACH_UPDATED' }, "*");
+                    console.log("opener postMessage sent");
+                }
+            } catch (e) {
+                console.warn('부모 창 갱신 실패:', e);
+            }
+
+            // ✅ 새창 닫기
+            window.close();
         } catch (e) {
             console.error(e);
             setStatus("bad", "업로드 실패");

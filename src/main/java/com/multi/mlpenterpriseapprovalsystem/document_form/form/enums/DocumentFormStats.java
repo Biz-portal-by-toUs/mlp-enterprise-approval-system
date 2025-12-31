@@ -13,5 +13,7 @@ public enum DocumentFormStats {
     P, // 대기
     R, // 반려
     A, // 승인
-    D  // 삭제
+    D, // 삭제
+    W, // 삭제대기
+    X  // 삭제반려
 }

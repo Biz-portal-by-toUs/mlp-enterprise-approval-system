@@ -935,6 +935,13 @@ INSERT INTO mail_attach (mail_attach_no, mail_id, path, size) VALUES
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+use bizportal;
+select * from comment;
+select * from board_cat;
+select * from notice;
+select * from attachment;
+INSERT INTO board_cat (board_cat_no, cat_code, cat_descript) VALUES
+                                                                 (6,'S','기타');
 
 USE bizportal;
 SET FOREIGN_KEY_CHECKS = 0;

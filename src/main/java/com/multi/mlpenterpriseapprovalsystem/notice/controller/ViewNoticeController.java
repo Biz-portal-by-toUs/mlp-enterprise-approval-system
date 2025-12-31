@@ -43,6 +43,7 @@ public class ViewNoticeController {
         return "notice/files"; // templates/files.html
     }
 
+    // 메인화면 팝업공지
     @GetMapping("/popup")
     public String popup() {
 

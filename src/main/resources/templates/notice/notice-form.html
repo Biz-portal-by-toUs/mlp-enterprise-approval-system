@@ -1,813 +1,843 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>공지 사항 등록</title>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
+
     <style>
         :root{
-            --bg: #f6f7fb;
-            --card: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --line: rgba(17, 24, 39, 0.08);
-            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-            --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
-
-            --primary: #3b82f6;      /* blue */
-            --primary2: #2563eb;
-            --danger: #ef4444;
-            --danger2: #dc2626;
-            --chip: rgba(59, 130, 246, 0.10);
-            --success: #10b981;
-            --warn: #f59e0b;
+            --bg:#f6f7fb;
+            --card:#ffffff;
+            --text:#1f2937;
+            --muted:#6b7280;
+            --line:rgba(17,24,39,.10);
+            --shadow:0 10px 30px rgba(17,24,39,.08);
+            --primary:#3b82f6;
+            --primary2:#2563eb;
+            --danger:#dc2626;
         }
-
-        * { box-sizing: border-box; }
-
+        *{box-sizing:border-box}
         body{
-            margin: 0;
-            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-            var(--bg);
-            font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color: var(--text);
+            margin:0;
+            background:
+                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
+                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
+                    var(--bg);
+            font-family:'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            color:var(--text);
         }
-
-        /* 컨테이너: 가운데 카드 느낌 */
         .container{
-            max-width: 920px;
-            margin: 64px auto;
-            padding: 0;
-            background: transparent;
-            box-shadow: none;
-            border: none;
+            max-width: 980px;
+            margin: 48px auto;
+            padding: 0 14px;
+        }
+        h2{
+            font-weight: 900;
+            letter-spacing: -0.3px;
+            margin: 0 0 14px;
         }
 
-        /* 상단 타이틀 영역(헤더 카드) */
-        .notice-detail{
-            background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(255,255,255,0));
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-
-        /* 실제 정보 카드 */
-        .notice-info{
+        /* ====== Summary table card (제목/팝업여부/팝업기간) ====== */
+        .summary-card{
             background: var(--card);
-            padding: 28px 28px 22px;
-            border-radius: 18px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            overflow: hidden;
+            margin-bottom: 14px;
         }
-
-        /* 제목/내용 영역 정리 */
-        .notice-info p{
-            margin: 0;
-            padding: 10px 0;
-            border-bottom: 1px dashed rgba(17,24,39,.12);
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            gap: 14px;
-            align-items: start;
+        .summary-table{
+            width:100%;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
-
-        .notice-info p strong{
-            color: var(--muted);
-            font-weight: 700;
+        .summary-table th,
+        .summary-table td{
+            border-top: 1px solid rgba(17,24,39,.08);
+            border-right: 1px solid rgba(17,24,39,.08);
+            padding: 14px 14px;
+            vertical-align: middle;
+        }
+        .summary-table tr:first-child th,
+        .summary-table tr:first-child td{ border-top: 0; }
+        .summary-table th{
+            width: 160px;
+            background: rgba(17,24,39,.02);
+            font-weight: 900;
+            color: #111827;
+            text-align: center;
             letter-spacing: -0.2px;
         }
+        .summary-table td{ border-right: 0; }
 
-        #noticeTitle{
-            font-size: 1.25rem;
+        .summary-input{
+            width: 100%;
+            height: 42px;
+            border-radius: 8px;
+            border: 1px solid rgba(17,24,39,.14);
+            padding: 0 12px;
             font-weight: 800;
-            color: var(--text);
+            outline: none;
+            background: #fff;
+        }
+        .summary-input:focus{
+            border-color: rgba(59,130,246,.55);
+            box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+        }
+        .summary-select{
+            width: 160px;
+            height: 42px;
+            border-radius: 8px;
+            border: 1px solid rgba(17,24,39,.14);
+            padding: 0 10px;
+            font-weight: 900;
+            outline: none;
+            background: #fff;
+        }
+        .summary-select:focus{
+            border-color: rgba(59,130,246,.55);
+            box-shadow: 0 0 0 4px rgba(59,130,246,.12);
         }
 
-        #noticeDescription{
-            margin: 0;
-            padding: 12px 0;
-            line-height: 1.7;
+        .period-inline{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex-wrap: wrap;
+        }
+        .period-inline .sep{
+            color: var(--muted);
+            font-weight: 900;
+            font-size: 12px;
+            padding: 0 2px;
+        }
+        .summary-date{
+            height: 42px;
+            width: 180px;
+            border-radius: 8px;
+            border: 1px solid rgba(17,24,39,.14);
+            padding: 0 10px;
+            font-weight: 800;
+            outline:none;
+            background:#fff;
+        }
+        .summary-date:focus{
+            border-color: rgba(59,130,246,.55);
+            box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+        }
+        .hint{
+            color: var(--muted);
+            font-weight: 800;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+
+        /* ====== Editor (office style) ====== */
+        .editor-wrap{
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        /* ✅ A안: 스크롤 없이, 무조건 한 줄에 다 보이게 (컴팩트) */
+        .office-toolbar{
+            display:flex;
+            flex-wrap: nowrap;
+            align-items:center;
+            gap: 6px;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(17,24,39,.10);
+            background:#fff;
+
+            overflow: hidden;     /* ✅ 스크롤 제거 */
+            white-space: nowrap;  /* ✅ 줄바꿈 제거 */
+        }
+
+        .tb-select{
+            height: 32px;
+            min-width: 86px;
+            border: 1px solid rgba(17,24,39,.14);
+            border-radius: 4px;
+            padding: 0 8px;
+            font-weight: 900;
+            font-size: 13px;
+            background:#fff;
+            flex: 0 0 auto;
+        }
+
+        .tb-btn{
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid rgba(17,24,39,.14);
+            border-radius: 4px;
+            background:#fff;
+            font-weight: 900;
+            font-size: 13px;
+            cursor:pointer;
+            user-select:none;
+            flex: 0 0 auto;
+            letter-spacing: -0.2px;
+        }
+        .tb-btn:hover{
+            background: rgba(59,130,246,.06);
+            border-color: rgba(59,130,246,.35);
+        }
+        .tb-btn.is-active{
+            background: #3b82f6;
+            border-color:#3b82f6;
+            color:#fff;
+        }
+        .tb-btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+        .tb-sep{
+            width:1px;
+            height:20px;
+            background:rgba(17,24,39,.12);
+            margin: 0 1px;
+            flex: 0 0 auto;
+        }
+
+        .office-editor{
+            min-height: 520px;
+            padding: 18px;
+            background:#fff;
+        }
+        .office-editor .ProseMirror{
+            outline:none;
+            min-height: 520px;
+            line-height: 1.75;
+            font-size: 1rem;
+            color: var(--text);
             white-space: pre-wrap;
         }
 
-        /* 내용 줄은 기존에 <p><strong>내용:</strong><p id="noticeDescription"> 구조가 살짝 깨져있어서
-           #noticeDescription을 카드처럼 보이게 강화 */
-        #noticeDescription{
+        /* ===== Table grid style ===== */
+        .office-editor .ProseMirror table{
+            width:100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 10px 0;
+        }
+        .office-editor .ProseMirror td,
+        .office-editor .ProseMirror th{
+            border:1px solid rgba(17,24,39,.18);
+            padding:10px;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .office-editor .ProseMirror th{
             background: rgba(17,24,39,.03);
-            border: 1px solid rgba(17,24,39,.06);
-            border-radius: 12px;
-            padding: 14px 14px;
+            font-weight:900;
+            color: var(--muted);
         }
-
-        /* 메타 영역을 2열로 보이게 */
-        .notice-info{
-            position: relative;
-        }
-        .notice-info::after{
+        .office-editor .ProseMirror .selectedCell:after{
             content:"";
-            display:block;
-            margin-top: 14px;
-        }
-
-        /* 팝업 여부 배지 느낌 */
-        #noticePopup{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-weight: 800;
-            font-size: .9rem;
-            border: 1px solid rgba(17,24,39,.10);
-            background: rgba(17,24,39,.03);
-        }
-
-        /* JS 값이 true/false로 그대로 보이면 아쉬우니,
-           true면 초록/false면 회색으로 보이게 하려면 JS에서 텍스트를 Y/N로 바꾸면 베스트.
-           CSS만으로도 기본 배지 제공 */
-        .notice-info p:last-child{ border-bottom: none; }
-
-        /* 탭 버튼 영역 */
-        .tab-buttons{
-            margin-top: 18px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .tab-btn{
-            border: 1px solid var(--line);
-            background: var(--card);
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-weight: 800;
-            color: var(--muted);
-            cursor: pointer;
-            box-shadow: 0 6px 14px rgba(17,24,39,.04);
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-        }
-
-        .tab-btn.active{
-            background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
-            color: var(--text);
-            border-color: rgba(59,130,246,.25);
-        }
-
-        .tab-btn:hover{
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(17,24,39,.08);
-        }
-
-        /* 첨부파일 카드 */
-        #attach.tab-content{
-            margin-top: 12px;
-            background: var(--card);
-            border-radius: 16px;
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
-            padding: 14px;
-        }
-
-        /* 첨부파일 테이블 */
-        #attachList{
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-
-        #attachList th{
-            text-align: left;
-            font-size: .9rem;
-            color: var(--muted);
-            background: rgba(17,24,39,.03);
-            padding: 12px 12px;
-            border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 800;
-        }
-
-        #attachList td{
-            padding: 12px 12px;
-            border-bottom: 1px solid rgba(17,24,39,.06);
-            font-size: .95rem;
-            color: var(--text);
-        }
-
-        #attachList tr:hover td{
-            background: rgba(59,130,246,.05);
-        }
-
-        /* 페이지네이션 */
-        #pagination{
-            margin-top: 12px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        #pagination button{
-            border: 1px solid rgba(17,24,39,.10);
-            background: #fff;
-            padding: 8px 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 800;
-            color: var(--muted);
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-        }
-
-        #pagination button:hover{
-            transform: translateY(-1px);
-            border-color: rgba(59,130,246,.35);
-            background: rgba(59,130,246,.06);
-        }
-
-        #pagination button.active{
-            background: rgba(59,130,246,.12);
-            border-color: rgba(59,130,246,.40);
-            color: var(--text);
-        }
-
-        /* 하단 버튼 그룹 */
-        .mt-4{
-            margin-top: 16px !important;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .btn{
-            appearance: none;
-            border: 1px solid rgba(17,24,39,.10);
-            background: var(--card);
-            padding: 11px 14px;
-            border-radius: 12px;
-            font-weight: 900;
-            color: var(--text);
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(17,24,39,.06);
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
-        }
-
-        .btn:hover{
-            transform: translateY(-1px);
-            box-shadow: var(--shadow2);
-            border-color: rgba(59,130,246,.25);
-            background: rgba(59,130,246,.05);
-        }
-
-        /* 수정/삭제 강조 */
-        #update-btn.btn{
-            background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
-            border-color: rgba(59,130,246,.25);
-        }
-
-        #delete-btn.btn{
-            background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
-            border-color: rgba(239,68,68,.25);
-        }
-
-        #delete-btn.btn:hover{
-            border-color: rgba(239,68,68,.40);
-            background: rgba(239,68,68,.06);
-        }
-
-        /* 홈 링크 */
-        .home-link{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 18px;
-            color: var(--primary2);
-            text-decoration: none;
-            font-weight: 900;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(59,130,246,.18);
-            background: rgba(59,130,246,.06);
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-        }
-
-        .home-link:hover{
-            transform: translateY(-1px);
-            border-color: rgba(59,130,246,.35);
+            position:absolute;
+            inset:0;
             background: rgba(59,130,246,.10);
+            pointer-events:none;
         }
+        .office-editor .ProseMirror td,
+        .office-editor .ProseMirror th{ position:relative; }
 
-        /* 공통 input/textarea 기본 리셋 */
-        #noticeForm input[type="text"],
-        #noticeForm textarea {
-            width: 100%;
-            border-radius: 14px;
-            border: 1px solid rgba(17, 24, 39, 0.12);
-            background: #fff;
-            color: var(--text);
-            font-family: inherit;
-            transition:
-                    border-color .2s ease,
-                    box-shadow .2s ease,
-                    transform .15s ease,
-                    background .2s ease;
-        }
-
-        /* 제목 입력란 */
-        #title {
-            font-size: 1.05rem;      /* 🔽 글자 크기 줄임 */
-            font-weight: 700;
-            padding: 16px 18px;
-            height: 56px;
-            letter-spacing: -0.2px;
-            background: linear-gradient(180deg, #ffffff, #f9fafb);
-        }
-
-        /* 제목 placeholder */
-        #title::placeholder {
+        .office-counter{
+            padding: 8px 12px;
+            border-top: 1px solid rgba(17,24,39,.10);
+            text-align:right;
+            font-weight: 900;
             color: var(--muted);
-            font-weight: 600;
+            background:#fff;
         }
+        .office-counter.over{ color: var(--danger); }
 
-        /* 내용 textarea */
-        #contents {
-            min-height: 260px;
-            padding: 20px 22px;
-            font-size: 1rem;
-            line-height: 1.7;
-            resize: vertical;
-            background: linear-gradient(180deg, #ffffff, #f8fafc);
-        }
-
-        /* textarea placeholder */
-        #contents::placeholder {
-            color: var(--muted);
-            font-weight: 500;
-        }
-
-        /* 포커스 효과 (제일 중요 – 세련됨 포인트) */
-        #noticeForm input:focus,
-        #noticeForm textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow:
-                    0 0 0 4px rgba(59, 130, 246, 0.12),
-                    0 10px 25px rgba(17, 24, 39, 0.08);
-            transform: translateY(-1px);
-        }
-
-        /* mb-3 전체를 카드처럼 보이게 */
-        #noticeForm .mb-3 {
+        /* 파일 UI (기존 유지) */
+        .file-attach-section{
             background: var(--card);
-            padding: 20px 22px 22px;
-            border-radius: 18px;
             border: 1px solid var(--line);
-            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
-            margin-bottom: 22px;
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            padding: 16px;
+            margin-bottom: 14px;
         }
-
-        /* label 강조 */
-        #noticeForm label {
-            display: block;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 10px;
-            letter-spacing: -0.2px;
-        }
-
-        /* 등록 버튼도 살짝 고급스럽게 */
-        .btn-submit {
-            padding: 14px 22px;
-            border-radius: 14px;
-            font-weight: 900;
-            border: 1px solid rgba(59, 130, 246, .25);
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: #fff;
-            box-shadow: 0 12px 24px rgba(59,130,246,.35);
-        }
-
-        .btn-submit:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 16px 32px rgba(59,130,246,.45);
-        }
-
-        /* =========================
-   취소 버튼 스타일
-========================= */
-
-        .btn-cancel {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 13px 22px;
-            border-radius: 14px;
-            font-weight: 800;
-            color: var(--muted);
-            text-decoration: none;
-            background: linear-gradient(180deg, #ffffff, #f9fafb);
-            border: 1px solid rgba(17, 24, 39, 0.15);
-            box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
-            transition:
-                    transform .15s ease,
-                    box-shadow .15s ease,
-                    border-color .15s ease,
-                    color .15s ease,
-                    background .15s ease;
-        }
-
-        /* hover 효과 */
-        .btn-cancel:hover {
-            color: var(--text);
-            background: rgba(17, 24, 39, 0.03);
-            border-color: rgba(17, 24, 39, 0.25);
-            transform: translateY(-1px);
-            box-shadow: 0 12px 26px rgba(17, 24, 39, 0.10);
-        }
-
-        /* active(클릭 시) */
-        .btn-cancel:active {
-            transform: translateY(0);
-            box-shadow: 0 6px 14px rgba(17, 24, 39, 0.08);
-        }
-
-        /* 접근성: 포커스 표시 */
-        .btn-cancel:focus-visible {
-            outline: none;
-            box-shadow:
-                    0 0 0 4px rgba(107, 114, 128, 0.25),
-                    0 10px 24px rgba(17, 24, 39, 0.10);
-        }
-
-        #noticeForm .btn-submit,g
-        #noticeForm .btn-cancel {
-            min-width: 120px;
-        }
-
-        /* ========= 공통 입력 컨트롤 ========= */
-        #noticeForm input[type="text"],
-        #noticeForm input[type="datetime-local"],
-        #noticeForm textarea {
-            width: 100%;
-            border-radius: 14px;
-            border: 1px solid rgba(17, 24, 39, 0.12);
-            background: #fff;
-            color: var(--text);
-            font-family: inherit;
-            transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease, background .2s ease;
-        }
-
-        #noticeForm input:focus,
-        #noticeForm textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12), 0 10px 25px rgba(17, 24, 39, 0.08);
-            transform: translateY(-1px);
-        }
-
-        /* ========= 제목 100자 UI (선택) ========= */
-        #title {
-            font-size: 1.35rem;
-            font-weight: 800;
-            padding: 18px 20px;
-            height: 64px;
-            letter-spacing: -0.3px;
-            background: linear-gradient(180deg, #ffffff, #f9fafb);
-        }
-
-        /* ========= 팝업여부 라디오: 한 줄 ========= */
-        .radio-row{
-            display: inline-flex;
-            gap: 10px;
-            margin-left: 12px;   /* label과 간격 */
-            vertical-align: middle;
-        }
-
-        .radio-pill{
-            padding: 6px 12px;
-            font-size: .9rem;
-            box-shadow: 0 6px 12px rgba(17,24,39,.05);
-        }
-
-        .radio-pill:hover{
-            transform: translateY(-1px);
-            border-color: rgba(59,130,246,.25);
-            background: rgba(59,130,246,.05);
-            box-shadow: 0 12px 22px rgba(17,24,39,.08);
-        }
-
-        .radio-pill input{
-            width: 18px;
-            height: 18px;
-            accent-color: var(--primary);
-            margin: 0;
-        }
-
-        /* ========= 팝업 시작/종료일: 한 줄(2열) ========= */
-        .grid-2{
-            margin-bottom: 0;
-            font-weight: 800;
-            color: var(--text);
-        }
-
-        /* 날짜 한 줄 정렬 */
-        .grid-2 > div {
-            display: grid;
-            grid-template-columns: 110px 1fr; /* label | input */
-            align-items: center;
-            gap: 12px;
-        }
-
-        .grid-2 label{
-            margin-bottom: 0;
-            font-weight: 800;
-            color: var(--text);
-        }
-
-        /* 팝업여부 label + 라디오 수평 정렬 */
-        .mb-3 > label {
-            display: inline-flex;
-            align-items: center;
-        }
-
-        @media (max-width: 640px){
-            .grid-2{
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* datetime-local 높이/패딩 정리 */
-        #noticeForm input[type="datetime-local"]{
-            height: 48px;
+        .file-attach-header{ font-weight: 900; margin-bottom: 10px; }
+        .file-input-wrapper{ position: relative; display: inline-block; }
+        .file-input-wrapper input[type="file"]{ position:absolute; opacity:0; width:0; height:0; }
+        .file-upload-btn{
+            display:inline-flex; align-items:center; gap:8px;
             padding: 10px 14px;
-            font-size: .95rem;
-        }
-
-        /* ========= 버튼 오른쪽 정렬 ========= */
-        .form-actions{
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 16px;
-            flex-wrap: wrap;
-        }
-
-        .btn-submit{
-            padding: 14px 22px;
-            border-radius: 14px;
+            border: 1px solid rgba(17,24,39,.14);
+            border-radius: 8px;
+            background:#fff;
             font-weight: 900;
-            border: 1px solid rgba(59, 130, 246, .25);
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: #fff;
-            box-shadow: 0 12px 24px rgba(59,130,246,.35);
-            cursor: pointer;
-            transition: transform .15s ease, box-shadow .15s ease;
+            cursor:pointer;
+            user-select:none;
+            font-size: 13px;
         }
-
-        .btn-submit:hover{
-            transform: translateY(-1px);
-            box-shadow: 0 16px 32px rgba(59,130,246,.45);
+        .file-list{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+        .file-item{
+            display:flex; justify-content:space-between; align-items:center;
+            padding: 10px 12px;
+            border: 1px solid rgba(17,24,39,.12);
+            border-radius: 8px;
+            background:#fff;
+            font-size: 13px;
         }
-
-        .btn-cancel{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 13px 22px;
-            border-radius: 14px;
-            font-weight: 800;
-            color: var(--muted);
-            text-decoration: none;
-            background: linear-gradient(180deg, #ffffff, #f9fafb);
-            border: 1px solid rgba(17, 24, 39, 0.15);
-            box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
-            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease, background .15s ease;
+        .file-item-info{ display:flex; gap:10px; align-items:center; flex:1; }
+        .file-item-name{ font-weight: 900; }
+        .file-item-size{ font-size:12px; color: var(--muted); font-weight:800; margin-top:2px; }
+        .file-remove-btn{
+            color: var(--danger);
+            cursor:pointer;
+            font-weight: 1000;
+            padding: 4px 10px;
+            border-radius: 8px;
+            user-select:none;
         }
+        .file-remove-btn:hover{ background: rgba(220,38,38,.08); }
 
-        .btn-cancel:hover{
-            color: var(--text);
-            background: rgba(17, 24, 39, 0.03);
-            border-color: rgba(17, 24, 39, 0.25);
-            transform: translateY(-1px);
-            box-shadow: 0 12px 26px rgba(17, 24, 39, 0.10);
-        }
-
-        /* =========================
-   ✅ 최종 정렬 오버라이드 (맨 아래에 붙이기)
-========================= */
-
-        /* 제목 크기 다시 커지는 문제 방지(중복 #title 덮어쓰기) */
-        #title{
-            font-size: 1.05rem !important;
-            font-weight: 700 !important;
-            height: 56px !important;
-            padding: 16px 18px !important;
-            letter-spacing: -0.2px !important;
-        }
-
-        /* ====== 팝업여부: label과 Y/N을 같은 줄로 ====== */
-        /* mb-3 안에 label + radio-row가 있다고 가정 */
-        #noticeForm .mb-3:has(.radio-row){
-            display: grid;
-            grid-template-columns: 110px 1fr; /* label | radios */
-            align-items: center;
-            gap: 12px;
-        }
-
-        #noticeForm .mb-3:has(.radio-row) > label{
-            margin-bottom: 0 !important;
-        }
-
-        .radio-row{
-            display: inline-flex !important;
-            gap: 10px !important;
-            margin: 0 !important;
-        }
-
-        /* ====== 시작일/종료일: 같은 줄(2칸) ====== */
-        .grid-2{
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important; /* 시작일 | 종료일 */
-            gap: 14px !important;
-        }
-
-        /* 각 칸 내부: label 옆에 input */
-        .grid-2 > div{
-            display: grid !important;
-            grid-template-columns: 110px 1fr !important; /* label | input */
-            align-items: center !important;
-            gap: 12px !important;
-        }
-
-        .grid-2 label{
-            margin-bottom: 0 !important;
-        }
-
-        /* datetime input 스타일 */
-        #noticeForm input[type="datetime-local"]{
-            height: 48px !important;
-            padding: 10px 14px !important;
-            font-size: .95rem !important;
-        }
-
-        /* 모바일에서는 줄바꿈 */
-        @media (max-width: 640px){
-            .grid-2{
-                grid-template-columns: 1fr !important;
-            }
-        }
-
-        /* 버튼 오른쪽 */
         .form-actions{
-            display: flex !important;
-            justify-content: flex-end !important;
-            gap: 10px !important;
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top: 10px;
+        }
+        .btn-submit{
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 900;
+            border: 1px solid rgba(59,130,246,.25);
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color:#fff;
+            box-shadow: 0 12px 24px rgba(59,130,246,.30);
+            cursor:pointer;
+        }
+        .btn-submit:disabled{ opacity:.7; cursor:not-allowed; }
+        .btn-cancel{
+            display:inline-flex; align-items:center; justify-content:center;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 900;
+            color: var(--muted);
+            text-decoration:none;
+            background: linear-gradient(180deg, #ffffff, #f9fafb);
+            border: 1px solid rgba(17,24,39,.15);
+            box-shadow: 0 8px 18px rgba(17,24,39,.06);
         }
 
+        @media (max-width: 720px){
+            .summary-table th{ width: 110px; }
+            .summary-select{ width: 100%; }
+            .summary-date{ width: 100%; }
+            .period-inline{ width:100%; }
+        }
     </style>
 </head>
-<body>
-<!----
-<div th:replace="~{common/header :: header}"></div>
---->
-<div class="container">
-    <h2>공지사항등록 </h2>
 
-    <div class="author-box">
-        작성자 : <span id="authorEmail">확인 중...</span>
-    </div>
+<body>
+<div class="container">
+    <h2>공지사항등록</h2>
 
     <form id="noticeForm" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="title">제목</label>
-            <input type="text" id="title" name="title" placeholder="공지사항 제목을 입력하세요" required maxlength="100">
+
+        <!-- ✅ 제목/팝업여부/팝업기간: 테이블 안에 통합 -->
+        <div class="summary-card">
+            <table class="summary-table">
+                <tr>
+                    <th>제목</th>
+                    <td>
+                        <input type="text" id="title" name="title" class="summary-input"
+                               placeholder="공지사항 제목을 입력하세요" required maxlength="100">
+                    </td>
+                </tr>
+                <tr>
+                    <th>팝업여부</th>
+                    <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <select id="isPopupSelect" name="isPopup" class="summary-select" required>
+                            <option value="true">사용</option>
+                            <option value="false" selected>미사용</option>
+                        </select>
+                        <span class="hint">사용 선택 시 아래 ‘팝업기간’ 입력</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>팝업기간</th>
+                    <td>
+                        <div class="period-inline">
+                            <input type="date" id="startedAt" name="startedAt" class="summary-date">
+                            <span class="sep">~</span>
+                            <input type="date" id="endedAt" name="endedAt" class="summary-date">
+                            <span class="hint">(미사용이면 자동 비활성)</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
-        <div class="mb-3">
-            <label for="contents">내용</label>
-            <textarea id="contents" name="contents" placeholder="공지 내용을 입력하세요" required></textarea>
-        </div>
+        <!-- ✅ 에디터 -->
+        <div class="editor-wrap">
+            <div class="office-toolbar" id="ttToolbar">
+                <select class="tb-select" id="headingSelect" title="서식">
+                    <option value="h2" selected>제목2</option>
+                    <option value="p">본문</option>
+                </select>
 
-        <div class="mb-3">
-            <label>팝업여부</label>
-            <div class="radio-row">
-                <label class="radio-pill">
-                    <input type="radio" name="isPopup" value="true" required> <span>Y</span>
-                </label>
+                <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
+                <button type="button" class="tb-btn" data-cmd="italic">기울</button>
+                <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
+                <button type="button" class="tb-btn" data-cmd="strike">취소</button>
 
-                <label class="radio-pill">
-                    <input type="radio" name="isPopup" value="false"> <span>N</span>
-                </label>
+                <span class="tb-sep"></span>
+
+                <button type="button" class="tb-btn" data-cmd="alignLeft">좌</button>
+                <button type="button" class="tb-btn" data-cmd="alignCenter">중</button>
+                <button type="button" class="tb-btn" data-cmd="alignRight">우</button>
+
+                <span class="tb-sep"></span>
+
+                <button type="button" class="tb-btn" data-cmd="bulletList">·목</button>
+                <button type="button" class="tb-btn" data-cmd="orderedList">1목</button>
+
+                <span class="tb-sep"></span>
+
+                <!-- ✅ 표: prompt 없이 행/열 증감 -->
+                <button type="button" class="tb-btn" data-cmd="insertTable">표</button>
+                <button type="button" class="tb-btn" data-cmd="rowPlus">행+</button>
+                <button type="button" class="tb-btn" data-cmd="colPlus">열+</button>
+                <button type="button" class="tb-btn" data-cmd="rowMinus">행-</button>
+                <button type="button" class="tb-btn" data-cmd="colMinus">열-</button>
+                <button type="button" class="tb-btn" data-cmd="deleteTable">삭제</button>
+
+                <span class="tb-sep"></span>
+
+                <button type="button" class="tb-btn" data-cmd="undo">↶</button>
+                <button type="button" class="tb-btn" data-cmd="redo">↷</button>
             </div>
+
+            <div id="contentsEditor" class="office-editor"></div>
+
+            <div class="office-counter">
+                <span id="charCount">0</span> / <span id="charLimit">1000</span>
+            </div>
+
+            <input type="hidden" id="contents" name="contents" required>
         </div>
 
-        <div class="mb-3">
-            <div class="grid-2">
-                <div>
-                    <label for="startedAt">팝업시작일</label>
-                    <input type="datetime-local" id="startedAt" name="startedAt">
-                </div>
-
-                <div>
-                    <label for="endedAt">팝업종료일</label>
-                    <input type="datetime-local" id="endedAt" name="endedAt">
-                </div>
+        <!-- 파일 첨부 -->
+        <div class="file-attach-section">
+            <div class="file-attach-header">📎 첨부파일 (최대 5개, 개당 10MB)</div>
+            <div class="file-input-wrapper">
+                <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
+                <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
+            </div>
+            <div class="file-list" id="file-list">
+                <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
             </div>
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-submit">공지 등록</button>
+            <button type="submit" class="btn-submit" id="submitBtn">등록</button>
             <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
         </div>
     </form>
 </div>
 
-<script>
-    // ✅ 페이지 진입 시 accessToken 유효성 검증 및 사용자 정보 표시
-    window.addEventListener("DOMContentLoaded", async () => {
-        const token = localStorage.getItem("accessToken");
+<!-- ✅ TipTap (ESM) - 링크/이미지/인용 제외 / JSON 저장 -->
+<script type="module">
+    const LIMIT = 1000;
 
-        if (!token) {
-            // Spring Security에서 자동 리다이렉트 설정이 되어 있으면 여긴 안탐
-            alert("로그인 후 이용해주세요.");
-            window.location.href = "/auth/login";
-            return;
+    import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+    import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+    import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
+
+    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
+
+    const hidden = document.getElementById("contents");
+    const editorEl = document.getElementById("contentsEditor");
+    const toolbar = document.getElementById("ttToolbar");
+    const headingSelect = document.getElementById("headingSelect");
+
+    const charCountEl = document.getElementById("charCount");
+    const charLimitEl = document.getElementById("charLimit");
+    const counterWrap = document.querySelector(".office-counter");
+
+    charLimitEl.textContent = String(LIMIT);
+
+    const editor = new Editor({
+        element: editorEl,
+        extensions: [
+            StarterKit,
+            Underline,
+            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            CharacterCount.configure({ limit: LIMIT }),
+
+            // ✅ 표 기능
+            Table.configure({ resizable: true }),
+            TableRow,
+            TableHeader,
+            TableCell,
+        ],
+        content: { type: "doc", content: [{ type: "paragraph" }] },
+        onCreate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+        onUpdate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+        onSelectionUpdate(){ refreshToolbar(); }
+    });
+
+    function syncHidden(){
+        hidden.value = JSON.stringify(editor.getJSON());
+    }
+
+    function refreshCount(){
+        const count = editor.storage.characterCount.characters();
+        charCountEl.textContent = String(count);
+        counterWrap.classList.toggle("over", count > LIMIT);
+    }
+
+    function setActive(btn, on){
+        btn.classList.toggle("is-active", !!on);
+    }
+
+    function ensureTable(){
+        if (editor.isActive("table")) return;
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    }
+
+    function refreshToolbar(){
+        const inTable = editor.isActive("table");
+
+        toolbar.querySelectorAll(".tb-btn").forEach(btn=>{
+            const cmd = btn.dataset.cmd;
+            if (!cmd) return;
+
+            const activeMap = {
+                bold: editor.isActive("bold"),
+                italic: editor.isActive("italic"),
+                underline: editor.isActive("underline"),
+                strike: editor.isActive("strike"),
+                bulletList: editor.isActive("bulletList"),
+                orderedList: editor.isActive("orderedList"),
+                alignLeft: editor.isActive({ textAlign: "left" }) || (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
+                alignCenter: editor.isActive({ textAlign: "center" }),
+                alignRight: editor.isActive({ textAlign: "right" }),
+            };
+
+            setActive(btn, activeMap[cmd]);
+
+            if (cmd === "undo") btn.disabled = !editor.can().chain().focus().undo().run();
+            if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
+
+            // 표 관련 - 표 안에서만 행-/열-/삭제 활성
+            if (cmd === "rowMinus") btn.disabled = !inTable;
+            if (cmd === "colMinus") btn.disabled = !inTable;
+            if (cmd === "deleteTable") btn.disabled = !inTable;
+        });
+
+        // heading select
+        if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
+        else headingSelect.value = "p";
+    }
+
+    headingSelect.addEventListener("change", ()=>{
+        const v = headingSelect.value;
+        const chain = editor.chain().focus();
+        if (v === "h2") chain.setHeading({ level: 2 }).run();
+        else chain.setParagraph().run();
+        refreshToolbar(); syncHidden(); refreshCount();
+    });
+
+    toolbar.addEventListener("click", (e)=>{
+        const btn = e.target.closest(".tb-btn");
+        if (!btn) return;
+
+        const cmd = btn.dataset.cmd;
+        if (!cmd) return;
+
+        const chain = editor.chain().focus();
+
+        switch(cmd){
+            case "bold": chain.toggleBold().run(); break;
+            case "italic": chain.toggleItalic().run(); break;
+            case "underline": chain.toggleUnderline().run(); break;
+            case "strike": chain.toggleStrike().run(); break;
+
+            case "alignLeft": chain.setTextAlign("left").run(); break;
+            case "alignCenter": chain.setTextAlign("center").run(); break;
+            case "alignRight": chain.setTextAlign("right").run(); break;
+
+            case "bulletList": chain.toggleBulletList().run(); break;
+            case "orderedList": chain.toggleOrderedList().run(); break;
+
+            // ✅ 표 기본 삽입 3x3
+            case "insertTable":
+                chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                break;
+
+            // ✅ 행/열 증감
+            case "rowPlus":
+                ensureTable();
+                editor.chain().focus().addRowAfter().run();
+                break;
+
+            case "colPlus":
+                ensureTable();
+                editor.chain().focus().addColumnAfter().run();
+                break;
+
+            case "rowMinus":
+                chain.deleteRow().run();
+                break;
+
+            case "colMinus":
+                chain.deleteColumn().run();
+                break;
+
+            case "deleteTable":
+                chain.deleteTable().run();
+                break;
+
+            case "undo": chain.undo().run(); break;
+            case "redo": chain.redo().run(); break;
+
+            default: break;
         }
 
+        refreshToolbar();
+        syncHidden();
+        refreshCount();
+    });
+
+    // submit 검증용
+    window.__noticeEditorGetText = () => editor.getText();
+    window.__noticeEditorGetCount = () => editor.storage.characterCount.characters();
+</script>
+
+<!-- 기존 로직 (팝업기간 토글/파일/등록) -->
+<script>
+    let attachedFiles = [];
+
+    window.addEventListener("DOMContentLoaded", async () => {
         setupPopupToggle();
     });
 
     function setupPopupToggle() {
-        const radios = document.querySelectorAll('input[name="isPopup"]');
-        const startAt = document.getElementById('startedAt');
-        const endAt = document.getElementById('endedAt');
+        const select = document.getElementById("isPopupSelect");
+        const startAt = document.getElementById("startedAt");
+        const endAt = document.getElementById("endedAt");
 
         function togglePopupDates(value) {
-            const enabled = value === 'true';
-
+            const enabled = value === "true";
             startAt.disabled = !enabled;
             endAt.disabled = !enabled;
-
-            // Y일 때만 필수
             startAt.required = enabled;
             endAt.required = enabled;
-
-            // N이면 값 제거(전송 방지)
-            if (!enabled) {
-                startAt.value = '';
-                endAt.value = '';
-            }
+            if (!enabled) { startAt.value = ""; endAt.value = ""; }
         }
 
-        radios.forEach(r => {
-            r.addEventListener('change', (e) => togglePopupDates(e.target.value));
-        });
-
-        // 현재 체크값 기준 반영
-        const checked = document.querySelector('input[name="idPopup"]:checked');
-        if (checked) togglePopupDates(checked.value);
+        select.addEventListener("change", (e) => togglePopupDates(e.target.value));
+        togglePopupDates(select.value);
     }
 
+    // ===== 파일 첨부 =====
+    function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        const maxSize = 10 * 1024 * 1024;
+        const maxCount = 5;
 
-    // ✅ 공지 등록 fetch
-    document.getElementById('noticeForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
+        for (let file of files) {
+            if (attachedFiles.length >= maxCount) {
+                alert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`);
+                break;
+            }
+            if (file.size > maxSize) {
+                alert(`${file.name}은(는) 10MB를 초과합니다.`);
+                continue;
+            }
+            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                alert(`${file.name}은(는) 이미 첨부되었습니다.`);
+                continue;
+            }
+            attachedFiles.push(file);
+        }
 
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-            alert("로그인 후 이용해주세요.");
-            window.location.href = "/auth/login";
+        event.target.value = '';
+        renderFileList();
+    }
+
+    function renderFileList() {
+        const container = document.getElementById('file-list');
+
+        if (attachedFiles.length === 0) {
+            container.innerHTML = '<div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>';
             return;
         }
 
+        container.innerHTML = attachedFiles.map((file, index) => `
+      <div class="file-item">
+        <div class="file-item-info">
+          <span style="font-size:18px;">📄</span>
+          <div>
+            <div class="file-item-name">${escapeHtml(file.name)}</div>
+            <div class="file-item-size">${formatFileSize(file.size)}</div>
+          </div>
+        </div>
+        <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
+      </div>
+    `).join('');
+    }
+
+    function removeFile(index) {
+        attachedFiles.splice(index, 1);
+        renderFileList();
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function escapeHtml(str){
+        return String(str || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function getFileType(mimeType) {
+        if ((mimeType || "").startsWith('image/')) return 'IMAGE';
+        if ((mimeType || "").startsWith('audio/')) return 'AUDIO';
+        return 'DOC';
+    }
+
+    async function uploadFiles(noticeNo) {
+        if (attachedFiles.length === 0) return;
+
+        for (const file of attachedFiles) {
+            try {
+                const presignRes = await fetch('/api/v1/attachments/presign', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        domain: 'NOTICE',
+                        entityId: noticeNo,
+                        fileType: getFileType(file.type),
+                        originalName: file.name,
+                        contentType: file.type || 'application/octet-stream',
+                        size: file.size
+                    })
+                });
+
+                if (!presignRes.ok) continue;
+                const presignData = await presignRes.json();
+                const { objectKey, uploadUrl } = presignData.data;
+
+                const uploadRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                    body: file
+                });
+                if (!uploadRes.ok) continue;
+
+                const etag = uploadRes.headers.get('ETag');
+
+                await fetch('/api/v1/attachments/complete', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        domain: 'NOTICE',
+                        entityId: noticeNo,
+                        fileType: getFileType(file.type),
+                        objectKey: objectKey,
+                        originalName: file.name,
+                        contentType: file.type || 'application/octet-stream',
+                        size: file.size,
+                        etag: etag ? etag.replace(/"/g, '') : null
+                    })
+                });
+            } catch (e) {
+                console.error(`[${file.name}] 업로드 오류:`, e);
+            }
+        }
+    }
+
+    // ===== 공지 등록 =====
+    document.getElementById('noticeForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const text = (window.__noticeEditorGetText ? window.__noticeEditorGetText() : "").trim();
+        const count = window.__noticeEditorGetCount ? window.__noticeEditorGetCount() : 0;
+
+        if (!text) {
+            alert('공지 내용을 입력하세요');
+            return;
+        }
+        if (count > 1000) {
+            alert('공지 내용은 최대 1000자까지 입력 가능합니다.');
+            return;
+        }
+
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+
         const formData = new FormData(e.target);
 
+        // date -> datetime 변환
+        const isPopup = formData.get("isPopup");
+        const startedDate = formData.get("startedAt");
+        const endedDate = formData.get("endedAt");
+
+        if (isPopup === "true") {
+            if (startedDate) formData.set("startedAt", `${startedDate}T00:00:00`);
+            if (endedDate) formData.set("endedAt", `${endedDate}T23:59:59`);
+        } else {
+            formData.delete("startedAt");
+            formData.delete("endedAt");
+        }
+
         try {
-
-
             const response = await fetch('/api/v1/notice', {
                 method: 'POST',
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                },
+                credentials: "include",
                 body: formData
             });
 
-            const result = await response.json();
-            const notice = result.data;
-            console.log(notice.noticeNo);
-            if (response.ok) {
-                alert('공지 등록 성공!');
-                window.location.href = `/notice/Attachment-notice/${notice.noticeNo}`;
-            } else {
-                alert(result.message || '리뷰 등록 실패');
+            const result = await response.json().catch(()=> ({}));
+
+            if (!response.ok) {
+                alert(result.message || '공지 등록 실패');
+                return;
             }
 
+            const notice = result.data;
+
+            alert('공지 등록 성공!');
+
+            if (attachedFiles.length > 0 && notice && notice.noticeNo) {
+                await uploadFiles(notice.noticeNo);
+            }
+
+            window.location.href = "/notice/list";
         } catch (error) {
             console.error('공지사항 등록 중 오류 발생:', error);
             alert('공지사항 등록 중 오류가 발생했습니다.');
+        } finally {
+            submitBtn.disabled = false;
         }
     });
 </script>
