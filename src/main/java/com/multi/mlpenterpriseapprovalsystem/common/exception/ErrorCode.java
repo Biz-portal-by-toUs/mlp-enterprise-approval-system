@@ -119,6 +119,8 @@ public enum ErrorCode {
 
     // 일정 관련
     START_MUST_BEFORE_END(HttpStatus.BAD_REQUEST,"START_MUST_BEFORE_END","endedAt은 startAt 이후여야 합니다"),
+    MUST_STARTDATE_IF_ALLDAY_TRUE(HttpStatus.BAD_REQUEST,"MUST_STARTDATE_IF_ALLDAY_TRUE","allDay=true이면 startDate는 필수입니다"),
+    MUST_STARTAT_ENDEDAT(HttpStatus.BAD_REQUEST,"MUST_STARTAT_ENDEDAT","allDay=false이면 startAt, endedAt은 필수입니다"),
 
 
     // 웹소켓 관련
