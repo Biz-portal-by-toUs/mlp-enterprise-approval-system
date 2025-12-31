@@ -1,365 +1,393 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout}">
+
 <head>
     <meta charset="UTF-8">
     <title>공유 설비 수정</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+    <!-- 이 페이지 전용 CSS -->
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .shared-eq-edit-page {
+                padding: 24px 26px;
+                background: #f4f6f8;
+                min-height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+            }
 
-        .card {
-            width: 520px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-            padding: 28px;
-        }
+            .shared-eq-edit-page .card {
+                width: 520px;
+                background: #fff;
+                border-radius: 16px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+                padding: 28px;
+            }
 
-        .form-inner {
-            max-width: 420px;          /* 입력칸 최대 폭 제한 */
-            margin: 0 auto;            /* 가운데 정렬 */
-        }
+            .shared-eq-edit-page .form-inner {
+                max-width: 420px;          /* 입력칸 최대 폭 제한 */
+                margin: 0 auto;            /* 가운데 정렬 */
+            }
 
-        input,
-        textarea {
-            width: 100%;
-            box-sizing: border-box;    /* 삐져나오는 거 방지 */
-        }
+            .shared-eq-edit-page input,
+            .shared-eq-edit-page textarea {
+                width: 100%;
+                box-sizing: border-box;    /* 삐져나오는 거 방지 */
+            }
 
-        .image-preview {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+            .shared-eq-edit-page .image-preview {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
 
-        .image-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
+            .shared-eq-edit-page .image-preview img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+            }
 
-        h2 {
-            margin-top: 0;
-            text-align: center;
-        }
+            .shared-eq-edit-page h2 {
+                margin-top: 0;
+                text-align: center;
+            }
 
-        .field {
-            margin-bottom: 14px;
-        }
+            .shared-eq-edit-page .field {
+                margin-bottom: 14px;
+            }
 
-        label {
-            display: block;
-            font-size: 13px;
-            margin-bottom: 6px;
-            color: #555;
-        }
+            .shared-eq-edit-page label {
+                display: block;
+                font-size: 13px;
+                margin-bottom: 6px;
+                color: #555;
+            }
 
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-        }
+            .shared-eq-edit-page input,
+            .shared-eq-edit-page textarea {
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                font-size: 14px;
+            }
 
-        textarea {
-            resize: none;
-        }
+            .shared-eq-edit-page textarea {
+                resize: none;
+            }
 
-        .btns {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-        }
+            .shared-eq-edit-page .btns {
+                display: flex;
+                gap: 10px;
+                margin-top: 18px;
+            }
 
-        button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-        }
+            .shared-eq-edit-page button {
+                flex: 1;
+                padding: 10px;
+                border-radius: 8px;
+                border: none;
+                font-size: 14px;
+                cursor: pointer;
+            }
 
-        .submit {
-            background: #1677ff;
-            color: #fff;
-            cursor: pointer;
-        }
+            .shared-eq-edit-page .submit {
+                background: #1677ff;
+                color: #fff;
+                cursor: pointer;
+            }
 
-        .submit.disabled {
-            background: #a5c8ff;   /* 연한 파랑 */
-            cursor: not-allowed;
-        }
+            .shared-eq-edit-page .submit.disabled {
+                background: #a5c8ff;   /* 연한 파랑 */
+                cursor: not-allowed;
+            }
 
-        .cancel {
-            background: #e5e7eb;
-        }
+            .shared-eq-edit-page .cancel {
+                background: #e5e7eb;
+            }
 
-        .preview-box {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
+            .shared-eq-edit-page .preview-box {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                overflow: hidden;
+                margin-top: 10px;
+            }
 
-        .preview-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-    </style>
+            .shared-eq-edit-page .preview-box img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: none;
+            }
+        </style>
+    </th:block>
 </head>
+
 <body>
 
-<div class="card">
-    <h2>공유 설비 수정</h2>
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <!-- 🔹 왼쪽: 예약 서브 사이드바 (공유 설비 예약 active) -->
+        <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('equipment')"></aside>
 
-    <form id="editForm" enctype="multipart/form-data">
+        <!-- 🔹 오른쪽: 기존 공유 설비 수정 화면 -->
+        <div class="shared-eq-edit-page">
+            <div class="card">
+                <h2>공유 설비 수정</h2>
 
-        <div class="field">
-            <label>설비명</label>
-            <input type="text" name="eqName" maxlength="20" required>
+                <form id="editForm" enctype="multipart/form-data">
+                    <div class="field">
+                        <label>설비명</label>
+                        <input type="text" name="eqName" maxlength="20" required>
+                    </div>
+
+                    <div class="field">
+                        <label>설비번호</label>
+                        <input type="text" name="eqId" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>모델명</label>
+                        <input type="text" name="modelName" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>보관위치</label>
+                        <input type="text" name="location" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>공유 설비 이미지</label>
+                        <input type="file"
+                               name="imageFile"
+                               id="imageFile"
+                               accept="image/*"
+                               onchange="previewImage(this)">
+                    </div>
+
+                    <div class="preview-box">
+                        <img id="imagePreview" alt="미리보기 이미지" />
+                    </div>
+
+                    <div class="btns">
+                        <button type="submit" class="submit disabled" disabled>수정</button>
+                        <button type="button" class="cancel" onclick="history.back()">취소</button>
+                    </div>
+                </form>
+            </div>
         </div>
-
-        <div class="field">
-            <label>설비번호</label>
-            <input type="text" name="eqId" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>모델명</label>
-            <input type="text" name="modelName" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>보관위치</label>
-            <input type="text" name="location" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>공유 설비 이미지</label>
-            <input type="file" name="imageFile" id="imageFile" accept="image/*" onchange="previewImage(this)">
-        </div>
-
-        <div class="preview-box">
-            <img id="imagePreview" alt="미리보기 이미지" />
-        </div>
-
-        <div class="btns">
-            <button type="submit" class="submit disabled" disabled>수정</button>
-            <button type="button" class="cancel" onclick="history.back()">취소</button>
-        </div>
-    </form>
+    </section>
 </div>
 
-<script th:inline="javascript">
-    /* ================== 공통 변수 ================== */
-    const eqNo = /*[[${eqNo}]]*/ null;
+<!-- 이 페이지 전용 JS -->
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        /* ================== 공통 변수 ================== */
+        const eqNo = /*[[${eqNo}]]*/ null;
 
-    // ✅ httpOnly cookie 기반 공통 fetch (쿠키 자동 포함)
-    const API_BASE = window.location.origin;
+        // ✅ httpOnly cookie 기반 공통 fetch (쿠키 자동 포함)
+        const API_BASE = window.location.origin;
 
-    async function apiFetch(path, options = {}) {
-        const url = API_BASE + path;
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
 
-        const res = await fetch(url, {
-            ...options,
-            credentials: "include",
-            headers: {
-                ...(options.headers || {})
+            const res = await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: {
+                    ...(options.headers || {})
+                }
+            });
+
+            // 401/403이면 로그인으로
+            if (res.status === 401 || res.status === 403) {
+                alert("로그인이 필요합니다. 다시 로그인 해주세요.");
+                location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
+            return res;
+        }
+
+        if (!eqNo) {
+            alert("잘못된 접근입니다.");
+            location.href = "/shared-equipment";
+        }
+
+        /* ================== 이미지 미리보기 ================== */
+        function previewImage(input) {
+            const preview = document.getElementById("imagePreview");
+
+            if (!input.files || !input.files[0]) {
+                preview.style.display = "none";
+                preview.src = "";
+                return;
+            }
+
+            const file = input.files[0];
+
+            if (!file.type.startsWith("image/")) {
+                alert("이미지 파일만 업로드 가능합니다.");
+                input.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* ================== 유효성 검사 ================== */
+        function validateEditForm() {
+            const name = document.querySelector("[name=eqName]").value.trim();
+
+            if (!name) {
+                alert("설비명을 입력해주세요.");
+                return false;
+            }
+            if (name.length > 20) {
+                alert("설비명은 20자 이내입니다.");
+                return false;
+            }
+            return true;
+        }
+
+        /* ================== 페이지 로드시 데이터 조회 ================== */
+        let originalData = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                // ✅ 조회는 GET
+                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
+                    method: "GET"
+                });
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error("[load fail]", res.status, text);
+                    alert("공유 설비 정보를 불러오지 못했습니다.");
+                    return;
+                }
+
+                // ResponseDto 형태면 보통 { data: ... } 라서 안전하게 처리
+                const json = await res.json();
+                const eq = json.data ?? json;
+
+                document.querySelector("[name=eqName]").value     = eq.eqName     ?? "";
+                document.querySelector("[name=eqId]").value        = eq.eqId       ?? "";
+                document.querySelector("[name=modelName]").value   = eq.modelName  ?? "";
+                document.querySelector("[name=location]").value    = eq.location   ?? "";
+
+                originalData = {
+                    eqName: eq.eqName ?? "",
+                    eqId: eq.eqId ?? "",
+                    modelName: eq.modelName ?? "",
+                    location: eq.location ?? "",
+                    imageChanged: false
+                };
+
+                if (eq.imageUrl) {
+                    const preview = document.getElementById("imagePreview");
+                    preview.src = eq.imageUrl;
+                    preview.style.display = "block";
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("서버 오류가 발생했습니다.");
             }
         });
 
-        // 401/403이면 로그인으로
-        if (res.status === 401 || res.status === 403) {
-            alert("로그인이 필요합니다. 다시 로그인 해주세요.");
-            location.href = "/login";
-            throw new Error("UNAUTHORIZED");
-        }
-        return res;
-    }
+        /* ================== 수정 submit ================== */
+        document.getElementById("editForm").addEventListener("submit", async e => {
+            e.preventDefault();
+            if (!validateEditForm()) return;
 
-    if (!eqNo) {
-        alert("잘못된 접근입니다.");
-        location.href = "/shared-equipment";
-    }
+            const formData = new FormData(e.target);
 
-    /* ================== 이미지 미리보기 ================== */
-    function previewImage(input) {
-        const preview = document.getElementById("imagePreview");
+            try {
+                // ✅ 쿠키 인증이면 Authorization 헤더 붙이지 말기
+                // ✅ FormData 보낼 땐 Content-Type도 넣지 말기(브라우저가 boundary 자동 세팅)
+                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
+                    method: "PUT",
+                    body: formData
+                });
 
-        if (!input.files || !input.files[0]) {
-            preview.style.display = "none";
-            preview.src = "";
-            return;
-        }
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error("[update fail]", res.status, text);
+                    alert("공유 설비 수정 실패했습니다.");
+                    return;
+                }
 
-        const file = input.files[0];
+                alert("공유 설비 수정 성공했습니다!");
+                location.href = "/shared-equipment";
 
-        if (!file.type.startsWith("image/")) {
-            alert("이미지 파일만 업로드 가능합니다.");
-            input.value = "";
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = e => {
-            preview.src = e.target.result;
-            preview.style.display = "block";
-        };
-        reader.readAsDataURL(file);
-    }
-
-    /* ================== 유효성 검사 ================== */
-    function validateEditForm() {
-        const name = document.querySelector("[name=eqName]").value.trim();
-
-        if (!name) {
-            alert("설비명을 입력해주세요.");
-            return false;
-        }
-        if (name.length > 20) {
-            alert("설비명은 20자 이내입니다.");
-            return false;
-        }
-        return true;
-    }
-
-    /* ================== 페이지 로드시 데이터 조회 ================== */
-    let originalData = null;
-
-    document.addEventListener("DOMContentLoaded", async () => {
-        try {
-            // ✅ 조회는 GET
-            const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
-                method: "GET"
-            });
-
-            if (!res.ok) {
-                const text = await res.text();
-                console.error("[load fail]", res.status, text);
-                alert("공유 설비 정보를 불러오지 못했습니다.");
-                return;
+            } catch (e) {
+                console.error(e);
+                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                alert("서버 오류가 발생했습니다.");
             }
+        });
 
-            // ResponseDto 형태면 보통 { data: ... } 라서 안전하게 처리
-            const json = await res.json();
-            const eq = json.data ?? json;
+        /* ================== 변경 감지(버튼 enable/disable) ================== */
+        function hasChanged() {
+            if (!originalData) return false;
 
-            document.querySelector("[name=eqName]").value = eq.eqName ?? "";
-            document.querySelector("[name=eqId]").value = eq.eqId ?? "";
-            document.querySelector("[name=modelName]").value = eq.modelName ?? "";
-            document.querySelector("[name=location]").value = eq.location ?? "";
-
-            originalData = {
-                eqName: eq.eqName ?? "",
-                eqId: eq.eqId ?? "",
-                modelName: eq.modelName ?? "",
-                location: eq.location ?? "",
-                imageChanged: false
+            const current = {
+                eqName: document.querySelector("[name=eqName]").value.trim(),
+                eqId: document.querySelector("[name=eqId]").value.trim(),
+                modelName: document.querySelector("[name=modelName]").value.trim(),
+                location: document.querySelector("[name=location]").value.trim(),
+                imageChanged: document.querySelector("[name=imageFile]").files.length > 0
             };
 
-            if (eq.imageUrl) {
-                const preview = document.getElementById("imagePreview");
-                preview.src = eq.imageUrl;
-                preview.style.display = "block";
+            return (
+                current.eqName !== originalData.eqName ||
+                current.eqId !== originalData.eqId ||
+                current.modelName !== originalData.modelName ||
+                current.location !== originalData.location ||
+                current.imageChanged
+            );
+        }
+
+        const submitBtn = document.querySelector(".submit");
+
+        function updateSubmitButton() {
+            if (hasChanged()) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove("disabled");
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.add("disabled");
             }
-
-        } catch (e) {
-            console.error(e);
-            alert("서버 오류가 발생했습니다.");
         }
-    });
 
-    /* ================== 수정 submit ================== */
-    document.getElementById("editForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        if (!validateEditForm()) return;
+        document
+            .querySelectorAll(
+                "input[name=eqName], input[name=eqId], input[name=modelName], input[name=location]"
+            )
+            .forEach(el => el.addEventListener("input", updateSubmitButton));
 
-        const formData = new FormData(e.target);
-
-        try {
-            // ✅ 쿠키 인증이면 Authorization 헤더 붙이지 말기
-            // ✅ FormData 보낼 땐 Content-Type도 넣지 말기(브라우저가 boundary 자동 세팅)
-            const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
-                method: "PUT",
-                body: formData
-            });
-
-            if (!res.ok) {
-                const text = await res.text();
-                console.error("[update fail]", res.status, text);
-                alert("공유 설비 수정 실패했습니다.");
-                return;
-            }
-
-            alert("공유 설비 수정 성공했습니다!");
-            location.href = "/shared-equipment";
-
-        } catch (e) {
-            console.error(e);
-            if (String(e.message || "").includes("UNAUTHORIZED")) return;
-            alert("서버 오류가 발생했습니다.");
-        }
-    });
-
-    /* ================== 변경 감지(버튼 enable/disable) ================== */
-    function hasChanged() {
-        if (!originalData) return false;
-
-        const current = {
-            eqName: document.querySelector("[name=eqName]").value.trim(),
-            eqId: document.querySelector("[name=eqId]").value.trim(),
-            modelName: document.querySelector("[name=modelName]").value.trim(),
-            location: document.querySelector("[name=location]").value.trim(),
-            imageChanged: document.querySelector("[name=imageFile]").files.length > 0
-        };
-
-        return (
-            current.eqName !== originalData.eqName ||
-            current.eqId !== originalData.eqId ||
-            current.modelName !== originalData.modelName ||
-            current.location !== originalData.location ||
-            current.imageChanged
-        );
-    }
-
-    const submitBtn = document.querySelector(".submit");
-
-    function updateSubmitButton() {
-        if (hasChanged()) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove("disabled");
-        } else {
-            submitBtn.disabled = true;
-            submitBtn.classList.add("disabled");
-        }
-    }
-
-    document.querySelectorAll(
-        "input[name=eqName], input[name=eqId], input[name=modelName], input[name=location]"
-    ).forEach(el => el.addEventListener("input", updateSubmitButton));
-
-    document.querySelector("[name=imageFile]")
-        .addEventListener("change", updateSubmitButton);
-</script>
+        document
+            .querySelector("[name=imageFile]")
+            .addEventListener("change", updateSubmitButton);
+    </script>
+</th:block>
 
 </body>
 </html>

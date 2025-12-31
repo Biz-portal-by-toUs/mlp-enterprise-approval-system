@@ -1,263 +1,288 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout}">
+
 <head>
     <meta charset="UTF-8">
     <title>공유 설비 등록</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
 
-        .card {
-            width: 520px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-            padding: 28px;
-        }
-
-        .form-inner {
-            max-width: 420px;          /* 입력칸 최대 폭 제한 */
-            margin: 0 auto;            /* 가운데 정렬 */
-        }
-
-        input,
-        textarea {
-            width: 100%;
-            box-sizing: border-box;    /* 삐져나오는 거 방지 */
-        }
-
-        .image-preview {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .image-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        h2 {
-            margin-top: 0;
-            text-align: center;
-        }
-
-        .field {
-            margin-bottom: 14px;
-        }
-
-        label {
-            display: block;
-            font-size: 13px;
-            margin-bottom: 6px;
-            color: #555;
-        }
-
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-        }
-
-        textarea {
-            resize: none;
-        }
-
-        .btns {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-        }
-
-        button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .submit {
-            background: #1677ff;
-            color: #fff;
-        }
-
-        .cancel {
-            background: #e5e7eb;
-        }
-
-        .preview-box {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-
-        .preview-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-    </style>
-</head>
-<body>
-
-<div class="card">
-    <h2>공유 설비 등록</h2>
-
-    <form id="eqForm" enctype="multipart/form-data">
-
-        <div class="field">
-            <label>설비명</label>
-            <input type="text" name="eqName" maxlength="20" required>
-        </div>
-
-        <div class="field">
-            <label>설비번호</label>
-            <input type="text" name="eqId" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>모델명</label>
-            <input type="text" name="modelName" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>보관위치</label>
-            <input type="text" name="location" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>공유 설비 이미지</label>
-            <input
-                    type="file"
-                    name="imageFile"
-                    id="imageFile"
-                    accept="image/*"
-                    onchange="previewImage(this)"
-            >
-        </div>
-
-        <div class="preview-box">
-            <img id="imagePreview" alt="미리보기 이미지" />
-        </div>
-
-        <div class="btns">
-            <button type="submit" class="submit">등록</button>
-            <button type="button" class="cancel" onclick="history.back()">취소</button>
-        </div>
-    </form>
-</div>
-<script>
-    const API_BASE = window.location.origin;
-
-    // ✅ httpOnly cookie 기반 공통 fetch
-    async function apiFetch(path, options = {}) {
-        const url = API_BASE + path;
-
-        const res = await fetch(url, {
-            ...options,
-            credentials: "include",                 // ✅ 쿠키 자동 포함
-            headers: { ...(options.headers || {}) } // ✅ 기존 헤더 유지
-            // ✅ FormData면 Content-Type 절대 지정하지 말기
-        });
-
-        // Spring Security가 /login 으로 리다이렉트 시켜버리는 케이스 방어
-        if ((res.redirected && res.url.includes("/login")) || res.status === 401 || res.status === 403) {
-            alert("로그인이 필요합니다. 다시 로그인 해 주세요.");
-            location.href = "/login";
-            throw new Error("UNAUTHORIZED");
-        }
-
-        return res;
-    }
-
-    function previewImage(input) {
-        const preview = document.getElementById("imagePreview");
-        if (!input.files || !input.files[0]) {
-            preview.style.display = "none";
-            preview.src = "";
-            return;
-        }
-        const file = input.files[0];
-        if (!file.type.startsWith("image/")) {
-            alert("이미지 파일만 업로드 가능합니다.");
-            input.value = "";
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            preview.src = e.target.result;
-            preview.style.display = "block";
-        };
-        reader.readAsDataURL(file);
-    }
-
-    async function submitSharedEquipmentForm(e) {
-        e.preventDefault();
-
-        const name = document.querySelector("[name=eqName]").value.trim();
-        const eqId = document.querySelector("[name=eqId]").value.trim();
-        const modelName = document.querySelector("[name=modelName]").value.trim();
-        const loc = document.querySelector("[name=location]").value.trim();
-
-        if (!name) return alert("설비명을 입력해주세요.");
-        if (name.length > 20) return alert("설비명은 20자 이내여야 합니다.");
-        if (eqId.length > 20) return alert("설비 번호는 20자 이내여야 합니다.");
-        if (modelName.length > 20) return alert("모델명은 20자 이내여야 합니다.");
-        if (loc.length > 20) return alert("보관위치는 20자 이내여야 합니다.");
-
-        const form = document.getElementById("eqForm");
-        const formData = new FormData(form);
-
-        try {
-            const res = await apiFetch("/api/v1/shared-equipment", {
-                method: "POST",
-                body: formData
-            });
-
-            // ✅ 에러 응답이 JSON 아닐 수도 있어서 안전 파싱
-            const ct = res.headers.get("content-type") || "";
-            const payload = ct.includes("application/json") ? await res.json() : await res.text();
-
-            if (!res.ok) {
-                const msg =
-                    (payload && payload.message) ||
-                    (typeof payload === "string" && payload) ||
-                    `등록 실패 (${res.status})`;
-                alert(msg);
-                return;
+    <!-- 이 페이지 전용 CSS -->
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .shared-eq-create-page {
+                padding: 24px 26px;
+                background: #f4f6f8;
+                min-height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
             }
 
-            alert("공유 설비 등록 성공!");
-            location.href = "/shared-equipment"; // ✅ 뒤로가기 꼬임 방지
-        } catch (err) {
-            if (err.message === "UNAUTHORIZED") return;
-            console.error(err);
-            alert("서버 오류가 발생했습니다.");
-        }
-    }
+            .shared-eq-create-page .card {
+                width: 520px;
+                background: #fff;
+                border-radius: 16px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+                padding: 28px;
+            }
 
-    document.getElementById("eqForm").addEventListener("submit", submitSharedEquipmentForm);
-</script>
+            .shared-eq-create-page .form-inner {
+                max-width: 420px;          /* 입력칸 최대 폭 제한 */
+                margin: 0 auto;            /* 가운데 정렬 */
+            }
+
+            .shared-eq-create-page input,
+            .shared-eq-create-page textarea {
+                width: 100%;
+                box-sizing: border-box;    /* 삐져나오는 거 방지 */
+            }
+
+            .shared-eq-create-page .image-preview {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .shared-eq-create-page .image-preview img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+            }
+
+            .shared-eq-create-page h2 {
+                margin-top: 0;
+                text-align: center;
+            }
+
+            .shared-eq-create-page .field {
+                margin-bottom: 14px;
+            }
+
+            .shared-eq-create-page label {
+                display: block;
+                font-size: 13px;
+                margin-bottom: 6px;
+                color: #555;
+            }
+
+            .shared-eq-create-page input,
+            .shared-eq-create-page textarea {
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                font-size: 14px;
+            }
+
+            .shared-eq-create-page textarea {
+                resize: none;
+            }
+
+            .shared-eq-create-page .btns {
+                display: flex;
+                gap: 10px;
+                margin-top: 18px;
+            }
+
+            .shared-eq-create-page button {
+                flex: 1;
+                padding: 10px;
+                border-radius: 8px;
+                border: none;
+                font-size: 14px;
+                cursor: pointer;
+            }
+
+            .shared-eq-create-page .submit {
+                background: #1677ff;
+                color: #fff;
+            }
+
+            .shared-eq-create-page .cancel {
+                background: #e5e7eb;
+            }
+
+            .shared-eq-create-page .preview-box {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                overflow: hidden;
+                margin-top: 10px;
+            }
+
+            .shared-eq-create-page .preview-box img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: none;
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <!-- 🔹 왼쪽: 예약 서브 사이드바 (공유 설비 예약 active) -->
+        <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('equipment')"></aside>
+
+        <!-- 🔹 오른쪽: 기존 공유 설비 등록 화면 -->
+        <div class="shared-eq-create-page">
+            <div class="card">
+                <h2>공유 설비 등록</h2>
+
+                <form id="eqForm" enctype="multipart/form-data">
+
+                    <div class="field">
+                        <label>설비명</label>
+                        <input type="text" name="eqName" maxlength="20" required>
+                    </div>
+
+                    <div class="field">
+                        <label>설비번호</label>
+                        <input type="text" name="eqId" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>모델명</label>
+                        <input type="text" name="modelName" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>보관위치</label>
+                        <input type="text" name="location" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>공유 설비 이미지</label>
+                        <input
+                                type="file"
+                                name="imageFile"
+                                id="imageFile"
+                                accept="image/*"
+                                onchange="previewImage(this)"
+                        >
+                    </div>
+
+                    <div class="preview-box">
+                        <img id="imagePreview" alt="미리보기 이미지" />
+                    </div>
+
+                    <div class="btns">
+                        <button type="submit" class="submit">등록</button>
+                        <button type="button" class="cancel" onclick="history.back()">취소</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- 이 페이지 전용 JS -->
+<th:block layout:fragment="pageScripts">
+    <script>
+        const API_BASE = window.location.origin;
+
+        // ✅ httpOnly cookie 기반 공통 fetch
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
+
+            const res = await fetch(url, {
+                ...options,
+                credentials: "include",                 // ✅ 쿠키 자동 포함
+                headers: { ...(options.headers || {}) } // ✅ 기존 헤더 유지
+                // ✅ FormData면 Content-Type 절대 지정하지 말기
+            });
+
+            // Spring Security가 /login 으로 리다이렉트 시켜버리는 케이스 방어
+            if ((res.redirected && res.url.includes("/login")) || res.status === 401 || res.status === 403) {
+                alert("로그인이 필요합니다. 다시 로그인 해 주세요.");
+                location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
+
+            return res;
+        }
+
+        function previewImage(input) {
+            const preview = document.getElementById("imagePreview");
+            if (!input.files || !input.files[0]) {
+                preview.style.display = "none";
+                preview.src = "";
+                return;
+            }
+            const file = input.files[0];
+            if (!file.type.startsWith("image/")) {
+                alert("이미지 파일만 업로드 가능합니다.");
+                input.value = "";
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function submitSharedEquipmentForm(e) {
+            e.preventDefault();
+
+            const name = document.querySelector("[name=eqName]").value.trim();
+            const eqId = document.querySelector("[name=eqId]").value.trim();
+            const modelName = document.querySelector("[name=modelName]").value.trim();
+            const loc = document.querySelector("[name=location]").value.trim();
+
+            if (!name) return alert("설비명을 입력해주세요.");
+            if (name.length > 20) return alert("설비명은 20자 이내여야 합니다.");
+            if (eqId.length > 20) return alert("설비 번호는 20자 이내여야 합니다.");
+            if (modelName.length > 20) return alert("모델명은 20자 이내여야 합니다.");
+            if (loc.length > 20) return alert("보관위치는 20자 이내여야 합니다.");
+
+            const form = document.getElementById("eqForm");
+            const formData = new FormData(form);
+
+            try {
+                const res = await apiFetch("/api/v1/shared-equipment", {
+                    method: "POST",
+                    body: formData
+                });
+
+                // ✅ 에러 응답이 JSON 아닐 수도 있어서 안전 파싱
+                const ct = res.headers.get("content-type") || "";
+                const payload = ct.includes("application/json") ? await res.json() : await res.text();
+
+                if (!res.ok) {
+                    const msg =
+                        (payload && payload.message) ||
+                        (typeof payload === "string" && payload) ||
+                        `등록 실패 (${res.status})`;
+                    alert(msg);
+                    return;
+                }
+
+                alert("공유 설비 등록 성공!");
+                location.href = "/shared-equipment"; // ✅ 뒤로가기 꼬임 방지
+            } catch (err) {
+                if (err.message === "UNAUTHORIZED") return;
+                console.error(err);
+                alert("서버 오류가 발생했습니다.");
+            }
+        }
+
+        document.getElementById("eqForm").addEventListener("submit", submitSharedEquipmentForm);
+    </script>
+</th:block>
+
 </body>
 </html>
