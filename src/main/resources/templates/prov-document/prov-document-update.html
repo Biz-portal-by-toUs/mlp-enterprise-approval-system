@@ -79,23 +79,41 @@
         const $ = (id) => document.getElementById(id);
         const API_BASE = "http://localhost:8090";
 
-        const provNo =null;
-        const provNoFromPath = provNo || location.pathname.split("/").filter(Boolean)[1];
+        // ✅ URL에서 ID 추출 로직 수정 (경로의 마지막 부분을 ID로 간주)
+        // ✅ 기존 로직 대신 숫자를 찾아내는 방식으로 변경
+        const pathSegments = location.pathname.split("/").filter(Boolean);
 
+        // 뒤에서부터 확인하며 숫자인 세그먼트를 찾음
+        const provNoFromPath = pathSegments.reverse().find(segment => !isNaN(segment) && segment.trim() !== "");
+
+        console.log("추출된 규정 번호:", provNoFromPath); // 디버깅용
+
+        // 1. 상세 데이터 로드
         async function loadDetail() {
-            if (!provNoFromPath) return;
+            if (!provNoFromPath || isNaN(provNoFromPath)) {
+                console.error("유효한 규정 번호를 찾을 수 없습니다.");
+                return;
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/api/v1/prov-documents/${provNoFromPath}`, { credentials: "include" });
+                if (!res.ok) throw new Error("데이터를 가져오는 데 실패했습니다.");
+
                 const json = await res.json();
                 const d = json.data || json;
 
                 $("docTitleInput").value = d.docTitle || "";
                 $("descInput").value = d.description || "";
 
+                // 라디오 버튼 상태 설정
+                const isPublicVal = String(d.isPublic);
                 document.querySelectorAll('input[name="isPublic"]').forEach(r => {
-                    r.checked = (r.value === String(d.isPublic));
+                    r.checked = (r.value === isPublicVal);
                 });
-            } catch(e) { console.error("데이터 로드 실패:", e); }
+            } catch(e) {
+                console.error("데이터 로드 실패:", e);
+                alert("기존 규정 정보를 불러오지 못했습니다.");
+            }
         }
 
         // 2. 저장 기능
@@ -110,7 +128,13 @@
                 return;
             }
 
-            const payload = { provNo: Number(provNoFromPath), docTitle, description, isPublic };
+            // 페이로드 구성
+            const payload = {
+                provNo: Number(provNoFromPath),
+                docTitle,
+                description,
+                isPublic
+            };
 
             try {
                 const res = await fetch(`${API_BASE}/api/v1/prov-documents/${provNoFromPath}`, {
@@ -121,10 +145,12 @@
                 });
 
                 if (res.ok) {
-                    alert("성공적으로 저장되었습니다.");
+                    alert("성공적으로 수정되었습니다.");
+                    // 수정 완료 후 상세 페이지 또는 목록으로 이동
                     location.href = `/admin/prov-document/${provNoFromPath}`;
                 } else {
-                    alert("저장 실패 (서버 오류)");
+                    const errorJson = await res.json();
+                    alert(`저장 실패: ${errorJson.message || "서버 오류"}`);
                 }
             } catch (e) {
                 alert("네트워크 오류가 발생했습니다.");
@@ -132,14 +158,15 @@
             }
         };
 
-        // 3. 취소 버튼 (목록으로 이동)
+        // 3. 취소 버튼
         $("backBtn").onclick = () => {
             if (confirm("수정 중인 내용이 사라집니다. 취소할까요?")) {
-                location.href = "/admin/prov-document/list";
+                // 이전 페이지로 돌아가거나 목록으로 이동
+                history.back();
             }
         };
 
-        // 초기 실행
+        // 초기 데이터 로드 실행
         loadDetail();
     </script>
 </th:block>

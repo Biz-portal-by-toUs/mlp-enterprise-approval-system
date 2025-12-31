@@ -55,7 +55,6 @@ public class ProvDocumentController {
             @RequestBody @Valid ReqProvDocumentCompleteDto request,
             @AuthenticationPrincipal CustomUser user
     ) {
-        // 이름은 유지하되 로직은 AI 분석 요청만 수행합니다.
         Long provNo = provDocumentService.completeAndRequestEmbedding(user.getComId(), request);
 
         return ResponseEntity

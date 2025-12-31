@@ -148,13 +148,21 @@
         const $ = (id) => document.getElementById(id);
         const API_BASE = "http://localhost:8090";
 
+        // Meeting 코드의 헬퍼 함수들 도입
+        function unwrapMaybeResponseDto(resJson) {
+            return (resJson && resJson.data) ? resJson.data : resJson;
+        }
+
+        const fetchOptions = (method, body) => ({
+            method,
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include',
+            body: body ? JSON.stringify(body) : null
+        });
+
         $("file").onchange = (e) => {
             const file = e.target.files[0];
             if (file) $("fileInfo").textContent = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
-        };
-
-        $("resetBtn").onclick = () => {
-            if (confirm("모든 입력 내용을 초기화하시겠습니까?")) location.reload();
         };
 
         $("submitBtn").onclick = async () => {
@@ -169,63 +177,79 @@
 
             try {
                 $("submitBtn").disabled = true;
-                $("progressWrap").style.display = "block";
+                const progWrap = $("progressWrap");
                 const progEl = $("progress");
                 const statusMsg = $("statusMsg");
+                progWrap.style.display = "block";
 
-                // 1) 정보 생성
+                // 1) 정보 생성 (Meeting 방식: fetchOptions 사용)
                 statusMsg.textContent = "1/5 규정 정보 생성 중...";
-                const cRes = await fetch(`${API_BASE}/api/v1/prov-documents`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ docTitle: title, description: desc, isPublic: $("isPublic").value === "true" })
-                });
-                const provNo = (await cRes.json()).data;
+                const cRes = await fetch(`${API_BASE}/api/v1/prov-documents`,
+                    fetchOptions("POST", { docTitle: title, description: desc, isPublic: $("isPublic").value === "true" }));
+                const cResult = await cRes.json();
+                const provData = unwrapMaybeResponseDto(cResult);
+                // 서버 응답이 숫자인지 객체인지에 따라 provNo 추출
+                const provNo = (typeof provData === 'number') ? provData : provData.provNo;
                 progEl.value = 20;
 
-                // 2) Presign
+                // 2) Presign URL 발급 (Meeting 방식: contentType 기본값 처리 추가)
                 statusMsg.textContent = "2/5 업로드 주소 발급 중...";
-                const pRes = await fetch(`${API_BASE}/api/v1/attachments/presign`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ domain: "PROV_DOCUMENT", entityId: provNo, fileType: "DOC", originalName: file.name, contentType: file.type || "application/octet-stream", size: file.size })
-                });
-                const { objectKey, uploadUrl } = (await pRes.json()).data;
+                const pRes = await fetch(`${API_BASE}/api/v1/attachments/presign`,
+                    fetchOptions("POST", {
+                        domain: "PROV_DOCUMENT",
+                        entityId: provNo,
+                        fileType: "DOC",
+                        originalName: file.name,
+                        contentType: file.type || "application/octet-stream", //
+                        size: file.size
+                    }));
+                const pResult = await pRes.json();
+                const { objectKey, uploadUrl } = unwrapMaybeResponseDto(pResult);
                 progEl.value = 40;
 
                 // 3) S3 Upload
                 statusMsg.textContent = "3/5 파일을 저장소에 전송 중...";
-                await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
+                await fetch(uploadUrl, {
+                    method: "PUT",
+                    body: file,
+                    headers: { "Content-Type": file.type || "application/octet-stream" } //
+                });
                 progEl.value = 70;
 
-                // 4) Complete
+                // 4) Complete (이 단계가 성공해야 attachment 테이블에 저장됨)
                 statusMsg.textContent = "4/5 업로드 완료 확인 중...";
-                await fetch(`${API_BASE}/api/v1/attachments/complete`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ domain: "PROV_DOCUMENT", entityId: provNo, fileType: "DOC", objectKey, originalName: file.name, contentType: file.type, size: file.size })
-                });
+                await fetch(`${API_BASE}/api/v1/attachments/complete`,
+                    fetchOptions("POST", {
+                        domain: "PROV_DOCUMENT",
+                        entityId: provNo,
+                        fileType: "DOC",
+                        objectKey,
+                        originalName: file.name,
+                        contentType: file.type || "application/octet-stream", //
+                        size: file.size
+                    }));
                 progEl.value = 90;
 
                 // 5) AI Request
                 statusMsg.textContent = "5/5 AI 챗봇 학습 요청 중...";
-                await fetch(`${API_BASE}/api/v1/prov-documents/complete`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ provNo, objectKey, originalName: file.name, contentType: file.type, size: file.size })
-                });
+                await fetch(`${API_BASE}/api/v1/prov-documents/complete`,
+                    fetchOptions("POST", {
+                        provNo,
+                        objectKey,
+                        originalName: file.name,
+                        contentType: file.type || "application/octet-stream", //
+                        size: file.size
+                    }));
 
                 progEl.value = 100;
                 statusMsg.textContent = "🎉 등록 및 학습 요청이 완료되었습니다!";
-                setTimeout(() => location.href = "/admin/prov-document/list", 1500);
+                setTimeout(() => {
+                    if(confirm("등록 완료! 목록으로 이동할까요?")) location.href = "/admin/prov-document/list";
+                }, 500);
 
             } catch (e) {
                 console.error(e);
-                alert("처리 중 오류가 발생했습니다.");
+                alert("처리 중 오류가 발생했습니다: " + e.message);
                 $("submitBtn").disabled = false;
             }
         };
