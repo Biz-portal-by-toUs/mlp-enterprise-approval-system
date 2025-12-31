@@ -39,4 +39,19 @@ public class EmpSchedule {
     private LocalDateTime endedAt;
 
     private String color;
+
+    private EmpSchedule(Employee employee, String title, String content,
+                        LocalDateTime startAt, LocalDateTime endedAt, String color) {
+        this.employee = employee;
+        this.title = title;
+        this.content = content;
+        this.startAt = startAt;
+        this.endedAt = endedAt;
+        this.color = color;
+    }
+
+    public static EmpSchedule create(Employee employee, String title, String content,
+                                     LocalDateTime startAt, LocalDateTime endedAt, String color) {
+        return new EmpSchedule(employee, title, content, startAt, endedAt, color);
+    }
 }
