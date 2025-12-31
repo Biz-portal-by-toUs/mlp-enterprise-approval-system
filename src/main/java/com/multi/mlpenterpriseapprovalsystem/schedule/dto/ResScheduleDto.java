@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class ResScheduleDto {
 
     private CalendarScope scope;
-    private Long id;
+    private Long schNo;
 
     private String title;
     private String content;
@@ -39,7 +39,7 @@ public class ResScheduleDto {
     public static ResScheduleDto fromPersonal(EmpSchedule s) {
         return ResScheduleDto.builder()
                 .scope(CalendarScope.PERSONAL)
-                .id(s.getSchNo())
+                .schNo(s.getSchNo())
                 .title(s.getTitle())
                 .content(s.getContent())
                 .startAt(s.getStartAt())
@@ -53,7 +53,7 @@ public class ResScheduleDto {
     public static ResScheduleDto fromSchedule(CalendarScope scope, Schedule s) {
         return ResScheduleDto.builder()
                 .scope(scope) // COMPANY or DEPARTMENT
-                .id(s.getSchNo())
+                .schNo(s.getSchNo())
                 .title(s.getTitle())
                 .content(s.getContent())
                 .startAt(s.getStartAt())
