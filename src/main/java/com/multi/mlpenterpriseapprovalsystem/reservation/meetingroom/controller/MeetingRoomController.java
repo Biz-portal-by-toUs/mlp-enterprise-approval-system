@@ -44,7 +44,7 @@ public class MeetingRoomController {
 
     @GetMapping("/meeting-rooms/{roomNo}")
     public ResponseEntity<ResponseDto<ResMeetingRoomDto>> getMeetingRoom(
-            @PathVariable Long roomNo,
+            @PathVariable(name = "roomNo") Long roomNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         ResMeetingRoomDto room =
@@ -97,7 +97,7 @@ public class MeetingRoomController {
     }
 
     @PutMapping(value="/meeting-rooms/{roomNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<Long>> updateMeetingRoom(@PathVariable Long roomNo,
+    public ResponseEntity<ResponseDto<Long>> updateMeetingRoom(@PathVariable(name = "roomNo") Long roomNo,
                                                                @AuthenticationPrincipal CustomUser user,
                                                                @Valid @ModelAttribute ReqMeetingRoomDto meetingRoomDto,
                                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
@@ -111,7 +111,7 @@ public class MeetingRoomController {
     }
 
     @DeleteMapping("/meeting-rooms/{roomNo}")
-    public ResponseEntity<ResponseDto> deleteMeetingRoom(@PathVariable Long roomNo) {
+    public ResponseEntity<ResponseDto> deleteMeetingRoom(@PathVariable(name = "roomNo") Long roomNo) {
         meetingRoomService.deleteMeetingRoom(roomNo);
         return ResponseEntity
                 .status(HttpStatus.OK)

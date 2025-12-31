@@ -1,233 +1,240 @@
-<!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout}">
+
 <head>
     <meta charset="UTF-8" />
     <title>내 예약 조회</title>
-    <style>
-        /* ===== 페이지/타이틀 ===== */
 
-        * { box-sizing: border-box; }
+    <!-- 이 페이지 전용 CSS -->
+    <th:block layout:fragment="pageStyles">
+        <style>
+            * { box-sizing: border-box; }
 
-        body{
-            margin: 0;
-            background: #fff;
-            color: #111;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-        }
+            /* 오른쪽 콘텐츠 영역 */
+            .my-res-page{
+                padding: 28px 32px;
+            }
 
-        /* 페이지 전체 여백 */
-        .page{
-            padding: 28px 32px;
-        }
+            .my-res-title{
+                margin: 0 0 28px 0;
+                font-size: 34px;
+                font-weight: 800;
+                line-height: 1.2;
+            }
 
-        /* ===== 제목(내 예약 조회) ===== */
-        .page-title{
-            margin: 0 0 28px 0;     /* ✅ 제목 ↔ 필터 간격(원하면 36px까지 올려) */
-            font-size: 34px;
-            font-weight: 800;
-            line-height: 1.2;
-        }
+            .table-top{
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                margin-bottom: 14px;
+            }
 
-        /* ===== 테이블 상단(필터가 들어가는 줄) ===== */
-        .table-top{
-            display: flex;
-            justify-content: flex-end;  /* ✅ 필터를 오른쪽에 */
-            align-items: center;
-            margin-bottom: 14px;        /* ✅ 필터 ↔ 테이블 간격 */
-        }
+            .filter-bar{
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
 
-        /* ===== 필터 바 ===== */
-        .filter-bar{
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+            .filter-bar input[type="date"],
+            .filter-bar select{
+                height: 34px;
+                border: 1px solid #dfe3ea;
+                border-radius: 10px;
+                padding: 0 12px;
+                background: #fff;
+                font-size: 14px;
+                outline: none;
+            }
 
-        .filter-bar input[type="date"],
-        .filter-bar select{
-            height: 34px;
-            border: 1px solid #dfe3ea;
-            border-radius: 10px;
-            padding: 0 12px;
-            background: #fff;
-            font-size: 14px;
-            outline: none;
-        }
+            .filter-bar input[type="date"]:focus,
+            .filter-bar select:focus{
+                border-color: #1a73e8;
+                box-shadow: 0 0 0 3px rgba(26,115,232,.12);
+            }
 
-        .filter-bar input[type="date"]:focus,
-        .filter-bar select:focus{
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 3px rgba(26,115,232,.12);
-        }
+            .tilde{
+                padding: 0 4px;
+                color: #666;
+            }
 
-        .tilde{
-            padding: 0 4px;
-            color: #666;
-        }
+            .btn-blue{
+                height: 34px;
+                background: #1a73e8;
+                color: #fff;
+                border: none;
+                border-radius: 10px;
+                padding: 0 14px;
+                font-weight: 800;
+                cursor: pointer;
+                box-shadow: 0 2px 10px rgba(26,115,232,.25);
+            }
+            .btn-blue:hover{ filter: brightness(.96); }
+            .btn-blue:active{ transform: translateY(1px); }
 
-        /* ===== 파란 단추 버튼 ===== */
-        .btn-blue{
-            height: 34px;
-            background: #1a73e8;
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 0 14px;
-            font-weight: 800;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(26,115,232,.25);
-        }
-        .btn-blue:hover{ filter: brightness(.96); }
-        .btn-blue:active{ transform: translateY(1px); }
+            table{
+                width: 100%;
+                border-collapse: collapse;
+                background: #fff;
+                border-radius: 12px;
+                overflow: hidden;
+            }
 
-        /* ===== 테이블 ===== */
-        table{
-            width: 100%;
-            border-collapse: collapse;
-        }
+            thead th{
+                text-align: left;
+                padding: 12px 10px;
+                font-size: 15px;
+                font-weight: 800;
+                color: #111;
+                border-bottom: 1px solid #eef2f7;
+                background: #f9fafb;
+            }
 
-        thead th{
-            text-align: left;
-            padding: 12px 10px;
-            font-size: 15px;
-            font-weight: 800;
-            color: #111;
-            border-bottom: 1px solid #eef2f7;
-        }
+            tbody td{
+                padding: 14px 10px;
+                font-size: 15px;
+                border-top: 1px solid #f4f6f9;
+                vertical-align: middle;
+            }
 
-        tbody td{
-            padding: 14px 10px;
-            font-size: 15px;
-            border-top: 1px solid #f4f6f9;
-            vertical-align: middle;
-        }
+            .empty{
+                padding: 24px 10px;
+                color: #777;
+                text-align: center;
+            }
 
-        /* 결과 없음 */
-        .empty{
-            padding: 24px 10px;
-            color: #777;
-            text-align: center;
-        }
-
-        /* ===== 반응형: 화면 좁아지면 필터 줄바꿈 ===== */
-        @media (max-width: 900px){
-            .page{ padding: 18px 16px; }
-            .page-title{ font-size: 28px; margin-bottom: 18px; }
-            .table-top{ justify-content: flex-start; }
-            .filter-bar{ flex-wrap: wrap; gap: 8px; }
-        }
-    </style>
+            @media (max-width: 900px){
+                .my-res-page{ padding: 18px 16px; }
+                .my-res-title{ font-size: 28px; margin-bottom: 18px; }
+                .table-top{ justify-content: flex-start; }
+                .filter-bar{ flex-wrap: wrap; gap: 8px; }
+            }
+        </style>
+    </th:block>
 </head>
+
 <body>
-<div class="page-header">
-    <h1 class="page-title">내 예약 조회</h1>
 
-    <!-- ✅ 테이블 상단 오른쪽 필터 -->
-    <div class="table-top">
-        <div class="filter-bar">
-            <input type="date" id="fromDate">
-            <span class="tilde">~</span>
-            <input type="date" id="toDate">
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <!-- 🔹 왼쪽: 예약 서브 사이드바 (내 예약 조회 active) -->
+        <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('my')"></aside>
 
-            <select id="domainFilter">
-                <option value="ALL">전체</option>
-                <option value="MEETING_ROOM">회의실</option>
-                <option value="CORPORATE_CAR">법인 차량</option>
-                <option value="SHARED_EQUIPMENT">공유 설비</option>
-            </select>
+        <!-- 🔹 오른쪽: 기존 내 예약 조회 화면 그대로 -->
+        <div class="my-res-page">
+            <h1 class="my-res-title">내 예약 조회</h1>
 
-            <button id="btnSearch" class="btn-blue">조회</button>
+            <!-- 상단 필터 -->
+            <div class="table-top">
+                <div class="filter-bar">
+                    <input type="date" id="fromDate">
+                    <span class="tilde">~</span>
+                    <input type="date" id="toDate">
+
+                    <select id="domainFilter">
+                        <option value="ALL">전체</option>
+                        <option value="MEETING_ROOM">회의실</option>
+                        <option value="CORPORATE_CAR">법인 차량</option>
+                        <option value="SHARED_EQUIPMENT">공유 설비</option>
+                    </select>
+
+                    <button id="btnSearch" class="btn-blue">조회</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                <tr>
+                    <th style="width:140px;">예약대상</th>
+                    <th style="width:140px;">예약일자</th>
+                    <th style="width:160px;">예약시간</th>
+                    <th>사용 목적</th>
+                    <th style="width:140px;">장소</th>
+                    <th style="width:120px;">예약상태</th>
+                </tr>
+                </thead>
+                <tbody id="tbody">
+                <tr><td class="empty" colspan="6">기간을 선택하고 조회를 눌러주세요.</td></tr>
+                </tbody>
+            </table>
         </div>
-    </div>
-
-
-    <table>
-        <thead>
-        <tr>
-            <th style="width:140px;">예약대상</th>
-            <th style="width:140px;">예약일자</th>
-            <th style="width:160px;">예약시간</th>
-            <th>사용 목적</th>
-            <th style="width:140px;">장소</th>
-            <th style="width:120px;">예약상태</th>
-        </tr>
-        </thead>
-        <tbody id="tbody">
-        <tr><td class="empty" colspan="6">기간을 선택하고 조회를 눌러주세요.</td></tr>
-        </tbody>
-    </table>
+    </section>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const API_BASE = window.location.origin;
+<!-- 이 페이지 전용 JS -->
+<th:block layout:fragment="pageScripts">
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const API_BASE = window.location.origin;
 
-        async function apiFetchJson(path) {
-            const res = await fetch(API_BASE + path, { credentials: "include" });
-            if (res.status === 401 || res.status === 403) {
-                location.href = "/login";
-                throw new Error("UNAUTHORIZED");
+            async function apiFetchJson(path) {
+                const res = await fetch(API_BASE + path, { credentials: "include" });
+                if (res.status === 401 || res.status === 403) {
+                    location.href = "/login";
+                    throw new Error("UNAUTHORIZED");
+                }
+                if (!res.ok) throw new Error(await res.text());
+                return res.json();
             }
-            if (!res.ok) throw new Error(await res.text());
-            return res.json();
-        }
 
-        function fmtDate(d){ return d.toISOString().slice(0,10); }
+            function fmtDate(d){ return d.toISOString().slice(0,10); }
 
-        function render(rows){
-            const tbody = document.getElementById("tbody");
-            if (!rows || rows.length === 0){
-                tbody.innerHTML = `<tr><td class="empty" colspan="6">조회 결과가 없습니다.</td></tr>`;
-                return;
+            function render(rows){
+                const tbody = document.getElementById("tbody");
+                if (!rows || rows.length === 0){
+                    tbody.innerHTML = `<tr><td class="empty" colspan="6">조회 결과가 없습니다.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.target ?? "-"}</td>
+            <td>${r.date ?? "-"}</td>
+            <td>${r.time ?? "-"}</td>
+            <td>${r.purpose ?? "-"}</td>
+            <td>${r.location ?? "-"}</td>
+            <td>${r.status ?? "-"}</td>
+          </tr>
+        `).join("");
             }
-            tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td>${r.target ?? "-"}</td>
-        <td>${r.date ?? "-"}</td>
-        <td>${r.time ?? "-"}</td>
-        <td>${r.purpose ?? "-"}</td>
-        <td>${r.location ?? "-"}</td>
-        <td>${r.status ?? "-"}</td>
-      </tr>
-    `).join("");
-        }
 
-        let ALL_ROWS = [];
-        let selectedDomain = "ALL"; // ✅ 현재 선택만 저장(자동 적용 X)
+            let ALL_ROWS = [];
+            let selectedDomain = "ALL";
 
-        function applyDomainFilter(domain){
-            const rows = (domain === "ALL")
-                ? ALL_ROWS
-                : ALL_ROWS.filter(r => r.domain === domain);
+            function applyDomainFilter(domain){
+                const rows = (domain === "ALL")
+                    ? ALL_ROWS
+                    : ALL_ROWS.filter(r => r.domain === domain);
 
-            render(rows);
-        }
+                render(rows);
+            }
 
-        async function search() {
-            const from = document.getElementById("fromDate").value;
-            const to   = document.getElementById("toDate").value;
+            async function search() {
+                const from = document.getElementById("fromDate").value;
+                const to   = document.getElementById("toDate").value;
 
-            const res = await apiFetchJson(`/api/v1/my-reservations?from=${from}&to=${to}`);
-            ALL_ROWS = res.data || [];
+                const res = await apiFetchJson(`/api/v1/my-reservations?from=${from}&to=${to}`);
+                ALL_ROWS = res.data || [];
 
-            // ✅ 조회 버튼 눌렀을 때만 화면 반영
-            applyDomainFilter(selectedDomain);
-        }
+                applyDomainFilter(selectedDomain);
+            }
 
-        // 기본값: 오늘~내일(원하면 유지)
-        const today = new Date();
-        document.getElementById("fromDate").value = fmtDate(today);
-        const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-        document.getElementById("toDate").value = fmtDate(tomorrow);
+            const today = new Date();
+            document.getElementById("fromDate").value = fmtDate(today);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate()+1);
+            document.getElementById("toDate").value = fmtDate(tomorrow);
 
-        // ✅ 카테고리 변경 시: 값만 저장하고 끝 (렌더 X)
-        document.getElementById("domainFilter").addEventListener("change", (e) => {
-            selectedDomain = e.target.value;
+            document.getElementById("domainFilter").addEventListener("change", (e) => {
+                selectedDomain = e.target.value;
+            });
+
+            document.getElementById("btnSearch").addEventListener("click", search);
         });
+    </script>
+</th:block>
 
-        // ✅ 조회 버튼에서만 실행
-        document.getElementById("btnSearch").addEventListener("click", search);
-    });
-</script>
 </body>
 </html>

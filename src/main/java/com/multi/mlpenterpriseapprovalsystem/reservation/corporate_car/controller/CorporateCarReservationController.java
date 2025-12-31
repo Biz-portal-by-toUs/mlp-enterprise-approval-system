@@ -37,7 +37,7 @@ public class CorporateCarReservationController {
 
     @GetMapping("/corporate-car-reservations")
     public ResponseEntity<ResponseDto<List<ResReservationListDto>>> getReservations(@AuthenticationPrincipal CustomUser user,
-                                                                                    @RequestParam(required = false) String data) {
+                                                                                    @RequestParam(required = false, name = "data") String data) {
         String comId = user.getComId();
         List<ResReservationListDto> reservations =
                 corporateCarReservationService.getReservations(comId, data);
@@ -56,7 +56,7 @@ public class CorporateCarReservationController {
 
     @DeleteMapping("/corporate-car-reservations/{resvNo}")
     public ResponseEntity<Void> deleteReservation(
-            @PathVariable Long resvNo,
+            @PathVariable(name = "resvNo") Long resvNo,
             @AuthenticationPrincipal CustomUser user) {
 
         corporateCarReservationService.deleteReservation(resvNo, user);

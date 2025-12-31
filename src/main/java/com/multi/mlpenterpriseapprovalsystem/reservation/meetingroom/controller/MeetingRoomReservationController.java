@@ -36,7 +36,7 @@ public class MeetingRoomReservationController {
 
     @GetMapping("/meeting-room-reservations")
     public ResponseEntity<ResponseDto<List<ResReservationListDto>>> getReservations(@AuthenticationPrincipal CustomUser user,
-                                                                                    @RequestParam(required = false) String date) {  // 한 페이지에서 보여줄 데이터 개수
+                                                                                    @RequestParam(required = false, name = "date") String date) {  // 한 페이지에서 보여줄 데이터 개수
 
         String comId = user.getComId();
         List<ResReservationListDto> reservations =
@@ -56,7 +56,7 @@ public class MeetingRoomReservationController {
 
     @DeleteMapping("/meeting-room-reservations/{resvNo}")
     public ResponseEntity<Void> deleteReservation(
-            @PathVariable Long resvNo,
+            @PathVariable(name = "resvNo") Long resvNo,
             @AuthenticationPrincipal CustomUser user) {
 
         meetingRoomReservationService.deleteReservation(resvNo, user);

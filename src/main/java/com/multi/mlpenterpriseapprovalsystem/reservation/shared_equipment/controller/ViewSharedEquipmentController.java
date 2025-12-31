@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 
 @Controller
-@RequestMapping("reservation/shared-equipment")
+@RequestMapping("/shared-equipment")
 @RequiredArgsConstructor
 public class ViewSharedEquipmentController {
 
@@ -31,26 +31,26 @@ public class ViewSharedEquipmentController {
         return "reservation/shared-equipment/shared-equipment-list";
     }
 
-    @GetMapping("/shared-equipment-register")
+    @GetMapping("/register")
     public String addSharedEquipment() {
         return "reservation/shared-equipment/shared-equipment-register";
     }
 
-    @GetMapping("/{eqNo}/shared-equipment-edit")
-    public String editSharedEquipment(@PathVariable Long eqNo, Model model) {
+    @GetMapping("/{eqNo}/edit")
+    public String editSharedEquipment(@PathVariable(name = "eqNo") Long eqNo, Model model) {
         model.addAttribute("eqNo", eqNo);
         return "reservation/shared-equipment/shared-equipment-edit";
     }
 
     // 공유 설비 예약 조회 화면
-    @GetMapping("/shared-equipment-reservation")
+    @GetMapping("/reservation")
     public String sharedEquipmentReservation() {
         return "reservation/shared-equipment/shared-equipment-reservation";
     }
 
     // 공유 설비 예약 등록 화면
-    @GetMapping("/{eqNo}/shared-equipment-reservation")
-    public String sharedEquipmentReservation(@PathVariable Long eqNo) {
+    @GetMapping("/{eqNo}/reservation")
+    public String sharedEquipmentReservation(@PathVariable(name = "eqNo") Long eqNo) {
         return "reservation/shared-equipment/shared-equipment-reservation";
     }
 }

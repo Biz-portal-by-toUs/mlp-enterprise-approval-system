@@ -1,947 +1,934 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
 <head>
     <meta charset="UTF-8"/>
     <title>법인 차량 예약</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* 이 페이지 전용 컨테이너 */
+            .car-reservation-page {
+                padding: 22px 26px;
+            }
 
-    <style>
-        body {
-            font-family: Pretendard, Arial, sans-serif;
-            background: #f7f8fa;
-            margin: 0;
-            padding: 20px;
-        }
+            .car-reservation-page h2 {
+                margin-bottom: 16px;
+            }
 
-        h2 {
-            margin-bottom: 16px;
-        }
+            /* ===== 기준 덩어리 ===== */
+            .car-reservation-page .timetable-section {
+                width: fit-content;
+                margin: 0 auto;
+            }
 
-        /* ===== 기준 덩어리 ===== */
-        .timetable-section {
-            width: fit-content;
-            margin: 0 auto;
-        }
+            /* ===== 상단 ===== */
+            .car-reservation-page .timetable-header {
+                display: grid;
+                grid-template-columns: 1fr auto 1fr;
+                align-items: center;
+                margin-bottom: 10px;
+            }
 
-        /* ===== 상단 ===== */
-        .timetable-header {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+            /* 범례 */
+            .car-reservation-page .legend {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                font-size: 13px;
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
 
-        /* 범례 */
-        .legend {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            font-size: 13px;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
+            .car-reservation-page .legend-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
 
-        .legend-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+            .car-reservation-page .dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+            }
 
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 3px;
-        }
+            .car-reservation-page .dot.selected {
+                background: #4a90e2;
+            }
 
-        .dot.selected {
-            background: #4a90e2;
-        }
+            .car-reservation-page .dot.reserved-other {
+                background: #8bc34a;
+            }
 
-        .dot.reserved-other {
-            background: #8bc34a;
-        }
+            .car-reservation-page .dot.reserved-mine {
+                background: #9c27b0;
+            }
 
-        .dot.reserved-mine {
-            background: #9c27b0;
-        }
+            .car-reservation-page .legend-box {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                margin-right: 6px;
+                border-radius: 3px;
+            }
 
-        .legend-box {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            margin-right: 6px;
-            border-radius: 3px;
-        }
+            .car-reservation-page .legend-box.legend-selected {
+                background: #4f8fe3;
+            }
 
-        .legend-box.legend-selected {
-            background: #4f8fe3;
-        }
+            .car-reservation-page .legend-box.legend-mine {
+                background: #9c27b0;
+            }
 
-        .legend-box.legend-mine {
-            background: #9c27b0;
-        }
+            .car-reservation-page .legend-box.legend-other {
+                background: #8bc34a;
+            }
 
-        .legend-box.legend-other {
-            background: #8bc34a;
-        }
+            /* 선택 중 */
+            .car-reservation-page .time-cell.selected {
+                background: #4f8fe3;
+            }
 
-        /* 선택 중 */
-        .time-cell.selected {
-            background: #4f8fe3;
-        }
+            /* 내 예약 */
+            .car-reservation-page .time-cell.reserved-mine {
+                background: #9c27b0;
+            }
 
-        /* 내 예약 */
-        .time-cell.reserved-mine {
-            background: #9c27b0;
-        }
+            /* 다른 사용자 예약 */
+            .car-reservation-page .time-cell.reserved-other {
+                background: #8bc34a;
+            }
 
-        /* 다른 사용자 예약 */
-        .time-cell.reserved-other {
-            background: #8bc34a;
-        }
+            /* 과거 시간/날짜 공통 */
+            .car-reservation-page .time-cell.disabled {
+                pointer-events: none;
+            }
 
-        /* 과거 시간/날짜 공통 */
-        .time-cell.disabled {
-            pointer-events: none;
-        }
+            /* 회색 오버레이 */
+            .car-reservation-page .time-cell.past {
+                position: relative;
+            }
 
-        /* 회색 오버레이 */
-        .time-cell.past {
-            position: relative;
-        }
+            .car-reservation-page .time-cell.past::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: rgba(200, 200, 200, 0.55);
+                z-index: 2;
+                pointer-events: none;
+            }
 
-        .time-cell.past::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: rgba(200, 200, 200, 0.55); /* 반투명 회색 */
-            z-index: 2;
-            pointer-events: none;
-        }
+            /* 날짜 */
+            .car-reservation-page .date-nav {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 22px;
+                font-weight: bold;
+            }
 
-        /* 날짜 */
-        .date-nav {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 22px;
-            font-weight: bold;
-        }
+            .car-reservation-page .date-nav button {
+                border: none;
+                background: none;
+                font-size: 22px;
+                cursor: pointer;
+            }
 
-        .date-nav button {
-            border: none;
-            background: none;
-            font-size: 22px;
-            cursor: pointer;
-        }
+            /* 예약 버튼 */
+            .car-reservation-page .reserve-action-btn {
+                background: #2d7ff9;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                justify-self: end;
+            }
 
-        /* 예약 버튼 */
-        .reserve-action-btn {
-            background: #2d7ff9;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            justify-self: end;
-        }
+            /* ===== 타임테이블 ===== */
+            .car-reservation-page .timetable-wrapper {
+                overflow-x: auto;
+            }
 
-        /* ===== 타임테이블 ===== */
-        .timetable-wrapper {
-            overflow-x: auto;
-        }
+            .car-reservation-page .timetable {
+                border: 1px solid #ddd;
+                background: white;
+                width: fit-content;
+            }
 
-        .timetable {
-            border: 1px solid #ddd;
-            background: white;
-            width: fit-content;
-        }
+            .car-reservation-page .time-header,
+            .car-reservation-page .car-row {
+                display: grid;
+                grid-template-columns: 150px repeat(18, 60px);
+            }
 
-        .time-header,
-        .car-row {
-            display: grid;
-            grid-template-columns: 150px repeat(18, 60px);
-        }
+            .car-reservation-page .time-header div,
+            .car-reservation-page .car-row div {
+                border-bottom: 1px solid #e0e0e0;
+                border-right: 1px solid #e0e0e0;
+                text-align: center;
+                padding: 8px 0;
+                font-size: 13px;
+            }
 
-        .time-header div,
-        .car-row div {
-            border-bottom: 1px solid #e0e0e0;
-            border-right: 1px solid #e0e0e0;
-            text-align: center;
-            padding: 8px 0;
-            font-size: 13px;
-        }
+            .car-reservation-page .time-header {
+                background: #f0f2f5;
+                font-weight: bold;
+            }
 
-        .time-header {
-            background: #f0f2f5;
-            font-weight: bold;
-        }
+            .car-reservation-page .car-name {
+                background: #fafafa;
+                font-weight: bold;
+            }
 
-        .car-name {
-            background: #fafafa;
-            font-weight: bold;
-        }
+            .car-reservation-page .modal-card {
+                width: 420px;
+                border-radius: 20px;
+                padding: 22px;
+                background: #fff;
+                box-shadow: 0 16px 40px rgba(0, 0, 0, .15);
+                margin: 0 auto;
+            }
 
-        .modal-card {
-            width: 420px;
-            border-radius: 20px;
-            padding: 22px;
-            background: #fff;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, .15);
-            margin: 0 auto;
-        }
+            .car-reservation-page .car-img {
+                width: 100%;
+                height: 180px;
+                border-radius: 15px;
+                object-fit: cover;
+                margin-bottom: 14px;
+            }
 
-        .car-img {
-            width: 100%;
-            height: 180px;
-            border-radius: 15px;
-            object-fit: cover;
-            margin-bottom: 14px;
-        }
+            .car-reservation-page .info-table > div {
+                margin: 8px 0;
+            }
 
-        .info-table > div {
-            margin: 8px 0;
-        }
+            .car-reservation-page input,
+            .car-reservation-page select {
+                width: 100%;
+                border-radius: 8px;
+                padding: 6px 10px;
+                border: 1px solid #ccc;
+            }
 
+            .car-reservation-page .actions {
+                margin-top: 16px;
+                text-align: center;
+            }
 
-        input, select {
-            width: 100%;
-            border-radius: 8px;
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-        }
+            .car-reservation-page .actions button {
+                padding: 8px 22px;
+                border-radius: 10px;
+                border: none;
+                margin: 0 8px;
+            }
 
-        .actions {
-            margin-top: 16px;
-            text-align: center;
-        }
+            .car-reservation-page .actions .primary {
+                background: #2969ff;
+                color: #fff;
+            }
 
-        .actions button {
-            padding: 8px 22px;
-            border-radius: 10px;
-            border: none;
-            margin: 0 8px;
-        }
+            /* 예약목적 줄 레이아웃 */
+            .car-reservation-page .form-block.reserve-only {
+                display: block;
+                align-items: center;
+                gap: 12px;
+            }
 
-        .actions .primary {
-            background: #2969ff;
-            color: #fff;
-        }
+            .car-reservation-page .form-block.reserve-only > b {
+                margin: 0;
+                white-space: nowrap;
+            }
 
-        /* ✅ 목적 줄은 input이 옆으로 자연스럽게 붙게 */
-        .form-block.reserve-only{
-            display:block;
-            align-items:center;
-            gap:12px;
-        }
+            .car-reservation-page .form-block.reserve-only > input#purpose {
+                display: block;
+                flex: 1;
+                min-width: 0;
+                width: 100%;
+                margin-top: 8px;
+            }
 
-        .form-block.reserve-only > b{
-            margin:0;
-            white-space:nowrap;
-        }
+            /* 모달 버튼 공통 스타일 */
+            .car-reservation-page .info-table button {
+                padding: 8px 22px;
+                border-radius: 10px;
+                border: none;
+                margin: 0 8px;
+                cursor: pointer;
+            }
 
-        .form-block.reserve-only > input#purpose{
-            display:block;
-            flex:1;
-            min-width:0;
-            width:100%;
-            margin-top:8px;
-        }
+            .car-reservation-page .info-table button.primary {
+                background: #2d7ff9;
+                color: #fff;
+            }
 
-        /* ✅ 모달(info-table) 안 버튼 공통 스타일 */
-        .info-table button{
-            padding: 8px 22px;
-            border-radius: 10px;
-            border: none;
-            margin: 0 8px;
-            cursor: pointer;
-        }
+            .car-reservation-page .info-table button.primary:hover {
+                background: #1d6fe8;
+            }
 
-        /* ✅ 예약 = 파란 버튼 (reserveBtn은 이미 class="primary") */
-        .info-table button.primary{
-            background: #2d7ff9;   /* 위에 '예약하기' 버튼이랑 톤 맞춤 */
-            color: #fff;
-        }
-        .info-table button.primary:hover{
-            background: #1d6fe8;
-        }
+            .car-reservation-page .info-table #cancelBtn {
+                background: #e5e7eb;
+                color: #111827;
+            }
 
-        /* ✅ 취소 = 회색 버튼 */
-        .info-table #cancelBtn{
-            background: #e5e7eb;
-            color: #111827;
-        }
-        .info-table #cancelBtn:hover{
-            background: #d1d5db;
-        }
-        .actions #cancelBtn{
-            background:#e5e7eb;
-            color:#111827;
-        }
-        .actions #cancelBtn:hover{
-            background:#d1d5db;
-        }
+            .car-reservation-page .info-table #cancelBtn:hover {
+                background: #d1d5db;
+            }
 
-    </style>
+            .car-reservation-page .actions #cancelBtn {
+                background: #e5e7eb;
+                color: #111827;
+            }
+
+            .car-reservation-page .actions #cancelBtn:hover {
+                background: #d1d5db;
+            }
+
+            /* 예약 모달 전체 오버레이 */
+            .car-reservation-page #reserveModal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, .35);
+                align-items: center;
+                justify-content: center;
+                z-index: 999999;
+            }
+        </style>
+    </th:block>
 </head>
 
 <body>
 
-<div class="timetable-section">
-    <h2>법인 차량 예약</h2>
-    <br><br>
-    <!-- 상단 -->
-    <div class="timetable-header">
+<div layout:fragment="content">
+    <section class="page-with-subbar">
 
-        <!-- 범례 -->
-        <ul class="legend">
-            <li class="legend-row">
-                <span class="legend-box legend-selected"></span> 선택한 예약
-            </li>
-            <li class="legend-row">
-                <span class="legend-box legend-mine"></span> 내 예약
-            </li>
-            <li class="legend-row">
-                <span class="legend-box legend-other"></span> 다른 사용자 예약
-            </li>
-        </ul>
+        <!-- 🔹 왼쪽: 예약 사이드바 (법인 차량 예약 active) -->
+        <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('car')"></aside>
 
-        <!-- 날짜 -->
-        <div class="date-nav">
-            <button id="prevDate">◀</button>
-            <span id="currentDate"></span>
-            <input type="date" id="hiddenDate" style="display:none"/>
-            <button id="nextDate">▶</button>
-        </div>
+        <!-- 🔹 오른쪽: 법인 차량 예약 타임테이블 -->
+        <div class="car-reservation-page">
 
-        <!-- 예약 -->
-        <button class="reserve-action-btn" id="openReserve">예약하기</button>
+            <div class="timetable-section">
+                <h2>법인 차량 예약</h2>
+                <br><br>
 
-    </div>
+                <!-- 상단 -->
+                <div class="timetable-header">
 
-    <!-- 타임테이블 -->
-    <div class="timetable-wrapper">
-        <div class="timetable" id="timetable"></div>
-    </div>
+                    <!-- 범례 -->
+                    <ul class="legend">
+                        <li class="legend-row">
+                            <span class="legend-box legend-selected"></span> 선택한 예약
+                        </li>
+                        <li class="legend-row">
+                            <span class="legend-box legend-mine"></span> 내 예약
+                        </li>
+                        <li class="legend-row">
+                            <span class="legend-box legend-other"></span> 다른 사용자 예약
+                        </li>
+                    </ul>
 
-    <!-- 예약 확인 폼 -->
-    <div id="reserveModal" style="
-  display:none;
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.35);
-  align-items:center; justify-content:center;
-  z-index: 999999;">
+                    <!-- 날짜 -->
+                    <div class="date-nav">
+                        <button id="prevDate">◀</button>
+                        <span id="currentDate"></span>
+                        <input type="date" id="hiddenDate" style="display:none"/>
+                        <button id="nextDate">▶</button>
+                    </div>
 
-        <div class="modal-card" style="position:relative; z-index:1000000;">
-            <h2>법인 차량 예약</h2>
+                    <!-- 예약 -->
+                    <button class="reserve-action-btn" id="openReserve">예약하기</button>
 
-            <!-- 이미지 -->
-            <img id="carImage" class="car-img">
-
-            <!-- 정보 -->
-            <div class="info-table">
-
-                <div><b>차량명:</b> <span id="carName"></span></div>
-                <div><b>예약일자:</b> <span id="resvDate"></span></div>
-                <div><b>예약시간:</b> <span id="resvTime"></span></div>
-                <div><b>예약자:</b> <span id="reserver"></span></div>
-
-                <div class="form-block reserve-only">
-                    <b>예약목적:</b>
-                    <input id="purpose">
                 </div>
-                <div class="actions">
-                <button class="primary reserve-only" id="reserveBtn">예약</button>
-                <button id="deleteBtn" style="background:#ff4d4f;color:#fff;display:none;">
-                    예약 취소
-                </button>
-                <button id="cancelBtn">취소</button>
+
+                <!-- 타임테이블 -->
+                <div class="timetable-wrapper">
+                    <div class="timetable" id="timetable"></div>
+                </div>
+
+                <!-- 예약 확인 / 취소 모달 -->
+                <div id="reserveModal">
+
+                    <div class="modal-card" style="position:relative; z-index:1000000;">
+                        <h2>법인 차량 예약</h2>
+
+                        <!-- 이미지 -->
+                        <img id="carImage" class="car-img">
+
+                        <!-- 정보 -->
+                        <div class="info-table">
+
+                            <div><b>차량명:</b> <span id="carName"></span></div>
+                            <div><b>예약일자:</b> <span id="resvDate"></span></div>
+                            <div><b>예약시간:</b> <span id="resvTime"></span></div>
+                            <div><b>예약자:</b> <span id="reserver"></span></div>
+
+                            <div class="form-block reserve-only">
+                                <b>예약목적:</b>
+                                <input id="purpose">
+                            </div>
+
+                            <div class="actions">
+                                <button class="primary reserve-only" id="reserveBtn">예약</button>
+                                <button id="deleteBtn" style="background:#ff4d4f;color:#fff;display:none;">
+                                    예약 취소
+                                </button>
+                                <button id="cancelBtn">취소</button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
         </div>
-
-    </div>
+    </section>
 </div>
 
-</div>
+<th:block layout:fragment="pageScripts">
+    <!-- dayjs CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 
-<script>
-    const START_HOUR = 9;
-    const END_HOUR = 18;
+    <script>
+        const START_HOUR = 9;
+        const END_HOUR = 18;
 
-    let myEmpId = null;
-    let currentDate = dayjs();
-    let firstClickCell = null;
+        let myEmpId = null;
+        let currentDate = dayjs();
+        let firstClickCell = null;
 
-    let dragCells = [];
-    let isDragging = false;
-    let dragRow = null;
+        let dragCells = [];
+        let isDragging = false;
+        let dragRow = null;
 
-    let CARS = [];
-    let RESERVATIONS = [];
+        let CARS = [];
+        let RESERVATIONS = [];
 
-    const timetable = document.getElementById("timetable");
-    const currentDateEl = document.getElementById("currentDate");
-    const hiddenDate = document.getElementById("hiddenDate");
+        const timetable = document.getElementById("timetable");
+        const currentDateEl = document.getElementById("currentDate");
+        const hiddenDate = document.getElementById("hiddenDate");
 
-    const reserverEl = document.getElementById("reserver");
-    const reserveBtn = document.getElementById("reserveBtn");
-    const deleteBtn = document.getElementById("deleteBtn");
+        const reserverEl = document.getElementById("reserver");
+        const reserveBtn = document.getElementById("reserveBtn");
+        const deleteBtn = document.getElementById("deleteBtn");
 
-    // ✅ 쿠키(httpOnly) 기반 공통 fetch (쿠키 자동 포함)
-    const API_BASE = window.location.origin; // 현재 페이지 떠있는 호스트/포트 그대로 사용
+        const API_BASE = window.location.origin;
 
-    async function apiFetch(path, options = {}) {
-        const url = API_BASE + path;
-        const res = await fetch(url, {
-            ...options,
-            credentials: "include",
-            headers: {...(options.headers || {})}
-        });
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
+            const res = await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: {...(options.headers || {})}
+            });
 
-        console.log("[apiFetch]", res.status, url);
+            console.log("[apiFetch]", res.status, url);
 
-        if (res.status === 401 || res.status === 403) {
-            alert("로그인이 만료되었어요. 다시 로그인 해 주세요.");
-            throw new Error("UNAUTHORIZED");
-        }
-        return res;
-    }
-
-    function get(obj, path) {
-        return path.split(".").reduce((o, k) => o?.[k], obj);
-    }
-
-    function pick(obj, paths, fallback = "-") {
-        for (const p of paths) {
-            const v = get(obj, p);
-            if (v !== undefined && v !== null && String(v).trim() !== "") return v;
-        }
-        return fallback;
-    }
-
-    function fmtTime(t) {
-        if (!t) return "-";
-        if (typeof t === "string") return t.slice(0, 5); // "13:00:00" -> "13:00"
-        const hh = String(t.hour ?? "").padStart(2, "0");
-        const mm = String(t.minute ?? "").padStart(2, "0");
-        return `${hh}:${mm}`;
-    }
-
-    function setReserverToMe() {
-        if (!reserverEl) return;
-        const emp = ME?.empName ?? ME?.employeeName ?? "-";
-        const dep = ME?.depName ?? ME?.departmentName ?? "-";
-        reserverEl.innerText = `${emp} (${dep})`;
-    }
-
-
-    function isPastCell(cellIdx) {
-        const now = dayjs();
-
-        // 날짜가 과거면 → 전 셀 과거 (시간 무시)
-        if (currentDate.isBefore(now, "day")) {
-            return true;
+            if (res.status === 401 || res.status === 403) {
+                alert("로그인이 만료되었어요. 다시 로그인 해 주세요.");
+                throw new Error("UNAUTHORIZED");
+            }
+            return res;
         }
 
-        // 오늘인 경우만 시간 비교
-        if (currentDate.isSame(now, "day")) {
-            const cellHour = START_HOUR + Math.floor(cellIdx / 2);
-            const cellMinute = cellIdx % 2 === 0 ? 0 : 30;
+        function get(obj, path) {
+            return path.split(".").reduce((o, k) => o?.[k], obj);
+        }
 
-            const cellTime = currentDate
-                .hour(cellHour)
-                .minute(cellMinute)
-                .second(0);
+        function pick(obj, paths, fallback = "-") {
+            for (const p of paths) {
+                const v = get(obj, p);
+                if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+            }
+            return fallback;
+        }
 
-            if (cellTime.isBefore(now)) {
+        function fmtTime(t) {
+            if (!t) return "-";
+            if (typeof t === "string") return t.slice(0, 5);
+            const hh = String(t.hour ?? "").padStart(2, "0");
+            const mm = String(t.minute ?? "").padStart(2, "0");
+            return `${hh}:${mm}`;
+        }
+
+        function setReserverToMe() {
+            if (!reserverEl) return;
+            const emp = ME?.empName ?? ME?.employeeName ?? "-";
+            const dep = ME?.depName ?? ME?.departmentName ?? "-";
+            reserverEl.innerText = `${emp} (${dep})`;
+        }
+
+        function isPastCell(cellIdx) {
+            const now = dayjs();
+
+            if (currentDate.isBefore(now, "day")) {
                 return true;
             }
-        }
 
-        // 미래 날짜
-        return false;
-    }
+            if (currentDate.isSame(now, "day")) {
+                const cellHour = START_HOUR + Math.floor(cellIdx / 2);
+                const cellMinute = cellIdx % 2 === 0 ? 0 : 30;
 
-    /* ================= 날짜 ================= */
-    async function changeDate(diff) {
-        currentDate = currentDate.add(diff, "day");
-        renderDate();
-        clearSelection();
+                const cellTime = currentDate
+                    .hour(cellHour)
+                    .minute(cellMinute)
+                    .second(0);
 
-        buildTable();
-
-        try {
-            await loadReservations();
-        } catch (e) {
-            console.error("예약 조회 실패:", e);
-            // 서버가 죽어있을 때 여기로 옴
-        }
-    }
-
-    function renderDate() {
-        const label = document.getElementById("currentDate");
-        const hidden = document.getElementById("hiddenDate");
-
-        const ymd = currentDate.format("YYYY-MM-DD");
-
-        if (label) label.textContent = ymd;     // 상단 날짜 표시
-        if (hidden) hidden.value = ymd;         // date input 값도 동기화
-    }
-
-    document.getElementById("prevDate").onclick = async () => changeDate(-1);
-    document.getElementById("nextDate").onclick = async () => changeDate(1);
-
-    function isPastDate() {
-        return currentDate.startOf("day").isBefore(dayjs().startOf("day"));
-    }
-
-    currentDateEl.onclick = () => {
-        hiddenDate.value = currentDate.format("YYYY-MM-DD");
-        hiddenDate.showPicker?.();
-    };
-
-    hiddenDate.addEventListener("change", async () => {
-        if (!hiddenDate.value) {
-            // 삭제 눌렀을 때
-            hiddenDate.value = dayjs().format("YYYY-MM-DD");
-        }
-
-        currentDate = dayjs(hiddenDate.value);
-        renderDate();
-        clearSelection();
-
-        buildTable();
-        await loadReservations();
-    });
-
-
-    /* ================= 법인 차량 조회 ================= */
-    async function loadCars() {
-        const res = await apiFetch("/api/v1/corporate-cars");
-        const json = await res.json();
-
-        // 차 목록은 페이징/래핑 케이스 대비
-        const raw = json?.data?.data ?? json?.data ?? json;
-        CARS = Array.isArray(raw) ? raw : (raw?.content ?? []);
-        buildTable();
-    }
-
-    async function loadReservations() {
-        const dateStr = currentDate.format("YYYY-MM-DD");
-        const res = await apiFetch(`/api/v1/corporate-car-reservations?date=${dateStr}`);
-
-        const json = await res.json();
-        console.log("[reservations] json:", json);
-
-        const raw = json?.data?.data ?? json?.data ?? json ?? [];
-        const list =
-            Array.isArray(raw) ? raw :
-                Array.isArray(raw?.content) ? raw.content :
-                    Array.isArray(raw?.items) ? raw.items :
-                        Array.isArray(raw?.data) ? raw.data :
-                            [];
-
-        RESERVATIONS = list;
-        console.log("sample resv", RESERVATIONS[0]);
-        console.log("[reservations] count:", RESERVATIONS.length);
-
-        paintReservations();
-    }
-
-    /* ================= 테이블 생성 ================= */
-    function buildTable() {
-        timetable.innerHTML = "";
-
-
-        if (CARS.length === 0) {
-            timetable.innerHTML = `<div style="padding:20px;color:#888">등록된 법인 차량이 없습니다.</div>`;
-            return;
-        }
-
-        const header = document.createElement("div");
-        header.className = "time-header";
-        header.innerHTML = "<div>법인 차량</div>";
-
-        for (let h = START_HOUR; h < END_HOUR; h++) {
-            header.innerHTML += `<div>${h}:00</div><div>${h}:30</div>`;
-        }
-        timetable.appendChild(header);
-
-        CARS.forEach(car => {
-            const row = document.createElement("div");
-            row.className = "car-row";
-            row.dataset.carNo = car.carNo;
-            row.innerHTML = `<div class="car-name">${car.carName}</div>`;
-
-            for (let i = 0; i < 18; i++) {
-                const cell = document.createElement("div");
-                cell.className = "time-cell";
-
-                if (isPastCell(i)) {
-                    cell.classList.add("disabled", "past");
+                if (cellTime.isBefore(now)) {
+                    return true;
                 }
-
-                // ✅ 클릭 로직은 여기서 직접 쓰지 말고, 공통 함수만 바인딩
-                if (!cell.classList.contains("disabled")) {
-                    bindSelectable(cell);
-                }
-
-                row.appendChild(cell);
             }
 
-            timetable.appendChild(row);
+            return false;
+        }
+
+        async function changeDate(diff) {
+            currentDate = currentDate.add(diff, "day");
+            renderDate();
+            clearSelection();
+
+            buildTable();
+
+            try {
+                await loadReservations();
+            } catch (e) {
+                console.error("예약 조회 실패:", e);
+            }
+        }
+
+        function renderDate() {
+            const ymd = currentDate.format("YYYY-MM-DD");
+            if (currentDateEl) currentDateEl.textContent = ymd;
+            if (hiddenDate) hiddenDate.value = ymd;
+        }
+
+        document.getElementById("prevDate").onclick = async () => changeDate(-1);
+        document.getElementById("nextDate").onclick = async () => changeDate(1);
+
+        function isPastDate() {
+            return currentDate.startOf("day").isBefore(dayjs().startOf("day"));
+        }
+
+        currentDateEl.onclick = () => {
+            hiddenDate.value = currentDate.format("YYYY-MM-DD");
+            hiddenDate.showPicker?.();
+        };
+
+        hiddenDate.addEventListener("change", async () => {
+            if (!hiddenDate.value) {
+                hiddenDate.value = dayjs().format("YYYY-MM-DD");
+            }
+
+            currentDate = dayjs(hiddenDate.value);
+            renderDate();
+            clearSelection();
+            buildTable();
+            await loadReservations();
         });
 
-        paintReservations(); // ⭐ 방 생성 후 예약 표시
-    }
+        async function loadCars() {
+            const res = await apiFetch("/api/v1/corporate-cars");
+            const json = await res.json();
 
-    /* ================= 예약 표시 ================= */
-    function bindSelectable(cell) {
-        cell.onclick = () => {
-            if (cell.classList.contains("disabled")) return;
+            const raw = json?.data?.data ?? json?.data ?? json;
+            CARS = Array.isArray(raw) ? raw : (raw?.content ?? []);
+            buildTable();
+        }
 
-            const row = cell.closest(".car-row");
-            const cells = [...row.querySelectorAll(".time-cell")];
+        async function loadReservations() {
+            const dateStr = currentDate.format("YYYY-MM-DD");
+            const res = await apiFetch(`/api/v1/corporate-car-reservations?date=${dateStr}`);
 
-            if (!cell.classList.contains("disabled")) bindSelectable(cell);
+            const json = await res.json();
+            console.log("[reservations] json:", json);
 
-            // 1️⃣ 첫 클릭
-            if (!firstClickCell) {
-                clearSelection();
-                firstClickCell = cell;
-                selectCell(cell);
+            const raw = json?.data?.data ?? json?.data ?? json ?? [];
+            const list =
+                Array.isArray(raw) ? raw :
+                    Array.isArray(raw?.content) ? raw.content :
+                        Array.isArray(raw?.items) ? raw.items :
+                            Array.isArray(raw?.data) ? raw.data :
+                                [];
+
+            RESERVATIONS = list;
+            console.log("[reservations] count:", RESERVATIONS.length);
+
+            paintReservations();
+        }
+
+        function buildTable() {
+            timetable.innerHTML = "";
+
+            if (CARS.length === 0) {
+                timetable.innerHTML = `<div style="padding:20px;color:#888">등록된 법인 차량이 없습니다.</div>`;
                 return;
             }
 
-            // 2️⃣ 두 번째 클릭 (같은 차량만 허용)
-            if (row !== firstClickCell.closest(".car-row")) {
-                alert("같은 차량에서만 선택할 수 있어요.");
-                clearSelection();
-                firstClickCell = null;
-                return;
+            const header = document.createElement("div");
+            header.className = "time-header";
+            header.innerHTML = "<div>법인 차량</div>";
+
+            for (let h = START_HOUR; h < END_HOUR; h++) {
+                header.innerHTML += `<div>${h}:00</div><div>${h}:30</div>`;
             }
+            timetable.appendChild(header);
 
-            const startIdx = cells.indexOf(firstClickCell);
-            const endIdx = cells.indexOf(cell);
+            CARS.forEach(car => {
+                const row = document.createElement("div");
+                row.className = "car-row";
+                row.dataset.carNo = car.carNo;
+                row.innerHTML = `<div class="car-name">${car.carName}</div>`;
 
-            let s = Math.min(startIdx, endIdx);
-            let e = Math.max(startIdx, endIdx);
+                for (let i = 0; i < 18; i++) {
+                    const cell = document.createElement("div");
+                    cell.className = "time-cell";
 
-            // ✅ 중간에 예약이 있으면 막기
-            for (let i = s; i <= e; i++) {
-                if (cells[i].classList.contains("reserved-other") ||
-                    cells[i].classList.contains("reserved-mine")) {
-                    alert("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
+                    if (isPastCell(i)) {
+                        cell.classList.add("disabled", "past");
+                    }
+
+                    if (!cell.classList.contains("disabled")) {
+                        bindSelectable(cell);
+                    }
+
+                    row.appendChild(cell);
+                }
+
+                timetable.appendChild(row);
+            });
+
+            paintReservations();
+        }
+
+        function bindSelectable(cell) {
+            cell.onclick = () => {
+                if (cell.classList.contains("disabled")) return;
+
+                const row = cell.closest(".car-row");
+                const cells = [...row.querySelectorAll(".time-cell")];
+
+                if (!firstClickCell) {
+                    clearSelection();
+                    firstClickCell = cell;
+                    selectCell(cell);
+                    return;
+                }
+
+                if (row !== firstClickCell.closest(".car-row")) {
+                    alert("같은 차량에서만 선택할 수 있어요.");
                     clearSelection();
                     firstClickCell = null;
                     return;
                 }
-            }
 
-            clearSelection();
-            for (let i = s; i <= e; i++) selectCell(cells[i]);
-            firstClickCell = null;
-        };
-    }
+                const startIdx = cells.indexOf(firstClickCell);
+                const endIdx = cells.indexOf(cell);
 
-    /* ================= 예약 표시 ================= */
-    function paintReservations() {
-        // ✅ 0) 전 셀 초기화 (예약 표시/툴팁/데이터/클릭 복구)
-        document.querySelectorAll(".time-cell").forEach(cell => {
-            cell.classList.remove("reserved-other", "reserved-mine");
-            cell.title = "";
+                let s = Math.min(startIdx, endIdx);
+                let e = Math.max(startIdx, endIdx);
 
-            delete cell.dataset.resvNo;
-            delete cell.dataset.empName;
-            delete cell.dataset.depName;
-
-            // cursor/onclick 복구
-            cell.style.cursor = "";
-            if (!cell.classList.contains("disabled")) {
-                bindSelectable(cell);
-            } else {
-                cell.onclick = null;
-            }
-        });
-
-        const dateStr = currentDate.format("YYYY-MM-DD");
-
-        const parseHM = (t) => {
-            if (!t) return null;
-            if (typeof t === "string") {
-                const [h, m] = t.split(":");
-                return {h: Number(h), m: Number(m)};
-            }
-            return {h: t.hour, m: t.minute};
-        };
-
-        RESERVATIONS.forEach(resv => {
-            const resvDate =
-                resv.resvDate ??
-                (resv.startedAt ? String(resv.startedAt).substring(0, 10) : null);
-
-            if (resvDate !== dateStr) return;
-            if (!resv.carNo) return;
-
-            const row = document.querySelector(`.car-row[data-car-no="${resv.carNo}"]`);
-            if (!row) return;
-
-            const st = parseHM(resv.startTime || (resv.startedAt ? String(resv.startedAt).substring(11, 16) : null));
-            const et = parseHM(resv.endTime || (resv.endedAt ? String(resv.endedAt).substring(11, 16) : null));
-            if (!st || !et) return;
-
-            const startIdx = ((st.h - START_HOUR) * 2) + (st.m >= 30 ? 1 : 0);
-            const endIdx = ((et.h - START_HOUR) * 2) + (et.m >= 30 ? 1 : 0);
-
-            const cells = Array.from(row.querySelectorAll(".time-cell"));
-            const isMine = (myEmpId != null) && (String(resv.resvEmpId) === String(myEmpId));
-
-
-            // ✅ 이름/부서 undefined 방지 (백엔드 필드가 달라도 대응)
-            const empName =
-                resv.reservedByName ??
-                resv.resvEmpName ?? resv.empName ?? resv.reserverName ?? resv.employeeName ?? resv.resvEmp?.empName ?? "-";
-            let depName =
-                resv.reservedByDepName ??
-                resv.depName ?? resv.resvDepName ?? resv.departmentName ?? resv.deptName ?? resv.resvEmp?.depName ?? "-";
-
-            for (let i = startIdx; i < endIdx; i++) {
-                const cell = cells[i];
-                if (!cell) continue;
-
-                cell.classList.add(isMine ? "reserved-mine" : "reserved-other");
-
-                cell.title = (depName === "-" ? `${empName}` : `${empName} / ${depName}`);
-                cell.dataset.resvNo  = resv.resvNo;
-                cell.dataset.empName = empName;
-                cell.dataset.depName = depName;
-
-                if (isMine) {
-                    cell.onclick = () => openCancelModal(resv, empName, depName); // ✅ 여기!
-                    cell.style.cursor = "pointer";
-                } else {
-                    cell.onclick = () => {};
-                    cell.style.cursor = "not-allowed";
+                for (let i = s; i <= e; i++) {
+                    if (cells[i].classList.contains("reserved-other") ||
+                        cells[i].classList.contains("reserved-mine")) {
+                        alert("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
+                        clearSelection();
+                        firstClickCell = null;
+                        return;
+                    }
                 }
+
+                clearSelection();
+                for (let i = s; i <= e; i++) selectCell(cells[i]);
+                firstClickCell = null;
+            };
+        }
+
+        function paintReservations() {
+            document.querySelectorAll(".time-cell").forEach(cell => {
+                cell.classList.remove("reserved-other", "reserved-mine");
+                cell.title = "";
+
+                delete cell.dataset.resvNo;
+                delete cell.dataset.empName;
+                delete cell.dataset.depName;
+
+                cell.style.cursor = "";
+                if (!cell.classList.contains("disabled")) {
+                    bindSelectable(cell);
+                } else {
+                    cell.onclick = null;
+                }
+            });
+
+            const dateStr = currentDate.format("YYYY-MM-DD");
+
+            const parseHM = (t) => {
+                if (!t) return null;
+                if (typeof t === "string") {
+                    const [h, m] = t.split(":");
+                    return {h: Number(h), m: Number(m)};
+                }
+                return {h: t.hour, m: t.minute};
+            };
+
+            RESERVATIONS.forEach(resv => {
+                const resvDate =
+                    resv.resvDate ??
+                    (resv.startedAt ? String(resv.startedAt).substring(0, 10) : null);
+
+                if (resvDate !== dateStr) return;
+                if (!resv.carNo) return;
+
+                const row = document.querySelector(`.car-row[data-car-no="${resv.carNo}"]`);
+                if (!row) return;
+
+                const st = parseHM(resv.startTime || (resv.startedAt ? String(resv.startedAt).substring(11, 16) : null));
+                const et = parseHM(resv.endTime || (resv.endedAt ? String(resv.endedAt).substring(11, 16) : null));
+                if (!st || !et) return;
+
+                const startIdx = ((st.h - START_HOUR) * 2) + (st.m >= 30 ? 1 : 0);
+                const endIdx = ((et.h - START_HOUR) * 2) + (et.m >= 30 ? 1 : 0);
+
+                const cells = Array.from(row.querySelectorAll(".time-cell"));
+                const isMine = (myEmpId != null) && (String(resv.resvEmpId) === String(myEmpId));
+
+                const empName =
+                    resv.reservedByName ??
+                    resv.resvEmpName ?? resv.empName ?? resv.reserverName ?? resv.employeeName ?? resv.resvEmp?.empName ?? "-";
+                let depName =
+                    resv.reservedByDepName ??
+                    resv.depName ?? resv.resvDepName ?? resv.departmentName ?? resv.deptName ?? resv.resvEmp?.depName ?? "-";
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const cell = cells[i];
+                    if (!cell) continue;
+
+                    cell.classList.add(isMine ? "reserved-mine" : "reserved-other");
+
+                    cell.title = (depName === "-" ? `${empName}` : `${empName} / ${depName}`);
+                    cell.dataset.resvNo = resv.resvNo;
+                    cell.dataset.empName = empName;
+                    cell.dataset.depName = depName;
+
+                    if (isMine) {
+                        cell.onclick = () => openCancelModal(resv, empName, depName);
+                        cell.style.cursor = "pointer";
+                    } else {
+                        cell.onclick = () => {};
+                        cell.style.cursor = "not-allowed";
+                    }
+                }
+            });
+        }
+
+        document.onmouseup = () => {
+            isDragging = false;
+            dragRow = null;
+        };
+
+        function selectCell(cell) {
+            if (!dragCells.includes(cell)) {
+                cell.classList.add("selected");
+                dragCells.push(cell);
             }
-        });
-    }
-
-    /* ================= 드래그 ================= */
-    document.onmouseup = () => {
-        isDragging = false;
-        dragRow = null;
-    };
-
-    function selectCell(cell) {
-        if (!dragCells.includes(cell)) {
-            cell.classList.add("selected");
-            dragCells.push(cell);
-        }
-    }
-
-    function clearSelection() {
-        dragCells.forEach(c => c.classList.remove("selected"));
-        dragCells = [];
-    }
-
-
-    const modal = document.getElementById("reserveModal");
-    const mCarName = document.getElementById("carName");
-    const mCarImage = document.getElementById("carImage");
-    const mDate = document.getElementById("resvDate");
-    const mTime = document.getElementById("resvTime");
-
-    document.getElementById("openReserve").onclick = async () => {
-        document.getElementById("reserver").innerText =
-            `${ME?.empName ?? "-"} (${ME?.depName ?? "-"})`;
-
-        showReserveMode();
-        setReserverToMe();
-
-        document.getElementById("purpose").value = "";
-
-        if (dragCells.length === 0) {
-            alert("예약할 시간을 선택하세요.");
-            return;
         }
 
-        const row = dragCells[0].closest(".car-row");
-        const carNo = row.dataset.carNo;
+        function clearSelection() {
+            dragCells.forEach(c => c.classList.remove("selected"));
+            dragCells = [];
+        }
 
-        const carName = row.querySelector(".car-name").innerText;
+        const modal = document.getElementById("reserveModal");
+        const mCarName = document.getElementById("carName");
+        const mCarImage = document.getElementById("carImage");
+        const mDate = document.getElementById("resvDate");
+        const mTime = document.getElementById("resvTime");
 
-        const startIdx = [...row.querySelectorAll(".time-cell")].indexOf(dragCells[0]);
-        const endIdx = [...row.querySelectorAll(".time-cell")].indexOf(dragCells.at(-1)) + 1;
+        document.getElementById("openReserve").onclick = async () => {
+            document.getElementById("reserver").innerText =
+                `${ME?.empName ?? "-"} (${ME?.depName ?? "-"})`;
 
-        const idxToTime = (idx) => {
-            const h = START_HOUR + Math.floor(idx / 2);
-            const m = idx % 2 === 0 ? "00" : "30";
-            return `${String(h).padStart(2, "0")}:${m}`;
+            showReserveMode();
+            setReserverToMe();
+
+            document.getElementById("purpose").value = "";
+
+            if (dragCells.length === 0) {
+                alert("예약할 시간을 선택하세요.");
+                return;
+            }
+
+            const row = dragCells[0].closest(".car-row");
+            const carNo = row.dataset.carNo;
+
+            const carName = row.querySelector(".car-name").innerText;
+
+            const cells = [...row.querySelectorAll(".time-cell")];
+            const startIdx = cells.indexOf(dragCells[0]);
+            const endIdx = cells.indexOf(dragCells.at(-1)) + 1;
+
+            const idxToTime = (idx) => {
+                const h = START_HOUR + Math.floor(idx / 2);
+                const m = idx % 2 === 0 ? "00" : "30";
+                return `${String(h).padStart(2, "0")}:${m}`;
+            };
+
+            mCarName.innerText = carName;
+            mDate.innerText = currentDate.format("YYYY-MM-DD");
+            mTime.innerText = `${idxToTime(startIdx)} ~ ${idxToTime(endIdx)}`;
+
+            const car = CARS.find(r => r.carNo == carNo);
+
+            if (car?.imageUrl) {
+                mCarImage.src = car.imageUrl;
+                mCarImage.style.display = "block";
+            } else {
+                mCarImage.style.display = "none";
+            }
+
+            modal.style.display = "flex";
+
+            modal.dataset.carNo = carNo;
+            modal.dataset.start = idxToTime(startIdx);
+            modal.dataset.end = idxToTime(endIdx);
         };
 
-        mCarName.innerText = carName;
-        mDate.innerText = currentDate.format("YYYY-MM-DD");
-        mTime.innerText = `${idxToTime(startIdx)} ~ ${idxToTime(endIdx)}`;
-
-        // 법인 차량 이미지 처리
-        const car = CARS.find(r => r.carNo == carNo);
-
-        if (car?.imageUrl) {
-            mCarImage.src = car.imageUrl;
-            mCarImage.style.display = "block";
-        } else {
-            mCarImage.style.display = "none";
-        }
-
-        modal.style.display = "flex";
-
-        modal.dataset.carNo = carNo;
-        modal.dataset.start = idxToTime(startIdx);
-        modal.dataset.end = idxToTime(endIdx);
-    };
-
-    document.getElementById("cancelBtn").onclick = () => {
-        modal.style.display = "none";
-    };
-
-    document.getElementById("reserveBtn").onclick = async () => {
-
-        const body = {
-            carNo: Number(modal.dataset.carNo),
-            resvDate: currentDate.format("YYYY-MM-DD"),
-            startTime: modal.dataset.start,
-            endTime: modal.dataset.end,
-            purp: document.getElementById("purpose").value,
+        document.getElementById("cancelBtn").onclick = () => {
+            modal.style.display = "none";
         };
 
-        const res = await apiFetch("/api/v1/corporate-car-reservations", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(body)
-        });
+        document.getElementById("reserveBtn").onclick = async () => {
 
-        if (!res.ok) {
-            const msg = await res.text();
-            alert("예약 실패: " + msg);
-            return;
+            const body = {
+                carNo: Number(modal.dataset.carNo),
+                resvDate: currentDate.format("YYYY-MM-DD"),
+                startTime: modal.dataset.start,
+                endTime: modal.dataset.end,
+                purp: document.getElementById("purpose").value,
+            };
+
+            const res = await apiFetch("/api/v1/corporate-car-reservations", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                alert("예약 실패: " + msg);
+                return;
+            }
+
+            modal.style.display = "none";
+            clearSelection();
+            await loadReservations();
+        };
+
+        function setCarImageByCarNo(carNo) {
+            const car = CARS.find(r => String(r.carNo) === String(carNo));
+            const url = car?.imageUrl || car?.imgUrl || car?.image || null;
+
+            if (url) {
+                mCarImage.src = url;
+                mCarImage.style.display = "block";
+            } else {
+                mCarImage.removeAttribute("src");
+                mCarImage.style.display = "none";
+            }
         }
 
-        modal.style.display = "none";
-        clearSelection();
-        await loadReservations();
-    };
+        function openCancelModal(resv, empNameFromCell, depNameFromCell) {
+            modal.style.display = "flex";
 
-    function setCarImageByCarNo(carNo) {
-        const car = CARS.find(r => String(r.carNo) === String(carNo));
-        const url  = car?.imageUrl || car?.imgUrl || car?.image || null;
+            document.querySelectorAll(".reserve-only").forEach(el => el.style.display = "none");
+            reserveBtn.style.display = "none";
+            deleteBtn.style.display = "inline-block";
 
-        if (url) {
-            mCarImage.src = url;
-            mCarImage.style.display = "block";
-        } else {
-            mCarImage.removeAttribute("src");   // ✅ 이전 이미지 잔상 제거
-            mCarImage.style.display = "none";
-        }
-    }
+            const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], "-");
+            const resvDate = pick(resv, ["resvDate", "date"], resv.startedAt ? String(resv.startedAt).substring(0, 10) : "-");
 
+            const startRaw = pick(resv, ["startTime"], resv.startedAt ? String(resv.startedAt).substring(11, 19) : null);
+            const endRaw   = pick(resv, ["endTime"],   resv.endedAt   ? String(resv.endedAt).substring(11, 19)   : null);
 
-    function openCancelModal(resv, empNameFromCell, depNameFromCell) {
-        modal.style.display = "flex";
+            const toHM = (t) => t ? String(t).substring(0, 5) : "-";
 
-        document.querySelectorAll(".reserve-only").forEach(el => el.style.display = "none");
-        reserveBtn.style.display = "none";
-        deleteBtn.style.display  = "inline-block";
+            const meName = ME?.empName ?? ME?.employeeName;
+            const meDep  = ME?.depName ?? ME?.departmentName;
 
-        const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], "-");
-        const resvDate = pick(resv, ["resvDate", "date"], resv.startedAt ? String(resv.startedAt).substring(0, 10) : "-");
+            const empName = meName ?? empNameFromCell ?? pick(resv, [
+                "resvEmpName", "empName", "reserverName", "employeeName",
+                "resvEmp.empName", "employee.empName", "user.empName"
+            ], "-");
 
-        const startRaw = pick(resv, ["startTime"], resv.startedAt ? String(resv.startedAt).substring(11, 19) : null);
-        const endRaw   = pick(resv, ["endTime"],   resv.endedAt   ? String(resv.endedAt).substring(11, 19)   : null);
+            const depName = meDep ?? depNameFromCell ?? pick(resv, [
+                "depName", "resvDepName", "departmentName", "deptName",
+                "resvEmp.depName", "employee.depName", "user.depName"
+            ], "-");
 
-        const toHM = (t) => t ? String(t).substring(0, 5) : "-";
+            document.getElementById("carName").innerText = carName;
+            document.getElementById("resvDate").innerText = resvDate;
+            document.getElementById("resvTime").innerText = `${toHM(startRaw)} ~ ${toHM(endRaw)}`;
+            reserverEl.innerText = `${empName} (${depName})`;
 
-        // ✅ 예약자: ME > 셀에서 넘어온 값 > resv에서 찾기
-        const meName = ME?.empName ?? ME?.employeeName;
-        const meDep  = ME?.depName ?? ME?.departmentName;
+            setCarImageByCarNo(pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null));
 
-        const empName = meName ?? empNameFromCell ?? pick(resv, [
-            "resvEmpName", "empName", "reserverName", "employeeName",
-            "resvEmp.empName", "employee.empName", "user.empName"
-        ], "-");
-
-        const depName = meDep ?? depNameFromCell ?? pick(resv, [
-            "depName", "resvDepName", "departmentName", "deptName",
-            "resvEmp.depName", "employee.depName", "user.depName"
-        ], "-");
-
-        document.getElementById("carName").innerText = carName;
-        document.getElementById("resvDate").innerText = resvDate;
-        document.getElementById("resvTime").innerText = `${toHM(startRaw)} ~ ${toHM(endRaw)}`; // ✅ 초 제거 확정
-        reserverEl.innerText = `${empName} (${depName})`;
-
-        // ✅ 이미지도 여기서 반드시 세팅/숨김 처리 (아래 3번 참고)
-        setCarImageByCarNo(pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null));
-
-        modal.dataset.resvNo = pick(resv, ["resvNo", "reservationNo", "id"], "");
-    }
-
-
-    document.getElementById("deleteBtn").onclick = async () => {
-        const resvNo = modal.dataset.resvNo;
-
-        if (!confirm("정말 예약을 취소할까요?")) return;
-
-        const res = await apiFetch(`/api/v1/corporate-car-reservations/${resvNo}`, {
-            method: "DELETE"
-        });
-
-        if (!res.ok) {
-            alert("취소 실패");
-            return;
+            modal.dataset.resvNo = pick(resv, ["resvNo", "reservationNo", "id"], "");
         }
 
-        modal.style.display = "none";
-        await loadReservations();
-    };
+        document.getElementById("deleteBtn").onclick = async () => {
+            const resvNo = modal.dataset.resvNo;
 
-    function showReserveMode() {
-        document.querySelectorAll(".reserve-only")
-            .forEach(el => el.style.display = "block");
+            if (!confirm("정말 예약을 취소할까요?")) return;
 
-        reserveBtn.style.display = "inline-block";
-        deleteBtn.style.display = "none";
+            const res = await apiFetch(`/api/v1/corporate-car-reservations/${resvNo}`, {
+                method: "DELETE"
+            });
 
-        // ✅ 예약 등록 모드면 예약자는 "나"로 표시
-        setReserverToMe();
-    }
+            if (!res.ok) {
+                alert("취소 실패");
+                return;
+            }
 
-    /* ================== 내 정보 로드 + 초기화 ================== */
-    async function loadMe() {
-        const res = await apiFetch("/api/v1/employees/me");
-        const json = await res.json();
-        return json?.data?.data ?? json?.data ?? json; // ✅ 어떤 래핑이든 대응
-    }
+            modal.style.display = "none";
+            await loadReservations();
+        };
 
-    let ME = null;
+        function showReserveMode() {
+            document.querySelectorAll(".reserve-only")
+                .forEach(el => el.style.display = "block");
 
-    async function init() {
-        renderDate();
-        ME = await loadMe();
-        myEmpId = pick(ME, ["empId", "employeeId", "id"], null);
+            reserveBtn.style.display = "inline-block";
+            deleteBtn.style.display = "none";
 
-        setReserverToMe();
+            setReserverToMe();
+        }
 
-        await loadCars();
-        await loadReservations();
-    }
+        async function loadMe() {
+            const res = await apiFetch("/api/v1/employees/me");
+            const json = await res.json();
+            return json?.data?.data ?? json?.data ?? json;
+        }
 
-    window.addEventListener("DOMContentLoaded", init);
-</script>
+        let ME = null;
 
+        async function init() {
+            renderDate();
+            ME = await loadMe();
+            myEmpId = pick(ME, ["empId", "employeeId", "id"], null);
+
+            setReserverToMe();
+
+            await loadCars();
+            await loadReservations();
+        }
+
+        window.addEventListener("DOMContentLoaded", init);
+    </script>
+</th:block>
 
 </body>
 </html>
