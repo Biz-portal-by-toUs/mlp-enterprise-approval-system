@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public record ResDocumentFormDetailDto(
         String cnttJson,
         String cnttHtml,
         String rejectReason,
+        DocumentFormStats docfoStat,
         List<ResDocumentFormCategoryNameDto> categories
 ) {
 }
