@@ -389,6 +389,24 @@
             .summary-table th{ width: 110px; }
             .tooltip-bubble{ left: 0 !important; right: auto !important; }
         }
+
+        /* 툴팁이 카드 밖으로 나가도 안 잘리게 */
+        .card.card--overflow-visible{
+            overflow: visible;
+        }
+
+        .popup-flag{
+            display:inline-block;
+            padding:4px 10px;
+            border-radius:999px;
+            font-size:12px;
+            font-weight:900;
+            color:#fff;
+        }
+        .popup-flag.on{ background:#16a34a; }
+        .popup-flag.off{ background:#9ca3af; }
+
+
     </style>
 </th:block>
 
@@ -441,10 +459,12 @@
                                 <span id="noticeWriter">-</span>
                               </button>
 
-                              <div class="tooltip-bubble" id="writerTooltip">
-                                <div class="tooltip-title">작성자 정보</div>
-                                <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
-                                <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
+                              <div class="card card--overflow-visible">
+                                  <div class="tooltip-bubble" id="writerTooltip">
+                                    <div class="tooltip-title">작성자 정보</div>
+                                    <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
+                                    <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
+                                  </div>
                               </div>
                             </span>
                           </span>
@@ -622,6 +642,8 @@
                 if (result.status === 200 && result.data) {
                     const notice = result.data;
 
+                    console.log("notice keys:", Object.keys(notice), notice);
+
                     $('#noticeTitle').text(notice.title ?? "-");
 
                     if (window.renderNoticeContentsAuto) window.renderNoticeContentsAuto(notice.contents);
@@ -629,8 +651,13 @@
 
                     const isPopup = notice.isPopup === true || notice.isPopup === 'true';
                     $('#noticePopup').html(
-                        isPopup ? `<span class="badge success">사용</span>` : `<span class="badge muted">미사용</span>`
+                        isPopup
+                            ? `<span class="popup-flag on">사용</span>`
+                            : `<span class="popup-flag off">미사용</span>`
                     );
+                   // $('#noticePopup').html(
+                   //     isPopup ? `<span class="badge success">사용</span>` : `<span class="badge muted">미사용</span>`
+                   // );
 
                     $('#noticeStarted').text(notice.startedAt ? notice.startedAt.substring(0,10) : "-");
                     $('#noticeEnded').text(notice.endedAt ? notice.endedAt.substring(0,10) : "-");
