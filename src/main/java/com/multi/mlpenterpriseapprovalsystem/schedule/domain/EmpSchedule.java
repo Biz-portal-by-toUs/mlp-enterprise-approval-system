@@ -38,20 +38,25 @@ public class EmpSchedule {
     @Column(name="ended_at", nullable = false)
     private LocalDateTime endedAt;
 
+    @Column(name="all_day", nullable = false)
+    private boolean allDay;
+
+    @Column
     private String color;
 
     private EmpSchedule(Employee employee, String title, String content,
-                        LocalDateTime startAt, LocalDateTime endedAt, String color) {
+                        LocalDateTime startAt, LocalDateTime endedAt, boolean allDay, String color) {
         this.employee = employee;
         this.title = title;
         this.content = content;
         this.startAt = startAt;
         this.endedAt = endedAt;
+        this.allDay = allDay;
         this.color = color;
     }
 
     public static EmpSchedule create(Employee employee, String title, String content,
-                                     LocalDateTime startAt, LocalDateTime endedAt, String color) {
-        return new EmpSchedule(employee, title, content, startAt, endedAt, color);
+                                     LocalDateTime startAt, LocalDateTime endedAt, boolean allDay, String color) {
+        return new EmpSchedule(employee, title, content, startAt, endedAt, allDay, color);
     }
 }

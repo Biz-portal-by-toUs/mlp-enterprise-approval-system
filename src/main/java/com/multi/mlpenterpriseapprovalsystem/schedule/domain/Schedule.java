@@ -46,6 +46,9 @@ public class Schedule {
     @Column(name="ended_at", nullable = false)
     private LocalDateTime endedAt;
 
+    @Column(name="all_day", nullable = false)
+    private boolean allDay;
+
     @Column
     private String color;
 
@@ -54,20 +57,24 @@ public class Schedule {
     private Employee register;
 
     private Schedule(Company company, Department department, Employee register,
-                     String title, String content, LocalDateTime startAt, LocalDateTime endedAt, String color) {
+                     String title, String content,
+                     LocalDateTime startAt, LocalDateTime endedAt,
+                     boolean allDay, String color) {
         this.company = company;
-        this.department = department; // COMPANY scope면 null
-        this.register = register;     // ✅ 로그인 사용자
+        this.department = department;
+        this.register = register;
         this.title = title;
         this.content = content;
         this.startAt = startAt;
         this.endedAt = endedAt;
+        this.allDay = allDay;
         this.color = color;
     }
 
     public static Schedule create(Company company, Department department, Employee register,
                                   String title, String content,
-                                  LocalDateTime startAt, LocalDateTime endedAt, String color) {
-        return new Schedule(company, department, register, title, content, startAt, endedAt, color);
+                                  LocalDateTime startAt, LocalDateTime endedAt,
+                                  boolean allDay, String color) {
+        return new Schedule(company, department, register, title, content, startAt, endedAt, allDay, color);
     }
 }
