@@ -98,6 +98,9 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     @Override
     @Transactional
     public Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId) {
+
+        validateDocfoNameForbidden(req.docfoName());
+
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new EntityNotFoundException("회사 없음"));
 
@@ -132,6 +135,9 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     @Override
     @Transactional
     public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req, String comId, String empId) {
+
+        validateDocfoNameForbidden(req.docfoName());
+
         DocumentForm origin = documentFormRepository.findById(docfoNo)
                 .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
 
@@ -278,5 +284,23 @@ public class DocumentFormServiceImpl implements DocumentFormService {
             return reason.trim();
         }
         return null;
+    }
+
+    // 양식 제목 금칙어
+    private void validateDocfoNameForbidden(String docfoName) {
+        String name = (docfoName == null) ? "" : docfoName.trim();
+
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("문서 양식 제목은 필수입니다.");
+        }
+
+        // 포함되면 차단할 키워드들
+        List<String> forbidden = List.of("휴가", "출장");
+
+        for (String w : forbidden) {
+            if (name.contains(w)) {
+                throw new IllegalArgumentException("문서 양식 제목에 금칙어가 포함되어 생성/수정할 수 없습니다: " + w);
+            }
+        }
     }
 }
