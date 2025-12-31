@@ -21,6 +21,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -188,22 +189,30 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // 2) 권한 체크: 업로더만 삭제 가능 (너희 정책에 맞게 subjectId/empNo 매핑)
         String requesterId = user.getUsername(); // 예: emp_no
-        if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+        if (a.getDomain() == AttachmentDomain.PROV_DOCUMENT) {
+            boolean isAdmin = user.getAuthorities().stream()
+                    .anyMatch(auth -> Objects.equals(auth.getAuthority(), "ROLE_COM_ADMIN"));
+
+            if (!isAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 사내 규정 첨부파일을 삭제할 수 있습니다.");
+            }
+        }
+        else if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+            // 일반 도메인(CLOUD 등)은 본인이 업로드한 파일인지 확인합니다.
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 첨부파일만 삭제할 수 있습니다.");
         }
 
         // 3) domain 분기
         if (a.getDomain() == AttachmentDomain.CLOUD) {
-            // ✅ CLOUD: soft delete
-            a.softDelete(); // status=DELETED
-            // save 안 해도 영속 상태면 flush되지만 명시적으로 해도 OK
-            // attachmentRepository.save(a);
+            // ✅ CLOUD: soft delete (DB 상태만 변경)
+            a.softDelete();
             return a.getAttachmentId();
         }
 
-        // ✅ 그 외: hard delete (S3 + DB)
-        deleteObjectFromS3(a.getObjectKey());  // S3 삭제
-        attachmentRepository.delete(a);        // DB row 삭제
+        // ✅ 그 외(PROV_DOCUMENT 포함): hard delete (S3 + DB 실제 삭제)
+        // PROV_DOCUMENT는 용량 관리 및 보안을 위해 S3 파일까지 지우는 하드 삭제를 수행하게 됩니다.
+        deleteObjectFromS3(a.getObjectKey());
+        attachmentRepository.delete(a);
 
         return attachmentId;
     }
