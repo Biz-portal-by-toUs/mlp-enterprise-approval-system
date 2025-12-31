@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>캘린더</title>
+
+    <th:block layout:fragment="pageHead">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.global.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.global.min.js"></script>
+
+        <style>
+            /* ===== Layout ===== */
+            .page{
+                display:grid;
+                grid-template-columns: 340px 1fr; /* ✅ 왼쪽 넓힘 */
+                min-height:calc(100vh - 64px);
+            }
+
+            /* ===== LEFT (가독성 강화) ===== */
+            .left{
+                background: #9bbff0;                /* ✅ 더 진한 연파랑 */
+                border-right:1px solid rgba(0,0,0,.10);
+                padding:18px 16px;
+                z-index:1;                          /* ✅ 혹시 겹침 방지 */
+            }
+
+            .leftCard{
+                background:#ffffff;
+                border:1px solid rgba(15,23,42,.10);
+                border-radius:16px;
+                box-shadow:0 10px 25px rgba(15,23,42,.10);
+                padding:12px;
+            }
+
+            /* mini calendar: 흰 카드 위에서 진한 글씨 */
+            #miniCalendar .fc{font-size:12px}
+            #miniCalendar .fc-toolbar{display:none}
+            #miniCalendar .fc-scrollgrid{border:none}
+            #miniCalendar .fc-col-header-cell{border:none;background:transparent}
+            #miniCalendar .fc-col-header-cell-cushion{
+                color:#475569; font-weight:900;
+            }
+            #miniCalendar .fc-daygrid-day{border:none}
+            #miniCalendar .fc-daygrid-day-number{
+                color:#0f172a; font-weight:800;
+            }
+            #miniCalendar .fc-daygrid-day.fc-day-today{
+                background:rgba(47,111,218,.12);
+                border-radius:12px;
+            }
+            #miniCalendar .fc-daygrid-day-frame{border-radius:12px}
+
+            .leftActions{
+                margin-top:14px;
+                display:flex;
+                flex-direction:column;
+                gap:10px;
+            }
+            .leftBtn{
+                height:44px;
+                border-radius:14px;
+                border:1px solid rgba(15,23,42,.12);
+                background:rgba(255,255,255,.88);
+                cursor:pointer;
+                font-weight:900;
+                color:#1f2937;
+            }
+            .leftHint{
+                font-size:12px;
+                color:rgba(15,23,42,.75);
+                line-height:1.4;
+            }
+
+            /* ===== MAIN ===== */
+            .main{
+                background:#fff;
+                display:flex;
+                flex-direction:column;
+                overflow:hidden;
+                min-width:0;
+            }
+
+            .mainTop{
+                display:flex;
+                align-items:center;
+                gap:10px;
+                padding:14px 16px;
+                border-bottom:1px solid #e5e7eb;
+                background:#fff;
+            }
+
+            .title{
+                font-size:28px;
+                font-weight:900;
+                letter-spacing:.2px;
+            }
+            .title .year{color:#ef4444}
+
+            .navGroup{display:flex;align-items:center;gap:8px;margin-left:8px}
+            .navbtn{
+                width:36px;height:34px;border-radius:10px;border:1px solid #e5e7eb;
+                background:#fff;cursor:pointer;font-weight:900;
+            }
+            .todaybtn{
+                height:34px;padding:0 12px;border-radius:10px;border:1px solid #e5e7eb;
+                background:#fff;cursor:pointer;font-weight:900;color:#64748b;
+            }
+
+            .spacer{flex:1}
+
+            /* Week/Month */
+            .viewTabs{
+                display:flex;
+                align-items:center;
+                gap:10px;
+                font-weight:900;
+            }
+            .pill{
+                height:28px;
+                padding:0 12px;
+                border-radius:999px;
+                border:1px solid #e5e7eb;
+                background:#f8fafc;
+                cursor:pointer;
+                font-weight:900;
+                color:#64748b;
+            }
+            .pill.week.active{
+                background:#c0392b;
+                border-color:#c0392b;
+                color:#fff;
+            }
+            .pill.month.active{
+                background:#2563eb;
+                border-color:#2563eb;
+                color:#fff;
+            }
+
+            /* scope */
+            .scopeTabs{display:flex;align-items:center;gap:8px;margin-left:12px}
+            .scopeBtn{
+                height:28px;padding:0 12px;border-radius:999px;border:1px solid #e5e7eb;
+                background:#f3f4f6;cursor:pointer;font-weight:900;color:#64748b;
+            }
+            .scopeBtn.active{
+                background:#2563eb;border-color:#2563eb;color:#fff;
+            }
+
+            .searchMini{
+                height:34px;
+                width:220px;
+                border:1px solid #e5e7eb;
+                border-radius:999px;
+                padding:0 12px;
+                outline:none;
+                margin-left:10px;
+            }
+
+            .tz{
+                margin-left:10px;
+                color:#64748b;
+                font-size:12px;
+                font-weight:900;
+            }
+
+            .mainBody{flex:1; min-height:0;}
+            #calendar{height:100%}
+
+            /* FullCalendar */
+            .fc .fc-toolbar{display:none}
+            .fc .fc-scrollgrid{border-color:#e5e7eb}
+            .fc .fc-timegrid-slot{border-color:rgba(229,231,235,.9)}
+            .fc .fc-col-header-cell{background:#fff}
+            .fc .fc-day-today{background:rgba(59,130,246,.08)}
+            .fc .fc-timegrid-axis-cushion,.fc .fc-col-header-cell-cushion{
+                color:#64748b;font-weight:900;
+            }
+
+            /* settings */
+            .settings{
+                display:flex;align-items:center;gap:10px;
+                padding:10px 16px;
+                border-top:1px solid #e5e7eb;
+                background:#fff;
+            }
+            .settings label{font-size:12px;color:#64748b;font-weight:900}
+            .settings select{
+                height:34px;border-radius:10px;border:1px solid #e5e7eb;
+                padding:0 10px;background:#fff;outline:none;
+            }
+
+            /* modal (이벤트 클릭 상세) */
+            .modal-backdrop{
+                position:fixed;inset:0;background:rgba(0,0,0,.35);
+                display:none;align-items:center;justify-content:center;padding:20px;
+            }
+            .modal-backdrop.on{display:flex}
+            .modal{
+                width:min(560px, 100%);background:#fff;border-radius:14px;border:1px solid #e5e7eb;
+                box-shadow:0 20px 60px rgba(0,0,0,.18); padding:16px;
+            }
+            .modal h3{margin:0 0 10px 0;font-size:18px}
+            .modal .meta{font-size:12px;color:#64748b;margin-bottom:10px}
+            .modal .content{white-space:pre-wrap;line-height:1.5}
+            .btn{
+                height:38px;padding:0 12px;border-radius:10px;border:1px solid #e5e7eb;
+                background:#fff;cursor:pointer;font-weight:900
+            }
+            .actions{display:flex;justify-content:flex-end;margin-top:14px}
+        </style>
+    </th:block>
+</head>
+
+<body>
+<th:block layout:fragment="content">
+    <div class="page">
+        <!-- LEFT -->
+        <aside class="left">
+            <div class="leftCard">
+                <div id="miniCalendar"></div>
+            </div>
+
+            <div class="leftActions">
+                <button class="leftBtn" type="button" id="createBtn">일정 추가하기</button>
+                <div class="leftHint">
+                    왼쪽 패널이 흐리게 보이던 문제를 수정했어.<br/>
+                    (배경/카드/텍스트 대비 강화)
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <section class="main">
+            <div class="mainTop">
+                <div class="title" id="mainTitle">December <span class="year">2025</span></div>
+
+                <div class="navGroup">
+                    <button class="navbtn" type="button" id="prevBtn">‹</button>
+                    <button class="navbtn" type="button" id="nextBtn">›</button>
+                    <button class="todaybtn" type="button" id="todayBtn">Today</button>
+                </div>
+
+                <div class="spacer"></div>
+
+                <div class="viewTabs">
+                    <button class="pill week active" type="button" id="weekBtn">Week</button>
+                    <button class="pill month" type="button" id="monthBtn">Month</button>
+                </div>
+
+                <div class="scopeTabs">
+                    <button class="scopeBtn" type="button" data-scope="COMPANY" id="scopeCompanyBtn">회사</button>
+                    <button class="scopeBtn" type="button" data-scope="DEPARTMENT" id="scopeDeptBtn">부서</button>
+                    <button class="scopeBtn active" type="button" data-scope="PERSONAL" id="scopePersonalBtn">개인</button>
+                </div>
+
+                <input class="searchMini" id="q" type="text" placeholder="Search"/>
+                <div class="tz" id="tzLabel">GMT+9</div>
+            </div>
+
+            <div class="mainBody">
+                <div id="calendar"></div>
+            </div>
+
+            <div class="settings">
+                <label>주 시작</label>
+                <select id="weekStart">
+                    <option value="MONDAY" selected>MONDAY</option>
+                    <option value="SUNDAY">SUNDAY</option>
+                </select>
+
+                <label style="margin-left:10px;">MONTH 인접일</label>
+                <select id="includeAdjacentInMonth">
+                    <option value="true" selected>true</option>
+                    <option value="false">false</option>
+                </select>
+            </div>
+        </section>
+    </div>
+
+    <!-- modal -->
+    <div class="modal-backdrop" id="modalBackdrop">
+        <div class="modal">
+            <h3 id="mTitle"></h3>
+            <div class="meta" id="mMeta"></div>
+            <div class="content" id="mContent"></div>
+            <div class="actions">
+                <button class="btn" id="closeModalBtn" type="button">닫기</button>
+            </div>
+        </div>
+    </div>
+</th:block>
+
+<th:block layout:fragment="pageScripts">
+    <script>
+        function yyyyMmDd(d){
+            const yyyy=d.getFullYear();
+            const mm=String(d.getMonth()+1).padStart(2,'0');
+            const dd=String(d.getDate()).padStart(2,'0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+        function dayOfWeekToFirstDay(day){ return (day === 'SUNDAY') ? 0 : 1; }
+        function toBool(v){ return String(v) === 'true'; }
+
+        function setTitleFromDate(date){
+            const d = (date instanceof Date) ? date : new Date(date);
+            const month = d.toLocaleString('en-US', { month: 'long' });
+            const year = d.getFullYear();
+            document.getElementById('mainTitle').innerHTML = `${month} <span class="year">${year}</span>`;
+        }
+
+        function openModal({title, meta, content}) {
+            document.getElementById('mTitle').textContent = title ?? '';
+            document.getElementById('mMeta').textContent = meta ?? '';
+            document.getElementById('mContent').textContent = content ?? '';
+            document.getElementById('modalBackdrop').classList.add('on');
+        }
+        function closeModal() {
+            document.getElementById('modalBackdrop').classList.remove('on');
+        }
+
+        async function fetchSchedules({scope, view, baseDate, weekStart, includeAdjacentInMonth}) {
+            const qs = new URLSearchParams({ scope, view, baseDate, weekStart, includeAdjacentInMonth }).toString();
+            const res = await fetch(`/api/v1/calendar/items?${qs}`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(payload?.message || `HTTP ${res.status}`);
+            const data = payload?.data ?? payload;
+            return data?.items ?? [];
+        }
+
+        function toEvents(items){
+            return items.map(s => ({
+                id: s.schNo ?? s.id ?? null,
+                title: s.title ?? '(제목 없음)',
+                start: s.startAt ?? s.start,
+                end: s.endedAt ?? s.end,
+                color: s.color ?? null,
+                extendedProps: { content: s.content ?? '' }
+            }));
+        }
+
+        function filterByQuery(events, q){
+            const t = (q || '').trim().toLowerCase();
+            if (!t) return events;
+            return events.filter(e => (e.title || '').toLowerCase().includes(t));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+                if (e.target.id === 'modalBackdrop') closeModal();
+            });
+
+            let state = {
+                scope: 'PERSONAL',
+                view: 'WEEK',
+                baseDate: yyyyMmDd(new Date()),
+                weekStart: 'MONDAY',
+                includeAdjacentInMonth: 'true'
+            };
+
+            let lastItems = [];
+
+            const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: 'timeGridWeek',
+                initialDate: state.baseDate,
+                firstDay: dayOfWeekToFirstDay(state.weekStart),
+                showNonCurrentDates: toBool(state.includeAdjacentInMonth),
+                fixedWeekCount: toBool(state.includeAdjacentInMonth),
+                nowIndicator: true,
+                height: '100%',
+                eventClick: (info) => {
+                    const ev = info.event;
+                    const start = ev.start ? ev.start.toLocaleString() : '';
+                    const end = ev.end ? ev.end.toLocaleString() : '';
+                    openModal({
+                        title: ev.title,
+                        meta: (start || end) ? `${start} ~ ${end}` : '',
+                        content: ev.extendedProps?.content ?? ''
+                    });
+                }
+            });
+            calendar.render();
+            setTitleFromDate(calendar.getDate());
+
+            const mini = new FullCalendar.Calendar(document.getElementById('miniCalendar'), {
+                initialView: 'dayGridMonth',
+                initialDate: state.baseDate,
+                height: 'auto',
+                fixedWeekCount: true,
+                showNonCurrentDates: true,
+                headerToolbar: { left:'', center:'', right:'' },
+                dateClick: (info) => {
+                    state.baseDate = info.dateStr;
+                    calendar.gotoDate(info.dateStr);
+                    setTitleFromDate(info.dateStr);
+                    reload().catch(err => alert(err.message));
+                }
+            });
+            mini.render();
+
+            function renderEvents(){
+                const q = document.getElementById('q').value;
+                const events = filterByQuery(toEvents(lastItems), q);
+                calendar.removeAllEvents();
+                calendar.addEventSource(events);
+            }
+
+            async function reload(){
+                const nextView = (state.view === 'MONTH') ? 'dayGridMonth' : 'timeGridWeek';
+                if (calendar.view.type !== nextView) calendar.changeView(nextView, state.baseDate);
+                else calendar.gotoDate(state.baseDate);
+
+                calendar.setOption('firstDay', dayOfWeekToFirstDay(state.weekStart));
+                calendar.setOption('showNonCurrentDates', toBool(state.includeAdjacentInMonth));
+                calendar.setOption('fixedWeekCount', toBool(state.includeAdjacentInMonth));
+
+                mini.gotoDate(state.baseDate);
+
+                lastItems = await fetchSchedules(state);
+                renderEvents();
+                setTitleFromDate(calendar.getDate());
+            }
+
+            // nav
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                calendar.prev();
+                state.baseDate = yyyyMmDd(calendar.getDate());
+                mini.gotoDate(state.baseDate);
+                reload().catch(err => alert(err.message));
+            });
+            document.getElementById('nextBtn').addEventListener('click', () => {
+                calendar.next();
+                state.baseDate = yyyyMmDd(calendar.getDate());
+                mini.gotoDate(state.baseDate);
+                reload().catch(err => alert(err.message));
+            });
+            document.getElementById('todayBtn').addEventListener('click', () => {
+                calendar.today();
+                state.baseDate = yyyyMmDd(calendar.getDate());
+                mini.gotoDate(state.baseDate);
+                reload().catch(err => alert(err.message));
+            });
+
+            // view buttons
+            const weekBtn = document.getElementById('weekBtn');
+            const monthBtn = document.getElementById('monthBtn');
+            function setViewButtons(){
+                weekBtn.classList.toggle('active', state.view === 'WEEK');
+                monthBtn.classList.toggle('active', state.view === 'MONTH');
+            }
+            weekBtn.addEventListener('click', () => { state.view='WEEK'; setViewButtons(); reload().catch(err=>alert(err.message)); });
+            monthBtn.addEventListener('click', () => { state.view='MONTH'; setViewButtons(); reload().catch(err=>alert(err.message)); });
+
+            // scope buttons
+            const scopeBtns = [
+                document.getElementById('scopeCompanyBtn'),
+                document.getElementById('scopeDeptBtn'),
+                document.getElementById('scopePersonalBtn')
+            ];
+            function setScopeActive(btn){
+                scopeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            scopeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.scope = btn.dataset.scope;
+                    setScopeActive(btn);
+                    reload().catch(err => alert(err.message));
+                });
+            });
+
+            // settings
+            document.getElementById('weekStart').addEventListener('change', (e) => {
+                state.weekStart = e.target.value; // MONDAY/SUNDAY
+                reload().catch(err => alert(err.message));
+            });
+            document.getElementById('includeAdjacentInMonth').addEventListener('change', (e) => {
+                state.includeAdjacentInMonth = e.target.value;
+                reload().catch(err => alert(err.message));
+            });
+
+            // search (client)
+            document.getElementById('q').addEventListener('input', renderEvents);
+
+            // create button placeholder
+            document.getElementById('createBtn').addEventListener('click', () => {
+                alert('다음 단계: 드래그 선택 → 생성 모달 → POST 연결');
+            });
+
+            setViewButtons();
+            reload().catch(err => alert(err.message));
+        });
+    </script>
+</th:block>
+</body>
+</html>
