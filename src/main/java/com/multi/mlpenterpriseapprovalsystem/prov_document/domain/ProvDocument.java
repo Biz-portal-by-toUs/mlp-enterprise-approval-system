@@ -26,16 +26,24 @@ public class ProvDocument extends BaseEntity {
     @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
+    @Column(name = "doc_title",length = 30)
     private String docTitle;
+    @Column(name="description",columnDefinition = "text")
     private String description;
+    @Column(name = "is_public")
     private Boolean isPublic;
+    @Column(name = "file_name", nullable = true)
     private String fileName;
+    @Column(name = "object_key")
     private String objectKey;
+    @Column(name = "file_size")
     private Long fileSize;
+    @Column(name = "chunk_cnt")
     private Integer chunkCnt;
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "proc_stat", nullable = false, length = 20)
     private ProvProcStat procStat;
+    @Column(name = "error_msg", length = 20)
     private String errorMsg;
 
 
@@ -81,10 +89,12 @@ public class ProvDocument extends BaseEntity {
         return d;
     }
 
-    public void assignObjectKey(String objectKey) {
-        this.objectKey = objectKey;
-    }
 
+    public void updateMeta(String docTitle, String description, Boolean isPublic) {
+        this.docTitle = docTitle;
+        this.description = description;
+        this.isPublic = isPublic;
+    }
 
 }
 
