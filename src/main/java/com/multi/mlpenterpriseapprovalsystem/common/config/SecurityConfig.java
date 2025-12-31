@@ -56,9 +56,9 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/meetings/*/ai").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/prov-documents/**").hasAnyRole("COM_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/prov-documents/*/embedding").permitAll()
 
-                        .requestMatchers("/api/v1/prov-documents/**)").hasAnyRole("COM_ADMIN")
+                        .requestMatchers("/api/v1/prov-documents/**").hasRole("COM_ADMIN")
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
