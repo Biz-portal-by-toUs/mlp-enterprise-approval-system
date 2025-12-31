@@ -37,7 +37,7 @@ public class ViewSharedEquipmentController {
     }
 
     @GetMapping("/{eqNo}/edit")
-    public String editSharedEquipment(@PathVariable Long eqNo, Model model) {
+    public String editSharedEquipment(@PathVariable(name = "eqNo") Long eqNo, Model model) {
         model.addAttribute("eqNo", eqNo);
         return "reservation/shared-equipment/shared-equipment-edit";
     }
@@ -50,7 +50,7 @@ public class ViewSharedEquipmentController {
 
     // 공유 설비 예약 등록 화면
     @GetMapping("/{eqNo}/reservation")
-    public String sharedEquipmentReservation(@PathVariable Long eqNo) {
+    public String sharedEquipmentReservation(@PathVariable(name = "eqNo") Long eqNo) {
         return "reservation/shared-equipment/shared-equipment-reservation";
     }
 }

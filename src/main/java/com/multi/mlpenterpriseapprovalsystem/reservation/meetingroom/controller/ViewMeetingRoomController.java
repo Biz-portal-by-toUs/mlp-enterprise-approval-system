@@ -40,7 +40,7 @@ public class ViewMeetingRoomController {
 
     // 회의실 수정
     @GetMapping("/{roomNo}/edit")
-    public String editMeetingRoom(@PathVariable Long roomNo, Model model) {
+    public String editMeetingRoom(@PathVariable(name = "roomNo") Long roomNo, Model model) {
         model.addAttribute("roomNo", roomNo);
         return "reservation/meeting-rooms/meeting-room-edit";
     }
@@ -53,7 +53,7 @@ public class ViewMeetingRoomController {
 
     // 회의실 예약 등록 화면
     @GetMapping("/{roomNo}/reservation")
-    public String meetingRoomReservation(@PathVariable Long roomNo) {
+    public String meetingRoomReservation(@PathVariable(name = "roomNo") Long roomNo) {
         return "reservation/meeting-rooms/meeting-room-reservation";
     }
 

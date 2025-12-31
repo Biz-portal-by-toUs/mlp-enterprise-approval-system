@@ -37,7 +37,7 @@ public class ViewCorporateCarController {
     }
 
     @GetMapping("/{carNo}/edit")
-    public String editCorporateCar(@PathVariable Long carNo, Model model) {
+    public String editCorporateCar(@PathVariable(name = "carNo") Long carNo, Model model) {
         model.addAttribute("carNo", carNo);
         return "reservation/corporate-cars/corporate-car-edit";
     }
@@ -50,7 +50,7 @@ public class ViewCorporateCarController {
 
     // 법인 차량 예약 등록 화면
     @GetMapping("/{carNo}/reservation")
-    public String corporateCarReservation(@PathVariable Long carNo) {
+    public String corporateCarReservation(@PathVariable(name = "carNo") Long carNo) {
         return "reservation/corporate-cars/corporate-car-reservation";
     }
 

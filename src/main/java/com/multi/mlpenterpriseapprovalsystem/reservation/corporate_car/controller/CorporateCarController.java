@@ -44,7 +44,7 @@ public class CorporateCarController {
 
     @GetMapping("/corporate-cars/{carNo}")
     public ResponseEntity<ResponseDto<ResCorporateCarDto>> getCorporateCar(
-            @PathVariable Long carNo,
+            @PathVariable(name = "carNo") Long carNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         ResCorporateCarDto car =
@@ -97,7 +97,7 @@ public class CorporateCarController {
     }
 
     @PutMapping(value="/corporate-cars/{carNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<Long>> updateCorporateCar(@PathVariable Long carNo,
+    public ResponseEntity<ResponseDto<Long>> updateCorporateCar(@PathVariable(name = "carNo") Long carNo,
                                                                @AuthenticationPrincipal CustomUser user,
                                                                @Valid @ModelAttribute ReqCorporateCarDto corporateCarDto,
                                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
@@ -111,7 +111,7 @@ public class CorporateCarController {
     }
 
     @DeleteMapping("/corporate-cars/{carNo}")
-    public ResponseEntity<ResponseDto> deleteCorporateCar(@PathVariable Long carNo) {
+    public ResponseEntity<ResponseDto> deleteCorporateCar(@PathVariable(name = "carNo") Long carNo) {
         corporateCarService.deleteCorporateCar(carNo);
         return ResponseEntity
                 .status(HttpStatus.OK)
