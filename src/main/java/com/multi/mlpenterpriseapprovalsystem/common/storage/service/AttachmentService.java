@@ -14,4 +14,6 @@ public interface AttachmentService {
     AttachmentDto.CompleteResponse completeUpload(AttachmentDto.CompleteRequest req, CustomUser user);
 
     Long softDelete(Long attachmentId, CustomUser user);
+
+    void moveCloudAttachment(CustomUser user, Long attachmentId, Long toFolderNo);
 }

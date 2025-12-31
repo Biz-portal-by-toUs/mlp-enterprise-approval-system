@@ -70,6 +70,9 @@ public enum ErrorCode {
 
     SHARED_EQUIPMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "SHARED_EQUIPMENT_NOT_FOUND", "공유 설비를 찾을 수 없습니다"),
 
+    // 공유함 관련
+    FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER_NOT_FOUND", "폴더를 찾을 수 없습니다"),
+
     // 파일 업로드 실패
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다"),
 
