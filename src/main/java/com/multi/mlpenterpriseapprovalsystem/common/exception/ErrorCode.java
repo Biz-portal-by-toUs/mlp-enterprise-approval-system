@@ -117,6 +117,9 @@ public enum ErrorCode {
     EMPLOYEE_ALREADY_RETIRED(HttpStatus.BAD_REQUEST,"EMPLOYEE_ALREADY_RETIRED","이미 퇴사 처리된 사원입니다"),
     ONLY_EMPLOYEE(HttpStatus.BAD_REQUEST,"ONLY_EMPLOYEE","사원 계정만 접근 가능합니다"),
 
+    // 일정 관련
+    START_MUST_BEFORE_END(HttpStatus.BAD_REQUEST,"START_MUST_BEFORE_END","endedAt은 startAt 이후여야 합니다"),
+
 
     // 웹소켓 관련
     SOCKET_AUTHENTICATION_ERROR(HttpStatus.UNAUTHORIZED, "SOCKET_AUTHENTICATION_ERROR", "웹소켓 인증 정보가 유효하지 않습니다"),
