@@ -133,4 +133,8 @@ public class Attachment extends BaseEntity {
     public boolean isActive() {
         return this.status == AttachmentStatus.ACTIVE;
     }
+
+    public void moveToEntityId(Long toFolderNo) {
+        this.entityId = toFolderNo;
+    }
 }

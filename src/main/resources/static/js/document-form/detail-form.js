@@ -178,6 +178,7 @@ const elTemplateMount = mustEl('templateMount')
 const elPresetLeftMount = mustEl('presetLeftMount')
 const elPresetRightMount = mustEl('presetRightMount')
 
+const btnApprove = mustEl('tplApproveBtn')
 const btnEdit = mustEl('tplEditBtn')
 const btnDelete = mustEl('tplDeleteBtn')
 const btnClose = mustEl('tplCloseBtn')
@@ -322,6 +323,35 @@ async function deleteForm(docfoNo) {
 
         const detail = await fetchDetail(docfoNo)
 
+        const stat = String(detail.docfoStat ?? detail.stat ?? '').trim().toUpperCase()
+        const canApprove = (stat === 'A' || stat === 'X')
+
+        // 기본은 숨김 → 조건 맞으면 표시
+        btnApprove.style.display = canApprove ? '' : 'none'
+        btnApprove.disabled = !canApprove
+        btnApprove.title = canApprove ? '' : '승인된(A) 또는 (X) 상태에서만 결재할 수 있습니다.'
+
+        btnApprove.addEventListener('click', () => {
+            if (!canApprove) return
+
+            const targetUrl = `/documents/create?docfoNo=${encodeURIComponent(docfoNo)}`
+
+            try {
+                // 팝업을 form-list에서 열었으면 opener가 존재함
+                if (window.opener && !window.opener.closed) {
+                    window.opener.location.href = targetUrl
+                    window.opener.focus?.()
+                    window.close()
+                    return
+                }
+            } catch (e) {
+                console.error('opener navigation failed:', e)
+            }
+
+            // opener가 없거나 접근 불가한 경우(예외) fallback
+            location.href = targetUrl
+        })
+
         elTplTitle.textContent = safeText(detail.docfoName, '-')
         mountPresetTables(detail)
         renderCategories(detail)
@@ -333,11 +363,11 @@ async function deleteForm(docfoNo) {
         bodyBox.className = 'tpl-bodyBox'
         elTemplateMount.appendChild(bodyBox)
 
-        console.log('ROLE=', ROLE, 'token?', !!localStorage.getItem('accessToken'))
-
+        console.log(document.getElementById('tplApproveBtn'))
+        console.log(document.getElementById('tplFooterRoot'))
         bootViewer(bodyBox, json)
 
-        // ✅ Employee면 수정/삭제 비활성화 (UI만 막지 말고 서버 권한도 꼭 막아야 안전)
+        // Employee면 수정/삭제 비활성화 (UI만 막지 말고 서버 권한도 꼭 막아야 안전)
         const isEmployee = (ROLE === 'EMPLOYEE')
         if (isEmployee) {
             btnEdit.disabled = true
