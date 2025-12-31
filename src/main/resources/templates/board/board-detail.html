@@ -1,965 +1,746 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>게시 내용 상세</title>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layout">
+
+<!-- ✅ board-detail 전용 CSS는 pageStyles로 -->
+<th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
-        :root{
-            --bg: #f6f7fb;
-            --card: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --line: rgba(17, 24, 39, 0.08);
-            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-            --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
+        /* ❌ :root, body는 layout.html이 담당(겹치면 전체 배경이 덮임) → 제거 권장
+           기존 board-detail의 컨텐츠 스타일만 유지 */
 
-            --primary: #3b82f6;
-            --primary2: #2563eb;
-            --danger: #ef4444;
-            --danger2: #dc2626;
-            --success: #10b981;
-            --warn: #f59e0b;
-        }
+        *{ box-sizing:border-box; }
 
-        * { box-sizing: border-box; }
-
-        body{
-            margin: 0;
-            background:
-                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-                    var(--bg);
-            font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color: var(--text);
-        }
-
-        /* 컨테이너 */
         .container{
             max-width: 1280px;
-            margin: 64px auto;
+            margin: 48px auto;
             padding: 0 14px;
-            background: transparent;
-            box-shadow: none;
-            border: none;
         }
 
-        /* 상단 카드 */
-        .notice-detail{
-            background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(255,255,255,0));
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-
-        .notice-info{
-            background: var(--card);
-            padding: 18px 18px 16px;
-            border-radius: 18px;
-        }
-
-        /* 제목 */
-        .title-area{
-            padding: 6px 6px 12px;
-            border-bottom: 1px dashed rgba(17,24,39,.12);
-        }
-        #noticeTitle{
-            font-size: 1.35rem;
-            font-weight: 1000;
-            color: var(--text);
-            line-height: 1.25;
-        }
-
-        /* ✅ 제목 아래 메타/카테고리/작성자/등록일/조회수: 테이블 */
-        .meta-card{
-            margin-top: 12px;
-            border: 1px solid rgba(17,24,39,.08);
-            border-radius: 14px;
-            overflow: hidden;
-            background: #fff;
-            box-shadow: 0 10px 24px rgba(17,24,39,.06);
-        }
-        .meta-table{
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        .meta-table th,
-        .meta-table td{
-            border-top: 1px solid rgba(17,24,39,.08);
-            border-right: 1px solid rgba(17,24,39,.08);
-            padding: 12px 12px;
-            vertical-align: middle;
-        }
-        .meta-table tr:first-child th,
-        .meta-table tr:first-child td{ border-top: 0; }
-        .meta-table th{
-            width: 150px;
-            background: rgba(17,24,39,.02);
-            font-weight: 1000;
-            color:#111827;
-            text-align: center;
-            letter-spacing: -0.2px;
-        }
-        .meta-table td{ border-right: 0; font-weight: 900; }
-
-        /* 작성자 + 풍선(tooltip) */
-        .author-line{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            flex-wrap: wrap;
-        }
-        .author-name{
-            font-weight: 1000;
-            color:#111827;
-        }
-        .pill{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            padding: 6px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(17,24,39,.14);
-            background: rgba(17,24,39,.02);
-            font-weight: 1000;
-            color: var(--muted);
-            font-size: 12px;
-            position: relative;
-            cursor: help;
-            user-select:none;
-        }
-        .pill[data-tip]::after{
-            content: attr(data-tip);
-            position:absolute;
-            left: 50%;
-            top: calc(100% + 8px);
-            transform: translateX(-50%);
-            background: #111827;
-            color: #fff;
-            padding: 8px 10px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 1000;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events:none;
-            transition: .15s ease;
-            box-shadow: 0 12px 24px rgba(17,24,39,.22);
-            z-index: 50;
-        }
-        .pill[data-tip]::before{
-            content:"";
-            position:absolute;
-            left:50%;
-            top: 100%;
-            transform: translateX(-50%);
-            border: 7px solid transparent;
-            border-top-color: #111827;
-            opacity: 0;
-            transition: .15s ease;
-            z-index: 50;
-        }
-        .pill:hover::after,
-        .pill:hover::before{
-            opacity: 1;
-        }
-
-        /* ✅ 등록일/조회수 한 줄 */
-        .meta-inline{
-            display:flex;
-            gap: 16px;
-            align-items:center;
-            flex-wrap: wrap;
+        h2{
+            margin: 0 0 14px;
             font-weight: 900;
-        }
-        .meta-inline b{
-            color: var(--muted);
-            font-weight: 1000;
-            margin-right: 6px;
-        }
-        .sep{
-            color: rgba(17,24,39,.25);
-            font-weight: 1000;
+            letter-spacing: -0.3px;
         }
 
-        /* ✅ JSON 내용 출력 영역 */
-        .content-card{
-            margin-top: 14px;
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            padding: 14px;
-        }
-        #noticeDescription{
-            background: rgba(17,24,39,.03);
-            border: 1px solid rgba(17,24,39,.06);
-            border-radius: 12px;
-            padding: 14px 14px;
-            line-height: 1.75;
-            white-space: normal;
-            min-height: 220px;
-            font-weight: 700;
+        .card{
+            background: var(--card, #ffffff);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            overflow: hidden;
+            margin-bottom: 14px;
         }
 
-        /* TipTap 렌더 테이블 스타일 */
-        #noticeDescription table{
+        .summary-table{
             width:100%;
             border-collapse: collapse;
             table-layout: fixed;
-            margin: 10px 0;
+        }
+        .summary-table th,
+        .summary-table td{
+            border-top: 1px solid rgba(17,24,39,.08);
+            padding: 14px 14px;
+            vertical-align: middle;
+        }
+        .summary-table tr:first-child th,
+        .summary-table tr:first-child td{ border-top: 0; }
+        .summary-table th{
+            width: 160px;
+            background: rgba(17,24,39,.02);
+            font-weight: 900;
+            color: #111827;
+            text-align: center;
+            letter-spacing: -0.2px;
+        }
+        .summary-table td{
+            font-weight: 800;
+            color: var(--text, #1f2937);
+        }
+
+        /* ===== Contents viewer card ===== */
+        .contents-card{
+            background: var(--card, #ffffff);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+        .contents-body{
+            padding: 18px;
             background:#fff;
         }
-        #noticeDescription td,
-        #noticeDescription th{
-            border:1px solid rgba(17,24,39,.18);
-            padding:10px;
+
+        /* TipTap/HTML 공통 렌더 스타일 */
+        #boardDescription{
+            white-space: normal;
+            line-height: 1.75;
+        }
+        #boardDescription .ProseMirror{
+            outline:none;
+            white-space: pre-wrap;
+            line-height: 1.75;
+        }
+        #boardDescription h2{
+            margin: 12px 0 8px;
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+        #boardDescription p{ margin: 8px 0; }
+        #boardDescription ul, #boardDescription ol{ padding-left: 22px; margin: 8px 0; }
+        #boardDescription blockquote{
+            margin: 10px 0;
+            padding: 10px 12px;
+            border-left: 4px solid rgba(59,130,246,.35);
+            background: rgba(59,130,246,.06);
+            border-radius: 10px;
+        }
+        #boardDescription pre{
+            background: rgba(17,24,39,.06);
+            padding: 12px;
+            border-radius: 10px;
+            overflow:auto;
+        }
+        #boardDescription code{
+            background: rgba(17,24,39,.06);
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 800;
+        }
+        #boardDescription a{
+            color: var(--primary2, #2563eb);
+            font-weight: 900;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        #boardDescription table{
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            margin: 10px 0;
+        }
+        #boardDescription th, #boardDescription td{
+            border: 1px solid rgba(17,24,39,.18);
+            padding: 10px;
             vertical-align: top;
             word-break: break-word;
+            position: relative;
         }
-        #noticeDescription th{
+        #boardDescription th{
             background: rgba(17,24,39,.03);
-            font-weight:1000;
-            color: var(--muted);
-        }
-
-        /* 탭 버튼 */
-        .tab-buttons{
-            margin-top: 18px;
-            display: flex;
-            gap: 10px;
-        }
-        .tab-btn{
-            border: 1px solid var(--line);
-            background: var(--card);
-            padding: 10px 14px;
-            border-radius: 12px;
             font-weight: 900;
-            color: var(--muted);
-            cursor: pointer;
-            box-shadow: 0 6px 14px rgba(17,24,39,.04);
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+            color: var(--muted, #6b7280);
         }
-        .tab-btn.active{
-            background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
-            color: var(--text);
-            border-color: rgba(59,130,246,.25);
-        }
-        .tab-btn:hover{
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(17,24,39,.08);
+        #boardDescription .selectedCell:after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background: rgba(59,130,246,.08);
+            pointer-events:none;
         }
 
-        /* 첨부파일 카드 */
-        #attach.tab-content{
-            margin-top: 12px;
-            background: var(--card);
-            border-radius: 16px;
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
-            padding: 14px;
+        /* ===== Writer tooltip ===== */
+        .writer-wrap{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
         }
+        .writer-btn{
+            appearance:none;
+            border: 0;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+            color: var(--primary2, #2563eb);
+            font-weight: 900;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .writer-btn:focus{ outline: none; }
+
+        .tooltip-bubble{
+            position: absolute;
+            z-index: 50;
+            min-width: 220px;
+            max-width: 320px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #111827;
+            color: #fff;
+            box-shadow: 0 16px 36px rgba(0,0,0,.18);
+            border: 1px solid rgba(255,255,255,.12);
+            transform: translateY(6px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .15s ease, transform .15s ease;
+        }
+        .tooltip-bubble::before{
+            content:"";
+            position:absolute;
+            top: -7px;
+            left: 18px;
+            width: 12px;
+            height: 12px;
+            background: #111827;
+            transform: rotate(45deg);
+            border-left: 1px solid rgba(255,255,255,.12);
+            border-top: 1px solid rgba(255,255,255,.12);
+        }
+        .tooltip-title{
+            font-weight: 1000;
+            margin-bottom: 6px;
+            letter-spacing: -0.2px;
+        }
+        .tooltip-row{
+            display:flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 13px;
+            color: rgba(255,255,255,.92);
+        }
+        .tooltip-row span:first-child{ color: rgba(255,255,255,.70); }
+
+        .tooltip-host{
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-host.show .tooltip-bubble{
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* meta row */
+        .meta-inline{
+            display:flex;
+            align-items:center;
+            gap: 14px;
+            flex-wrap: wrap;
+            color: var(--muted, #6b7280);
+            font-weight: 900;
+        }
+        .meta-inline .meta-item{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+        }
+        .meta-inline .k{
+            color: #111827;
+            opacity: .65;
+            font-weight: 900;
+        }
+        .meta-inline .v{
+            color: #111827;
+            font-weight: 1000;
+        }
+
+        /* ===== Attach card ===== */
+        .attach-card{
+            background: var(--card, #ffffff);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .attach-head{
+            display:flex;
+            align-items:center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .attach-title{
+            margin:0;
+            font-size: 1.05rem;
+            font-weight: 900;
+            letter-spacing: -0.2px;
+        }
+
         #attachList{
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             overflow: hidden;
-            border-radius: 12px;
+            border-radius: 10px;
         }
         #attachList th{
-            text-align: left;
+            text-align:left;
             font-size: .9rem;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             background: rgba(17,24,39,.03);
-            padding: 12px 12px;
+            padding: 12px;
             border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 1000;
+            font-weight: 900;
         }
         #attachList td{
-            padding: 12px 12px;
+            padding: 12px;
             border-bottom: 1px solid rgba(17,24,39,.06);
             font-size: .95rem;
-            color: var(--text);
-            font-weight: 800;
+            color: var(--text, #1f2937);
+            font-weight: 700;
         }
         #attachList tr:hover td{ background: rgba(59,130,246,.05); }
 
-        /* 버튼 */
-        .mt-4{
-            margin-top: 16px !important;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
         .btn{
-            appearance: none;
-            border: 1px solid rgba(17,24,39,.10);
-            background: var(--card);
-            padding: 11px 14px;
-            border-radius: 12px;
-            font-weight: 1000;
-            color: var(--text);
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(17,24,39,.06);
+            appearance:none;
+            border: 1px solid rgba(17,24,39,.12);
+            background: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-weight: 900;
+            color: var(--text, #1f2937);
+            text-decoration:none;
+            cursor:pointer;
+            box-shadow: 0 8px 18px rgba(17,24,39,.06);
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
         }
         .btn:hover{
             transform: translateY(-1px);
-            box-shadow: var(--shadow2);
-            border-color: rgba(59,130,246,.25);
+            box-shadow: 0 12px 24px rgba(17,24,39,.10);
+            border-color: rgba(59,130,246,.28);
             background: rgba(59,130,246,.05);
         }
-        #delete-btn.btn{
-            background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
-            border-color: rgba(239,68,68,.25);
+        .btn-danger{
+            background: linear-gradient(135deg, rgba(220,38,38,.14), rgba(255,255,255,0));
+            border-color: rgba(220,38,38,.25);
+            color: #991b1b;
         }
-        #delete-btn.btn:hover{
-            border-color: rgba(239,68,68,.40);
-            background: rgba(239,68,68,.06);
+        .btn-danger:hover{
+            background: rgba(220,38,38,.06);
+            border-color: rgba(220,38,38,.40);
         }
-        .btn.btn-sm{
+        .btn-sm{
             padding: 8px 10px;
             font-weight: 900;
+            border-radius: 8px;
+            font-size: 12px;
             box-shadow: 0 6px 14px rgba(17,24,39,.05);
         }
 
-        /* ✅ 댓글 등록 UI + 댓글 리스트(원본 유지) */
-        .comment-editor{
-            margin-top: 14px;
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            padding: 12px;
+        .actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top: 10px;
         }
-        .comment-editor textarea{
-            width: 100%;
-            border: 1px solid rgba(17,24,39,.10);
-            border-radius: 12px;
-            padding: 12px;
-            font-size: 14px;
-            resize: vertical;
-            outline: none;
-        }
-        .comment-editor textarea:focus{
-            border-color: rgba(59,130,246,.45);
-            box-shadow: 0 0 0 4px rgba(59,130,246,.12);
-        }
-        .comment-editor__footer{
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-        .comment-editor__counter{
-            color: var(--muted);
-            font-weight: 900;
-            font-size: 12px;
-        }
-        .comment-editor__actions{ display: flex; gap: 8px; }
-
-        #comment{
-            margin-top: 12px;
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            padding: 14px;
-        }
-        #commentList{
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-        #commentList thead th{
-            text-align: left;
-            font-size: .9rem;
-            color: var(--muted);
-            background: rgba(17,24,39,.03);
-            padding: 12px 12px;
-            border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 1000;
-        }
-        #commentList tbody td{
-            padding: 14px 12px;
-            border-bottom: 1px solid rgba(17,24,39,.06);
-            font-size: .95rem;
-            color: var(--text);
-            vertical-align: top;
-            font-weight: 800;
-        }
-        #commentList tbody tr:hover td{ background: rgba(59,130,246,.05); }
-        .comment-content{
-            display: inline-block;
-            max-width: 100%;
-            background: rgba(17,24,39,.03);
-            border: 1px solid rgba(17,24,39,.06);
-            border-radius: 12px;
-            padding: 10px 12px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            font-weight: 800;
-        }
-        .comment-meta{
-            display: inline-flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .comment-meta .name{ font-weight: 1000; color: var(--text); }
-        .comment-meta .dept{ font-size: .85rem; font-weight: 900; color: var(--muted); }
-        .comment-date{ font-size: .85rem; font-weight: 900; color: var(--muted); white-space: nowrap; }
-        .comment-no{ font-weight: 1000; color: var(--muted); width: 80px; }
 
         @media (max-width: 720px){
-            .meta-table th{ width: 120px; }
-            #commentList thead{ display: none; }
-            #commentList, #commentList tbody, #commentList tr, #commentList td{
-                display: block;
-                width: 100%;
-            }
-            #commentList tbody tr{
-                border: 1px solid rgba(17,24,39,.06);
-                border-radius: 14px;
-                margin-bottom: 10px;
-                overflow: hidden;
-            }
-            #commentList tbody td{ border-bottom: 1px solid rgba(17,24,39,.06); }
-            #commentList tbody td:last-child{ border-bottom: none; }
-            .comment-no{ width: auto; }
+            .summary-table th{ width: 110px; }
+            .tooltip-bubble{ left: 0 !important; right: auto !important; }
         }
     </style>
-</head>
+</th:block>
 
-<body>
-<div class="header">
-    <!-- <th:block th:replace="~{common/header :: header}"/> -->
-</div>
+<!-- ✅ layout content -->
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- ✅ board-list와 동일하게 sidebar 도킹 -->
+        <div th:replace="~{sidebar/board-sidebar :: boardSidebar('board')}"></div>
 
-<div class="container">
-    <h2>자유게시판내용 및 댓글</h2>
+        <div class="container">
+            <h2>자유게시판 상세</h2>
 
-    <div class="notice-detail">
-        <div class="notice-info">
-
-            <!-- ✅ 제목만 크게 -->
-            <div class="title-area">
-                <div id="noticeTitle">제목</div>
-            </div>
-
-            <!-- ✅ 제목 아래 테이블(카테고리/작성자/등록일/조회) -->
-            <div class="meta-card">
-                <table class="meta-table">
+            <div class="card">
+                <table class="summary-table">
+                    <tr>
+                        <th>제목</th>
+                        <td><span id="boardTitle"></span></td>
+                    </tr>
                     <tr>
                         <th>카테고리</th>
-                        <td><span id="noticeCategory"></span></td>
+                        <td><span id="boardCategory"></span></td>
                     </tr>
+                </table>
+            </div>
+
+            <div class="contents-card">
+                <div class="contents-body">
+                    <div id="boardDescription"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <table class="summary-table">
                     <tr>
                         <th>작성자</th>
                         <td>
-                            <div class="author-line">
-                                <span class="author-name" id="noticeWriter"></span>
+                          <span class="writer-wrap">
+                            <span class="tooltip-host" id="writerTooltipHost">
+                              <button type="button" class="writer-btn" id="boardWriterBtn">
+                                <span id="boardWriter">-</span>
+                              </button>
 
-                                <!-- 직번/부서는 풍선(hover) -->
-                                <span class="pill" id="pillEmpId" data-tip="">직번</span>
-                                <span class="pill" id="pillDept" data-tip="">부서</span>
-                            </div>
+                              <div class="tooltip-bubble" id="writerTooltip">
+                                <div class="tooltip-title">작성자 정보</div>
+                                <div class="tooltip-row"><span>부서</span><span id="boardDepart">-</span></div>
+                                <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="boardWriterId">-</span></div>
+                              </div>
+                            </span>
+                          </span>
                         </td>
                     </tr>
                     <tr>
-                        <th>등록/조회</th>
+                        <th>정보</th>
                         <td>
                             <div class="meta-inline">
-                                <span><b>등록일</b><span id="noticeCreated"></span></span>
-                                <span class="sep">|</span>
-                                <span><b>조회</b><span id="noticeRating"></span></span>
+                              <span class="meta-item">
+                                <span class="k">등록일</span><span class="v" id="boardCreated">-</span>
+                              </span>
+                                <span class="meta-item">
+                                <span class="k">조회</span><span class="v" id="boardRating">-</span>
+                              </span>
                             </div>
                         </td>
                     </tr>
                 </table>
             </div>
 
-            <!-- ✅ 내용(JSON 렌더 결과) -->
-            <div class="content-card">
-                <div style="font-weight:1000; color:var(--muted); margin-bottom:10px;">📝 내용</div>
-                <div id="noticeDescription"></div>
+            <div class="attach-card">
+                <div class="attach-head">
+                    <h3 class="attach-title">첨부 파일</h3>
+                </div>
+                <table id="attachList"></table>
             </div>
 
-        </div>
-    </div>
-
-    <div id="placeFavorite" style="margin-top: 10px; text-align: left;"></div>
-
-    <div class="tab-buttons">
-        <button class="tab-btn active" data-target="review">첨부 파일</button>
-    </div>
-
-    <div id="attach" class="tab-content active">
-        <table id="attachList"></table>
-    </div>
-
-    <h2 style="margin-top:18px;">관련 댓글</h2>
-    <div id="comment">
-        <table id="commentList"></table>
-    </div>
-
-    <!-- ✅ 댓글 등록 입력란 -->
-    <div id="commentEditor" class="comment-editor">
-        <textarea id="commentContents" placeholder="의견입력" rows="5"></textarea>
-        <div class="comment-editor__footer">
-            <div class="comment-editor__counter">
-                <span id="commentByte">0</span>/600bytes
-            </div>
-            <div class="comment-editor__actions">
-                <button type="button" class="btn btn-sm" id="commentSubmitBtn">등록</button>
-                <button type="button" class="btn btn-sm" id="commentCancelBtn">취소</button>
+            <div class="actions">
+                <a href="/board/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
+                <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteBoard()">
+                    <i class="fa-solid fa-trash"></i> 삭제
+                </button>
             </div>
         </div>
-    </div>
-
-    <div class="mt-4">
-        <a href="/board/list" class="btn">목록으로</a>
-        <button id="delete-btn" class="btn ms-2" onclick="deleteBoard()">삭제하기</button>
     </div>
 </div>
 
-<!-- ✅ TipTap JSON -> HTML 변환(상세조회에서 contents를 JSON으로 렌더) -->
-<script type="module">
-    import { generateHTML } from "https://esm.sh/@tiptap/html@2.11.5";
-    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
-    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
-    import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
-    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
-    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
-    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
-    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
+<!-- ✅ JS는 pageScripts로 (생략 X) -->
+<th:block layout:fragment="pageScripts">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    // window.__renderBoardContentsJson(jsonStringOrObj)
-    window.__renderBoardContentsJson = function(raw){
-        const target = document.getElementById("noticeDescription");
-        let json;
+    <!-- ✅ TipTap viewer: JSON/HTML 자동 렌더 -->
+    <script type="module">
+        import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+        import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+        import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+        import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+        import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+        import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+        import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+        import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
 
-        try{
-            if (!raw) {
-                json = { type:"doc", content:[{ type:"paragraph" }] };
-            } else if (typeof raw === "string") {
-                json = JSON.parse(raw);
-            } else {
-                json = raw;
-            }
-        }catch(e){
-            console.error("contents JSON 파싱 실패:", e);
-            json = { type:"doc", content:[{ type:"paragraph", content:[{ type:"text", text:"(내용을 불러오지 못했습니다.)" }] }] };
+        let viewer = null;
+
+        function ensureViewer(){
+            if (viewer) return viewer;
+            const host = document.querySelector("#boardDescription");
+            viewer = new Editor({
+                element: host,
+                editable: false,
+                extensions: [
+                    StarterKit,
+                    Underline,
+                    TextAlign.configure({ types: ["heading","paragraph"] }),
+                    Table.configure({ resizable: true }),
+                    TableRow, TableHeader, TableCell,
+                ],
+                content: { type:"doc", content:[{ type:"paragraph" }] },
+            });
+            return viewer;
         }
 
-        const html = generateHTML(json, [
-            StarterKit,
-            Underline,
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
-            Table.configure({ resizable: true }),
-            TableRow,
-            TableHeader,
-            TableCell,
-        ]);
+        function isProbablyJson(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            if (!(s.startsWith("{") || s.startsWith("["))) return false;
+            try{
+                const obj = JSON.parse(s);
+                return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
+            }catch{ return false; }
+        }
 
-        target.innerHTML = html;
-    };
-</script>
+        function isProbablyHtml(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            return /<\/?[a-z][\s\S]*>/i.test(s);
+        }
 
-<script>
-    const boardNo = [[${boardNo}]];
-    const API_BASE = "http://localhost:8090";
+        function escapeHtml(str){
+            return String(str ?? "")
+                .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+        }
 
-    async function loadBoardDetail() {
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/board/${boardNo}`, {
-                method: 'GET',
-                credentials: "include",
-                headers: {'Content-Type': 'application/json' }
+        window.renderBoardContentsAuto = (contents)=>{
+            const host = document.querySelector("#boardDescription");
+
+            if (contents == null) {
+                host.innerHTML = "<p>-</p>";
+                return;
+            }
+
+            if (typeof contents === "object") {
+                const ed = ensureViewer();
+                ed.commands.setContent(contents);
+                return;
+            }
+
+            const raw = String(contents);
+
+            if (isProbablyJson(raw)) {
+                const ed = ensureViewer();
+                ed.commands.setContent(JSON.parse(raw));
+                return;
+            }
+
+            if (isProbablyHtml(raw)) {
+                if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
+                host.innerHTML = raw; // ❗ 서버 sanitize 권장
+                return;
+            }
+
+            if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
+            host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`;
+        };
+    </script>
+
+    <script th:inline="javascript">
+        const boardNo = [[${boardNo}]];
+        const API_BASE = "http://localhost:8090";
+
+        function setupWriterTooltip() {
+            const host = document.getElementById("writerTooltipHost");
+            const btn = document.getElementById("boardWriterBtn");
+
+            function show() { host.classList.add("show"); }
+            function hide() { host.classList.remove("show"); }
+            function toggle() { host.classList.toggle("show"); }
+
+            host.addEventListener("mouseenter", show);
+            host.addEventListener("mouseleave", hide);
+
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggle();
             });
 
-            const result = await response.json();
+            document.addEventListener("click", (e) => {
+                if (!host.contains(e.target)) hide();
+            });
 
-            if (result.status === 200 && result.data) {
-                const board = result.data;
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") hide();
+            });
+        }
 
-                // ✅ 제목
-                $('#noticeTitle').text(board.title ?? "");
+        async function loadBoardDetail() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/board/${boardNo}`, {
+                    method: 'GET',
+                    credentials: "include",
+                    headers: {'Content-Type': 'application/json' }
+                });
 
-                // ✅ 내용(JSON 렌더)
-                // board.contents가 JSON 문자열이어야 함 (등록화면에서 JSON.stringify(editor.getJSON()) 저장한 값)
-                if (window.__renderBoardContentsJson) {
-                    window.__renderBoardContentsJson(board.contents);
-                } else {
-                    // 혹시 모듈 로드 타이밍 이슈 대비
-                    $('#noticeDescription').text(board.contents ?? "");
+                const result = await response.json();
+
+                if (result.status === 200 && result.data) {
+                    const board = result.data;
+
+                    $('#boardTitle').text(board.title ?? "-");
+                    $('#boardCategory').text(board.catDescript ?? "-");
+
+                    if (window.renderBoardContentsAuto) window.renderBoardContentsAuto(board.contents);
+                    else $('#boardDescription').text(board.contents ?? "");
+
+                    $('#boardWriter').text(board.empName ?? "-");
+                    $('#boardWriterId').text(board.empId ?? "-");
+                    $('#boardDepart').text(board.depName ?? "-");
+
+                    $('#boardCreated').text(board.createdAt ? String(board.createdAt).substring(0,10) : "-");
+                    $('#boardRating').text(board.rating ?? "-");
+
+                    initAttach();
+                    setupWriterTooltip();
                 }
-
-                // ✅ 카테고리
-                $('#noticeCategory').text(board.catDescript ?? "-");
-
-                // ✅ 조회수
-                $('#noticeRating').text(board.rating ?? 0);
-
-                // ✅ 작성자(이름만)
-                $('#noticeWriter').text(board.empName ?? "-");
-
-                // ✅ 직번/부서: 풍선으로
-                const empId = board.empId ?? "-";
-                const depName = board.depName ?? "-";
-                $('#pillEmpId').attr('data-tip', `직번: ${empId}`);
-                $('#pillDept').attr('data-tip', `부서: ${depName}`);
-
-                // ✅ 등록일(기존 substring 대신 조금 더 안전)
-                const createdAt = board.createdAt ? String(board.createdAt).substring(0, 10) : "-";
-                $('#noticeCreated').text(createdAt);
-
-                initAttach();
-                initComment();
+            } catch (e) {
+                console.error(e);
+                alert("상세 로딩 중 오류가 발생했습니다.");
             }
-        } catch (error) {
-            console.error('Error loading board detail:', error);
         }
-    }
 
-    function unwrapMaybeResponseDto(obj) {
-        if (obj && typeof obj === "object" && "data" in obj) return obj.data;
-        return obj;
-    }
+        function unwrapMaybeResponseDto(obj) {
+            if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+            return obj;
+        }
 
-    async function initAttach() {
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/attachments?domain=BOARD&entityId=${boardNo}`, {
-                method: 'GET',
-                credentials: "include",
-                headers: { 'Content-Type': 'application/json' }
-            });
+        async function initAttach(){
+            try{
+                const response = await fetch(`${API_BASE}/api/v1/attachments?domain=BOARD&entityId=${boardNo}`, {
+                    method:'GET',
+                    credentials:"include",
+                    headers:{ 'Content-Type': 'application/json' }
+                });
 
-            const result = await response.json();
-            const attachList = $('#attachList').empty();
+                const result = await response.json();
+                const attachList = $('#attachList').empty();
 
-            if (result.status === 200 && result.data?.length) {
-                const attachs = result.data;
+                if (result.status === 200 && result.data?.length) {
+                    const attachs = result.data;
 
-                attachList.append(`
-          <tr>
-            <th>일련번호</th>
-            <th>파일명</th>
-            <th>attachmentId</th>
-            <th>displayOrder</th>
-            <th>size</th>
-            <th>미리보기</th>
-            <th>다운로드</th>
-          </tr>
-        `);
-
-                attachs.forEach((r, index) => {
                     attachList.append(`
-            <tr>
-              <td>${index+1}</td>
-              <td>${escapeHtml(r.originalName)}</td>
-              <td>${r.attachmentId}</td>
-              <td>${r.displayOrder}</td>
-              <td>${formatFileSize(r.size)}</td>
-              <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
-              <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
-            </tr>
-          `);
-                });
+                      <tr>
+                        <th style="width:90px;">일련번호</th>
+                        <th>파일명</th>
+                        <th style="width:120px;">size</th>
+                        <th style="width:110px;">미리보기</th>
+                        <th style="width:110px;">다운로드</th>
+                      </tr>
+                    `);
 
-                document.querySelectorAll("button[data-down]").forEach(btn => {
-                    btn.addEventListener("click", async (e) => {
-                        const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
-                        await downAttachment(attachmentId);
+                    attachs.forEach((r, index) => {
+                        attachList.append(`
+                          <tr>
+                            <td>${index+1}</td>
+                            <td>${escapeHtml(r.originalName)}</td>
+                            <td>${formatFileSize(r.size)}</td>
+                            <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+                            <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+                          </tr>
+                        `);
                     });
-                });
 
-                document.querySelectorAll("button[data-view]").forEach(btn => {
-                    btn.addEventListener("click", async (e) => {
-                        const attachmentId = Number(e.currentTarget.getAttribute("data-view"));
-                        await viewAttachment(attachmentId);
+                    document.querySelectorAll("button[data-down]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
+                            await downAttachment(attachmentId);
+                        });
                     });
+
+                    document.querySelectorAll("button[data-view]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-view"));
+                            await viewAttachment(attachmentId);
+                        });
+                    });
+
+                } else {
+                    attachList.html('<tr><td colspan="5">관련 첨부파일이 없습니다.</td></tr>');
+                }
+            }catch(e){
+                console.error(e);
+            }
+        }
+
+        function escapeHtml(str){
+            return String(str ?? "")
+                .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes == null || isNaN(bytes)) return "-";
+            if (bytes < 1024) return `${bytes} B`;
+            const kb = bytes / 1024;
+            if (kb < 1024) return `${kb.toFixed(1)} KB`;
+            const mb = kb / 1024;
+            return `${mb.toFixed(1)} MB`;
+        }
+
+        async function fetchDownloadUrl(attachmentId) {
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
+                method:"GET",
+                credentials:"include",
+                headers:{ 'Accept': 'application/json' }
+            });
+            if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const url = data.url;
+            if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
+            return { url, meta: data };
+        }
+
+        async function fetchPreviewUrl(attachmentId) {
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
+                method:"GET",
+                credentials:"include",
+                headers:{ 'Accept': 'application/json' }
+            });
+            if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const url = data.url;
+            if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
+            return { url, meta: data };
+        }
+
+        async function downAttachment(attachmentId){
+            if (!attachmentId) return;
+            if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+
+            try{
+                const { url, meta } = await fetchDownloadUrl(attachmentId);
+                const a = document.createElement("a");
+                a.href = url;
+                a.rel = "noopener";
+                a.download = meta.originalName || "";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }catch(e){
+                console.error(e);
+                alert("다운로드 중 오류: " + (e?.message ?? e));
+            }
+        }
+
+        async function viewAttachment(attachmentId){
+            if (!attachmentId) return;
+            try{
+                const { url } = await fetchPreviewUrl(attachmentId);
+                window.open(url, "_blank", "noopener");
+            }catch(e){
+                console.error(e);
+                alert("미리보기 중 오류: " + (e?.message ?? e));
+            }
+        }
+
+        async function deleteBoard(){
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            try{
+                const res = await fetch(`/api/v1/board/${boardNo}`, {
+                    method:"DELETE",
+                    credentials:"include"
                 });
 
-            } else {
-                attachList.html('<tr><td colspan="7">관련 첨부파일이 없습니다.</td></tr>');
+                if (res.ok) {
+                    alert("게시글이 삭제되었습니다.");
+                    window.location.href = "/board/list";
+                } else {
+                    alert("삭제 실패했습니다.");
+                }
+            }catch(e){
+                console.error(e);
+                alert("삭제 중 오류 발생");
             }
-
-        } catch (error) {
-            console.error('Failed to load attachment file:', error);
-        }
-    }
-
-    function escapeHtml(str){
-        return String(str || "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes == null || isNaN(bytes)) return "-";
-        if (bytes < 1024) return `${bytes} B`;
-
-        const kb = bytes / 1024;
-        if (kb < 1024) return `${kb.toFixed(1)} KB`;
-
-        const mb = kb / 1024;
-        return `${mb.toFixed(1)} MB`;
-    }
-
-    async function fetchDownloadUrl(attachmentId) {
-        const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
-            method: "GET",
-            credentials: "include",
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
-
-        const raw = await res.json();
-        const data = unwrapMaybeResponseDto(raw);
-        const url = data.url;
-
-        if (typeof url !== "string" || !url.startsWith("http")) {
-            console.error("응답:", raw);
-            throw new Error("응답에 url이 없습니다. (data.url 확인)");
-        }
-        return { url, meta: data };
-    }
-
-    async function fetchPreviewloadUrl(attachmentId) {
-        const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
-            method: "GET",
-            credentials: "include",
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
-
-        const raw = await res.json();
-        const data = unwrapMaybeResponseDto(raw);
-        const url = data.url;
-
-        if (typeof url !== "string" || !url.startsWith("http")) {
-            console.error("응답:", raw);
-            throw new Error("응답에 url이 없습니다. (data.url 확인)");
-        }
-        return { url, meta: data };
-    }
-
-    async function downAttachment(attachmentId) {
-        if (!attachmentId) return;
-        if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
-
-        try {
-            const { url, meta } = await fetchDownloadUrl(attachmentId);
-            const a = document.createElement("a");
-            a.href = url;
-            a.rel = "noopener";
-            a.download = meta.originalName || "";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        } catch (e) {
-            console.error(e);
-            alert("다운로드 중 오류: " + (e?.message ?? e));
-        }
-    }
-
-    async function viewAttachment(attachmentId) {
-        if (!attachmentId) return;
-
-        try {
-            const { url } = await fetchPreviewloadUrl(attachmentId);
-            window.open(url, "_blank", "noopener");
-        } catch (e) {
-            console.error(e);
-            alert("미리보기 중 오류: " + (e?.message ?? e));
-        }
-    }
-
-    async function deleteBoard() {
-        if (!confirm("정말 삭제하시겠습니까?")) return;
-
-        try {
-            const res = await fetch(`/api/v1/board/${boardNo}`, {
-                method: "DELETE",
-                credentials: "include"
-            });
-
-            if (res.ok) {
-                alert("게시글이 삭제되었습니다.");
-                window.location.href = "/board/list";
-            } else {
-                alert("삭제 실패했습니다.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("삭제 중 오류 발생");
-        }
-    }
-
-    async function initComment() {
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/boards/${boardNo}/comments`, {
-                method: 'GET',
-                credentials: "include"
-            });
-
-            const result = await response.json();
-            const commentList = $('#commentList').empty();
-
-            if (!result.data || result.data.length === 0) {
-                commentList.html(`<tr><td colspan="5">등록된 댓글이 없습니다.</td></tr>`);
-                return;
-            }
-
-            if (result.status === 200 && result.data) {
-                const comments = result.data;
-
-                commentList.append(`
-          <thead>
-            <tr>
-              <th>일련번호</th>
-              <th>내용</th>
-              <th>작성자</th>
-              <th>부서</th>
-              <th>등록일자</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        `);
-
-                const tbody = commentList.find("tbody");
-                comments.forEach((r, index) => {
-                    const createdAt = r.createdAt ? String(r.createdAt).substring(0, 10) : "-";
-                    tbody.append(`
-            <tr>
-              <td class="comment-no">${index + 1}</td>
-              <td><div class="comment-content">${escapeHtml(r.contents ?? "")}</div></td>
-              <td>
-                <div class="comment-meta">
-                  <div class="name">${escapeHtml(r.empName ?? "-")}</div>
-                </div>
-              </td>
-              <td>
-                <div class="comment-meta">
-                  <div class="dept">${escapeHtml(r.depName ?? "-")}</div>
-                </div>
-              </td>
-              <td class="comment-date">${createdAt}</td>
-            </tr>
-          `);
-                });
-
-            } else {
-                commentList.html('<tr><td colspan="5">관련 댓글이 없습니다.</td></tr>');
-            }
-        } catch (error) {
-            console.error('Failed to load board comments :', error);
-        }
-    }
-
-    // ===== 댓글 bytes 제한(원본 유지) =====
-    function getUtf8Bytes(str) {
-        return new Blob([str ?? ""], { type: "text/plain; charset=UTF-8" }).size;
-    }
-
-    function enforceByteLimit(text, limitBytes = 600) {
-        if (!text) return "";
-
-        let lo = 0, hi = text.length;
-        while (lo < hi) {
-            const mid = Math.ceil((lo + hi) / 2);
-            const sliced = text.slice(0, mid);
-            if (getUtf8Bytes(sliced) <= limitBytes) lo = mid;
-            else hi = mid - 1;
-        }
-        return text.slice(0, lo);
-    }
-
-    function updateCommentByteCounter() {
-        const ta = document.getElementById("commentContents");
-        const counter = document.getElementById("commentByte");
-
-        const limited = enforceByteLimit(ta.value, 600);
-        if (limited !== ta.value) ta.value = limited;
-
-        counter.textContent = String(getUtf8Bytes(ta.value));
-    }
-
-    async function submitComment() {
-        const contentsEl = document.getElementById("commentContents");
-        const contents = (contentsEl.value ?? "").trim();
-
-        if (!contents) {
-            alert("댓글 내용을 입력해주세요.");
-            contentsEl.focus();
-            return;
         }
 
-        const fd = new FormData();
-        fd.append("boardNo", String(boardNo));
-        fd.append("contents", contents);
+        document.addEventListener('DOMContentLoaded', loadBoardDetail);
+    </script>
+</th:block>
 
-        try {
-            const res = await fetch(`${API_BASE}/api/v1/comment`, {
-                method: "POST",
-                credentials: "include",
-                body: fd
-            });
-
-            const json = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                console.error("댓글 등록 실패:", res.status, json);
-                alert("댓글 등록 실패: " + (json?.message ?? res.statusText));
-                return;
-            }
-
-            alert(json?.message ?? "댓글 등록 성공");
-            contentsEl.value = "";
-            updateCommentByteCounter();
-            await initComment();
-
-        } catch (e) {
-            console.error(e);
-            alert("댓글 등록 중 오류: " + (e?.message ?? e));
-        }
-    }
-
-    function cancelComment() {
-        const contentsEl = document.getElementById("commentContents");
-        contentsEl.value = "";
-        updateCommentByteCounter();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadBoardDetail();
-
-        const ta = document.getElementById("commentContents");
-        const submitBtn = document.getElementById("commentSubmitBtn");
-        const cancelBtn = document.getElementById("commentCancelBtn");
-
-        if (ta) {
-            ta.addEventListener("input", updateCommentByteCounter);
-            updateCommentByteCounter();
-        }
-        if (submitBtn) submitBtn.addEventListener("click", submitComment);
-        if (cancelBtn) cancelBtn.addEventListener("click", cancelComment);
-    });
-</script>
-</body>
 </html>

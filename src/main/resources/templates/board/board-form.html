@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
-<head>
-    <meta charset="UTF-8" />
-    <title>자유게시판 등록</title>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layout">
+
+<th:block layout:fragment="pageStyles">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
 
     <style>
+        /* ❌ body 배경/폰트는 layout이 담당 → 컨텐츠 스타일만 유지(겹침 방지) */
         :root{
             --bg:#f6f7fb;
             --card:#ffffff;
@@ -19,15 +22,7 @@
             --danger:#dc2626;
         }
         *{box-sizing:border-box}
-        body{
-            margin:0;
-            background:
-                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-                    var(--bg);
-            font-family:'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color:var(--text);
-        }
+
         .container{
             max-width: 1280px;
             margin: 48px auto;
@@ -108,7 +103,7 @@
             margin-left: 6px;
         }
 
-        /* ====== Editor (공지사항과 동일) ====== */
+        /* ====== Editor ====== */
         .editor-wrap{
             background: var(--card);
             border: 1px solid var(--line);
@@ -126,13 +121,12 @@
             padding: 8px 10px;
             border-bottom: 1px solid rgba(17,24,39,.10);
             background:#fff;
-            overflow-x: auto;      /* ✅ 가로 스크롤 */
+
+            overflow-x: auto;
             overflow-y: hidden;
             white-space: nowrap;
             -webkit-overflow-scrolling: touch;
         }
-
-        /* ✅ 스크롤바 숨기기(보이지만 않게) */
         .office-toolbar::-webkit-scrollbar{ height: 0; }
         .office-toolbar{ scrollbar-width: none; }
 
@@ -194,7 +188,6 @@
             white-space: pre-wrap;
         }
 
-        /* 표 스타일 */
         .office-editor .ProseMirror table{
             width:100%;
             border-collapse: collapse;
@@ -233,7 +226,7 @@
         }
         .office-counter.over{ color: var(--danger); }
 
-        /* 파일 UI(공지사항과 동일 톤) */
+        /* 파일 UI */
         .file-attach-section{
             background: var(--card);
             border: 1px solid var(--line);
@@ -313,457 +306,446 @@
             .summary-select{ width: 100%; }
         }
     </style>
-</head>
+</th:block>
 
-<body>
-<div class="container">
-    <h2>게시판등록</h2>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- ✅ board-list와 동일: 게시판 서브바 -->
+        <div th:replace="~{sidebar/board-sidebar :: boardSidebar('boardForm')}"></div>
 
-    <form id="boardForm" enctype="multipart/form-data">
-        <!-- ✅ 제목/카테고리: Summary Table -->
-        <div class="summary-card">
-            <table class="summary-table">
-                <tr>
-                    <th>제목</th>
-                    <td>
-                        <input type="text" id="title" name="title" class="summary-input"
-                               placeholder="자유게시판 제목을 입력하세요" required maxlength="100">
-                    </td>
-                </tr>
-                <tr>
-                    <th>카테고리</th>
-                    <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                        <select id="catCode" name="catCode" class="summary-select" required>
-                            <option value="">카테고리를 선택하세요</option>
-                            <option th:each="category : ${categories}"
-                                    th:value="${category.catCode}"
-                                    th:text="${category.catDescript}">
-                            </option>
+        <div class="container">
+            <h2>게시판등록</h2>
+
+            <form id="boardForm" enctype="multipart/form-data">
+                <div class="summary-card">
+                    <table class="summary-table">
+                        <tr>
+                            <th>제목</th>
+                            <td>
+                                <input type="text" id="title" name="title" class="summary-input"
+                                       placeholder="자유게시판 제목을 입력하세요" required maxlength="100">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>카테고리</th>
+                            <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                                <select id="catCode" name="catCode" class="summary-select" required>
+                                    <option value="">카테고리를 선택하세요</option>
+                                    <option th:each="category : ${categories}"
+                                            th:value="${category.catCode}"
+                                            th:text="${category.catDescript}">
+                                    </option>
+                                </select>
+                                <span class="hint">필수 선택</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="editor-wrap">
+                    <div class="office-toolbar" id="ttToolbar">
+                        <select class="tb-select" id="headingSelect" title="서식">
+                            <option value="h2" selected>제목2</option>
+                            <option value="p">본문</option>
                         </select>
-                        <span class="hint">필수 선택</span>
-                    </td>
-                </tr>
-            </table>
+
+                        <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
+                        <button type="button" class="tb-btn" data-cmd="italic">기울임</button>
+                        <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
+                        <button type="button" class="tb-btn" data-cmd="strike">취소선</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="alignLeft">왼쪽</button>
+                        <button type="button" class="tb-btn" data-cmd="alignCenter">가운데</button>
+                        <button type="button" class="tb-btn" data-cmd="alignRight">오른쪽</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="bulletList">글머리</button>
+                        <button type="button" class="tb-btn" data-cmd="orderedList">번호</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="insertTable">표 삽입</button>
+                        <button type="button" class="tb-btn" data-cmd="rowPlus">행 +</button>
+                        <button type="button" class="tb-btn" data-cmd="colPlus">열 +</button>
+                        <button type="button" class="tb-btn" data-cmd="rowMinus">행 -</button>
+                        <button type="button" class="tb-btn" data-cmd="colMinus">열 -</button>
+                        <button type="button" class="tb-btn" data-cmd="deleteTable">표 삭제</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="undo">실행취소</button>
+                        <button type="button" class="tb-btn" data-cmd="redo">다시실행</button>
+                    </div>
+
+                    <div id="contentsEditor" class="office-editor"></div>
+
+                    <div class="office-counter">
+                        <span id="charCount">0</span> / <span id="charLimit">1000</span>
+                    </div>
+
+                    <input type="hidden" id="contents" name="contents" required>
+                </div>
+
+                <div class="file-attach-section">
+                    <div class="file-attach-header">📎 첨부파일 (최대 5개, 개당 10MB)</div>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
+                        <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
+                    </div>
+                    <div class="file-list" id="file-list">
+                        <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit" id="submitBtn">등록</button>
+                    <a th:href="@{/board/list}" class="btn-cancel">취소</a>
+                </div>
+            </form>
         </div>
-
-        <!-- ✅ 에디터(TipTap + JSON 저장) -->
-        <div class="editor-wrap">
-            <div class="office-toolbar" id="ttToolbar">
-                <select class="tb-select" id="headingSelect" title="서식">
-                    <option value="h2" selected>제목2</option>
-                    <option value="p">본문</option>
-                </select>
-
-                <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
-                <button type="button" class="tb-btn" data-cmd="italic">기울임</button>
-                <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
-                <button type="button" class="tb-btn" data-cmd="strike">취소선</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="alignLeft">왼쪽</button>
-                <button type="button" class="tb-btn" data-cmd="alignCenter">가운데</button>
-                <button type="button" class="tb-btn" data-cmd="alignRight">오른쪽</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="bulletList">글머리</button>
-                <button type="button" class="tb-btn" data-cmd="orderedList">번호</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="insertTable">표 삽입</button>
-                <button type="button" class="tb-btn" data-cmd="rowPlus">행 +</button>
-                <button type="button" class="tb-btn" data-cmd="colPlus">열 +</button>
-                <button type="button" class="tb-btn" data-cmd="rowMinus">행 -</button>
-                <button type="button" class="tb-btn" data-cmd="colMinus">열 -</button>
-                <button type="button" class="tb-btn" data-cmd="deleteTable">표 삭제</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="undo">실행취소</button>
-                <button type="button" class="tb-btn" data-cmd="redo">다시실행</button>
-            </div>
-
-            <div id="contentsEditor" class="office-editor"></div>
-
-            <div class="office-counter">
-                <span id="charCount">0</span> / <span id="charLimit">1000</span>
-            </div>
-
-            <!-- ✅ JSON 저장 -->
-            <input type="hidden" id="contents" name="contents" required>
-        </div>
-
-        <!-- 파일 첨부 -->
-        <div class="file-attach-section">
-            <div class="file-attach-header">📎 첨부파일 (최대 5개, 개당 10MB)</div>
-            <div class="file-input-wrapper">
-                <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
-                <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
-            </div>
-            <div class="file-list" id="file-list">
-                <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
-            </div>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn-submit" id="submitBtn">등록</button>
-            <a th:href="@{/board/list}" class="btn-cancel">취소</a>
-        </div>
-    </form>
+    </div>
 </div>
 
-<!-- ✅ TipTap (ESM) - 공지사항과 동일 구성 / JSON 저장 / 1000자 제한 -->
-<script type="module">
-    const LIMIT = 1000;
+<th:block layout:fragment="pageScripts">
+    <!-- ✅ TipTap (ESM) - 원본 그대로 -->
+    <script type="module">
+        const LIMIT = 1000;
 
-    import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
-    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
-    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
-    import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
-    import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
+        import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+        import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+        import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+        import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+        import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
 
-    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
-    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
-    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
-    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
+        import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+        import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+        import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+        import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
 
-    const hidden = document.getElementById("contents");
-    const editorEl = document.getElementById("contentsEditor");
-    const toolbar = document.getElementById("ttToolbar");
-    const headingSelect = document.getElementById("headingSelect");
+        const hidden = document.getElementById("contents");
+        const editorEl = document.getElementById("contentsEditor");
+        const toolbar = document.getElementById("ttToolbar");
+        const headingSelect = document.getElementById("headingSelect");
 
-    const charCountEl = document.getElementById("charCount");
-    const charLimitEl = document.getElementById("charLimit");
-    const counterWrap = document.querySelector(".office-counter");
+        const charCountEl = document.getElementById("charCount");
+        const charLimitEl = document.getElementById("charLimit");
+        const counterWrap = document.querySelector(".office-counter");
 
-    charLimitEl.textContent = String(LIMIT);
+        charLimitEl.textContent = String(LIMIT);
 
-    const editor = new Editor({
-        element: editorEl,
-        extensions: [
-            StarterKit,
-            Underline,
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
-            CharacterCount.configure({ limit: LIMIT }),
+        const editor = new Editor({
+            element: editorEl,
+            extensions: [
+                StarterKit,
+                Underline,
+                TextAlign.configure({ types: ["heading", "paragraph"] }),
+                CharacterCount.configure({ limit: LIMIT }),
 
-            Table.configure({ resizable: true }),
-            TableRow,
-            TableHeader,
-            TableCell,
-        ],
-        content: { type: "doc", content: [{ type: "paragraph" }] },
-        onCreate(){ syncHidden(); refreshToolbar(); refreshCount(); },
-        onUpdate(){ syncHidden(); refreshToolbar(); refreshCount(); },
-        onSelectionUpdate(){ refreshToolbar(); }
-    });
+                Table.configure({ resizable: true }),
+                TableRow,
+                TableHeader,
+                TableCell,
+            ],
+            content: { type: "doc", content: [{ type: "paragraph" }] },
+            onCreate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+            onUpdate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+            onSelectionUpdate(){ refreshToolbar(); }
+        });
 
-    function syncHidden(){
-        hidden.value = JSON.stringify(editor.getJSON());
-    }
+        function syncHidden(){
+            hidden.value = JSON.stringify(editor.getJSON());
+        }
 
-    function refreshCount(){
-        const count = editor.storage.characterCount.characters();
-        charCountEl.textContent = String(count);
-        counterWrap.classList.toggle("over", count > LIMIT);
-    }
+        function refreshCount(){
+            const count = editor.storage.characterCount.characters();
+            charCountEl.textContent = String(count);
+            counterWrap.classList.toggle("over", count > LIMIT);
+        }
 
-    function setActive(btn, on){
-        btn.classList.toggle("is-active", !!on);
-    }
+        function setActive(btn, on){
+            btn.classList.toggle("is-active", !!on);
+        }
 
-    function ensureTable(){
-        if (editor.isActive("table")) return;
-        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-    }
+        function ensureTable(){
+            if (editor.isActive("table")) return;
+            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        }
 
-    function refreshToolbar(){
-        const inTable = editor.isActive("table");
+        function refreshToolbar(){
+            const inTable = editor.isActive("table");
 
-        toolbar.querySelectorAll(".tb-btn").forEach(btn=>{
+            toolbar.querySelectorAll(".tb-btn").forEach(btn=>{
+                const cmd = btn.dataset.cmd;
+                if (!cmd) return;
+
+                const activeMap = {
+                    bold: editor.isActive("bold"),
+                    italic: editor.isActive("italic"),
+                    underline: editor.isActive("underline"),
+                    strike: editor.isActive("strike"),
+                    bulletList: editor.isActive("bulletList"),
+                    orderedList: editor.isActive("orderedList"),
+                    alignLeft: editor.isActive({ textAlign: "left" }) || (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
+                    alignCenter: editor.isActive({ textAlign: "center" }),
+                    alignRight: editor.isActive({ textAlign: "right" }),
+                };
+
+                setActive(btn, activeMap[cmd]);
+
+                if (cmd === "undo") btn.disabled = !editor.can().chain().focus().undo().run();
+                if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
+
+                if (cmd === "rowMinus") btn.disabled = !inTable;
+                if (cmd === "colMinus") btn.disabled = !inTable;
+                if (cmd === "deleteTable") btn.disabled = !inTable;
+            });
+
+            if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
+            else headingSelect.value = "p";
+        }
+
+        headingSelect.addEventListener("change", ()=>{
+            const v = headingSelect.value;
+            const chain = editor.chain().focus();
+            if (v === "h2") chain.setHeading({ level: 2 }).run();
+            else chain.setParagraph().run();
+            refreshToolbar(); syncHidden(); refreshCount();
+        });
+
+        toolbar.addEventListener("click", (e)=>{
+            const btn = e.target.closest(".tb-btn");
+            if (!btn) return;
+
             const cmd = btn.dataset.cmd;
             if (!cmd) return;
 
-            const activeMap = {
-                bold: editor.isActive("bold"),
-                italic: editor.isActive("italic"),
-                underline: editor.isActive("underline"),
-                strike: editor.isActive("strike"),
-                bulletList: editor.isActive("bulletList"),
-                orderedList: editor.isActive("orderedList"),
-                alignLeft: editor.isActive({ textAlign: "left" }) || (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
-                alignCenter: editor.isActive({ textAlign: "center" }),
-                alignRight: editor.isActive({ textAlign: "right" }),
-            };
+            const chain = editor.chain().focus();
 
-            setActive(btn, activeMap[cmd]);
+            switch(cmd){
+                case "bold": chain.toggleBold().run(); break;
+                case "italic": chain.toggleItalic().run(); break;
+                case "underline": chain.toggleUnderline().run(); break;
+                case "strike": chain.toggleStrike().run(); break;
 
-            if (cmd === "undo") btn.disabled = !editor.can().chain().focus().undo().run();
-            if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
+                case "alignLeft": chain.setTextAlign("left").run(); break;
+                case "alignCenter": chain.setTextAlign("center").run(); break;
+                case "alignRight": chain.setTextAlign("right").run(); break;
 
-            if (cmd === "rowMinus") btn.disabled = !inTable;
-            if (cmd === "colMinus") btn.disabled = !inTable;
-            if (cmd === "deleteTable") btn.disabled = !inTable;
+                case "bulletList": chain.toggleBulletList().run(); break;
+                case "orderedList": chain.toggleOrderedList().run(); break;
+
+                case "insertTable":
+                    chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                    break;
+
+                case "rowPlus":
+                    ensureTable();
+                    editor.chain().focus().addRowAfter().run();
+                    break;
+
+                case "colPlus":
+                    ensureTable();
+                    editor.chain().focus().addColumnAfter().run();
+                    break;
+
+                case "rowMinus": chain.deleteRow().run(); break;
+                case "colMinus": chain.deleteColumn().run(); break;
+                case "deleteTable": chain.deleteTable().run(); break;
+
+                case "undo": chain.undo().run(); break;
+                case "redo": chain.redo().run(); break;
+
+                default: break;
+            }
+
+            refreshToolbar();
+            syncHidden();
+            refreshCount();
         });
 
-        if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
-        else headingSelect.value = "p";
-    }
+        window.__boardEditorGetText = () => editor.getText();
+        window.__boardEditorGetCount = () => editor.storage.characterCount.characters();
+    </script>
 
-    headingSelect.addEventListener("change", ()=>{
-        const v = headingSelect.value;
-        const chain = editor.chain().focus();
-        if (v === "h2") chain.setHeading({ level: 2 }).run();
-        else chain.setParagraph().run();
-        refreshToolbar(); syncHidden(); refreshCount();
-    });
+    <!-- ✅ 파일/등록 로직 - 원본 그대로 -->
+    <script>
+        let attachedFiles = [];
 
-    toolbar.addEventListener("click", (e)=>{
-        const btn = e.target.closest(".tb-btn");
-        if (!btn) return;
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            const maxSize = 10 * 1024 * 1024;
+            const maxCount = 5;
 
-        const cmd = btn.dataset.cmd;
-        if (!cmd) return;
-
-        const chain = editor.chain().focus();
-
-        switch(cmd){
-            case "bold": chain.toggleBold().run(); break;
-            case "italic": chain.toggleItalic().run(); break;
-            case "underline": chain.toggleUnderline().run(); break;
-            case "strike": chain.toggleStrike().run(); break;
-
-            case "alignLeft": chain.setTextAlign("left").run(); break;
-            case "alignCenter": chain.setTextAlign("center").run(); break;
-            case "alignRight": chain.setTextAlign("right").run(); break;
-
-            case "bulletList": chain.toggleBulletList().run(); break;
-            case "orderedList": chain.toggleOrderedList().run(); break;
-
-            case "insertTable":
-                chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-                break;
-
-            case "rowPlus":
-                ensureTable();
-                editor.chain().focus().addRowAfter().run();
-                break;
-
-            case "colPlus":
-                ensureTable();
-                editor.chain().focus().addColumnAfter().run();
-                break;
-
-            case "rowMinus":
-                chain.deleteRow().run();
-                break;
-
-            case "colMinus":
-                chain.deleteColumn().run();
-                break;
-
-            case "deleteTable":
-                chain.deleteTable().run();
-                break;
-
-            case "undo": chain.undo().run(); break;
-            case "redo": chain.redo().run(); break;
-            default: break;
-        }
-
-        refreshToolbar();
-        syncHidden();
-        refreshCount();
-    });
-
-    // submit 검증용(공지와 동일 패턴)
-    window.__boardEditorGetText = () => editor.getText();
-    window.__boardEditorGetCount = () => editor.storage.characterCount.characters();
-</script>
-
-<!-- ✅ 파일/등록 로직 (공지와 동일 패턴) -->
-<script>
-    let attachedFiles = [];
-
-    function handleFileSelect(event) {
-        const files = Array.from(event.target.files);
-        const maxSize = 10 * 1024 * 1024;
-        const maxCount = 5;
-
-        for (let file of files) {
-            if (attachedFiles.length >= maxCount) {
-                alert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`);
-                break;
+            for (let file of files) {
+                if (attachedFiles.length >= maxCount) {
+                    alert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`);
+                    break;
+                }
+                if (file.size > maxSize) {
+                    alert(`${file.name}은(는) 10MB를 초과합니다.`);
+                    continue;
+                }
+                if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    alert(`${file.name}은(는) 이미 첨부되었습니다.`);
+                    continue;
+                }
+                attachedFiles.push(file);
             }
-            if (file.size > maxSize) {
-                alert(`${file.name}은(는) 10MB를 초과합니다.`);
-                continue;
-            }
-            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                alert(`${file.name}은(는) 이미 첨부되었습니다.`);
-                continue;
-            }
-            attachedFiles.push(file);
+
+            event.target.value = '';
+            renderFileList();
         }
 
-        event.target.value = '';
-        renderFileList();
-    }
+        function renderFileList() {
+            const container = document.getElementById('file-list');
 
-    function renderFileList() {
-        const container = document.getElementById('file-list');
-
-        if (attachedFiles.length === 0) {
-            container.innerHTML = '<div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>';
-            return;
-        }
-
-        container.innerHTML = attachedFiles.map((file, index) => `
-      <div class="file-item">
-        <div class="file-item-info">
-          <span style="font-size:18px;">📄</span>
-          <div>
-            <div class="file-item-name">${escapeHtml(file.name)}</div>
-            <div class="file-item-size">${formatFileSize(file.size)}</div>
-          </div>
-        </div>
-        <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
-      </div>
-    `).join('');
-    }
-
-    function removeFile(index) {
-        attachedFiles.splice(index, 1);
-        renderFileList();
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    function escapeHtml(str){
-        return String(str || "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    function getFileType(mimeType) {
-        if ((mimeType || "").startsWith('image/')) return 'IMAGE';
-        if ((mimeType || "").startsWith('audio/')) return 'AUDIO';
-        return 'DOC';
-    }
-
-    async function uploadFiles(boardNo) {
-        if (attachedFiles.length === 0) return;
-
-        for (const file of attachedFiles) {
-            try {
-                const presignRes = await fetch('/api/v1/attachments/presign', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        domain: 'BOARD',
-                        entityId: boardNo,
-                        fileType: getFileType(file.type),
-                        originalName: file.name,
-                        contentType: file.type || 'application/octet-stream',
-                        size: file.size
-                    })
-                });
-
-                if (!presignRes.ok) continue;
-                const presignData = await presignRes.json();
-                const { objectKey, uploadUrl } = presignData.data;
-
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
-                    body: file
-                });
-                if (!uploadRes.ok) continue;
-
-                const etag = uploadRes.headers.get('ETag');
-
-                await fetch('/api/v1/attachments/complete', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        domain: 'BOARD',
-                        entityId: boardNo,
-                        fileType: getFileType(file.type),
-                        objectKey: objectKey,
-                        originalName: file.name,
-                        contentType: file.type || 'application/octet-stream',
-                        size: file.size,
-                        etag: etag ? etag.replace(/"/g, '') : null
-                    })
-                });
-            } catch (e) {
-                console.error(`[${file.name}] 업로드 오류:`, e);
-            }
-        }
-    }
-
-    // ===== 게시판 등록 (공지와 동일하게 FormData + contents(JSON)) =====
-    document.getElementById('boardForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const text = (window.__boardEditorGetText ? window.__boardEditorGetText() : "").trim();
-        const count = window.__boardEditorGetCount ? window.__boardEditorGetCount() : 0;
-
-        if (!text) {
-            alert('게시글 내용을 입력하세요');
-            return;
-        }
-        if (count > 1000) {
-            alert('게시글 내용은 최대 1000자까지 입력 가능합니다.');
-            return;
-        }
-
-        const submitBtn = document.getElementById("submitBtn");
-        submitBtn.disabled = true;
-
-        const formData = new FormData(e.target);
-
-        try {
-            const response = await fetch('/api/v1/board', {
-                method: 'POST',
-                credentials: "include",
-                body: formData
-            });
-
-            const result = await response.json().catch(()=> ({}));
-
-            if (!response.ok) {
-                alert(result.message || '게시판 등록 실패');
+            if (attachedFiles.length === 0) {
+                container.innerHTML = '<div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>';
                 return;
             }
 
-            const board = result.data;
-            alert('게시판 등록 성공!');
-
-            if (attachedFiles.length > 0 && board && board.boardNo) {
-                await uploadFiles(board.boardNo);
-            }
-
-            window.location.href = "/board/list";
-        } catch (error) {
-            console.error('게시판 등록 중 오류 발생:', error);
-            alert('게시판 등록 중 오류가 발생했습니다.');
-        } finally {
-            submitBtn.disabled = false;
+            container.innerHTML = attachedFiles.map((file, index) => `
+              <div class="file-item">
+                <div class="file-item-info">
+                  <span style="font-size:18px;">📄</span>
+                  <div>
+                    <div class="file-item-name">${escapeHtml(file.name)}</div>
+                    <div class="file-item-size">${formatFileSize(file.size)}</div>
+                  </div>
+                </div>
+                <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
+              </div>
+            `).join('');
         }
-    });
-</script>
-</body>
+
+        function removeFile(index) {
+            attachedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function escapeHtml(str){
+            return String(str || "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function getFileType(mimeType) {
+            if ((mimeType || "").startsWith('image/')) return 'IMAGE';
+            if ((mimeType || "").startsWith('audio/')) return 'AUDIO';
+            return 'DOC';
+        }
+
+        async function uploadFiles(boardNo) {
+            if (attachedFiles.length === 0) return;
+
+            for (const file of attachedFiles) {
+                try {
+                    const presignRes = await fetch('/api/v1/attachments/presign', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            domain: 'BOARD',
+                            entityId: boardNo,
+                            fileType: getFileType(file.type),
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size
+                        })
+                    });
+
+                    if (!presignRes.ok) continue;
+                    const presignData = await presignRes.json();
+                    const { objectKey, uploadUrl } = presignData.data;
+
+                    const uploadRes = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                        body: file
+                    });
+                    if (!uploadRes.ok) continue;
+
+                    const etag = uploadRes.headers.get('ETag');
+
+                    await fetch('/api/v1/attachments/complete', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            domain: 'BOARD',
+                            entityId: boardNo,
+                            fileType: getFileType(file.type),
+                            objectKey: objectKey,
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size,
+                            etag: etag ? etag.replace(/"/g, '') : null
+                        })
+                    });
+                } catch (e) {
+                    console.error(`[${file.name}] 업로드 오류:`, e);
+                }
+            }
+        }
+
+        document.getElementById('boardForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const text = (window.__boardEditorGetText ? window.__boardEditorGetText() : "").trim();
+            const count = window.__boardEditorGetCount ? window.__boardEditorGetCount() : 0;
+
+            if (!text) { alert('게시글 내용을 입력하세요'); return; }
+            if (count > 1000) { alert('게시글 내용은 최대 1000자까지 입력 가능합니다.'); return; }
+
+            const submitBtn = document.getElementById("submitBtn");
+            submitBtn.disabled = true;
+
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/api/v1/board', {
+                    method: 'POST',
+                    credentials: "include",
+                    body: formData
+                });
+
+                const result = await response.json().catch(()=> ({}));
+
+                if (!response.ok) {
+                    alert(result.message || '게시판 등록 실패');
+                    return;
+                }
+
+                const board = result.data;
+                alert('게시판 등록 성공!');
+
+                if (attachedFiles.length > 0 && board && board.boardNo) {
+                    await uploadFiles(board.boardNo);
+                }
+
+                window.location.href = "/board/list";
+            } catch (error) {
+                console.error('게시판 등록 중 오류 발생:', error);
+                alert('게시판 등록 중 오류가 발생했습니다.');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</th:block>
+
 </html>

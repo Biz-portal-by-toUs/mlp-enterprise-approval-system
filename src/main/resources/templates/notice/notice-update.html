@@ -1,13 +1,17 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
-<head>
-    <meta charset="UTF-8" />
-    <title>공지 사항 변경</title>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layout">
+
+<th:block layout:fragment="pageStyles">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
+        /* ❌ :root / body 배경은 layout.html이 담당하므로 제거 권장 (겹치면 레이아웃 전체 덮임)
+           필요한 컨텐츠 스타일만 유지 */
+
         :root{
             --bg:#f6f7fb;
             --card:#ffffff;
@@ -20,15 +24,7 @@
             --danger:#dc2626;
         }
         *{box-sizing:border-box}
-        body{
-            margin:0;
-            background:
-                    radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-                    radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-                    var(--bg);
-            font-family:'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color:var(--text);
-        }
+
         .container{
             max-width: 1280px;
             margin: 48px auto;
@@ -146,7 +142,6 @@
             margin-bottom: 14px;
         }
 
-        /* ✅ 스크롤 없이 한 줄 고정(컴팩트) */
         .office-toolbar{
             display:flex;
             flex-wrap: nowrap;
@@ -156,7 +151,7 @@
             border-bottom: 1px solid rgba(17,24,39,.10);
             background:#fff;
 
-            overflow-x: auto;      /* ✅ 가로 스크롤 */
+            overflow-x: auto;
             overflow-y: hidden;
             white-space: nowrap;
             -webkit-overflow-scrolling: touch;
@@ -172,8 +167,6 @@
             background:#fff;
             flex: 0 0 auto;
         }
-
-        /* ✅ 스크롤바 숨기기(보이지만 않게) */
         .office-toolbar::-webkit-scrollbar{ height: 0; }
         .office-toolbar{ scrollbar-width: none; }
 
@@ -222,7 +215,6 @@
             white-space: pre-wrap;
         }
 
-        /* Table grid style */
         .office-editor .ProseMirror table{
             width:100%;
             border-collapse: collapse;
@@ -389,647 +381,653 @@
             .period-inline{ width:100%; }
         }
     </style>
-</head>
+</th:block>
 
-<body>
-<div class="container">
-    <h2>공지사항 수정</h2>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- ✅ notice-list와 동일한 sidebar 도킹 -->
+        <div th:replace="~{sidebar/board-sidebar :: boardSidebar('notice')}"></div>
 
-    <form id="updateForm" enctype="multipart/form-data">
-        <input type="hidden" id="noticeNo" name="noticeNo" th:value="${noticeNo}">
+        <div class="container">
+            <h2>공지사항 수정</h2>
 
-        <!-- ✅ 등록 화면처럼: 제목/팝업여부/팝업기간 테이블 -->
-        <div class="summary-card">
-            <table class="summary-table">
-                <tr>
-                    <th>제목</th>
-                    <td>
-                        <input type="text" id="title" name="title" class="summary-input" required maxlength="100">
-                    </td>
-                </tr>
-                <tr>
-                    <th>팝업여부</th>
-                    <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                        <select id="isPopupSelect" name="isPopup" class="summary-select" required>
-                            <option value="true">사용</option>
-                            <option value="false">미사용</option>
+            <form id="updateForm" enctype="multipart/form-data">
+                <input type="hidden" id="noticeNo" name="noticeNo" th:value="${noticeNo}">
+
+                <div class="summary-card">
+                    <table class="summary-table">
+                        <tr>
+                            <th>제목</th>
+                            <td>
+                                <input type="text" id="title" name="title" class="summary-input" required maxlength="100">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>팝업여부</th>
+                            <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                                <select id="isPopupSelect" name="isPopup" class="summary-select" required>
+                                    <option value="true">사용</option>
+                                    <option value="false">미사용</option>
+                                </select>
+                                <span class="hint">사용 선택 시 아래 ‘팝업기간’ 입력</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>팝업기간</th>
+                            <td>
+                                <div class="period-inline">
+                                    <input type="date" id="startedAt" name="startedAt" class="summary-date">
+                                    <span class="sep">~</span>
+                                    <input type="date" id="endedAt" name="endedAt" class="summary-date">
+                                    <span class="hint">(미사용이면 자동 비활성)</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="editor-wrap">
+                    <div class="office-toolbar" id="ttToolbar">
+                        <select class="tb-select" id="headingSelect" title="서식">
+                            <option value="h2">제목2</option>
+                            <option value="p" selected>본문</option>
                         </select>
-                        <span class="hint">사용 선택 시 아래 ‘팝업기간’ 입력</span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>팝업기간</th>
-                    <td>
-                        <div class="period-inline">
-                            <input type="date" id="startedAt" name="startedAt" class="summary-date">
-                            <span class="sep">~</span>
-                            <input type="date" id="endedAt" name="endedAt" class="summary-date">
-                            <span class="hint">(미사용이면 자동 비활성)</span>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+
+                        <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
+                        <button type="button" class="tb-btn" data-cmd="italic">기울</button>
+                        <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
+                        <button type="button" class="tb-btn" data-cmd="strike">취소</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="alignLeft">좌</button>
+                        <button type="button" class="tb-btn" data-cmd="alignCenter">중</button>
+                        <button type="button" class="tb-btn" data-cmd="alignRight">우</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="bulletList">·목</button>
+                        <button type="button" class="tb-btn" data-cmd="orderedList">1목</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="insertTable">표</button>
+                        <button type="button" class="tb-btn" data-cmd="rowPlus">행+</button>
+                        <button type="button" class="tb-btn" data-cmd="colPlus">열+</button>
+                        <button type="button" class="tb-btn" data-cmd="rowMinus">행-</button>
+                        <button type="button" class="tb-btn" data-cmd="colMinus">열-</button>
+                        <button type="button" class="tb-btn" data-cmd="deleteTable">삭제</button>
+
+                        <span class="tb-sep"></span>
+
+                        <button type="button" class="tb-btn" data-cmd="undo">↶</button>
+                        <button type="button" class="tb-btn" data-cmd="redo">↷</button>
+                    </div>
+
+                    <div id="contentsEditor" class="office-editor"></div>
+
+                    <div class="office-counter">
+                        <span id="charCount">0</span> / <span id="charLimit">1000</span>
+                    </div>
+
+                    <input type="hidden" id="contents" name="contents" required>
+                </div>
+
+                <section class="attach-section">
+                    <div class="attach-head">
+                        <h3 class="attach-title">첨부 파일</h3>
+                    </div>
+                    <div class="attach-body">
+                        <table id="attachList" class="table table-striped"></table>
+                    </div>
+                </section>
+
+                <div class="file-attach-section">
+                    <div class="file-attach-header">📎 첨부파일 (최대 5개, 개당 10MB)</div>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
+                        <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
+                    </div>
+                    <div class="file-list" id="file-list">
+                        <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit" id="submitBtn">수정하기</button>
+                    <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
+                </div>
+            </form>
         </div>
-
-        <!-- ✅ 등록 화면과 동일 에디터 (JSON 저장) -->
-        <div class="editor-wrap">
-            <div class="office-toolbar" id="ttToolbar">
-                <select class="tb-select" id="headingSelect" title="서식">
-                    <option value="h2">제목2</option>
-                    <option value="p" selected>본문</option>
-                </select>
-
-                <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
-                <button type="button" class="tb-btn" data-cmd="italic">기울</button>
-                <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
-                <button type="button" class="tb-btn" data-cmd="strike">취소</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="alignLeft">좌</button>
-                <button type="button" class="tb-btn" data-cmd="alignCenter">중</button>
-                <button type="button" class="tb-btn" data-cmd="alignRight">우</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="bulletList">·목</button>
-                <button type="button" class="tb-btn" data-cmd="orderedList">1목</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="insertTable">표</button>
-                <button type="button" class="tb-btn" data-cmd="rowPlus">행+</button>
-                <button type="button" class="tb-btn" data-cmd="colPlus">열+</button>
-                <button type="button" class="tb-btn" data-cmd="rowMinus">행-</button>
-                <button type="button" class="tb-btn" data-cmd="colMinus">열-</button>
-                <button type="button" class="tb-btn" data-cmd="deleteTable">삭제</button>
-
-                <span class="tb-sep"></span>
-
-                <button type="button" class="tb-btn" data-cmd="undo">↶</button>
-                <button type="button" class="tb-btn" data-cmd="redo">↷</button>
-            </div>
-
-            <div id="contentsEditor" class="office-editor"></div>
-
-            <div class="office-counter">
-                <span id="charCount">0</span> / <span id="charLimit">1000</span>
-            </div>
-
-            <input type="hidden" id="contents" name="contents" required>
-        </div>
-
-        <!-- 기존 첨부파일 목록 -->
-        <section class="attach-section">
-            <div class="attach-head">
-                <h3 class="attach-title">첨부 파일</h3>
-            </div>
-            <div class="attach-body">
-                <table id="attachList" class="table table-striped"></table>
-            </div>
-        </section>
-
-        <!-- 추가 첨부 -->
-        <div class="file-attach-section">
-            <div class="file-attach-header">📎 첨부파일 (최대 5개, 개당 10MB)</div>
-            <div class="file-input-wrapper">
-                <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
-                <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
-            </div>
-            <div class="file-list" id="file-list">
-                <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
-            </div>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn-submit" id="submitBtn">수정하기</button>
-            <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
-        </div>
-    </form>
+    </div>
 </div>
 
-<!-- ✅ TipTap (ESM) - 링크/이미지/인용 제외 / JSON 저장 -->
-<script type="module">
-    const LIMIT = 1000;
+<th:block layout:fragment="pageScripts">
+    <!-- ✅ 기존 head에 있던 jQuery 포함(생략 X) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
-    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
-    import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
-    import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
-    import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
+    <!-- ✅ TipTap (ESM) - 원본 그대로 -->
+    <script type="module">
+        const LIMIT = 1000;
 
-    import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
-    import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
-    import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
-    import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
+        import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+        import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+        import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+        import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+        import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
 
-    const hidden = document.getElementById("contents");
-    const editorEl = document.getElementById("contentsEditor");
-    const toolbar = document.getElementById("ttToolbar");
-    const headingSelect = document.getElementById("headingSelect");
+        import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+        import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+        import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+        import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
 
-    const charCountEl = document.getElementById("charCount");
-    const charLimitEl = document.getElementById("charLimit");
-    const counterWrap = document.querySelector(".office-counter");
+        const hidden = document.getElementById("contents");
+        const editorEl = document.getElementById("contentsEditor");
+        const toolbar = document.getElementById("ttToolbar");
+        const headingSelect = document.getElementById("headingSelect");
 
-    charLimitEl.textContent = String(LIMIT);
+        const charCountEl = document.getElementById("charCount");
+        const charLimitEl = document.getElementById("charLimit");
+        const counterWrap = document.querySelector(".office-counter");
 
-    const editor = new Editor({
-        element: editorEl,
-        extensions: [
-            StarterKit,
-            Underline,
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
-            CharacterCount.configure({ limit: LIMIT }),
+        charLimitEl.textContent = String(LIMIT);
 
-            Table.configure({ resizable: true }),
-            TableRow,
-            TableHeader,
-            TableCell,
-        ],
-        content: { type: "doc", content: [{ type: "paragraph" }] },
-        onCreate(){ syncHidden(); refreshToolbar(); refreshCount(); },
-        onUpdate(){ syncHidden(); refreshToolbar(); refreshCount(); },
-        onSelectionUpdate(){ refreshToolbar(); }
-    });
+        const editor = new Editor({
+            element: editorEl,
+            extensions: [
+                StarterKit,
+                Underline,
+                TextAlign.configure({ types: ["heading", "paragraph"] }),
+                CharacterCount.configure({ limit: LIMIT }),
 
-    function syncHidden(){ hidden.value = JSON.stringify(editor.getJSON()); }
+                Table.configure({ resizable: true }),
+                TableRow,
+                TableHeader,
+                TableCell,
+            ],
+            content: { type: "doc", content: [{ type: "paragraph" }] },
+            onCreate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+            onUpdate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+            onSelectionUpdate(){ refreshToolbar(); }
+        });
 
-    function refreshCount(){
-        const count = editor.storage.characterCount.characters();
-        charCountEl.textContent = String(count);
-        counterWrap.classList.toggle("over", count > LIMIT);
-    }
+        function syncHidden(){ hidden.value = JSON.stringify(editor.getJSON()); }
 
-    function setActive(btn, on){ btn.classList.toggle("is-active", !!on); }
+        function refreshCount(){
+            const count = editor.storage.characterCount.characters();
+            charCountEl.textContent = String(count);
+            counterWrap.classList.toggle("over", count > LIMIT);
+        }
 
-    function ensureTable(){
-        if (editor.isActive("table")) return;
-        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-    }
+        function setActive(btn, on){ btn.classList.toggle("is-active", !!on); }
 
-    function refreshToolbar(){
-        const inTable = editor.isActive("table");
+        function ensureTable(){
+            if (editor.isActive("table")) return;
+            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        }
 
-        toolbar.querySelectorAll(".tb-btn").forEach(btn=>{
+        function refreshToolbar(){
+            const inTable = editor.isActive("table");
+
+            toolbar.querySelectorAll(".tb-btn").forEach(btn=>{
+                const cmd = btn.dataset.cmd;
+                if (!cmd) return;
+
+                const activeMap = {
+                    bold: editor.isActive("bold"),
+                    italic: editor.isActive("italic"),
+                    underline: editor.isActive("underline"),
+                    strike: editor.isActive("strike"),
+                    bulletList: editor.isActive("bulletList"),
+                    orderedList: editor.isActive("orderedList"),
+                    alignLeft: editor.isActive({ textAlign: "left" }) || (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
+                    alignCenter: editor.isActive({ textAlign: "center" }),
+                    alignRight: editor.isActive({ textAlign: "right" }),
+                };
+
+                setActive(btn, activeMap[cmd]);
+
+                if (cmd === "undo") btn.disabled = !editor.can().chain().focus().undo().run();
+                if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
+
+                if (cmd === "rowMinus") btn.disabled = !inTable;
+                if (cmd === "colMinus") btn.disabled = !inTable;
+                if (cmd === "deleteTable") btn.disabled = !inTable;
+            });
+
+            if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
+            else headingSelect.value = "p";
+        }
+
+        headingSelect.addEventListener("change", ()=>{
+            const v = headingSelect.value;
+            const chain = editor.chain().focus();
+            if (v === "h2") chain.setHeading({ level: 2 }).run();
+            else chain.setParagraph().run();
+            refreshToolbar(); syncHidden(); refreshCount();
+        });
+
+        toolbar.addEventListener("click", (e)=>{
+            const btn = e.target.closest(".tb-btn");
+            if (!btn) return;
+
             const cmd = btn.dataset.cmd;
             if (!cmd) return;
 
-            const activeMap = {
-                bold: editor.isActive("bold"),
-                italic: editor.isActive("italic"),
-                underline: editor.isActive("underline"),
-                strike: editor.isActive("strike"),
-                bulletList: editor.isActive("bulletList"),
-                orderedList: editor.isActive("orderedList"),
-                alignLeft: editor.isActive({ textAlign: "left" }) || (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
-                alignCenter: editor.isActive({ textAlign: "center" }),
-                alignRight: editor.isActive({ textAlign: "right" }),
-            };
+            const chain = editor.chain().focus();
 
-            setActive(btn, activeMap[cmd]);
+            switch(cmd){
+                case "bold": chain.toggleBold().run(); break;
+                case "italic": chain.toggleItalic().run(); break;
+                case "underline": chain.toggleUnderline().run(); break;
+                case "strike": chain.toggleStrike().run(); break;
 
-            if (cmd === "undo") btn.disabled = !editor.can().chain().focus().undo().run();
-            if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
+                case "alignLeft": chain.setTextAlign("left").run(); break;
+                case "alignCenter": chain.setTextAlign("center").run(); break;
+                case "alignRight": chain.setTextAlign("right").run(); break;
 
-            if (cmd === "rowMinus") btn.disabled = !inTable;
-            if (cmd === "colMinus") btn.disabled = !inTable;
-            if (cmd === "deleteTable") btn.disabled = !inTable;
+                case "bulletList": chain.toggleBulletList().run(); break;
+                case "orderedList": chain.toggleOrderedList().run(); break;
+
+                case "insertTable":
+                    chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                    break;
+
+                case "rowPlus":
+                    ensureTable();
+                    editor.chain().focus().addRowAfter().run();
+                    break;
+
+                case "colPlus":
+                    ensureTable();
+                    editor.chain().focus().addColumnAfter().run();
+                    break;
+
+                case "rowMinus": chain.deleteRow().run(); break;
+                case "colMinus": chain.deleteColumn().run(); break;
+                case "deleteTable": chain.deleteTable().run(); break;
+
+                case "undo": chain.undo().run(); break;
+                case "redo": chain.redo().run(); break;
+
+                default: break;
+            }
+
+            refreshToolbar();
+            syncHidden();
+            refreshCount();
         });
 
-        if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
-        else headingSelect.value = "p";
-    }
-
-    headingSelect.addEventListener("change", ()=>{
-        const v = headingSelect.value;
-        const chain = editor.chain().focus();
-        if (v === "h2") chain.setHeading({ level: 2 }).run();
-        else chain.setParagraph().run();
-        refreshToolbar(); syncHidden(); refreshCount();
-    });
-
-    toolbar.addEventListener("click", (e)=>{
-        const btn = e.target.closest(".tb-btn");
-        if (!btn) return;
-
-        const cmd = btn.dataset.cmd;
-        if (!cmd) return;
-
-        const chain = editor.chain().focus();
-
-        switch(cmd){
-            case "bold": chain.toggleBold().run(); break;
-            case "italic": chain.toggleItalic().run(); break;
-            case "underline": chain.toggleUnderline().run(); break;
-            case "strike": chain.toggleStrike().run(); break;
-
-            case "alignLeft": chain.setTextAlign("left").run(); break;
-            case "alignCenter": chain.setTextAlign("center").run(); break;
-            case "alignRight": chain.setTextAlign("right").run(); break;
-
-            case "bulletList": chain.toggleBulletList().run(); break;
-            case "orderedList": chain.toggleOrderedList().run(); break;
-
-            case "insertTable":
-                chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-                break;
-
-            case "rowPlus":
-                ensureTable();
-                editor.chain().focus().addRowAfter().run();
-                break;
-
-            case "colPlus":
-                ensureTable();
-                editor.chain().focus().addColumnAfter().run();
-                break;
-
-            case "rowMinus": chain.deleteRow().run(); break;
-            case "colMinus": chain.deleteColumn().run(); break;
-            case "deleteTable": chain.deleteTable().run(); break;
-
-            case "undo": chain.undo().run(); break;
-            case "redo": chain.redo().run(); break;
-            default: break;
-        }
-
-        refreshToolbar();
-        syncHidden();
-        refreshCount();
-    });
-
-    // ✅ 외부에서 기존 contents 자동 로딩 (JSON/HTML/텍스트 모두 대응)
-    function isProbablyJson(str){
-        if (typeof str !== "string") return false;
-        const s = str.trim();
-        if (!s) return false;
-        if (!(s.startsWith("{") || s.startsWith("["))) return false;
-        try {
-            const obj = JSON.parse(s);
-            return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
-        } catch { return false; }
-    }
-    function isProbablyHtml(str){
-        if (typeof str !== "string") return false;
-        const s = str.trim();
-        if (!s) return false;
-        return /<\/?[a-z][\s\S]*>/i.test(s);
-    }
-    function escapeHtml(str){
-        return String(str ?? "")
-            .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-            .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-    }
-
-    window.__setEditorContentAuto = (contents)=>{
-        if (contents == null) {
-            editor.commands.setContent({ type:"doc", content:[{ type:"paragraph"}] });
-            syncHidden(); refreshCount(); refreshToolbar();
-            return;
-        }
-        if (typeof contents === "object") {
-            editor.commands.setContent(contents);
-            syncHidden(); refreshCount(); refreshToolbar();
-            return;
-        }
-        const raw = String(contents);
-        if (isProbablyJson(raw)) {
-            editor.commands.setContent(JSON.parse(raw));
-        } else if (isProbablyHtml(raw)) {
-            editor.commands.setContent(raw);
-        } else {
-            editor.commands.setContent(`<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`);
-        }
-        syncHidden(); refreshCount(); refreshToolbar();
-    };
-
-    window.__editorGetText = () => editor.getText();
-    window.__editorGetCount = () => editor.storage.characterCount.characters();
-</script>
-
-<script th:inline="javascript">
-    const noticeNo = [[${noticeNo}]];
-    const API_BASE = "http://localhost:8090";
-    let attachedFiles = [];
-
-    function toDateOnly(value){
-        if (!value) return "";
-        return String(value).substring(0,10);
-    }
-
-    function setupPopupToggle(){
-        const select = document.getElementById("isPopupSelect");
-        const startAt = document.getElementById("startedAt");
-        const endAt = document.getElementById("endedAt");
-
-        function toggle(v){
-            const enabled = String(v) === "true";
-            startAt.disabled = !enabled;
-            endAt.disabled = !enabled;
-            startAt.required = enabled;
-            endAt.required = enabled;
-            if (!enabled) { startAt.value=""; endAt.value=""; }
-        }
-        select.addEventListener("change",(e)=>toggle(e.target.value));
-        toggle(select.value);
-    }
-
-    // ===== 파일 첨부 =====
-    function handleFileSelect(event) {
-        const files = Array.from(event.target.files);
-        const maxSize = 10 * 1024 * 1024;
-        const maxCount = 5;
-
-        for (let file of files) {
-            if (attachedFiles.length >= maxCount) {
-                alert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`);
-                break;
-            }
-            if (file.size > maxSize) {
-                alert(`${file.name}은(는) 10MB를 초과합니다.`);
-                continue;
-            }
-            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                alert(`${file.name}은(는) 이미 첨부되었습니다.`);
-                continue;
-            }
-            attachedFiles.push(file);
-        }
-        event.target.value = '';
-        renderFileList();
-    }
-
-    function renderFileList() {
-        const container = document.getElementById('file-list');
-
-        if (attachedFiles.length === 0) {
-            container.innerHTML = '<div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>';
-            return;
-        }
-
-        container.innerHTML = attachedFiles.map((file, index) => `
-      <div class="file-item">
-        <div class="file-item-info">
-          <span style="font-size:18px;">📄</span>
-          <div>
-            <div class="file-item-name">${escapeHtml(file.name)}</div>
-            <div class="file-item-size">${formatFileSize(file.size)}</div>
-          </div>
-        </div>
-        <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
-      </div>
-    `).join('');
-    }
-
-    function removeFile(index) {
-        attachedFiles.splice(index, 1);
-        renderFileList();
-    }
-
-    function formatFileSize(bytes) {
-        if (!bytes) return "0 Bytes";
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    function escapeHtml(str){
-        return String(str ?? "")
-            .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-            .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-    }
-
-    function getFileType(mimeType) {
-        const t = mimeType || "";
-        if (t.startsWith('image/')) return 'IMAGE';
-        if (t.startsWith('audio/')) return 'AUDIO';
-        return 'DOC';
-    }
-
-    async function uploadFiles(noticeNo) {
-        if (attachedFiles.length === 0) return;
-
-        for (const file of attachedFiles) {
+        // ✅ 외부에서 기존 contents 자동 로딩 (JSON/HTML/텍스트 모두 대응)
+        function isProbablyJson(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            if (!(s.startsWith("{") || s.startsWith("["))) return false;
             try {
-                const presignRes = await fetch('/api/v1/attachments/presign', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        domain: 'NOTICE',
-                        entityId: noticeNo,
-                        fileType: getFileType(file.type),
-                        originalName: file.name,
-                        contentType: file.type || 'application/octet-stream',
-                        size: file.size
-                    })
-                });
-                if (!presignRes.ok) continue;
-
-                const presignData = await presignRes.json();
-                const { objectKey, uploadUrl } = presignData.data;
-
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
-                    body: file
-                });
-                if (!uploadRes.ok) continue;
-
-                const etag = uploadRes.headers.get('ETag');
-
-                await fetch('/api/v1/attachments/complete', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        domain: 'NOTICE',
-                        entityId: noticeNo,
-                        fileType: getFileType(file.type),
-                        objectKey,
-                        originalName: file.name,
-                        contentType: file.type || 'application/octet-stream',
-                        size: file.size,
-                        etag: etag ? etag.replace(/"/g, '') : null
-                    })
-                });
-            } catch (e) {
-                console.error(`[${file.name}] 업로드 오류:`, e);
-            }
+                const obj = JSON.parse(s);
+                return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
+            } catch { return false; }
         }
-    }
+        function isProbablyHtml(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            return /<\/?[a-z][\s\S]*>/i.test(s);
+        }
+        function escapeHtml(str){
+            return String(str ?? "")
+                .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+        }
 
-    // ===== 기존 공지 로드 =====
-    async function loadNoticeDetails() {
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
-                method: 'GET',
-                credentials: "include",
-                headers: {'Content-Type': 'application/json'}
-            });
-
-            const result = await response.json();
-
-            if (result.status === 200 && result.data) {
-                const notice = result.data;
-
-                document.getElementById('title').value = notice.title ?? "";
-                document.getElementById("isPopupSelect").value = String(notice.isPopup);
-
-                document.getElementById("startedAt").value = toDateOnly(notice.startedAt);
-                document.getElementById("endedAt").value = toDateOnly(notice.endedAt);
-
-                // ✅ editor 내용 자동 로딩 (JSON/HTML/텍스트)
-                if (window.__setEditorContentAuto) {
-                    window.__setEditorContentAuto(notice.contents ?? "");
-                }
-
-                setupPopupToggle();
-                initAttach();
+        window.__setEditorContentAuto = (contents)=>{
+            if (contents == null) {
+                editor.commands.setContent({ type:"doc", content:[{ type:"paragraph"}] });
+                syncHidden(); refreshCount(); refreshToolbar();
+                return;
+            }
+            if (typeof contents === "object") {
+                editor.commands.setContent(contents);
+                syncHidden(); refreshCount(); refreshToolbar();
+                return;
+            }
+            const raw = String(contents);
+            if (isProbablyJson(raw)) {
+                editor.commands.setContent(JSON.parse(raw));
+            } else if (isProbablyHtml(raw)) {
+                editor.commands.setContent(raw);
             } else {
-                alert('공지사항을 불러오는 데 실패했습니다.');
+                editor.commands.setContent(`<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`);
             }
-        } catch (error) {
-            console.error('Error loading notice details:', error);
-            alert('공지사항을 불러오는 중 오류가 발생했습니다.');
-        }
-    }
+            syncHidden(); refreshCount(); refreshToolbar();
+        };
 
-    // ===== 수정 제출 =====
-    document.getElementById('updateForm').addEventListener('submit', async function (event) {
-        event.preventDefault();
+        window.__editorGetText = () => editor.getText();
+        window.__editorGetCount = () => editor.storage.characterCount.characters();
+    </script>
 
-        const text = (window.__editorGetText ? window.__editorGetText() : "").trim();
-        const count = window.__editorGetCount ? window.__editorGetCount() : 0;
+    <!-- ✅ 원본 로직(데이터 로드/첨부/수정) 그대로 -->
+    <script th:inline="javascript">
+        const noticeNo = [[${noticeNo}]];
+        const API_BASE = "http://localhost:8090";
+        let attachedFiles = [];
 
-        if (!text) { alert("공지 내용을 입력하세요."); return; }
-        if (count > 1000) { alert("공지 내용은 최대 1000자까지 입력 가능합니다."); return; }
-
-        const submitBtn = document.getElementById("submitBtn");
-        submitBtn.disabled = true;
-
-        const formData = new FormData(this);
-
-        // date -> datetime 변환
-        const isPopup = formData.get("isPopup");
-        const startedDate = formData.get("startedAt");
-        const endedDate = formData.get("endedAt");
-
-        if (isPopup === "true") {
-            if (startedDate) formData.set("startedAt", `${startedDate}T00:00:00`);
-            if (endedDate) formData.set("endedAt", `${endedDate}T23:59:59`);
-        } else {
-            formData.delete("startedAt");
-            formData.delete("endedAt");
+        function toDateOnly(value){
+            if (!value) return "";
+            return String(value).substring(0,10);
         }
 
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
-                method: 'PUT',
-                credentials: "include",
-                body: formData,
-            });
+        function setupPopupToggle(){
+            const select = document.getElementById("isPopupSelect");
+            const startAt = document.getElementById("startedAt");
+            const endAt = document.getElementById("endedAt");
 
-            const result = await response.json().catch(()=>({}));
+            function toggle(v){
+                const enabled = String(v) === "true";
+                startAt.disabled = !enabled;
+                endAt.disabled = !enabled;
+                startAt.required = enabled;
+                endAt.required = enabled;
+                if (!enabled) { startAt.value=""; endAt.value=""; }
+            }
+            select.addEventListener("change",(e)=>toggle(e.target.value));
+            toggle(select.value);
+        }
 
-            if (!response.ok) {
-                alert(result.message || '공지사항 수정 실패');
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            const maxSize = 10 * 1024 * 1024;
+            const maxCount = 5;
+
+            for (let file of files) {
+                if (attachedFiles.length >= maxCount) {
+                    alert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`);
+                    break;
+                }
+                if (file.size > maxSize) {
+                    alert(`${file.name}은(는) 10MB를 초과합니다.`);
+                    continue;
+                }
+                if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    alert(`${file.name}은(는) 이미 첨부되었습니다.`);
+                    continue;
+                }
+                attachedFiles.push(file);
+            }
+            event.target.value = '';
+            renderFileList();
+        }
+
+        function renderFileList() {
+            const container = document.getElementById('file-list');
+
+            if (attachedFiles.length === 0) {
+                container.innerHTML = '<div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>';
                 return;
             }
 
-            alert('공지사항이 수정되었습니다.');
-
-            if (attachedFiles.length > 0 && noticeNo) {
-                await uploadFiles(noticeNo);
-            }
-
-            window.location.href = '/notice/list';
-        } catch (error) {
-            console.error('Error updating notice:', error);
-            alert('공지사항 수정 중 오류가 발생했습니다.');
-        } finally {
-            submitBtn.disabled = false;
+            container.innerHTML = attachedFiles.map((file, index) => `
+              <div class="file-item">
+                <div class="file-item-info">
+                  <span style="font-size:18px;">📄</span>
+                  <div>
+                    <div class="file-item-name">${escapeHtml(file.name)}</div>
+                    <div class="file-item-size">${formatFileSize(file.size)}</div>
+                  </div>
+                </div>
+                <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
+              </div>
+            `).join('');
         }
-    });
 
-    // ===== 첨부 목록 =====
-    async function initAttach() {
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
-                method: 'GET',
-                credentials: "include",
-                headers: {'Content-Type': 'application/json'}
-            });
+        function removeFile(index) {
+            attachedFiles.splice(index, 1);
+            renderFileList();
+        }
 
-            const result = await response.json();
-            const attachList = document.getElementById('attachList');
-            attachList.innerHTML = "";
+        function formatFileSize(bytes) {
+            if (!bytes) return "0 Bytes";
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
 
-            if (result.status === 200 && result.data?.length) {
-                const attachs = result.data;
+        function escapeHtml(str){
+            return String(str ?? "")
+                .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+        }
 
-                attachList.insertAdjacentHTML("beforeend", `
-          <tr>
-            <th>일련번호</th>
-            <th>파일명</th>
-            <th>attachmentId</th>
-            <th>displayOrder</th>
-            <th>size</th>
-            <th>삭제</th>
-          </tr>
-        `);
+        function getFileType(mimeType) {
+            const t = mimeType || "";
+            if (t.startsWith('image/')) return 'IMAGE';
+            if (t.startsWith('audio/')) return 'AUDIO';
+            return 'DOC';
+        }
 
-                attachs.forEach((r,index) => {
-                    attachList.insertAdjacentHTML("beforeend", `
-            <tr>
-              <td>${index+1}</td>
-              <td>${escapeHtml(r.originalName)}</td>
-              <td>${r.attachmentId}</td>
-              <td>${r.displayOrder}</td>
-              <td>${formatFileSize(r.size)}</td>
-              <td><button type="button" class="btn btn-sm" data-attachment-id="${r.attachmentId}">삭제</button></td>
-            </tr>
-          `);
-                });
+        async function uploadFiles(noticeNo) {
+            if (attachedFiles.length === 0) return;
 
-                attachList.querySelectorAll("button[data-attachment-id]").forEach(btn => {
-                    btn.addEventListener("click", async (e) => {
-                        const attachmentId = Number(e.currentTarget.getAttribute("data-attachment-id"));
-                        await deleteAttachment(attachmentId);
+            for (const file of attachedFiles) {
+                try {
+                    const presignRes = await fetch('/api/v1/attachments/presign', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            domain: 'NOTICE',
+                            entityId: noticeNo,
+                            fileType: getFileType(file.type),
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size
+                        })
                     });
+                    if (!presignRes.ok) continue;
+
+                    const presignData = await presignRes.json();
+                    const { objectKey, uploadUrl } = presignData.data;
+
+                    const uploadRes = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                        body: file
+                    });
+                    if (!uploadRes.ok) continue;
+
+                    const etag = uploadRes.headers.get('ETag');
+
+                    await fetch('/api/v1/attachments/complete', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            domain: 'NOTICE',
+                            entityId: noticeNo,
+                            fileType: getFileType(file.type),
+                            objectKey,
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size,
+                            etag: etag ? etag.replace(/"/g, '') : null
+                        })
+                    });
+                } catch (e) {
+                    console.error(`[${file.name}] 업로드 오류:`, e);
+                }
+            }
+        }
+
+        async function loadNoticeDetails() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
+                    method: 'GET',
+                    credentials: "include",
+                    headers: {'Content-Type': 'application/json'}
                 });
 
+                const result = await response.json();
+
+                if (result.status === 200 && result.data) {
+                    const notice = result.data;
+
+                    document.getElementById('title').value = notice.title ?? "";
+                    document.getElementById("isPopupSelect").value = String(notice.isPopup);
+
+                    document.getElementById("startedAt").value = toDateOnly(notice.startedAt);
+                    document.getElementById("endedAt").value = toDateOnly(notice.endedAt);
+
+                    if (window.__setEditorContentAuto) {
+                        window.__setEditorContentAuto(notice.contents ?? "");
+                    }
+
+                    setupPopupToggle();
+                    initAttach();
+                } else {
+                    alert('공지사항을 불러오는 데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error loading notice details:', error);
+                alert('공지사항을 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        document.getElementById('updateForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const text = (window.__editorGetText ? window.__editorGetText() : "").trim();
+            const count = window.__editorGetCount ? window.__editorGetCount() : 0;
+
+            if (!text) { alert("공지 내용을 입력하세요."); return; }
+            if (count > 1000) { alert("공지 내용은 최대 1000자까지 입력 가능합니다."); return; }
+
+            const submitBtn = document.getElementById("submitBtn");
+            submitBtn.disabled = true;
+
+            const formData = new FormData(this);
+
+            const isPopup = formData.get("isPopup");
+            const startedDate = formData.get("startedAt");
+            const endedDate = formData.get("endedAt");
+
+            if (isPopup === "true") {
+                if (startedDate) formData.set("startedAt", `${startedDate}T00:00:00`);
+                if (endedDate) formData.set("endedAt", `${endedDate}T23:59:59`);
             } else {
-                attachList.innerHTML = `<tr><td colspan="6">관련 첨부파일이 없습니다.</td></tr>`;
+                formData.delete("startedAt");
+                formData.delete("endedAt");
             }
 
-        } catch (error) {
-            console.error('Failed to load attachment file:', error);
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
+                    method: 'PUT',
+                    credentials: "include",
+                    body: formData,
+                });
+
+                const result = await response.json().catch(()=>({}));
+
+                if (!response.ok) {
+                    alert(result.message || '공지사항 수정 실패');
+                    return;
+                }
+
+                alert('공지사항이 수정되었습니다.');
+
+                if (attachedFiles.length > 0 && noticeNo) {
+                    await uploadFiles(noticeNo);
+                }
+
+                window.location.href = '/notice/list';
+            } catch (error) {
+                console.error('Error updating notice:', error);
+                alert('공지사항 수정 중 오류가 발생했습니다.');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        async function initAttach() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
+                    method: 'GET',
+                    credentials: "include",
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+                const result = await response.json();
+                const attachList = document.getElementById('attachList');
+                attachList.innerHTML = "";
+
+                if (result.status === 200 && result.data?.length) {
+                    const attachs = result.data;
+
+                    attachList.insertAdjacentHTML("beforeend", `
+                      <tr>
+                        <th>일련번호</th>
+                        <th>파일명</th>
+                        <th>attachmentId</th>
+                        <th>displayOrder</th>
+                        <th>size</th>
+                        <th>삭제</th>
+                      </tr>
+                    `);
+
+                    attachs.forEach((r,index) => {
+                        attachList.insertAdjacentHTML("beforeend", `
+                          <tr>
+                            <td>${index+1}</td>
+                            <td>${escapeHtml(r.originalName)}</td>
+                            <td>${r.attachmentId}</td>
+                            <td>${r.displayOrder}</td>
+                            <td>${formatFileSize(r.size)}</td>
+                            <td><button type="button" class="btn btn-sm" data-attachment-id="${r.attachmentId}">삭제</button></td>
+                          </tr>
+                        `);
+                    });
+
+                    attachList.querySelectorAll("button[data-attachment-id]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-attachment-id"));
+                            await deleteAttachment(attachmentId);
+                        });
+                    });
+
+                } else {
+                    attachList.innerHTML = `<tr><td colspan="6">관련 첨부파일이 없습니다.</td></tr>`;
+                }
+
+            } catch (error) {
+                console.error('Failed to load attachment file:', error);
+            }
         }
-    }
 
-    async function deleteAttachment(attachmentId) {
-        if (!attachmentId) return;
-        if (!confirm(`attachmentId=${attachmentId} 파일을 삭제 할까요?`)) return;
+        async function deleteAttachment(attachmentId) {
+            if (!attachmentId) return;
+            if (!confirm(`attachmentId=${attachmentId} 파일을 삭제 할까요?`)) return;
 
-        try {
-            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}`, {
-                method: "DELETE",
-                credentials: "include"
-            });
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}`, {
+                    method: "DELETE",
+                    credentials: "include"
+                });
 
-            if (!res.ok) throw new Error("삭제 실패: " + await res.text());
-            await res.json().catch(()=>({}));
-            initAttach();
-        } catch (e) {
-            console.error(e);
-            alert("첨부 삭제 중 오류");
+                if (!res.ok) throw new Error("삭제 실패: " + await res.text());
+                await res.json().catch(()=>({}));
+                initAttach();
+            } catch (e) {
+                console.error(e);
+                alert("첨부 삭제 중 오류");
+            }
         }
-    }
 
-    document.addEventListener('DOMContentLoaded', loadNoticeDetails);
-</script>
-</body>
+        document.addEventListener('DOMContentLoaded', () => {
+            setupPopupToggle();
+            loadNoticeDetails();
+        });
+    </script>
+</th:block>
+
 </html>
