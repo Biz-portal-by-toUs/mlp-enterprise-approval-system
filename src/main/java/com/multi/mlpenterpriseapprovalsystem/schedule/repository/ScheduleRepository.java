@@ -35,14 +35,16 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
     // 부서 일정(depNo = :depNo)
     @Query("""
-        select s
-        from Schedule s
-        where s.department.depNo = :depNo
-          and s.startAt < :toExclusive
-          and s.endedAt > :fromInclusive
-        order by s.startAt asc, s.schNo asc
-    """)
+                select s
+                from Schedule s
+                where s.company.comId = :comId
+                  and s.department.depNo = :depNo
+                  and s.startAt < :toExclusive
+                  and s.endedAt > :fromInclusive
+                order by s.startAt asc, s.schNo asc
+            """)
     List<Schedule> findDepartmentOverlapping(
+            @Param("comId") String comId,
             @Param("depNo") Long depNo,
             @Param("fromInclusive") LocalDateTime fromInclusive,
             @Param("toExclusive") LocalDateTime toExclusive
