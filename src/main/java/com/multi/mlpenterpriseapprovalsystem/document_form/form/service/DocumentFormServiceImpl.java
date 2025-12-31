@@ -90,6 +90,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 form.getCnttJson(),
                 form.getCnttHtml(),
                 form.getRejectReason(),
+                form.getDocfoStat(),
                 categories
         );
     }
