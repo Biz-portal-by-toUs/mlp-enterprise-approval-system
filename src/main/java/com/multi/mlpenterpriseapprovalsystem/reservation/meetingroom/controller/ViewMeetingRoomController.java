@@ -46,7 +46,7 @@ public class ViewMeetingRoomController {
     }
 
     // 회의실 예약 화면
-    @GetMapping("/resevation")
+    @GetMapping("/reservation")
     public String meetingRoomReservation() {
         return "reservation/meeting-rooms/meeting-room-reservation";
     }
