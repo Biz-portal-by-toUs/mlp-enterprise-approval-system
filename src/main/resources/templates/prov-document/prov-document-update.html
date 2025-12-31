@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head>
+    <title>규정 수정 - Bizportal</title>
+    <style>
+        .prov-page .page-title { font-size: 34px; font-weight: 900; margin: 10px 0 8px; }
+        .prov-page .page-sub { font-size: 18px; font-weight: 800; margin: 0 0 20px; color: #111; }
+
+        .prov-page .actions { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; }
+        .prov-page .btn {
+            border: 0; border-radius: 12px; padding: 10px 24px; font-weight: 900; cursor: pointer;
+            background: #fff; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px;
+            transition: 0.2s; font-size: 14px;
+        }
+        .prov-page .btn.primary { background: var(--primary); color: #fff; border: none; box-shadow: 0 10px 20px rgba(59,130,246,.22); }
+        .prov-page .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+
+        .prov-page .card { background: #f1f3f6; border-radius: 18px; padding: 32px; }
+        .form-card { background: #fff; border-radius: 16px; padding: 32px; border: 1px solid var(--line); max-width: 900px; margin: 0 auto; }
+
+        .field { margin-bottom: 24px; }
+        .label { display: block; font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input, .textarea {
+            width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #f8fafc;
+            padding: 14px 18px; font-size: 14px; font-weight: 700; transition: 0.2s; outline: none;
+        }
+        .input:focus, .textarea:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
+        .textarea { min-height: 300px; resize: vertical; line-height: 1.6; }
+
+        .radio-group { display: flex; gap: 20px; padding: 10px 0; }
+        .radio-item { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; cursor: pointer; color: #334155; }
+        .radio-item input { width: 18px; height: 18px; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div layout:fragment="content" class="prov-page">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
+
+        <main style="padding: 0 26px; flex: 1;">
+            <div class="page-title">규정 정보 수정</div>
+            <div class="page-sub">사내 규정의 제목, 설명 및 공개 여부를 관리합니다.</div>
+
+            <div class="actions">
+                <button class="btn" id="backBtn" type="button">취소</button>
+                <button class="btn primary" id="saveBtn" type="button">
+                    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                    저장하기
+                </button>
+            </div>
+
+            <section class="card">
+                <div class="form-card">
+                    <div class="field">
+                        <span class="label">규정 제목</span>
+                        <input id="docTitleInput" class="input" placeholder="문서 제목을 입력하세요">
+                    </div>
+
+                    <div class="field">
+                        <span class="label">공개 여부</span>
+                        <div class="radio-group">
+                            <label class="radio-item"><input type="radio" name="isPublic" value="true"> 공개</label>
+                            <label class="radio-item"><input type="radio" name="isPublic" value="false"> 비공개</label>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <span class="label">상세 설명 및 본문</span>
+                        <textarea id="descInput" class="textarea" placeholder="규정의 구체적인 내용을 작성하세요."></textarea>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const $ = (id) => document.getElementById(id);
+        const API_BASE = "http://localhost:8090";
+
+        const provNo =null;
+        const provNoFromPath = provNo || location.pathname.split("/").filter(Boolean)[1];
+
+        async function loadDetail() {
+            if (!provNoFromPath) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/prov-documents/${provNoFromPath}`, { credentials: "include" });
+                const json = await res.json();
+                const d = json.data || json;
+
+                $("docTitleInput").value = d.docTitle || "";
+                $("descInput").value = d.description || "";
+
+                document.querySelectorAll('input[name="isPublic"]').forEach(r => {
+                    r.checked = (r.value === String(d.isPublic));
+                });
+            } catch(e) { console.error("데이터 로드 실패:", e); }
+        }
+
+        // 2. 저장 기능
+        $("saveBtn").onclick = async () => {
+            const docTitle = $("docTitleInput").value.trim();
+            const description = $("descInput").value;
+            const checkedRadio = document.querySelector('input[name="isPublic"]:checked');
+            const isPublic = checkedRadio ? checkedRadio.value === "true" : true;
+
+            if (!docTitle) {
+                alert("제목을 입력해주세요.");
+                return;
+            }
+
+            const payload = { provNo: Number(provNoFromPath), docTitle, description, isPublic };
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/prov-documents/${provNoFromPath}`, {
+                    method: "PATCH",
+                    headers: {"Content-Type":"application/json"},
+                    credentials: "include",
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert("성공적으로 저장되었습니다.");
+                    location.href = `/admin/prov-document/${provNoFromPath}`;
+                } else {
+                    alert("저장 실패 (서버 오류)");
+                }
+            } catch (e) {
+                alert("네트워크 오류가 발생했습니다.");
+                console.error(e);
+            }
+        };
+
+        // 3. 취소 버튼 (목록으로 이동)
+        $("backBtn").onclick = () => {
+            if (confirm("수정 중인 내용이 사라집니다. 취소할까요?")) {
+                location.href = "/admin/prov-document/list";
+            }
+        };
+
+        // 초기 실행
+        loadDetail();
+    </script>
+</th:block>
+</body>
+</html>
