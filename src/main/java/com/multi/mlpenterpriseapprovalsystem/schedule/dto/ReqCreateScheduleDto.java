@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.schedule.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarScope;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -30,14 +30,19 @@ public class ReqCreateScheduleDto {
 
     private String content;
 
-    @NotNull(message = "startAt은 필수입니다.")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime startAt;
+    private boolean allDay = false;
 
-    @NotNull(message = "endedAt은 필수입니다.")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    // allDay=true일 때 사용 (날짜 기반)
+    private LocalDate startDate;   // inclusive
+    private LocalDate endDate;     // inclusive (선택) - 며칠짜리 올데이
+
+    // allDay=false일 때 사용 (시간 기반)
+    private LocalDateTime startAt;
     private LocalDateTime endedAt;
 
     private String color;
+
+    // DEPARTMENT scope에서만 필요
+    private Long depNo;
 
 }
