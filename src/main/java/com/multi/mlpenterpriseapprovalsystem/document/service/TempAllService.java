@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document.service;
 
+import com.multi.mlpenterpriseapprovalsystem.attendance.domain.Attendance;
+import com.multi.mlpenterpriseapprovalsystem.attendance.repository.AttendanceRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.*;
@@ -13,13 +15,16 @@ import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFo
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 임시 서비스
  *
  * @author : 이지헌
  * @filename : TempDepartmentService
