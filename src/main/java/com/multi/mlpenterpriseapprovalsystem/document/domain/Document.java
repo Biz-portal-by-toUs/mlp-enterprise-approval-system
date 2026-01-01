@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
+import com.multi.mlpenterpriseapprovalsystem.attendance.domain.Attendance;
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
@@ -29,6 +30,7 @@ import java.util.List;
 public class Document extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "doc_no")
     private Long docNo;
 
     // 회사 참조 (com_id -> company.com_id)
@@ -78,9 +80,39 @@ public class Document extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private DocStat docStat = DocStat.AW;
 
-    // 상신일(
+    // 상신일
     @Column(name = "submitted_at")
-    LocalDateTime submittedAt;
+    private LocalDateTime submittedAt;
+
+    // 재상신 여부(반려된 문서 재작성)
+    @Column(name = "is_resubmitted", nullable = true)
+    private Boolean isResubmitted = Boolean.FALSE;
+
+    // 어떤 문서에 의해 재상신되었는지
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resubmitted_by_doc_no", referencedColumnName = "doc_no", nullable = true)
+    private Document resubmittedBy;
+
+    // 어떤 문서를 위해 재상신했는지
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resubmitted_for_doc_no", referencedColumnName = "doc_no", nullable = true)
+    private Document resubmittedFor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "atte_no")
+    private Attendance attendance; // 이 문서가 생성하거나 수정한 근태
+
+    // 근태와 문서 연결
+    public void linkAttendance(Attendance attendance) {
+        this.attendance = attendance;
+    }
+
+    // 양방향 연결 설정 메서드 (반려된 문서에서 호출)
+    public void linkResubmission(Document newDocument) {
+        this.isResubmitted = true;
+        this.resubmittedFor = newDocument;     // 반려된 문서(this) → 새 문서 참조
+        newDocument.resubmittedBy = this;      // 새 문서 → 반려된 문서(this) 참조
+    }
 
     /**
      * 문서 내용 수정 (임시저장 문서용)
