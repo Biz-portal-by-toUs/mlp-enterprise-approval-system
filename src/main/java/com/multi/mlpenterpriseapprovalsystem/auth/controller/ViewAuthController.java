@@ -35,4 +35,29 @@ public class ViewAuthController {
     public String employeeLoginPage() {
         return "employee/common/login"; // templates/employee/common/login.html
     }
+
+    // 회사 인증 페이지
+    @GetMapping("/companies/verify")
+    public String verifyCompanyPage() {
+        return "company/common/verify";
+    }
+
+    // 회사 비밀번호 변경 페이지
+    @GetMapping("/companies/password")
+    public String changeCompanyPwdPage() {
+        return "company/common/password";
+    }
+
+    // 사원 인증 페이지
+    @GetMapping("/employee/verify")
+    public String verifyEmployeePage() {
+        return "employee/common/verify";
+    }
+
+    // 사원 비밀번호 변경 페이지
+    @GetMapping("/employee/password")
+    public String changeEmployeePwdPage() {
+        return "employee/common/password";
+    }
+
 }

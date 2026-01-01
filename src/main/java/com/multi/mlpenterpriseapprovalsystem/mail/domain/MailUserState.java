@@ -46,5 +46,29 @@ public class MailUserState extends BaseEntity {
     private Boolean isPrior = false;
 
     private LocalDateTime deletedAt;
-    private LocalDateTime purgedAt;
+
+    public void markRead() {
+        this.isRead = true;
+    }
+
+    public void moveToTrash(LocalDateTime now) {
+        if (this.deletedAt == null) {
+            this.deletedAt = now;
+        }
+    }
+
+    public void restore() {
+        this.deletedAt = null;
+    }
+
+    public static MailUserState create(Mail mail, Employee user, MailRole role) {
+        MailUserState mus = new MailUserState();
+        mus.mail = mail;
+        mus.user = user;
+        mus.role = role;
+        mus.isRead = false;
+        mus.isPrior = false;
+        mus.deletedAt = null;
+        return mus;
+    }
 }

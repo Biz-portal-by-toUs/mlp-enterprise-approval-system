@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Template Editor</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prosemirror-view/style/prosemirror.css"/>
+
+    <style>
+        /* (너가 준 스타일 그대로) */
+        body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif; background:#f4f6fb; }
+        .wrap { width:1100px; margin:30px auto; background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.08); padding:24px; }
+        .topbar { margin-bottom:12px; }
+        .title-area { display:flex; align-items:center; }
+        #docTitle { width:420px; padding:10px 12px; border:1px solid #dcdfe6; border-radius:8px; font-size:16px; }
+
+        .category-bar { display:flex; align-items:center; gap:10px; margin:12px 0 18px; }
+        .category-bar #typeRadios { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .radio-item { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #e1e3ea; border-radius:999px; background:#fafbff; }
+        .radio-item input[type="text"] { width:80px; border:none; background:transparent; outline:none; font-size:13px; }
+        .radio-del { border:none; background:transparent; cursor:pointer; color:#ff4d4f; font-weight:700; }
+
+        #addRadioBtn { border:1px dashed #8aa3ff; background:#f0f4ff; color:#2c5cff; padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:700; white-space:nowrap; flex-shrink:0; }
+
+        #toolbar { display:flex; flex-wrap:wrap; gap:8px; padding:12px; border:1px solid #e1e3ea; border-radius:10px; background:#fafbff; margin-bottom:14px; }
+        #toolbar button { border:1px solid #dcdfe6; background:#fff; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; }
+        #toolbar button:hover { background:#f0f4ff; }
+        #fontSizeSelect { border:1px solid #dcdfe6; background:#fff; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; }
+
+        #editorWrap { border:1px solid #e1e3ea; border-radius:10px; padding:14px; background:#fff; }
+        #editor .ProseMirror { min-height:520px; outline:none; font-size:16px; line-height:1.6; }
+
+        .bottom-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+        #saveBtn { background:#2c5cff; color:#fff; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:800; }
+        #closeBtn { background:#f1f2f5; color:#222; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:800; }
+
+        #editor .preset-no-col-resize { display:none !important; }
+
+        #editor .ProseMirror table { border-collapse:collapse; width:100%; margin:8px 0; }
+        #editor .ProseMirror td, #editor .ProseMirror th { border:1px solid #c9cdd4; padding:8px 10px; min-width:40px; vertical-align:top; }
+        #editor .ProseMirror th { background:#f4f6fb; font-weight:700; text-align:center; }
+        #editor .ProseMirror .selectedCell { background:rgba(44,92,255,0.08); }
+        #editor .ProseMirror .column-resize-handle { background-color:#2c5cff; }
+    </style>
+</head>
+
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <div class="title-area">
+            <input id="docTitle" placeholder="양식 제목(docfo_name)을 입력하세요" />
+        </div>
+    </div>
+
+    <div class="category-bar">
+        <div id="typeRadios">
+            <div class="radio-item">
+                <input class="radio-choice" name="templateType" type="radio"/>
+                <input class="radio-value-input" type="text" value="type1"/>
+                <button class="radio-del" title="삭제" type="button">✕</button>
+            </div>
+        </div>
+        <button id="addRadioBtn" type="button">+ 카테고리</button>
+    </div>
+
+    <div id="toolbar">
+        <select id="fontSizeSelect" title="글자 크기">
+            <option value="">Font</option>
+            <option value="12">12</option>
+            <option value="14">14</option>
+            <option value="16">16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="24">24</option>
+            <option value="28">28</option>
+            <option value="32">32</option>
+        </select>
+
+        <button data-act="h1">H1</button>
+        <button data-act="h2">H2</button>
+        <button data-act="h3">H3</button>
+        <button data-act="p">P</button>
+
+        <button data-act="bold">Bold</button>
+        <button data-act="italic">Italic</button>
+        <button data-act="underline">Underline</button>
+        <button data-act="strike">Strike</button>
+
+        <button data-act="alignLeft">좌</button>
+        <button data-act="alignCenter">중</button>
+        <button data-act="alignRight">우</button>
+
+        <button data-act="bullet">Bullet</button>
+        <button data-act="ordered">Ordered</button>
+
+        <button data-act="inputField">입력창</button>
+
+        <button data-act="table">표 생성</button>
+        <button data-act="addColumnAfter">열 추가</button>
+        <button data-act="addRowAfter">행 추가</button>
+        <button data-act="deleteColumn">열 삭제</button>
+        <button data-act="deleteRow">행 삭제</button>
+        <button data-act="tableDelete">표 삭제</button>
+
+        <button data-act="undo">Undo</button>
+        <button data-act="redo">Redo</button>
+    </div>
+
+    <div id="editorWrap">
+        <div id="editor"></div>
+    </div>
+
+    <div class="bottom-actions">
+        <button id="saveBtn">저장하기</button>
+        <button id="closeBtn">닫기</button>
+    </div>
+</div>
+
+<!-- 프리셋 헤더표 템플릿 -->
+<template id="presetLeftTemplate">
+    <table class="preset-no-col-resize preset-left">
+        <tbody>
+        <tr><td>부서명</td><td></td></tr>
+        <tr><td>작성자</td><td></td></tr>
+        <tr><td>제목</td><td></td></tr>
+        <tr><td>작성일</td><td></td></tr>
+        </tbody>
+    </table>
+</template>
+
+<template id="presetRightTemplate">
+    <table class="preset-no-col-resize preset-right">
+        <tr>
+            <th>결재자</th><th>결재자1</th><th>결재자2</th><th>결재자3</th><th>결재자4</th><th>결재자5</th>
+        </tr>
+        <tr>
+            <th>서명</th><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+    </table>
+</template>
+
+<script type="importmap">
+    {
+      "imports": {
+        "@tiptap/core": "https://esm.sh/@tiptap/core@2.11.2?target=es2020",
+        "@tiptap/starter-kit": "https://esm.sh/@tiptap/starter-kit@2.11.2?target=es2020",
+        "@tiptap/extension-table": "https://esm.sh/@tiptap/extension-table@2.11.2?target=es2020",
+        "@tiptap/extension-table-row": "https://esm.sh/@tiptap/extension-table-row@2.11.2?target=es2020",
+        "@tiptap/extension-table-cell": "https://esm.sh/@tiptap/extension-table-cell@2.11.2?target=es2020",
+        "@tiptap/extension-table-header": "https://esm.sh/@tiptap/extension-table-header@2.11.2?target=es2020",
+        "@tiptap/extension-text-style": "https://esm.sh/@tiptap/extension-text-style@2.11.2?target=es2020",
+        "@tiptap/extension-color": "https://esm.sh/@tiptap/extension-color@2.11.2?target=es2020",
+        "@tiptap/extension-underline": "https://esm.sh/@tiptap/extension-underline@2.11.2?target=es2020",
+        "@tiptap/extension-text-align": "https://esm.sh/@tiptap/extension-text-align@2.11.2?target=es2020",
+        "@tiptap/extension-font-family": "https://esm.sh/@tiptap/extension-font-family@2.11.2?target=es2020",
+        "@tiptap/extension-link": "https://esm.sh/@tiptap/extension-link@2.11.2?target=es2020",
+
+        "@tiptap/pm/model": "https://esm.sh/@tiptap/pm@2.11.2/model?target=es2020",
+        "@tiptap/pm/state": "https://esm.sh/@tiptap/pm@2.11.2/state?target=es2020",
+        "@tiptap/pm/view": "https://esm.sh/@tiptap/pm@2.11.2/view?target=es2020",
+        "@tiptap/pm/transform": "https://esm.sh/@tiptap/pm@2.11.2/transform?target=es2020",
+        "@tiptap/pm/commands": "https://esm.sh/@tiptap/pm@2.11.2/commands?target=es2020",
+        "@tiptap/pm/keymap": "https://esm.sh/@tiptap/pm@2.11.2/keymap?target=es2020",
+        "@tiptap/pm/history": "https://esm.sh/@tiptap/pm@2.11.2/history?target=es2020",
+        "@tiptap/pm/schema-list": "https://esm.sh/@tiptap/pm@2.11.2/schema-list?target=es2020",
+        "@tiptap/pm/dropcursor": "https://esm.sh/@tiptap/pm@2.11.2/dropcursor?target=es2020",
+        "@tiptap/pm/gapcursor": "https://esm.sh/@tiptap/pm@2.11.2/gapcursor?target=es2020"
+      }
+    }
+</script>
+
+<script type="module">
+    // 생성 화면임을 JS에 알려줌(선택)
+    window.__DOCFO_NO__ = null;
+    window.__MODE__ = 'create';
+</script>
+
+<script type="module" src="/js/document-form/make-form.js"></script>
+</body>
+</html>

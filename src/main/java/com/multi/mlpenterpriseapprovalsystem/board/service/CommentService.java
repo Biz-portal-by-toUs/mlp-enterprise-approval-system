@@ -5,6 +5,12 @@ import com.multi.mlpenterpriseapprovalsystem.board.domain.Comment;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.CommentDto;
 import com.multi.mlpenterpriseapprovalsystem.board.repository.BoardRepository;
 import com.multi.mlpenterpriseapprovalsystem.board.repository.CommentRepository;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,9 +29,8 @@ public class CommentService {
 
     public final CommentRepository commentRepository;
     public final BoardRepository boardRepository;
-   // public final CompanyRepository companyRepository;
-  //  public final EmployeeRepository employeeRepository;
-
+    public final CompanyRepository companyRepository;
+    public final EmployeeRepository employeeRepository;
 
     //특정 댓글 조회 (1건)
     public CommentDto getCommentById(Long commentId) {
@@ -39,7 +44,6 @@ public class CommentService {
                 .boardNo(comment.getBoard().getBoardNo())
                 .contents(comment.getContents())
                 .empId(comment.getEmployee().getEmpId())
-                .createdAt(comment.getCreatedAt())
                 .build();
 
     }
@@ -83,6 +87,30 @@ public class CommentService {
         Board board = comment.getBoard();
         board.removeComment(comment);
         System.out.println("board : " + board.getComments().size());
+    }
+
+    @Transactional
+    public void registComment(CommentDto dto) {
+        Board board = boardRepository.findById(dto.getBoardNo()).
+                orElseThrow(() -> new RuntimeException("게시판 정보가 없습니다"));
+
+        Employee employee = employeeRepository.findByEmpId(dto.getEmpId())
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        Company company = companyRepository.findByComId(dto.getComId())
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        Comment comment = Comment.builder()
+                .board(board)
+                .company(company)
+                .employee(employee)
+                .contents(dto.getContents())
+                .build();
+
+//        reviewRepository.save(review);
+        board.addComment(comment);
+
+
     }
 
 

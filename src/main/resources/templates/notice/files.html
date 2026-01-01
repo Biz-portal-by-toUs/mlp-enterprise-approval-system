@@ -115,17 +115,15 @@
 
     // ✅ 다운로드: <a href>로 바로 가면 헤더를 못 넣으니, fetch + blob 방식 사용
     async function downloadFile(fileId) {
-        const token = localStorage.getItem('accessToken');
-        console.log(token);
-        if (!token) return;
+       // const token = localStorage.getItem('accessToken');
+      //  console.log(token);
+       // if (!token) return;
 
         const url = `${API_BASE}/${encodeURIComponent(fileId)}/download`;
 
         const res = await fetch(url, {
             method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+            credentials: "include"
         });
 
         if (!res.ok) {
@@ -167,8 +165,6 @@
         }
 
 
-
-
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
@@ -184,8 +180,9 @@
         const ok = confirm(`정말 삭제할까요?\n${filename}`);
         if (!ok) return;
 
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch(`${API_BASE}/${encodedId}`, { method: "DELETE", headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(`${API_BASE}/${encodedId}`,
+            { method: "DELETE",
+              credentials: "include"
         });
         if (!res.ok && res.status !== 204) {
             alert(`삭제 실패: HTTP ${res.status}`);
@@ -208,9 +205,10 @@
         const form = new FormData();
         form.append("file", file);
 
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch(API_BASE, { method: "POST", headers: { 'Authorization': `Bearer ${token}` },
-            body: form });
+        const res = await fetch(API_BASE,
+            { method: "POST",
+              credentials: "include",
+              body: form });
         if (!res.ok) {
             resultEl.textContent = `업로드 실패: HTTP ${res.status}`;
             return;
@@ -225,8 +223,9 @@
         const tbody = document.getElementById("filesTbody");
         tbody.innerHTML = "";
 
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch(API_BASE, { method: "GET", headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch(API_BASE,
+            { method: "GET",
+              credentials: "include"
         });
         if (!res.ok) {
             tbody.innerHTML = `<tr><td colspan="5">목록 조회 실패 (HTTP ${res.status})</td></tr>`;

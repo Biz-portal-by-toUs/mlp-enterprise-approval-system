@@ -935,6 +935,13 @@ INSERT INTO mail_attach (mail_attach_no, mail_id, path, size) VALUES
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+use bizportal;
+select * from comment;
+select * from board_cat;
+select * from notice;
+select * from attachment;
+INSERT INTO board_cat (board_cat_no, cat_code, cat_descript) VALUES
+                                                                 (6,'S','기타');
 
 USE bizportal;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -1082,3 +1089,51 @@ DELIMITER ;
 
 
 CALL PopulateDocumentTestData();
+-- 사원 컬럼 추가 후 데이터 넣기
+-- 사원 COM_ADMIN(empId=E000001): ComAdmin!123
+INSERT INTO employee
+(com_id, dep_no, pos_no, emp_id, pwd, emp_name, email, phone, work_phone, gen,
+ hire_date, ret_date, addr, role, is_deleted, atte, msg_stat, delegate,
+ birth, created_at, updated_at, object_key)
+VALUES
+    ('C01', 1, 1, 'E000001',
+     '$2b$10$ATeuTqhILEKaCdmEIZfdtu9XdRy2M8taQO7x/euNVp5mZXESP/j0i',
+     '관리자', 'e000001@c01.com', '010-0000-0001', '1001', 'M',
+     NOW(), NULL, '서울특별시 강남구', 'COM_ADMIN', FALSE, 'c', 'c', NULL,
+     '1990-01-01', NOW(6), NOW(6), NULL);
+
+-- 사원 SEC_ADMIN(empId=E000002): SecAdmin!123
+INSERT INTO employee
+(com_id, dep_no, pos_no, emp_id, pwd, emp_name, email, phone, work_phone, gen,
+ hire_date, ret_date, addr, role, is_deleted, atte, msg_stat, delegate,
+ birth, created_at, updated_at, object_key)
+VALUES
+    ('C01', 1, 1, 'E000002',
+     '$2b$10$2IrR4YB0.bq07kclwgXEcOjuH0ed6/Ztq8uwFaGp53t5.ubvvJOCK',
+     '보안관리자', 'e000002@c01.com', '010-0000-0002', '1002', 'M',
+     NOW(), NULL, '서울특별시 강남구', 'SEC_ADMIN', FALSE, 'c', 'c', NULL,
+     '1991-02-02', NOW(6), NOW(6), NULL);
+
+-- 사원 THR_ADMIN(empId=E000003): ThrAdmin!123
+INSERT INTO employee
+(com_id, dep_no, pos_no, emp_id, pwd, emp_name, email, phone, work_phone, gen,
+ hire_date, ret_date, addr, role, is_deleted, atte, msg_stat, delegate,
+ birth, created_at, updated_at, object_key)
+VALUES
+    ('C01', 1, 1, 'E000003',
+     '$2b$10$tHXsfKtqkeKwMpL0lMD7q.KoGGGbAEHAaXpm.oLHcEl/blKCjD5qC',
+     '인사관리자', 'e000003@c01.com', '010-0000-0003', '1003', 'F',
+     NOW(), NULL, '서울특별시 강남구', 'THR_ADMIN', FALSE, 'c', 'c', NULL,
+     '1992-03-03', NOW(6), NOW(6), NULL);
+
+-- 사원 EMPLOYEE(empId=E000004): Emp!12345
+INSERT INTO employee
+(com_id, dep_no, pos_no, emp_id, pwd, emp_name, email, phone, work_phone, gen,
+ hire_date, ret_date, addr, role, is_deleted, atte, msg_stat, delegate,
+ birth, created_at, updated_at, object_key)
+VALUES
+    ('C01', 1, 1, 'E000004',
+     '$2b$10$cE6Ul1Pt9RWVcUYqyX0i..cfPssd/xfcGyM.v/77h.Jsgi4QRNzYe',
+     '일반사원', 'e000004@c01.com', '010-0000-0004', '1004', 'F',
+     NOW(), NULL, '서울특별시 강남구', 'EMPLOYEE', FALSE, 'c', 'c', NULL,
+     '1993-04-04', NOW(6), NOW(6), NULL);

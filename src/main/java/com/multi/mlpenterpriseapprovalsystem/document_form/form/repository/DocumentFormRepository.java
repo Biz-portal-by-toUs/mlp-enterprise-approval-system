@@ -15,29 +15,43 @@ import org.springframework.data.repository.query.Param;
  * @filename : DocumentFormRepository
  * @since : 2025-12-22 월요일
  */
+
 public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long> {
 
-    Page<DocumentForm> findByDocfoStatOrderByDocfoNoAsc(DocumentFormStats docfoStat, Pageable pageable);
+    Page<DocumentForm> findByDocfoStatAndCompany_ComIdOrderByDocfoNoAsc(
+            DocumentFormStats stat,
+            String comId,
+            Pageable pageable
+    );
 
-    @Query("""
-        select new com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto(
-            d.docfoNo,
-            d.docfoName,
-            d.docfoStat
-        )
-          from DocumentForm d
-         where d.docfoStat = :stat
-         order by d.docfoNo asc
-    """)
-    Page<ResDocumentFormListDto> findListByDocfoStat(@Param("stat") DocumentFormStats stat,
-                                                     Pageable pageable);
+    Page<DocumentForm> findByDocfoStatAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+            DocumentFormStats stat,
+            String comId,
+            String docfoName,
+            Pageable pageable
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-        update DocumentForm d
-           set d.docfoStat = :stat
-         where d.docfoNo = :docfoNo
+        update DocumentForm f
+           set f.docfoStat = :stat,
+               f.rejectReason = :reason
+         where f.docfoNo = :docfoNo
     """)
-    int updateDocfoStat(@Param("docfoNo") Long docfoNo,
-                        @Param("stat") DocumentFormStats stat);
+    int updateStatusAndReason(@Param("docfoNo") Long docfoNo,
+                              @Param("stat") DocumentFormStats stat,
+                              @Param("reason") String reason);
+
+    Page<DocumentForm> findByDocfoStatInAndCompany_ComIdOrderByDocfoNoAsc(
+            java.util.List<DocumentFormStats> stats,
+            String comId,
+            Pageable pageable
+    );
+
+    Page<DocumentForm> findByDocfoStatInAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+            java.util.List<DocumentFormStats> stats,
+            String comId,
+            String docfoName,
+            Pageable pageable
+    );
 }

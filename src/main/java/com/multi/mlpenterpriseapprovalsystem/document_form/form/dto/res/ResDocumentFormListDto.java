@@ -1,6 +1,9 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
 
+import com.fasterxml.jackson.annotation.*;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
 
 /**
  * Please explain the class!!!
@@ -12,6 +15,10 @@ import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
 
 public record ResDocumentFormListDto(
         Long docfoNo,
+        Company company,
+        @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
+        Employee writer,
         String docfoName,
-        DocumentFormStats docfoStat
+        DocumentFormStats docfoStat,
+        String rejectReason
 ) {}

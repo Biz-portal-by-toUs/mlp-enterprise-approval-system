@@ -19,6 +19,7 @@ public class DocumentWebClientConfig {
 
     private final DocumentOpenAiConfig documentOpenAiConfig;
 
+
     @Bean
     public WebClient documentOpenAiWebClient() {
         return WebClient.builder()

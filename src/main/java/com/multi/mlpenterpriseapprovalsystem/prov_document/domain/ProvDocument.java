@@ -26,13 +26,75 @@ public class ProvDocument extends BaseEntity {
     @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
+    @Column(name = "doc_title",length = 30)
     private String docTitle;
+    @Column(name="description",columnDefinition = "text")
     private String description;
+    @Column(name = "is_public")
     private Boolean isPublic;
+    @Column(name = "file_name", nullable = true)
     private String fileName;
-    private String fileUrl;
+    @Column(name = "object_key")
+    private String objectKey;
+    @Column(name = "file_size")
     private Long fileSize;
+    @Column(name = "chunk_cnt")
     private Integer chunkCnt;
-    private String procStat;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "proc_stat", nullable = false, length = 20)
+    private ProvProcStat procStat;
+    @Column(name = "error_msg", length = 20)
     private String errorMsg;
+
+
+
+    public void markUploaded(String fileName, String objectKey, Long fileSize) {
+        this.fileName = fileName;
+        this.objectKey = objectKey;
+        this.fileSize = fileSize;
+        this.procStat = ProvProcStat.UPLOADED;
+        this.errorMsg = null;
+    }
+
+    public void markProcessing() {
+        this.procStat = ProvProcStat.PROCESSING;
+        this.errorMsg = null;
+    }
+
+    public void markDone(Integer chunkCnt) {
+        this.procStat = ProvProcStat.DONE;
+        this.chunkCnt = chunkCnt;
+        this.errorMsg = null;
+    }
+
+    public void markFailed(String errorMsg) {
+        this.procStat = ProvProcStat.FAILED;
+        this.errorMsg = errorMsg;
+    }
+
+    public static ProvDocument create(Company company, String docTitle, String description, Boolean isPublic,
+                                      String fileName, Long fileSize) {
+
+        ProvDocument d = new ProvDocument();
+        d.company = company;
+        d.docTitle = docTitle;
+        d.description = description;
+        d.isPublic = (isPublic != null ? isPublic : Boolean.TRUE);
+
+        d.fileName = fileName;
+        d.fileSize = fileSize;
+
+        d.chunkCnt = 0;
+        d.procStat = ProvProcStat.CREATED;
+        return d;
+    }
+
+
+    public void updateMeta(String docTitle, String description, Boolean isPublic) {
+        this.docTitle = docTitle;
+        this.description = description;
+        this.isPublic = isPublic;
+    }
+
 }
+

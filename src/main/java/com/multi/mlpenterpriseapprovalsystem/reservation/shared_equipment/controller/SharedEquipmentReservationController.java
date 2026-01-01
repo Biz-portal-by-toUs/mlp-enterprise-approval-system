@@ -36,7 +36,7 @@ public class SharedEquipmentReservationController {
 
     @GetMapping("/shared-equipment-reservations")
     public ResponseEntity<ResponseDto<List<ResReservationListDto>>> getReservations(@AuthenticationPrincipal CustomUser user,
-                                                                                    @RequestParam(required = false) String data) {
+                                                                                    @RequestParam(required = false, name = "data") String data) {
 
         String comId = user.getComId();
         List<ResReservationListDto> reservations =
@@ -56,7 +56,7 @@ public class SharedEquipmentReservationController {
     }
 
     @DeleteMapping("/shared-equipment-reservations/{resvNo}")
-    public ResponseEntity<Void> deleteReservation(@PathVariable Long resvNo,
+    public ResponseEntity<Void> deleteReservation(@PathVariable(name = "resvNo") Long resvNo,
                                                   @AuthenticationPrincipal CustomUser user) {
 
         sharedEquipmentReservationService.deleteReservation(resvNo, user);

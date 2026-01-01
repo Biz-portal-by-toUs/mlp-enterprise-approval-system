@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
@@ -15,16 +17,30 @@ import org.springframework.data.domain.Pageable;
  */
 
 public interface DocumentFormService {
-    Page<ResDocumentFormListDto> findListByStatus(
-            DocumentFormStats stat,
+
+    Page<ResDocumentFormListDto> findListByStatuses(
+            java.util.List<DocumentFormStats> stats,
+            String comId,
+            String keyword,
             Pageable pageable
     );
 
-    ResDocumentFormDetailDto findDetailById(Long docfoNo);
+    ResDocumentFormDetailDto findDetailById(Long docfoNo, String comId);
 
-    //Long createDocumentForm(ReqDocumentFormCreateDto req);
+    Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId);
 
-    void deleteDocumentForm(Long docfoNo);
+    Long updateDocumentForm(
+            Long docfoNo,
+            ReqDocumentFormCreateDto req,
+            String comId,
+            String writerId
+    );
 
-    //Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req);
+    // 삭제 플로우
+    void requestDelete(Long docfoNo, String comId, CustomUser requester);
+    void approveDelete(Long docfoNo, String comId);
+    void rejectDelete(Long docfoNo, String comId, String rejectReason);
+
+    // 승인/반려
+    void changeApproveOrReject(Long docfoNo, String comId, DocumentFormStats next, String rejectReason);
 }

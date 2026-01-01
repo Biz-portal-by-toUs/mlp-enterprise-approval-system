@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cloud</title>
+    <style>
+        :root{
+            --bg:#ffffff;
+            --line:#e8e8ee;
+            --text:#111;
+            --muted:#666;
+            --blue:#2f6feb;
+            --blue-weak:#e7f0ff;
+            --btn:#f5f6fa;
+            --danger:#d13b3b;
+        }
+        *{ box-sizing:border-box; }
+        body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif; color:var(--text); background:var(--bg); }
+
+        /* ===== layout ===== */
+        .cloud-layout{
+            display: flex;
+            width: 100%;
+            height: 100vh;                 /* 화면 꽉 */
+            background: #fff;
+        }
+
+        /* ===== sidebar ===== */
+        .sidebar{
+            width: 240px;                  /* 스샷 느낌 */
+            border-right: 1px solid var(--line);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 공유함/개인함: 사이드바 폭 꽉 채워 2등분 */
+        .tabs{
+            display: flex;
+            width: 100%;
+            gap: 0;
+            padding: 10px;
+            padding-bottom: 8px;
+        }
+
+        .tabs .tab{
+            flex: 1;
+            height: 34px;
+            border-radius: 4px;            /* ✅ 각진 */
+            border: 1px solid #1a1a1a;
+            background: #fff;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .tabs .tab + .tab{ margin-left: 8px; }
+
+        .tabs .tab.active{
+            background: var(--blue);
+            color: #fff;
+            border-color: #1a1a1a;
+        }
+
+        /* 생성/수정/삭제: 사이드바 폭 3등분 */
+        .folder-actions{
+            display: flex;
+            gap: 8px;
+            padding: 0 10px 10px;
+        }
+
+        .folder-actions .btn{
+            flex: 1;
+            height: 34px;
+            border-radius: 4px;            /* ✅ 각진 */
+            border: 1px solid #1a1a1a;
+            font-weight: 900;
+            cursor: pointer;
+            background: #fff;
+        }
+
+        .folder-actions .btn.primary{
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .folder-actions .btn.ghost{
+            background: #fff;
+            color: #111;
+        }
+
+        .folder-actions .btn.danger{
+            background: #fff;
+            color: var(--danger);
+        }
+
+        /* 트리 영역 */
+        .tree-panel{
+            padding: 8px 10px 12px;
+            overflow: auto;
+            flex: 1;
+        }
+
+        /* ===== content ===== */
+        .content{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #f5f6f8;           /* 스샷의 연회색 바탕 */
+        }
+
+        /* 오른쪽 상단바(경로 + 파일버튼) */
+        .content-topbar{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .breadcrumb{
+            font-weight: 900;
+            color: #222;
+        }
+
+        /* 파일 버튼 오른쪽 정렬 */
+        .file-actions{
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .file-actions .btn{
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 4px;            /* ✅ 각진 */
+            border: 1px solid #1a1a1a;
+            background: #fff;
+            font-weight: 900;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .file-actions .btn.primary{
+            background: var(--blue);
+            color: #fff;
+        }
+
+        /* 본문 */
+        .content-body{
+            flex: 1;
+            padding: 18px;
+            overflow: auto;
+            background: #f5f6f8;
+        }
+
+        /* ✅ 파일 아이콘 그리드 느낌(너 그리드에 class만 맞춰 쓰면 됨) */
+        .file-grid{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 18px;
+        }
+
+        .file-item{
+            width: 120px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .file-item img{
+            width: 64px;
+            height: 64px;
+            display: block;
+            margin: 0 auto 8px;
+        }
+
+        .file-item .name{
+            font-size: 12px;
+            font-weight: 800;
+            color: #222;
+            word-break: break-word;
+        }
+
+        /* 반응형 */
+        @media (max-width: 900px){
+            .cloud-layout{ flex-direction: column; height: auto; min-height: 100vh; }
+            .sidebar{ width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
+            .content-topbar{ flex-direction: column; align-items: flex-start; gap: 10px; }
+            .file-actions{ flex-wrap: wrap; }
+        }
+
+        /* ===== tree UI ===== */
+        .tree{ list-style:none; padding:0; margin:0; }
+        .tree > li{ margin: 2px 0; }
+
+        .node{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding:6px 8px;
+            border-radius:6px;
+            cursor:pointer;
+            user-select:none;
+        }
+        .node:hover{ background: #f3f6ff; }
+        .node.selected{ background: var(--blue-weak); }
+
+        .caret{
+            width:16px;
+            text-align:center;
+            color:#666;
+            font-weight:900;
+        }
+
+        .folder-ico{
+            width:18px; height:14px;
+            position:relative;
+            background:#f5c84b;
+            border:1px solid #d6a93a;
+            border-radius:3px;
+        }
+        .folder-ico::before{
+            content:"";
+            position:absolute;
+            left:2px; top:-4px;
+            width:10px; height:6px;
+            background:#f7d77b;
+            border:1px solid #d6a93a;
+            border-bottom:none;
+            border-radius:3px 3px 0 0;
+        }
+
+        .label{
+            font-weight:800;
+            font-size:13px;
+            color:#222;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        /* children indentation */
+        .children{
+            list-style:none;
+            padding-left: 22px;
+            margin: 2px 0 6px;
+            border-left: 1px dashed #d9dbe3;
+        }
+        .children > li{ margin: 2px 0; }
+
+        .node.drop{ outline:2px dashed var(--blue); outline-offset:2px; }
+        .empty{ padding:10px; color:#777; font-weight:700; }
+
+        .content-split{
+            display:grid;
+            grid-template-columns: 340px 1fr;
+            gap: 14px;
+        }
+
+        .file-list{
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:8px;
+            overflow:auto;
+            max-height: calc(100vh - 140px);
+        }
+
+        .file-row{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:10px 12px;
+            border-bottom:1px solid var(--line);
+            cursor:pointer;
+        }
+        .file-row:last-child{ border-bottom:0; }
+        .file-row:hover{ background:#f6f9ff; }
+        .file-row.selected{ background: var(--blue-weak); }
+
+        .file-mini{
+            width:26px; height:26px;
+            border-radius:6px;
+            border:1px solid var(--line);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-weight:900;
+            font-size:11px;
+            background:#fff;
+        }
+
+        .file-meta{ min-width:0; }
+        .file-title{
+            font-weight:900;
+            font-size:13px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+        .file-sub{
+            font-size:12px;
+            color:#666;
+        }
+
+        @media (max-width: 1100px){
+            .content-split{ grid-template-columns: 1fr; }
+            .file-list{ max-height: 260px; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="cloud-layout">
+
+    <!-- ✅ LEFT: sidebar -->
+    <aside class="sidebar">
+        <div class="tabs">
+            <button class="tab active" id="tabDept">공유함</button>
+            <button class="tab" id="tabPrvt">개인함</button>
+        </div>
+
+        <div class="folder-actions">
+            <button class="btn primary" id="btnCreate">생성</button>
+            <button class="btn ghost" id="btnRename">수정</button>
+            <button class="btn danger" id="btnDeleteFolder">삭제</button>
+        </div>
+
+        <div class="tree-panel">
+            <ul class="tree" id="treeRoot"></ul>
+        </div>
+    </aside>
+
+    <!-- ✅ RIGHT: content -->
+    <main class="content">
+
+        <!-- 상단: 경로 + 파일버튼 -->
+        <div class="content-topbar">
+            <div class="breadcrumb" id="breadcrumb">
+            </div>
+
+            <div class="file-actions">
+                <button class="btn primary" id="btnUpload">파일 업로드</button>
+                <button class="btn" id="btnDownload">파일 다운로드</button>
+                <button class="btn" id="btnDeleteFile">파일 삭제</button>
+                <input type="file" id="fileInput" multiple style="display:none" />
+            </div>
+        </div>
+
+        <!-- 본문: 아이콘 그리드 -->
+        <section class="content-body">
+            <div class="file-grid" id="fileGrid"></div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    /** ===== state ===== */
+    const state = {
+        scope: "dept",            // "dept" | "prvt"
+        selectedFolderNo: null,
+        selectedFolderName: null,
+        selectedAttachmentId: null,
+    };
+
+    const el = {
+        tabDept: document.getElementById("tabDept"),
+        tabPrvt: document.getElementById("tabPrvt"),
+        btnCreate: document.getElementById("btnCreate"),
+        btnRename: document.getElementById("btnRename"),
+        btnDeleteFolder: document.getElementById("btnDeleteFolder"),
+
+        btnUpload: document.getElementById("btnUpload"),
+        btnDownload: document.getElementById("btnDownload"),
+        btnDeleteFile: document.getElementById("btnDeleteFile"),
+        fileInput: document.getElementById("fileInput"),
+
+        breadcrumb: document.getElementById("breadcrumb"),
+        treeRoot: document.getElementById("treeRoot"),
+
+        // ✅ 그리드(기존)
+        fileGrid: document.getElementById("fileGrid"),
+
+    };
+
+    /** ===== fetch helper (쿠키 인증 포함) ===== */
+    async function apiJson(url, opt = {}) {
+        const res = await fetch(url, {
+            credentials: "include",
+            headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
+            ...opt,
+        });
+
+        const text = await res.text();
+        const json = text ? JSON.parse(text) : null;
+
+        if (!res.ok) {
+            const msg = json?.message || json?.error || res.statusText;
+            throw new Error(msg);
+        }
+        // ResponseDto { data: ... } 형태면 data만 반환
+        return (json && "data" in json) ? json.data : json;
+    }
+
+    /** ===== endpoints ===== */
+    function folderBase() {
+        return state.scope === "dept" ? "/api/v1/folders/dept" : "/api/v1/folders/prvt";
+    }
+    function folderListUrl(parentId) {
+        const p = parentId == null ? "" : `?parentId=${encodeURIComponent(parentId)}`;
+        return folderBase() + p;
+    }
+
+    /** 폴더 파일은 domain=CLOUD + entityId=folderNo */
+    function attachmentListUrl(folderNo) {
+        return `/api/v1/attachments?domain=CLOUD&entityId=${encodeURIComponent(folderNo)}`;
+    }
+
+    /** 업로드(가정): presign -> S3 PUT -> complete */
+    const UPLOAD = {
+        presign: "/api/v1/attachments/presign",
+        complete: "/api/v1/attachments/complete",
+    };
+
+    /** ===== UI helpers ===== */
+    function setBreadcrumb(nodeEl) {
+        const parts = [];
+
+        // 루트
+        parts.push(state.scope === "dept" ? "공유함" : "개인함");
+
+        // 현재 폴더 → 부모 폴더로 거슬러 올라가며 경로 만들기
+        let cur = nodeEl;
+        while (cur && cur.classList.contains("node")) {
+            const name = cur.dataset.folderName;
+            if (name) parts.push(name);
+
+            // node -> li -> ul(children) -> li(parent) -> node
+            cur = cur.parentElement      // li
+                ?.parentElement          // ul.children
+                ?.parentElement          // li(parent)
+                ?.querySelector(":scope > .node");
+        }
+
+        el.breadcrumb.textContent = parts.join(" > ");
+    }
+
+    function clearFileSelection() {
+        state.selectedAttachmentId = null;
+        document.querySelectorAll(".file-card.selected").forEach(x => x.classList.remove("selected"));
+        document.querySelectorAll(".file-row.selected").forEach(x => x.classList.remove("selected"));
+    }
+
+    /** ===== tree render (lazy children) ===== */
+    async function loadChildren(parentId, containerUl) {
+        const rows = await apiJson(folderListUrl(parentId));
+        containerUl.innerHTML = "";
+
+        if (!rows || rows.length === 0) {
+            const li = document.createElement("li");
+            li.className = "empty";
+            li.textContent = "폴더가 없습니다.";
+            containerUl.appendChild(li);
+            return;
+        }
+
+        for (const f of rows) {
+            const li = document.createElement("li");
+
+            const node = document.createElement("div");
+            node.className = "node";
+            node.dataset.folderNo = f.folderNo;
+            node.dataset.folderName = f.folderName;
+
+            const caret = document.createElement("div");
+            caret.className = "caret";
+            caret.textContent = "▸";
+
+            const ico = document.createElement("div");
+            ico.className = "folder-ico";
+
+            const label = document.createElement("div");
+            label.className = "label";
+            label.textContent = f.folderName;
+
+            node.appendChild(caret);
+            node.appendChild(ico);
+            node.appendChild(label);
+
+            const children = document.createElement("ul");
+            children.className = "children";
+            children.style.display = "none";
+
+            node.addEventListener("click", async (e) => {
+                e.stopPropagation();
+
+                document.querySelectorAll(".node.selected").forEach(x => x.classList.remove("selected"));
+                node.classList.add("selected");
+
+                state.selectedFolderNo = f.folderNo;
+                state.selectedFolderName = f.folderName;
+                setBreadcrumb(node);
+                clearFileSelection();
+                await loadFiles(f.folderNo);
+
+                if (children.dataset.loaded !== "1") {
+                    await loadChildren(f.folderNo, children);
+                    children.dataset.loaded = "1";
+                }
+                const opened = children.style.display === "block";
+                children.style.display = opened ? "none" : "block";
+                caret.textContent = opened ? "▸" : "▾";
+            });
+
+            // drop target (파일 드래그 이동)
+            node.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                node.classList.add("drop");
+            });
+            node.addEventListener("dragleave", () => node.classList.remove("drop"));
+            node.addEventListener("drop", async (e) => {
+                e.preventDefault();
+                node.classList.remove("drop");
+
+                const attachmentId = Number(e.dataTransfer.getData("text/plain"));
+                if (!attachmentId) return;
+
+                try {
+                    await apiJson(`/api/v1/attachments/${attachmentId}/move`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ toFolderNo: f.folderNo })
+                    });
+
+                    if (state.selectedFolderNo) await loadFiles(state.selectedFolderNo);
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            li.appendChild(node);
+            li.appendChild(children);
+            containerUl.appendChild(li);
+        }
+    }
+
+    async function initTree() {
+        state.selectedFolderNo = null;
+        state.selectedFolderName = null;
+        setBreadcrumb();
+        clearFileSelection();
+
+        if (el.fileGrid) el.fileGrid.innerHTML = "";
+
+        await loadChildren(null, el.treeRoot);
+    }
+
+    /** ===== folder actions ===== */
+    async function createFolder() {
+        const name = prompt("폴더 이름");
+        if (!name) return;
+
+        const body = {
+            parentId: state.selectedFolderNo,
+            folderName: name.trim()
+        };
+
+        await apiJson(folderBase(), {
+            method: "POST",
+            body: JSON.stringify(body)
+        });
+
+        await initTree();
+    }
+
+    async function renameFolder() {
+        if (!state.selectedFolderNo) return alert("수정할 폴더를 선택해주세요.");
+        const name = prompt("새 폴더명", state.selectedFolderName || "");
+        if (!name) return;
+
+        await apiJson(`/api/v1/folders/${state.selectedFolderNo}/rename`, {
+            method: "PATCH",
+            body: JSON.stringify({ folderName: name.trim() })
+        });
+
+        await initTree();
+    }
+
+    async function deleteFolder() {
+        if (!state.selectedFolderNo) return alert("삭제할 폴더를 선택해주세요.");
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        await apiJson(`/api/v1/folders/${state.selectedFolderNo}`, { method: "DELETE" });
+        await initTree();
+    }
+
+    /** ===== files ===== */
+    function humanBytes(n) {
+        if (n == null) return "";
+        const units = ["B","KB","MB","GB","TB"];
+        let v = Number(n);
+        let i = 0;
+        while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+        return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    async function loadFiles(folderNo) {
+        if (!folderNo) {
+            if (el.fileGrid) el.fileGrid.innerHTML = "";
+            if (el.fileList) el.fileList.innerHTML = "";
+            return;
+        }
+
+        const rows = await apiJson(attachmentListUrl(folderNo));
+        if (el.fileGrid) el.fileGrid.innerHTML = "";
+        if (el.fileList) el.fileList.innerHTML = "";
+
+        if (!rows || rows.length === 0) {
+            const div = document.createElement("div");
+            div.className = "empty";
+            div.textContent = "파일이 없습니다.";
+            if (el.fileGrid) el.fileGrid.appendChild(div);
+
+            if (el.fileList) {
+                const div2 = document.createElement("div");
+                div2.className = "empty";
+                div2.textContent = "파일이 없습니다.";
+                el.fileList.appendChild(div2);
+            }
+            return;
+        }
+
+        for (const a of rows) {
+            const extLower = (a.ext || "").toLowerCase();
+            const extUpper = (a.ext || "").toUpperCase() || "FILE";
+
+            /** ✅ 리스트 렌더 (fileList가 있을 때만) */
+            if (el.fileList) {
+                const row = document.createElement("div");
+                row.className = "file-row";
+                row.dataset.attachmentId = a.attachmentId;
+
+                const mini = document.createElement("div");
+                mini.className = "file-mini";
+                mini.textContent = extUpper.length > 4 ? "FILE" : extUpper;
+
+                const meta = document.createElement("div");
+                meta.className = "file-meta";
+
+                const title = document.createElement("div");
+                title.className = "file-title";
+                title.textContent = a.originalName || ("file-" + a.attachmentId);
+
+                const sub = document.createElement("div");
+                sub.className = "file-sub";
+                sub.textContent = humanBytes(a.size);
+
+                meta.appendChild(title);
+                meta.appendChild(sub);
+
+                row.appendChild(mini);
+                row.appendChild(meta);
+
+                row.addEventListener("click", () => {
+                    clearFileSelection();
+                    row.classList.add("selected");
+                    state.selectedAttachmentId = a.attachmentId;
+
+                });
+
+                // drag
+                row.draggable = true;
+                row.addEventListener("dragstart", (e) => {
+                    e.dataTransfer.setData("text/plain", String(a.attachmentId));
+                });
+
+                el.fileList.appendChild(row);
+            }
+
+            /** ✅ 그리드 렌더 (기존) */
+            if (el.fileGrid) {
+                const card = document.createElement("div");
+                card.className = "file-card";
+                card.draggable = true;
+                card.dataset.attachmentId = a.attachmentId;
+
+                const ico = document.createElement("div");
+                ico.className = "file-ico doc";
+                if (extLower === "pdf") ico.className = "file-ico pdf";
+                else if (["jpg","jpeg","png","gif","webp"].includes(extLower)) ico.className = "file-ico img";
+                else if (["xls","xlsx","csv"].includes(extLower)) ico.className = "file-ico xls";
+
+                const tag = document.createElement("div");
+                tag.className = "tag";
+                tag.textContent = extUpper.length > 6 ? "FILE" : extUpper;
+                ico.appendChild(tag);
+
+                const nm = document.createElement("div");
+                nm.className = "file-name";
+                nm.textContent = a.originalName || ("file-" + a.attachmentId);
+
+                card.appendChild(ico);
+                card.appendChild(nm);
+
+                card.addEventListener("click", () => {
+                    clearFileSelection();
+                    card.classList.add("selected");
+                    state.selectedAttachmentId = a.attachmentId;
+
+                    // 리스트도 같이 선택 표시
+                    document.querySelectorAll(".file-row").forEach(r => {
+                        if (Number(r.dataset.attachmentId) === a.attachmentId) r.classList.add("selected");
+                    });
+                });
+
+                card.addEventListener("dragstart", (e) => {
+                    e.dataTransfer.setData("text/plain", String(a.attachmentId));
+                });
+
+                el.fileGrid.appendChild(card);
+            }
+        }
+    }
+
+
+    async function deleteSelectedFile() {
+        if (!state.selectedAttachmentId) return alert("삭제할 파일을 선택해주세요.");
+        if (!confirm("파일을 삭제하시겠습니까?")) return;
+
+        await apiJson(`/api/v1/attachments/${state.selectedAttachmentId}`, { method: "DELETE" });
+        await loadFiles(state.selectedFolderNo);
+        clearFileSelection();
+    }
+
+    async function downloadSelectedFile() {
+        if (!state.selectedAttachmentId) return alert("다운로드할 파일을 선택해주세요.");
+
+        const res = await apiJson(`/api/v1/attachments/${state.selectedAttachmentId}/download-url`);
+        window.open(res.url, "_blank");
+    }
+
+    /** ===== upload: presign -> PUT -> complete ===== */
+    function openUploadPicker() {
+        if (!state.selectedFolderNo) return alert("업로드할 폴더를 먼저 선택해주세요.");
+        el.fileInput.click();
+    }
+
+    async function uploadOneFile(file) {
+        // 1) presign
+        const presign = await apiJson(UPLOAD.presign, {
+            method: "POST",
+            body: JSON.stringify({
+                domain: "CLOUD",
+                entityId: state.selectedFolderNo,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+                fileType: file.type?.startsWith("image") ? "IMAGE" : "DOC"
+            })
+        });
+
+        // 2) S3 PUT (presigned URL은 쿠키 인증 필요 없음)
+        const putRes = await fetch(presign.uploadUrl, {
+            method: "PUT",
+            headers: {"Content-Type": file.type || "application/octet-stream"},
+            body: file
+        });
+        if (!putRes.ok) throw new Error("S3 업로드 실패");
+
+        // 3) completeUpload
+        await apiJson("/api/v1/attachments/complete", {
+            method: "POST",
+            body: JSON.stringify({
+                domain: "CLOUD",
+                entityId: state.selectedFolderNo,
+                fileType: presign.fileType,          // ⭐ 추가
+                objectKey: presign.objectKey,
+                originalName: file.name,
+                contentType: file.type || "application/octet-stream",
+                size: file.size,
+                etag: null
+            })
+        });
+    }
+
+    /** ===== event binding ===== */
+    el.tabDept.addEventListener("click", async () => {
+        state.scope = "dept";
+        el.tabDept.classList.add("active");
+        el.tabPrvt.classList.remove("active");
+        await initTree();
+    });
+
+    el.tabPrvt.addEventListener("click", async () => {
+        state.scope = "prvt";
+        el.tabPrvt.classList.add("active");
+        el.tabDept.classList.remove("active");
+        await initTree();
+    });
+
+    el.btnCreate.addEventListener("click", () => createFolder().catch(e => alert(e.message)));
+    el.btnRename.addEventListener("click", () => renameFolder().catch(e => alert(e.message)));
+    el.btnDeleteFolder.addEventListener("click", () => deleteFolder().catch(e => alert(e.message)));
+
+    el.btnUpload.addEventListener("click", openUploadPicker);
+    el.btnDeleteFile.addEventListener("click", () => deleteSelectedFile().catch(e => alert(e.message)));
+    el.btnDownload.addEventListener("click", () => downloadSelectedFile().catch(e => alert(e.message)));
+
+    el.fileInput.addEventListener("change", async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        if (!state.selectedFolderNo) {
+            alert("업로드할 폴더를 먼저 선택해주세요.");
+            el.fileInput.value = "";
+            return;
+        }
+
+        try {
+            for (const file of files) {
+                await uploadOneFile(file);
+            }
+            await loadFiles(state.selectedFolderNo);
+            alert("업로드 완료!");
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            el.fileInput.value = "";
+        }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => initTree().catch(e => alert(e.message)));
+</script>
+</body>
+</html>

@@ -46,4 +46,13 @@ public class Mail extends BaseEntity {
 
     @OneToMany(mappedBy = "mail", cascade = CascadeType.ALL)
     private List<MailAttach> attachments = new ArrayList<>();
+
+    public static Mail create(String mailId, String title, String cntt, Employee sender) {
+        Mail m = new Mail();
+        m.mailId = mailId;
+        m.title = title;
+        m.cntt = cntt;
+        m.sender = sender;
+        return m;
+    }
 }

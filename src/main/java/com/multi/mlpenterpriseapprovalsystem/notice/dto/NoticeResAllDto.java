@@ -29,6 +29,8 @@ public class NoticeResAllDto {
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private String empId;
+    private String empName;
+    private String depName;
     private Integer rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

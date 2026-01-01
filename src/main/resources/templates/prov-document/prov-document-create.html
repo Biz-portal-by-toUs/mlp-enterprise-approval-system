@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>사내 규정 등록 - Bizportal</title>
+    <style>
+        /* ✅ 페이지 헤더 영역 (타이틀 + 버튼 한 줄 배치) */
+        .header-section {
+            display: flex;
+            justify-content: space-between; /* 좌우 끝으로 배치 */
+            align-items: flex-end; /* 하단 라인 맞춤 */
+            margin-bottom: 30px;
+        }
+
+        .title-group .page-title { font-size: 34px; font-weight: 900; margin: 0; line-height: 1.2; }
+        .title-group .page-sub { font-size: 18px; font-weight: 800; margin: 8px 0 0; color: #111; }
+
+        .actions {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .btn-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+        .btn-caption {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 700;
+            margin-right: 4px;
+        }
+
+        .prov-page .btn {
+            border: 0; border-radius: 12px; padding: 12px 24px; font-weight: 900; cursor: pointer;
+            background: #fff; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px;
+            transition: 0.2s; font-size: 14px; height: 46px;
+        }
+        .prov-page .btn.primary { background: var(--primary); color: #fff; border: none; box-shadow: 0 10px 20px rgba(59,130,246,.22); }
+        .prov-page .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ✅ 폼 카드 스타일 (detail.html 스타일 계승) */
+        .prov-page .card { background: #f1f3f6; border-radius: 24px; padding: 30px; }
+        .form-card {
+            background: #fff; border-radius: 20px; padding: 35px;
+            border: 1px solid var(--line); max-width: 1000px; margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        .form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .field { margin-bottom: 24px; }
+        .label { display: block; font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; }
+
+        .input, .textarea, .select {
+            width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #f8fafc;
+            padding: 14px 18px; font-size: 15px; font-weight: 700; transition: 0.2s; outline: none; box-sizing: border-box;
+        }
+        .input:focus, .textarea:focus, .select:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
+        .textarea { min-height: 250px; resize: vertical; line-height: 1.6; }
+
+        .file-upload-zone {
+            border: 2px dashed var(--line); border-radius: 16px; padding: 30px; text-align: center;
+            background: #f8fafc; transition: 0.2s; cursor: pointer;
+        }
+        .file-upload-zone:hover { border-color: var(--primary); background: #f0f7ff; }
+        .file-info { margin-top: 10px; font-size: 15px; font-weight: 800; color: var(--primary); }
+
+        .progress-wrap { margin-top: 30px; display: none; }
+        progress { width: 100%; height: 8px; border-radius: 4px; overflow: hidden; appearance: none; border: none; background: #e2e8f0; }
+        progress::-webkit-progress-value { background: var(--primary); }
+
+        /* style 태그 안에 추가 또는 수정 */
+        #submitBtn {
+            width: 200px;            /* ✅ 원하는 길이로 조절 */
+            justify-content: center; /* ✅ 내용물(아이콘+텍스트) 중앙 정렬 */
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content" class="prov-page">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
+
+        <main style="padding: 0 26px; flex: 1;">
+            <div class="header-section">
+                <div class="title-group">
+                    <div class="page-title">사내 규정 관리</div>
+                    <div class="page-sub">사내 규정 등록</div>
+                </div>
+
+                <div class="actions">
+                    <div class="btn-wrapper">
+                        <button class="btn primary" id="submitBtn" type="button">
+                            규정 등록
+                        </button>
+                        <span class="btn-caption">등록과 동시에 AI 챗봇 학습이 시작됩니다</span>
+                    </div>
+                </div>
+            </div>
+
+            <section class="card">
+                <div class="form-card">
+                    <div class="form-grid">
+                        <div class="field" style="margin-bottom:0">
+                            <span class="label">규정 제목 (최대 30자)</span>
+                            <input id="docTitle" class="input" placeholder="규정의 제목을 입력하세요" maxlength="30">
+                        </div>
+                        <div class="field" style="margin-bottom:0">
+                            <span class="label">공개 설정</span>
+                            <select id="isPublic" class="select">
+                                <option value="true" selected>전사 공개</option>
+                                <option value="false">비공개 (관리자 전용)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <span class="label">규정 상세 설명</span>
+                        <textarea id="description" class="textarea" placeholder="AI가 참고할 규정의 상세 내용을 입력하세요."></textarea>
+                    </div>
+
+                    <div class="field">
+                        <span class="label">첨부 파일 (문서 전용)</span>
+                        <div class="file-upload-zone" onclick="$('file').click()">
+                            <input id="file" type="file" style="display:none;" />
+                            <div id="fileInfo" class="file-info">📄 클릭하여 파일 선택</div>
+                            <div style="font-size:13px; color:var(--muted); margin-top:6px; font-weight:600;">PDF, DOCX, TXT 파일만 업로드 가능합니다.</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-wrap" id="progressWrap">
+                        <progress id="progress" value="0" max="100"></progress>
+                        <div id="statusMsg" class="status-msg" style="margin-top:15px; font-weight:700; text-align:center; color:var(--primary);"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const $ = (id) => document.getElementById(id);
+        const API_BASE = "http://localhost:8090";
+
+        // Meeting 코드의 헬퍼 함수들 도입
+        function unwrapMaybeResponseDto(resJson) {
+            return (resJson && resJson.data) ? resJson.data : resJson;
+        }
+
+        const fetchOptions = (method, body) => ({
+            method,
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include',
+            body: body ? JSON.stringify(body) : null
+        });
+
+        $("file").onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) $("fileInfo").textContent = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+        };
+
+        $("submitBtn").onclick = async () => {
+            const title = $("docTitle").value.trim();
+            const desc = $("description").value.trim();
+            const file = $("file").files[0];
+
+            if (!title || !desc || !file) {
+                alert("모든 필드를 입력하고 파일을 선택해주세요.");
+                return;
+            }
+
+            try {
+                $("submitBtn").disabled = true;
+                const progWrap = $("progressWrap");
+                const progEl = $("progress");
+                const statusMsg = $("statusMsg");
+                progWrap.style.display = "block";
+
+                // 1) 정보 생성 (Meeting 방식: fetchOptions 사용)
+                statusMsg.textContent = "1/5 규정 정보 생성 중...";
+                const cRes = await fetch(`${API_BASE}/api/v1/prov-documents`,
+                    fetchOptions("POST", { docTitle: title, description: desc, isPublic: $("isPublic").value === "true" }));
+                const cResult = await cRes.json();
+                const provData = unwrapMaybeResponseDto(cResult);
+                // 서버 응답이 숫자인지 객체인지에 따라 provNo 추출
+                const provNo = (typeof provData === 'number') ? provData : provData.provNo;
+                progEl.value = 20;
+
+                // 2) Presign URL 발급 (Meeting 방식: contentType 기본값 처리 추가)
+                statusMsg.textContent = "2/5 업로드 주소 발급 중...";
+                const pRes = await fetch(`${API_BASE}/api/v1/attachments/presign`,
+                    fetchOptions("POST", {
+                        domain: "PROV_DOCUMENT",
+                        entityId: provNo,
+                        fileType: "DOC",
+                        originalName: file.name,
+                        contentType: file.type || "application/octet-stream", //
+                        size: file.size
+                    }));
+                const pResult = await pRes.json();
+                const { objectKey, uploadUrl } = unwrapMaybeResponseDto(pResult);
+                progEl.value = 40;
+
+                // 3) S3 Upload
+                statusMsg.textContent = "3/5 파일을 저장소에 전송 중...";
+                await fetch(uploadUrl, {
+                    method: "PUT",
+                    body: file,
+                    headers: { "Content-Type": file.type || "application/octet-stream" } //
+                });
+                progEl.value = 70;
+
+                // 4) Complete (이 단계가 성공해야 attachment 테이블에 저장됨)
+                statusMsg.textContent = "4/5 업로드 완료 확인 중...";
+                await fetch(`${API_BASE}/api/v1/attachments/complete`,
+                    fetchOptions("POST", {
+                        domain: "PROV_DOCUMENT",
+                        entityId: provNo,
+                        fileType: "DOC",
+                        objectKey,
+                        originalName: file.name,
+                        contentType: file.type || "application/octet-stream", //
+                        size: file.size
+                    }));
+                progEl.value = 90;
+
+                // 5) AI Request
+                statusMsg.textContent = "5/5 AI 챗봇 학습 요청 중...";
+                await fetch(`${API_BASE}/api/v1/prov-documents/complete`,
+                    fetchOptions("POST", {
+                        provNo,
+                        objectKey,
+                        originalName: file.name,
+                        contentType: file.type || "application/octet-stream", //
+                        size: file.size
+                    }));
+
+                progEl.value = 100;
+                statusMsg.textContent = "🎉 등록 및 학습 요청이 완료되었습니다!";
+                setTimeout(() => {
+                    if(confirm("등록 완료! 목록으로 이동할까요?")) location.href = "/admin/prov-document/list";
+                }, 500);
+
+            } catch (e) {
+                console.error(e);
+                alert("처리 중 오류가 발생했습니다: " + e.message);
+                $("submitBtn").disabled = false;
+            }
+        };
+    </script>
+</th:block>
+</body>
+</html>

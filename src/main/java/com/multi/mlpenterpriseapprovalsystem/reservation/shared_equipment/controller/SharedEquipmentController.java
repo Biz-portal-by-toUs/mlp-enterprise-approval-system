@@ -44,7 +44,7 @@ public class SharedEquipmentController {
 
     @GetMapping("/shared-equipment/{eqNo}")
     public ResponseEntity<ResponseDto<ResSharedEquipmentDto>> getSharedEquipment(
-            @PathVariable Long eqNo,
+            @PathVariable(name = "eqNo") Long eqNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         ResSharedEquipmentDto eq =
@@ -97,7 +97,7 @@ public class SharedEquipmentController {
     }
 
     @PutMapping(value="/shared-equipment/{eqNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<Long>> updateSharedEquipment(@PathVariable Long eqNo,
+    public ResponseEntity<ResponseDto<Long>> updateSharedEquipment(@PathVariable(name = "eqNo") Long eqNo,
                                                                @AuthenticationPrincipal CustomUser user,
                                                                @Valid @ModelAttribute ReqSharedEquipmentDto sharedEquipmentDto,
                                                                @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) {
@@ -111,7 +111,7 @@ public class SharedEquipmentController {
     }
 
     @DeleteMapping("/shared-equipment/{eqNo}")
-    public ResponseEntity<ResponseDto> deleteSharedEquipment(@PathVariable Long eqNo) {
+    public ResponseEntity<ResponseDto> deleteSharedEquipment(@PathVariable(name = "eqNo") Long eqNo) {
         sharedEquipmentService.deleteSharedEquipment(eqNo);
         return ResponseEntity
                 .status(HttpStatus.OK)

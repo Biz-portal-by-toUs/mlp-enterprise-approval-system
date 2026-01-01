@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.meeting.service;
 
-import com.multi.mlpenterpriseapprovalsystem.common.client.MeetingAiClient;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
@@ -13,6 +12,7 @@ import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingDept;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingEmp;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.MeetingScope;
 import com.multi.mlpenterpriseapprovalsystem.meeting.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.meeting.event.MeetingAiRequestedEvent;
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingDeptRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingEmpRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingRepository;
@@ -21,6 +21,7 @@ import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,28 +52,13 @@ public class MeetingService {
     private final CompanyRepository companyRepository;
     private final DepartmentRepository departmentRepository;
 
-    private final MeetingAiClient meetingAiClient;
-
     private final S3UrlService s3UrlService;
-
     private final EntityManager em;
 
+    private final ApplicationEventPublisher publisher;
 
     /**
      * [회의 목록 조회]
-     * - scope(탭) 기준으로 데이터셋 결정
-     *   1) ALL: 공개(status=true) + 비공개라도 내가 참여(작성자/참석자)면 노출
-     *   2) MY_DEPT: 내 부서가 포함된 회의만
-     *   3) MY: 내가 참여한 회의만
-     *
-     * - keyword(제목검색), 날짜(from~to: startedAt 기준) 는 모든 탭에 공통 적용
-     * - depNo(부서검색)는 전체회의 탭(ALL)에서만 적용(다른 탭이면 무시)
-     *
-     * - 날짜 처리 규칙:
-     *   - fromDate만 오면 그 날짜 하루만
-     *   - toDate만 오면 그 날짜 하루만
-     *   - 둘 다 오면 from~to 범위 (from > to면 스왑)
-     *   - 필터는 startedAt 기준:  from <= startedAt < (to+1일 00:00)
      */
     @Transactional(readOnly = true)
     public ResMeetingListDto getMeetingList(String empId,
@@ -89,12 +75,9 @@ public class MeetingService {
         String comId = me.getCompany().getComId();
         Long myDepNo = (me.getDepartment() != null) ? me.getDepartment().getDepNo() : null;
 
-        // 날짜 정규화 (from만/ to만 들어오는 경우 "하루 조회"로 처리)
         LocalDate f = fromDate;
         LocalDate t = toDate;
 
-        if (f != null && t == null) t = f;
-        if (f == null && t != null) f = t;
         if (f != null && t != null && f.isAfter(t)) {
             LocalDate tmp = f;
             f = t;
@@ -107,19 +90,14 @@ public class MeetingService {
         Page<Meeting> page;
 
         if (scope == MeetingScope.MY) {
-            // 내 회의 탭
             page = meetingRepository.findMyMeetings(comId, empId, keyword, from, toExclusive, pageable);
-
         } else if (scope == MeetingScope.MY_DEPT) {
-            // 내 부서 회의 탭
             if (myDepNo == null) {
                 page = Page.empty(pageable);
             } else {
                 page = meetingRepository.findMyDeptMeetings(comId, myDepNo, keyword, from, toExclusive, pageable);
             }
-
         } else {
-            // 전체회의 탭 (depNo 필터는 ALL에서만 적용)
             page = meetingRepository.findAllTabMeetings(comId, empId, depNo, keyword, from, toExclusive, pageable);
         }
 
@@ -127,10 +105,12 @@ public class MeetingService {
                 .map(m -> ResMeetingSimpleDto.builder()
                         .meetNo(m.getMeetNo())
                         .title(m.getTitle())
-                        .startAt(m.getStartedAt())   // Meeting.getStartAt() = startedAt
+                        .startAt(m.getStartedAt())
                         .endAt(m.getCreatedAt())
+                        .aiStatus(String.valueOf(m.getAiStatus()))
                         .writerEmpId(m.getWriter().getEmpId())
                         .writerName(m.getWriter().getEmpName())
+                        .participantCount(m.getMeetingEmps().size())
                         .build())
                 .toList();
 
@@ -164,7 +144,6 @@ public class MeetingService {
             boolean isWriter = meeting.getWriter().getEmpId().equals(empId);
             boolean isParticipant = meetingEmpRepository.existsByMeeting_MeetNoAndEmployee_EmpId(meetNo, empId);
 
-
             if (!isWriter && !isParticipant) {
                 throw new CustomException(ErrorCode.MEETING_ACCESS_DENIED);
             }
@@ -178,6 +157,7 @@ public class MeetingService {
                     .empName(me.getEmployee().getEmpName())
                     .build());
         }
+
         List<ResMeetingDepartmentDto> departments = new ArrayList<>();
         if (meeting.getMeetingDepts() != null) {
             for (MeetingDept md : meeting.getMeetingDepts()) {
@@ -189,8 +169,6 @@ public class MeetingService {
                         .build());
             }
         }
-
-
 
         String audioKey = meeting.getAudioObjectKey();
         String recordUrl = null;
@@ -207,6 +185,7 @@ public class MeetingService {
                 .startAt(meeting.getStartedAt())
                 .endAt(meeting.getCreatedAt())
                 .departments(departments)
+                .status(meeting.getStatus())
                 .writerEmpId(meeting.getWriter().getEmpId())
                 .writerName(meeting.getWriter().getEmpName())
                 .recordUrl(recordUrl)
@@ -224,14 +203,15 @@ public class MeetingService {
         Company company = companyRepository.findByComId(writer.getCompany().getComId())
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
-        // 부서(depNos)는 항상 1개 이상
         if (request.getDepNos() == null || request.getDepNos().isEmpty()) {
             throw new CustomException(ErrorCode.MEETING_DEPT_REQUIRED);
         }
-
-        // 참석자(participantEmpIds)는 항상 1명 이상
         if (request.getParticipantEmpIds() == null || request.getParticipantEmpIds().isEmpty()) {
             throw new CustomException(ErrorCode.MEETING_PARTICIPANT_REQUIRED);
+        }
+
+        if (request.getTitle().length()>30) {
+            throw new CustomException(ErrorCode.MEETING_ACCESS_DENIED);
         }
 
         Meeting meeting = Meeting.create(
@@ -242,7 +222,6 @@ public class MeetingService {
                 request.getStatus()
         );
 
-        // depNos 중복 제거 후 저장
         for (Long dno : request.getDepNos().stream().distinct().toList()) {
             Department dep = departmentRepository.findById(dno)
                     .orElseThrow(() -> new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND));
@@ -251,7 +230,6 @@ public class MeetingService {
 
         Meeting saved = meetingRepository.save(meeting);
 
-        // 참석자 중복 제거 후 저장
         List<String> distinctEmpIds = request.getParticipantEmpIds().stream()
                 .distinct()
                 .toList();
@@ -261,25 +239,22 @@ public class MeetingService {
         for (String pid : distinctEmpIds) {
             Employee p = employeeRepository.findByEmpId(pid)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-
-            // meeting_emp에 com_id 없는 버전
             meetingEmpRepository.save(MeetingEmp.create(saved, p));
         }
 
-        // 작성자도 참석자에 자동 포함(항상)
         if (!writerIncluded) {
             meetingEmpRepository.save(MeetingEmp.create(saved, writer));
         }
 
         return saved.getMeetNo();
     }
+
     @Transactional
     public Long updateMeeting(String empId, Long meetNo, ReqMeetingUpdateDto request) {
 
         Meeting meeting = meetingRepository.findByMeetNoAndIsDeletedFalse(meetNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
 
-        // 작성자만 수정 가능
         if (!meeting.getWriter().getEmpId().equals(empId)) {
             throw new CustomException(ErrorCode.MEETING_ACCESS_DENIED);
         }
@@ -292,6 +267,10 @@ public class MeetingService {
             throw new CustomException(ErrorCode.MEETING_PARTICIPANT_REQUIRED);
         }
 
+        if (request.getTitle().length()>30) {
+            throw new CustomException(ErrorCode.MEETING_ACCESS_DENIED);
+        }
+
         meeting.updateBasic(
                 request.getTitle(),
                 request.getStartedAt(),
@@ -300,10 +279,9 @@ public class MeetingService {
                 request.getAiText()
         );
 
-        // 부서 교체: "DB에서 먼저 delete → flush → 컬렉션 비우기 → add"
         meetingDeptRepository.deleteAllByMeeting_MeetNo(meetNo);
-        em.flush();                 // ✅ DB delete 먼저 확정
-        meeting.clearDepartments(); // ✅ 영속성 컨텍스트 컬렉션도 정리(중요)
+        em.flush();
+        meeting.clearDepartments();
 
         for (Long dno : request.getDepNos().stream().distinct().toList()) {
             Department dep = departmentRepository.findById(dno)
@@ -324,7 +302,7 @@ public class MeetingService {
         for (String pid : distinctEmpIds) {
             Employee p = employeeRepository.findByEmpId(pid)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-            meetingEmpRepository.save(MeetingEmp.create(meeting, p)); // com_id 없는 버전
+            meetingEmpRepository.save(MeetingEmp.create(meeting, p));
         }
 
         if (!writerIncluded) {
@@ -333,8 +311,6 @@ public class MeetingService {
 
         return meeting.getMeetNo();
     }
-
-
 
     @Transactional
     public Long deleteMeeting(String empId, Long meetNo) {
@@ -352,26 +328,26 @@ public class MeetingService {
         return meeting.getMeetNo();
     }
 
-    // ✅ 프론트가 AI 처리 요청
+    /**
+     * ✅ 핵심 수정: 트랜잭션 안에서는 DB 상태만 업데이트하고,
+     * FastAPI 호출은 "커밋 이후" 이벤트 리스너(@TransactionalEventListener AFTER_COMMIT)에서 실행
+     */
     @Transactional
     public void requestAiPipeline(String empId, Long meetNo, ReqMeetingAiRequestDto req) {
 
         Meeting meeting = meetingRepository.findByMeetNoAndIsDeletedFalse(meetNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
 
-        // 작성자만 요청 가능(원하면 참석자도 허용으로 바꾸면 됨)
         if (!meeting.getWriter().getEmpId().equals(empId)) {
             throw new CustomException(ErrorCode.MEETING_ACCESS_DENIED);
         }
 
-        // (선택) 처리 상태값 컬럼이 있으면 PROCESSING으로 변경
-         meeting.markAiProcessing();
+        meeting.markAiProcessing();
+        meeting.updateTexts("음성을 텍스트로 변환중입니다...", "회의 요약중입니다...");
 
-        // ✅ Spring -> FastAPI 호출 (비동기 권장)
-        meetingAiClient.requestAi(meetNo, req.getObjectKey(),req.getTitle());
+        publisher.publishEvent(new MeetingAiRequestedEvent(meetNo, req.getObjectKey(), req.getTitle()));
     }
 
-    // MeetingService.java 안에 추가
     @Transactional
     public Long applyAiResult(Long meetNo, ReqMeetingAiCallbackDto request) {
 
@@ -385,18 +361,12 @@ public class MeetingService {
                 request.getStatus());
 
         if ("FAILED".equalsIgnoreCase(status)) {
-            // ⚠️ DTO 필드명이 errorMessage면 여기 맞춰야 함
-            meeting.markAiFailed(request.getErrorMessage());  // request.getError() 쓰면 안 맞을 수 있음
+            meeting.markAiFailed(request.getErrorMessage());
             return meeting.getMeetNo();
         }
 
-        // DONE
         meeting.markAiDone(request.getSttText(), request.getAiText());
-
         meeting.setAudioObjectKey(request.getObjectKey());
-
-        // 디버깅용: 바로 DB 반영 확인하고 싶으면
-        // meetingRepository.saveAndFlush(meeting);
 
         return meeting.getMeetNo();
     }

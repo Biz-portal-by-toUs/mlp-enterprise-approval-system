@@ -1,22 +1,26 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * Please explain the class!!!
@@ -32,113 +36,271 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
     private final DocumentFormRepository documentFormRepository;
     private final DocumentFormCategoryRepository documentFormCategoryRepository;
-
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResDocumentFormListDto> findListByStatus(
-            DocumentFormStats stat,
-            Pageable pageable
+    public Page<ResDocumentFormListDto> findListByStatuses(
+            List<DocumentFormStats> stats, String comId, String keyword, Pageable pageable
     ) {
-        return documentFormRepository.findListByDocfoStat(stat, pageable);
+        // 비어있으면 기본값 A (안전장치)
+        List<DocumentFormStats> safeStats =
+                (stats == null || stats.isEmpty()) ? List.of(DocumentFormStats.A) : stats;
+
+        boolean hasKeyword = (keyword != null && !keyword.isBlank());
+        String kw = hasKeyword ? keyword.trim() : null;
+
+        Page<DocumentForm> page = hasKeyword
+                ? documentFormRepository.findByDocfoStatInAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+                safeStats, comId, kw, pageable
+        )
+                : documentFormRepository.findByDocfoStatInAndCompany_ComIdOrderByDocfoNoAsc(
+                safeStats, comId, pageable
+        );
+
+        return page.map(f -> new ResDocumentFormListDto(
+                f.getDocfoNo(),
+                f.getCompany(),
+                f.getWriter(),
+                f.getDocfoName(),
+                f.getDocfoStat(),
+                f.getRejectReason()
+        ));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ResDocumentFormDetailDto findDetailById(Long docfoNo) {
-
+    public ResDocumentFormDetailDto findDetailById(Long docfoNo, String comId) {
         DocumentForm form = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() ->
-                        new EntityNotFoundException(
-                                "DocumentForm not found. docfoNo=" + docfoNo
-                        )
-                );
+                .orElseThrow(() -> new EntityNotFoundException("문서 양식을 찾을 수 없습니다."));
 
-        List<String> categories = documentFormCategoryRepository
-                .findByDocumentForm_DocfoNo(docfoNo)
-                .stream()
-                .map(DocumentFormCategory::getName)
-                .toList();
+        validateCompany(form, comId);
+
+        List<ResDocumentFormCategoryNameDto> categories =
+                documentFormCategoryRepository
+                        .findByDocumentForm_DocfoNoOrderByDocfoCatNoAsc(docfoNo)
+                        .stream()
+                        .map(c -> new ResDocumentFormCategoryNameDto(c.getName()))
+                        .toList();
 
         return new ResDocumentFormDetailDto(
                 form.getDocfoNo(),
                 form.getDocfoName(),
-                form.getDocfoStat(),
                 form.getCnttJson(),
                 form.getCnttHtml(),
+                form.getRejectReason(),
+                form.getDocfoStat(),
                 categories
         );
     }
 
-//    @Override
-//    @Transactional
-//    public Long createDocumentForm(ReqDocumentFormCreateDto req) {
-//        Company company = companyRepository.findByComId(req.comId())
-//                .orElseThrow(() -> new EntityNotFoundException("Company not found. comId=" + req.comId()));
-//        Employee writer = employeeRepository.findByEmpId(req.writerId())
-//                .orElseThrow(() -> new EntityNotFoundException("Employee not found. writerId=" + req.writerId()));
-//
-//        // 1) 문서양식 저장
-//        DocumentForm form = DocumentForm.create(
-//                req.comId(),
-//                req.writerId(),
-//                req.docfoName(),
-//                req.cnttJson(),
-//                req.cnttHtml()
-//        );
-//        DocumentForm saved = documentFormRepository.save(form);
-//
-//        // 2) 카테고리 저장 (옵션: null/빈값 방어)
-//        List<String> categories = req.categories();
-//        if (categories != null && !categories.isEmpty()) {
-//            List<DocumentFormCategory> catEntities = categories.stream()
-//                    .filter(n -> n != null && !n.isBlank())
-//                    .map(String::trim)
-//                    .distinct()
-//                    .map(n -> DocumentFormCategory.create(company, saved, n))
-//                    .toList();
-//            documentFormCategoryRepository.saveAll(catEntities);
-//        }
-//        return saved.getDocfoNo();
-//    }
-//
     @Override
     @Transactional
-    public void deleteDocumentForm(Long docfoNo) {
-        DocumentForm form = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
-        form.delete();
+    public Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId) {
+
+        validateDocfoNameForbidden(req.docfoName());
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new EntityNotFoundException("회사 없음"));
+
+        Employee writer = employeeRepository.findByEmpId(writerId)
+                .orElseThrow(() -> new EntityNotFoundException("작성자 없음"));
+
+        DocumentForm form = DocumentForm.create(
+                company,
+                writer,
+                req.docfoName(),
+                ensureJsonString(req.cnttJson()),
+                null
+        );
+
+        DocumentForm saved = documentFormRepository.save(form);
+
+        if (req.categories() != null && !req.categories().isEmpty()) {
+            List<DocumentFormCategory> categories =
+                    req.categories().stream()
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .distinct()
+                            .map(name -> DocumentFormCategory.create(company, saved, name))
+                            .toList();
+
+            documentFormCategoryRepository.saveAll(categories);
+        }
+
+        return saved.getDocfoNo();
     }
-//
-//    @Override
-//    @Transactional
-//    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req) {
-//
-//        // 1) 기존 양식 조회
-//        DocumentForm oldForm = documentFormRepository.findById(docfoNo)
-//                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
-//
-//        //2) 삭제 가능한 문서인지 조회
-//        if(oldForm.getDocfoStat()==DocumentFormStats.D){
-//            throw new RuntimeException("이미 삭제된 문서입니다.");
-//        }
-//
-//        // 3) 기존 양식 상태 D로 변경
-//        oldForm.delete();
-//
-//        // 4) 새 양식 생성 & 저장
-//        DocumentForm newForm = DocumentForm.create(
-//                oldForm.getComId(),
-//                req.writerId(),
-//                req.docfoName(),
-//                req.cnttJson(),
-//                req.cnttHtml()
-//        );
-//
-//        DocumentForm saved = documentFormRepository.save(newForm);
-//
-//        return saved.getDocfoNo();
-//    }
+
+    @Override
+    @Transactional
+    public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req, String comId, String empId) {
+
+        validateDocfoNameForbidden(req.docfoName());
+
+        DocumentForm origin = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new IllegalArgumentException("문서 양식 없음"));
+
+        validateCompany(origin, comId);
+
+        // 기존 문서 삭제 처리(논리삭제)
+        documentFormRepository.updateStatusAndReason(origin.getDocfoNo(), DocumentFormStats.D, null);
+
+        Employee writer = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new IllegalArgumentException("작성자 정보 없음"));
+
+        DocumentForm newForm = DocumentForm.create(
+                origin.getCompany(),
+                writer,
+                req.docfoName(),
+                ensureJsonString(req.cnttJson()),
+                req.cnttHtml()
+        );
+
+        DocumentForm saved = documentFormRepository.save(newForm);
+
+        if (req.categories() != null && !req.categories().isEmpty()) {
+            List<DocumentFormCategory> categories =
+                    req.categories().stream()
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .distinct()
+                            .map(name -> DocumentFormCategory.create(origin.getCompany(), saved, name))
+                            .toList();
+
+            documentFormCategoryRepository.saveAll(categories);
+        }
+
+        return saved.getDocfoNo();
+    }
+
+    // 승인/반려(A/R) 전용
+    @Override
+    @Transactional
+    public void changeApproveOrReject(Long docfoNo, String comId, DocumentFormStats next, String rejectReason) {
+        if (next != DocumentFormStats.A && next != DocumentFormStats.R) {
+            throw new IllegalArgumentException("A(승인) 또는 R(반려)만 가능합니다.");
+        }
+
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("DocumentForm not found"));
+
+        validateCompany(form, comId);
+
+        DocumentFormStats cur = form.getDocfoStat();
+
+        if (cur == DocumentFormStats.D || cur == DocumentFormStats.W || cur == DocumentFormStats.X) {
+            throw new IllegalStateException("삭제 흐름 상태에서는 승인/반려를 변경할 수 없습니다.");
+        }
+
+        // R/X가 아니면 null로 만드는 규칙 강제
+        String normalized = normalizeRejectReason(next, rejectReason);
+
+        documentFormRepository.updateStatusAndReason(docfoNo, next, normalized);
+    }
+    // 삭제 플로우
+    @Override
+    @Transactional
+    public void requestDelete(Long docfoNo, String comId, CustomUser requester) {
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("DocumentForm not found"));
+
+        validateCompany(form, comId);
+
+        // 이미 삭제/삭제대기면 불가
+        if (form.getDocfoStat() == DocumentFormStats.D) throw new IllegalStateException("이미 삭제된 양식입니다.");
+        if (form.getDocfoStat() == DocumentFormStats.W) throw new IllegalStateException("이미 삭제대기 상태입니다.");
+
+        // 삭제요청은 관리자만 가능
+        boolean isAdmin = requester.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_COM_ADMIN")
+                        || a.getAuthority().equals("ROLE_SEC_ADMIN")
+                        || a.getAuthority().equals("ROLE_THR_ADMIN")
+        );
+        if (!isAdmin) throw new AccessDeniedException("권한이 없습니다.");
+
+        // W로 바꿀 때 사유는 무조건 null
+        documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.W, null);
+    }
+
+    @Override
+    @Transactional
+    public void approveDelete(Long docfoNo, String comId) {
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("DocumentForm not found"));
+
+        validateCompany(form, comId);
+
+        if (form.getDocfoStat() != DocumentFormStats.W) {
+            throw new IllegalStateException("삭제대기(W) 상태에서만 삭제 승인할 수 있습니다.");
+        }
+
+        // D로 바꿀 때 사유는 무조건 null
+        documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.D, null);
+    }
+
+    @Override
+    @Transactional
+    public void rejectDelete(Long docfoNo, String comId, String rejectReason) {
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("DocumentForm not found"));
+
+        validateCompany(form, comId);
+
+        if (form.getDocfoStat() != DocumentFormStats.W) {
+            throw new IllegalStateException("삭제대기(W) 상태에서만 삭제 반려할 수 있습니다.");
+        }
+
+        // X는 사유 필수 + trim
+        String normalized = normalizeRejectReason(DocumentFormStats.X, rejectReason);
+
+        documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.X, normalized);
+    }
+    // 공통
+    private String ensureJsonString(String raw) {
+        if (raw == null || raw.trim().isEmpty()) throw new IllegalArgumentException("cnttJson is empty");
+        String s = raw.trim();
+        if (s.startsWith("<")) throw new IllegalArgumentException("cnttJson must be JSON");
+
+        boolean isObj = s.startsWith("{") && s.endsWith("}");
+        boolean isArr = s.startsWith("[") && s.endsWith("]");
+        if (!isObj && !isArr) throw new IllegalArgumentException("cnttJson must be JSON string");
+
+        return s;
+    }
+
+    private void validateCompany(DocumentForm form, String comId) {
+        if (!form.getCompany().getComId().equals(comId)) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+    }
+
+    // R/X면 사유 필수, 그 외는 무조건 null로 정규화
+    private String normalizeRejectReason(DocumentFormStats next, String reason) {
+        if (next == DocumentFormStats.R || next == DocumentFormStats.X) {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException("반려 사유는 필수입니다.");
+            }
+            return reason.trim();
+        }
+        return null;
+    }
+
+    // 양식 제목 금칙어
+    private void validateDocfoNameForbidden(String docfoName) {
+        String name = (docfoName == null) ? "" : docfoName.trim();
+
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("문서 양식 제목은 필수입니다.");
+        }
+
+        // 포함되면 차단할 키워드들
+        List<String> forbidden = List.of("휴가", "출장");
+
+        for (String w : forbidden) {
+            if (name.contains(w)) {
+                throw new IllegalArgumentException("문서 양식 제목에 금칙어가 포함되어 생성/수정할 수 없습니다: " + w);
+            }
+        }
+    }
 }

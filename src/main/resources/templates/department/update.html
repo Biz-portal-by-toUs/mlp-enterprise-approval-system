@@ -1,261 +1,257 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Bizportal - 부서 수정</title>
 
-    <style>
-        :root {
-            --primary: #2f6fdb;
-            --primary-dark: #2151a5;
-            --secondary: #6c757d;
-            --bg-light: #f7f9fc;
-            --border: #e6e6e6;
-            --text-main: #111;
-            --text-muted: #777;
-            --radius: 12px;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
+    <!-- ✅ layout.html의 <th:block layout:fragment="pageStyles"> 로 주입됨 -->
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* ✅ 이 페이지 전용(스코프) */
+            .dept-edit-page{
+                padding-top: 6px;
+            }
 
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
-            background: #fff;
-            color: var(--text-main);
-        }
+            .dept-edit-page .page-kicker{
+                font-size:14px;
+                color:var(--muted);
+                margin: 0 0 10px;
+            }
 
-        /* Topbar */
-        .topbar {
-            height: 72px;
-            background: var(--primary);
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
-            color: #fff;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; cursor: pointer; }
-        .logo-box {
-            width: 36px; height: 36px; background: rgba(255,255,255,0.2);
-            border-radius: 8px; display: flex; align-items: center; justify-content: center;
-        }
-        .search-container { flex: 1; display: flex; justify-content: center; }
-        .search-bar {
-            width: 100%; max-width: 500px; height: 40px; border-radius: 20px;
-            border: none; padding: 0 20px; background: rgba(255,255,255,0.95);
-        }
-        .user-actions { display: flex; align-items: center; gap: 15px; }
-        .icon-circle { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .btn-logout {
-            background: rgba(255,255,255,0.2); border: none; color: #fff;
-            padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer;
-        }
+            .dept-edit-page .page-title{
+                font-size:34px;
+                font-weight:900;
+                margin: 0 0 22px;
+                letter-spacing: -.2px;
+            }
 
-        /* Layout */
-        .container { display: flex; min-height: calc(100vh - 72px); }
+            .dept-edit-page .section-title{
+                font-size:22px;
+                font-weight:900;
+                margin: 0 0 14px;
+            }
 
-        /* Icon Sidebar */
-        .icon-nav { width: 72px; border-right: 1px solid var(--border); padding: 15px 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .nav-icon { font-size: 24px; cursor: pointer; opacity: 0.6; transition: 0.2s; }
-        .nav-icon.active { opacity: 1; color: var(--primary); }
+            .dept-edit-page .card{
+                background: var(--white);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px;
+                box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            }
 
-        /* Text Sidebar */
-        .text-nav { width: 220px; background: var(--bg-light); border-right: 1px solid var(--border); padding: 20px; }
-        .menu-list { list-style: none; padding: 0; margin: 0; background: #fff; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
-        .menu-item {
-            display: block; padding: 15px 20px; text-decoration: none; color: #444;
-            font-weight: 600; border-bottom: 1px solid var(--border);
-        }
-        .menu-item:last-child { border-bottom: none; }
-        .menu-item.active { background: #eef4ff; color: var(--primary); }
+            .dept-edit-page .form-wrap{
+                background:#f3f4f6;
+                border-radius: 18px;
+                padding: 26px;
+            }
 
-        /* Main Content */
-        .content { flex: 1; padding: 40px 60px; }
-        .title-group { margin-bottom: 30px; }
-        .title-group h1 { font-size: 32px; margin: 0 0 10px; }
-        .title-group h2 { font-size: 24px; color: #555; margin: 0; }
+            .dept-edit-page .field{ margin: 18px 0; }
+            .dept-edit-page .label{
+                font-weight: 800;
+                margin-bottom: 10px;
+            }
 
-        .edit-card {
-            max-width: 800px; background: #f9fbff; border-radius: 24px;
-            padding: 50px; border: 1px solid #e1e8f5; box-shadow: var(--shadow);
-        }
-        .input-group { margin-bottom: 25px; }
-        .input-label { font-weight: 700; margin-bottom: 10px; display: block; }
-        .form-control {
-            width: 100%; height: 56px; border-radius: 12px; border: 1px solid #ddd;
-            padding: 0 18px; font-size: 16px; transition: 0.3s;
-        }
-        .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(47,111,219,0.1); }
-        .helper-text { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+            .dept-edit-page .input{
+                width:100%;
+                height:48px;
+                border-radius: 12px;
+                border: 1px solid var(--line);
+                padding: 0 14px;
+                font-size: 14px;
+                outline: none;
+                background: #fff;
+            }
+            .dept-edit-page .input:focus{
+                border-color: rgba(59,130,246,.55);
+                box-shadow: 0 0 0 4px rgba(59,130,246,.12);
+            }
 
-        /* Buttons */
-        .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 40px; }
-        .btn {
-            height: 56px; min-width: 140px; border: none; border-radius: 14px;
-            font-size: 18px; font-weight: 700; cursor: pointer; transition: 0.3s;
-        }
-        .btn-submit { background: var(--primary); color: #fff; box-shadow: 0 8px 16px rgba(47,111,219,0.2); }
-        .btn-submit:hover { background: var(--primary-dark); transform: translateY(-2px); }
+            .dept-edit-page .hint{
+                margin-top: 8px;
+                font-size: 12px;
+                color: var(--muted);
+            }
 
-        .btn-cancel { background: #e9ecef; color: #495057; }
-        .btn-cancel:hover { background: #dee2e6; }
+            .dept-edit-page .actions{
+                display:flex;
+                justify-content:flex-end;
+                gap:12px;
+                margin-top: 22px;
+            }
 
-        /* Status Message */
-        .status-msg { margin-top: 15px; font-weight: 600; display: none; text-align: center; }
-        .status-msg.success { color: #28a745; }
-        .status-msg.error { color: #dc3545; }
-    </style>
+            .dept-edit-page .btn{
+                height:50px;
+                min-width:140px;
+                border:none;
+                border-radius: 14px;
+                font-weight: 900;
+                cursor:pointer;
+                padding: 0 18px;
+            }
+
+            .dept-edit-page .btn-cancel{
+                background:#e5e7eb;
+                color:#374151;
+            }
+            .dept-edit-page .btn-cancel:hover{ filter: brightness(0.98); }
+
+            .dept-edit-page .btn-primary{
+                background: var(--primary);
+                color:#fff;
+                box-shadow: 0 10px 22px rgba(59,130,246,.22);
+            }
+            .dept-edit-page .btn-primary:hover{ filter: brightness(0.98); }
+            .dept-edit-page .btn-primary:active{ transform: translateY(1px); }
+
+            .dept-edit-page .msg{
+                margin-top:14px;
+                font-size:13px;
+                display:none;
+                font-weight:800;
+            }
+            .dept-edit-page .msg.ok{ color:#0f766e; }
+            .dept-edit-page .msg.err{ color:#b91c1c; }
+        </style>
+    </th:block>
 </head>
+
 <body>
 
-<div class="topbar">
-    <div class="brand" onclick="location.href='/'"><div class="logo-box">B</div> Bizportal</div>
-    <div class="search-container"><input type="text" class="search-bar" placeholder="부서, 사원 검색..."/></div>
-    <div class="user-actions">
-        <div class="icon-circle">🔔</div>
-        <div class="icon-circle">👤</div>
-        <button class="btn-logout" id="logoutBtn" type="button">로그아웃</button>
+<!-- ✅ layout.html의 content 영역으로 들어감 -->
+<th:block layout:fragment="content">
+
+    <div class="page-with-subbar">
+
+        <!-- ✅ 관리자 사이드바(fragment) -->
+        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('dept')}"></div>
+
+        <!-- ✅ 오른쪽 콘텐츠 -->
+        <section class="dept-edit-page">
+            <p class="page-kicker">부서 편성(수정)</p>
+            <h1 class="page-title">부서 편성</h1>
+            <h2 class="section-title">부서 수정</h2>
+
+            <div class="card">
+                <div class="form-wrap">
+
+                    <!-- 서버에서 내려주는 값 -->
+                    <input type="hidden" id="depNo" th:value="${depNo}" />
+
+                    <div class="field">
+                        <div class="label">부서 코드</div>
+                        <input class="input"
+                               id="depId"
+                               maxlength="3"
+                               placeholder="예) A01"
+                               th:value="${depId}" />
+                        <div class="hint">최대 3자</div>
+                    </div>
+
+                    <div class="field">
+                        <div class="label">부서 이름</div>
+                        <input class="input"
+                               id="depName"
+                               maxlength="10"
+                               placeholder="예) 인사팀"
+                               th:value="${depName}" />
+                        <div class="hint">최대 10자</div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-cancel" type="button"
+                                onclick="location.href='/admin/departments/list'">
+                            취소
+                        </button>
+
+                        <button class="btn btn-primary" id="submitBtn" type="button">
+                            수정 완료
+                        </button>
+                    </div>
+
+                    <div id="resultMsg" class="msg"></div>
+                </div>
+            </div>
+        </section>
     </div>
-</div>
 
-<div class="container">
-    <nav class="icon-nav">
-        <div class="nav-icon">📄</div><div class="nav-icon">💬</div><div class="nav-icon">✉️</div>
-        <div class="nav-icon">📁</div><div class="nav-icon">☁️</div><div class="nav-icon">📅</div>
-        <div class="nav-icon">👥</div><div class="nav-icon active">⚙️</div>
-    </nav>
+</th:block>
 
-    <aside class="text-nav">
-        <div class="menu-list">
-            <a href="/admin/departments" class="menu-item active">부서 편성</a>
-            <a href="/admin/positions" class="menu-item">직급 편성</a>
-            <a href="/admin/employees" class="menu-item">사원 관리</a>
-            <a href="/admin/rules" class="menu-item">사내 규정 관리</a>
-        </div>
-    </aside>
+<!-- ✅ layout.html의 pageScripts 영역으로 들어감 -->
+<th:block layout:fragment="pageScripts">
+    <script>
+        const API_URL = "/api/v1/admin/departments";
+        const $ = (id) => document.getElementById(id);
 
-    <main class="content">
-        <div class="title-group">
-            <h1>부서 편성</h1>
-            <h2>부서 수정</h2>
-        </div>
+        function showMsg(text, ok) {
+            const el = $("resultMsg");
+            if (!el) return;
+            el.style.display = "block";
+            el.className = "msg " + (ok ? "ok" : "err");
+            el.textContent = text;
 
-        <div class="edit-card">
-            <input type="hidden" id="depNo" th:value="${depNo}"/>
+            clearTimeout(window.__msgTimer);
+            window.__msgTimer = setTimeout(() => {
+                el.style.display = "none";
+            }, 2800);
+        }
 
-            <div class="input-group">
-                <label class="input-label" for="depId">부서 코드</label>
-                <input type="text" id="depId" class="form-control" placeholder="예: DEP001" maxlength="3" th:value="${depId}"/>
-                <p class="helper-text">최대 3자의 고유 코드를 입력하세요.</p>
-            </div>
+        async function safeJson(res) {
+            const ct = res.headers.get("content-type") || "";
+            if (!ct.includes("application/json")) return {};
+            try { return await res.json(); } catch { return {}; }
+        }
 
-            <div class="input-group">
-                <label class="input-label" for="depName">부서 이름</label>
-                <input type="text" id="depName" class="form-control" placeholder="예: 인사팀" maxlength="10" th:value="${depName}"/>
-                <p class="helper-text">최대 10자 이내의 부서명을 입력하세요.</p>
-            </div>
+        window.addEventListener("DOMContentLoaded", () => {
+            const btn = $("submitBtn");
+            if (!btn) return;
 
-            <div class="form-actions">
-                <button type="button" class="btn btn-cancel" onclick="location.href='/admin/departments'">취소</button>
-                <button type="button" id="submitBtn" class="btn btn-submit">수정 완료</button>
-            </div>
+            btn.addEventListener("click", async () => {
+                const depNo = $("depNo")?.value;
+                const depId = $("depId")?.value?.trim() || "";
+                const depName = $("depName")?.value?.trim() || "";
 
-            <div id="statusMsg" class="status-msg"></div>
-        </div>
-    </main>
-</div>
+                if (!depNo) return showMsg("잘못된 접근입니다. (depNo 없음)", false);
+                if (!depId) return showMsg("부서 코드를 입력해주세요.", false);
+                if (!depName) return showMsg("부서 이름을 입력해주세요.", false);
+                if (depId.length > 3) return showMsg("부서 코드는 최대 3자입니다.", false);
+                if (depName.length > 10) return showMsg("부서 이름은 최대 10자입니다.", false);
 
-<script th:inline="javascript">
-    const API_URL = "/api/v1/admin/departments";
+                try {
+                    const res = await fetch(`${API_URL}/${encodeURIComponent(depNo)}`, {
+                        method: "PUT",
+                        credentials: "include",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        },
+                        body: JSON.stringify({ depId, depName })
+                    });
 
-    // 알림 메시지 표시 함수
-    function showStatus(msg, isSuccess) {
-        const el = document.getElementById("statusMsg");
-        el.textContent = msg;
-        el.className = `status-msg ${isSuccess ? 'success' : 'error'}`;
-        el.style.display = "block";
-        setTimeout(() => { el.style.display = "none"; }, 3000);
-    }
+                    if (res.status === 401) return showMsg("로그인이 필요합니다. 다시 로그인 해주세요.", false);
+                    if (res.status === 403) return showMsg("권한이 없습니다. (COM_ADMIN만 가능)", false);
 
-    async function safeJson(res) {
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) return {};
-        try { return await res.json(); } catch { return {}; }
-    }
+                    if (res.ok) {
+                        showMsg("부서 정보가 수정되었습니다.", true);
+                        setTimeout(() => {
+                            window.location.href = "/admin/departments/list";
+                        }, 700);
+                        return;
+                    }
 
-    // (선택) 로그아웃 버튼 - 쿠키 기반이면 보통 POST /auth/logout 같은 API 호출로 처리
-    // 프로젝트 라우팅에 맞춰 경로만 바꿔서 쓰면 됨
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-        try {
-            // 예: 백엔드에 POST /auth/logout 구현되어 있다면
-            const res = await fetch("/auth/logout", {
-                method: "POST",
-                credentials: "include"
+                    const data = await safeJson(res);
+                    showMsg(data?.message || `수정 실패 (HTTP ${res.status})`, false);
+
+                } catch (e) {
+                    console.error(e);
+                    showMsg("서버 통신 오류가 발생했습니다.", false);
+                }
             });
-
-            // 성공/실패와 상관없이 쿠키 삭제 헤더 내려주게 해둔 상태라면
-            // 프론트는 그냥 로그인 페이지나 메인으로 이동시키면 됨
-            location.href = "/auth/companies/login";
-        } catch (e) {
-            console.error(e);
-            location.href = "/auth/companies/login";
-        }
-    });
-
-    // 수정 완료 버튼 클릭 이벤트
-    document.getElementById("submitBtn").addEventListener("click", async () => {
-        const depNo = document.getElementById("depNo").value;
-        const depId = document.getElementById("depId").value.trim();
-        const depName = document.getElementById("depName").value.trim();
-
-        if (!depId || !depName) {
-            showStatus("모든 필드를 입력해야 수정할 수 있습니다.", false);
-            return;
-        }
-
-        const payload = { depId, depName };
-
-        try {
-            const response = await fetch(`${API_URL}/${depNo}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                credentials: "include", // ✅ httpOnly 쿠키(accessToken) 자동 포함
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showStatus("부서 정보가 성공적으로 반영되었습니다.", true);
-                setTimeout(() => {
-                    window.location.href = "/admin/departments/list";
-                }, 1000);
-                return;
-            }
-
-            if (response.status === 401) {
-                showStatus("로그인이 필요합니다. 다시 로그인해주세요.", false);
-                return;
-            }
-
-            if (response.status === 403) {
-                showStatus("수정 권한이 없습니다 (관리자 전용).", false);
-                return;
-            }
-
-            const errorData = await safeJson(response);
-            showStatus(errorData.message || `수정 처리 중 오류가 발생했습니다. (HTTP ${response.status})`, false);
-
-        } catch (error) {
-            console.error("Fetch Error:", error);
-            showStatus("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", false);
-        }
-    });
-</script>
+        });
+    </script>
+</th:block>
 
 </body>
 </html>

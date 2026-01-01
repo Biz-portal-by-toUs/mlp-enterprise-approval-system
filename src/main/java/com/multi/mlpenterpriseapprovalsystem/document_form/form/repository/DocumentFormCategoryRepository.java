@@ -13,5 +13,6 @@ import java.util.*;
  * @since : 2025-12-22 월요일
  */
 public interface DocumentFormCategoryRepository extends JpaRepository<DocumentFormCategory, Long> {
-    List<DocumentFormCategory> findByDocumentForm_DocfoNo(Long docfoNo);
+    void deleteByDocumentForm(DocumentForm documentForm);
+    List<DocumentFormCategory> findByDocumentForm_DocfoNoOrderByDocfoCatNoAsc(Long docfoNo);
 }

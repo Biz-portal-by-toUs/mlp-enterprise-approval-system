@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>비밀번호 변경 페이지(사원 인증)</title>
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --muted:#8a8a8a;
+            --border:#e5e5e5;
+            --primary:#2f66d7;
+            --danger:#ef4444;
+            --ok:#22c55e;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
+            "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{
+            min-height:100vh;
+            border:2px solid #222;
+            margin:12px;
+            background:#fff;
+            display:flex;
+            flex-direction:column;
+        }
+        header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:26px 28px;
+        }
+        .brand{
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-weight:700;
+            font-size:40px;
+            letter-spacing:-0.5px;
+        }
+
+        main{
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+        }
+        .card{
+            width:min(560px, 92vw);
+            text-align:center;
+        }
+        .title{
+            font-size:44px;
+            font-weight:900;
+            margin:0 0 26px;
+            letter-spacing:-0.6px;
+        }
+        .form{
+            width:min(420px, 92vw);
+            margin:0 auto;
+            display:flex;
+            flex-direction:column;
+            gap:18px;
+        }
+        .field{ text-align:left; }
+        .label{
+            font-size:12px;
+            font-weight:900;
+            color:var(--muted);
+            margin:0 0 8px 2px;
+            letter-spacing:0.2px;
+        }
+        .input{
+            width:100%;
+            height:46px;
+            border:1px solid var(--border);
+            border-radius:4px;
+            padding:0 12px;
+            font-size:15px;
+            outline:none;
+            background:#fff;
+        }
+        .input:focus{
+            border-color:#c7d6fb;
+            box-shadow:0 0 0 4px rgba(47,102,215,.10);
+        }
+
+        .btn-primary{
+            width:220px;
+            height:50px;
+            border:0;
+            border-radius:4px;
+            background:var(--primary);
+            color:#fff;
+            font-weight:900;
+            cursor:pointer;
+            margin:12px auto 0;
+        }
+
+        .msg{
+            margin-top:18px;
+            font-size:14px;
+            font-weight:900;
+            text-align:center;
+            min-height:18px;
+        }
+        .msg.ok{color:var(--ok)}
+        .msg.bad{color:var(--danger)}
+
+        @media (max-width:768px){
+            .brand{font-size:32px}
+            .title{font-size:36px}
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="brand">Bizportal</div>
+        <div></div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h1 class="title">비밀번호 변경</h1>
+
+            <form id="verifyForm" class="form" autocomplete="off">
+                <div class="field">
+                    <div class="label">이름</div>
+                    <input id="empName" class="input" type="text" placeholder="예) 홍길동" required />
+                </div>
+
+                <div class="field">
+                    <div class="label">사번</div>
+                    <input id="empId" class="input" type="text" placeholder="예) E0001" required />
+                </div>
+
+                <div class="field">
+                    <div class="label">이메일</div>
+                    <input id="email" class="input" type="email" placeholder="예) user@company.com" maxlength="50" required />
+                </div>
+
+                <button class="btn-primary" type="submit">인증하기</button>
+                <div id="msg" class="msg"></div>
+            </form>
+        </section>
+    </main>
+</div>
+
+<script>
+    // ✅ 네 백엔드 사원 인증 API로 맞춰줘
+    const VERIFY_URL = "/auth/verify/employee";
+
+    // ✅ 인증 성공 후 이동할 사원 비밀번호 변경 페이지
+    const NEXT_URL = "/auth/employee/password";
+
+    function showMsg(text, ok){
+        const el = document.getElementById("msg");
+        el.textContent = text;
+        el.className = "msg " + (ok ? "ok" : "bad");
+    }
+
+    function isValidEmail(email){
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    document.getElementById("verifyForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const empName = document.getElementById("empName").value.trim();
+        const empId = document.getElementById("empId").value.trim();
+        const email = document.getElementById("email").value.trim();
+
+        if (!empName) return showMsg("이름을 입력해주세요.", false);
+        if (!empId) return showMsg("사번을 입력해주세요.", false);
+        if (!email) return showMsg("이메일을 입력해주세요.", false);
+        if (!isValidEmail(email)) return showMsg("이메일 형식이 올바르지 않습니다.", false);
+
+        try {
+            const res = await fetch(VERIFY_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ empId, empName, email })
+            });
+
+            if (!res.ok) {
+                let err = "인증 실패";
+                try { err = (await res.json()).message || err; } catch(e) {}
+                showMsg(err, false);
+                return;
+            }
+
+            const data = await res.json();
+            console.log("verify raw response = ", data);
+
+            // 서버 DTO가 SubjectId로 내려갈 수도 있어서 둘 다 대응
+            const subjectId =
+                data?.subjectId ??
+                data?.SubjectId ??
+                data?.data?.subjectId ??
+                data?.data?.SubjectId ??
+                data?.result?.subjectId ??
+                data?.result?.SubjectId ??
+                data?.comNo ??
+                data?.empNo;
+
+            if (subjectId === null || subjectId === undefined) {
+                showMsg("인증 응답에 subjectId가 없습니다. (서버 응답 확인 필요)", false);
+                return;
+            }
+
+            // ✅ 인증 성공 정보 저장
+            sessionStorage.setItem("employeePwSubjectId", String(subjectId));
+            sessionStorage.setItem("employeePwSubjectType", "EMPLOYEE");
+
+            showMsg("인증 성공! 비밀번호 변경 페이지로 이동합니다.", true);
+            setTimeout(() => location.href = NEXT_URL, 450);
+
+        } catch (e) {
+            showMsg("요청 실패: " + e.message, false);
+        }
+    });
+</script>
+</body>
+</html>

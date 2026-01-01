@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -102,7 +102,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "AND (:posNo IS NULL OR p.posNo = :posNo) " +
             "AND (:isDeleted IS NULL OR e.isDeleted = :isDeleted) " +
             "AND (:keyword IS NULL OR :keyword = '' " +
-            "    OR e.empName LIKE CONCAT('%', :keyword, '%')) " +
+            "    OR e.empName LIKE CONCAT('%', :keyword, '%') " +
+            "    OR e.empId  LIKE CONCAT('%', :keyword, '%')) " +   // 사번 검색 추가
             "ORDER BY e.empNo DESC")
     List<ResEmployeeListDto> searchEmployees(
             @Param("comId") String comId,
@@ -111,6 +112,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("isDeleted") Boolean isDeleted,
             @Param("keyword") String keyword
     );
+
 
     @Query("""
         SELECT e
@@ -136,11 +138,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     """)
     int retireEmployee(@Param("comId") String comId,
                        @Param("empNo") Long empNo,
-                       @Param("retDate") LocalDateTime retDate);
+                       @Param("retDate") LocalDate retDate);
 
     List<Employee> findByEmpIdIn(List<String> attendeeIds);
 
     Optional<Employee> findByEmpNoAndCompany_ComId(Long empNo, String comId);
+
+    Optional<Employee> findByEmpNoAndIsDeletedFalse(Long empNo);
 
     interface PosCount {
         Long getPosNo();

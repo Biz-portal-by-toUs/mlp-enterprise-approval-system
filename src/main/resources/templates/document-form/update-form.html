@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <!-- ViewDocumentFormController에서 model로 docfoNo 내려줌 -->
+    <meta name="template-id" th:content="${docfoNo}"/>
+
+    <title>문서양식 수정</title>
+
+    <!-- ProseMirror 기본 스타일 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prosemirror-view/style/prosemirror.css"/>
+
+    <style>
+        /* make-form.html 스타일 기반 (동일 UX 유지) */
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+            background: #f4f6fb;
+        }
+        .wrap {
+            width: 1100px;
+            margin: 30px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
+            padding: 24px;
+        }
+        .topbar { margin-bottom: 12px; }
+        .title-area { display: flex; align-items: center; gap: 12px; }
+        #docTitle {
+            width: 420px;
+            padding: 10px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        #statusLine { color: #666; font-size: 13px; user-select: none; }
+
+        /* 카테고리 영역 */
+        .category-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0 18px;
+        }
+        .category-bar #typeRadios {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .radio-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border: 1px solid #e1e3ea;
+            border-radius: 999px;
+            background: #fafbff;
+        }
+        .radio-item input[type="text"] {
+            width: 90px;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 13px;
+        }
+        .radio-del {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #ff4d4f;
+            font-weight: 700;
+        }
+        #addRadioBtn {
+            border: 1px dashed #8aa3ff;
+            background: #f0f4ff;
+            color: #2c5cff;
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* 툴바 */
+        #toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px;
+            border: 1px solid #e1e3ea;
+            border-radius: 10px;
+            background: #fafbff;
+            margin-bottom: 14px;
+        }
+        #toolbar button {
+            border: 1px solid #dcdfe6;
+            background: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        #toolbar button:hover { background: #f0f4ff; }
+        #fontSizeSelect {
+            border: 1px solid #dcdfe6;
+            background: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* 에디터 */
+        #editorWrap {
+            border: 1px solid #e1e3ea;
+            border-radius: 10px;
+            padding: 14px;
+            background: #fff;
+        }
+        #editor .ProseMirror {
+            min-height: 520px;
+            outline: none;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* 작성/수정 화면에서는 프리셋 헤더표 숨김 */
+        #editor .preset-no-col-resize { display: none !important; }
+
+        /* 테이블 테두리 */
+        #editor .ProseMirror table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
+        }
+        #editor .ProseMirror td,
+        #editor .ProseMirror th {
+            border: 1px solid #c9cdd4;
+            padding: 8px 10px;
+            min-width: 40px;
+            vertical-align: top;
+        }
+        #editor .ProseMirror th {
+            background: #f4f6fb;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        /* 하단 버튼 */
+        .bottom-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        #saveBtn {
+            background: #2c5cff;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 800;
+        }
+        #closeBtn {
+            background: #f1f2f5;
+            color: #222;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrap">
+    <div class="topbar">
+        <div class="title-area">
+            <input id="docTitle" placeholder="양식 제목(docfo_name)을 입력하세요"/>
+            <span id="statusLine"></span>
+        </div>
+    </div>
+
+    <div class="category-bar">
+        <div id="typeRadios"></div>
+        <button id="addRadioBtn" type="button">+ 카테고리</button>
+    </div>
+
+    <div id="toolbar">
+        <select id="fontSizeSelect" title="글자 크기">
+            <option value="">Font</option>
+            <option value="12">12</option>
+            <option value="14">14</option>
+            <option value="16">16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="24">24</option>
+            <option value="28">28</option>
+            <option value="32">32</option>
+        </select>
+
+        <button data-act="h1" type="button">H1</button>
+        <button data-act="h2" type="button">H2</button>
+        <button data-act="h3" type="button">H3</button>
+        <button data-act="p" type="button">P</button>
+
+        <button data-act="bold" type="button">Bold</button>
+        <button data-act="italic" type="button">Italic</button>
+        <button data-act="underline" type="button">Underline</button>
+        <button data-act="strike" type="button">Strike</button>
+
+        <button data-act="alignLeft" type="button">좌</button>
+        <button data-act="alignCenter" type="button">중</button>
+        <button data-act="alignRight" type="button">우</button>
+
+        <button data-act="bullet" type="button">Bullet</button>
+        <button data-act="ordered" type="button">Ordered</button>
+
+        <button data-act="table" type="button">표 생성</button>
+        <button data-act="addColumnAfter" type="button">열 추가</button>
+        <button data-act="addRowAfter" type="button">행 추가</button>
+        <button data-act="deleteColumn" type="button">열 삭제</button>
+        <button data-act="deleteRow" type="button">행 삭제</button>
+        <button data-act="tableDelete" type="button">표 삭제</button>
+
+        <button data-act="undo" type="button">Undo</button>
+        <button data-act="redo" type="button">Redo</button>
+    </div>
+
+    <div id="editorWrap">
+        <div id="editor"></div>
+    </div>
+
+    <div class="bottom-actions">
+        <button id="saveBtn" type="button">수정 저장</button>
+        <button id="closeBtn" type="button">닫기</button>
+    </div>
+</div>
+
+<!-- ===== 프리셋 헤더표 템플릿(고정) ===== -->
+<template id="presetLeftTemplate">
+    <table class="preset-no-col-resize preset-left">
+        <tbody>
+        <tr><td>부서명</td><td></td></tr>
+        <tr><td>작성자</td><td></td></tr>
+        <tr><td>제목</td><td></td></tr>
+        <tr><td>작성일</td><td></td></tr>
+        </tbody>
+    </table>
+</template>
+
+<template id="presetRightTemplate">
+    <table class="preset-no-col-resize preset-right">
+        <tr>
+            <th>결재자</th><th>결재자1</th><th>결재자2</th><th>결재자3</th><th>결재자4</th><th>결재자5</th>
+        </tr>
+        <tr>
+            <th>서명</th>
+            <td></td><td></td><td></td><td></td><td></td>
+        </tr>
+    </table>
+</template>
+
+<script type="importmap">
+    {
+      "imports": {
+        "@tiptap/core": "https://esm.sh/@tiptap/core@2.11.2?target=es2020",
+        "@tiptap/starter-kit": "https://esm.sh/@tiptap/starter-kit@2.11.2?target=es2020",
+
+        "@tiptap/extension-table": "https://esm.sh/@tiptap/extension-table@2.11.2?target=es2020",
+        "@tiptap/extension-table-row": "https://esm.sh/@tiptap/extension-table-row@2.11.2?target=es2020",
+        "@tiptap/extension-table-cell": "https://esm.sh/@tiptap/extension-table-cell@2.11.2?target=es2020",
+        "@tiptap/extension-table-header": "https://esm.sh/@tiptap/extension-table-header@2.11.2?target=es2020",
+
+        "@tiptap/extension-underline": "https://esm.sh/@tiptap/extension-underline@2.11.2?target=es2020",
+        "@tiptap/extension-text-align": "https://esm.sh/@tiptap/extension-text-align@2.11.2?target=es2020",
+        "@tiptap/extension-text-style": "https://esm.sh/@tiptap/extension-text-style@2.11.2?target=es2020"
+      }
+    }
+</script>
+
+<script type="module" src="/js/document-form/update-form.js"></script>
+</body>
+</html>

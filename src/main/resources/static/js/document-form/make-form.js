@@ -1,7 +1,7 @@
 // static/src/make-form.js
 // TipTap/ProseMirror는 esm.sh로만 로드 + ProseMirror는 external로 고정(단일 인스턴스)
 // 저장: meta + uiState(상단표/라디오) + templateJson
-// 불러오기: make-form.html?id=... 로 들어오면 자동 복원
+// 불러오기: update-form.html(서버 주입 docfoNo)에서 자동 복원
 // 테이블 "행 높이" 드래그 리사이즈 + attrs(height)로 저장
 // 행/열 리사이즈 hover 커서 통일(row-resize / col-resize)
 // 새 표 생성 시 기본 열 폭(colwidth) 설정
@@ -9,24 +9,55 @@
 // preset-no-col-resize 테이블: 열 리사이즈(드래그/커서) 완전 금지 + 프리셋 좌/우 폭 기본값 적용
 // presetRightTemplate은 왼쪽 셀을 더 작게(LeftTemplate보다 작게) 고정 + 잠금 유지
 // FontSize: 드롭다운으로 글자크기 적용 + JSON 저장/복원 + 커서 이동 시 드롭다운 실시간 동기화
+//
+// ✅ ViewController(pathVariable) 기준
+// - 생성 화면: /form/new  (window.__DOCFO_NO__ = null)
+// - 수정 화면: /form/{docfoNo}/edit (window.__DOCFO_NO__ = <number>)
+// -> querystring(docfoNo/id) 기반 복원/저장 로직 제거, 서버 주입 값 사용
 
 const TIPTAP_V = '2.11.2'
 
-const PM_EXTERNAL = [
-    'prosemirror-model',
-    'prosemirror-state',
-    'prosemirror-view',
-    'prosemirror-transform',
-    'prosemirror-commands',
-    'prosemirror-keymap',
-    'prosemirror-history',
-    'prosemirror-schema-list',
-    'prosemirror-dropcursor',
-    'prosemirror-gapcursor',
-].join(',')
+/** fetch 재귀 방지용: 원본 fetch 고정 */
+const _fetch = window.fetch.bind(window)
 
-const cdn = (pkg) =>
-    `https://esm.sh/${pkg}@${TIPTAP_V}?bundle&target=es2020&external=${encodeURIComponent(PM_EXTERNAL)}`
+/** 토큰 키 고정 (accessToken) */
+function getAccessToken() {
+    return (localStorage.getItem('accessToken') || '').trim()
+}
+
+/** Authorization Bearer 자동 처리 */
+async function apiFetch(url, options = {}) {
+    const token = getAccessToken()
+
+    const headers = new Headers(options.headers || {})
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json')
+
+    // FormData면 content-type 자동
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
+    if (options.body && !isFormData && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
+    }
+
+    if (token) {
+        const hasBearer = /^Bearer\s+/i.test(token)
+        headers.set('Authorization', hasBearer ? token : `Bearer ${token}`)
+    }
+
+    return _fetch(url, { ...options, headers, credentials: 'same-origin' })
+}
+
+// ✅ ViewController에서 주입된 docfoNo 사용 (수정 화면)
+// - make-form(생성)에서는 null
+function getDocfoNoFromServerInjected() {
+    const v = window.__DOCFO_NO__
+    if (v === null || v === undefined) return null
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+}
+
+function markFormListDirty() {
+    try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
+}
 
 // 새 표 기본 열 폭(px)
 const DEFAULT_COL_WIDTH = 160
@@ -57,7 +88,6 @@ function deepClone(obj) {
 }
 
 const DEFAULT_TABLE_FONT_SIZE = '16px'
-
 
 function getEditorDefaultTextStyle() {
     // create-docform 화면에서는 CSS에 의존하지 않고, 기본 폰트/크기를 meta로 저장해 render에서 재현한다.
@@ -116,7 +146,6 @@ function escapeHtml(s) {
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;')
 }
-
 
 // ---------- document_form 통합 저장용 helpers ----------
 function getCategoriesFromRadios() {
@@ -378,38 +407,50 @@ function applyPresetTableDefaultsInDocument() {
 // ---------- boot ----------
 async function bootEditor() {
     const [
-        { Editor, Extension },
-        { StarterKit },
-        { Table },
-        { TableRow },
-        { TableCell },
-        { TableHeader },
-        { TextStyle },
-        { Color },
-        { Underline },
-        { TextAlign },
-        { FontFamily },
-        { Link },
+        core,
+        starterKit,
+        table,
+        tableRow,
+        tableCell,
+        tableHeader,
+        textStyle,
+        color,
+        underline,
+        textAlign,
+        fontFamily,
+        link,
+        pmState,
     ] = await Promise.all([
-        import(cdn('@tiptap/core')),
-        import(cdn('@tiptap/starter-kit')),
-        import(cdn('@tiptap/extension-table')),
-        import(cdn('@tiptap/extension-table-row')),
-        import(cdn('@tiptap/extension-table-cell')),
-        import(cdn('@tiptap/extension-table-header')),
-        import(cdn('@tiptap/extension-text-style')),
-        import(cdn('@tiptap/extension-color')),
-        import(cdn('@tiptap/extension-underline')),
-        import(cdn('@tiptap/extension-text-align')),
-        import(cdn('@tiptap/extension-font-family')),
-        import(cdn('@tiptap/extension-link')),
+        import('@tiptap/core'),
+        import('@tiptap/starter-kit'),
+        import('@tiptap/extension-table'),
+        import('@tiptap/extension-table-row'),
+        import('@tiptap/extension-table-cell'),
+        import('@tiptap/extension-table-header'),
+        import('@tiptap/extension-text-style'),
+        import('@tiptap/extension-color'),
+        import('@tiptap/extension-underline'),
+        import('@tiptap/extension-text-align'),
+        import('@tiptap/extension-font-family'),
+        import('@tiptap/extension-link'),
+        import('@tiptap/pm/state'),
     ])
 
-    // inputField 선택 상태 판별용 NodeSelection (importmap 경로 사용)
-    const { NodeSelection, TextSelection, Plugin } = await import('prosemirror-state')
+    const { Editor, Extension, Node, mergeAttributes } = core
+    const { StarterKit } = starterKit
+    const { Table } = table
+    const { TableRow } = tableRow
+    const { TableCell } = tableCell
+    const { TableHeader } = tableHeader
+    const { TextStyle } = textStyle
+    const { Color } = color
+    const { Underline } = underline
+    const { TextAlign } = textAlign
+    const { FontFamily } = fontFamily
+    const { Link } = link
 
-    // custom InputField node
-    const { Node, mergeAttributes } = await import(cdn('@tiptap/core'))
+    // NodeSelection / TextSelection import
+    const { Plugin, PluginKey, NodeSelection, TextSelection } = pmState
 
     const isInputFieldNodeSelection = (state) => {
         const sel = state.selection
@@ -485,7 +526,6 @@ async function bootEditor() {
             ]
         },
     })
-
 
     const InputField = Node.create({
         name: 'inputField',
@@ -602,40 +642,7 @@ async function bootEditor() {
         },
     })
 
-// 표 셀 편집 제한: "유효한 텍스트가 있는 셀"만 키입력/붙여넣기 차단
-    const isMeaninglessWhitespace = (str) => {
-        const s = (str ?? '').toString()
-        // ASCII 0~32 + NBSP(160) + ZWSP(8203) + BOM(65279)
-        for (let i = 0; i < s.length; i++) {
-            const c = s.charCodeAt(i)
-            if (c <= 32) continue
-            if (c === 160 || c === 8203 || c === 65279) continue
-            return false
-        }
-        return true
-    }
-
-    const cellHasMeaningfulText = (cellNode) => {
-        if (!cellNode) return false
-        // ProseMirror Node.content는 Fragment라 for..of가 안 될 수 있음 -> forEach 사용
-        cellNode.content?.forEach((child) => {
-            // noop - forEach only for iteration; result via closure
-        })
-        let found = false
-        cellNode.content?.forEach((n) => {
-            if (found) return
-            if (n.type?.name === 'paragraph') {
-                n.content?.forEach((pn) => {
-                    if (found) return
-                    if (pn.type?.name === 'text' && !isMeaninglessWhitespace(pn.text)) found = true
-                })
-            }
-        })
-        return found
-    }
-
-
-// tableCell/tableHeader에 editable 속성을 저장하기 위한 확장
+    // tableCell/tableHeader에 editable 속성을 저장하기 위한 확장
     const EditableTableCell = TableCell.extend({
         addAttributes() {
             return {
@@ -661,7 +668,6 @@ async function bootEditor() {
             }
         },
     })
-
 
     const SelectionExcludeInputField = Extension.create({
         name: 'selectionExcludeInputField',
@@ -751,7 +757,6 @@ async function bootEditor() {
         ],
         content: '',
 
-
         // inputField는 기본적으로 수정 가능
         // - locked=true인 inputField만 삭제/입력/붙여넣기를 차단
         editorProps: {
@@ -836,6 +841,7 @@ async function bootEditor() {
             },
         },
     })
+
     wireToolbar(editor)
     wireFontSizeDropdown(editor)
 
@@ -843,7 +849,7 @@ async function bootEditor() {
     enableColResizeHoverCursor(editor)
 
     wireSave(editor)
-    await restoreIfIdExists(editor)
+    await restoreIfDocfoNoExists(editor)
 
     applyPresetTableDefaultsInDocument()
     ensureDocEndsWithParagraph(editor)
@@ -861,48 +867,22 @@ function wireToolbar(editor) {
         const ch = editor.chain().focus()
 
         switch (act) {
-            case 'h1':
-                ch.toggleHeading({ level: 1 }).run()
-                break
-            case 'h2':
-                ch.toggleHeading({ level: 2 }).run()
-                break
-            case 'h3':
-                ch.toggleHeading({ level: 3 }).run()
-                break
-            case 'p':
-                ch.setParagraph().run()
-                break
+            case 'h1': ch.toggleHeading({ level: 1 }).run(); break
+            case 'h2': ch.toggleHeading({ level: 2 }).run(); break
+            case 'h3': ch.toggleHeading({ level: 3 }).run(); break
+            case 'p':  ch.setParagraph().run(); break
 
-            case 'bold':
-                ch.toggleBold().run()
-                break
-            case 'italic':
-                ch.toggleItalic().run()
-                break
-            case 'underline':
-                ch.toggleUnderline().run()
-                break
-            case 'strike':
-                ch.toggleStrike().run()
-                break
+            case 'bold':      ch.toggleBold().run(); break
+            case 'italic':    ch.toggleItalic().run(); break
+            case 'underline': ch.toggleUnderline().run(); break
+            case 'strike':    ch.toggleStrike().run(); break
 
-            case 'alignLeft':
-                ch.setTextAlign('left').run()
-                break
-            case 'alignCenter':
-                ch.setTextAlign('center').run()
-                break
-            case 'alignRight':
-                ch.setTextAlign('right').run()
-                break
+            case 'alignLeft':   ch.setTextAlign('left').run(); break
+            case 'alignCenter': ch.setTextAlign('center').run(); break
+            case 'alignRight':  ch.setTextAlign('right').run(); break
 
-            case 'bullet':
-                ch.toggleBulletList().run()
-                break
-            case 'ordered':
-                ch.toggleOrderedList().run()
-                break
+            case 'bullet': ch.toggleBulletList().run(); break
+            case 'ordered': ch.toggleOrderedList().run(); break
 
             case 'table': {
                 const rowsInput = window.prompt('행(rows) 개수를 입력하세요', '3')
@@ -937,45 +917,22 @@ function wireToolbar(editor) {
                 break
             }
 
-            case 'tableDelete':
-                ch.deleteTable().run()
+            case 'tableDelete': ch.deleteTable().run(); break
+            case 'addRowAfter': ch.addRowAfter().run(); break
+            case 'deleteRow': ch.deleteRow().run(); break
+            case 'addColumnAfter': ch.addColumnAfter().run(); break
+            case 'deleteColumn': ch.deleteColumn().run(); break
+
+            case 'inputField':
+                editor.chain().focus().insertContent({
+                    type: 'inputField',
+                    attrs: { value: '', locked: false, placeholder: '입력' },
+                }).run()
                 break
 
-            case 'addRowBefore':
-                ch.addRowBefore().run()
-                break
-            case 'deleteRow':
-                ch.deleteRow().run()
-                break
-
-            case 'addColumnAfter':
-                ch.addColumnAfter().run()
-                break
-            case 'deleteColumn':
-                ch.deleteColumn().run()
-                break
-
-            // 추가: 입력필드 삽입(마킹용)
-            case 'inputField': {
-                editor
-                    .chain()
-                    .focus()
-                    .insertContent({
-                        type: 'inputField',
-                        attrs: { value: '', locked: false, placeholder: '입력' },
-                    })
-                    .run()
-                break
-            }
-
-            case 'undo':
-                ch.undo().run()
-                break
-            case 'redo':
-                ch.redo().run()
-                break
-            default:
-                break
+            case 'undo': ch.undo().run(); break
+            case 'redo': ch.redo().run(); break
+            default: break
         }
     })
 }
@@ -1011,27 +968,7 @@ function syncFontSizeSelectFromEditor(editor) {
     fontSizeSelect.value = has ? num : ''
 }
 
-
-// 빈 셀에 inputField를 자동 주입하는 로직은 제거했습니다.
-
-
-function unlockAllInputFields(json) {
-    const cloned = deepClone(json)
-    const walk = (node) => {
-        if (!node || typeof node !== 'object') return
-        if (node.type === 'inputField') {
-            node.attrs = { ...(node.attrs || {}), locked: false }
-        }
-        const content = node.content
-        if (Array.isArray(content)) content.forEach(walk)
-    }
-    walk(cloned)
-    return cloned
-}
-
-// '문서 작성 단계'에서 입력을 허용할 영역을 템플릿 JSON에 표시
-// - tableCell/tableHeader 중 "의미 있는 텍스트가 없는 셀" => editable: true
-// - inputField => editable: true
+// 템플릿 JSON에 "작성 단계에서 입력 허용" 정책 표시
 function markEditablePolicyForTemplate(json) {
     const cloned = deepClone(json)
 
@@ -1078,22 +1015,16 @@ function wireSave(editor) {
         const docTitle = (elDocTitle?.value || '').trim()
 
         const rawJson = editor.getJSON()
-
         const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE)
+
         // 템플릿 편집(create-docform)에서는 잠금(locked) 저장 금지
         // 대신 '문서 작성 단계'에서 입력을 허용할 영역만 editable로 표시해 저장
         const templateJson = markEditablePolicyForTemplate(withTableFont)
 
-        const templateTypes = [...elTypeRadios.querySelectorAll('.radio-item')]
-            .map((item) => item.querySelector('.radio-value-input')?.value?.trim())
-            .filter(Boolean)
-
-        const presetTables = getPresetTablesState()
-
         const categories = getCategoriesFromRadios()
 
         // TipTap JSON/HTML (본문)
-        const cnttJson = JSON.stringify(templateJson)
+        const cnttJson = JSON.stringify(templateJson) // ✅ editor 내용만 저장
         const bodyHtml = editor.getHTML()
 
         // 헤더표(고정 템플릿) + 전체 HTML 조립
@@ -1106,19 +1037,17 @@ function wireSave(editor) {
         })
 
         const payload = {
-            comId: getComId(),
-            writerId: getWriterId(),
             docfoName: docTitle,
-            cnttHtml,
             cnttJson,
+            cnttHtml,
             categories,
         }
 
-        const isEdit = Boolean(new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id'))
-        const targetId = new URLSearchParams(location.search).get('docfoNo') || new URLSearchParams(location.search).get('id')
-        const url = isEdit ? `/api/forms/${encodeURIComponent(targetId)}` : '/api/forms'
+        const docfoNo = getDocfoNoFromServerInjected()
+        const isEdit = Boolean(docfoNo)
+        const url = isEdit ? `/api/v1/forms/${encodeURIComponent(docfoNo)}` : '/api/v1/forms'
 
-        const res = await fetch(url, {
+        const res = await apiFetch(url, {
             method: isEdit ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -1130,6 +1059,8 @@ function wireSave(editor) {
             return
         }
 
+        // ✅ 목록 자동 갱신 신호
+        markFormListDirty()
         window.close()
     })
 }
@@ -1371,13 +1302,12 @@ function focusEndParagraphAndAlignLeft(editor) {
     editor.chain().focus().setTextAlign('left').run()
 }
 
-// ---------- restore ----------
-async function restoreIfIdExists(editor) {
-    const qs = new URLSearchParams(location.search)
-    const id = qs.get('docfoNo') || qs.get('id')
-    if (!id) return
+// ---------- restore (ViewController path 기반) ----------
+async function restoreIfDocfoNoExists(editor) {
+    const docfoNo = getDocfoNoFromServerInjected()
+    if (!docfoNo) return
 
-    const res = await fetch(`/api/forms/${encodeURIComponent(id)}`, {
+    const res = await apiFetch(`/api/v1/forms/${encodeURIComponent(docfoNo)}`, {
         headers: { Accept: 'application/json' },
     })
     if (!res.ok) {

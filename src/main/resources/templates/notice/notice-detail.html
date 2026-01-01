@@ -1,474 +1,814 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>공지 내용 상세</title>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layout">
+
+<th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <style>
-        :root{
-            --bg: #f6f7fb;
-            --card: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --line: rgba(17, 24, 39, 0.08);
-            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-            --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
+        /* ❌ 기존 notice-detail의 :root, body는 layout이 담당하므로 제거 권장 (겹치면 전체 레이아웃 덮임)
+           필요한 스타일만(컨텐츠 영역 클래스들) 유지 */
 
-            --primary: #3b82f6;      /* blue */
-            --primary2: #2563eb;
-            --danger: #ef4444;
-            --danger2: #dc2626;
-            --chip: rgba(59, 130, 246, 0.10);
-            --success: #10b981;
-            --warn: #f59e0b;
+        *{ box-sizing:border-box; }
+
+        .subbar-main{
+            flex: 1;
+            min-width: 0;
+            padding: 24px; /* meeting 톤 */
         }
 
-        * { box-sizing: border-box; }
-
-        body{
-            margin: 0;
-            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-            var(--bg);
-            font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color: var(--text);
+        .notice-detail-wrap{
+            width: 100%;
+            max-width: none;   /* ✅ 제한 해제 */
+            margin: 0;         /* ✅ auto 제거 */
+            padding: 0;        /* ✅ main이 padding 갖고 있음 */
         }
 
-        /* 컨테이너: 가운데 카드 느낌 */
-        .container{
-            max-width: 920px;
-            margin: 64px auto;
-            padding: 0;
-            background: transparent;
-            box-shadow: none;
-            border: none;
+
+        h2{
+            margin: 0 0 14px;
+            font-weight: 900;
+            letter-spacing: -0.3px;
         }
 
-        /* 상단 타이틀 영역(헤더 카드) */
-        .notice-detail{
-            background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(255,255,255,0));
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow);
+        .card{
+            background: var(--white, #fff);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
             overflow: hidden;
+            margin-bottom: 14px;
         }
 
-        /* 실제 정보 카드 */
-        .notice-info{
-            background: var(--card);
-            padding: 28px 28px 22px;
-            border-radius: 18px;
+        .summary-table{
+            width:100%;
+            border-collapse: collapse;
+            table-layout: fixed;
         }
-
-        /* 제목/내용 영역 정리 */
-        .notice-info p{
-            margin: 0;
-            padding: 10px 0;
-            border-bottom: 1px dashed rgba(17,24,39,.12);
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            gap: 14px;
-            align-items: start;
+        .summary-table th,
+        .summary-table td{
+            border-top: 1px solid rgba(17,24,39,.08);
+            padding: 14px 14px;
+            vertical-align: middle;
         }
-
-        .notice-info p strong{
-            color: var(--muted);
-            font-weight: 700;
+        .summary-table tr:first-child th,
+        .summary-table tr:first-child td{ border-top: 0; }
+        .summary-table th{
+            width: 160px;
+            background: rgba(17,24,39,.02);
+            font-weight: 900;
+            color: #111827;
+            text-align: center;
             letter-spacing: -0.2px;
         }
-
-        #noticeTitle{
-            font-size: 1.25rem;
+        .summary-table td{
             font-weight: 800;
-            color: var(--text);
+            color: var(--text, #1f2937);
+        }
+
+        .badge{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 900;
+            border: 1px solid transparent;
+            line-height: 1;
+        }
+        .badge.success{
+            background: rgba(16,185,129,.12);
+            color: var(--success, #10b981);
+            border-color: rgba(16,185,129,.30);
+        }
+        .badge.muted{
+            background: rgba(107,114,128,.12);
+            color: var(--muted, #6b7280);
+            border-color: rgba(107,114,128,.30);
+        }
+
+        .period-inline{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex-wrap: wrap;
+            color: var(--muted, #6b7280);
+            font-weight: 900;
+        }
+        .period-inline .sep{ color: var(--muted, #6b7280); }
+
+        .contents-card{
+            background: var(--white, #fff);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+        .contents-body{
+            padding: 18px;
+            background:#fff;
         }
 
         #noticeDescription{
-            margin: 0;
-            padding: 12px 0;
-            line-height: 1.7;
+            white-space: normal;
+            line-height: 1.75;
+        }
+
+        #noticeDescription .ProseMirror{
+            outline:none;
             white-space: pre-wrap;
+            line-height: 1.75;
         }
 
-        /* 내용 줄은 기존에 <p><strong>내용:</strong><p id="noticeDescription"> 구조가 살짝 깨져있어서
-           #noticeDescription을 카드처럼 보이게 강화 */
-        #noticeDescription{
-            background: rgba(17,24,39,.03);
-            border: 1px solid rgba(17,24,39,.06);
-            border-radius: 12px;
-            padding: 14px 14px;
+        #noticeDescription h2{
+            margin: 12px 0 8px;
+            font-size: 1.25rem;
+            font-weight: 900;
         }
-
-        /* 메타 영역을 2열로 보이게 */
-        .notice-info{
+        #noticeDescription p{ margin: 8px 0; }
+        #noticeDescription ul,
+        #noticeDescription ol{ padding-left: 22px; margin: 8px 0; }
+        #noticeDescription blockquote{
+            margin: 10px 0;
+            padding: 10px 12px;
+            border-left: 4px solid rgba(59,130,246,.35);
+            background: rgba(59,130,246,.06);
+            border-radius: 10px;
+        }
+        #noticeDescription pre{
+            background: rgba(17,24,39,.06);
+            padding: 12px;
+            border-radius: 10px;
+            overflow:auto;
+        }
+        #noticeDescription code{
+            background: rgba(17,24,39,.06);
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 800;
+        }
+        #noticeDescription a{
+            color: var(--primary2, #2563eb);
+            font-weight: 900;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        #noticeDescription table{
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            margin: 10px 0;
+        }
+        #noticeDescription th,
+        #noticeDescription td{
+            border: 1px solid rgba(17,24,39,.18);
+            padding: 10px;
+            vertical-align: top;
+            word-break: break-word;
             position: relative;
         }
-        .notice-info::after{
+        #noticeDescription th{
+            background: rgba(17,24,39,.03);
+            font-weight: 900;
+            color: var(--muted, #6b7280);
+        }
+        #noticeDescription .selectedCell:after{
             content:"";
-            display:block;
-            margin-top: 14px;
+            position:absolute;
+            inset:0;
+            background: rgba(59,130,246,.08);
+            pointer-events:none;
         }
 
-        /* 팝업 여부 배지 느낌 */
-        #noticePopup{
+        .writer-wrap{
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-weight: 800;
-            font-size: .9rem;
-            border: 1px solid rgba(17,24,39,.10);
-            background: rgba(17,24,39,.03);
+            font-weight: 900;
         }
-
-        /* JS 값이 true/false로 그대로 보이면 아쉬우니,
-           true면 초록/false면 회색으로 보이게 하려면 JS에서 텍스트를 Y/N로 바꾸면 베스트.
-           CSS만으로도 기본 배지 제공 */
-        .notice-info p:last-child{ border-bottom: none; }
-
-        /* 탭 버튼 영역 */
-        .tab-buttons{
-            margin-top: 18px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .tab-btn{
-            border: 1px solid var(--line);
-            background: var(--card);
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-weight: 800;
-            color: var(--muted);
+        .writer-btn{
+            appearance:none;
+            border: 0;
+            background: transparent;
+            padding: 0;
             cursor: pointer;
-            box-shadow: 0 6px 14px rgba(17,24,39,.04);
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+            color: var(--primary2, #2563eb);
+            font-weight: 900;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .writer-btn:focus{ outline: none; }
+
+        .tooltip-bubble{
+            position: absolute;
+            z-index: 50;
+            min-width: 220px;
+            max-width: 320px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #111827;
+            color: #fff;
+            box-shadow: 0 16px 36px rgba(0,0,0,.18);
+            border: 1px solid rgba(255,255,255,.12);
+            transform: translateY(6px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .15s ease, transform .15s ease;
+        }
+        .tooltip-bubble::before{
+            content:"";
+            position:absolute;
+            top: -7px;
+            left: 18px;
+            width: 12px;
+            height: 12px;
+            background: #111827;
+            transform: rotate(45deg);
+            border-left: 1px solid rgba(255,255,255,.12);
+            border-top: 1px solid rgba(255,255,255,.12);
+        }
+        .tooltip-title{
+            font-weight: 1000;
+            margin-bottom: 6px;
+            letter-spacing: -0.2px;
+        }
+        .tooltip-row{
+            display:flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 13px;
+            color: rgba(255,255,255,.92);
+        }
+        .tooltip-row span:first-child{ color: rgba(255,255,255,.70); }
+
+        .tooltip-host{
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-host.show .tooltip-bubble{
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
         }
 
-        .tab-btn.active{
-            background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(255,255,255,0));
-            color: var(--text);
-            border-color: rgba(59,130,246,.25);
+        .meta-inline{
+            display:flex;
+            align-items:center;
+            gap: 14px;
+            flex-wrap: wrap;
+            color: var(--muted, #6b7280);
+            font-weight: 900;
+        }
+        .meta-inline .meta-item{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+        }
+        .meta-inline .k{
+            color: #111827;
+            opacity: .65;
+            font-weight: 900;
+        }
+        .meta-inline .v{
+            color: #111827;
+            font-weight: 1000;
         }
 
-        .tab-btn:hover{
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(17,24,39,.08);
-        }
-
-        /* 첨부파일 카드 */
-        #attach.tab-content{
-            margin-top: 12px;
-            background: var(--card);
-            border-radius: 16px;
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
+        .attach-card{
+            background: var(--white, #fff);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(17,24,39,.06);
             padding: 14px;
+            margin-bottom: 14px;
+        }
+        .attach-head{
+            display:flex;
+            align-items:center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .attach-title{
+            margin:0;
+            font-size: 1.05rem;
+            font-weight: 900;
+            letter-spacing: -0.2px;
         }
 
-        /* 첨부파일 테이블 */
         #attachList{
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             overflow: hidden;
-            border-radius: 12px;
+            border-radius: 10px;
         }
-
         #attachList th{
-            text-align: left;
+            text-align:left;
             font-size: .9rem;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             background: rgba(17,24,39,.03);
-            padding: 12px 12px;
+            padding: 12px;
             border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 800;
+            font-weight: 900;
         }
-
         #attachList td{
-            padding: 12px 12px;
+            padding: 12px;
             border-bottom: 1px solid rgba(17,24,39,.06);
             font-size: .95rem;
-            color: var(--text);
+            color: var(--text, #1f2937);
+            font-weight: 700;
         }
-
-        #attachList tr:hover td{
-            background: rgba(59,130,246,.05);
-        }
-
-        /* 페이지네이션 */
-        #pagination{
-            margin-top: 12px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        #pagination button{
-            border: 1px solid rgba(17,24,39,.10);
-            background: #fff;
-            padding: 8px 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 800;
-            color: var(--muted);
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-        }
-
-        #pagination button:hover{
-            transform: translateY(-1px);
-            border-color: rgba(59,130,246,.35);
-            background: rgba(59,130,246,.06);
-        }
-
-        #pagination button.active{
-            background: rgba(59,130,246,.12);
-            border-color: rgba(59,130,246,.40);
-            color: var(--text);
-        }
-
-        /* 하단 버튼 그룹 */
-        .mt-4{
-            margin-top: 16px !important;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
+        #attachList tr:hover td{ background: rgba(59,130,246,.05); }
 
         .btn{
-            appearance: none;
-            border: 1px solid rgba(17,24,39,.10);
-            background: var(--card);
-            padding: 11px 14px;
-            border-radius: 12px;
+            appearance:none;
+            border: 1px solid rgba(17,24,39,.12);
+            background: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
             font-weight: 900;
-            color: var(--text);
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(17,24,39,.06);
+            color: var(--text, #1f2937);
+            text-decoration:none;
+            cursor:pointer;
+            box-shadow: 0 8px 18px rgba(17,24,39,.06);
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
         }
-
         .btn:hover{
             transform: translateY(-1px);
-            box-shadow: var(--shadow2);
-            border-color: rgba(59,130,246,.25);
+            box-shadow: 0 12px 24px rgba(17,24,39,.10);
+            border-color: rgba(59,130,246,.28);
             background: rgba(59,130,246,.05);
         }
-
-        /* 수정/삭제 강조 */
-        #update-btn.btn{
-            background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
+        .btn-primary{
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             border-color: rgba(59,130,246,.25);
+            color:#fff;
+            box-shadow: 0 12px 24px rgba(59,130,246,.28);
         }
-
-        #delete-btn.btn{
-            background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
-            border-color: rgba(239,68,68,.25);
-        }
-
-        #delete-btn.btn:hover{
-            border-color: rgba(239,68,68,.40);
-            background: rgba(239,68,68,.06);
-        }
-
-        /* 홈 링크 */
-        .home-link{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 18px;
-            color: var(--primary2);
-            text-decoration: none;
-            font-weight: 900;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(59,130,246,.18);
-            background: rgba(59,130,246,.06);
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-        }
-
-        .home-link:hover{
-            transform: translateY(-1px);
+        .btn-primary:hover{
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             border-color: rgba(59,130,246,.35);
-            background: rgba(59,130,246,.10);
+        }
+        .btn-danger{
+            background: linear-gradient(135deg, rgba(220,38,38,.14), rgba(255,255,255,0));
+            border-color: rgba(220,38,38,.25);
+            color: #991b1b;
+        }
+        .btn-danger:hover{
+            background: rgba(220,38,38,.06);
+            border-color: rgba(220,38,38,.40);
+        }
+        .btn-sm{
+            padding: 8px 10px;
+            font-weight: 900;
+            border-radius: 8px;
+            font-size: 12px;
+            box-shadow: 0 6px 14px rgba(17,24,39,.05);
         }
 
+        .actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            flex-wrap:wrap;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 720px){
+            .summary-table th{ width: 110px; }
+            .tooltip-bubble{ left: 0 !important; right: auto !important; }
+        }
     </style>
-</head>
-<body>
-<div class="header">
-    <!----
-    <th:block th:replace="~{common/header :: header}"/>
-    ---->
-</div>
+</th:block>
 
-<div class="container">
-    <h2>공지 사항 상세</h2>
-    <div class="notice-detail">
-        <div class="notice-info">
-            <p><strong>제 목:</strong> <span id="noticeTitle"></span></p>
-            <p><strong>내용:</strong> <span id="noticeDescription"></span></p>
-            <p><strong>팝업여부:</strong> <span id="noticePopup"></span></p>
-            <p><strong>팝업시작일:</strong> <span id="noticeStarted"></span></p>
-            <p><strong>팝업종료일:</strong> <span id="noticeEnded"></span></p>
-            <p><strong>조회건수:</strong> <span id="noticeRating"></span></p>
-            <p><strong>작성자:</strong> <span id="noticeWriter"></span></p>
-            <p><strong>등록일:</strong> <span id="noticeCreated"></span></p>
-            <p><strong>변경일:</strong> <span id="noticeUpdated"></span></p>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- ✅ notice-list와 동일하게 게시판 서브바 도킹 -->
+        <div th:replace="~{sidebar/board-sidebar :: boardSidebar('notice')}"></div>
+        <main class="subbar-main">
+        <!-- ✅ 상세 본문 -->
+        <div class="notice-detail-wrap">
+            <h2>공지사항 상세</h2>
+
+            <div class="card">
+                <table class="summary-table">
+                    <tr>
+                        <th>제목</th>
+                        <td><span id="noticeTitle"></span></td>
+                    </tr>
+                    <tr>
+                        <th>팝업여부</th>
+                        <td><span id="noticePopup"></span></td>
+                    </tr>
+                    <tr>
+                        <th>팝업기간</th>
+                        <td>
+                            <div class="period-inline">
+                                <span id="noticeStarted">-</span>
+                                <span class="sep">~</span>
+                                <span id="noticeEnded">-</span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="contents-card">
+                <div class="contents-body">
+                    <div id="noticeDescription"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <table class="summary-table">
+                    <tr>
+                        <th>작성자</th>
+                        <td>
+                          <span class="writer-wrap">
+                            <span class="tooltip-host" id="writerTooltipHost">
+                              <button type="button" class="writer-btn" id="noticeWriterBtn">
+                                <span id="noticeWriter">-</span>
+                              </button>
+
+                              <div class="tooltip-bubble" id="writerTooltip">
+                                <div class="tooltip-title">작성자 정보</div>
+                                <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
+                                <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
+                              </div>
+                            </span>
+                          </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>정보</th>
+                        <td>
+                            <div class="meta-inline">
+                              <span class="meta-item">
+                                <span class="k">등록일</span><span class="v" id="noticeCreated">-</span>
+                              </span>
+                                <span class="meta-item">
+                                <span class="k">변경일</span><span class="v" id="noticeUpdated">-</span>
+                              </span>
+                                <span class="meta-item">
+                                <span class="k">조회</span><span class="v" id="noticeRating">-</span>
+                              </span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="attach-card">
+                <div class="attach-head">
+                    <h3 class="attach-title">첨부 파일</h3>
+                </div>
+                <table id="attachList"></table>
+            </div>
+
+            <div class="actions">
+                <a href="/notice/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
+                <button id="update-btn" class="btn btn-primary" type="button"><i class="fa-solid fa-pen"></i> 수정</button>
+                <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteNotice()"><i class="fa-solid fa-trash"></i> 삭제</button>
+            </div>
         </div>
+        </main>
     </div>
-
-    <div id="placeFavorite" style="margin-top: 10px; text-align: left;"></div>
-
-    <div class="tab-buttons">
-        <button class="tab-btn active" data-target="review">첨부 파일</button>
-    </div>
-
-    <div id="attach" class="tab-content active">
-        <table id="attachList"></table>
-        <div id="pagination"></div>
-    </div>
-
-    <div class="mt-4">
-        <a href="/notice/list" class="btn">목록으로</a>
-        <button id="update-btn" class="btn ms-2">수정하기</button>
-
-        <button id="delete-btn" class="btn ms-2" onclick="deleteNotice()">삭제하기</button>
-    </div>
-
-    <a href="/main" class="home-link">← 홈으로 돌아가기</a>
 </div>
 
+<th:block layout:fragment="pageScripts">
+    <!-- ✅ 기존에 head에 있던 jQuery 포함(생략 X) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<script>
-    const noticeNo = [[${noticeNo}]];
+    <!-- ✅ TipTap viewer (원본 그대로) -->
+    <script type="module">
+        import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+        import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+        import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+        import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+        import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
+        import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
+        import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
+        import TableCell from "https://esm.sh/@tiptap/extension-table-cell@2.11.5";
 
-    async function loadPlaceDetail() {
-        try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/notice/${noticeNo}`,{
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        let viewer = null;
+
+        function ensureViewer(){
+            if (viewer) return viewer;
+            const host = document.querySelector("#noticeDescription");
+            viewer = new Editor({
+                element: host,
+                editable: false,
+                extensions: [
+                    StarterKit,
+                    Underline,
+                    TextAlign.configure({ types: ["heading","paragraph"] }),
+                    Table.configure({ resizable: true }),
+                    TableRow, TableHeader, TableCell,
+                ],
+                content: { type:"doc", content:[{ type:"paragraph" }] },
+            });
+            return viewer;
+        }
+
+        function isProbablyJson(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            if (!(s.startsWith("{") || s.startsWith("["))) return false;
+            try{
+                const obj = JSON.parse(s);
+                return !!obj && typeof obj === "object" && (obj.type === "doc" || obj.content);
+            }catch{ return false; }
+        }
+
+        function isProbablyHtml(str){
+            if (typeof str !== "string") return false;
+            const s = str.trim();
+            if (!s) return false;
+            return /<\/?[a-z][\s\S]*>/i.test(s);
+        }
+
+        function escapeHtml(str){
+            return String(str ?? "")
+                .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+                .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+        }
+
+        window.renderNoticeContentsAuto = (contents)=>{
+            const host = document.querySelector("#noticeDescription");
+
+            if (contents == null) {
+                host.innerHTML = "<p>-</p>";
+                return;
+            }
+
+            if (typeof contents === "object") {
+                const ed = ensureViewer();
+                ed.commands.setContent(contents);
+                return;
+            }
+
+            const raw = String(contents);
+
+            if (isProbablyJson(raw)) {
+                const ed = ensureViewer();
+                ed.commands.setContent(JSON.parse(raw));
+                return;
+            }
+
+            if (isProbablyHtml(raw)) {
+                if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
+                host.innerHTML = raw; // ❗ 서버 sanitize 권장
+                return;
+            }
+
+            if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
+            host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`;
+        };
+    </script>
+
+    <!-- ✅ 기존 script(원본 그대로) -->
+    <script>
+        const noticeNo = [[${noticeNo}]];
+        const API_BASE = "http://localhost:8090";
+
+        function setupWriterTooltip() {
+            const host = document.getElementById("writerTooltipHost");
+            const btn = document.getElementById("noticeWriterBtn");
+
+            function show() { host.classList.add("show"); }
+            function hide() { host.classList.remove("show"); }
+            function toggle() { host.classList.toggle("show"); }
+
+            host.addEventListener("mouseenter", show);
+            host.addEventListener("mouseleave", hide);
+
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggle();
             });
 
-            const result = await response.json();
+            document.addEventListener("click", (e) => {
+                if (!host.contains(e.target)) hide();
+            });
 
-            if (result.status === 200 && result.data) {
-                const notice = result.data;
-                $('#noticeTitle').text(notice.title);
-                $('#noticeDescription').text(notice.contents);
-                $('#noticePopup').text(notice.isPopup);
-                $('#noticeStarted').text(notice.startedAt);
-                $('#noticeEnded').text(notice.endedAt);
-                $('#noticeRating').text(notice.rating);
-                $('#noticeWriter').text(notice.empId);
-                $('#noticeCreated').text(notice.createdAt);
-                $('#noticeUpdated').text(notice.updatedAt);
-
-                initAttach();
-            }
-        } catch (error) {
-            console.error('Error loading place detail:', error);
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") hide();
+            });
         }
-    }
 
-    // 수정 버튼 클릭 시 화면 이동
-    document.getElementById('update-btn').onclick = () => {
-        location.href = `/notice/update/${noticeNo}`;
-    };
-
-    async function initAttach() {
-        try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`http://localhost:8090/api/v1/notice/`,{
+        async function loadPlaceDetail(){
+            try{
+                const response = await fetch(`${API_BASE}/api/v1/notice/${noticeNo}`, {
                     method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                    credentials: "include",
+                    headers: { 'Content-Type': 'application/json' }
                 });
-            const result = await response.json();
 
-            const attachList = $('#attachList').empty();
+                const result = await response.json();
 
-            if (result.status === 200 && result.data?.data?.length) {
-                const attachs = result.data.data;
-                const pageInfo = result.data.pageInfo;
+                if (result.status === 200 && result.data) {
+                    const notice = result.data;
 
-                attachList.append(`
-                    <tr><th>파일명</th><th>내용</th><th>작성자</th><th>첨부일자</th></tr>
-                `);
+                    $('#noticeTitle').text(notice.title ?? "-");
 
-                attachs.forEach(r => {
+                    if (window.renderNoticeContentsAuto) window.renderNoticeContentsAuto(notice.contents);
+                    else $('#noticeDescription').text(notice.contents ?? "");
+
+                    const isPopup = notice.isPopup === true || notice.isPopup === 'true';
+                    $('#noticePopup').html(
+                        isPopup ? `<span class="badge success">사용</span>` : `<span class="badge muted">미사용</span>`
+                    );
+
+                    $('#noticeStarted').text(notice.startedAt ? notice.startedAt.substring(0,10) : "-");
+                    $('#noticeEnded').text(notice.endedAt ? notice.endedAt.substring(0,10) : "-");
+
+                    $('#noticeWriter').text(notice.empName ?? "-");
+                    $('#noticeWriterId').text(notice.empId ?? "-");
+                    $('#noticeDepart').text(notice.depName ?? "-");
+
+                    $('#noticeCreated').text(notice.createdAt ? notice.createdAt.substring(0,10) : "-");
+                    $('#noticeUpdated').text(notice.updatedAt ? notice.updatedAt.substring(0,10) : "-");
+                    $('#noticeRating').text(notice.rating ?? "-");
+
+                    initAttach();
+                    setupWriterTooltip();
+                }
+            }catch(e){
+                console.error(e);
+                alert("상세 로딩 중 오류가 발생했습니다.");
+            }
+        }
+
+        document.getElementById('update-btn').onclick = () => {
+            location.href = `/notice/update/${noticeNo}`;
+        };
+
+        function unwrapMaybeResponseDto(obj) {
+            if (obj && typeof obj === "object" && "data" in obj) return obj.data;
+            return obj;
+        }
+
+        async function initAttach(){
+            try{
+                const response = await fetch(`${API_BASE}/api/v1/attachments?domain=NOTICE&entityId=${noticeNo}`, {
+                    method:'GET',
+                    credentials:"include",
+                    headers:{ 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                const attachList = $('#attachList').empty();
+
+                if (result.status === 200 && result.data?.length) {
+                    const attachs = result.data;
 
                     attachList.append(`
-                        <tr>
-                            <td>${r.title}</td>
-                            <td>${r.content}</td>
-                            <td>${r.writerEmail}</td>
-
-                        </tr>
+                      <tr>
+                        <th style="width:90px;">일련번호</th>
+                        <th>파일명</th>
+                        <th style="width:120px;">size</th>
+                        <th style="width:110px;">미리보기</th>
+                        <th style="width:110px;">다운로드</th>
+                      </tr>
                     `);
+
+                    attachs.forEach((r, index) => {
+                        attachList.append(`
+                          <tr>
+                            <td>${index+1}</td>
+                            <td>${r.originalName}</td>
+                            <td>${formatFileSize(r.size)}</td>
+                            <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+                            <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+                          </tr>
+                        `);
+                    });
+
+                    document.querySelectorAll("button[data-down]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-down"));
+                            await downAttachment(attachmentId);
+                        });
+                    });
+
+                    document.querySelectorAll("button[data-view]").forEach(btn => {
+                        btn.addEventListener("click", async (e) => {
+                            const attachmentId = Number(e.currentTarget.getAttribute("data-view"));
+                            await viewAttachment(attachmentId);
+                        });
+                    });
+
+                } else {
+                    attachList.html('<tr><td colspan="5">관련 첨부파일이 없습니다.</td></tr>');
+                }
+            }catch(e){
+                console.error(e);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes == null || isNaN(bytes)) return "-";
+            if (bytes < 1024) return `${bytes} B`;
+            const kb = bytes / 1024;
+            if (kb < 1024) return `${kb.toFixed(1)} KB`;
+            const mb = kb / 1024;
+            return `${mb.toFixed(1)} MB`;
+        }
+
+        async function fetchDownloadUrl(attachmentId) {
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/download-url`, {
+                method:"GET",
+                credentials:"include",
+                headers:{ 'Accept': 'application/json' }
+            });
+            if (!res.ok) throw new Error("download-url 호출 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const url = data.url;
+            if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
+            return { url, meta: data };
+        }
+
+        async function fetchPreviewUrl(attachmentId) {
+            const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}/preview-url`, {
+                method:"GET",
+                credentials:"include",
+                headers:{ 'Accept': 'application/json' }
+            });
+            if (!res.ok) throw new Error("preview-url 호출 실패: " + await res.text());
+            const raw = await res.json();
+            const data = unwrapMaybeResponseDto(raw);
+            const url = data.url;
+            if (typeof url !== "string" || !url.startsWith("http")) throw new Error("응답에 url이 없습니다.");
+            return { url, meta: data };
+        }
+
+        async function downAttachment(attachmentId){
+            if (!attachmentId) return;
+            if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+
+            try{
+                const { url, meta } = await fetchDownloadUrl(attachmentId);
+                const a = document.createElement("a");
+                a.href = url;
+                a.rel = "noopener";
+                a.download = meta.originalName || "";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }catch(e){
+                console.error(e);
+                alert("다운로드 중 오류: " + (e?.message ?? e));
+            }
+        }
+
+        async function viewAttachment(attachmentId){
+            if (!attachmentId) return;
+            try{
+                const { url } = await fetchPreviewUrl(attachmentId);
+                window.open(url, "_blank", "noopener");
+            }catch(e){
+                console.error(e);
+                alert("미리보기 중 오류: " + (e?.message ?? e));
+            }
+        }
+
+        async function deleteNotice(){
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            try{
+                const res = await fetch(`/api/v1/notice/${noticeNo}`, {
+                    method:"DELETE",
+                    credentials:"include"
                 });
 
-                renderPagination(pageInfo);
-            } else {
-                reviewList.html('<tr><td colspan="4">관련 리뷰가 없습니다.</td></tr>');
-            }
-        } catch (error) {
-            console.error('Failed to load reviews:', error);
-        }
-    }
-
-    async function deleteNotice() {
-        if (!confirm("정말 삭제하시겠습니까?")) return;
-        console.log(noticeNo);
-        try {
-            const accessToken = localStorage.getItem("accessToken");
-            const response = await fetch(`/api/v1/notice/${noticeNo}`, {
-                method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`
+                if (res.ok) {
+                    alert("공지사항이 삭제되었습니다.");
+                    window.location.href = "/notice/list";
+                } else {
+                    alert("삭제 실패했습니다.");
                 }
-            });
-
-            console.log(response);
-            const result = await response.json();
-
-            if (response.ok) {
-                alert("공지사항이 삭제되었습니다.");
-                window.location.href = "/notice/list";
-            } else {
-                alert(result.message || '공지사항 삭제 실패');
+            }catch(e){
+                console.error(e);
+                alert("삭제 중 오류 발생");
             }
-        } catch (e) {
-            console.error(e);
-            alert("삭제 중 오류 발생");
-        }
-    }
-
-    function renderPagination(pageInfo) {
-        if (!pageInfo) return;
-        const pagination = $('#pagination').empty();
-
-        if (pageInfo.pageNo > 1)
-            pagination.append(`<button onclick="initReview(${pageInfo.pageNo - 1})">이전</button>`);
-
-        for (let i = pageInfo.startPage; i <= pageInfo.endPage; i++) {
-            pagination.append(`<button class="${i === pageInfo.pageNo ? 'active' : ''}" onclick="initReview(${i})">${i}</button>`);
         }
 
-        if (pageInfo.pageNo < pageInfo.maxPage)
-            pagination.append(`<button onclick="initReview(${pageInfo.pageNo + 1})">다음</button>`);
-    }
+        document.addEventListener('DOMContentLoaded', loadPlaceDetail);
+    </script>
+</th:block>
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadPlaceDetail();
-
-    });
-</script>
-
-</body>
 </html>
