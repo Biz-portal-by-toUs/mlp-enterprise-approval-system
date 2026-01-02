@@ -237,19 +237,25 @@ CREATE TABLE IF NOT EXISTS attach_box (
 CREATE TABLE IF NOT EXISTS document (
                                         doc_no        BIGINT        NOT NULL AUTO_INCREMENT,
                                         com_id        VARCHAR(3)    NOT NULL,
-                                        doc_id        VARCHAR(14)   NULL,
+                                        doc_id        VARCHAR(14)   NULL unique,
                                         docfo_cat_no  BIGINT        NOT NULL,
                                         docfo_no      BIGINT        NOT NULL,
                                         title         VARCHAR(100)  NOT NULL,
-                                        content       mediumTEXT          not NULL,
+                                        content       mediumTEXT    not NULL,
                                         cntt_html     mediumtext    NULL,
                                         emp_id        VARCHAR(7)    NOT NULL,
                                         ai_summ       TEXT          NULL,
                                         temp          BOOLEAN       NOT NULL DEFAULT FALSE,
                                         submitted_at  TIMESTAMP      NULL,
+                                        doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
+
                                         created_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
                                         updated_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                        doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
+
+                                        is_resubmitted boolean      null default false,
+                                        resubmitted_by_doc_no  bigint null,
+                                        resubmitted_for_doc_no bigint null,
+                                        atte_no        bigint        null,
 
                                         CONSTRAINT pk_document PRIMARY KEY (doc_no),
                                         CONSTRAINT uk_document_doc_id UNIQUE (doc_id),
@@ -269,7 +275,20 @@ CREATE TABLE IF NOT EXISTS document (
 
                                         CONSTRAINT fk_document_form_cat
                                             FOREIGN KEY (docfo_cat_no) REFERENCES document_form_category(docfo_cat_no)
-                                                ON UPDATE CASCADE
+                                                ON UPDATE CASCADE,
+
+                                        CONSTRAINT fk_document_resubmitted_by
+                                            FOREIGN KEY (resubmitted_by_doc_no) REFERENCES document(doc_no)
+                                                ON UPDATE CASCADE ON DELETE SET NULL,
+
+                                        CONSTRAINT fk_document_resubmitted_for
+                                            FOREIGN KEY (resubmitted_for_doc_no) REFERENCES document(doc_no)
+                                                ON UPDATE CASCADE ON DELETE SET NULL,
+
+                                        CONSTRAINT fk_document_attendance
+                                            FOREIGN KEY (atte_no) REFERENCES attendance(atte_no)
+                                                ON UPDATE CASCADE ON DELETE SET NULL
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS approval_line (
@@ -283,6 +302,10 @@ CREATE TABLE IF NOT EXISTS approval_line (
                                              is_actual_appr boolean    not null,
                                              rej_reason  text          null,
                                              is_delegate boolean       not null default false,
+                                             target_emp_id  VARCHAR(7) NULL COMMENT '권한 위임자 (누구를 대신하는가)',
+
+                                             created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                             updated_at     TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                                              CONSTRAINT pk_approval_line PRIMARY KEY (apprl_no),
                                              CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('I', 'W', 'A', 'R')),
@@ -297,7 +320,11 @@ CREATE TABLE IF NOT EXISTS approval_line (
 
                                              CONSTRAINT fk_approval_line_employee
                                                  FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
-                                                     ON UPDATE CASCADE
+                                                     ON UPDATE CASCADE,
+
+                                             CONSTRAINT fk_approval_line_target
+                                                 FOREIGN KEY (target_emp_id) REFERENCES employee(emp_id)
+                                                     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 # CREATE TABLE IF NOT EXISTS document_file (
@@ -567,77 +594,77 @@ CREATE TABLE IF NOT EXISTS shared_equipment_reservation (
 -- 6. 파일 드라이브 (File Drive)
 -- ========================================================
 
-CREATE TABLE IF NOT EXISTS folder (
-                                      folder_no   BIGINT NOT NULL AUTO_INCREMENT,
-                                      com_id      VARCHAR(3) NOT NULL,
-                                      dep_no      BIGINT NULL,
-                                      parent_id   BIGINT NULL,
-                                      folder_name VARCHAR(255) NOT NULL,
-                                      owner_id    VARCHAR(7) NOT NULL,
-                                      scope       VARCHAR(10) NOT NULL,
-                                      created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                      updated_at  TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-                                      path        VARCHAR(255) NOT NULL,
+# CREATE TABLE IF NOT EXISTS folder (
+#                                       folder_no   BIGINT NOT NULL AUTO_INCREMENT,
+#                                       com_id      VARCHAR(3) NOT NULL,
+#                                       dep_no      BIGINT NULL,
+#                                       parent_id   BIGINT NULL,
+#                                       folder_name VARCHAR(255) NOT NULL,
+#                                       owner_id    VARCHAR(7) NOT NULL,
+#                                       scope       VARCHAR(10) NOT NULL,
+#                                       created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+#                                       updated_at  TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+#                                       path        VARCHAR(255) NOT NULL,
+#
+#                                       PRIMARY KEY (folder_no),
+#                                       CONSTRAINT fk_folder_company
+#                                           FOREIGN KEY (com_id) REFERENCES company(com_id)
+#                                               ON DELETE CASCADE,
+#                                       CONSTRAINT fk_folder_department
+#                                           FOREIGN KEY (dep_no) REFERENCES department(dep_no)
+#                                               ON DELETE CASCADE,
+#                                       CONSTRAINT fk_folder_owner
+#                                           FOREIGN KEY (owner_id) REFERENCES employee(emp_id)
+#                                               ON DELETE CASCADE,
+#                                       CONSTRAINT fk_folder_parent
+#                                           FOREIGN KEY (parent_id) REFERENCES folder(folder_no)
+#                                               ON DELETE CASCADE,
+#                                       CONSTRAINT ck_folder_scope CHECK (scope IN ('all','dept','prvt'))
+# ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-                                      PRIMARY KEY (folder_no),
-                                      CONSTRAINT fk_folder_company
-                                          FOREIGN KEY (com_id) REFERENCES company(com_id)
-                                              ON DELETE CASCADE,
-                                      CONSTRAINT fk_folder_department
-                                          FOREIGN KEY (dep_no) REFERENCES department(dep_no)
-                                              ON DELETE CASCADE,
-                                      CONSTRAINT fk_folder_owner
-                                          FOREIGN KEY (owner_id) REFERENCES employee(emp_id)
-                                              ON DELETE CASCADE,
-                                      CONSTRAINT fk_folder_parent
-                                          FOREIGN KEY (parent_id) REFERENCES folder(folder_no)
-                                              ON DELETE CASCADE,
-                                      CONSTRAINT ck_folder_scope CHECK (scope IN ('all','dept','prvt'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# CREATE TABLE IF NOT EXISTS `file` (
+#                                       file_no    BIGINT NOT NULL AUTO_INCREMENT,
+#                                       com_id     VARCHAR(3) NOT NULL,
+#                                       folder_no  BIGINT NOT NULL,
+#                                       file_name  VARCHAR(255) NOT NULL,
+#                                       size       BIGINT NOT NULL,
+#                                       emp_id     VARCHAR(7) NOT NULL,
+#                                       path       VARCHAR(255) NOT NULL,
+#                                       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+#
+#                                       PRIMARY KEY (file_no),
+#                                       CONSTRAINT fk_file_company
+#                                           FOREIGN KEY (com_id) REFERENCES company(com_id)
+#                                               ON DELETE CASCADE,
+#                                       CONSTRAINT fk_file_folder
+#                                           FOREIGN KEY (folder_no) REFERENCES folder(folder_no)
+#                                               ON DELETE CASCADE,
+#                                       CONSTRAINT fk_file_emp
+#                                           FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
+#                                               ON DELETE CASCADE
+# ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `file` (
-                                      file_no    BIGINT NOT NULL AUTO_INCREMENT,
-                                      com_id     VARCHAR(3) NOT NULL,
-                                      folder_no  BIGINT NOT NULL,
-                                      file_name  VARCHAR(255) NOT NULL,
-                                      size       BIGINT NOT NULL,
-                                      emp_id     VARCHAR(7) NOT NULL,
-                                      path       VARCHAR(255) NOT NULL,
-                                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-                                      PRIMARY KEY (file_no),
-                                      CONSTRAINT fk_file_company
-                                          FOREIGN KEY (com_id) REFERENCES company(com_id)
-                                              ON DELETE CASCADE,
-                                      CONSTRAINT fk_file_folder
-                                          FOREIGN KEY (folder_no) REFERENCES folder(folder_no)
-                                              ON DELETE CASCADE,
-                                      CONSTRAINT fk_file_emp
-                                          FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
-                                              ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS folder_permission (
-                                                 perm_no   BIGINT NOT NULL AUTO_INCREMENT,
-                                                 com_id    VARCHAR(3) NOT NULL,
-                                                 folder_no BIGINT NOT NULL,
-                                                 emp_id    VARCHAR(7) NOT NULL,
-                                                 perm_type CHAR(1) NOT NULL,
-
-                                                 PRIMARY KEY (perm_no),
-                                                 UNIQUE KEY uq_fp_unique (folder_no, emp_id),
-
-                                                 CONSTRAINT fk_fp_company
-                                                     FOREIGN KEY (com_id) REFERENCES company(com_id)
-                                                         ON DELETE CASCADE,
-                                                 CONSTRAINT fk_fp_folder
-                                                     FOREIGN KEY (folder_no) REFERENCES folder(folder_no)
-                                                         ON DELETE CASCADE,
-                                                 CONSTRAINT fk_fp_emp
-                                                     FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
-                                                         ON DELETE CASCADE,
-                                                 CONSTRAINT ck_fp_perm CHECK (perm_type IN ('R','W'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# CREATE TABLE IF NOT EXISTS folder_permission (
+#                                                  perm_no   BIGINT NOT NULL AUTO_INCREMENT,
+#                                                  com_id    VARCHAR(3) NOT NULL,
+#                                                  folder_no BIGINT NOT NULL,
+#                                                  emp_id    VARCHAR(7) NOT NULL,
+#                                                  perm_type CHAR(1) NOT NULL,
+#
+#                                                  PRIMARY KEY (perm_no),
+#                                                  UNIQUE KEY uq_fp_unique (folder_no, emp_id),
+#
+#                                                  CONSTRAINT fk_fp_company
+#                                                      FOREIGN KEY (com_id) REFERENCES company(com_id)
+#                                                          ON DELETE CASCADE,
+#                                                  CONSTRAINT fk_fp_folder
+#                                                      FOREIGN KEY (folder_no) REFERENCES folder(folder_no)
+#                                                          ON DELETE CASCADE,
+#                                                  CONSTRAINT fk_fp_emp
+#                                                      FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
+#                                                          ON DELETE CASCADE,
+#                                                  CONSTRAINT ck_fp_perm CHECK (perm_type IN ('R','W'))
+# ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ========================================================
 -- 7. 게시판 (Board & Notice)
@@ -793,12 +820,15 @@ CREATE TABLE IF NOT EXISTS attendance (
                                           atte_no     BIGINT        NOT NULL AUTO_INCREMENT,
                                           com_id      VARCHAR(3)    NOT NULL,
                                           emp_id      VARCHAR(7)    NOT NULL,
-                                          doc_id      VARCHAR(14)   NOT NULL,
+                                          doc_no      bigint        NOT NULL,
                                           type        CHAR(1)       NOT NULL,
                                           day         INT           NOT NULL DEFAULT 1,
                                           delegate    VARCHAR(7)    NULL,
-                                          created_at  DATETIME      NOT NULL,
-                                          ended_at    DATETIME      NOT NULL,
+                                          start_at    datetime      not null,
+                                          end_at      DATETIME      NOT NULL,
+
+                                          created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                          updated_at  TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                                           CONSTRAINT pk_attendance PRIMARY KEY (atte_no),
                                           CONSTRAINT fk_attendance_company
@@ -808,8 +838,10 @@ CREATE TABLE IF NOT EXISTS attendance (
                                               FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
                                                   ON DELETE CASCADE,
                                           CONSTRAINT fk_attendance_document
-                                              FOREIGN KEY (doc_id) REFERENCES document(doc_id)
-                                                  ON DELETE CASCADE
+                                              FOREIGN KEY (doc_no) REFERENCES document(doc_no),
+                                          CONSTRAINT fk_attendance_delegate
+                                              FOREIGN KEY (delegate) REFERENCES employee(emp_id)
+                                                  ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ========================================================
@@ -979,3 +1011,44 @@ ALTER TABLE emp_schedule
 
 ALTER TABLE schedule
     ADD COLUMN all_day TINYINT(1) NOT NULL DEFAULT 0 AFTER ended_at;
+drop table folder;
+-- 공유함 Folder 테이블 변경(드롭하고 실행해주세요)
+CREATE TABLE folder (
+                        folder_no   BIGINT NOT NULL AUTO_INCREMENT,
+                        com_id      VARCHAR(3)  NOT NULL,
+                        dep_no      BIGINT      NULL,
+                        parent_id   BIGINT      NULL,
+                        folder_name VARCHAR(255) NOT NULL,
+                        owner_id    VARCHAR(7)  NOT NULL,
+                        scope       VARCHAR(10) NOT NULL,
+                        created_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at  TIMESTAMP   NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                        path        VARCHAR(255) NOT NULL DEFAULT '',
+
+                        PRIMARY KEY (folder_no),
+
+                        CONSTRAINT fk_folder_company
+                            FOREIGN KEY (com_id) REFERENCES company(com_id),
+
+                        CONSTRAINT fk_folder_department
+                            FOREIGN KEY (dep_no) REFERENCES department(dep_no),
+
+                        CONSTRAINT fk_folder_parent
+                            FOREIGN KEY (parent_id) REFERENCES folder(folder_no),
+
+                        CONSTRAINT fk_folder_owner
+                            FOREIGN KEY (owner_id) REFERENCES employee(emp_id),
+
+                        CONSTRAINT ck_folder_scope
+                            CHECK (scope IN ('dept','prvt'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE document_form
+    DROP CHECK ck_docform_stat;
+
+ALTER TABLE document_form
+    ADD CONSTRAINT ck_docform_stat
+        CHECK (docfo_stat IN ('T','P','R','A','D','W','X'));
+
+ALTER TABLE mail_user_state
+    DROP COLUMN purged_at;

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head>
+    <title>규정 상세 - Bizportal</title>
+    <style>
+        /* ✅ 기존 스타일 유지 */
+        .prov-page .page-title { font-size: 34px; font-weight: 900; margin: 10px 0 8px; }
+        .prov-page .page-sub { font-size: 18px; font-weight: 800; margin: 0 0 20px; color: #111; }
+
+        .prov-page .actions { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; }
+        .prov-page .btn {
+            border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 900; cursor: pointer;
+            background: #fff; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px;
+            transition: 0.2s; font-size: 14px;
+        }
+        .prov-page .btn.primary { background: var(--primary); color: #fff; border: none; box-shadow: 0 10px 20px rgba(59,130,246,.22); }
+        .prov-page .btn.danger { color: #ef4444; border-color: #fee2e2; }
+        .prov-page .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+
+        .prov-page .card { background: #f1f3f6; border-radius: 18px; padding: 24px; margin-bottom: 24px; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .info-item { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+        .info-label { font-size: 12px; font-weight: 800; color: var(--muted); }
+        .info-value { font-size: 15px; font-weight: 700; color: #1e293b; }
+
+        .content-card { background: #fff; border-radius: 16px; padding: 30px; border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .section-title { font-size: 17px; font-weight: 800; color: #111; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #f1f3f6; padding-bottom: 12px; }
+        .desc-box { font-size: 15px; line-height: 1.8; color: #334155; white-space: pre-wrap; word-break: break-all; }
+
+        .download-link { color: var(--primary2); text-decoration: none; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; border-bottom: 1px solid transparent; transition: 0.2s; }
+        .download-link:hover { border-bottom-color: var(--primary2); }
+    </style>
+</head>
+<body>
+<div layout:fragment="content" class="prov-page">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
+
+        <main style="padding: 0 26px; flex: 1;">
+            <div class="page-title" id="title">사내 규정 관리</div>
+            <div class="page-sub">사내 규정 상세 정보</div>
+
+            <div class="actions">
+                <button class="btn" id="backBtn">
+                    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="3"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    목록으로
+                </button>
+                <button class="btn primary" id="editBtn">
+                    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    수정하기
+                </button>
+                <button class="btn danger" id="deleteBtn">삭제</button>
+            </div>
+
+            <section class="card">
+                <div class="info-grid" id="infoGrid"></div>
+
+                <div class="content-card">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+                        규정 상세 내용
+                    </div>
+                    <div class="desc-box" id="desc">-</div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const $ = (id) => document.getElementById(id);
+        const API_BASE = "http://localhost:8090";
+        const provNo = /*[[${provNo}]]*/ null;
+        const provNoFromPath = provNo || location.pathname.split("/").pop();
+
+        // ✅ HTML 이스케이프 유틸 추가
+        function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+        function formatDateTime(isoLike){ if (!isoLike) return "-"; return isoLike.replace("T", " ").slice(0, 16).replace(/-/g, "."); }
+
+        async function loadDetail() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/prov-documents/${encodeURIComponent(provNoFromPath)}`, { credentials: "include" });
+                const d = (await res.json()).data;
+
+                $("title").textContent = d.docTitle;
+                $("desc").textContent = d.description || "등록된 상세 내용이 없습니다.";
+
+                // ✅ 파일명 처리 (없을 경우 기본 텍스트 표시)
+                const fileName = d.fileName ? escapeHtml(d.fileName) : "첨부 파일";
+
+                $("infoGrid").innerHTML = `
+                    <div class="info-item"><span class="info-label">규정 번호</span><span class="info-value">${d.provNo}</span></div>
+                    <div class="info-item"><span class="info-label">공개 여부</span><span class="info-value">${d.isPublic ? '공개' : '비공개'}</span></div>
+                    <div class="info-item"><span class="info-label">처리 상태</span><span class="info-value">${d.procStat || '대기'}</span></div>
+                    <div class="info-item"><span class="info-label">최종 수정일</span><span class="info-value">${formatDateTime(d.updatedAt)}</span></div>
+                    <div class="info-item"><span class="info-label">첨부 파일</span><span class="info-value">
+                        ${d.downloadUrl ? `<a href="${d.downloadUrl}" class="download-link">💾 ${fileName}</a>` : '<span style="color:var(--muted)">없음</span>'}
+                    </span></div>
+                `;
+            } catch(e) { console.error(e); }
+        }
+
+        $("backBtn").onclick = () => location.href = "/admin/prov-document/list";
+        $("editBtn").onclick = () => location.href = `/admin/prov-document/${encodeURIComponent(provNoFromPath)}/update`;
+        $("deleteBtn").onclick = async () => {
+            if (!confirm("정말 이 규정을 삭제하시겠습니까?")) return;
+            await fetch(`${API_BASE}/api/v1/prov-documents/${encodeURIComponent(provNoFromPath)}`, { method: "DELETE", credentials: "include" });
+            location.href = "/admin/prov-document/list";
+        };
+        window.onload = loadDetail;
+    </script>
+</th:block>
+</body>
+</html>

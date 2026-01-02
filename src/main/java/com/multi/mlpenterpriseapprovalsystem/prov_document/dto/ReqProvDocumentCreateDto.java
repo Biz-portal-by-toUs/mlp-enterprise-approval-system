@@ -1,7 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.prov_document.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,12 +25,9 @@ public class ReqProvDocumentCreateDto {
     private Boolean isPublic;
 
     // ===== 파일 메타 (presign에 필요) =====
-    @NotBlank
     private String originalName;
 
-    @NotBlank
     private String contentType;
 
-    @NotNull
     private Long size;
 }

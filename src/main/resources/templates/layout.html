@@ -323,7 +323,7 @@
 
         /* ✅ subbar가 있는 페이지는 "도킹" 느낌으로: 좌우 padding 제거 */
         .content-wrap:has(.page-with-subbar){
-            padding:22px 0;
+            padding: 0;
         }
 
         /* ====== 하단 푸터 ====== */
@@ -401,36 +401,47 @@
             place-items:center;
             z-index:50;
         }
-        .chat-panel{
-            position:fixed;
-            right:18px;
-            bottom:80px;
-            width:320px;
-            max-width: calc(100vw - 36px);
-            height:420px;
-            max-height: calc(100vh - 140px);
-            background:#fff;
-            border:1px solid var(--line);
-            border-radius:18px;
-            box-shadow:var(--shadow);
-            overflow:hidden;
-            display:none;
-            z-index:50;
+        /* layout.html의 스타일 영역 수정 */
+        .chat-panel {
+            position: fixed;
+            right: 18px;
+            bottom: 80px;
+            width: 350px; /* 기존 320px에서 약간 넓게 조정 추천 */
+            height: 500px; /* 기존 420px에서 높게 조정 추천 */
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: none;
+            z-index: 50;
+            /* ✅ 추가: 유연한 높이 관리를 위해 flex 설정 */
+            flex-direction: column;
         }
-        .chat-panel.open{display:block;}
-        .chat-head{
-            padding:12px 14px;
-            background:#f8fafc;
-            border-bottom:1px solid var(--line);
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            font-weight:800;
+
+        .chat-panel.open { display: flex; } /* block 대신 flex로 변경 */
+
+        .chat-head {
+            padding: 12px 14px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 800;
+            flex-shrink: 0; /* 헤더 크기 고정 */
         }
-        .chat-body{
-            padding:12px 14px;
-            font-size:13px;
-            color:#374151;
+
+        .chat-body {
+            flex: 1; /* 남은 영역 전체 차지 */
+            padding: 0 !important; /* ✅ 중요: iframe이 꽉 차도록 패딩 제거 */
+            overflow: hidden;
+        }
+
+        .chat-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
         .chat-close{
             border:0;
@@ -526,8 +537,8 @@
 
         /* ✅ content padding은 nth-child보다 안전하게: "subbar 다음 요소" */
         .page-with-subbar > .subbar + *{
-            padding: 0 26px;
-            min-width: 0; /* ✅ grid/flex에서 내용 overflow로 깨지는거 방지 */
+            padding: 22px 26px;
+            min-width: 0;
         }
 
         /* ✅ 접힘 상태: 첫 컬럼을 0으로, subbar는 grid에 남겨둔 채로 숨김 */
@@ -652,7 +663,7 @@
                 <span class="sr-only">문서함</span>
             </a>
 
-            <a class="nav-item" th:href="@{/share}" href="/share" data-tip="공유함" aria-label="공유함">
+            <a class="nav-item" th:href="@{/cloud}" href="/cloud" data-tip="공유함" aria-label="공유함">
                 <div class="nav-ico">☁</div>
                 <span class="sr-only">공유함</span>
             </a>
@@ -668,14 +679,14 @@
             </a>
 
             <a class="nav-item"
-               th:href="@{/reservation/meeting-rooms/meeting-room-reservation}"
-               href="/reservation/meeting-rooms/meeting-room-reservation"
+               th:href="@{/meeting-rooms/reservation}"
+               href="/meeting-rooms/reservation"
                data-tip="예약" aria-label="예약">
                 <div class="nav-ico">🕒</div>
                 <span class="sr-only">예약</span>
             </a>
 
-            <a class="nav-item" th:href="@{/attendance}" href="/attendance" data-tip="근태" aria-label="근태">
+            <a class="nav-item" th:href="@{/attendances/me/vacations}" href="/attendances/me/vacations" data-tip="근태" aria-label="근태">
                 <div class="nav-ico">🧳</div>
                 <span class="sr-only">근태</span>
             </a>
@@ -735,12 +746,11 @@
 
 <div class="chat-panel" id="chatPanel" aria-label="챗봇">
     <div class="chat-head">
-        <span>챗봇</span>
+        <span>비즈포탈 메신저</span>
         <button class="chat-close" type="button" aria-label="닫기" onclick="toggleChat(false)">×</button>
     </div>
     <div class="chat-body">
-        <p style="margin:0 0 8px 0;">챗봇 위젯 영역 (예시)</p>
-        <p style="margin:0;color:var(--muted);">실제 채팅 컴포넌트로 교체하세요.</p>
+        <iframe src="/chat" class="chat-iframe" id="chatIframe"></iframe>
     </div>
 </div>
 

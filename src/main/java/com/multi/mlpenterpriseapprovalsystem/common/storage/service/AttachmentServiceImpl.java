@@ -1,6 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.cloud.domain.Folder;
+import com.multi.mlpenterpriseapprovalsystem.cloud.repository.FolderRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.domain.Attachment;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.AttachmentDto;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain;
@@ -21,7 +23,10 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+
+import static com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain.CLOUD;
 
 /**
  * attachment 저장 서비스
@@ -37,6 +42,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     private final AttachmentRepository attachmentRepository;
     private final S3Client s3Client;
+    private final FolderRepository folderRepository;
 
     @Value("${app.s3.bucket}")
     private String bucket;
@@ -188,12 +194,21 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // 2) 권한 체크: 업로더만 삭제 가능 (너희 정책에 맞게 subjectId/empNo 매핑)
         String requesterId = user.getUsername(); // 예: emp_no
-        if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+        if (a.getDomain() == AttachmentDomain.PROV_DOCUMENT) {
+            boolean isAdmin = user.getAuthorities().stream()
+                    .anyMatch(auth -> Objects.equals(auth.getAuthority(), "ROLE_COM_ADMIN"));
+
+            if (!isAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 사내 규정 첨부파일을 삭제할 수 있습니다.");
+            }
+        }
+        else if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+            // 일반 도메인(CLOUD 등)은 본인이 업로드한 파일인지 확인합니다.
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 첨부파일만 삭제할 수 있습니다.");
         }
 
         // 3) domain 분기
-        if (a.getDomain() == AttachmentDomain.CLOUD) {
+        if (a.getDomain() == CLOUD) {
             // ✅ CLOUD: soft delete
             a.softDelete(); // status=DELETED
             // save 안 해도 영속 상태면 flush되지만 명시적으로 해도 OK
@@ -201,9 +216,10 @@ public class AttachmentServiceImpl implements AttachmentService {
             return a.getAttachmentId();
         }
 
-        // ✅ 그 외: hard delete (S3 + DB)
-        deleteObjectFromS3(a.getObjectKey());  // S3 삭제
-        attachmentRepository.delete(a);        // DB row 삭제
+        // ✅ 그 외(PROV_DOCUMENT 포함): hard delete (S3 + DB 실제 삭제)
+        // PROV_DOCUMENT는 용량 관리 및 보안을 위해 S3 파일까지 지우는 하드 삭제를 수행하게 됩니다.
+        deleteObjectFromS3(a.getObjectKey());
+        attachmentRepository.delete(a);
 
         return attachmentId;
     }
@@ -219,5 +235,86 @@ public class AttachmentServiceImpl implements AttachmentService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "S3 삭제 실패: " + e.awsErrorDetails().errorMessage(), e);
         }
+    }
+
+    @Override
+    @Transactional
+    public void moveCloudAttachment(CustomUser user, Long attachmentId, Long toFolderNo) {
+        if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
+
+        String comId = user.getComId();
+        String ownerId = resolveOwnerId(user);
+        Long depNo = resolveDepNo(user);
+
+        Folder toFolder = folderRepository.findByFolderNoAndComId(toFolderNo, comId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "이동 대상 폴더가 없습니다."));
+        if (!canView(toFolder, ownerId, depNo))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이동 대상 폴더 권한이 없습니다.");
+
+        // ✅ ACTIVE만 대상으로 잡는 게 안전
+        Attachment att = attachmentRepository
+                .findByAttachmentIdAndComIdAndStatus(attachmentId, comId, AttachmentStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 없습니다."));
+
+        if (att.getDomain() != CLOUD)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CLOUD 파일만 이동 가능합니다.");
+
+        Long fromFolderNo = att.getEntityId();
+        Folder fromFolder = folderRepository.findByFolderNoAndComId(fromFolderNo, comId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "원본 폴더가 없습니다."));
+        if (!canView(fromFolder, ownerId, depNo))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "원본 폴더 권한이 없습니다.");
+
+        if (fromFolder.getScope() != toFolder.getScope())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "공유함과 개인함 간 이동은 불가합니다.");
+
+        // ✅ 목적지 폴더: 잠그고 슬롯 계산
+        List<Attachment> destAll = attachmentRepository.findAllByRefForUpdate(comId, CLOUD, toFolderNo);
+
+        long destActive = destAll.stream().filter(Attachment::isActive).count();
+        if (destActive >= 5)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "대상 폴더 첨부파일은 최대 5개까지 가능합니다.");
+
+        Set<Integer> used = new HashSet<>();
+        for (Attachment a : destAll) {
+            if (a.getDisplayOrder() != null) used.add(a.getDisplayOrder());
+        }
+
+        Integer newOrder = null;
+        for (int i = 1; i <= 5; i++) {
+            if (!used.contains(i)) { newOrder = i; break; }
+        }
+        if (newOrder == null)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "사용 가능한 displayOrder가 없습니다.");
+
+        // ✅ 이동 + 재배정
+        att.moveToEntityId(toFolderNo);
+        att.changeDisplayOrder(newOrder);
+    }
+
+    /* ===== helpers ===== */
+
+    private boolean canView(Folder f, String ownerId, Long depNo) {
+        return switch (f.getScope()) {
+            case DEPT -> depNo != null && depNo.equals(f.getDepNo());
+            case PRVT -> ownerId != null && ownerId.equals(f.getOwnerId());
+        };
+    }
+
+    private String resolveOwnerId(CustomUser user) {
+        try {
+            Object v = user.getClass().getMethod("getEmpId").invoke(user);
+            if (v != null) return String.valueOf(v);
+        } catch (Exception ignored) {}
+        return user.getUsername();
+    }
+
+    private Long resolveDepNo(CustomUser user) {
+        Object v = null;
+        try { v = user.getClass().getMethod("getDepNo").invoke(user); } catch (Exception ignored) {}
+        if (v == null) { try { v = user.getClass().getMethod("getDepId").invoke(user); } catch (Exception ignored) {} }
+        if (v == null) return null;
+        if (v instanceof Number n) return n.longValue();
+        return Long.valueOf(String.valueOf(v));
     }
 }

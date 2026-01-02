@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>내 휴가 조회 - 기업용 전자결재시스템</title>
+
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* ✅ 여백 및 컨테이너 최적화 (목록 페이지와 통일) */
+            .detail-content-area {
+                background: white;
+                padding: 40px;
+                min-height: 850px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            }
+
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #339af0;
+                padding-bottom: 15px;
+            }
+
+            .page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
+
+            .btn-close {
+                padding: 10px 24px; background: #fff; color: #495057;
+                border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; font-size: 14px;
+                transition: all 0.2s;
+            }
+            .btn-close:hover { background: #f8f9fa; border-color: #adb5bd; }
+
+            /* 테이블 스타일 */
+            .doc-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+            .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 15px 12px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
+            .doc-table td { padding: 15px 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
+
+            /* 배지 및 버튼 */
+            .doc-badge { display: inline-block !important; padding: 4px 10px !important; border-radius: 4px !important; font-size: 12px !important; font-weight: bold !important; position: static !important; border: none !important; }
+            .doc-badge-vacation { background: #e7f5ff !important; color: #228be6 !important; }
+
+            /* ✅ 심플하게 변경된 버튼 스타일 */
+            .btn-view, .btn-modify, .btn-cancel {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-align: center;
+            }
+
+            .btn-view {
+                background: #339af0; /* 단색 파랑 */
+                color: white;
+            }
+            .btn-view:hover { background: #228be6; }
+
+            .btn-modify {
+                background: #fd7e14; /* 단색 주황 */
+                color: white;
+                margin-right: 4px;
+            }
+            .btn-modify:hover { background: #e8590c; }
+
+            .btn-cancel {
+                background: #fa5252; /* 단색 빨강 */
+                color: white;
+            }
+            .btn-cancel:hover { background: #e03131; }
+
+            .action-buttons { display: flex; gap: 6px; justify-content: center; align-items: center; }
+            .loading, .no-data { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
+
+            /* ✅ 레이아웃 패딩 정의 */
+            .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <aside th:replace="~{sidebar/attendance-sidebar :: attendanceSidebar('vacations')}"></aside>
+
+        <div>
+            <div id="vacation-container" class="detail-content-area">
+                <div class="page-header">
+                    <h1 class="page-title">내 휴가 관리</h1>
+                </div>
+
+                <div id="loading" class="loading">휴가 정보를 불러오는 중...</div>
+
+                <table class="doc-table" id="attendance-table" style="display: none;">
+                    <thead>
+                    <tr>
+                        <th style="width: 50px;">NO</th>
+                        <th style="width: 80px;">타입</th>
+                        <th style="width: 140px;">시작일</th>
+                        <th style="width: 140px;">종료일</th>
+                        <th style="width: 60px;">일수</th>
+                        <th style="width: 120px;">대직자</th>
+                        <th style="width: 130px;">문서번호</th>
+                        <th>문서제목</th>
+                        <th style="width: 90px;">문서보기</th>
+                        <th style="width: 140px;">관리</th>
+                    </tr>
+                    </thead>
+                    <tbody id="attendance-list"></tbody>
+                </table>
+
+                <div id="no-data" class="no-data" style="display: none;">휴가 정보가 없습니다.</div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        let vacationFormDocfoNo = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadVacationFormDocfoNo();
+            loadMyVacations();
+        });
+
+        async function loadVacationFormDocfoNo() {
+            try {
+                const response = await fetch('/api/v1/temp/documentForms', { credentials: 'include' });
+                const result = await response.json();
+                if (response.ok && result.data) {
+                    const vacationForm = result.data.find(form => {
+                        const normalizedName = form.docfoName.replace(/\s+/g, '').toLowerCase();
+                        return normalizedName.includes('휴가신청서');
+                    });
+                    if (vacationForm) {
+                        vacationFormDocfoNo = vacationForm.docfoNo;
+                        console.log('✅ 휴가 양식 확인:', vacationFormDocfoNo);
+                    }
+                }
+            } catch (error) { console.error('양식 조회 실패:', error); }
+        }
+
+        async function loadMyVacations() {
+            try {
+                const response = await fetch('/api/v1/attendances/me/vacations', { credentials: 'include' });
+                const result = await response.json();
+                document.getElementById('loading').style.display = 'none';
+                if (result.status === 200 && result.data?.length > 0) {
+                    renderAttendances(result.data);
+                    document.getElementById('attendance-table').style.display = 'table';
+                } else {
+                    document.getElementById('no-data').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('no-data').style.display = 'block';
+            }
+        }
+
+        function renderAttendances(attendances) {
+            const tbody = document.getElementById('attendance-list');
+            tbody.innerHTML = '';
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            attendances.forEach((att, index) => {
+                const startDate = new Date(att.startAt); startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date(att.endAt); endDate.setHours(0, 0, 0, 0);
+
+                const showModifyButton = (startDate >= today) || (startDate < today && endDate >= today);
+                const showCancelButton = startDate >= today;
+
+                let actionButtons = '';
+                // ✅ 아이콘 제거 및 텍스트만 표시
+                if (showModifyButton || showCancelButton) {
+                    actionButtons = '<div class="action-buttons">';
+                    if (showModifyButton) actionButtons += `<button class="btn-modify" onclick="modifyVacation(${att.atteNo})">수정</button>`;
+                    if (showCancelButton) actionButtons += `<button class="btn-cancel" onclick="cancelVacation(${att.atteNo})">취소</button>`;
+                    actionButtons += '</div>';
+                } else {
+                    actionButtons = '<span style="color: #adb5bd;">-</span>';
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><span class="doc-badge doc-badge-vacation">휴가</span></td>
+                    <td>${formatDate(att.startAt)}</td>
+                    <td>${formatDate(att.endAt)}</td>
+                    <td>${att.day}일</td>
+                    <td>${att.delegateEmpName ? `${att.delegateEmpName}<br><small>${att.delegateEmpId}</small>` : '-'}</td>
+                    <td>${att.docId || '-'}</td>
+                    <td style="text-align: left;">${att.docTitle || '-'}</td>
+                    <td>${att.docNo ? `<button class="btn-view" onclick="viewDocument(${att.docNo})">보기</button>` : '-'}</td>
+                    <td>${actionButtons}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function modifyVacation(atteNo) {
+            if (!vacationFormDocfoNo) { alert('휴가 신청서 양식을 찾을 수 없습니다.'); return; }
+            location.href = `/documents/create?docfoNo=${vacationFormDocfoNo}&atteNo=${atteNo}&category=휴가수정신청`;
+        }
+
+        function cancelVacation(atteNo) {
+            if (!vacationFormDocfoNo) { alert('휴가 신청서 양식을 찾을 수 없습니다.'); return; }
+            location.href = `/documents/create?docfoNo=${vacationFormDocfoNo}&atteNo=${atteNo}&category=휴가취소신청`;
+        }
+
+        function viewDocument(docNo) { location.href = `/documents/${docNo}?status=SUBMITTED`; }
+
+        function formatDate(str) {
+            if (!str) return '-';
+            const d = new Date(str);
+            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br><small>${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</small>`;
+        }
+    </script>
+</th:block>
+</body>
+</html>

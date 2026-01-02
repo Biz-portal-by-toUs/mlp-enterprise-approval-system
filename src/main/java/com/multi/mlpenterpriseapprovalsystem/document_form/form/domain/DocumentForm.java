@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
@@ -55,10 +56,11 @@ public class DocumentForm {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false, length = 1)
-    @Enumerated(EnumType.STRING)
-    private DocumentFormStats docfoStat; // T, P, R, A, D
+    @Column(name = "docfo_stat", nullable = false, columnDefinition = "char(1)")
+    @Convert(converter = DocumentFormStatsConverter.class)
+    private DocumentFormStats docfoStat;
 
+    @Column(name = "reject_reason")
     private String rejectReason;
 
     public static DocumentForm create(
@@ -74,7 +76,7 @@ public class DocumentForm {
         f.docfoName = docfoName;
         f.cnttJson = cnttJson;
         f.cnttHtml = cnttHtml;
-        f.docfoStat = DocumentFormStats.P; // 승인 로직 개발 후 T로 수정
+        f.docfoStat = DocumentFormStats.P;
         return f;
     }
 

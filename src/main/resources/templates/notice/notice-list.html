@@ -1,71 +1,59 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>공지사항 목록</title>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layout">
+
+<!-- ✅ notice-list 전용 스타일만 pageStyles로 이동 -->
+<th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        :root{
-            --bg: #f6f7fb;
-            --card: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --line: rgba(17, 24, 39, 0.08);
-            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-            --shadow2: 0 6px 18px rgba(17, 24, 39, 0.10);
 
-            --primary: #3b82f6;
-            --primary2: #2563eb;
-            --danger: #ef4444;
-            --success: #10b981;
-            --warn: #f59e0b;
-        }
+    <style>
+        /* ⚠️ layout.html에 :root, body 배경이 이미 있으니
+           여기서는 notice-list 전용(.notice-container 이하) 위주로 두는 걸 권장 */
 
         *{ box-sizing: border-box; }
 
+        /* ❌ body 배경/폰트는 layout이 담당하므로 제거 권장
         body{
             margin: 0;
-            background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,.15), transparent 55%),
-            radial-gradient(900px 500px at 90% 0%, rgba(16,185,129,.12), transparent 55%),
-            var(--bg);
+            background: radial-gradient(...);
             font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             color: var(--text);
         }
+        */
 
         /* 전체 레이아웃 */
         .notice-container{
-            max-width: 980px;
-            margin: 64px auto;
-            padding: 0;
+            width: 100%;
+            max-width: none;     /* ✅ 제한 해제 */
+            margin: 0;           /* ✅ 가운데 정렬 제거 */
+            padding: 0;          /* main이 이미 padding 24px을 갖고 있음 */
         }
 
-        /* 상단 헤더 카드 */
+
         .notice-container > h2{
-            margin: 0 0 14px;
+            margin: 0 0 6px;
             font-size: 1.4rem;
             font-weight: 900;
             letter-spacing: -0.3px;
             color: var(--text);
         }
 
-        .notice-container{
-            position: relative;
-        }
+        .notice-container{ position: relative; }
 
-        /* 등록 버튼 영역 */
         .top-bar{
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
         }
 
-        /* 공통 버튼(상세조회 톤과 동일) */
         .btn{
             appearance: none;
             border: 1px solid rgba(17,24,39,.10);
-            background: var(--card);
+            background: var(--card, #fff);
             padding: 11px 14px;
             border-radius: 12px;
             font-weight: 900;
@@ -78,7 +66,7 @@
 
         .btn:hover{
             transform: translateY(-1px);
-            box-shadow: var(--shadow2);
+            box-shadow: var(--shadow2, 0 6px 18px rgba(17,24,39,.10));
             border-color: rgba(59,130,246,.25);
             background: rgba(59,130,246,.05);
         }
@@ -88,18 +76,17 @@
             border-color: rgba(59,130,246,.25);
         }
 
-        /* 검색바: 카드형 */
         .search-bar{
-            background: var(--card);
-            border: 1px solid var(--line);
+            background: var(--card, #fff);
+            border: 1px solid var(--line, rgba(17, 24, 39, 0.08));
             border-radius: 16px;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow, 0 10px 30px rgba(17, 24, 39, 0.08));
             padding: 14px;
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             align-items: center;
-            margin-bottom: 14px;
+            margin-bottom: 8px;
         }
 
         .search-bar select,
@@ -116,18 +103,9 @@
             transition: border-color .15s ease, box-shadow .15s ease;
         }
 
-        .search-bar select{
-            min-width: 120px;
-        }
-
-        .search-bar input[type="text"]{
-            min-width: 260px;
-            flex: 1 1 260px;
-        }
-
-        .search-bar input[type="date"]{
-            min-width: 160px;
-        }
+        .search-bar select{ min-width: 120px; }
+        .search-bar input[type="text"]{ min-width: 260px; flex: 1 1 260px; }
+        .search-bar input[type="date"]{ min-width: 160px; }
 
         .search-bar select:focus,
         .search-bar input:focus{
@@ -155,7 +133,7 @@
 
         .search-bar .search-hint{
             flex: 1 1 100%;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             font-weight: 800;
             font-size: .9rem;
             padding: 2px 2px 0 2px;
@@ -163,22 +141,21 @@
 
         .hidden{ display:none !important; }
 
-        /* 목록 테이블을 “리스트 카드”처럼 */
         .notice-table{
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            background: var(--card);
+            background: var(--card, #fff);
             border-radius: 16px;
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
+            border: 1px solid var(--line, rgba(17, 24, 39, 0.08));
+            box-shadow: var(--shadow, 0 10px 30px rgba(17, 24, 39, 0.08));
             overflow: hidden;
         }
 
         .notice-table thead th{
             text-align: left;
             font-size: .9rem;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             background: rgba(17,24,39,.03);
             padding: 14px 14px;
             border-bottom: 1px solid rgba(17,24,39,.08);
@@ -198,7 +175,6 @@
             background: rgba(59,130,246,.05);
         }
 
-        /* 번호/날짜는 약간 톤 다운 */
         .notice-table tbody td:first-child,
         .notice-table tbody td:last-child{
             color: rgba(31,41,55,.75);
@@ -206,12 +182,16 @@
             white-space: nowrap;
         }
 
-        /* 제목 링크 강조 */
         .notice-table td.title a{
             color: var(--text);
             text-decoration: none;
             font-weight: 900;
             letter-spacing: -0.2px;
+            display: inline-block;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .notice-table td.title a:hover{
@@ -220,22 +200,16 @@
             text-decoration-thickness: 2px;
         }
 
-        /* 반응형: 좁아지면 일부 컬럼 숨김 */
         @media (max-width: 760px){
-            .notice-container{
-                padding: 0 14px;
-            }
+            .notice-container{ padding: 0 14px; }
+
             .notice-table thead th:nth-child(1),
-            .notice-table tbody td:nth-child(1){
-                display: none; /* 번호 숨김 */
-            }
+            .notice-table tbody td:nth-child(1){ display:none; }
+
             .notice-table thead th:nth-child(3),
-            .notice-table tbody td:nth-child(3){
-                display: none; /* 작성자 숨김 */
-            }
+            .notice-table tbody td:nth-child(3){ display:none; }
         }
 
-        /* 페이지네이션: 상세조회와 동일 톤 */
         .pagination{
             margin-top: 12px;
             display: flex;
@@ -251,7 +225,7 @@
             border-radius: 12px;
             cursor: pointer;
             font-weight: 900;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
         }
 
@@ -268,267 +242,303 @@
             color: var(--text);
         }
 
-        /* 빈 데이터 메시지 */
         .notice-table tbody td[colspan]{
             text-align: center;
-            color: var(--muted);
+            color: var(--muted, #6b7280);
             font-weight: 900;
             padding: 20px 14px;
         }
 
+        /* 컬럼 폭 */
+        .notice-table th:nth-child(1),
+        .notice-table td:nth-child(1){
+            width: 70px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .notice-table th:nth-child(2),
+        .notice-table td:nth-child(2){ width: 55%; }
+        .notice-table th:nth-child(3),
+        .notice-table td:nth-child(3){
+            width: 110px;
+            white-space: nowrap;
+        }
+        .notice-table th:nth-child(4),
+        .notice-table td:nth-child(4){
+            width: 90px;
+            white-space: nowrap;
+        }
+        .notice-table th:nth-child(5),
+        .notice-table td:nth-child(5){
+            width: 110px;
+            white-space: nowrap;
+        }
+        .notice-table th:nth-child(6),
+        .notice-table td:nth-child(6){
+            width: 90px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .subbar-main{
+            flex: 1;
+            min-width: 0;
+            padding: 24px;
+        }
     </style>
+</th:block>
 
-</head>
-<body>
+<!-- ✅ layout의 content 영역에 들어갈 실제 내용 -->
+<div layout:fragment="content">
 
-<div class="container notice-container">
-    <h2>공지사항 목록</h2>
-    <div class="top-bar">
-        <a href="/notice/form" class="btn btn-create">공지사항등록</a>
+    <!-- (선택) 게시판 subbar를 같이 붙이고 싶으면 이 구조 사용 -->
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/board-sidebar :: boardSidebar('notice')}"></div>
+        <main class="subbar-main">
+        <div class="container notice-container">
+
+            <div class="top-bar">
+                <a href="/notice/form" class="btn btn-create">공지사항작성</a>
+            </div>
+
+            <div class="search-bar">
+                <select id="searchType">
+                    <option value="">전체</option>
+                    <option value="title">제목</option>
+                    <option value="empName">작성자</option>
+                    <option value="depName">부서</option>
+                    <option value="date">작성일</option>
+                </select>
+
+                <input id="keyword" type="text" placeholder="키워드를 입력하세요" />
+
+                <input id="fromDate" type="date" class="hidden" />
+                <span id="dateTilde" class="hidden">~</span>
+                <input id="toDate" type="date" class="hidden" />
+
+                <button type="button" class="btn" onclick="applySearch()">검색</button>
+                <button type="button" class="btn" onclick="resetSearch()">초기화</button>
+
+                <span class="search-hint" id="searchHint"></span>
+            </div>
+
+            <table class="notice-table">
+                <thead>
+                <tr>
+                    <th>번호</th>
+                    <th>제목</th>
+                    <th>부서</th>
+                    <th>작성자</th>
+                    <th>등록일</th>
+                    <th>조회건수</th>
+                </tr>
+                </thead>
+                <tbody id="noticeTbody"></tbody>
+            </table>
+
+            <div class="pagination" id="pagination"></div>
+        </div>
+        </main>
     </div>
-    <!-- 검색창 -->
-    <div class="search-bar">
-        <select id="searchType">
-            <option value="">전체</option>
-            <option value="title">제목</option>
-            <option value="empName">작성자</option>
-            <option value="depName">부서</option>
-            <option value="date">작성일</option>
-        </select>
 
-        <input id="keyword" type="text" placeholder="키워드를 입력하세요" />
-
-        <input id="fromDate" type="date" class="hidden" />
-        <span id="dateTilde" class="hidden">~</span>
-        <input id="toDate" type="date" class="hidden" />
-
-        <button type="button" class="btn" onclick="applySearch()">검색</button>
-        <button type="button" class="btn" onclick="resetSearch()">초기화</button>
-
-
-        <span class="search-hint" id="searchHint"></span>
-    </div>
-
-    <table class="notice-table">
-        <thead>
-        <tr>
-            <th>번호</th>
-            <th>제목</th>
-            <th>부서</th>
-            <th>작성자</th>
-            <th>등록일</th>
-            <th>조회건수</th>
-        </tr>
-        </thead>
-        <tbody id="noticeTbody"></tbody>
-    </table>
-
-    <div class="pagination" id="pagination"></div>
 </div>
 
-<script>
-    const API_URL = "/api/v1/notices";
-    const PAGE_SIZE = 10;
+<!-- ✅ JS도 생략 없이 pageScripts로 그대로 포함 -->
+<th:block layout:fragment="pageScripts">
+    <script>
+        const API_URL = "/api/v1/notices";
+        const PAGE_SIZE = 10;
 
-    // 현재 검색 상태(페이징 이동 시 유지)
-    let currentQuery = {
-        type: "",
-        keyword: "",
-        from: "",
-        to: ""
-    };
+        let currentQuery = {
+            type: "",
+            keyword: "",
+            from: "",
+            to: ""
+        };
 
-    function setDateInputsVisible(visible) {
-        const from = document.getElementById("fromDate");
-        const to = document.getElementById("toDate");
-        const tilde = document.getElementById("dateTilde");
-        const keyword = document.getElementById("keyword");
+        function setDateInputsVisible(visible) {
+            const from = document.getElementById("fromDate");
+            const to = document.getElementById("toDate");
+            const tilde = document.getElementById("dateTilde");
+            const keyword = document.getElementById("keyword");
 
-        if (visible) {
-            from.classList.remove("hidden");
-            to.classList.remove("hidden");
-            tilde.classList.remove("hidden");
-            keyword.classList.add("hidden");
-        } else {
-            from.classList.add("hidden");
-            to.classList.add("hidden");
-            tilde.classList.add("hidden");
-            keyword.classList.remove("hidden");
-        }
-    }
-
-    function updateHint() {
-        const hint = document.getElementById("searchHint");
-        if (!currentQuery.type) {
-            hint.textContent = "전체(제목+내용)에서 키워드로 검색합니다.";
-            return;
-        }
-        if (currentQuery.type === "title") hint.textContent = "제목에 포함된 키워드로 검색합니다.";
-        if (currentQuery.type === "empName") hint.textContent = "작성자(사원명)에 포함된 키워드로 검색합니다.";
-        if (currentQuery.type === "depName") hint.textContent = "부서명에 포함된 키워드로 검색합니다.";
-        if (currentQuery.type === "date") hint.textContent = "작성일 범위(from~to)로 검색합니다.";
-    }
-
-    function buildUrl(page) {
-        const params = new URLSearchParams();
-        params.set("page", String(page));
-        params.set("size", String(PAGE_SIZE));
-
-        if (currentQuery.type) params.set("type", currentQuery.type);
-
-        if (currentQuery.type === "date") {
-            if (currentQuery.from) params.set("from", currentQuery.from);
-            if (currentQuery.to) params.set("to", currentQuery.to);
-        } else {
-            // ✅ 핵심: date가 아니면(전체/제목/작성자/부서) keyword를 항상 전송
-            if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
+            if (visible) {
+                from.classList.remove("hidden");
+                to.classList.remove("hidden");
+                tilde.classList.remove("hidden");
+                keyword.classList.add("hidden");
+            } else {
+                from.classList.add("hidden");
+                to.classList.add("hidden");
+                tilde.classList.add("hidden");
+                keyword.classList.remove("hidden");
+            }
         }
 
-        return `${API_URL}?${params.toString()}`;
-    }
-
-    function applySearch() {
-        const type = document.getElementById("searchType").value;
-        const keyword = document.getElementById("keyword").value.trim();
-        const from = document.getElementById("fromDate").value;
-        const to = document.getElementById("toDate").value;
-
-        currentQuery.type = type;
-        currentQuery.keyword = keyword;
-        currentQuery.from = from;
-        currentQuery.to = to;
-
-        updateHint();
-        loadNotices(0);
-    }
-
-    function resetSearch() {
-        document.getElementById("searchType").value = "";
-        document.getElementById("keyword").value = "";
-        document.getElementById("fromDate").value = "";
-        document.getElementById("toDate").value = "";
-        currentQuery = { type: "", keyword: "", from: "", to: "" };
-
-        setDateInputsVisible(false);
-        updateHint();
-        loadNotices(0);
-    }
-
-    async function loadNotices(page) {
-        const tbody = document.getElementById("noticeTbody");
-        tbody.innerHTML = "";
-
-        try {
-            const url = buildUrl(page);
-
-            const response = await fetch(url ,
-                { credentials: "include",
-                   headers: { 'Content-Type': 'application/json' } });
-            const result = await response.json();
-            console.log(result);
-            // ResponseDto 형식: { status, message, data }
-            if (!result || result.status !== 200 || !result.data) {
-                tbody.innerHTML = `<tr><td colspan="6">데이터 오류</td></tr>`;
-                document.getElementById("pagination").innerHTML = "";
+        function updateHint() {
+            const hint = document.getElementById("searchHint");
+            if (!currentQuery.type) {
+                hint.textContent = "전체(제목+내용)에서 키워드로 검색합니다.";
                 return;
             }
+            if (currentQuery.type === "title") hint.textContent = "제목에 포함된 키워드로 검색합니다.";
+            if (currentQuery.type === "empName") hint.textContent = "작성자(사원명)에 포함된 키워드로 검색합니다.";
+            if (currentQuery.type === "depName") hint.textContent = "부서명에 포함된 키워드로 검색합니다.";
+            if (currentQuery.type === "date") hint.textContent = "작성일 범위(from~to)로 검색합니다.";
+        }
 
-            const pageData = result.data;
-            const notices = pageData.content || [];
+        function buildUrl(page) {
+            const params = new URLSearchParams();
+            params.set("page", String(page));
+            params.set("size", String(PAGE_SIZE));
 
-            if (notices.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6">공지사항이 없습니다.</td></tr>`;
-                renderPagination(pageData);
-                return;
+            if (currentQuery.type) params.set("type", currentQuery.type);
+
+            if (currentQuery.type === "date") {
+                if (currentQuery.from) params.set("from", currentQuery.from);
+                if (currentQuery.to) params.set("to", currentQuery.to);
+            } else {
+                if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
             }
 
-            const startNo = page * PAGE_SIZE;
-
-            notices.forEach((notice, index) => {
-                const no = startNo + index + 1;
-                //const createdAt = notice.createdAt ? notice.createdAt.substring(0, 10) : "-";
-
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                              <td>${no}</td>
-                              <td class="title">
-                                <a href="/notice/${notice.noticeNo}">${notice.title}</a>
-                              </td>
-                              <td>${notice.depName ?? ""}</td>
-                              <td>${notice.empName ?? ""}</td>
-                              <td>${notice.createdAt?.substring(0, 10) ?? "-"}</td>
-                              <td>${notice.rating}</td>
-                            `;
-                tbody.appendChild(tr);
-            });
-
-            renderPagination(pageData);
-
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="6">서버 오류</td></tr>`;
-            document.getElementById("pagination").innerHTML = "";
-        }
-    }
-
-    function renderPagination(page) {
-        const pagination = document.getElementById("pagination");
-        pagination.innerHTML = "";
-
-        if (!page) return;
-
-        // 이전
-        if (page.number > 0) {
-            const prev = document.createElement("button");
-            prev.textContent = "이전";
-            prev.onclick = () => loadNotices(page.number - 1);
-            pagination.appendChild(prev);
+            return `${API_URL}?${params.toString()}`;
         }
 
-        // 페이지 번호
-        for (let i = 0; i < page.totalPages; i++) {
-            const btn = document.createElement("button");
-            btn.textContent = i + 1;
-            if (i === page.number) btn.classList.add("active");
-            btn.onclick = () => loadNotices(i);
-            pagination.appendChild(btn);
+        function applySearch() {
+            const type = document.getElementById("searchType").value;
+            const keyword = document.getElementById("keyword").value.trim();
+            const from = document.getElementById("fromDate").value;
+            const to = document.getElementById("toDate").value;
+
+            currentQuery.type = type;
+            currentQuery.keyword = keyword;
+            currentQuery.from = from;
+            currentQuery.to = to;
+
+            updateHint();
+            loadNotices(0);
         }
 
-        // 다음
-        if (page.number < page.totalPages - 1) {
-            const next = document.createElement("button");
-            next.textContent = "다음";
-            next.onclick = () => loadNotices(page.number + 1);
-            pagination.appendChild(next);
-        }
-    }
+        function resetSearch() {
+            document.getElementById("searchType").value = "";
+            document.getElementById("keyword").value = "";
+            document.getElementById("fromDate").value = "";
+            document.getElementById("toDate").value = "";
+            currentQuery = { type: "", keyword: "", from: "", to: "" };
 
-    // 검색 타입 변경 시 입력 UI 전환
-    document.getElementById("searchType").addEventListener("change", (e) => {
-        const type = e.target.value;
-
-        // UI 초기화
-        document.getElementById("keyword").value = "";
-        document.getElementById("fromDate").value = "";
-        document.getElementById("toDate").value = "";
-
-        if (type === "date") {
-            setDateInputsVisible(true);
-        } else {
             setDateInputsVisible(false);
+            updateHint();
+            loadNotices(0);
         }
-    });
 
-    // Enter 키로 검색
-    document.getElementById("keyword").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") applySearch();
-    });
+        async function loadNotices(page) {
+            const tbody = document.getElementById("noticeTbody");
+            tbody.innerHTML = "";
 
-    document.addEventListener("DOMContentLoaded", () => {
-        setDateInputsVisible(false);
-        updateHint();
-        loadNotices(0);
-    });
-</script>
+            try {
+                const url = buildUrl(page);
 
-</body>
+                const response = await fetch(url, {
+                    credentials: "include",
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+
+                if (!result || result.status !== 200 || !result.data) {
+                    tbody.innerHTML = `<tr><td colspan="6">데이터 오류</td></tr>`;
+                    document.getElementById("pagination").innerHTML = "";
+                    return;
+                }
+
+                const pageData = result.data;
+                const notices = pageData.content || [];
+
+                if (notices.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6">공지사항이 없습니다.</td></tr>`;
+                    renderPagination(pageData);
+                    return;
+                }
+
+                const startNo = page * PAGE_SIZE;
+
+                notices.forEach((notice, index) => {
+                    const no = startNo + index + 1;
+
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                      <td>${no}</td>
+                      <td class="title">
+                        <a href="/notice/${notice.noticeNo}">${notice.title}</a>
+                      </td>
+                      <td>${notice.depName ?? ""}</td>
+                      <td>${notice.empName ?? ""}</td>
+                      <td>${notice.createdAt?.substring(0, 10) ?? "-"}</td>
+                      <td>${notice.rating}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                renderPagination(pageData);
+
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6">서버 오류</td></tr>`;
+                document.getElementById("pagination").innerHTML = "";
+            }
+        }
+
+        function renderPagination(page) {
+            const pagination = document.getElementById("pagination");
+            pagination.innerHTML = "";
+
+            if (!page) return;
+
+            if (page.number > 0) {
+                const prev = document.createElement("button");
+                prev.textContent = "이전";
+                prev.onclick = () => loadNotices(page.number - 1);
+                pagination.appendChild(prev);
+            }
+
+            for (let i = 0; i < page.totalPages; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i + 1;
+                if (i === page.number) btn.classList.add("active");
+                btn.onclick = () => loadNotices(i);
+                pagination.appendChild(btn);
+            }
+
+            if (page.number < page.totalPages - 1) {
+                const next = document.createElement("button");
+                next.textContent = "다음";
+                next.onclick = () => loadNotices(page.number + 1);
+                pagination.appendChild(next);
+            }
+        }
+
+        document.getElementById("searchType").addEventListener("change", (e) => {
+            const type = e.target.value;
+
+            document.getElementById("keyword").value = "";
+            document.getElementById("fromDate").value = "";
+            document.getElementById("toDate").value = "";
+
+            if (type === "date") {
+                setDateInputsVisible(true);
+            } else {
+                setDateInputsVisible(false);
+            }
+        });
+
+        document.getElementById("keyword").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") applySearch();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            setDateInputsVisible(false);
+            updateHint();
+            loadNotices(0);
+        });
+    </script>
+</th:block>
+
 </html>

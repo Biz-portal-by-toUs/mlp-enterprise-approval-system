@@ -133,4 +133,13 @@ public class Attachment extends BaseEntity {
     public boolean isActive() {
         return this.status == AttachmentStatus.ACTIVE;
     }
+
+    public void moveToEntityId(Long toFolderNo) {
+        this.entityId = toFolderNo;
+    }
+
+    // 이동 시 목적지 폴더의 빈 displayOrder(1~5) 찾아서 재배정
+    public void changeDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
 }

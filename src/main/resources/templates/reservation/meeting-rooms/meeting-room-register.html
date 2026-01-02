@@ -1,290 +1,314 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout}">
+
 <head>
     <meta charset="UTF-8">
     <title>회의실 등록</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
 
-        .card {
-            width: 520px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-            padding: 28px;
-        }
+    <!-- 이 페이지 전용 CSS -->
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .meeting-room-register-page {
+                padding: 24px 26px;
+                background: #f4f6f8;
+                min-height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+            }
 
-        .form-inner {
-            max-width: 420px;          /* 입력칸 최대 폭 제한 */
-            margin: 0 auto;            /* 가운데 정렬 */
-        }
+            .meeting-room-register-page .card {
+                width: 520px;
+                background: #fff;
+                border-radius: 16px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+                padding: 28px;
+            }
 
-        input,
-        textarea {
-            width: 100%;
-            box-sizing: border-box;    /* 삐져나오는 거 방지 */
-        }
+            .meeting-room-register-page .form-inner {
+                max-width: 420px;          /* 입력칸 최대 폭 제한 */
+                margin: 0 auto;            /* 가운데 정렬 */
+            }
 
-        .image-preview {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+            .meeting-room-register-page input,
+            .meeting-room-register-page textarea {
+                width: 100%;
+                box-sizing: border-box;    /* 삐져나오는 거 방지 */
+            }
 
-        .image-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
+            .meeting-room-register-page .image-preview {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
 
-        h2 {
-            margin-top: 0;
-            text-align: center;
-        }
+            .meeting-room-register-page .image-preview img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+            }
 
-        .field {
-            margin-bottom: 14px;
-        }
+            .meeting-room-register-page h2 {
+                margin-top: 0;
+                text-align: center;
+            }
 
-        label {
-            display: block;
-            font-size: 13px;
-            margin-bottom: 6px;
-            color: #555;
-        }
+            .meeting-room-register-page .field {
+                margin-bottom: 14px;
+            }
 
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-        }
+            .meeting-room-register-page label {
+                display: block;
+                font-size: 13px;
+                margin-bottom: 6px;
+                color: #555;
+            }
 
-        textarea {
-            resize: none;
-        }
+            .meeting-room-register-page input,
+            .meeting-room-register-page textarea {
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                font-size: 14px;
+            }
 
-        .btns {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-        }
+            .meeting-room-register-page textarea {
+                resize: none;
+            }
 
-        button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-        }
+            .meeting-room-register-page .btns {
+                display: flex;
+                gap: 10px;
+                margin-top: 18px;
+            }
 
-        .submit {
-            background: #1677ff;
-            color: #fff;
-        }
+            .meeting-room-register-page button {
+                flex: 1;
+                padding: 10px;
+                border-radius: 8px;
+                border: none;
+                font-size: 14px;
+                cursor: pointer;
+            }
 
-        .cancel {
-            background: #e5e7eb;
-        }
+            .meeting-room-register-page .submit {
+                background: #1677ff;
+                color: #fff;
+            }
 
-        .preview-box {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
+            .meeting-room-register-page .cancel {
+                background: #e5e7eb;
+            }
 
-        .preview-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-    </style>
+            .meeting-room-register-page .preview-box {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                overflow: hidden;
+                margin-top: 10px;
+            }
+
+            .meeting-room-register-page .preview-box img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: none;
+            }
+        </style>
+    </th:block>
 </head>
+
 <body>
 
-<div class="card">
-    <h2>회의실 등록</h2>
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <!-- 🔹 왼쪽: 예약 서브 사이드바 (회의실 예약 active) -->
+        <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('meeting')"></aside>
 
-    <form id="roomForm" enctype="multipart/form-data">
+        <!-- 🔹 오른쪽: 방금 회의실 등록 화면 그대로 -->
+        <div class="meeting-room-register-page">
+            <div class="card">
+                <h2>회의실 등록</h2>
 
-        <div class="field">
-            <label>회의실명</label>
-            <input type="text" name="roomName" maxlength="20" required>
+                <form id="roomForm" enctype="multipart/form-data">
+
+                    <div class="field">
+                        <label>회의실명</label>
+                        <input type="text" name="roomName" maxlength="20" required>
+                    </div>
+
+                    <div class="field">
+                        <label>수용 인원</label>
+                        <input type="number" name="capacity" id="capacity" min="1" max="100" required>
+                    </div>
+
+                    <div class="field">
+                        <label>위치</label>
+                        <input type="text" name="location" maxlength="20">
+                    </div>
+
+                    <div class="field">
+                        <label>주요 장비</label>
+                        <input type="text" name="equipList" maxlength="255">
+                    </div>
+
+                    <div class="field">
+                        <label>특이사항</label>
+                        <textarea name="note" rows="3" maxlength="255"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label>회의실 이미지</label>
+                        <input
+                                type="file"
+                                name="imageFile"
+                                id="imageFile"
+                                accept="image/*"
+                                onchange="previewImage(this)"
+                        >
+                    </div>
+
+                    <div class="preview-box">
+                        <img id="imagePreview" alt="미리보기 이미지" />
+                    </div>
+
+                    <div class="btns">
+                        <button type="submit" class="submit">등록</button>
+                        <button type="button" class="cancel" onclick="history.back()">취소</button>
+                    </div>
+                </form>
+            </div>
         </div>
-
-        <div class="field">
-            <label>수용 인원</label>
-            <input type="number" name="capacity" id="capacity" min="1" max="100" required>
-        </div>
-
-        <div class="field">
-            <label>위치</label>
-            <input type="text" name="location" maxlength="20">
-        </div>
-
-        <div class="field">
-            <label>주요 장비</label>
-            <input type="text" name="equipList" maxlength="255">
-        </div>
-
-        <div class="field">
-            <label>특이사항</label>
-            <textarea name="note" rows="3" maxlength="255"></textarea>
-        </div>
-
-        <div class="field">
-            <label>회의실 이미지</label>
-            <input
-                    type="file"
-                    name="imageFile"
-                    id="imageFile"
-                    accept="image/*"
-                    onchange="previewImage(this)"
-            >
-        </div>
-
-        <div class="preview-box">
-            <img id="imagePreview" alt="미리보기 이미지" />
-        </div>
-
-        <div class="btns">
-            <button type="submit" class="submit">등록</button>
-            <button type="button" class="cancel" onclick="history.back()">취소</button>
-        </div>
-    </form>
+    </section>
 </div>
-<script>
-    /* ---------- image preview ---------- */
-    function previewImage(input) {
-        const preview = document.getElementById("imagePreview");
 
-        if (!input.files || !input.files[0]) {
-            preview.style.display = "none";
-            preview.src = "";
-            return;
-        }
+<!-- 이 페이지 전용 JS -->
+<th:block layout:fragment="pageScripts">
+    <script>
+        /* ---------- image preview ---------- */
+        function previewImage(input) {
+            const preview = document.getElementById("imagePreview");
 
-        const file = input.files[0];
-
-        if (!file.type.startsWith("image/")) {
-            alert("이미지 파일만 업로드 가능합니다.");
-            input.value = "";
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            preview.src = e.target.result;
-            preview.style.display = "block";
-        };
-
-        reader.readAsDataURL(file);
-    }
-
-    /* ---------- submit ---------- */
-    async function submitMeetingRoomForm(e) {
-        e.preventDefault();
-
-        const name = document.querySelector("[name=roomName]").value.trim();
-        const capacity = Number(document.querySelector("[name=capacity]").value);
-        const form = document.getElementById("roomForm");
-        const formData = new FormData(form);
-
-        // 🔎 기본 유효성
-        if (!name) {
-            alert("회의실명을 입력해주세요.");
-            return;
-        }
-
-        if (name.length > 20) {
-            alert("회의실명은 20자 이내여야 합니다.");
-            return;
-        }
-
-        if (!capacity || capacity < 1 || capacity > 100) {
-            alert("수용 인원은 1~100명 사이여야 합니다.");
-            return;
-        }
-
-        try {
-            const res = await fetch("/api/v1/meeting-rooms", {
-                method: "POST",
-                credentials: "include",        // 🔥 쿠키 자동 전송
-                body: formData                 // ⚠️ Content-Type 지정 금지
-            });
-
-            // 🔒 인증 만료/미로그인
-            if (res.status === 401) {
-                alert("로그인이 필요합니다.");
-                location.href = "/login";
+            if (!input.files || !input.files[0]) {
+                preview.style.display = "none";
+                preview.src = "";
                 return;
             }
 
-            const result = await res.json();
+            const file = input.files[0];
 
-            if (!res.ok) {
-                console.error(result);
-                alert(result.message || "등록 실패");
+            if (!file.type.startsWith("image/")) {
+                alert("이미지 파일만 업로드 가능합니다.");
+                input.value = "";
                 return;
             }
 
-            alert("회의실 등록 성공!");
-            location.href = "/reservation/meeting-rooms";
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            };
 
-        } catch (err) {
-            console.error(err);
-            alert("서버 오류가 발생했습니다.");
-        }
-    }
-
-    /* ---------- capacity guard ---------- */
-    const capacityInput = document.getElementById("capacity");
-
-    capacityInput.addEventListener("input", () => {
-        let value = capacityInput.value;
-
-        if (value === "") return;
-
-        value = Number(value);
-
-        if (isNaN(value)) {
-            capacityInput.value = "";
-            return;
+            reader.readAsDataURL(file);
         }
 
-        if (value < 1) {
-            capacityInput.value = 1;
-            return;
+        /* ---------- submit ---------- */
+        async function submitMeetingRoomForm(e) {
+            e.preventDefault();
+
+            const name = document.querySelector("[name=roomName]").value.trim();
+            const capacity = Number(document.querySelector("[name=capacity]").value);
+            const form = document.getElementById("roomForm");
+            const formData = new FormData(form);
+
+            // 🔎 기본 유효성
+            if (!name) {
+                alert("회의실명을 입력해주세요.");
+                return;
+            }
+
+            if (name.length > 20) {
+                alert("회의실명은 20자 이내여야 합니다.");
+                return;
+            }
+
+            if (!capacity || capacity < 1 || capacity > 100) {
+                alert("수용 인원은 1~100명 사이여야 합니다.");
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/v1/meeting-rooms", {
+                    method: "POST",
+                    credentials: "include",        // 🔥 쿠키 자동 전송
+                    body: formData                 // ⚠️ Content-Type 지정 금지
+                });
+
+                // 🔒 인증 만료/미로그인
+                if (res.status === 401) {
+                    alert("로그인이 필요합니다.");
+                    location.href = "/login";
+                    return;
+                }
+
+                const result = await res.json();
+
+                if (!res.ok) {
+                    console.error(result);
+                    alert(result.message || "등록 실패");
+                    return;
+                }
+
+                alert("회의실 등록 성공!");
+                location.href = "/meeting-rooms";
+
+            } catch (err) {
+                console.error(err);
+                alert("서버 오류가 발생했습니다.");
+            }
         }
 
-        if (value > 100) {
-            capacityInput.value = 100;
-        }
-    });
+        /* ---------- capacity guard ---------- */
+        const capacityInput = document.getElementById("capacity");
 
-    document
-        .getElementById("roomForm")
-        .addEventListener("submit", submitMeetingRoomForm);
-</script>
+        capacityInput.addEventListener("input", () => {
+            let value = capacityInput.value;
+
+            if (value === "") return;
+
+            value = Number(value);
+
+            if (isNaN(value)) {
+                capacityInput.value = "";
+                return;
+            }
+
+            if (value < 1) {
+                capacityInput.value = 1;
+                return;
+            }
+
+            if (value > 100) {
+                capacityInput.value = 100;
+            }
+        });
+
+        document
+            .getElementById("roomForm")
+            .addEventListener("submit", submitMeetingRoomForm);
+    </script>
+</th:block>
 
 </body>
 </html>

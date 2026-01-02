@@ -33,19 +33,25 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-        update DocumentForm d
-           set d.docfoStat = :stat
-         where d.docfoNo = :docfoNo
+        update DocumentForm f
+           set f.docfoStat = :stat,
+               f.rejectReason = :reason
+         where f.docfoNo = :docfoNo
     """)
-    int updateDocfoStat(@Param("docfoNo") Long docfoNo,
-                        @Param("stat") DocumentFormStats stat);
+    int updateStatusAndReason(@Param("docfoNo") Long docfoNo,
+                              @Param("stat") DocumentFormStats stat,
+                              @Param("reason") String reason);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-        update DocumentForm d
-           set d.rejectReason = :rejectReason
-         where d.docfoNo = :docfoNo
-    """)
-    int updateRejectReason(@Param("docfoNo") Long docfoNo,
-                           @Param("rejectReason") String rejectReason);
+    Page<DocumentForm> findByDocfoStatInAndCompany_ComIdOrderByDocfoNoAsc(
+            java.util.List<DocumentFormStats> stats,
+            String comId,
+            Pageable pageable
+    );
+
+    Page<DocumentForm> findByDocfoStatInAndCompany_ComIdAndDocfoNameContainingIgnoreCaseOrderByDocfoNoAsc(
+            java.util.List<DocumentFormStats> stats,
+            String comId,
+            String docfoName,
+            Pageable pageable
+    );
 }

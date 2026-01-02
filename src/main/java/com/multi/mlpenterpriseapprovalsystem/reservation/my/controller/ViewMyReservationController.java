@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 
 @Controller
-@RequestMapping("/reservation")
+@RequestMapping
 public class ViewMyReservationController {
 
     @GetMapping("/my-reservations")

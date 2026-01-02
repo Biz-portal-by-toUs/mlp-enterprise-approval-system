@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
 
 import lombok.*;
+import org.springframework.security.access.prepost.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,22 +23,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class ViewDocumentFormController {
 
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN','EMPLOYEE')")
     @GetMapping("/forms")
     public String formList() {
         return "document-form/form-list";
     }
 
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN','EMPLOYEE')")
     @GetMapping("/{docfoNo}")
     public String formDetail(@PathVariable Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
         return "document-form/detail";
     }
 
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @GetMapping("/new")
     public String createForm() {
         return "document-form/make-form";
     }
 
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @GetMapping("/{docfoNo}/edit")
     public String updateForm(@PathVariable Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
