@@ -77,4 +77,13 @@ public class Schedule {
                                   boolean allDay, String color) {
         return new Schedule(company, department, register, title, content, startAt, endedAt, allDay, color);
     }
+
+    public void update (String title, String content, LocalDateTime startAt, LocalDateTime endedAt,
+                        boolean allDay) {
+        this.title = title;
+        this.content = content;
+        this.startAt = startAt;
+        this.endedAt = endedAt;
+        this.allDay = allDay;
+    }
 }
