@@ -173,4 +173,43 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
                 group by e.department.depId
             """)
     List<DepCount> countGroupByDepId(@Param("comId") String comId);
+
+    //조직도용 사원 조회
+    interface OrgEmployeeRow {
+        Long getEmpNo();
+        String getEmpId();
+        String getEmpName();
+        String getEmail();
+        String getWorkPhone();
+        String getObjectKey();
+
+        String getDepId();
+        String getDepName();
+
+        String getPosName();
+        Integer getPosOrder();
+    }
+
+    @Query("""
+        select
+          e.empNo as empNo,
+          e.empId as empId,
+          e.empName as empName,
+          e.email as email,
+          e.workPhone as workPhone,
+          e.objectKey as objectKey,
+
+          d.depId as depId,
+          d.depName as depName,
+
+          p.posName as posName,
+          p.posOrder as posOrder
+        from Employee e
+          join e.department d
+          join e.positions p
+        where e.company.comId = :comId
+          and (:depId is null or d.depId = :depId)
+        order by d.depName asc, p.posOrder asc, e.empName asc, e.empNo asc
+    """)
+    List<OrgEmployeeRow> findOrgChartRows(@Param("comId")String comId,@Param("depId") String depId);
 }
