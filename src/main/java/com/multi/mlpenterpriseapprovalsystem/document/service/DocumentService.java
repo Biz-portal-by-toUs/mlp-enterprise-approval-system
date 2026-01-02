@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.service;
 
+import com.multi.mlpenterpriseapprovalsystem.attendance.service.AttendanceService;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
@@ -56,6 +57,7 @@ public class DocumentService {
     private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
     private final DocumentOpenAiConfig documentOpenAiConfig;
     private final WebClient documentOpenAiWebClient;
+    private final AttendanceService attendanceService;
 
     public DocumentService(
             DocumentRepository documentRepository,
@@ -442,52 +444,96 @@ public class DocumentService {
     }
 
     // 결재라인 생성 (대직자 포함)
-    private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
+//    private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
+//
+//        // seq 기준 정렬하여 순서 보장
+//        List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
+//                .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
+//                .toList();
+//
+//        for (int i = 0; i < sortedLines.size(); i++) {
+//            ReqApprovalLineDto lineDto = sortedLines.get(i);
+//
+//            Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
+//                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+//
+//            // 첫 번째 결재자는 I(결재중), 나머지는 W(대기)
+//            ApprStat apprStat;
+//            if (isTemp) {
+//                apprStat = ApprStat.W;
+//            } else {
+//                apprStat = (i == 0) ? ApprStat.I : ApprStat.W;
+//            }
+//
+//            // 결재자 추가
+//            ApprovalLine approverLine = ApprovalLine.toEntity(
+//                    document,
+//                    approver,
+//                    company,
+//                    lineDto.getSeq(),
+//                    apprStat,
+//                    false,  // isDelegate = false
+//                    null
+//            );
+//            approvalLineRepository.save(approverLine);
+//
+//            // 결재자가 휴가중(V)이고 대직자가 있으면 대직자도 추가
+//            if ("V".equals(approver.getAtte()) && approver.getDelegate() != null) {
+//                ApprovalLine delegateLine = ApprovalLine.toEntity(
+//                        document,
+//                        approver.getDelegate(),
+//                        company,
+//                        lineDto.getSeq(),  // 같은 seq
+//                        apprStat,          // 같은 상태
+//                        true,               // isDelegate = true
+//                        approver
+//                );
+//                approvalLineRepository.save(delegateLine);
+//
+//                log.info("대직자 추가: 결재자={}, 대직자={}, seq={}",
+//                        approver.getEmpId(), approver.getDelegate().getEmpId(), lineDto.getSeq());
+//            }
+//        }
+//    }
 
-        // seq 기준 정렬하여 순서 보장
+    // 결재라인 생성 (대직자 포함)
+    private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
         List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
                 .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
                 .toList();
 
         for (int i = 0; i < sortedLines.size(); i++) {
             ReqApprovalLineDto lineDto = sortedLines.get(i);
-
             Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-            // 첫 번째 결재자는 I(결재중), 나머지는 W(대기)
-            ApprStat apprStat;
-            if (isTemp) {
-                apprStat = ApprStat.W;
-            } else {
-                apprStat = (i == 0) ? ApprStat.I : ApprStat.W;
-            }
+            ApprStat apprStat = isTemp ? ApprStat.W : (i == 0 ? ApprStat.I : ApprStat.W);
 
-            // 결재자 추가
+            // 1. 원 결재자 추가 (A)
             ApprovalLine approverLine = ApprovalLine.toEntity(
-                    document,
-                    approver,
-                    company,
-                    lineDto.getSeq(),
-                    apprStat,
-                    false  // isDelegate = false
+                    document, approver, company, lineDto.getSeq(), apprStat, false, null
             );
             approvalLineRepository.save(approverLine);
 
-            // 결재자가 휴가중(v)이고 대직자가 있으면 대직자도 추가
-            if ("V".equals(approver.getAtte()) && approver.getDelegate() != null) {
+            // 2. 연쇄 대직자 추적 및 추가 (A -> B -> C -> D)
+            Employee currentTarget = approver;
+            // 현재 대상이 휴가 중(V)이고 대직자가 지정되어 있다면 계속 추적
+            while ("V".equals(currentTarget.getAtte()) && currentTarget.getDelegate() != null) {
+                Employee delegate = currentTarget.getDelegate();
+
+                // 대직자 라인 생성 (targetApprover는 바로 직전 단계의 사람)
                 ApprovalLine delegateLine = ApprovalLine.toEntity(
-                        document,
-                        approver.getDelegate(),
-                        company,
-                        lineDto.getSeq(),  // 같은 seq
-                        apprStat,          // 같은 상태
-                        true               // isDelegate = true
+                        document, delegate, company, lineDto.getSeq(), apprStat, true, currentTarget
                 );
                 approvalLineRepository.save(delegateLine);
 
-                log.info("대직자 추가: 결재자={}, 대직자={}, seq={}",
-                        approver.getEmpId(), approver.getDelegate().getEmpId(), lineDto.getSeq());
+                log.info("연쇄 대직자 투입: {}의 대직자로 {} 지정 (seq: {})",
+                        currentTarget.getEmpId(), delegate.getEmpId(), lineDto.getSeq());
+
+                // 다음 체인 확인을 위해 대상을 현재 대직자로 교체
+                currentTarget = delegate;
+
+                // "휴가자는 대직자로 설정 불가" 규칙 덕분에 무한 루프에 빠지지 않고 결국 출근자에서 멈춤
             }
         }
     }
@@ -525,7 +571,6 @@ public class DocumentService {
     }
 
     // 결재 승인 및 반려
-    // 결재 승인 및 반려
     public void processApproval(String comId, String myEmpId, Long docNo, ReqApprovalLineDto reqDto) {
 
         // 1. 문서 조회
@@ -545,28 +590,39 @@ public class DocumentService {
         // 4. 결재라인에서 내 결재라인 조회 (본인이 결재자이거나 대직자인 경우)
         List<ApprovalLine> allLines = approvalLineRepository.findByDocument_docNo(document.getDocNo());
 
-        ApprovalLine myLine = allLines.stream()
-                .filter(line -> line.getApprover().getEmpId().equals(myEmpId))
-                .findFirst()
-                .orElseThrow(() -> new CustomException(ErrorCode.APPROVAL_LINE_NOT_FOUND));
+//        ApprovalLine myLine = allLines.stream()
+//                .filter(line -> line.getApprover().getEmpId().equals(myEmpId))
+//                .findFirst()
+//                .orElseThrow(() -> new CustomException(ErrorCode.APPROVAL_LINE_NOT_FOUND));
 
-        // 5. 내 차례인지 확인 (apprStat이 I인 경우만 결재 가능)
-        if (myLine.getApprStat() != ApprStat.I) {
+        List<ApprovalLine> myLines = allLines.stream()
+                .filter(line -> line.getApprover().getEmpId().equals(myEmpId)
+                        && line.getApprStat() == ApprStat.I)
+                .toList();
+
+        if (myLines.isEmpty()) {
             throw new CustomException(ErrorCode.NOT_MY_TURN_TO_APPROVE);
         }
 
+//        // 5. 내 차례인지 확인 (apprStat이 I인 경우만 결재 가능)
+//        if (myLine.getApprStat() != ApprStat.I) {
+//            throw new CustomException(ErrorCode.NOT_MY_TURN_TO_APPROVE);
+//        }
+
         // 6. 승인/반려 처리
+        // 내 라인들 중 첫 번째의 seq를 기준으로 잡음 (모두 같은 seq임)
+        int currentSeq = myLines.get(0).getSeq();
         String apprStat = reqDto.getApprStat();
 
         if ("A".equals(apprStat)) {
             // 승인 처리
-            myLine.approve();
+            myLines.forEach(ApprovalLine::approve);
 
             // 같은 seq의 다른 결재자(원 결재자 또는 대직자)도 승인 처리 (isActualAppr = false)
-            markOtherApproversInSameSeq(allLines, myLine.getSeq(), myEmpId, ApprStat.A, null);
+            markOtherApproversInSameSeq(allLines, currentSeq, myEmpId, ApprStat.A, null);
 
             // 다음 결재자에게 차례 넘기기
-            passToNextApprover(allLines, myLine.getSeq());
+            passToNextApprover(allLines, currentSeq);
 
             // 모든 결재자가 승인했는지 확인 후 문서 상태 변경
             boolean allApproved = allLines.stream()
@@ -576,18 +632,20 @@ public class DocumentService {
                 String docId = generateDocId(document);
                 document.finalize(docId);
                 log.info("문서 최종 승인: docNo={}, docId={}", docNo, docId);
-            }
 
+                // 문서양식이 휴가 신청서, 출장 신청서이면 호출
+                attendanceService.processAttendance(document);
+            }
         } else if ("R".equals(apprStat)) {
             // 반려 처리
             if (reqDto.getRejReason() == null || reqDto.getRejReason().trim().isEmpty()) {
                 throw new CustomException(ErrorCode.REJECT_REASON_REQUIRED);
             }
 
-            myLine.reject(reqDto.getRejReason());
+            myLines.forEach(line -> line.reject(reqDto.getRejReason()));
 
             // 같은 seq의 다른 결재자(원 결재자 또는 대직자)도 반려 처리 (isActualAppr = false)
-            markOtherApproversInSameSeq(allLines, myLine.getSeq(), myEmpId, ApprStat.R, reqDto.getRejReason());
+            markOtherApproversInSameSeq(allLines, currentSeq, myEmpId, ApprStat.R, reqDto.getRejReason());
 
             document.reject();
 
@@ -692,6 +750,41 @@ public class DocumentService {
      * - 기존 반려 문서는 그대로 유지
      * - 새 문서를 생성하여 상신 또는 임시저장
      */
+//    public Long resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
+//
+//        // 1. 원본 문서 조회
+//        Document originalDoc = documentRepository.findById(originalDocNo)
+//                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+//
+//        // 2. 본인 문서인지 확인
+//        if (!originalDoc.getWriter().getEmpId().equals(myEmpId)) {
+//            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+//        }
+//
+//        // 3. 회사 일치 확인
+//        if (!originalDoc.getCompany().getComId().equals(comId)) {
+//            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+//        }
+//
+//        // 4. 반려 상태인지 확인
+//        if (originalDoc.getDocStat() != DocStat.RJ) {
+//            throw new CustomException(ErrorCode.DOCUMENT_NOT_REJECTED);
+//        }
+//
+//        // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
+//        Long newDocNo = createDocument(comId, myEmpId, reqDto);
+//
+//        log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
+//
+//        return newDocNo;
+//    }
+
+    /**
+     * 반려된 문서 재작성 (새 문서 생성)
+     * - 기존 반려 문서는 그대로 유지하되 isResubmitted = true, resubmittedFor = 새 문서로 변경
+     * - 새 문서를 생성하여 상신 또는 임시저장, resubmittedBy = 반려된 문서로 설정
+     * - 양방향 연결 설정
+     */
     public Long resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
 
         // 1. 원본 문서 조회
@@ -713,12 +806,51 @@ public class DocumentService {
             throw new CustomException(ErrorCode.DOCUMENT_NOT_REJECTED);
         }
 
-        // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
-        Long newDocNo = createDocument(comId, myEmpId, reqDto);
+        // 5. 이미 재상신된 문서인지 확인
+        if (Boolean.TRUE.equals(originalDoc.getIsResubmitted())) {
+            throw new CustomException(ErrorCode.DOCUMENT_ALREADY_RESUBMITTED);
+        }
 
-        log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
+        // 6. 연관 엔티티 조회
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
-        return newDocNo;
+        Employee writer = employeeRepository.findByEmpId(myEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
+
+        DocumentForm form = tempDocumentFormRepository.findById(reqDto.getDocfoNo())
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
+
+        // 7. 새 문서 생성
+        Document newDocument = Document.toEntity(reqDto, company, writer, category, form);
+
+        boolean isTemp = Boolean.TRUE.equals(reqDto.getTemp());
+
+        if (isTemp) {
+            newDocument.saveAsTemp();
+        } else {
+            newDocument.submit();
+        }
+
+        documentRepository.save(newDocument);
+
+        // 8. 결재라인 생성
+        if (reqDto.getApprovalLines() != null && !reqDto.getApprovalLines().isEmpty()) {
+            validateApproverNotSelf(myEmpId, reqDto.getApprovalLines());
+            validateApprovalLineOrder(reqDto.getApprovalLines());
+            createApprovalLines(newDocument, company, reqDto.getApprovalLines(), isTemp);
+        }
+
+        // 9. 양방향 연결 설정 (핵심!)
+        originalDoc.linkResubmission(newDocument);
+
+        log.info("반려 문서 재작성 완료: originalDocNo={}, newDocNo={}, isTemp={}",
+                originalDocNo, newDocument.getDocNo(), isTemp);
+
+        return newDocument.getDocNo();
     }
 
 

@@ -48,6 +48,10 @@ public class ResDocumentDto {
     private ApprStat myApprStat; // 나의 결재 상태
     private LocalDateTime submittedAt;
 
+    private Boolean isResubmitted;
+    private Long resubmittedForDocNo;
+    private Long resubmittedByDocNo;
+
 
     public static ResDocumentDto toDto(Document document) {
         return ResDocumentDto.builder()
@@ -77,6 +81,11 @@ public class ResDocumentDto {
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
                 .submittedAt(document.getSubmittedAt())
+                .isResubmitted(document.getIsResubmitted())
+                .resubmittedForDocNo(document.getResubmittedFor() != null ?
+                        document.getResubmittedFor().getDocNo() : null)
+                .resubmittedByDocNo(document.getResubmittedBy() != null ?
+                        document.getResubmittedBy().getDocNo() : null)
                 .build();
     }
 
@@ -109,6 +118,11 @@ public class ResDocumentDto {
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
                 .submittedAt(document.getSubmittedAt())
+                .isResubmitted(document.getIsResubmitted())
+                .resubmittedForDocNo(document.getResubmittedFor() != null ?
+                        document.getResubmittedFor().getDocNo() : null)
+                .resubmittedByDocNo(document.getResubmittedBy() != null ?
+                        document.getResubmittedBy().getDocNo() : null)
                 .build();
 
         // empId가 전달되었다면 해당 사용자의 상태를 찾아 세팅

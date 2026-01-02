@@ -172,6 +172,17 @@ public class Employee extends BaseEntity {
         this.role = role;
     }
 
+    public void updateDelegate(Employee onLeave) {
+        this.delegate = onLeave;
+    }
+
+    public void updateAtteStatus(String newAtte) {
+        this.atte = newAtte;
+
+        // 휴가나 출장 중이면 메시지 상태를 '출근 안 함(H)'으로 강제 변경
+        if ("V".equals(newAtte) || "B".equals(newAtte)) {
+            this.msgStat = "H";
+        }
     public void changePassword(String encodedPwd) {
         this.pwd = encodedPwd;
     }

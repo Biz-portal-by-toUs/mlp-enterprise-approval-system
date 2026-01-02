@@ -237,19 +237,25 @@ CREATE TABLE IF NOT EXISTS attach_box (
 CREATE TABLE IF NOT EXISTS document (
                                         doc_no        BIGINT        NOT NULL AUTO_INCREMENT,
                                         com_id        VARCHAR(3)    NOT NULL,
-                                        doc_id        VARCHAR(14)   NULL,
+                                        doc_id        VARCHAR(14)   NULL unique,
                                         docfo_cat_no  BIGINT        NOT NULL,
                                         docfo_no      BIGINT        NOT NULL,
                                         title         VARCHAR(100)  NOT NULL,
-                                        content       mediumTEXT          not NULL,
+                                        content       mediumTEXT    not NULL,
                                         cntt_html     mediumtext    NULL,
                                         emp_id        VARCHAR(7)    NOT NULL,
                                         ai_summ       TEXT          NULL,
                                         temp          BOOLEAN       NOT NULL DEFAULT FALSE,
                                         submitted_at  TIMESTAMP      NULL,
+                                        doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
+
                                         created_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
                                         updated_at    TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                        doc_stat      varchar(2)    NOT NULL DEFAULT 'AW',
+
+                                        is_resubmitted boolean      null default false,
+                                        resubmitted_by_doc_no  bigint null,
+                                        resubmitted_for_doc_no bigint null,
+                                        atte_no        bigint        null,
 
                                         CONSTRAINT pk_document PRIMARY KEY (doc_no),
                                         CONSTRAINT uk_document_doc_id UNIQUE (doc_id),
@@ -269,7 +275,20 @@ CREATE TABLE IF NOT EXISTS document (
 
                                         CONSTRAINT fk_document_form_cat
                                             FOREIGN KEY (docfo_cat_no) REFERENCES document_form_category(docfo_cat_no)
-                                                ON UPDATE CASCADE
+                                                ON UPDATE CASCADE,
+
+                                        CONSTRAINT fk_document_resubmitted_by
+                                            FOREIGN KEY (resubmitted_by_doc_no) REFERENCES document(doc_no)
+                                                ON UPDATE CASCADE ON DELETE SET NULL,
+
+                                        CONSTRAINT fk_document_resubmitted_for
+                                            FOREIGN KEY (resubmitted_for_doc_no) REFERENCES document(doc_no)
+                                                ON UPDATE CASCADE ON DELETE SET NULL,
+
+                                        CONSTRAINT fk_document_attendance
+                                            FOREIGN KEY (atte_no) REFERENCES attendance(atte_no)
+                                                ON UPDATE CASCADE ON DELETE SET NULL
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS approval_line (
@@ -283,6 +302,10 @@ CREATE TABLE IF NOT EXISTS approval_line (
                                              is_actual_appr boolean    not null,
                                              rej_reason  text          null,
                                              is_delegate boolean       not null default false,
+                                             target_emp_id  VARCHAR(7) NULL COMMENT '권한 위임자 (누구를 대신하는가)',
+
+                                             created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                             updated_at     TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                                              CONSTRAINT pk_approval_line PRIMARY KEY (apprl_no),
                                              CONSTRAINT ck_approval_line_stat CHECK (appr_stat IN ('I', 'W', 'A', 'R')),
@@ -297,7 +320,11 @@ CREATE TABLE IF NOT EXISTS approval_line (
 
                                              CONSTRAINT fk_approval_line_employee
                                                  FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
-                                                     ON UPDATE CASCADE
+                                                     ON UPDATE CASCADE,
+
+                                             CONSTRAINT fk_approval_line_target
+                                                 FOREIGN KEY (target_emp_id) REFERENCES employee(emp_id)
+                                                     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 # CREATE TABLE IF NOT EXISTS document_file (
@@ -793,12 +820,15 @@ CREATE TABLE IF NOT EXISTS attendance (
                                           atte_no     BIGINT        NOT NULL AUTO_INCREMENT,
                                           com_id      VARCHAR(3)    NOT NULL,
                                           emp_id      VARCHAR(7)    NOT NULL,
-                                          doc_id      VARCHAR(14)   NOT NULL,
+                                          doc_no      bigint        NOT NULL,
                                           type        CHAR(1)       NOT NULL,
                                           day         INT           NOT NULL DEFAULT 1,
                                           delegate    VARCHAR(7)    NULL,
-                                          created_at  DATETIME      NOT NULL,
-                                          ended_at    DATETIME      NOT NULL,
+                                          start_at    datetime      not null,
+                                          end_at      DATETIME      NOT NULL,
+
+                                          created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                          updated_at  TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
                                           CONSTRAINT pk_attendance PRIMARY KEY (atte_no),
                                           CONSTRAINT fk_attendance_company
@@ -808,8 +838,10 @@ CREATE TABLE IF NOT EXISTS attendance (
                                               FOREIGN KEY (emp_id) REFERENCES employee(emp_id)
                                                   ON DELETE CASCADE,
                                           CONSTRAINT fk_attendance_document
-                                              FOREIGN KEY (doc_id) REFERENCES document(doc_id)
-                                                  ON DELETE CASCADE
+                                              FOREIGN KEY (doc_no) REFERENCES document(doc_no),
+                                          CONSTRAINT fk_attendance_delegate
+                                              FOREIGN KEY (delegate) REFERENCES employee(emp_id)
+                                                  ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ========================================================

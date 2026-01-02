@@ -56,7 +56,8 @@ public class ViewDocumentController {
 
     // 반려된 문서 재작성 화면
     @GetMapping("/documents/{docNo}/rejected/rewrite")
-    public String documentRewriteRejected(@PathVariable(name = "docNo") Long docNo) {
+    public String documentRewriteRejected(@PathVariable(name = "docNo") Long docNo,
+                                          @RequestParam(name = "atteNo", required = false) Long atteNo) {
         return "document/document-rejected-rewrite";
     }
 
@@ -69,13 +70,17 @@ public class ViewDocumentController {
 
     // 문서 작성 화면
     @GetMapping("/documents/create")
-    public String viewNewDocument(@RequestParam(name = "docfoNo") Long docfoNo) {
+    public String viewNewDocument(@RequestParam(name = "docfoNo") Long docfoNo,
+                                  @RequestParam(name = "atteNo", required = false) Long atteNo,
+                                  @RequestParam(name = "category", required = false) String category)
+    {
         return "document/create";
     }
 
     // 문서 상세 조회 화면
     @GetMapping("/documents/{docNo}")
-    public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status)
+    public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status,
+                                            @RequestParam(name = "atteNo", required = false) Long atteNo)
     {
         if("UNSUBMITTED".equals(status)) { // 임시저장 문서 상세
             return "document/document-temp-rewrite";

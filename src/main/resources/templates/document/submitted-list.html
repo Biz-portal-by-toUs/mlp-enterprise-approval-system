@@ -515,15 +515,27 @@
 
             const tr = document.createElement('tr');
 
+            // ✅ 재상신된 문서이면 배경 회색 + 투명도
+            const isResubmitted = doc.isResubmitted === true;
+            if (isResubmitted) {
+                tr.style.backgroundColor = '#f1f3f5';
+                tr.style.opacity = '0.7';
+            }
+
             const statusBadgeHtml = doc.docStat === 'RJ'
                 ? `<span class="badge badge-${doc.docStat}" onclick="showRejectModal(${doc.docNo})" title="클릭하여 반려 정보 보기">${getDocStatusName(doc.docStat)}</span>`
                 : `<span class="badge badge-${doc.docStat}">${getDocStatusName(doc.docStat)}</span>`;
+
+            // ✅ 제목 옆에 재상신 표시 추가
+            const titleHtml = isResubmitted
+                ? `${doc.title} <span style="color: #868e96; font-size: 11px; font-weight: 500; margin-left: 6px;">(재상신됨)</span>`
+                : doc.title;
 
             tr.innerHTML = `
                 <td>${no}</td>
                 <td>${doc.docId || '-'}</td>
                 <td>${doc.docFormCatName || '-'}</td>
-                <td class="title-cell" onclick="location.href='/documents/${doc.docNo}?status=SUBMITTED'">${doc.title}</td>
+                <td class="title-cell" onclick="location.href='/documents/${doc.docNo}?status=SUBMITTED'">${titleHtml}</td>
                 <td>${doc.writerDepName || '-'}</td>
                 <td>${doc.writer}<br>${doc.writerId}</td>
                 <td>${statusBadgeHtml}</td>

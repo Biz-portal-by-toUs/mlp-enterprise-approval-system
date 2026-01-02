@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>임시저장 문서 수정 - 기업용 전자결재시스템</title>
 
-    <!-- TipTap 번들 -->
     <script th:src="@{/js/tiptap.min.js}"></script>
 
     <style>
@@ -43,6 +42,7 @@
             margin-bottom: 25px;
         }
         .page-title { font-size: 24px; font-weight: 700; color: var(--primary-color); }
+        .form-name-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
 
         .header-btns { display: flex; gap: 8px; }
 
@@ -258,6 +258,7 @@
 
         .ProseMirror table {
             border-collapse: collapse;
+            table-layout: fixed;
             width: 100%;
             margin: 1em 0;
         }
@@ -268,11 +269,29 @@
             padding: 8px;
             min-width: 50px;
             vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
         }
 
         .ProseMirror table th {
             background: var(--bg-light);
             font-weight: 600;
+        }
+
+        .ProseMirror table td[data-editable="false"],
+        .ProseMirror table th[data-editable="false"] {
+            background-color: #f1f3f5 !important;
+            cursor: not-allowed;
+            user-select: none;
+            color: #495057;
+            position: relative;
+        }
+
+        .ProseMirror table td[data-editable="true"]:focus-within {
+            background-color: #e7f5ff;
+            outline: 2px solid var(--primary-color);
+            outline-offset: -2px;
         }
 
         .ProseMirror ul,
@@ -327,7 +346,6 @@
             text-decoration: underline;
         }
 
-        /* Gapcursor 스타일 */
         .ProseMirror .ProseMirror-gapcursor {
             display: none;
             pointer-events: none;
@@ -470,6 +488,318 @@
             pointer-events: none;
         }
 
+        /* 모달 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            animation: fadeIn 0.2s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            font-size: 15px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            white-space: pre-line;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+            min-width: 100px;
+        }
+
+        .modal-btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #228be6;
+        }
+
+        .modal-btn-cancel {
+            background: #e9ecef;
+            color: var(--text-dark);
+        }
+
+        .modal-btn-cancel:hover {
+            background: #dee2e6;
+        }
+
+        .modal-btn-danger {
+            background: #fa5252;
+            color: white;
+        }
+
+        .modal-btn-danger:hover {
+            background: #e03131;
+        }
+
+        /* 근태 정보 섹션 스타일 */
+        .attendance-section {
+            background: #fff8e1;
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .attendance-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f59f00;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .attendance-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr 1.5fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .attendance-grid-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .attendance-grid-item label {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        .attendance-grid-item input[type="date"] {
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .attendance-grid-item input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(51, 154, 240, 0.1);
+        }
+
+        .required-mark {
+            color: #fa5252;
+            font-weight: bold;
+        }
+
+        .delegate-grid-item {
+            border-color: #40c057;
+            background: #f8fff9;
+        }
+
+        .delegate-search-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        #delegate-search {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        #delegate-search:focus {
+            outline: none;
+            border-color: #40c057;
+            box-shadow: 0 0 0 2px rgba(64, 192, 87, 0.1);
+        }
+
+        .delegate-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 2px;
+        }
+
+        .delegate-search-results.show {
+            display: block;
+        }
+
+        .delegate-result-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f5;
+            font-size: 13px;
+        }
+
+        .delegate-result-item:hover {
+            background: #e7f5ff;
+        }
+
+        .delegate-result-item:last-child {
+            border-bottom: none;
+        }
+
+        #selected-delegate-display {
+            display: flex;
+            align-items: center;
+            min-height: 44px;
+        }
+
+        .selected-delegate {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #40c057;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            box-shadow: 0 1px 3px rgba(64, 192, 87, 0.2);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .selected-delegate .delegate-icon {
+            font-size: 18px;
+            color: #40c057;
+            flex-shrink: 0;
+        }
+
+        .selected-delegate .delegate-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .selected-delegate .delegate-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .selected-delegate .delegate-detail {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .selected-delegate .delegate-remove {
+            cursor: pointer;
+            color: #fa5252;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 0 4px;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+
+        .selected-delegate .delegate-remove:hover {
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 1200px) {
+            .attendance-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .attendance-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 820px) { .top-section { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -477,7 +807,10 @@
 
 <div class="main-container">
     <div class="page-header">
-        <div class="page-title">임시저장 문서 수정</div>
+        <div>
+            <div class="page-title">임시저장 문서 수정</div>
+            <div class="form-name-subtitle" id="form-name-subtitle">문서 로딩 중...</div>
+        </div>
         <div class="header-btns">
             <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
         </div>
@@ -496,8 +829,8 @@
 
         <div class="search-container">
             <div class="search-header">
-                <span>결재선 수정 (최대 5명)</span>
-                <span class="rank-info">💡 낮은 직급 → 높은 직급 순 (같은 직급 가능)</span>
+                <span>결재선 지정 (최대 5명)</span>
+                <span class="rank-info">💡 자신보다 높은 직급, 직급순서대로, 각 1명씩</span>
             </div>
             <div class="search-input-wrap">
                 <input type="text" id="approver-search" placeholder="이름 또는 사번 검색 (클릭하면 전체 조회)" autocomplete="off" maxlength="20">
@@ -527,9 +860,40 @@
         </tr>
     </table>
 
+    <!-- 근태 정보 섹션 -->
+    <div id="attendance-section" class="attendance-section" style="display: none;">
+        <div class="attendance-section-title">
+            📅 <span id="attendance-title">근태 정보</span>
+        </div>
+
+        <div class="attendance-grid">
+            <div class="attendance-grid-item">
+                <label>시작일 <span class="required-mark">*</span></label>
+                <input type="date" id="startDate">
+            </div>
+
+            <div class="attendance-grid-item">
+                <label>종료일 <span class="required-mark">*</span></label>
+                <input type="date" id="endDate">
+            </div>
+
+            <div id="delegate-section" class="attendance-grid-item delegate-grid-item" style="display: none;">
+                <label>대직자 <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(선택)</span></label>
+                <div class="delegate-search-wrapper">
+                    <input type="text" id="delegate-search" placeholder="이름 또는 사번 검색" autocomplete="off">
+                    <div class="delegate-search-results" id="delegate-search-results"></div>
+                </div>
+            </div>
+
+            <div id="selected-delegate-section" class="attendance-grid-item" style="display: none;">
+                <label>선택된 대직자</label>
+                <div id="selected-delegate-display"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="content-section">
         <div style="position: relative;">
-            <!-- TipTap 에디터 -->
             <div class="tiptap-editor-wrapper">
                 <div class="tiptap-toolbar">
                     <select onchange="setHeading(this.value)">
@@ -563,7 +927,6 @@
             <div id="char-counter" class="char-counter">0 / 1000</div>
         </div>
 
-        <!-- 파일 첨부 영역 -->
         <div class="file-attach-section">
             <div class="file-attach-header">
                 📎 첨부파일 (최대 5개, 개당 10MB)
@@ -579,13 +942,11 @@
             </div>
         </div>
 
-        <!-- ✅ AI 요약 박스 -->
         <div id="ai-summary-box" style="display:none; margin-top:15px; padding:15px; background:#f1f3f5; border-left:4px solid var(--primary-color); font-size:13px;">
             <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
         </div>
 
         <div class="bottom-actions">
-            <!-- ✅ AI 요약 버튼 -->
             <button type="button" class="btn btn-temp" style="padding: 8px 16px; font-size: 13px;" onclick="generateAiSummary()">AI 요약 생성</button>
             <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
                 <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
@@ -598,19 +959,31 @@
 
 <div id="custom-alert" class="alert"></div>
 
+<div id="modal-overlay" class="modal-overlay">
+    <div class="modal-content">
+        <div id="modal-icon" class="modal-icon">⚠️</div>
+        <h3 id="modal-title" class="modal-title">알림</h3>
+        <p id="modal-message" class="modal-message"></p>
+        <div id="modal-buttons" class="modal-buttons"></div>
+    </div>
+</div>
+
 <script>
-    let myInfo = { empId: null, comId: null };
+    let myInfo = { empId: null, comId: null, posOrder: null };
     let selectedApprovers = [];
+    let selectedDelegate = null;
     let searchTimeout = null;
+    let delegateSearchTimeout = null;
     let originalDocNo = null;
     let originalDocumentJson = null;
-    const currentDocfoNo = 1;
+    let currentDocfoNo = null;
+    let currentFormName = '';
     let tiptapEditor = null;
-
-    // 첨부파일 관련 변수
     let existingFiles = [];
     let newFiles = [];
     let filesToDelete = [];
+    let formCategories = [];
+    let currentCategoryName = '';
 
     document.addEventListener('DOMContentLoaded', async () => {
         const pathParts = window.location.pathname.split('/');
@@ -621,7 +994,320 @@
         await fetchMyEmployeeInfo();
         await loadOriginalDocumentData();
         initApproverSearch();
+        initDelegateSearch();
+
+        document.getElementById('startDate').addEventListener('change', onStartDateChange);
+        document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
+
+    // ✅ 날짜 계산 헬퍼 함수
+    function getDateString(type) {
+        const date = new Date();
+
+        if (type === 'today') {
+            // 오늘
+        } else if (type === 'yesterday') {
+            date.setDate(date.getDate() - 1); // ✅ 어제
+        } else if (type === '-6months') {
+            date.setMonth(date.getMonth() - 6);
+        } else if (type === '+6months') {
+            date.setMonth(date.getMonth() + 6);
+        }
+
+        return date.toISOString().split('T')[0];
+    }
+
+    // ✅ 카테고리별 날짜 규칙 판별
+    function getCategoryRule(categoryName) {
+        const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
+
+        // ✅ 휴가/출장 수정신청 - 시작일 제한 없음, 종료일은 어제부터 미래
+        if (normalized.includes('수정신청')) {
+            return {
+                startDate: { min: null, max: null },
+                endDate: { min: getDateString('yesterday'), max: getDateString('+6months') }
+            };
+        }
+
+        // ✅ 휴가/출장 신청, 취소신청 - 오늘부터 미래
+        if (normalized.includes('휴가') || normalized.includes('출장')) {
+            return {
+                startDate: { min: getDateString('today'), max: getDateString('+6months') },
+                endDate: { min: getDateString('today'), max: getDateString('+6months') }
+            };
+        }
+
+        return null;
+    }
+
+    // ✅ 날짜 제약 적용
+    function applyDateConstraints(rule) {
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+
+        if (!rule) {
+            startDateInput.removeAttribute('min');
+            startDateInput.removeAttribute('max');
+            endDateInput.removeAttribute('min');
+            endDateInput.removeAttribute('max');
+            return;
+        }
+
+        // ✅ 시작일 제약 (null이면 제약 없음)
+        if (rule.startDate.min) {
+            startDateInput.min = rule.startDate.min;
+        } else {
+            startDateInput.removeAttribute('min');
+        }
+
+        if (rule.startDate.max) {
+            startDateInput.max = rule.startDate.max;
+        } else {
+            startDateInput.removeAttribute('max');
+        }
+
+        // ✅ 종료일 제약
+        if (rule.endDate.min) {
+            endDateInput.min = rule.endDate.min;
+        } else {
+            endDateInput.removeAttribute('min');
+        }
+
+        if (rule.endDate.max) {
+            endDateInput.max = rule.endDate.max;
+        } else {
+            endDateInput.removeAttribute('max');
+        }
+
+        console.log('✅ 날짜 제약 적용:', rule);
+    }
+
+    // ✅ 카테고리 변경 핸들러
+    function onCategoryChange(categoryName) {
+        console.log('📌 카테고리 변경:', categoryName);
+
+        currentCategoryName = categoryName;
+        const rule = getCategoryRule(categoryName);
+
+        const attendanceSection = document.getElementById('attendance-section');
+        const delegateSection = document.getElementById('delegate-section');
+        const selectedDelegateSection = document.getElementById('selected-delegate-section');
+        const attendanceTitle = document.getElementById('attendance-title');
+
+        if (!rule) {
+            attendanceSection.style.display = 'none';
+            return;
+        }
+
+        attendanceSection.style.display = 'block';
+
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+
+        selectedDelegate = null;
+        renderSelectedDelegate();
+
+        updateTableDates();
+        updateTableDelegate();
+
+        applyDateConstraints(rule);
+
+        const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
+
+        if (normalized.includes('휴가')) {
+            attendanceTitle.textContent = '휴가 정보';
+
+            // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 필드 표시
+            if (normalized === '휴가신청' || normalized === '휴가수정신청') {
+                delegateSection.style.display = 'block';
+            } else {
+                delegateSection.style.display = 'none';
+                selectedDelegateSection.style.display = 'none';
+            }
+        } else if (normalized.includes('출장')) {
+            attendanceTitle.textContent = '출장 정보';
+            delegateSection.style.display = 'none';
+            selectedDelegateSection.style.display = 'none';
+        }
+
+        console.log('✅ 카테고리 설정 완료 - 대직자 표시:', delegateSection.style.display);
+    }
+    // ✅ 시작일 변경 이벤트
+    function onStartDateChange(e) {
+        const startDate = e.target.value;
+        const endDateInput = document.getElementById('endDate');
+        const endDate = endDateInput.value;
+
+        if (startDate) {
+            const rule = getCategoryRule(currentCategoryName);
+            if (rule) {
+                endDateInput.min = startDate;
+            }
+        }
+
+        if (startDate && endDate && endDate < startDate) {
+            showModal(
+                '⚠️',
+                '날짜 오류',
+                '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
+            );
+            endDateInput.value = '';
+        }
+
+        updateTableDates();
+    }
+
+    // ✅ 종료일 변경 이벤트
+    function onEndDateChange(e) {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = e.target.value;
+
+        if (startDate && endDate && endDate < startDate) {
+            showModal(
+                '⚠️',
+                '날짜 오류',
+                '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
+            );
+            e.target.value = '';
+            return;
+        }
+
+        updateTableDates();
+    }
+
+    // ✅ 표에 날짜 업데이트
+    function updateTableDates() {
+        if (!tiptapEditor) return;
+
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        const json = tiptapEditor.getJSON();
+        const table = findTableInContent(json.content);
+        if (!table) return;
+
+        table.content.forEach(row => {
+            if (row.type === 'tableRow' && row.content) {
+                row.content.forEach(cell => {
+                    if (cell.attrs && cell.attrs['data-field']) {
+                        const field = cell.attrs['data-field'];
+
+                        if (field === 'startDate') {
+                            cell.content = [{
+                                type: 'paragraph',
+                                attrs: { textAlign: 'center' },
+                                content: [{ type: 'text', text: startDate ? formatDateKorean(startDate) : '-' }]
+                            }];
+                        } else if (field === 'endDate') {
+                            cell.content = [{
+                                type: 'paragraph',
+                                attrs: { textAlign: 'center' },
+                                content: [{ type: 'text', text: endDate ? formatDateKorean(endDate) : '-' }]
+                            }];
+                        }
+                    }
+                });
+            }
+        });
+
+        tiptapEditor.commands.setContent(json);
+        console.log('✅ 표 날짜 업데이트 완료');
+    }
+
+    // ✅ 표에 대직자 업데이트
+    function updateTableDelegate() {
+        if (!tiptapEditor) return;
+
+        const json = tiptapEditor.getJSON();
+        const table = findTableInContent(json.content);
+        if (!table) return;
+
+        table.content.forEach(row => {
+            if (row.type === 'tableRow' && row.content) {
+                row.content.forEach(cell => {
+                    if (cell.attrs && cell.attrs['data-field'] === 'delegate') {
+                        if (selectedDelegate) {
+                            cell.content = [{
+                                type: 'paragraph',
+                                attrs: { textAlign: 'center' },
+                                content: [{
+                                    type: 'text',
+                                    text: `${selectedDelegate.empName} (${selectedDelegate.posName} / ${selectedDelegate.depName})`
+                                }]
+                            }];
+                        } else {
+                            cell.content = [{
+                                type: 'paragraph',
+                                attrs: { textAlign: 'center' },
+                                content: [{ type: 'text', text: '-' }]
+                            }];
+                        }
+                    }
+                });
+            }
+        });
+
+        tiptapEditor.commands.setContent(json);
+        console.log('✅ 표 대직자 업데이트 완료');
+    }
+
+    function findTableInContent(content) {
+        if (!content || !Array.isArray(content)) return null;
+
+        for (let node of content) {
+            if (node.type === 'table') {
+                return node;
+            }
+            if (node.content) {
+                const found = findTableInContent(node.content);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    function formatDateKorean(dateStr) {
+        if (!dateStr) return '-';
+        const [year, month, day] = dateStr.split('-');
+        return `${year}년 ${month}월 ${day}일`;
+    }
+
+    function getCategoryNameByNo(docfoCatNo) {
+        const category = formCategories.find(c => c.docfoCatNo == docfoCatNo);
+        return category ? category.docfoCatName : '';
+    }
+
+    function showModal(icon, title, message, buttons) {
+        const modal = document.getElementById('modal-overlay');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalButtons = document.getElementById('modal-buttons');
+
+        modalIcon.textContent = icon;
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+
+        modalButtons.innerHTML = '';
+        buttons.forEach(btn => {
+            const button = document.createElement('button');
+            button.className = `modal-btn ${btn.className}`;
+            button.textContent = btn.text;
+            button.onclick = () => {
+                closeModal();
+                if (btn.callback) btn.callback();
+            };
+            modalButtons.appendChild(button);
+        });
+
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').style.display = 'none';
+    }
 
     async function loadOriginalDocumentData() {
         try {
@@ -634,22 +1320,41 @@
                 const doc = result.data;
                 document.getElementById('doc-title').value = doc.title || "";
 
-                // ✅ AI 요약 로드
+                currentDocfoNo = doc.docFormNo;
+
                 if (doc.aiSumm && doc.aiSumm.trim() !== '') {
                     const summaryBox = document.getElementById('ai-summary-box');
                     const summaryText = document.getElementById('ai-summary-text');
-
                     summaryBox.style.display = 'block';
                     summaryText.innerText = doc.aiSumm;
-
-                    console.log('✅ 기존 AI 요약 로드:', doc.aiSumm);
                 }
-
-                const originalDocfoNo = doc.docFormNo;
 
                 if (doc.content) {
                     try {
                         let parsedJson = JSON.parse(doc.content);
+
+                        // ⭐ 근태 정보 복원
+                        if (parsedJson.attendanceInfo) {
+                            const attendanceInfo = parsedJson.attendanceInfo;
+
+                            if (attendanceInfo.startDate) {
+                                document.getElementById('startDate').value = attendanceInfo.startDate;
+                            }
+                            if (attendanceInfo.endDate) {
+                                document.getElementById('endDate').value = attendanceInfo.endDate;
+                            }
+
+                            // ⭐ 대직자 정보 복원
+                            if (attendanceInfo.delegate) {
+                                selectedDelegate = {
+                                    empId: attendanceInfo.delegate.empId,
+                                    empName: attendanceInfo.delegate.empName,
+                                    posName: attendanceInfo.delegate.posName || '사원',
+                                    depName: attendanceInfo.delegate.depName || '',
+                                    posOrder: attendanceInfo.delegate.posOrder || 999
+                                };
+                            }
+                        }
 
                         function removeInputFields(obj) {
                             if (Array.isArray(obj)) {
@@ -659,7 +1364,11 @@
                             } else if (obj && typeof obj === 'object') {
                                 const newObj = {};
                                 for (let key in obj) {
-                                    newObj[key] = removeInputFields(obj[key]);
+                                    if (key === 'attendanceInfo') {
+                                        newObj[key] = obj[key];
+                                    } else {
+                                        newObj[key] = removeInputFields(obj[key]);
+                                    }
                                 }
                                 return newObj;
                             }
@@ -667,7 +1376,7 @@
                         }
 
                         originalDocumentJson = removeInputFields(parsedJson);
-                        console.log('✅ 문서 데이터 로드 완료 (inputField 제거됨):', originalDocumentJson);
+                        console.log('✅ 문서 데이터 로드 완료:', originalDocumentJson);
                     } catch (e) {
                         console.error('❌ content JSON 파싱 실패:', e);
                         originalDocumentJson = null;
@@ -676,15 +1385,51 @@
 
                 initTipTapEditor();
 
-                if (originalDocfoNo) {
-                    await fetchFormDetailsForDocument(originalDocfoNo);
+                if (currentDocfoNo) {
+                    await fetchFormDetailsForDocument(currentDocfoNo);
                 }
 
                 if (doc.docFormCatNo) {
                     const radio = document.querySelector(`input[name="docfoCatNo"][value="${doc.docFormCatNo}"]`);
                     if (radio) {
                         radio.checked = true;
-                        console.log('✅ 카테고리 자동 선택됨:', doc.docFormCatNo);
+
+                        // ✅ 선택된 카테고리로 근태 섹션 및 대직자 표시 결정
+                        const categoryName = getCategoryNameByNo(doc.docFormCatNo);
+                        if (categoryName) {
+                            currentCategoryName = categoryName;
+
+                            const rule = getCategoryRule(categoryName);
+                            if (rule) {
+                                const attendanceSection = document.getElementById('attendance-section');
+                                attendanceSection.style.display = 'block';
+
+                                applyDateConstraints(rule);
+
+                                const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
+                                const delegateSection = document.getElementById('delegate-section');
+                                const selectedDelegateSection = document.getElementById('selected-delegate-section');
+                                const attendanceTitle = document.getElementById('attendance-title');
+
+                                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 필드 표시
+                                if (normalized === '휴가신청' || normalized === '휴가수정신청') {
+                                    attendanceTitle.textContent = '휴가 정보';
+                                    delegateSection.style.display = 'block';
+
+                                    if (selectedDelegate) {
+                                        renderSelectedDelegate();
+                                    }
+                                } else if (normalized.includes('휴가')) {
+                                    attendanceTitle.textContent = '휴가 정보';
+                                    delegateSection.style.display = 'none';
+                                    selectedDelegateSection.style.display = 'none';
+                                } else if (normalized.includes('출장')) {
+                                    attendanceTitle.textContent = '출장 정보';
+                                    delegateSection.style.display = 'none';
+                                    selectedDelegateSection.style.display = 'none';
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -705,7 +1450,8 @@
             }
         } catch (e) {
             console.error('데이터 로드 오류:', e);
-            showAlert("데이터 로드 중 오류가 발생했습니다.", "error");
+            showModal('❌', '오류 발생', '데이터 로드 중 오류가 발생했습니다.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
         }
     }
 
@@ -734,18 +1480,34 @@
             });
             const result = await response.json();
 
+            if (result.data && result.data.docfoName) {
+                currentFormName = result.data.docfoName;
+                document.getElementById('form-name-subtitle').textContent = `📄 ${currentFormName}`;
+            }
+
             if (response.ok && result.data && result.data.tempResDocumentFormCategoryDtos) {
                 const categories = result.data.tempResDocumentFormCategoryDtos;
+
+                formCategories = categories;
+
                 if (categories.length > 0) {
                     container.innerHTML = categories.map((cat, index) => `
                     <label class="cat-item">
                         <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}">
                         <span>${cat.docfoCatName}</span>
                     </label>`).join('');
+
+                    document.querySelectorAll('input[name="docfoCatNo"]').forEach(radio => {
+                        radio.addEventListener('change', (e) => {
+                            const selectedCategoryName = getCategoryNameByNo(e.target.value);
+                            onCategoryChange(selectedCategoryName);
+                        });
+                    });
                 } else {
                     container.innerHTML = '<span style="color:#adb5bd; font-size:12px;">선택 가능한 카테고리가 없습니다.</span>';
                 }
             }
+
         } catch (e) {
             console.error('문서 카테고리 로드 실패:', e);
         }
@@ -777,6 +1539,61 @@
         const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader,
             TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
 
+        const CustomTableCell = TableCell.extend({
+            addAttributes() {
+                return {
+                    ...this.parent?.(),
+                    'data-field': {
+                        default: null,
+                        parseHTML: element => element.getAttribute('data-field'),
+                        renderHTML: attributes => {
+                            if (attributes['data-field']) {
+                                return { 'data-field': attributes['data-field'] };
+                            }
+                            return {};
+                        },
+                    },
+                    editable: {
+                        default: true,
+                        parseHTML: element => {
+                            const attr = element.getAttribute('data-editable');
+                            return attr === 'false' ? false : true;
+                        },
+                        renderHTML: attributes => {
+                            if (attributes.editable === false) {
+                                return {
+                                    'data-editable': 'false',
+                                    'style': 'background-color: #f1f3f5;'
+                                };
+                            }
+                            return { 'data-editable': 'true' };
+                        },
+                    },
+                    colspan: {
+                        default: 1,
+                        parseHTML: element => {
+                            const colspan = element.getAttribute('colspan');
+                            return colspan ? parseInt(colspan, 10) : 1;
+                        },
+                    },
+                    rowspan: {
+                        default: 1,
+                        parseHTML: element => {
+                            const rowspan = element.getAttribute('rowspan');
+                            return rowspan ? parseInt(rowspan, 10) : 1;
+                        },
+                    },
+                    colwidth: {
+                        default: null,
+                        parseHTML: element => {
+                            const colwidth = element.getAttribute('colwidth');
+                            return colwidth ? colwidth.split(',').map(w => parseInt(w, 10)) : null;
+                        },
+                    },
+                };
+            },
+        });
+
         const initialContent = originalDocumentJson || '<p>문서 내용을 입력하세요.</p>';
 
         tiptapEditor = new Editor({
@@ -785,7 +1602,7 @@
                 StarterKit,
                 Table.configure({ resizable: true }),
                 TableRow,
-                TableCell,
+                CustomTableCell,
                 TableHeader,
                 TextAlign.configure({ types: ['heading', 'paragraph'] }),
                 TextStyle,
@@ -799,6 +1616,50 @@
             content: initialContent,
             editable: true,
             autofocus: true,
+            editorProps: {
+                handleKeyDown: (view, event) => {
+                    const { state } = view;
+                    const { selection } = state;
+                    const { $from } = selection;
+
+                    for (let depth = $from.depth; depth > 0; depth--) {
+                        const node = $from.node(depth);
+                        if (node.type.name === 'tableCell' && node.attrs.editable === false) {
+                            const blockedKeys = ['Backspace', 'Delete', 'Enter'];
+                            if (event.key.length === 1 || blockedKeys.includes(event.key)) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                },
+                handlePaste: (view) => {
+                    const { state } = view;
+                    const { selection } = state;
+                    const { $from } = selection;
+
+                    for (let depth = $from.depth; depth > 0; depth--) {
+                        const node = $from.node(depth);
+                        if (node.type.name === 'tableCell' && node.attrs.editable === false) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                handleDrop: (view, event, slice, moved) => {
+                    const { state } = view;
+                    const { selection } = state;
+                    const { $from } = selection;
+
+                    for (let depth = $from.depth; depth > 0; depth--) {
+                        const node = $from.node(depth);
+                        if (node.type.name === 'tableCell' && node.attrs.editable === false) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+            },
             onUpdate: ({ editor }) => {
                 updateCharCounter();
                 updateToolbarButtons();
@@ -808,7 +1669,7 @@
             }
         });
 
-        console.log('✅ TipTap 에디터 초기화 완료, 문서 데이터 적용됨');
+        console.log('✅ TipTap 에디터 초기화 완료');
 
         document.querySelector('#editor-container').addEventListener('click', () => {
             if (tiptapEditor && !tiptapEditor.isFocused) {
@@ -821,13 +1682,10 @@
 
     function updateCharCounter() {
         if (!tiptapEditor) return;
-
         const text = tiptapEditor.getText();
         const length = text.length;
         const counter = document.getElementById('char-counter');
-
         counter.textContent = `${length} / 1000`;
-
         if (length >= 900) {
             counter.style.color = '#fa5252';
             counter.style.fontWeight = 'bold';
@@ -839,7 +1697,6 @@
 
     function updateToolbarButtons() {
         if (!tiptapEditor) return;
-
         const buttons = {
             'btn-bold': 'bold',
             'btn-italic': 'italic',
@@ -852,7 +1709,6 @@
             'btn-align-center': { textAlign: 'center' },
             'btn-align-right': { textAlign: 'right' },
         };
-
         Object.entries(buttons).forEach(([btnId, format]) => {
             const btn = document.getElementById(btnId);
             if (btn) {
@@ -869,7 +1725,6 @@
     function toggleItalic() { tiptapEditor.chain().focus().toggleItalic().run(); }
     function toggleUnderline() { tiptapEditor.chain().focus().toggleUnderline().run(); }
     function toggleStrike() { tiptapEditor.chain().focus().toggleStrike().run(); }
-
     function setHeading(level) {
         if (level === '') {
             tiptapEditor.chain().focus().setParagraph().run();
@@ -877,7 +1732,6 @@
             tiptapEditor.chain().focus().setHeading({ level: parseInt(level) }).run();
         }
     }
-
     function setTextAlign(align) { tiptapEditor.chain().focus().setTextAlign(align).run(); }
     function toggleBulletList() { tiptapEditor.chain().focus().toggleBulletList().run(); }
     function toggleOrderedList() { tiptapEditor.chain().focus().toggleOrderedList().run(); }
@@ -886,51 +1740,35 @@
     function insertTable() {
         const rows = prompt('행(row) 수를 입력하세요:', '3');
         const cols = prompt('열(column) 수를 입력하세요:', '3');
-
         if (rows && cols && rows > 0 && cols > 0) {
             tiptapEditor.chain().focus()
                 .insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: false })
                 .run();
-
             setTimeout(() => {
                 const { state } = tiptapEditor;
                 const { doc } = state;
                 const lastNode = doc.lastChild;
-
                 if (lastNode && lastNode.type.name === 'table') {
-                    tiptapEditor.chain()
-                        .focus('end')
-                        .insertContent('<p></p>')
-                        .focus('end')
-                        .run();
+                    tiptapEditor.chain().focus('end').insertContent('<p></p>').focus('end').run();
                 }
             }, 50);
         }
     }
 
     function deleteTable() { tiptapEditor.chain().focus().deleteTable().run(); }
-
     function insertLink() {
         const url = prompt('링크 URL을 입력하세요:');
-        if (url) {
-            tiptapEditor.chain().focus().setLink({ href: url }).run();
-        }
+        if (url) { tiptapEditor.chain().focus().setLink({ href: url }).run(); }
     }
-
     function insertImage() {
         const url = prompt('이미지 URL을 입력하세요:');
-        if (url) {
-            tiptapEditor.chain().focus().setImage({ src: url }).run();
-        }
+        if (url) { tiptapEditor.chain().focus().setImage({ src: url }).run(); }
     }
-
-    // ==================== 첨부파일 관련 함수 ====================
 
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
         const maxCount = 5;
-
         const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
 
         for (let file of files) {
@@ -938,31 +1776,25 @@
                 showAlert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`, "error");
                 break;
             }
-
             if (file.size > maxSize) {
                 showAlert(`${file.name}은(는) 10MB를 초과합니다.`, "error");
                 continue;
             }
-
             if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
                 showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
                 continue;
             }
-
             newFiles.push(file);
         }
-
         event.target.value = '';
         renderFileList();
     }
 
     function renderFileList() {
         const container = document.getElementById('file-list');
-
         const activeExistingFiles = existingFiles.filter(file =>
             !filesToDelete.includes(file.attachmentId)
         );
-
         const totalFiles = activeExistingFiles.length + newFiles.length;
 
         if (totalFiles === 0) {
@@ -971,7 +1803,6 @@
         }
 
         let html = '';
-
         activeExistingFiles.forEach(file => {
             html += `
                 <div class="file-item" style="background: #f0f8ff;">
@@ -1006,13 +1837,11 @@
     }
 
     function removeExistingFile(attachmentId) {
-        console.log('🗑️ 기존 파일 삭제 예약:', attachmentId);
         filesToDelete.push(attachmentId);
         renderFileList();
     }
 
     function removeNewFile(index) {
-        console.log('🗑️ 새 파일 삭제:', newFiles[index].name);
         newFiles.splice(index, 1);
         renderFileList();
     }
@@ -1031,18 +1860,17 @@
         return 'DOC';
     }
 
-    // ✅ AI 요약 생성 함수
     async function generateAiSummary() {
         const html = tiptapEditor.getHTML();
         const text = tiptapEditor.getText().trim();
 
         if (text.length < 100) {
-            return showAlert('내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.', 'error');
+            return showModal('⚠️', 'AI 요약 오류', '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
         }
 
         const summaryBox = document.getElementById('ai-summary-box');
         const summaryText = document.getElementById('ai-summary-text');
-
         summaryBox.style.display = 'block';
         summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
 
@@ -1055,24 +1883,19 @@
             });
 
             if (!response.ok) throw new Error('AI 요약 생성 실패');
-
             const result = await response.json();
 
             if (result.data) {
                 summaryText.innerText = result.data;
-                console.log('✅ [AI 요약] 생성 완료:', result.data);
             } else {
                 throw new Error('요약 데이터가 없습니다');
             }
-
         } catch (error) {
-            console.error('❌ [AI 요약] 오류:', error);
             summaryBox.style.display = 'none';
-            showAlert('AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.', 'error');
+            showModal('❌', 'AI 요약 실패', 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
         }
     }
-
-    // ==================== 문서 저장 ====================
 
     async function saveDocument(isTemp) {
         const title = document.getElementById('doc-title').value.trim();
@@ -1081,26 +1904,59 @@
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
 
-        // ✅ AI 요약 데이터
+        let startDate = null;
+        let endDate = null;
+
+        const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
+        const isAttendanceCategory = normalized.includes('휴가') || normalized.includes('출장');
+
+        if (isAttendanceCategory) {
+            startDate = document.getElementById('startDate').value;
+            endDate = document.getElementById('endDate').value;
+
+            if (!isTemp) {
+                if (!startDate || !endDate) {
+                    return showModal('⚠️', '입력 오류', '시작일과 종료일을 입력해주세요.',
+                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                }
+                if (startDate > endDate) {
+                    return showModal('⚠️', '입력 오류', '종료일이 시작일보다 빠를 수 없습니다.',
+                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                }
+            }
+
+            contentJson.attendanceInfo = {
+                startDate: startDate,
+                endDate: endDate
+            };
+
+            // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 포함
+            if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
+                contentJson.attendanceInfo.delegate = {
+                    empId: selectedDelegate.empId,
+                    empName: selectedDelegate.empName,
+                    posName: selectedDelegate.posName,
+                    depName: selectedDelegate.depName
+                };
+            }
+        }
+
         const aiSummaryBox = document.getElementById('ai-summary-box');
         const aiSummaryText = document.getElementById('ai-summary-text').innerText;
         const includeAiSummary = document.getElementById('include-ai-summ').checked;
         const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
 
-        // 유효성 검사
-        if (!title) return showAlert("제목을 입력하세요.", "error");
-        if (title.length > 100) return showAlert("제목은 100자 이내로 입력하세요.", "error");
-        if (!contentText) return showAlert("내용을 입력하세요.", "error");
-        if (contentText.length > 1000) return showAlert("내용은 1000자 이내로 입력하세요.", "error");
-        if (!checkedRadio) return showAlert("카테고리를 선택하세요.", "error");
-        if (!isTemp && selectedApprovers.length === 0) return showAlert("결재선을 최소 1명 지정하세요.", "error");
+        if (!title) return showModal('⚠️', '입력 오류', '제목을 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        if (title.length > 100) return showModal('⚠️', '입력 오류', '제목은 100자 이내로 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        if (!contentText) return showModal('⚠️', '입력 오류', '내용을 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        if (contentText.length > 1000) return showModal('⚠️', '입력 오류', '내용은 1000자 이내로 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        if (!checkedRadio) return showModal('⚠️', '입력 오류', '카테고리를 선택하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        if (!isTemp && selectedApprovers.length === 0) return showModal('⚠️', '입력 오류', '결재선을 최소 1명 지정하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
 
-        // ✅ AI 요약 체크박스 검증 (상신 시만)
         if (!isTemp && includeAiSummary && !hasAiSummary) {
-            return showAlert('AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.', 'error');
+            return showModal('⚠️', 'AI 요약 오류', 'AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
         }
 
-        // ✅ AI 요약 최종 결정
         let finalAiSummary = null;
         if (isTemp) {
             finalAiSummary = hasAiSummary ? aiSummaryText : null;
@@ -1118,7 +1974,7 @@
                 content: JSON.stringify(contentJson),
                 cnttHtml: contentHtml,
                 temp: isTemp,
-                aiSumm: finalAiSummary,  // ✅ AI 요약 추가
+                aiSumm: finalAiSummary,
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,
@@ -1129,86 +1985,74 @@
             const response = await fetch(`/api/v1/documents/${originalDocNo}`, {
                 method: 'PUT',
                 credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                console.log('✅ 문서 저장 성공! docNo:', originalDocNo);
-
                 if (filesToDelete.length > 0) {
-                    console.log('🗑️ 삭제할 파일:', filesToDelete);
                     await deleteFiles(filesToDelete);
                 }
 
                 if (newFiles.length > 0) {
-                    console.log('📤 새 파일 업로드:', newFiles);
                     await uploadFiles(originalDocNo);
                 }
 
-                showAlert(isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.", "success");
+                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 등록
+                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && originalDocNo) {
+                    await registerDelegate(originalDocNo, selectedDelegate.empId);
+                }
 
-                const targetUrl = isTemp
-                    ? "/documents/me?status=UNSUBMITTED"
-                    : "/documents/me?status=SUBMITTED";
+                const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.";
+                const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
 
-                setTimeout(() => location.href = targetUrl, 500);
+                showModal('✅', '완료', successMessage,
+                    [{ text: '확인', className: 'modal-btn-primary', callback: () => { location.href = targetUrl; } }]);
             } else {
                 const err = await response.json().catch(() => ({}));
-                showAlert(err.message || "처리 실패", "error");
+                showModal('❌', '오류 발생', err.message || "처리 실패", [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
             }
         } catch (e) {
-            console.error(e);
-            showAlert("서버 통신 오류", "error");
+            showModal('❌', '통신 오류', '서버 통신 오류', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        }
+    }
+
+    async function registerDelegate(docNo, delegateEmpId) {
+        try {
+            const response = await fetch('/api/v1/delegates', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId })
+            });
+            if (response.ok) {
+                console.log('✅ 대직자 등록 성공');
+            }
+        } catch (e) {
+            console.warn('⚠️ 대직자 등록 실패:', e);
         }
     }
 
     async function deleteFiles(attachmentIds) {
-        console.log('🗑️ [deleteFiles] 시작 - attachmentIds:', attachmentIds);
-
         for (const attachmentId of attachmentIds) {
             try {
-                const response = await fetch(`/api/v1/attachments/${attachmentId}`, {
+                await fetch(`/api/v1/attachments/${attachmentId}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
-
-                if (response.ok) {
-                    console.log(`✅ [deleteFiles] 파일 삭제 성공 - attachmentId: ${attachmentId}`);
-                } else {
-                    console.error(`❌ [deleteFiles] 파일 삭제 실패 - attachmentId: ${attachmentId}`);
-                }
             } catch (e) {
-                console.error(`❌ [deleteFiles] 파일 삭제 오류 - attachmentId: ${attachmentId}`, e);
+                console.error('파일 삭제 오류:', e);
             }
         }
-
-        console.log('✅ [deleteFiles] 모든 파일 삭제 완료!');
     }
 
     async function uploadFiles(docNo) {
-        console.log('📎 [uploadFiles] 시작 - docNo:', docNo, 'newFiles:', newFiles);
-
-        if (newFiles.length === 0) {
-            console.log('⚠️ [uploadFiles] 새 파일이 없어서 종료');
-            return;
-        }
-
-        console.log(`📤 [uploadFiles] 총 ${newFiles.length}개 파일 업로드 시작`);
-
         for (const file of newFiles) {
-            console.log(`\n🔄 [파일 ${file.name}] 업로드 시작...`);
-
             try {
-                console.log(`  1️⃣ [${file.name}] Presigned URL 요청 중...`);
                 const presignRes = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
                     credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         domain: 'APPROVAL',
                         entityId: docNo,
@@ -1218,37 +2062,24 @@
                         size: file.size
                     })
                 });
-
-                if (!presignRes.ok) {
-                    console.error(`  ❌ [${file.name}] Presign 실패:`, presignRes.status);
-                    continue;
-                }
+                if (!presignRes.ok) continue;
 
                 const presignData = await presignRes.json();
                 const { objectKey, uploadUrl } = presignData.data;
 
-                console.log(`  2️⃣ [${file.name}] S3 직접 업로드 중...`);
                 const uploadRes = await fetch(uploadUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': file.type },
                     body: file
                 });
-
-                if (!uploadRes.ok) {
-                    console.error(`  ❌ [${file.name}] S3 업로드 실패:`, uploadRes.status);
-                    continue;
-                }
+                if (!uploadRes.ok) continue;
 
                 const etag = uploadRes.headers.get('ETag');
-                console.log(`  ✅ [${file.name}] S3 업로드 성공! ETag:`, etag);
 
-                console.log(`  3️⃣ [${file.name}] Complete 요청 중...`);
-                const completeRes = await fetch('/api/v1/attachments/complete', {
+                await fetch('/api/v1/attachments/complete', {
                     method: 'POST',
                     credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         domain: 'APPROVAL',
                         entityId: docNo,
@@ -1260,89 +2091,41 @@
                         etag: etag ? etag.replace(/"/g, '') : null
                     })
                 });
-
-                if (completeRes.ok) {
-                    console.log(`  ✅ [${file.name}] Complete 성공!`);
-                } else {
-                    console.error(`  ❌ [${file.name}] Complete 실패:`, completeRes.status);
-                }
-
             } catch (e) {
-                console.error(`❌ [${file.name}] 파일 업로드 오류:`, e);
+                console.error('파일 업로드 오류:', e);
             }
         }
-
-        console.log('\n✅ [uploadFiles] 모든 파일 업로드 완료!');
     }
-
-    // ==================== 사원 정보 및 검색 ====================
 
     async function fetchMyEmployeeInfo() {
         try {
-            const response = await fetch('/api/v1/employees/me', {
-                credentials: 'include'
-            });
+            const response = await fetch('/api/v1/temp/employees/me', { credentials: 'include' });
             const result = await response.json();
+
             if (response.ok && result.data) {
-                myInfo = { empId: result.data.empId, comId: result.data.comId || "C01" };
+                myInfo = {
+                    empId: result.data.empId,
+                    comId: result.data.comId || "C01",
+                    posOrder: result.data.position?.posOrder || 999
+                };
+
                 document.getElementById('writer-name').value = result.data.empName;
-                document.getElementById('writer-dept').value = result.data.depName || "총무팀";
+                document.getElementById('writer-dept').value = result.data.department?.depName || "총무팀";
                 document.getElementById('writer-phone').value = result.data.workPhone || "-";
             }
-        } catch (e) { showAlert("내 정보 로드 실패", "error"); }
+        } catch (e) {
+            showAlert("내 정보 로드 실패", "error");
+        }
     }
 
     async function searchEmployees(keyword = '') {
         try {
             let url = `/api/v1/employees?size=20&excludeMe=true`;
             if (keyword && keyword.trim().length > 0) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            const res = await fetch(url, {
-                credentials: 'include'
-            });
+            const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
             renderSearchResults(result.data?.items || []);
         } catch (e) { renderSearchResults([]); }
-    }
-
-    function renderSearchResults(employees) {
-        const container = document.getElementById('search-results');
-        if (employees.length === 0) {
-            container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>';
-            return;
-        }
-
-        const lowestPosOrder = selectedApprovers.length > 0
-            ? Math.min(...selectedApprovers.map(a => a.posOrder))
-            : Infinity;
-
-        container.innerHTML = employees.map(emp => {
-            const isAdded = selectedApprovers.some(a => a.approverId === emp.empId);
-            const isLowerRank = emp.posOrder > lowestPosOrder;
-            const isDisabled = isAdded || (selectedApprovers.length > 0 && isLowerRank);
-
-            let statusText = '';
-            let statusColor = '';
-            if (isAdded) {
-                statusText = '추가됨';
-                statusColor = '#adb5bd';
-            } else if (isLowerRank && selectedApprovers.length > 0) {
-                statusText = '직급낮음';
-                statusColor = '#fa5252';
-            } else {
-                statusText = '+';
-                statusColor = 'var(--primary-color)';
-            }
-
-            return `
-                <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
-                     style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
-                    <div>
-                        <strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span>
-                        <br><small>${emp.depName || '-'} | ${emp.empId}</small>
-                    </div>
-                    <div style="color:${statusColor}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
-                </div>`;
-        }).join('');
     }
 
     function initApproverSearch() {
@@ -1360,21 +2143,189 @@
         });
     }
 
-    function addApprover(id, name, pos, dept, posOrder) {
-        if (selectedApprovers.some(a => a.approverId === id)) return;
+    function initDelegateSearch() {
+        const searchInput = document.getElementById('delegate-search');
+        const searchResults = document.getElementById('delegate-search-results');
 
-        if (selectedApprovers.length >= 5) {
-            return showAlert("최대 5명까지 추가할 수 있습니다.", "error");
+        searchInput.addEventListener('focus', () => {
+            searchDelegates(searchInput.value);
+            searchResults.classList.add('show');
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            if (delegateSearchTimeout) clearTimeout(delegateSearchTimeout);
+            delegateSearchTimeout = setTimeout(() => {
+                searchDelegates(e.target.value);
+                searchResults.classList.add('show');
+            }, 300);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.delegate-search-wrapper')) {
+                searchResults.classList.remove('show');
+            }
+        });
+    }
+
+    async function searchDelegates(keyword = '') {
+        try {
+            let url = `/api/v1/employees?size=20&excludeMe=true`;
+            if (keyword && keyword.trim().length > 0) {
+                url += `&keyword=${encodeURIComponent(keyword.trim())}`;
+            }
+            const res = await fetch(url, { credentials: 'include' });
+            const result = await res.json();
+            renderDelegateResults(result.data?.items || []);
+        } catch (e) {
+            renderDelegateResults([]);
+        }
+    }
+
+    function renderDelegateResults(employees) {
+        const container = document.getElementById('delegate-search-results');
+
+        if (employees.length === 0) {
+            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">검색 결과 없음</div>';
+            return;
         }
 
+        container.innerHTML = employees.map(emp => {
+            const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
+            const isLowerRank = emp.posOrder > myInfo.posOrder;
+            const isDisabled = isSelected || isLowerRank;
+
+            let statusHtml = '';
+            if (isSelected) {
+                statusHtml = '<span style="float: right; color: #40c057;">✓ 선택됨</span>';
+            } else if (isLowerRank) {
+                statusHtml = '<span style="float: right; color: #fa5252; font-size: 11px;">직급낮음</span>';
+            }
+
+            return `
+                <div class="delegate-result-item"
+                     onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
+                     style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}">
+                    <strong>${emp.empName}</strong> | ${emp.posName || '사원'}
+                    <br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>
+                    ${statusHtml}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function selectDelegate(empId, empName, posName, depName, posOrder) {
+        if (posOrder > myInfo.posOrder) {
+            showModal('⚠️', '직급 제한', '대직자는 자신과 같거나 높은 직급만 선택할 수 있습니다.',
+                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return;
+        }
+
+        selectedDelegate = {
+            empId: empId,
+            empName: empName,
+            posName: posName,
+            depName: depName,
+            posOrder: posOrder
+        };
+
+        renderSelectedDelegate();
+        updateTableDelegate();
+
+        document.getElementById('delegate-search').value = '';
+        document.getElementById('delegate-search-results').classList.remove('show');
+    }
+
+    function renderSelectedDelegate() {
+        const container = document.getElementById('selected-delegate-display');
+        const section = document.getElementById('selected-delegate-section');
+
+        if (!selectedDelegate) {
+            container.innerHTML = '';
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'flex';
+        container.innerHTML = `
+            <div class="selected-delegate">
+                <span class="delegate-icon">👤</span>
+                <div class="delegate-info">
+                    <span class="delegate-name">${selectedDelegate.empName} | ${selectedDelegate.posName}</span>
+                    <span class="delegate-detail">${selectedDelegate.depName} | ${selectedDelegate.empId}</span>
+                </div>
+                <span class="delegate-remove" onclick="removeDelegate()">×</span>
+            </div>
+        `;
+    }
+
+    function removeDelegate() {
+        selectedDelegate = null;
+        renderSelectedDelegate();
+        updateTableDelegate();
+    }
+
+    function renderSearchResults(employees) {
+        const container = document.getElementById('search-results');
+        if (employees.length === 0) {
+            container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>';
+            return;
+        }
+
+        const highestSelectedPosOrder = selectedApprovers.length > 0
+            ? Math.min(...selectedApprovers.map(a => a.posOrder))
+            : Infinity;
+
+        container.innerHTML = employees.map(emp => {
+            const isAdded = selectedApprovers.some(a => a.approverId === emp.empId);
+            const isSameOrLowerRank = emp.posOrder >= myInfo.posOrder;
+            const hasSameRank = selectedApprovers.some(a => a.posOrder === emp.posOrder);
+            const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
+            const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
+
+            let statusText = '';
+            let statusColor = '';
+            if (isAdded) {
+                statusText = '추가됨'; statusColor = '#adb5bd';
+            } else if (isSameOrLowerRank) {
+                statusText = '직급낮음'; statusColor = '#fa5252';
+            } else if (hasSameRank) {
+                statusText = '중복직급'; statusColor = '#fa5252';
+            } else if (isLowerThanSelected) {
+                statusText = '순서오류'; statusColor = '#fa5252';
+            } else {
+                statusText = '+'; statusColor = 'var(--primary-color)';
+            }
+
+            return `
+                <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
+                     style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
+                    <div>
+                        <strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span>
+                        <br><small>${emp.depName || '-'} | ${emp.empId}</small>
+                    </div>
+                    <div style="color:${statusColor}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function addApprover(id, name, pos, dept, posOrder) {
+        if (selectedApprovers.some(a => a.approverId === id)) return;
+        if (selectedApprovers.length >= 5) {
+            return showModal('⚠️', '최대 인원 초과', '결재선은 최대 5명까지만 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        }
+        if (posOrder >= myInfo.posOrder) {
+            showModal('⚠️', '직급 제한', '자신보다 높은 직급만 결재선으로 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return;
+        }
+        if (selectedApprovers.some(a => a.posOrder === posOrder)) {
+            showModal('⚠️', '중복 직급', '같은 직급은 1명만 결재선으로 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return;
+        }
         if (selectedApprovers.length > 0) {
-            const lowestPosOrder = Math.min(...selectedApprovers.map(a => a.posOrder));
-            if (posOrder > lowestPosOrder) {
-                const highestRankName = selectedApprovers.find(a => a.posOrder === lowestPosOrder).posName;
-                showAlert(
-                    `결재선은 낮은 직급부터 높은 직급 순으로 지정해야 합니다.\n(같은 직급은 가능)\n\n현재 선택된 가장 높은 직급: ${highestRankName}\n추가하려는 직급: ${pos}`,
-                    "error"
-                );
+            const highestSelectedPosOrder = Math.min(...selectedApprovers.map(a => a.posOrder));
+            if (posOrder > highestSelectedPosOrder) {
+                const highestRankName = selectedApprovers.find(a => a.posOrder === highestSelectedPosOrder).posName;
+                showModal('⚠️', '직급 순서 오류', `현재 선택된 가장 높은 직급(${highestRankName})보다\n낮은 직급은 추가할 수 없습니다.\n\n선택하려는 직급: ${pos}`, [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
                 return;
             }
         }
@@ -1418,7 +2369,6 @@
     function removeApprover(id) {
         selectedApprovers = selectedApprovers.filter(a => a.approverId !== id);
         renderSelectedTags();
-
         const currentResults = Array.from(document.getElementById('search-results').children);
         if (currentResults.length > 0 && !currentResults[0].innerText.includes('검색창을 클릭')) {
             searchEmployees(document.getElementById('approver-search').value);
@@ -1430,7 +2380,7 @@
         alert.innerText = msg;
         alert.className = `alert alert-${type}`;
         alert.style.display = 'block';
-        setTimeout(() => alert.style.display = 'none', 4000);
+        setTimeout(() => alert.style.display = 'none', 2500);
     }
 </script>
 </body>

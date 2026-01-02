@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.domain;
 
+import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
@@ -21,7 +22,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor(access = AccessLevel.PUBLIC)
 @Table(name = "approval_line")
 @Builder
-public class ApprovalLine {
+public class ApprovalLine extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long apprlNo;
 
@@ -31,7 +32,7 @@ public class ApprovalLine {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "emp_id", referencedColumnName = "emp_id")
-    private Employee approver;
+    private Employee approver; // 원결재자
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id")
@@ -55,6 +56,9 @@ public class ApprovalLine {
     @Column(name = "is_delegate", nullable = false)
     Boolean isDelegate = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_emp_id", referencedColumnName = "emp_id", nullable = true)
+    Employee targetApprover; // 권한 위임자. 누구를 대신해서 내가 여기 있는가
 
     /**
      * 실제 결재자가 아닌 경우 상태만 변경 (같은 seq의 다른 결재자/대직자)
@@ -99,7 +103,8 @@ public class ApprovalLine {
                                         Company company,
                                         int seq,
                                         ApprStat apprStat,
-                                        boolean isDelegate) {
+                                        boolean isDelegate,
+                                        Employee targetApprover) {
         return ApprovalLine.builder()
                 .document(document)
                 .approver(approver)
@@ -110,6 +115,7 @@ public class ApprovalLine {
                 .isActualAppr(false)
                 .isDelegate(isDelegate)
                 .rejReason(null)
+                .targetApprover(targetApprover)
                 .build();
     }
 }

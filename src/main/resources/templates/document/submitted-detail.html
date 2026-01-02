@@ -5,7 +5,7 @@
     <title>문서 상세 - 기업용 전자결재시스템</title>
 
     <!-- TipTap 번들 -->
-    <script th:src="@{/js/tiptap.min.js}"></script>
+    <script th:src="@{/js/jiheon-temp-origin/tiptap.min.js}"></script>
 
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 0; padding: 40px; }
@@ -34,20 +34,82 @@
         }
         .btn-cancel-submit:hover { background: #fff5f5; border-color: #fa5252; }
 
-        /* 재작성 버튼 */
-        .btn-rewrite {
-            padding: 10px 24px; background: #fff; color: #339af0;
-            border: 1px solid #a5d8ff; border-radius: 6px; cursor: pointer; font-size: 14px;
-            font-weight: 600; transition: all 0.2s;
-        }
-        .btn-rewrite:hover { background: #e7f5ff; border-color: #339af0; }
-
         .btn-close {
             position: absolute; right: 0; padding: 10px 24px; background: #fff; color: #495057;
             border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; font-size: 14px;
             transition: all 0.2s;
         }
         .btn-close:hover { background: #f8f9fa; border-color: #adb5bd; }
+
+        /* ✅ 재상신 안내 배너 */
+        .resubmit-banner {
+            background: linear-gradient(135deg, #fff3bf 0%, #fff 100%);
+            border: 2px solid #ffd43b;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(255, 212, 59, 0.2);
+        }
+
+        .resubmit-banner.new-doc {
+            background: linear-gradient(135deg, #e7f5ff 0%, #fff 100%);
+            border-color: #74c0fc;
+            box-shadow: 0 2px 8px rgba(51, 154, 240, 0.2);
+        }
+
+        .resubmit-banner-content h4 {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #f59f00;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .resubmit-banner.new-doc .resubmit-banner-content h4 {
+            color: #1971c2;
+        }
+
+        .resubmit-banner-content p {
+            margin: 0;
+            font-size: 13px;
+            color: #868e96;
+        }
+
+        .btn-navigate-doc {
+            padding: 12px 24px;
+            background: #ffd43b;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(255, 212, 59, 0.3);
+        }
+
+        .btn-navigate-doc:hover {
+            background: #fcc419;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 212, 59, 0.4);
+        }
+
+        .btn-navigate-doc.new-doc {
+            background: #339af0;
+            color: white;
+            box-shadow: 0 2px 6px rgba(51, 154, 240, 0.3);
+        }
+
+        .btn-navigate-doc.new-doc:hover {
+            background: #228be6;
+            box-shadow: 0 4px 12px rgba(51, 154, 240, 0.4);
+        }
 
         /* 섹션 공통 */
         .section { margin-bottom: 25px; }
@@ -345,11 +407,13 @@
             <!-- 왼쪽 버튼 그룹 -->
             <div class="header-left-buttons">
                 <button class="btn-cancel-submit" id="btn-cancel-submit" style="display: none;" onclick="showCancelModal()">상신취소</button>
-                <button class="btn-rewrite" id="btn-rewrite" style="display: none;" onclick="goToRewrite()">재작성</button>
             </div>
             <div class="page-title" id="form-title">휴가 신청서</div>
-            <button class="btn-close" onclick="history.back()">닫기</button>
+            <button class="btn-close" onclick="location.href='/documents/me?status=SUBMITTED'">목록으로</button>
         </div>
+
+        <!-- ✅ 재상신 안내 배너 (동적으로 표시) -->
+        <div id="resubmit-banner" style="display: none;"></div>
 
         <!-- 문서 정보 + 결재라인 -->
         <div class="section">
@@ -510,8 +574,8 @@
         document.getElementById('info-phone').textContent = doc.writerWorkPhone || '-';
         renderApprovalLine(doc.resApprovalLineDtos);
 
-        // 버튼 표시 로직
-        checkButtonVisibility(doc.resApprovalLineDtos, doc.docStat);
+        // ✅ 배너 표시 로직
+        renderResubmitBanner(doc);
 
         document.getElementById('doc-title').textContent = doc.title || '-';
         document.getElementById('doc-category').textContent = doc.docFormCatName || '-';
@@ -524,6 +588,83 @@
         if (doc.aiSumm) {
             document.getElementById('ai-summary-section').style.display = 'block';
             document.getElementById('ai-summary-content').textContent = doc.aiSumm;
+        }
+    }
+
+    /**
+     * ✅ 재상신 관련 배너 표시
+     */
+    function renderResubmitBanner(doc) {
+        const banner = document.getElementById('resubmit-banner');
+        const cancelBtn = document.getElementById('btn-cancel-submit');
+
+        // 초기화
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        cancelBtn.style.display = 'none';
+
+        // ✅ Case 1: 반려된 문서이고 재상신된 경우 → "재상신한 문서로 이동" 배너
+        if (doc.docStat === 'RJ' && doc.isResubmitted === true && doc.resubmittedForDocNo) {
+            banner.className = 'resubmit-banner';
+            banner.innerHTML = `
+                <div class="resubmit-banner-content">
+                    <h4>⚠️ 이 문서는 재작성되었습니다</h4>
+                    <p>새로운 문서에서 수정된 내용을 확인하세요</p>
+                </div>
+                <button class="btn-navigate-doc" onclick="location.href='/documents/${doc.resubmittedForDocNo}?status=SUBMITTED'">
+                    재상신한 문서로 이동 →
+                </button>
+            `;
+            banner.style.display = 'flex';
+            return;
+        }
+
+        // ✅ Case 2: 재상신 문서인 경우 (반려된 원본 문서가 있음) → "원본 문서 보기" 배너 항상 표시
+        if (doc.resubmittedByDocNo) {
+            banner.className = 'resubmit-banner new-doc';
+            banner.innerHTML = `
+                <div class="resubmit-banner-content">
+                    <h4>📝 재상신된 문서입니다</h4>
+                    <p>원본 반려 문서를 확인하려면 클릭하세요</p>
+                </div>
+                <button class="btn-navigate-doc new-doc" onclick="location.href='/documents/${doc.resubmittedByDocNo}?status=SUBMITTED'">
+                    ← 원본 문서 보기
+                </button>
+            `;
+            banner.style.display = 'flex';
+        }
+
+        // ✅ Case 3: 반려 상태이지만 재상신 안 된 경우 → 재작성 버튼 표시
+        if (doc.docStat === 'RJ' && doc.isResubmitted !== true) {
+            banner.className = 'resubmit-banner';
+            banner.innerHTML = `
+                <div class="resubmit-banner-content">
+                    <h4>❌ 반려된 문서입니다</h4>
+                    <p>문서를 수정하여 다시 상신하세요</p>
+                </div>
+                <button class="btn-navigate-doc" onclick="location.href='/documents/${currentDocNo}/rejected/rewrite'">
+                    재작성 →
+                </button>
+            `;
+            banner.style.display = 'flex';
+            return;
+        }
+
+        // ✅ Case 4: 결재중(AW) → 상신취소 버튼
+        if (doc.docStat === 'AW') {
+            const lines = doc.resApprovalLineDtos || [];
+            if (lines.length === 0) {
+                cancelBtn.style.display = 'block';
+                return;
+            }
+
+            const hasProcessedApproval = lines.some(line =>
+                line.apprStat === 'A' || line.apprStat === 'R' || line.endedAt !== null
+            );
+
+            if (!hasProcessedApproval) {
+                cancelBtn.style.display = 'block';
+            }
         }
     }
 
@@ -671,47 +812,6 @@
             console.error('❌ 파일 다운로드 오류:', error);
             showToast('파일 다운로드 중 오류가 발생했습니다.', 'error');
         }
-    }
-
-    /**
-     * 버튼 표시 조건
-     * - 상신취소: docStat === 'AW' && 아무도 결재 안 함
-     * - 재작성: docStat === 'RJ' (반려된 문서)
-     */
-    function checkButtonVisibility(lines, docStat) {
-        const cancelBtn = document.getElementById('btn-cancel-submit');
-        const rewriteBtn = document.getElementById('btn-rewrite');
-
-        // 초기화
-        cancelBtn.style.display = 'none';
-        rewriteBtn.style.display = 'none';
-
-        // 반려된 문서 → 재작성 버튼 표시
-        if (docStat === 'RJ') {
-            rewriteBtn.style.display = 'block';
-            return;
-        }
-
-        // 결재중(AW) → 상신취소 조건 확인
-        if (docStat === 'AW') {
-            if (!lines || lines.length === 0) {
-                cancelBtn.style.display = 'block';
-                return;
-            }
-
-            const hasProcessedApproval = lines.some(line =>
-                line.apprStat === 'A' || line.apprStat === 'R' || line.endedAt !== null
-            );
-
-            if (!hasProcessedApproval) {
-                cancelBtn.style.display = 'block';
-            }
-        }
-    }
-
-    // 재작성 버튼 클릭 → 수정 화면으로 이동
-    function goToRewrite() {
-        location.href = `/documents/${currentDocNo}/rejected/rewrite`;
     }
 
     function renderApprovalLine(lines) {
