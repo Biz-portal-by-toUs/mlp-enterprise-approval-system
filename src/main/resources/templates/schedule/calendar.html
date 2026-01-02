@@ -5,10 +5,8 @@
       layout:decorate="~{layout}">
 
 <th:block layout:fragment="pageStyles">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css"/>
-
     <style>
-        /* ===== Layout ===== */
+        /* ===== Layout (✅ 원래 크기 유지) ===== */
         .cal-wrap{
             display:grid;
             grid-template-columns: 320px minmax(0, 1fr);
@@ -49,7 +47,11 @@
             margin-bottom:10px;
         }
         .toolbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
-        .main-title{ font-size:28px; font-weight:900; margin:0; white-space:nowrap; }
+        .main-title{
+            font-size:28px; font-weight:900; margin:0; white-space:nowrap;
+            cursor:pointer; user-select:none;
+        }
+        .main-title:hover{ text-decoration: underline; text-underline-offset: 6px; }
 
         .nav-group{
             display:flex;
@@ -123,7 +125,11 @@
             gap:10px;
             margin:0 0 10px;
         }
-        .mini-month{ font-weight:900; color:#1f3b7a; }
+        .mini-month{
+            font-weight:900; color:#1f3b7a;
+            cursor:pointer; user-select:none;
+        }
+        .mini-month:hover{ text-decoration: underline; text-underline-offset: 6px; }
         .mini-nav{ display:flex; gap:6px; }
         .mini-nav button{
             width:34px; height:34px;
@@ -179,10 +185,7 @@
         .fc .fc-timegrid-slot{ height:46px; }
         .fc .fc-day-today{ background:rgba(59,130,246,.08) !important; }
 
-        /* ===== 이벤트 디자인(깨진 부분 수정 핵심) =====
-           - FullCalendar가 자체로 배경색을 칠하는 걸 막고
-           - 우리가 만든 .bp-event 하나로 "투명 배경 + 왼쪽 바"를 통일
-        */
+        /* ===== 이벤트 디자인(배경/바 통일) ===== */
         .fc .fc-event,
         .fc .fc-event-main,
         .fc .fc-timegrid-event,
@@ -195,11 +198,11 @@
         .bp-event{
             height:100%;
             padding:6px 8px 6px 10px;
-            color:#0f172a;                 /* ✅ 글자 검정 */
-            background: var(--bpBg);       /* ✅ 투명 배경(변수) */
-            box-shadow: inset 4px 0 0 var(--bpColor); /* ✅ 왼쪽 바(변수) */
+            color:#0f172a;
+            background: var(--bpBg);
+            box-shadow: inset 4px 0 0 var(--bpColor);
             overflow:hidden;
-            border-radius:0;               /* ✅ 각지게 */
+            border-radius:0;
         }
         .bp-evt-title{
             font-size:12px;
@@ -208,13 +211,10 @@
             word-break:break-word;
             line-height:1.2;
         }
-        /* ✅ “클릭 전엔 제목만” */
         .bp-evt-time{ display:none; }
 
         /* +n more 링크 */
-        /* MAIN(month)에서 +n을 오른쪽 아래 "글자만"으로 */
         #calendar .fc-daygrid-day-frame{ position:relative; }
-
         #calendar .fc-daygrid .fc-more-link,
         #calendar .fc-daygrid .fc-daygrid-more-link{
             position:absolute;
@@ -238,12 +238,11 @@
         .fc-timegrid .fc-more-link{
             position: relative;
             z-index: 5;
-            margin-left: 6px;   /* 현재 자리에서 너무 붙지 않게 */
+            margin-left: 6px;
             padding: 0 !important;
             background: transparent !important;
         }
         .fc-timegrid .fc-timegrid-col-frame{ position: relative; }
-
         .fc-timegrid .fc-timegrid-more-link{
             position: absolute !important;
             right: 6px;
@@ -252,7 +251,7 @@
             top: auto !important;
         }
 
-        /* ===== Mini calendar dots (위치 깨진거 수정 핵심) ===== */
+        /* ===== Mini calendar dots (✅ scope별 dot 1개씩) ===== */
         #miniCalendar .fc-daygrid-day-frame{ position:relative; }
         #miniCalendar .mini-dots{
             position:absolute;
@@ -304,7 +303,7 @@
             background:rgba(248,250,252,.75);
         }
         .pop-title{ display:flex; align-items:center; gap:8px; font-weight:900; color:#0f172a; }
-        .pop-badge{ width:10px; height:10px; border-radius:999px; background:#7C3AED; }
+        .pop-badge{ width:10px; height:10px; border-radius:999px; background:#f59e0b; }
         .pop-body{
             padding:14px;
             display:grid;
@@ -361,9 +360,115 @@
         .more-time{ font-size:12px; font-weight:900; color:#0f172a; }
         .more-title{ font-size:13px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
+        /* =========================
+           ✅ Pretty Month Picker Modal
+        ========================= */
+        .mp-mask{
+            position:fixed; inset:0;
+            background:rgba(15,23,42,.18);
+            display:none;
+            z-index:10020;
+        }
+        .mp{
+            position:fixed;
+            z-index:10021;
+            width:min(380px, 92vw);
+            background:rgba(255,255,255,.92);
+            backdrop-filter: blur(10px);
+            border:1px solid rgba(15,23,42,.10);
+            box-shadow:0 18px 50px rgba(0,0,0,.18);
+            border-radius:18px;
+            overflow:hidden;
+            display:none;
+        }
+        .mp.center{
+            left:50%; top:50%;
+            transform:translate(-50%,-50%);
+        }
+        .mp-head{
+            padding:12px 14px;
+            display:flex; align-items:center; justify-content:space-between;
+            border-bottom:1px solid rgba(15,23,42,.08);
+            background:rgba(248,250,252,.75);
+        }
+        .mp-title{
+            display:flex; align-items:center; gap:10px;
+            font-weight:900; color:#0f172a;
+        }
+        .mp-chip{
+            font-size:12px;
+            padding:4px 10px;
+            border-radius:999px;
+            background:rgba(37,99,235,.10);
+            border:1px solid rgba(37,99,235,.18);
+            color:#1f3b7a;
+            font-weight:900;
+        }
+        .mp-year{
+            display:flex; align-items:center; gap:8px;
+            font-weight:900;
+        }
+        .mp-year button{
+            width:34px; height:34px;
+            border:1px solid rgba(17,24,39,.10);
+            background:rgba(255,255,255,.55);
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:900;
+        }
+        .mp-year button:hover{ background:rgba(255,255,255,.75); }
+        .mp-body{ padding:14px; }
+        .mp-grid{
+            display:grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap:10px;
+        }
+        .mp-mon{
+            border:1px solid rgba(17,24,39,.10);
+            background:rgba(255,255,255,.65);
+            border-radius:14px;
+            padding:12px 10px;
+            cursor:pointer;
+            font-weight:900;
+            color:#0f172a;
+            text-align:center;
+            transition:.12s;
+        }
+        .mp-mon:hover{ transform:translateY(-1px); background:rgba(255,255,255,.85); }
+        .mp-mon.active{
+            background:#2563eb;
+            border-color:#2563eb;
+            color:#fff;
+        }
+        .mp-foot{
+            padding:12px 14px;
+            border-top:1px solid rgba(15,23,42,.08);
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            background:rgba(255,255,255,.75);
+        }
+        .mp-foot .btn{ padding:10px 12px; }
+        .mp-foot .left{ display:flex; gap:8px; }
+        .mp-foot .right{ display:flex; gap:8px; }
+
         @media (max-width: 1100px){
             .cal-wrap{ grid-template-columns: 1fr; }
             .cal-left{ min-height:auto; }
+        }
+
+        /* ✅ 일정 추가/수정 모달(createPop)만 크게 */
+        #createPop{
+            width: min(720px, 94vw);
+        }
+
+        #createPop .pop-body{
+            max-height: min(72vh, 720px);
+        }
+
+        /* 내용이 많아졌을 때 입력 영역이 더 시원하게 보이게 */
+        #createPop textarea{
+            min-height: 140px;
         }
     </style>
 </th:block>
@@ -402,7 +507,7 @@
                 </div>
 
                 <div class="toggle-row">
-                    <div class="tag"><span class="dot" style="background:#7C3AED"></span><span>개인</span></div>
+                    <div class="tag"><span class="dot" style="background:#f59e0b"></span><span>개인</span></div>
                     <div class="switch on" id="tgPersonal" role="switch" aria-checked="true"></div>
                 </div>
             </div>
@@ -441,6 +546,37 @@
 
     <div class="pop-mask" id="popMask"></div>
 
+    <!-- ✅ Month Picker Mask + Modal (공용, 모드로 main/mini 분기) -->
+    <div class="mp-mask" id="mpMask"></div>
+    <div class="mp center" id="monthPickerPop" role="dialog" aria-modal="true" aria-label="월 선택">
+        <div class="mp-head">
+            <div class="mp-title">
+                <span class="mp-chip" id="mpModeChip">MAIN</span>
+                <span>월 선택</span>
+            </div>
+
+            <div class="mp-year">
+                <button type="button" id="mpPrevYear">‹</button>
+                <span id="mpYearText">2026</span>
+                <button type="button" id="mpNextYear">›</button>
+                <button type="button" class="btn ghost" id="mpClose" style="padding:6px 10px;">✕</button>
+            </div>
+        </div>
+
+        <div class="mp-body">
+            <div class="mp-grid" id="mpGrid"></div>
+        </div>
+
+        <div class="mp-foot">
+            <div class="left">
+                <button class="btn" type="button" id="mpToday">This Month</button>
+            </div>
+            <div class="right">
+                <button class="btn" type="button" id="mpCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Create/Edit -->
     <div class="pop" id="createPop" role="dialog" aria-modal="true" aria-label="일정 추가/수정">
         <div class="pop-head">
@@ -463,7 +599,7 @@
 
             <div class="field">
                 <label>title</label>
-                <input type="text" id="titleInput" placeholder="예) 전사 타운홀"/>
+                <input type="text" id="titleInput" placeholder="제목(필수입력)"/>
             </div>
 
             <div class="field">
@@ -483,8 +619,8 @@
                 <div class="field">
                     <label>color (fixed)</label>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <span class="dot" id="fixedColorDot" style="width:14px;height:14px;background:#7C3AED;"></span>
-                        <input type="text" id="fixedColorText" class="readonly" readonly value="#7C3AED"/>
+                        <span class="dot" id="fixedColorDot" style="width:14px;height:14px;background:#f59e0b;"></span>
+                        <input type="text" id="fixedColorText" class="readonly" readonly value="#f59e0b"/>
                     </div>
                 </div>
             </div>
@@ -583,8 +719,55 @@
            API
         ========================= */
         const API_BASE = '/api/v1/calendar';
-        const API_DELETE = (schNo) => API_BASE + '/' + schNo;
+        const API_DELETE = (schNo, scope) => {
+            const params = new URLSearchParams();
+            params.set('scope', String(scope || 'PERSONAL').toUpperCase());
+            return `${API_BASE}/${schNo}?${params.toString()}`;
+        };
         const API_UPDATE = (schNo) => API_BASE + '/' + schNo;
+
+        /* =========================
+           ✅ 현재 로그인 사용자(me) - 백엔드 API로만 결정
+           - /api/v1/employees/me -> ResEmployeeDetailDto(role 포함)
+        ========================= */
+        let CURRENT_ME = null;
+
+        async function loadMe(){
+            try{
+                const res = await fetch('/api/v1/employees/me', {
+                    method:'GET',
+                    credentials:'include'
+                });
+
+                if (res.status === 401){
+                    CURRENT_ME = null;
+                    console.warn('ME 401 (unauthorized)');
+                    return null;
+                }
+                if (!res.ok){
+                    CURRENT_ME = null;
+                    console.warn('ME failed:', res.status, await res.text());
+                    return null;
+                }
+
+                const json = await res.json();
+                CURRENT_ME = (json?.data ?? json);
+                console.log('ME=', CURRENT_ME);
+                return CURRENT_ME;
+            }catch(e){
+                CURRENT_ME = null;
+                console.warn('ME error:', e);
+                return null;
+            }
+        }
+
+        function getMyRole(){
+            return String(CURRENT_ME?.role || '').toUpperCase();
+        }
+        function isCompanyAdmin(){
+            const r = getMyRole();
+            return ['COM_ADMIN','SEC_ADMIN','THR_ADMIN'].includes(r);
+        }
 
         /* =========================
            scope 고정색
@@ -592,15 +775,15 @@
         const SCOPE_COLOR = {
             COMPANY: '#2563EB',
             DEPARTMENT: '#16A34A',
-            PERSONAL: '#7C3AED'
+            PERSONAL: '#f59e0b'
         };
         function scopeColor(scope){
             const s = String(scope || '').toUpperCase();
-            return SCOPE_COLOR[s] || '#7C3AED';
+            return SCOPE_COLOR[s] || '#f59e0b';
         }
 
         /* =========================
-           색 -> 투명 배경(rgba) (여기서 깨졌던 배경/바 통일)
+           색 -> 투명 배경(rgba)
         ========================= */
         function hexToRgba(hex, a){
             const h = String(hex || '').replace('#','');
@@ -639,11 +822,9 @@
         /* =========================
            날짜 유틸
         ========================= */
-        // ✅ API가 Z(UTC)나 +00:00 같이 내려주면 KST에서 +9시간 밀림 → "존 정보" 제거해서 로컬 시간으로 고정
         function normalizeApiDatetime(v){
             if (!v) return v;
             const s = String(v).trim();
-            // 2025-12-31T10:00:00Z / 2025-12-31T10:00:00.000+00:00 같은 꼬리 제거
             return s.replace(/(\.\d+)?(Z|[+-]\d\d:\d\d)$/, '');
         }
         const pad = (n) => String(n).padStart(2, '0');
@@ -663,92 +844,20 @@
             if (!dtStr) return '';
             return String(dtStr).replace('T',' ').replace(/(\.\d+)?Z?$/,'');
         }
-        function formatHm(d){
-            if (!d) return '';
-            return pad(d.getHours()) + ':' + pad(d.getMinutes());
-        }
-
-        function buildMoreItemsByDate(date){
-            const dayStart = new Date(date);
-            dayStart.setHours(0,0,0,0);
-            const dayEnd = new Date(dayStart);
-            dayEnd.setDate(dayEnd.getDate() + 1);
-
-            return mainCalendar.getEvents()
-                .filter(ev => {
-                    const s = ev.start;
-                    const e = ev.end || ev.start; // end 없으면 start로
-                    return s < dayEnd && e > dayStart; // 하루와 겹치면 포함
-                })
-                .sort((a,b) => (a.start?.getTime()||0) - (b.start?.getTime()||0))
-                .map(ev => {
-                    const ext = ev.extendedProps || {};
-                    const scope = ext.scope || 'PERSONAL';
-                    const color = ext.color || scopeColor(scope);
-
-                    const timeText = ev.allDay
-                        ? 'all-day'
-                        : (formatHm(ev.start) + (ev.end ? `-${formatHm(ev.end)}` : ''));
-
-                    return {
-                        ...ext,
-                        title: ev.title,
-                        scope,
-                        allDay: !!ev.allDay,
-                        color,
-                        timeText
-                    };
-                });
-        }
 
         /* =========================
-           Role/권한
+           권한 체크
         ========================= */
-        function getTokenMaybe() {
-            const keys = ['accessToken','token','jwt','ACCESS_TOKEN'];
-            for (const k of keys) {
-                const v1 = localStorage.getItem(k);
-                if (v1) return v1;
-                const v2 = sessionStorage.getItem(k);
-                if (v2) return v2;
-            }
-            const m = document.cookie.match(/(?:^|;\s*)(accessToken|token|jwt)=([^;]+)/);
-            if (m) return decodeURIComponent(m[2]);
-            return null;
-        }
-        function decodeJwtPayload(token){
-            try{
-                const parts = token.split('.');
-                if (parts.length < 2) return null;
-                const base64 = parts[1].replace(/-/g,'+').replace(/_/g,'/');
-                const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-                return JSON.parse(atob(padded));
-            }catch(e){ return null; }
-        }
-        function getUserRole(){
-            if (window.__USER_ROLE__) return String(window.__USER_ROLE__);
-            const t = getTokenMaybe();
-            if (!t) return null;
-            const payload = decodeJwtPayload(t);
-            if (!payload) return null;
-            const r = payload.role || payload.roles || payload.auth || payload.authority || payload.authorities;
-            if (!r) return null;
-            if (Array.isArray(r)) return String(r[0]);
-            return String(r);
-        }
         function canEditDelete(scope){
             scope = String(scope || '').toUpperCase();
             if (scope === 'PERSONAL') return true;
             if (scope === 'DEPARTMENT') return true;
-            if (scope === 'COMPANY') {
-                const role = getUserRole();
-                return ['COM_ADMIN','SEC_ADMIN','THR_ADMIN'].includes(role);
-            }
+            if (scope === 'COMPANY') return isCompanyAdmin();
             return false;
         }
 
         /* =========================
-           Popover (옆/중앙)
+           Popover (기존)
         ========================= */
         const popMask = document.getElementById('popMask');
         const createPop = document.getElementById('createPop');
@@ -806,12 +915,106 @@
         function safeClick(handler){
             return (e) => { e.preventDefault(); e.stopPropagation(); handler(e); };
         }
-        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllPops(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAllPops(); closeMonthPicker(); } });
+
         function rectFromMouseEvent(e){
             if (!e) return null;
             const x = e.clientX, y = e.clientY;
             return { left:x, right:x, top:y, bottom:y };
         }
+
+        /* =========================
+           ✅ Month Picker Modal (MAIN/MINI 분리)
+        ========================= */
+        const mpMask = document.getElementById('mpMask');
+        const monthPickerPop = document.getElementById('monthPickerPop');
+        const mpModeChip = document.getElementById('mpModeChip');
+        const mpPrevYear = document.getElementById('mpPrevYear');
+        const mpNextYear = document.getElementById('mpNextYear');
+        const mpYearText = document.getElementById('mpYearText');
+        const mpGrid = document.getElementById('mpGrid');
+        const mpClose = document.getElementById('mpClose');
+        const mpCancel = document.getElementById('mpCancel');
+        const mpToday = document.getElementById('mpToday');
+
+        let mpMode = 'MAIN'; // 'MAIN' | 'MINI'
+        let mpYear = new Date().getFullYear();
+        let mpMonthIdx = new Date().getMonth(); // 0~11
+
+        const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        function showMonthPicker(){
+            mpMask.style.display = 'block';
+            monthPickerPop.style.display = 'block';
+            monthPickerPop.classList.add('center');
+        }
+        function closeMonthPicker(){
+            monthPickerPop.style.display = 'none';
+            mpMask.style.display = 'none';
+        }
+
+        function getCurrentDateByMode(mode){
+            if (mode === 'MINI' && miniCalendar) return miniCalendar.getDate();
+            return mainCalendar ? mainCalendar.getDate() : new Date();
+        }
+
+        function gotoMonthByMode(mode, year, monthIdx){
+            const d = new Date(year, monthIdx, 1);
+
+            if (mode === 'MINI'){
+                miniCalendar.gotoDate(d);          // ✅ 미니만 이동
+                refreshMiniDots();
+            }else{
+                mainCalendar.gotoDate(d);          // ✅ 메인만 이동
+                mainCalendar.refetchEvents();
+            }
+        }
+
+        function renderMonthPicker(){
+            mpModeChip.textContent = mpMode;
+            mpYearText.textContent = String(mpYear);
+
+            mpGrid.innerHTML = '';
+            for (let i=0; i<12; i++){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'mp-mon' + ((i === mpMonthIdx) ? ' active' : '');
+                btn.textContent = MONTH_LABELS[i];
+                btn.addEventListener('click', () => {
+                    mpMonthIdx = i;
+                    gotoMonthByMode(mpMode, mpYear, mpMonthIdx);
+                    closeMonthPicker();
+                });
+                mpGrid.appendChild(btn);
+            }
+        }
+
+        function openMonthPicker(mode){
+            mpMode = mode;
+
+            const cur = getCurrentDateByMode(mode);
+            mpYear = cur.getFullYear();
+            mpMonthIdx = cur.getMonth();
+
+            renderMonthPicker();
+            showMonthPicker();
+        }
+
+        mpMask.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeMonthPicker(); });
+        monthPickerPop.addEventListener('click', (e)=> e.stopPropagation());
+        mpClose.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeMonthPicker(); });
+        mpCancel.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeMonthPicker(); });
+
+        mpPrevYear.addEventListener('click', () => { mpYear -= 1; renderMonthPicker(); });
+        mpNextYear.addEventListener('click', () => { mpYear += 1; renderMonthPicker(); });
+
+        mpToday.addEventListener('click', () => {
+            const now = new Date();
+            mpYear = now.getFullYear();
+            mpMonthIdx = now.getMonth();
+            gotoMonthByMode(mpMode, mpYear, mpMonthIdx);
+            closeMonthPicker();
+        });
 
         /* =========================
            Create/Edit state
@@ -857,6 +1060,17 @@
         }
         scopeSelect.addEventListener('change', () => applyFixedColorByScope(scopeSelect.value));
 
+        function applyScopeSelectByRole(){
+            const companyOpt = scopeSelect.querySelector('option[value="COMPANY"]');
+            if (companyOpt){
+                companyOpt.disabled = !isCompanyAdmin();
+            }
+            if (!isCompanyAdmin() && scopeSelect.value === 'COMPANY'){
+                scopeSelect.value = 'PERSONAL';
+            }
+            applyFixedColorByScope(scopeSelect.value);
+        }
+
         function resetCreateForm(){
             editing = null;
             createPopTitle.textContent = '일정 추가';
@@ -864,7 +1078,6 @@
 
             scopeSelect.disabled = false;
             scopeSelect.value = 'PERSONAL';
-            applyFixedColorByScope('PERSONAL');
 
             titleInput.value = '';
             contentInput.value = '';
@@ -876,6 +1089,8 @@
             endedAtInput.value = '';
             startDateInput.value = '';
             endDateInput.value = '';
+
+            applyScopeSelectByRole();
         }
 
         function openCreate({ anchorRect=null, center=false, prefill=null, mode='create' } = {}){
@@ -883,7 +1098,7 @@
 
             if (prefill?.scope){
                 scopeSelect.value = prefill.scope;
-                applyFixedColorByScope(prefill.scope);
+                applyScopeSelectByRole();
             }
             if (prefill?.title) titleInput.value = prefill.title;
             if (prefill?.content) contentInput.value = prefill.content;
@@ -905,6 +1120,7 @@
                 createPopTitle.textContent = '일정 수정';
                 document.getElementById('createSave').textContent = '수정';
                 scopeSelect.disabled = true;
+                applyFixedColorByScope(scopeSelect.value);
             }
 
             openPop(createPop, { anchorRect, center });
@@ -963,6 +1179,8 @@
                 editBtn.className = 'btn primary';
                 editBtn.textContent = '수정';
                 editBtn.onclick = safeClick(() => {
+                    closePop(detailPop);
+
                     openCreate({
                         anchorRect: detailPop.getBoundingClientRect(),
                         center:false,
@@ -987,16 +1205,9 @@
                 delBtn.onclick = safeClick(async () => {
                     if (!confirm('삭제할까?')) return;
                     try{
-                        await apiDelete(data.schNo);
-                        // UX: 자연스럽게 사라짐 느낌
-                        const el = document.querySelector(`[data-event-id="${CSS.escape(String(data.id || ''))}"]`);
-                        if (el){
-                            el.style.transition = 'opacity .2s ease, transform .2s ease';
-                            el.style.opacity = '0';
-                            el.style.transform = 'scale(.98)';
-                        }
+                        await apiDelete(data.schNo, data.scope);
                         closePop(detailPop);
-                        setTimeout(() => { mainCalendar.refetchEvents(); refreshMiniDots(); }, 220);
+                        setTimeout(() => { mainCalendar.refetchEvents(); refreshMiniDots(); }, 120);
                     }catch(e){
                         console.error(e);
                         alert(e.message);
@@ -1055,7 +1266,6 @@
                 el.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    // ✅ 리스트는 유지, 상세만 열기
                     openDetail({ anchorRect: el.getBoundingClientRect(), data: item });
                 });
 
@@ -1092,12 +1302,17 @@
                 credentials: 'include',
                 body: JSON.stringify(payload)
             });
+            if (res.status === 403) throw new Error('권한이 없습니다.');
             if (!res.ok) throw new Error('Create failed: ' + res.status + ' ' + await res.text());
             return await res.json();
         }
 
-        async function apiDelete(schNo){
-            const res = await fetch(API_DELETE(schNo), { method:'DELETE', credentials:'include' });
+        async function apiDelete(schNo, scope){
+            const res = await fetch(API_DELETE(schNo, scope), {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (res.status === 403) throw new Error('권한이 없습니다.');
             if (!res.ok) throw new Error('Delete failed: ' + res.status + ' ' + await res.text());
             return true;
         }
@@ -1109,14 +1324,13 @@
                 credentials:'include',
                 body: JSON.stringify(payload)
             });
+            if (res.status === 403) throw new Error('권한이 없습니다.');
             if (!res.ok) throw new Error('Update failed: ' + res.status + ' ' + await res.text());
             return await res.json();
         }
 
         /* =========================
-           Fetch events (3 scope 병렬 -> 합쳐서)
-           ✅ 배경/바는 eventContent에서 "저장된 color 기반 투명"으로 통일
-           ✅ FullCalendar backgroundColor는 건드리지 않음(깨짐 방지)
+           Fetch events
         ========================= */
         async function fetchEvents(info, success, fail){
             try{
@@ -1139,7 +1353,6 @@
                         const scope = String(it.scope || 'PERSONAL').toUpperCase();
                         const id = scope + '-' + String(it.schNo);
 
-                        // ✅ "저장된 색" 우선, 없으면 scope 고정색
                         const color = it.color || scopeColor(scope);
 
                         const startAtNorm = normalizeApiDatetime(it.startAt);
@@ -1162,8 +1375,6 @@
                             start,
                             end,
                             allDay,
-
-                            // ✅ 여기서 backgroundColor/borderColor 넣지 않음 (디자인 깨짐 방지)
                             extendedProps: {
                                 id,
                                 schNo: it.schNo,
@@ -1216,14 +1427,9 @@
 
                 events: fetchEvents,
 
-                // Month: 칸 늘어나지 않게 +n
                 dayMaxEvents: 3,
-
-                // Week(timeGrid): 시간대 2개만, 나머지 +n
                 slotEventOverlap: false,
                 eventMaxStack: 2,
-
-                // ✅ allDay는 다 보여주기(늘어나도 OK)
                 allDayMaxEventRows: false,
 
                 datesSet: function(){
@@ -1292,7 +1498,6 @@
                         info.dayEl?.getBoundingClientRect?.() ||
                         rectFromMouseEvent(info.jsEvent);
 
-                    // ✅ timeGrid에서는 이게 정답: 겹쳐서 숨겨진 seg들(또는 전체 seg들)
                     const segs = info.allSegs || info.hiddenSegs || info.segs || [];
 
                     const items = segs.map(seg => {
@@ -1311,7 +1516,6 @@
                         };
                     });
 
-                    // ✅ 제목도 "날짜 + 시간대"로 보이게(원하면)
                     const t = info.allDay ? '' : (' ' + pad(info.date.getHours()) + ':' + pad(info.date.getMinutes()));
 
                     openMore({
@@ -1323,7 +1527,6 @@
                     return 'none';
                 },
 
-                // ✅ 여기서 "배경/왼쪽 바"를 확정적으로 그려서 깨짐 방지
                 eventContent: function(arg){
                     const ext = arg.event.extendedProps || {};
                     const bar = (ext.color || scopeColor(ext.scope));
@@ -1332,8 +1535,8 @@
                     const title = (arg.event.title || '');
                     return {
                         html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};">
-                    <div class="bp-evt-title">${title}</div>
-                  </div>`
+                          <div class="bp-evt-title">${title}</div>
+                        </div>`
                     };
                 },
 
@@ -1357,12 +1560,15 @@
             const scope = String(scopeSelect.value).toUpperCase();
             const allDay = allDaySelect.value === 'true';
 
+            if (scope === 'COMPANY' && !isCompanyAdmin()){
+                return alert('회사 일정은 관리자만 등록/수정할 수 있어요.');
+            }
+
             const payload = {
                 scope,
                 title,
                 content: (contentInput.value || '').trim() || null,
-                allDay,
-                color: scopeColor(scope) // ✅ 고정색으로 저장
+                allDay
             };
 
             if (allDay){
@@ -1436,10 +1642,6 @@
 
         /* =========================
            Mini Calendar
-           ✅ 점 위치: cell bottom center (CSS absolute)
-           ✅ 표시 규칙: "그 날 일정이 하나라도 있으면 점 1개만"
-              - 한 scope만 있으면 그 색
-              - 여러 scope 섞이면 중립색(#334155)
         ========================= */
         function setMiniTitle(){
             const d = miniCalendar.getDate();
@@ -1457,9 +1659,7 @@
             const calls = scopes.map(s => apiGetItems({ scope:s, view:'MONTH', baseDate, weekStart }));
             const results = await Promise.allSettled(calls);
 
-            // dateKey -> Set(scopes that exist on that date)
-            const map = new Map();
-
+            const map = new Map(); // dateKey -> Set(scopes)
             function mark(dateKey, scope){
                 if (!map.has(dateKey)) map.set(dateKey, new Set());
                 map.get(dateKey).add(scope);
@@ -1493,7 +1693,6 @@
         }
 
         function paintMiniDots(map){
-            // 기존 dot 제거
             document.querySelectorAll('#miniCalendar .mini-dots').forEach(el => el.remove());
 
             const dayCells = document.querySelectorAll('#miniCalendar .fc-daygrid-day');
@@ -1510,18 +1709,14 @@
                 const wrap = document.createElement('div');
                 wrap.className = 'mini-dots';
 
-                // ✅ 점 1개만
-                const dot = document.createElement('span');
-                dot.className = 'mini-dot';
+                ['COMPANY','DEPARTMENT','PERSONAL'].forEach(sc => {
+                    if (!scopes.has(sc)) return;
+                    const dot = document.createElement('span');
+                    dot.className = 'mini-dot';
+                    dot.style.background = scopeColor(sc);
+                    wrap.appendChild(dot);
+                });
 
-                if (scopes.size === 1){
-                    const only = Array.from(scopes)[0];
-                    dot.style.background = scopeColor(only);
-                }else{
-                    dot.style.background = '#334155'; // 여러개 섞이면 중립색
-                }
-
-                wrap.appendChild(dot);
                 frame.appendChild(wrap);
             });
         }
@@ -1539,9 +1734,8 @@
                     refreshMiniDots();
                 },
 
+                // ✅ 미니에서 날짜 클릭할 때만 메인이 이동
                 dateClick: function(info){
-                    // ✅ mini에서 달 넘긴다고 main 달은 안 바뀜
-                    // ✅ 날짜 클릭했을 때만 main 이동
                     mainCalendar.gotoDate(info.date);
                     mainCalendar.refetchEvents();
                 }
@@ -1574,18 +1768,35 @@
         bindToggle(tgPersonal, 'PERSONAL');
 
         /* =========================
-           Init
+           ✅ Title click -> open pretty picker
         ========================= */
-        buildMainCalendar();
-        buildMiniCalendar();
+        document.getElementById('mainTitle').addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            openMonthPicker('MAIN');
+        });
+        document.getElementById('miniMonthTitle').addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            openMonthPicker('MINI');
+        });
 
-        setActiveView('WEEK');
+        /* =========================
+           Init (✅ me 먼저 로드)
+        ========================= */
+        (async function init(){
+            await loadMe();
+            resetCreateForm();
 
-        setSwitch(tgCompany, true);
-        setSwitch(tgDept, true);
-        setSwitch(tgPersonal, true);
+            buildMainCalendar();
+            buildMiniCalendar();
 
-        refreshMiniDots();
+            setActiveView('WEEK');
+
+            setSwitch(tgCompany, true);
+            setSwitch(tgDept, true);
+            setSwitch(tgPersonal, true);
+
+            refreshMiniDots();
+        })();
     </script>
 </th:block>
 
