@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 일정 등록 요청 dto
+ * 일정 등록, 수정 요청 dto
  *
  * @author : 권지영
  * @filename : ReqCreateScheduleDto
@@ -39,8 +39,6 @@ public class ReqCreateScheduleDto {
     // allDay=false일 때 사용 (시간 기반)
     private LocalDateTime startAt;
     private LocalDateTime endedAt;
-
-    private String color;
 
     // DEPARTMENT scope에서만 필요
     private Long depNo;
