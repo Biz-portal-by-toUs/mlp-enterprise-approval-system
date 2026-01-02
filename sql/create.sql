@@ -996,6 +996,21 @@ UPDATE employee SET birth = '2000-01-01' WHERE birth IS NULL;
 -- 3) 마지막에 NOT NULL로 변경
 ALTER TABLE employee MODIFY birth DATE NOT NULL;
 
+ALTER TABLE employee MODIFY COLUMN object_key VARCHAR(255) NULL;
+
+
+
+-- 일정 관련 변경 --
+use bizportal;
+-- 1) 부서+회사 스케줄 테이블에서 dep_no nullable로 변경
+ALTER TABLE schedule
+    MODIFY dep_no BIGINT NULL;
+-- 2) emp_schedule, schedule all_day 컬럼 추가
+ALTER TABLE emp_schedule
+    ADD COLUMN all_day TINYINT(1) NOT NULL DEFAULT 0 AFTER ended_at;
+
+ALTER TABLE schedule
+    ADD COLUMN all_day TINYINT(1) NOT NULL DEFAULT 0 AFTER ended_at;
 drop table folder;
 -- 공유함 Folder 테이블 변경(드롭하고 실행해주세요)
 CREATE TABLE folder (

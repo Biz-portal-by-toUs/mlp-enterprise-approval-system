@@ -137,6 +137,16 @@ public enum ErrorCode {
     EMPLOYEE_ALREADY_RETIRED(HttpStatus.BAD_REQUEST,"EMPLOYEE_ALREADY_RETIRED","이미 퇴사 처리된 사원입니다"),
     ONLY_EMPLOYEE(HttpStatus.BAD_REQUEST,"ONLY_EMPLOYEE","사원 계정만 접근 가능합니다"),
 
+    // 일정 관련
+    START_MUST_BEFORE_END(HttpStatus.BAD_REQUEST,"START_MUST_BEFORE_END","endedAt은 startAt 이후여야 합니다"),
+    MUST_STARTDATE_IF_ALLDAY_TRUE(HttpStatus.BAD_REQUEST,"MUST_STARTDATE_IF_ALLDAY_TRUE","allDay=true이면 startDate는 필수입니다"),
+    MUST_STARTAT_ENDEDAT(HttpStatus.BAD_REQUEST,"MUST_STARTAT_ENDEDAT","allDay=false이면 startAt, endedAt은 필수입니다"),
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다"),
+    NOT_REGISTER(HttpStatus.BAD_REQUEST,"NOT_REGISTER","등록자만 삭제가 가능합니다"),
+    SCHEDULE_NOT_AUTH(HttpStatus.BAD_REQUEST,"SCHEDULE_NOT_AUTH","일정에 접근할 권한이 없습니다"),
+
+
+
 
     // 웹소켓 관련
     SOCKET_AUTHENTICATION_ERROR(HttpStatus.UNAUTHORIZED, "SOCKET_AUTHENTICATION_ERROR", "웹소켓 인증 정보가 유효하지 않습니다"),
@@ -164,6 +174,7 @@ public enum ErrorCode {
     INVALID_MEMBER_COUNT(HttpStatus.BAD_REQUEST, "INVALID_MEMBER_COUNT", "채팅방 멤버는 최소 1명 이상이어야 합니다"),
     ALREADY_CHAT_MEMBER(HttpStatus.CONFLICT, "ALREADY_CHAT_MEMBER", "이미 채팅방에 참여 중인 멤버입니다"),
     INVALID_ROOM_TYPE(HttpStatus.BAD_REQUEST,"INVALID_ROOM_TYPE","맞지 않는 채팅방타입입니다");
+
 
 
 

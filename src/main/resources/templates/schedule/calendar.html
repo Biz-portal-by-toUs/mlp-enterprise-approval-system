@@ -1,0 +1,1804 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
+<th:block layout:fragment="pageStyles">
+    <style>
+        /* ===== Layout (✅ 원래 크기 유지) ===== */
+        .cal-wrap{
+            display:grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap:16px;
+            align-items:stretch;
+        }
+        .cal-left{
+            background: rgba(59,130,246,.14);
+            border:1px solid rgba(59,130,246,.18);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow2);
+            padding:16px;
+            min-height: 760px;
+        }
+        .mini-box{
+            background: rgba(255,255,255,.40);
+            border:1px solid rgba(255,255,255,.35);
+            border-radius: 12px;
+            padding:10px;
+            margin-bottom:12px;
+        }
+
+        .cal-main{
+            background:#fff;
+            border:1px solid rgba(17,24,39,.08);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow2);
+            padding:14px;
+            min-height: 760px;
+            min-width: 0;
+        }
+
+        .cal-toolbar{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:10px;
+        }
+        .toolbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
+        .main-title{
+            font-size:28px; font-weight:900; margin:0; white-space:nowrap;
+            cursor:pointer; user-select:none;
+        }
+        .main-title:hover{ text-decoration: underline; text-underline-offset: 6px; }
+
+        .nav-group{
+            display:flex;
+            gap:6px;
+            background:#f3f4f6;
+            border:1px solid #e5e7eb;
+            border-radius: 999px;
+            padding:4px;
+        }
+        .nav-btn{
+            border:0;
+            background:transparent;
+            padding:8px 12px;
+            border-radius:999px;
+            font-weight:900;
+            cursor:pointer;
+        }
+        .nav-btn:hover{ background:#e5e7eb; }
+
+        .toolbar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+        .pill-group{
+            display:flex;
+            gap:6px;
+            background:#f3f4f6;
+            border:1px solid #e5e7eb;
+            border-radius: 999px;
+            padding:4px;
+        }
+        .pill{
+            border:0;
+            background:transparent;
+            padding:8px 14px;
+            border-radius: 999px;
+            font-weight:900;
+            cursor:pointer;
+            color:#334155;
+        }
+        .pill.active{ background:#2563eb; color:#fff; }
+
+        .weekstart-select{
+            border:1px solid #e5e7eb;
+            background:#fff;
+            border-radius: 12px;
+            padding:8px 10px;
+            font-weight:800;
+            cursor:pointer;
+        }
+        .local-search{
+            border:1px solid #e5e7eb;
+            border-radius: 999px;
+            padding:10px 14px;
+            min-width:240px;
+            outline:none;
+            font-weight:700;
+        }
+
+        .add-btn{
+            width:100%;
+            height:44px;
+            border:1px solid rgba(17,24,39,.10);
+            border-radius: 12px;
+            background: rgba(255,255,255,.55);
+            font-weight:900;
+            cursor:pointer;
+        }
+        .add-btn:hover{ background: rgba(255,255,255,.75); }
+
+        /* ===== Mini header ===== */
+        .mini-head{
+            display:flex; align-items:center; justify-content:space-between;
+            gap:10px;
+            margin:0 0 10px;
+        }
+        .mini-month{
+            font-weight:900; color:#1f3b7a;
+            cursor:pointer; user-select:none;
+        }
+        .mini-month:hover{ text-decoration: underline; text-underline-offset: 6px; }
+        .mini-nav{ display:flex; gap:6px; }
+        .mini-nav button{
+            width:34px; height:34px;
+            border:1px solid rgba(17,24,39,.10);
+            background:rgba(255,255,255,.55);
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:900;
+        }
+        .mini-nav button:hover{ background:rgba(255,255,255,.75); }
+
+        /* ===== Left toggles ===== */
+        .mycal{
+            margin-top:14px;
+            background: rgba(255,255,255,.40);
+            border:1px solid rgba(255,255,255,.35);
+            border-radius: 12px;
+            padding:12px;
+        }
+        .mycal-title{ font-weight:900; color:#1f3b7a; margin-bottom:8px; }
+        .toggle-row{
+            display:flex; align-items:center; justify-content:space-between;
+            padding:10px 6px;
+            border-top:1px solid rgba(17,24,39,.08);
+            gap:10px;
+        }
+        .tag{ display:flex; align-items:center; gap:10px; font-weight:900; color:#0f172a; }
+        .dot{ width:10px; height:10px; border-radius:999px; display:inline-block; }
+
+        .switch{
+            position:relative;
+            width:44px; height:24px;
+            background:#cbd5e1;
+            border-radius:999px;
+            cursor:pointer;
+            transition:.15s;
+        }
+        .switch::after{
+            content:"";
+            position:absolute;
+            top:3px; left:3px;
+            width:18px; height:18px;
+            background:#fff;
+            border-radius:999px;
+            transition:.15s;
+            box-shadow:0 3px 10px rgba(0,0,0,.15);
+        }
+        .switch.on{ background:#2563eb; }
+        .switch.on::after{ left:23px; }
+
+        /* ===== FullCalendar base ===== */
+        .fc .fc-header-toolbar{ display:none; }
+        .fc .fc-timegrid-slot{ height:46px; }
+        .fc .fc-day-today{ background:rgba(59,130,246,.08) !important; }
+
+        /* ===== 이벤트 디자인(배경/바 통일) ===== */
+        .fc .fc-event,
+        .fc .fc-event-main,
+        .fc .fc-timegrid-event,
+        .fc .fc-daygrid-event{
+            border:none !important;
+            border-radius:0 !important;
+            background:transparent !important;
+            box-shadow:none !important;
+        }
+        .bp-event{
+            height:100%;
+            padding:6px 8px 6px 10px;
+            color:#0f172a;
+            background: var(--bpBg);
+            box-shadow: inset 4px 0 0 var(--bpColor);
+            overflow:hidden;
+            border-radius:0;
+        }
+        .bp-evt-title{
+            font-size:12px;
+            font-weight:900;
+            white-space:normal;
+            word-break:break-word;
+            line-height:1.2;
+        }
+        .bp-evt-time{ display:none; }
+
+        /* +n more 링크 */
+        #calendar .fc-daygrid-day-frame{ position:relative; }
+        #calendar .fc-daygrid .fc-more-link,
+        #calendar .fc-daygrid .fc-daygrid-more-link{
+            position:absolute;
+            right:8px;
+            bottom:6px;
+            background:transparent !important;
+            padding:0 !important;
+            border-radius:0 !important;
+            border:0 !important;
+        }
+        .fc .fc-more-link{
+            display:inline-block;
+            padding:2px 6px;
+            font-size:12px;
+            font-weight:900;
+            border-radius:10px;
+            background:rgba(15,23,42,.06);
+            color:#0f172a;
+            text-decoration:none;
+        }
+        .fc-timegrid .fc-more-link{
+            position: relative;
+            z-index: 5;
+            margin-left: 6px;
+            padding: 0 !important;
+            background: transparent !important;
+        }
+        .fc-timegrid .fc-timegrid-col-frame{ position: relative; }
+        .fc-timegrid .fc-timegrid-more-link{
+            position: absolute !important;
+            right: 6px;
+            bottom: 2px;
+            left: auto !important;
+            top: auto !important;
+        }
+
+        /* ===== Mini calendar dots (✅ scope별 dot 1개씩) ===== */
+        #miniCalendar .fc-daygrid-day-frame{ position:relative; }
+        #miniCalendar .mini-dots{
+            position:absolute;
+            left:50%;
+            bottom:4px;
+            transform:translateX(-50%);
+            display:flex;
+            gap:4px;
+            align-items:center;
+            justify-content:center;
+            height:10px;
+            pointer-events:none;
+        }
+        #miniCalendar .mini-dot{
+            width:6px; height:6px;
+            border-radius:999px;
+            display:inline-block;
+            opacity:.95;
+        }
+
+        /* ===== Popover ===== */
+        .pop-mask{
+            position:fixed; inset:0;
+            background:transparent;
+            display:none;
+            z-index:9998;
+        }
+        .pop{
+            position:fixed;
+            z-index:9999;
+            width:min(420px, 92vw);
+            background:rgba(255,255,255,.92);
+            backdrop-filter: blur(10px);
+            border:1px solid rgba(15,23,42,.10);
+            box-shadow:0 18px 50px rgba(0,0,0,.18);
+            border-radius:18px;
+            overflow:hidden;
+            display:none;
+        }
+        .pop.center{
+            left:50% !important;
+            top:50% !important;
+            transform:translate(-50%,-50%) !important;
+        }
+        .pop-head{
+            padding:12px 14px;
+            display:flex; align-items:center; justify-content:space-between;
+            border-bottom:1px solid rgba(15,23,42,.08);
+            background:rgba(248,250,252,.75);
+        }
+        .pop-title{ display:flex; align-items:center; gap:8px; font-weight:900; color:#0f172a; }
+        .pop-badge{ width:10px; height:10px; border-radius:999px; background:#f59e0b; }
+        .pop-body{
+            padding:14px;
+            display:grid;
+            gap:10px;
+            max-height: min(62vh, 520px);
+            overflow:auto;
+        }
+        .field{ display:grid; gap:6px; }
+        .field label{ font-size:12px; font-weight:900; color:#334155; }
+        .field input, .field textarea, .field select{
+            border:1px solid rgba(17,24,39,.12);
+            border-radius:12px;
+            padding:10px 12px;
+            font-size:14px;
+            outline:none;
+            background:rgba(255,255,255,.9);
+        }
+        textarea{ min-height:90px; resize:vertical; }
+        .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .pop-foot{
+            padding:12px 14px;
+            border-top:1px solid rgba(15,23,42,.08);
+            display:flex;
+            justify-content:flex-end;
+            gap:8px;
+            background:rgba(255,255,255,.75);
+        }
+        .btn{
+            border:1px solid rgba(17,24,39,.12);
+            background:#fff;
+            padding:10px 14px;
+            border-radius:12px;
+            cursor:pointer;
+            font-weight:900;
+        }
+        .btn.primary{ background:#2563eb; border-color:#2563eb; color:#fff; }
+        .btn.danger{ background:#ef4444; border-color:#ef4444; color:#fff; }
+        .btn.ghost{ background:transparent; }
+        .readonly{ background:rgba(248,250,252,.9) !important; }
+        .hidden{ display:none !important; }
+
+        .more-list{ display:grid; gap:8px; }
+        .more-item{
+            display:flex; align-items:flex-start; gap:10px;
+            padding:10px 10px;
+            border-radius:12px;
+            background:rgba(15,23,42,.04);
+            cursor:pointer;
+            border:1px solid rgba(15,23,42,.06);
+        }
+        .more-item:hover{ background:rgba(15,23,42,.06); }
+        .more-color{ width:10px; height:10px; border-radius:999px; margin-top:3px; flex:0 0 auto; }
+        .more-meta{ display:grid; gap:2px; min-width:0; }
+        .more-time{ font-size:12px; font-weight:900; color:#0f172a; }
+        .more-title{ font-size:13px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+        /* =========================
+           ✅ Pretty Month Picker Modal
+        ========================= */
+        .mp-mask{
+            position:fixed; inset:0;
+            background:rgba(15,23,42,.18);
+            display:none;
+            z-index:10020;
+        }
+        .mp{
+            position:fixed;
+            z-index:10021;
+            width:min(380px, 92vw);
+            background:rgba(255,255,255,.92);
+            backdrop-filter: blur(10px);
+            border:1px solid rgba(15,23,42,.10);
+            box-shadow:0 18px 50px rgba(0,0,0,.18);
+            border-radius:18px;
+            overflow:hidden;
+            display:none;
+        }
+        .mp.center{
+            left:50%; top:50%;
+            transform:translate(-50%,-50%);
+        }
+        .mp-head{
+            padding:12px 14px;
+            display:flex; align-items:center; justify-content:space-between;
+            border-bottom:1px solid rgba(15,23,42,.08);
+            background:rgba(248,250,252,.75);
+        }
+        .mp-title{
+            display:flex; align-items:center; gap:10px;
+            font-weight:900; color:#0f172a;
+        }
+        .mp-chip{
+            font-size:12px;
+            padding:4px 10px;
+            border-radius:999px;
+            background:rgba(37,99,235,.10);
+            border:1px solid rgba(37,99,235,.18);
+            color:#1f3b7a;
+            font-weight:900;
+        }
+        .mp-year{
+            display:flex; align-items:center; gap:8px;
+            font-weight:900;
+        }
+        .mp-year button{
+            width:34px; height:34px;
+            border:1px solid rgba(17,24,39,.10);
+            background:rgba(255,255,255,.55);
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:900;
+        }
+        .mp-year button:hover{ background:rgba(255,255,255,.75); }
+        .mp-body{ padding:14px; }
+        .mp-grid{
+            display:grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap:10px;
+        }
+        .mp-mon{
+            border:1px solid rgba(17,24,39,.10);
+            background:rgba(255,255,255,.65);
+            border-radius:14px;
+            padding:12px 10px;
+            cursor:pointer;
+            font-weight:900;
+            color:#0f172a;
+            text-align:center;
+            transition:.12s;
+        }
+        .mp-mon:hover{ transform:translateY(-1px); background:rgba(255,255,255,.85); }
+        .mp-mon.active{
+            background:#2563eb;
+            border-color:#2563eb;
+            color:#fff;
+        }
+        .mp-foot{
+            padding:12px 14px;
+            border-top:1px solid rgba(15,23,42,.08);
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            background:rgba(255,255,255,.75);
+        }
+        .mp-foot .btn{ padding:10px 12px; }
+        .mp-foot .left{ display:flex; gap:8px; }
+        .mp-foot .right{ display:flex; gap:8px; }
+
+        @media (max-width: 1100px){
+            .cal-wrap{ grid-template-columns: 1fr; }
+            .cal-left{ min-height:auto; }
+        }
+
+        /* ✅ 일정 추가/수정 모달(createPop)만 크게 */
+        #createPop{
+            width: min(720px, 94vw);
+        }
+
+        #createPop .pop-body{
+            max-height: min(72vh, 720px);
+        }
+
+        /* 내용이 많아졌을 때 입력 영역이 더 시원하게 보이게 */
+        #createPop textarea{
+            min-height: 140px;
+        }
+    </style>
+</th:block>
+
+<body>
+<div layout:fragment="content">
+
+    <div class="cal-wrap">
+        <!-- LEFT -->
+        <aside class="cal-left">
+            <div class="mini-head">
+                <div class="mini-month" id="miniMonthTitle">December 2025</div>
+                <div class="mini-nav">
+                    <button type="button" id="miniPrevBtn">‹</button>
+                    <button type="button" id="miniNextBtn">›</button>
+                </div>
+            </div>
+
+            <div class="mini-box">
+                <div id="miniCalendar"></div>
+            </div>
+
+            <button type="button" class="add-btn" id="openCreateBtn">+ 일정 추가하기</button>
+
+            <div class="mycal">
+                <div class="mycal-title">내 캘린더</div>
+
+                <div class="toggle-row">
+                    <div class="tag"><span class="dot" style="background:#2563EB"></span><span>회사</span></div>
+                    <div class="switch on" id="tgCompany" role="switch" aria-checked="true"></div>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="tag"><span class="dot" style="background:#16A34A"></span><span>부서</span></div>
+                    <div class="switch on" id="tgDept" role="switch" aria-checked="true"></div>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="tag"><span class="dot" style="background:#f59e0b"></span><span>개인</span></div>
+                    <div class="switch on" id="tgPersonal" role="switch" aria-checked="true"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <section class="cal-main">
+            <div class="cal-toolbar">
+                <div class="toolbar-left">
+                    <h2 class="main-title" id="mainTitle"></h2>
+                    <div class="nav-group">
+                        <button class="nav-btn" type="button" id="prevBtn">‹</button>
+                        <button class="nav-btn" type="button" id="todayBtn">Today</button>
+                        <button class="nav-btn" type="button" id="nextBtn">›</button>
+                    </div>
+                </div>
+
+                <div class="toolbar-right">
+                    <div class="pill-group" id="viewGroup">
+                        <button class="pill active" type="button" data-view="WEEK">Week</button>
+                        <button class="pill" type="button" data-view="MONTH">Month</button>
+                    </div>
+
+                    <select class="weekstart-select" id="weekStartSelect">
+                        <option value="MONDAY" selected>MONDAY</option>
+                        <option value="SUNDAY">SUNDAY</option>
+                    </select>
+
+                    <input class="local-search" id="searchInput" type="text" placeholder="Search"/>
+                </div>
+            </div>
+
+            <div id="calendar"></div>
+        </section>
+    </div>
+
+    <div class="pop-mask" id="popMask"></div>
+
+    <!-- ✅ Month Picker Mask + Modal (공용, 모드로 main/mini 분기) -->
+    <div class="mp-mask" id="mpMask"></div>
+    <div class="mp center" id="monthPickerPop" role="dialog" aria-modal="true" aria-label="월 선택">
+        <div class="mp-head">
+            <div class="mp-title">
+                <span class="mp-chip" id="mpModeChip">MAIN</span>
+                <span>월 선택</span>
+            </div>
+
+            <div class="mp-year">
+                <button type="button" id="mpPrevYear">‹</button>
+                <span id="mpYearText">2026</span>
+                <button type="button" id="mpNextYear">›</button>
+                <button type="button" class="btn ghost" id="mpClose" style="padding:6px 10px;">✕</button>
+            </div>
+        </div>
+
+        <div class="mp-body">
+            <div class="mp-grid" id="mpGrid"></div>
+        </div>
+
+        <div class="mp-foot">
+            <div class="left">
+                <button class="btn" type="button" id="mpToday">This Month</button>
+            </div>
+            <div class="right">
+                <button class="btn" type="button" id="mpCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit -->
+    <div class="pop" id="createPop" role="dialog" aria-modal="true" aria-label="일정 추가/수정">
+        <div class="pop-head">
+            <div class="pop-title">
+                <span class="pop-badge" id="createBadge"></span>
+                <span id="createPopTitle">일정 추가</span>
+            </div>
+            <button class="btn ghost" type="button" id="createClose">✕</button>
+        </div>
+
+        <div class="pop-body">
+            <div class="field">
+                <label>scope</label>
+                <select id="scopeSelect">
+                    <option value="PERSONAL">PERSONAL</option>
+                    <option value="DEPARTMENT">DEPARTMENT</option>
+                    <option value="COMPANY">COMPANY</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>title</label>
+                <input type="text" id="titleInput" placeholder="제목(필수입력)"/>
+            </div>
+
+            <div class="field">
+                <label>content</label>
+                <textarea id="contentInput" placeholder="메모"></textarea>
+            </div>
+
+            <div class="row">
+                <div class="field">
+                    <label>allDay</label>
+                    <select id="allDaySelect">
+                        <option value="false" selected>false</option>
+                        <option value="true">true</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>color (fixed)</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span class="dot" id="fixedColorDot" style="width:14px;height:14px;background:#f59e0b;"></span>
+                        <input type="text" id="fixedColorText" class="readonly" readonly value="#f59e0b"/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="timeRow">
+                <div class="field">
+                    <label>startAt</label>
+                    <input type="datetime-local" id="startAtInput"/>
+                </div>
+                <div class="field">
+                    <label>endedAt</label>
+                    <input type="datetime-local" id="endedAtInput"/>
+                </div>
+            </div>
+
+            <div class="row hidden" id="dateRow">
+                <div class="field">
+                    <label>startDate</label>
+                    <input type="date" id="startDateInput"/>
+                </div>
+                <div class="field">
+                    <label>endDate</label>
+                    <input type="date" id="endDateInput"/>
+                </div>
+            </div>
+        </div>
+
+        <div class="pop-foot">
+            <button class="btn" type="button" id="createCancel">Cancel</button>
+            <button class="btn primary" type="button" id="createSave">Save</button>
+        </div>
+    </div>
+
+    <!-- Detail -->
+    <div class="pop" id="detailPop" role="dialog" aria-modal="true" aria-label="일정 상세">
+        <div class="pop-head">
+            <div class="pop-title">
+                <span class="pop-badge" id="detailBadge"></span>
+                <span>일정 상세</span>
+            </div>
+            <button class="btn ghost" type="button" id="detailClose">✕</button>
+        </div>
+
+        <div class="pop-body">
+            <div class="field">
+                <label>title</label>
+                <input type="text" id="dTitle" class="readonly" readonly/>
+            </div>
+
+            <div class="field hidden" id="dContentWrap">
+                <label>content</label>
+                <textarea id="dContent" class="readonly" readonly></textarea>
+            </div>
+
+            <div class="row">
+                <div class="field">
+                    <label>start</label>
+                    <input type="text" id="dStart" class="readonly" readonly/>
+                </div>
+                <div class="field">
+                    <label>end</label>
+                    <input type="text" id="dEnd" class="readonly" readonly/>
+                </div>
+            </div>
+        </div>
+
+        <div class="pop-foot" id="detailFoot">
+            <button class="btn" type="button" id="detailOk">확인</button>
+        </div>
+    </div>
+
+    <!-- More list (+n) -->
+    <div class="pop" id="morePop" role="dialog" aria-modal="true" aria-label="더보기 목록">
+        <div class="pop-head">
+            <div class="pop-title">
+                <span class="pop-badge" style="background:#334155"></span>
+                <span id="moreTitle">일정 목록</span>
+            </div>
+            <button class="btn ghost" type="button" id="moreClose">✕</button>
+        </div>
+        <div class="pop-body">
+            <div class="more-list" id="moreList"></div>
+        </div>
+        <div class="pop-foot">
+            <button class="btn" type="button" id="moreOk">확인</button>
+        </div>
+    </div>
+
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+    <script>
+        /* =========================
+           API
+        ========================= */
+        const API_BASE = '/api/v1/calendar';
+        const API_DELETE = (schNo, scope) => {
+            const params = new URLSearchParams();
+            params.set('scope', String(scope || 'PERSONAL').toUpperCase());
+            return `${API_BASE}/${schNo}?${params.toString()}`;
+        };
+        const API_UPDATE = (schNo) => API_BASE + '/' + schNo;
+
+        /* =========================
+           ✅ 현재 로그인 사용자(me) - 백엔드 API로만 결정
+           - /api/v1/employees/me -> ResEmployeeDetailDto(role 포함)
+        ========================= */
+        let CURRENT_ME = null;
+
+        async function loadMe(){
+            try{
+                const res = await fetch('/api/v1/employees/me', {
+                    method:'GET',
+                    credentials:'include'
+                });
+
+                if (res.status === 401){
+                    CURRENT_ME = null;
+                    console.warn('ME 401 (unauthorized)');
+                    return null;
+                }
+                if (!res.ok){
+                    CURRENT_ME = null;
+                    console.warn('ME failed:', res.status, await res.text());
+                    return null;
+                }
+
+                const json = await res.json();
+                CURRENT_ME = (json?.data ?? json);
+                console.log('ME=', CURRENT_ME);
+                return CURRENT_ME;
+            }catch(e){
+                CURRENT_ME = null;
+                console.warn('ME error:', e);
+                return null;
+            }
+        }
+
+        function getMyRole(){
+            return String(CURRENT_ME?.role || '').toUpperCase();
+        }
+        function isCompanyAdmin(){
+            const r = getMyRole();
+            return ['COM_ADMIN','SEC_ADMIN','THR_ADMIN'].includes(r);
+        }
+
+        /* =========================
+           scope 고정색
+        ========================= */
+        const SCOPE_COLOR = {
+            COMPANY: '#2563EB',
+            DEPARTMENT: '#16A34A',
+            PERSONAL: '#f59e0b'
+        };
+        function scopeColor(scope){
+            const s = String(scope || '').toUpperCase();
+            return SCOPE_COLOR[s] || '#f59e0b';
+        }
+
+        /* =========================
+           색 -> 투명 배경(rgba)
+        ========================= */
+        function hexToRgba(hex, a){
+            const h = String(hex || '').replace('#','');
+            if (!/^[0-9a-fA-F]{6}$/.test(h)) return `rgba(124,58,237,${a})`;
+            const r = parseInt(h.slice(0,2), 16);
+            const g = parseInt(h.slice(2,4), 16);
+            const b = parseInt(h.slice(4,6), 16);
+            return `rgba(${r},${g},${b},${a})`;
+        }
+
+        /* =========================
+           토글(회사/부서/개인)
+        ========================= */
+        const selectedScopes = new Set(['COMPANY','DEPARTMENT','PERSONAL']);
+        function getSelectedScopes(){ return Array.from(selectedScopes); }
+
+        function setSwitch(el, on){
+            el.classList.toggle('on', !!on);
+            el.setAttribute('aria-checked', String(!!on));
+        }
+        function toggleScope(scope, on){
+            scope = scope.toUpperCase();
+            if (on) selectedScopes.add(scope);
+            else selectedScopes.delete(scope);
+
+            if (selectedScopes.size === 0){
+                selectedScopes.add(scope);
+                setSwitch(scope === 'COMPANY' ? tgCompany : scope === 'DEPARTMENT' ? tgDept : tgPersonal, true);
+                return;
+            }
+
+            mainCalendar && mainCalendar.refetchEvents();
+            refreshMiniDots();
+        }
+
+        /* =========================
+           날짜 유틸
+        ========================= */
+        function normalizeApiDatetime(v){
+            if (!v) return v;
+            const s = String(v).trim();
+            return s.replace(/(\.\d+)?(Z|[+-]\d\d:\d\d)$/, '');
+        }
+        const pad = (n) => String(n).padStart(2, '0');
+        function toDateKey(d){
+            const dt = (d instanceof Date) ? d : new Date(d);
+            return dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate());
+        }
+        function toDatetimeLocalValue(d) {
+            return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+        function addDays(date, days) {
+            const d = new Date(date);
+            d.setDate(d.getDate() + days);
+            return d;
+        }
+        function formatNice(dtStr){
+            if (!dtStr) return '';
+            return String(dtStr).replace('T',' ').replace(/(\.\d+)?Z?$/,'');
+        }
+
+        /* =========================
+           권한 체크
+        ========================= */
+        function canEditDelete(scope){
+            scope = String(scope || '').toUpperCase();
+            if (scope === 'PERSONAL') return true;
+            if (scope === 'DEPARTMENT') return true;
+            if (scope === 'COMPANY') return isCompanyAdmin();
+            return false;
+        }
+
+        /* =========================
+           Popover (기존)
+        ========================= */
+        const popMask = document.getElementById('popMask');
+        const createPop = document.getElementById('createPop');
+        const detailPop = document.getElementById('detailPop');
+        const morePop = document.getElementById('morePop');
+
+        function showMask(){ popMask.style.display = 'block'; }
+        function hideMaskIfNone(){
+            const anyOpen = [createPop, detailPop, morePop].some(p => p.style.display === 'block');
+            if (!anyOpen) popMask.style.display = 'none';
+        }
+        function openPop(popEl, { anchorRect=null, center=false } = {}){
+            showMask();
+            popEl.classList.toggle('center', !!center);
+            popEl.style.display = 'block';
+
+            if (center){
+                popEl.style.left = '50%';
+                popEl.style.top = '50%';
+                popEl.style.transform = 'translate(-50%,-50%)';
+                return;
+            }
+
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const rect = anchorRect || { left: vw/2, top: vh/2, right: vw/2, bottom: vh/2 };
+            const popRect = popEl.getBoundingClientRect();
+            const popW = popRect.width || 420;
+            const popH = popRect.height || 360;
+
+            let left = rect.right + 12;
+            let top  = rect.top;
+
+            if (left + popW > vw - 12) left = rect.left - popW - 12;
+            if (left < 12) left = 12;
+
+            if (top + popH > vh - 12) top = vh - popH - 12;
+            if (top < 12) top = 12;
+
+            popEl.style.left = left + 'px';
+            popEl.style.top = top + 'px';
+            popEl.style.transform = 'none';
+        }
+        function closePop(popEl){
+            popEl.style.display = 'none';
+            popEl.classList.remove('center');
+            hideMaskIfNone();
+        }
+        function closeAllPops(){
+            closePop(createPop);
+            closePop(detailPop);
+            closePop(morePop);
+        }
+        popMask.addEventListener('click', (e) => { e.stopPropagation(); closeAllPops(); });
+        [createPop, detailPop, morePop].forEach(p => p.addEventListener('click', (e)=> e.stopPropagation()));
+        function safeClick(handler){
+            return (e) => { e.preventDefault(); e.stopPropagation(); handler(e); };
+        }
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAllPops(); closeMonthPicker(); } });
+
+        function rectFromMouseEvent(e){
+            if (!e) return null;
+            const x = e.clientX, y = e.clientY;
+            return { left:x, right:x, top:y, bottom:y };
+        }
+
+        /* =========================
+           ✅ Month Picker Modal (MAIN/MINI 분리)
+        ========================= */
+        const mpMask = document.getElementById('mpMask');
+        const monthPickerPop = document.getElementById('monthPickerPop');
+        const mpModeChip = document.getElementById('mpModeChip');
+        const mpPrevYear = document.getElementById('mpPrevYear');
+        const mpNextYear = document.getElementById('mpNextYear');
+        const mpYearText = document.getElementById('mpYearText');
+        const mpGrid = document.getElementById('mpGrid');
+        const mpClose = document.getElementById('mpClose');
+        const mpCancel = document.getElementById('mpCancel');
+        const mpToday = document.getElementById('mpToday');
+
+        let mpMode = 'MAIN'; // 'MAIN' | 'MINI'
+        let mpYear = new Date().getFullYear();
+        let mpMonthIdx = new Date().getMonth(); // 0~11
+
+        const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        function showMonthPicker(){
+            mpMask.style.display = 'block';
+            monthPickerPop.style.display = 'block';
+            monthPickerPop.classList.add('center');
+        }
+        function closeMonthPicker(){
+            monthPickerPop.style.display = 'none';
+            mpMask.style.display = 'none';
+        }
+
+        function getCurrentDateByMode(mode){
+            if (mode === 'MINI' && miniCalendar) return miniCalendar.getDate();
+            return mainCalendar ? mainCalendar.getDate() : new Date();
+        }
+
+        function gotoMonthByMode(mode, year, monthIdx){
+            const d = new Date(year, monthIdx, 1);
+
+            if (mode === 'MINI'){
+                miniCalendar.gotoDate(d);          // ✅ 미니만 이동
+                refreshMiniDots();
+            }else{
+                mainCalendar.gotoDate(d);          // ✅ 메인만 이동
+                mainCalendar.refetchEvents();
+            }
+        }
+
+        function renderMonthPicker(){
+            mpModeChip.textContent = mpMode;
+            mpYearText.textContent = String(mpYear);
+
+            mpGrid.innerHTML = '';
+            for (let i=0; i<12; i++){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'mp-mon' + ((i === mpMonthIdx) ? ' active' : '');
+                btn.textContent = MONTH_LABELS[i];
+                btn.addEventListener('click', () => {
+                    mpMonthIdx = i;
+                    gotoMonthByMode(mpMode, mpYear, mpMonthIdx);
+                    closeMonthPicker();
+                });
+                mpGrid.appendChild(btn);
+            }
+        }
+
+        function openMonthPicker(mode){
+            mpMode = mode;
+
+            const cur = getCurrentDateByMode(mode);
+            mpYear = cur.getFullYear();
+            mpMonthIdx = cur.getMonth();
+
+            renderMonthPicker();
+            showMonthPicker();
+        }
+
+        mpMask.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeMonthPicker(); });
+        monthPickerPop.addEventListener('click', (e)=> e.stopPropagation());
+        mpClose.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeMonthPicker(); });
+        mpCancel.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeMonthPicker(); });
+
+        mpPrevYear.addEventListener('click', () => { mpYear -= 1; renderMonthPicker(); });
+        mpNextYear.addEventListener('click', () => { mpYear += 1; renderMonthPicker(); });
+
+        mpToday.addEventListener('click', () => {
+            const now = new Date();
+            mpYear = now.getFullYear();
+            mpMonthIdx = now.getMonth();
+            gotoMonthByMode(mpMode, mpYear, mpMonthIdx);
+            closeMonthPicker();
+        });
+
+        /* =========================
+           Create/Edit state
+        ========================= */
+        let weekStart = 'MONDAY';
+        let currentViewType = 'WEEK';
+        let mainCalendar = null;
+        let miniCalendar = null;
+
+        let editing = null; // { schNo, scope }
+        const createBadge = document.getElementById('createBadge');
+        const createPopTitle = document.getElementById('createPopTitle');
+
+        const scopeSelect = document.getElementById('scopeSelect');
+        const titleInput = document.getElementById('titleInput');
+        const contentInput = document.getElementById('contentInput');
+        const allDaySelect = document.getElementById('allDaySelect');
+        const timeRow = document.getElementById('timeRow');
+        const dateRow = document.getElementById('dateRow');
+        const startAtInput = document.getElementById('startAtInput');
+        const endedAtInput = document.getElementById('endedAtInput');
+        const startDateInput = document.getElementById('startDateInput');
+        const endDateInput = document.getElementById('endDateInput');
+        const fixedColorDot = document.getElementById('fixedColorDot');
+        const fixedColorText = document.getElementById('fixedColorText');
+
+        function toggleAllDayUI(isAllDay){
+            if (isAllDay){
+                timeRow.classList.add('hidden');
+                dateRow.classList.remove('hidden');
+            }else{
+                dateRow.classList.add('hidden');
+                timeRow.classList.remove('hidden');
+            }
+        }
+        allDaySelect.addEventListener('change', () => toggleAllDayUI(allDaySelect.value === 'true'));
+
+        function applyFixedColorByScope(scope){
+            const c = scopeColor(scope);
+            fixedColorDot.style.background = c;
+            fixedColorText.value = c;
+            createBadge.style.background = c;
+        }
+        scopeSelect.addEventListener('change', () => applyFixedColorByScope(scopeSelect.value));
+
+        function applyScopeSelectByRole(){
+            const companyOpt = scopeSelect.querySelector('option[value="COMPANY"]');
+            if (companyOpt){
+                companyOpt.disabled = !isCompanyAdmin();
+            }
+            if (!isCompanyAdmin() && scopeSelect.value === 'COMPANY'){
+                scopeSelect.value = 'PERSONAL';
+            }
+            applyFixedColorByScope(scopeSelect.value);
+        }
+
+        function resetCreateForm(){
+            editing = null;
+            createPopTitle.textContent = '일정 추가';
+            document.getElementById('createSave').textContent = 'Save';
+
+            scopeSelect.disabled = false;
+            scopeSelect.value = 'PERSONAL';
+
+            titleInput.value = '';
+            contentInput.value = '';
+
+            allDaySelect.value = 'false';
+            toggleAllDayUI(false);
+
+            startAtInput.value = '';
+            endedAtInput.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
+
+            applyScopeSelectByRole();
+        }
+
+        function openCreate({ anchorRect=null, center=false, prefill=null, mode='create' } = {}){
+            resetCreateForm();
+
+            if (prefill?.scope){
+                scopeSelect.value = prefill.scope;
+                applyScopeSelectByRole();
+            }
+            if (prefill?.title) titleInput.value = prefill.title;
+            if (prefill?.content) contentInput.value = prefill.content;
+
+            if (prefill?.allDay){
+                allDaySelect.value = 'true';
+                toggleAllDayUI(true);
+                startDateInput.value = prefill.startDate || '';
+                endDateInput.value = prefill.endDate || prefill.startDate || '';
+            }else{
+                allDaySelect.value = 'false';
+                toggleAllDayUI(false);
+                startAtInput.value = prefill?.startAt || '';
+                endedAtInput.value = prefill?.endedAt || '';
+            }
+
+            if (mode === 'edit'){
+                editing = { schNo: prefill.schNo, scope: prefill.scope };
+                createPopTitle.textContent = '일정 수정';
+                document.getElementById('createSave').textContent = '수정';
+                scopeSelect.disabled = true;
+                applyFixedColorByScope(scopeSelect.value);
+            }
+
+            openPop(createPop, { anchorRect, center });
+        }
+
+        function closeCreate(){ closePop(createPop); }
+        document.getElementById('createClose').addEventListener('click', safeClick(closeCreate));
+        document.getElementById('createCancel').addEventListener('click', safeClick(closeCreate));
+
+        /* =========================
+           Detail
+        ========================= */
+        const detailBadge = document.getElementById('detailBadge');
+        const dTitle = document.getElementById('dTitle');
+        const dContentWrap = document.getElementById('dContentWrap');
+        const dContent = document.getElementById('dContent');
+        const dStart = document.getElementById('dStart');
+        const dEnd = document.getElementById('dEnd');
+        const detailFoot = document.getElementById('detailFoot');
+
+        function openDetail({ anchorRect, data }){
+            const c = scopeColor(data.scope);
+            detailBadge.style.background = c;
+
+            dTitle.value = data.title || '';
+
+            const content = (data.content || '').trim();
+            if (content){
+                dContentWrap.classList.remove('hidden');
+                dContent.value = content;
+            }else{
+                dContentWrap.classList.add('hidden');
+                dContent.value = '';
+            }
+
+            const startText = data.allDay
+                ? (data.startDate || (data.startAt ? String(data.startAt).slice(0,10) : ''))
+                : formatNice(data.startAt);
+            const endText = data.allDay
+                ? (data.endDate || (data.endedAt ? String(data.endedAt).slice(0,10) : ''))
+                : formatNice(data.endedAt);
+
+            dStart.value = startText || '';
+            dEnd.value = endText || '';
+
+            detailFoot.innerHTML = '';
+
+            const okBtn = document.createElement('button');
+            okBtn.className = 'btn';
+            okBtn.textContent = '확인';
+            okBtn.onclick = safeClick(() => closePop(detailPop));
+            detailFoot.appendChild(okBtn);
+
+            if (canEditDelete(data.scope)){
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn primary';
+                editBtn.textContent = '수정';
+                editBtn.onclick = safeClick(() => {
+                    closePop(detailPop);
+
+                    openCreate({
+                        anchorRect: detailPop.getBoundingClientRect(),
+                        center:false,
+                        mode:'edit',
+                        prefill:{
+                            schNo: data.schNo,
+                            scope: data.scope,
+                            title: data.title,
+                            content: data.content,
+                            allDay: !!data.allDay,
+                            startAt: data.startAt ? String(data.startAt).slice(0,16) : '',
+                            endedAt: data.endedAt ? String(data.endedAt).slice(0,16) : '',
+                            startDate: data.startDate || (data.startAt ? String(data.startAt).slice(0,10) : ''),
+                            endDate: data.endDate || (data.endedAt ? String(data.endedAt).slice(0,10) : '')
+                        }
+                    });
+                });
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn danger';
+                delBtn.textContent = '삭제';
+                delBtn.onclick = safeClick(async () => {
+                    if (!confirm('삭제할까?')) return;
+                    try{
+                        await apiDelete(data.schNo, data.scope);
+                        closePop(detailPop);
+                        setTimeout(() => { mainCalendar.refetchEvents(); refreshMiniDots(); }, 120);
+                    }catch(e){
+                        console.error(e);
+                        alert(e.message);
+                    }
+                });
+
+                detailFoot.prepend(delBtn);
+                detailFoot.prepend(editBtn);
+            }
+
+            openPop(detailPop, { anchorRect, center:false });
+        }
+
+        document.getElementById('detailClose').addEventListener('click', safeClick(() => closePop(detailPop)));
+        document.getElementById('detailOk').addEventListener('click', safeClick(() => closePop(detailPop)));
+
+        /* =========================
+           More list popover (+n)
+        ========================= */
+        const moreTitle = document.getElementById('moreTitle');
+        const moreList = document.getElementById('moreList');
+
+        document.getElementById('moreClose').addEventListener('click', safeClick(() => closePop(morePop)));
+        document.getElementById('moreOk').addEventListener('click', safeClick(() => closePop(morePop)));
+
+        function openMore({ anchorRect, title, items }){
+            moreTitle.textContent = title || '일정 목록';
+            moreList.innerHTML = '';
+
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'more-item';
+
+                const c = item.color || scopeColor(item.scope);
+                const dot = document.createElement('span');
+                dot.className = 'more-color';
+                dot.style.background = c;
+
+                const meta = document.createElement('div');
+                meta.className = 'more-meta';
+
+                const time = document.createElement('div');
+                time.className = 'more-time';
+                time.textContent = item.allDay ? 'all-day' : (item.timeText || '');
+
+                const t = document.createElement('div');
+                t.className = 'more-title';
+                t.textContent = item.title || '';
+
+                meta.appendChild(time);
+                meta.appendChild(t);
+
+                el.appendChild(dot);
+                el.appendChild(meta);
+
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openDetail({ anchorRect: el.getBoundingClientRect(), data: item });
+                });
+
+                moreList.appendChild(el);
+            });
+
+            openPop(morePop, { anchorRect, center:false });
+        }
+
+        /* =========================
+           API helpers
+        ========================= */
+        async function apiGetItems({ scope, view, baseDate, weekStart }){
+            const params = new URLSearchParams();
+            params.set('scope', scope);
+            params.set('view', view);
+            params.set('baseDate', baseDate);
+            params.set('weekStart', weekStart);
+            params.set('includeAdjacentInMonth', 'true');
+
+            const res = await fetch(API_BASE + '?' + params.toString(), {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error('GET failed: ' + res.status);
+            const json = await res.json();
+            return (json?.data?.items ?? []);
+        }
+
+        async function apiCreate(payload){
+            const res = await fetch(API_BASE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            if (res.status === 403) throw new Error('권한이 없습니다.');
+            if (!res.ok) throw new Error('Create failed: ' + res.status + ' ' + await res.text());
+            return await res.json();
+        }
+
+        async function apiDelete(schNo, scope){
+            const res = await fetch(API_DELETE(schNo, scope), {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (res.status === 403) throw new Error('권한이 없습니다.');
+            if (!res.ok) throw new Error('Delete failed: ' + res.status + ' ' + await res.text());
+            return true;
+        }
+
+        async function apiUpdate(schNo, payload){
+            const res = await fetch(API_UPDATE(schNo), {
+                method:'PATCH',
+                headers:{ 'Content-Type':'application/json' },
+                credentials:'include',
+                body: JSON.stringify(payload)
+            });
+            if (res.status === 403) throw new Error('권한이 없습니다.');
+            if (!res.ok) throw new Error('Update failed: ' + res.status + ' ' + await res.text());
+            return await res.json();
+        }
+
+        /* =========================
+           Fetch events
+        ========================= */
+        async function fetchEvents(info, success, fail){
+            try{
+                const baseDate = toDateKey(mainCalendar.getDate());
+                const scopes = getSelectedScopes();
+                const view = currentViewType;
+
+                const calls = scopes.map(s => apiGetItems({ scope:s, view, baseDate, weekStart }));
+                const results = await Promise.all(calls);
+                const raw = results.flat();
+
+                const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+
+                const events = raw
+                    .filter(it => !q
+                        || (it.title || '').toLowerCase().includes(q)
+                        || (it.content || '').toLowerCase().includes(q)
+                    )
+                    .map(it => {
+                        const scope = String(it.scope || 'PERSONAL').toUpperCase();
+                        const id = scope + '-' + String(it.schNo);
+
+                        const color = it.color || scopeColor(scope);
+
+                        const startAtNorm = normalizeApiDatetime(it.startAt);
+                        const endedAtNorm = normalizeApiDatetime(it.endedAt);
+
+                        let start = startAtNorm;
+                        let end = endedAtNorm;
+                        let allDay = !!it.allDay;
+
+                        if (allDay){
+                            const sd = it.startDate || (it.startAt ? String(it.startAt).slice(0,10) : null);
+                            const ed = it.endDate || (it.endedAt ? String(it.endedAt).slice(0,10) : sd);
+                            start = sd;
+                            end = ed ? toDateKey(addDays(ed, 1)) : (sd ? toDateKey(addDays(sd, 1)) : null);
+                        }
+
+                        return {
+                            id,
+                            title: it.title,
+                            start,
+                            end,
+                            allDay,
+                            extendedProps: {
+                                id,
+                                schNo: it.schNo,
+                                scope,
+                                title: it.title,
+                                content: it.content,
+                                startAt: startAtNorm,
+                                endedAt: endedAtNorm,
+                                allDay,
+                                startDate: it.startDate,
+                                endDate: it.endDate,
+                                color
+                            }
+                        };
+                    });
+
+                success(events);
+            }catch(e){
+                console.error(e);
+                fail(e);
+            }
+        }
+
+        /* =========================
+           Main Calendar build
+        ========================= */
+        function updateTitles(){
+            const d = mainCalendar.getDate();
+            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            document.getElementById('mainTitle').textContent = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+        }
+
+        function setActiveView(viewType){
+            currentViewType = viewType;
+            const group = document.getElementById('viewGroup');
+            group.querySelectorAll('.pill').forEach(b => b.classList.toggle('active', b.dataset.view === viewType));
+
+            mainCalendar.changeView(viewType === 'WEEK' ? 'timeGridWeek' : 'dayGridMonth');
+            mainCalendar.refetchEvents();
+        }
+
+        function buildMainCalendar(){
+            mainCalendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: 'timeGridWeek',
+                nowIndicator: true,
+                selectable: true,
+                selectMirror: true,
+                firstDay: (weekStart === 'SUNDAY') ? 0 : 1,
+                height: 'auto',
+
+                events: fetchEvents,
+
+                dayMaxEvents: 3,
+                slotEventOverlap: false,
+                eventMaxStack: 2,
+                allDayMaxEventRows: false,
+
+                datesSet: function(){
+                    updateTitles();
+                },
+
+                select: function(selInfo){
+                    const anchorRect = rectFromMouseEvent(selInfo.jsEvent);
+
+                    if (selInfo.allDay){
+                        const startDate = toDateKey(selInfo.start);
+                        const endInc = toDateKey(addDays(selInfo.end, -1));
+                        openCreate({
+                            anchorRect,
+                            center:false,
+                            prefill:{ allDay:true, startDate, endDate:endInc, scope:'PERSONAL' }
+                        });
+                    }else{
+                        openCreate({
+                            anchorRect,
+                            center:false,
+                            prefill:{
+                                allDay:false,
+                                startAt: toDatetimeLocalValue(selInfo.start),
+                                endedAt: toDatetimeLocalValue(selInfo.end),
+                                scope:'PERSONAL'
+                            }
+                        });
+                    }
+                    mainCalendar.unselect();
+                },
+
+                dateClick: function(info){
+                    const anchorRect = rectFromMouseEvent(info.jsEvent);
+                    if (info.allDay){
+                        const d = toDateKey(info.date);
+                        openCreate({ anchorRect, center:false, prefill:{ allDay:true, startDate:d, endDate:d, scope:'PERSONAL' } });
+                    }else{
+                        const start = new Date(info.date);
+                        const end = new Date(start);
+                        end.setMinutes(end.getMinutes() + 30);
+                        openCreate({
+                            anchorRect,
+                            center:false,
+                            prefill:{
+                                allDay:false,
+                                startAt: toDatetimeLocalValue(start),
+                                endedAt: toDatetimeLocalValue(end),
+                                scope:'PERSONAL'
+                            }
+                        });
+                    }
+                },
+
+                eventClick: function(arg){
+                    const ext = arg.event.extendedProps || {};
+                    const anchorRect = arg.jsEvent ? rectFromMouseEvent(arg.jsEvent) : arg.el.getBoundingClientRect();
+                    openDetail({ anchorRect, data: ext });
+                },
+
+                moreLinkClick: function(info){
+                    info.jsEvent?.preventDefault?.();
+
+                    const anchorRect =
+                        info.moreEl?.getBoundingClientRect?.() ||
+                        info.dayEl?.getBoundingClientRect?.() ||
+                        rectFromMouseEvent(info.jsEvent);
+
+                    const segs = info.allSegs || info.hiddenSegs || info.segs || [];
+
+                    const items = segs.map(seg => {
+                        const ev = seg.event;
+                        const ext = ev.extendedProps || {};
+                        const scope = ext.scope || 'PERSONAL';
+                        const color = ext.color || scopeColor(scope);
+
+                        return {
+                            ...ext,
+                            title: ev.title,
+                            scope,
+                            allDay: !!ev.allDay,
+                            color,
+                            timeText: seg.timeText || (ev.allDay ? 'all-day' : '')
+                        };
+                    });
+
+                    const t = info.allDay ? '' : (' ' + pad(info.date.getHours()) + ':' + pad(info.date.getMinutes()));
+
+                    openMore({
+                        anchorRect,
+                        title: toDateKey(info.date) + t + ' 일정',
+                        items
+                    });
+
+                    return 'none';
+                },
+
+                eventContent: function(arg){
+                    const ext = arg.event.extendedProps || {};
+                    const bar = (ext.color || scopeColor(ext.scope));
+                    const bg  = hexToRgba(bar, 0.14);
+
+                    const title = (arg.event.title || '');
+                    return {
+                        html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};">
+                          <div class="bp-evt-title">${title}</div>
+                        </div>`
+                    };
+                },
+
+                eventDidMount: function(arg){
+                    const ext = arg.event.extendedProps || {};
+                    arg.el.setAttribute('data-event-id', String(ext.id || arg.event.id));
+                }
+            });
+
+            mainCalendar.render();
+            updateTitles();
+        }
+
+        /* =========================
+           Save (create/edit)
+        ========================= */
+        async function onSave(){
+            const title = titleInput.value.trim();
+            if (!title) return alert('title은 필수야');
+
+            const scope = String(scopeSelect.value).toUpperCase();
+            const allDay = allDaySelect.value === 'true';
+
+            if (scope === 'COMPANY' && !isCompanyAdmin()){
+                return alert('회사 일정은 관리자만 등록/수정할 수 있어요.');
+            }
+
+            const payload = {
+                scope,
+                title,
+                content: (contentInput.value || '').trim() || null,
+                allDay
+            };
+
+            if (allDay){
+                const sd = startDateInput.value;
+                const ed = endDateInput.value || sd;
+                if (!sd) return alert('startDate는 필수야');
+                payload.startDate = sd;
+                payload.endDate = ed;
+            }else{
+                const sa = startAtInput.value;
+                const ea = endedAtInput.value;
+                if (!sa || !ea) return alert('startAt/endedAt은 필수야');
+                payload.startAt = sa;
+                payload.endedAt = ea;
+            }
+
+            try{
+                if (editing) await apiUpdate(editing.schNo, payload);
+                else await apiCreate(payload);
+
+                closeCreate();
+                mainCalendar.refetchEvents();
+                refreshMiniDots();
+            }catch(e){
+                console.error(e);
+                alert(e.message);
+            }
+        }
+        document.getElementById('createSave').addEventListener('click', safeClick(onSave));
+
+        /* =========================
+           Toolbar
+        ========================= */
+        document.getElementById('prevBtn').addEventListener('click', () => mainCalendar.prev());
+        document.getElementById('nextBtn').addEventListener('click', () => mainCalendar.next());
+        document.getElementById('todayBtn').addEventListener('click', () => mainCalendar.today());
+
+        document.getElementById('viewGroup').addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-view]');
+            if (!btn) return;
+            setActiveView(btn.dataset.view);
+        });
+
+        document.getElementById('weekStartSelect').addEventListener('change', (e) => {
+            weekStart = e.target.value;
+            mainCalendar.setOption('firstDay', weekStart === 'SUNDAY' ? 0 : 1);
+            miniCalendar.setOption('firstDay', weekStart === 'SUNDAY' ? 0 : 1);
+            mainCalendar.refetchEvents();
+            refreshMiniDots();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', () => mainCalendar.refetchEvents());
+
+        document.getElementById('openCreateBtn').addEventListener('click', () => {
+            const now = mainCalendar ? mainCalendar.getDate() : new Date();
+            const start = new Date(now);
+            start.setHours(10,0,0,0);
+            const end = new Date(start);
+            end.setMinutes(end.getMinutes() + 60);
+
+            openCreate({
+                center:true,
+                prefill:{
+                    allDay:false,
+                    startAt: toDatetimeLocalValue(start),
+                    endedAt: toDatetimeLocalValue(end),
+                    scope:'PERSONAL'
+                }
+            });
+        });
+
+        /* =========================
+           Mini Calendar
+        ========================= */
+        function setMiniTitle(){
+            const d = miniCalendar.getDate();
+            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            document.getElementById('miniMonthTitle').textContent = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+        }
+
+        async function refreshMiniDots(){
+            if (!miniCalendar) return;
+
+            const cur = miniCalendar.getDate();
+            const baseDate = cur.getFullYear() + '-' + pad(cur.getMonth()+1) + '-01';
+            const scopes = getSelectedScopes();
+
+            const calls = scopes.map(s => apiGetItems({ scope:s, view:'MONTH', baseDate, weekStart }));
+            const results = await Promise.allSettled(calls);
+
+            const map = new Map(); // dateKey -> Set(scopes)
+            function mark(dateKey, scope){
+                if (!map.has(dateKey)) map.set(dateKey, new Set());
+                map.get(dateKey).add(scope);
+            }
+
+            results.forEach((r, idx) => {
+                if (r.status !== 'fulfilled') return;
+                const scope = scopes[idx];
+
+                (r.value || []).forEach(it => {
+                    const isAllDay = !!it.allDay;
+
+                    if (isAllDay){
+                        const sd = it.startDate || (it.startAt ? String(it.startAt).slice(0,10) : null);
+                        const ed = it.endDate || (it.endedAt ? String(it.endedAt).slice(0,10) : sd);
+                        if (!sd) return;
+
+                        const start = new Date(sd);
+                        const end = new Date(ed || sd);
+                        for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
+                            mark(toDateKey(d), scope);
+                        }
+                    }else{
+                        const day = it.startAt ? String(it.startAt).slice(0,10) : null;
+                        if (day) mark(day, scope);
+                    }
+                });
+            });
+
+            paintMiniDots(map);
+        }
+
+        function paintMiniDots(map){
+            document.querySelectorAll('#miniCalendar .mini-dots').forEach(el => el.remove());
+
+            const dayCells = document.querySelectorAll('#miniCalendar .fc-daygrid-day');
+            dayCells.forEach(cell => {
+                const dateStr = cell.getAttribute('data-date');
+                if (!dateStr) return;
+
+                const scopes = map.get(dateStr);
+                if (!scopes || scopes.size === 0) return;
+
+                const frame = cell.querySelector('.fc-daygrid-day-frame');
+                if (!frame) return;
+
+                const wrap = document.createElement('div');
+                wrap.className = 'mini-dots';
+
+                ['COMPANY','DEPARTMENT','PERSONAL'].forEach(sc => {
+                    if (!scopes.has(sc)) return;
+                    const dot = document.createElement('span');
+                    dot.className = 'mini-dot';
+                    dot.style.background = scopeColor(sc);
+                    wrap.appendChild(dot);
+                });
+
+                frame.appendChild(wrap);
+            });
+        }
+
+        function buildMiniCalendar(){
+            miniCalendar = new FullCalendar.Calendar(document.getElementById('miniCalendar'), {
+                initialView: 'dayGridMonth',
+                headerToolbar: false,
+                height: 'auto',
+                fixedWeekCount: false,
+                firstDay: (weekStart === 'SUNDAY') ? 0 : 1,
+
+                datesSet: function(){
+                    setMiniTitle();
+                    refreshMiniDots();
+                },
+
+                // ✅ 미니에서 날짜 클릭할 때만 메인이 이동
+                dateClick: function(info){
+                    mainCalendar.gotoDate(info.date);
+                    mainCalendar.refetchEvents();
+                }
+            });
+
+            miniCalendar.render();
+            setMiniTitle();
+        }
+
+        document.getElementById('miniPrevBtn').addEventListener('click', () => miniCalendar.prev());
+        document.getElementById('miniNextBtn').addEventListener('click', () => miniCalendar.next());
+
+        /* =========================
+           Toggles wiring
+        ========================= */
+        const tgCompany = document.getElementById('tgCompany');
+        const tgDept = document.getElementById('tgDept');
+        const tgPersonal = document.getElementById('tgPersonal');
+
+        function bindToggle(el, scope){
+            el.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const on = !el.classList.contains('on');
+                setSwitch(el, on);
+                toggleScope(scope, on);
+            });
+        }
+        bindToggle(tgCompany, 'COMPANY');
+        bindToggle(tgDept, 'DEPARTMENT');
+        bindToggle(tgPersonal, 'PERSONAL');
+
+        /* =========================
+           ✅ Title click -> open pretty picker
+        ========================= */
+        document.getElementById('mainTitle').addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            openMonthPicker('MAIN');
+        });
+        document.getElementById('miniMonthTitle').addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            openMonthPicker('MINI');
+        });
+
+        /* =========================
+           Init (✅ me 먼저 로드)
+        ========================= */
+        (async function init(){
+            await loadMe();
+            resetCreateForm();
+
+            buildMainCalendar();
+            buildMiniCalendar();
+
+            setActiveView('WEEK');
+
+            setSwitch(tgCompany, true);
+            setSwitch(tgDept, true);
+            setSwitch(tgPersonal, true);
+
+            refreshMiniDots();
+        })();
+    </script>
+</th:block>
+
+</body>
+</html>

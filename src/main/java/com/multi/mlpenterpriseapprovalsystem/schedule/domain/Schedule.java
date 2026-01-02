@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "schedule")
 public class Schedule {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="sch_no")
     private Long schNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,13 +36,54 @@ public class Schedule {
     @JoinColumn(name = "dep_no")
     private Department department;
 
+    @Column(nullable = false)
     private String title;
+    @Column
     private String content;
+
+    @Column(name="start_at", nullable = false)
     private LocalDateTime startAt;
+    @Column(name="ended_at", nullable = false)
     private LocalDateTime endedAt;
+
+    @Column(name="all_day", nullable = false)
+    private boolean allDay;
+
+    @Column
     private String color;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reg_emp", referencedColumnName = "emp_id")
     private Employee register;
+
+    private Schedule(Company company, Department department, Employee register,
+                     String title, String content,
+                     LocalDateTime startAt, LocalDateTime endedAt,
+                     boolean allDay, String color) {
+        this.company = company;
+        this.department = department;
+        this.register = register;
+        this.title = title;
+        this.content = content;
+        this.startAt = startAt;
+        this.endedAt = endedAt;
+        this.allDay = allDay;
+        this.color = color;
+    }
+
+    public static Schedule create(Company company, Department department, Employee register,
+                                  String title, String content,
+                                  LocalDateTime startAt, LocalDateTime endedAt,
+                                  boolean allDay, String color) {
+        return new Schedule(company, department, register, title, content, startAt, endedAt, allDay, color);
+    }
+
+    public void update (String title, String content, LocalDateTime startAt, LocalDateTime endedAt,
+                        boolean allDay) {
+        this.title = title;
+        this.content = content;
+        this.startAt = startAt;
+        this.endedAt = endedAt;
+        this.allDay = allDay;
+    }
 }
