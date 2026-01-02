@@ -67,7 +67,8 @@ public class DocumentService {
             TempDocumentFormRepository tempDocumentFormRepository,
             TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository,
             DocumentOpenAiConfig documentOpenAiConfig,
-            @Qualifier("documentOpenAiWebClient") WebClient documentOpenAiWebClient
+            @Qualifier("documentOpenAiWebClient") WebClient documentOpenAiWebClient,
+            AttendanceService attendanceService
     ) {
         this.documentRepository = documentRepository;
         this.approvalLineRepository = approvalLineRepository;
@@ -77,6 +78,7 @@ public class DocumentService {
         this.tempDocumentFormCategoryRepository = tempDocumentFormCategoryRepository;
         this.documentOpenAiConfig = documentOpenAiConfig;
         this.documentOpenAiWebClient = documentOpenAiWebClient;
+        this.attendanceService = attendanceService;
     }
 
 
