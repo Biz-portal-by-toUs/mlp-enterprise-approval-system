@@ -183,6 +183,8 @@ public class Employee extends BaseEntity {
         if ("V".equals(newAtte) || "B".equals(newAtte)) {
             this.msgStat = "H";
         }
+    }
+
     public void changePassword(String encodedPwd) {
         this.pwd = encodedPwd;
     }
