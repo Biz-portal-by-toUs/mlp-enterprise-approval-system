@@ -10,10 +10,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeReposit
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.schedule.domain.EmpSchedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.domain.Schedule;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ReqCreateScheduleDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ReqScheduleDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ResScheduleDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ResScheduleListDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarScope;
 import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarViewType;
 import com.multi.mlpenterpriseapprovalsystem.schedule.repository.EmpScheduleRepository;
@@ -28,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 일정 관련 서비스
@@ -156,6 +154,95 @@ public class ScheduleService {
         return date.minusDays(diff);
     }
 
+    @Transactional
+    public void deleteItem(CustomUser user, Long schNo, ReqDeleteScheduleDto req) {
+
+        if(req.getScope() == CalendarScope.PERSONAL) {
+
+            EmpSchedule empSchedule = empScheduleRepository.findById(schNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+            if(!empSchedule.getEmployee().getEmpId().equals(user.getUsername())) {
+                throw new CustomException(ErrorCode.NOT_REGISTER);
+            }
+
+            empScheduleRepository.delete(empSchedule);
+        } else if(req.getScope() == CalendarScope.DEPARTMENT) {
+            Schedule schedule = scheduleRepository.findById(schNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+            if(!schedule.getRegister().getEmpId().equals(user.getUsername())) {
+                throw new CustomException(ErrorCode.NOT_REGISTER);
+            }
+
+            scheduleRepository.delete(schedule);
+        } else if(req.getScope() == CalendarScope.COMPANY) {
+            Schedule schedule = scheduleRepository.findById(schNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+            if(!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
+                throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
+            }
+            scheduleRepository.delete(schedule);
+        }
+
+
+
+    }
+    private boolean hasAnyRole(CustomUser user, Set<String> allowed) {
+        return user.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(allowed::contains);
+    }
+
+    @Transactional
+    public void updateItem(CustomUser user, Long schNo, ReqCreateScheduleDto req) {
+
+        // ✅ 여기서 검증 + 정규화 한 번에 끝
+        TimeBundle time = resolveTime(req);
+
+        if (req.getScope() == CalendarScope.PERSONAL) {
+            EmpSchedule s = empScheduleRepository.findById(schNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+            if (!s.getEmployee().getEmpId().equals(user.getUsername())) {
+                throw new CustomException(ErrorCode.NOT_REGISTER);
+            }
+
+            s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
+
+
+            return;
+        }
+
+        if (req.getScope() == CalendarScope.DEPARTMENT) {
+            Schedule s = scheduleRepository.findById(schNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+            if (!s.getRegister().getEmpId().equals(user.getUsername())) {
+                throw new CustomException(ErrorCode.NOT_REGISTER);
+            }
+
+            s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
+            return;
+        }
+
+        if (req.getScope() == CalendarScope.COMPANY) {
+            Schedule s = scheduleRepository.findById(schNo)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+            if (!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
+                throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
+            }
+
+            s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
+            return;
+        }
+
+        throw new CustomException(ErrorCode.FORBIDDEN);
+    }
+
+
     private record Range(LocalDateTime fromInclusive, LocalDateTime toExclusive) {}
 
     @Transactional
@@ -172,7 +259,7 @@ public class ScheduleService {
 
         return switch (req.getScope()) {
             case PERSONAL -> createPersonal(employee, time, req);
-            case COMPANY -> createCompany(employee, comId, time, req);
+            case COMPANY -> createCompany(user, employee, comId, time, req);
             case DEPARTMENT -> createDepartment(employee, comId, time, req);
         };
     }
@@ -204,9 +291,12 @@ public class ScheduleService {
     }
 
     private ResScheduleDto createPersonal(Employee employee, TimeBundle time, ReqCreateScheduleDto req) {
+
+        String finalColor = ScheduleColorPolicy.resolve(req.getScope());
+
         EmpSchedule saved = empScheduleRepository.save(
                 EmpSchedule.create(employee, req.getTitle(), req.getContent(),
-                        time.startAt, time.endedAt, time.allDay, req.getColor())
+                        time.startAt, time.endedAt, time.allDay, finalColor)
         );
 
         return ResScheduleDto.builder()
@@ -220,14 +310,21 @@ public class ScheduleService {
                 .build();
     }
 
-    private ResScheduleDto createCompany(Employee register, String comId, TimeBundle time, ReqCreateScheduleDto req) {
+    private ResScheduleDto createCompany(CustomUser user, Employee register, String comId, TimeBundle time, ReqCreateScheduleDto req) {
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        String finalColor = ScheduleColorPolicy.resolve(req.getScope());
+
+        if (!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
+            throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
+        }
+
 
         Schedule saved = scheduleRepository.save(
                 Schedule.create(company, null, register,
                         req.getTitle(), req.getContent(),
-                        time.startAt, time.endedAt, time.allDay, req.getColor())
+                        time.startAt, time.endedAt, time.allDay, finalColor)
         );
 
         return ResScheduleDto.builder()
@@ -247,10 +344,13 @@ public class ScheduleService {
 
         Department department = register.getDepartment();
 
+        String finalColor = ScheduleColorPolicy.resolve(req.getScope());
+
+
         Schedule saved = scheduleRepository.save(
                 Schedule.create(company, department, register,
                         req.getTitle(), req.getContent(),
-                        time.startAt, time.endedAt, time.allDay, req.getColor())
+                        time.startAt, time.endedAt, time.allDay, finalColor)
         );
 
         return ResScheduleDto.builder()
