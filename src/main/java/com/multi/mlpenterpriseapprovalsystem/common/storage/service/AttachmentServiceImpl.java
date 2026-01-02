@@ -240,51 +240,56 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Override
     @Transactional
     public void moveCloudAttachment(CustomUser user, Long attachmentId, Long toFolderNo) {
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
-        }
+        if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
 
         String comId = user.getComId();
         String ownerId = resolveOwnerId(user);
         Long depNo = resolveDepNo(user);
 
-        // 1) 목적지 폴더 검증 + 권한
         Folder toFolder = folderRepository.findByFolderNoAndComId(toFolderNo, comId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "이동 대상 폴더가 없습니다."));
-
-        if (!canView(toFolder, ownerId, depNo)) {
+        if (!canView(toFolder, ownerId, depNo))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이동 대상 폴더 권한이 없습니다.");
-        }
 
-        // 2) 파일(attachment) 검증
-        Attachment att = attachmentRepository.findById(attachmentId)
+        // ✅ ACTIVE만 대상으로 잡는 게 안전
+        Attachment att = attachmentRepository
+                .findByAttachmentIdAndComIdAndStatus(attachmentId, comId, AttachmentStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 없습니다."));
 
-        if (!comId.equals(att.getComId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "회사 권한이 없습니다.");
-        }
-
-        // 도메인 필드가 enum이면 그 enum으로 맞춰
-        if (att.getDomain() != CLOUD) {
+        if (att.getDomain() != CLOUD)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CLOUD 파일만 이동 가능합니다.");
-        }
 
-        // 3) 원본 폴더 권한도 확인 (남의 파일 이동 방지)
         Long fromFolderNo = att.getEntityId();
         Folder fromFolder = folderRepository.findByFolderNoAndComId(fromFolderNo, comId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "원본 폴더가 없습니다."));
-
-        if (!canView(fromFolder, ownerId, depNo)) {
+        if (!canView(fromFolder, ownerId, depNo))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "원본 폴더 권한이 없습니다.");
-        }
 
-        // 4) 공유함↔개인함 이동 금지(원하면 제거 가능)
-        if (fromFolder.getScope() != toFolder.getScope()) {
+        if (fromFolder.getScope() != toFolder.getScope())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "공유함과 개인함 간 이동은 불가합니다.");
+
+        // ✅ 목적지 폴더: 잠그고 슬롯 계산
+        List<Attachment> destAll = attachmentRepository.findAllByRefForUpdate(comId, CLOUD, toFolderNo);
+
+        long destActive = destAll.stream().filter(Attachment::isActive).count();
+        if (destActive >= 5)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "대상 폴더 첨부파일은 최대 5개까지 가능합니다.");
+
+        Set<Integer> used = new HashSet<>();
+        for (Attachment a : destAll) {
+            if (a.getDisplayOrder() != null) used.add(a.getDisplayOrder());
         }
 
-        // 5) 실제 이동 = DB에서 entityId만 변경
-        att.moveToEntityId(toFolderNo); // ✅ Attachment에 메서드 없으면 setter로 바꿔
+        Integer newOrder = null;
+        for (int i = 1; i <= 5; i++) {
+            if (!used.contains(i)) { newOrder = i; break; }
+        }
+        if (newOrder == null)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "사용 가능한 displayOrder가 없습니다.");
+
+        // ✅ 이동 + 재배정
+        att.moveToEntityId(toFolderNo);
+        att.changeDisplayOrder(newOrder);
     }
 
     /* ===== helpers ===== */
