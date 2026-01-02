@@ -2,10 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.schedule.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ReqCreateScheduleDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ReqScheduleDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ResScheduleDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.ResScheduleListDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.schedule.service.ScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,5 +44,29 @@ public class ScheduleController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto<>(HttpStatus.CREATED, "일정 등록 성공", created));
+    }
+
+    @DeleteMapping("/{schNo}")
+    public ResponseEntity<ResponseDto<Void>> deleteSchedule(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="schNo") Long schNo,
+            @Valid @ModelAttribute ReqDeleteScheduleDto request
+    ) {
+        scheduleService.deleteItem(user, schNo, request);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "일정 삭제 성공", null));
+    }
+
+    @PatchMapping("/{schNo}")
+    public ResponseEntity<ResponseDto<Void>> updateSchedule(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="schNo") Long schNo,
+            @Valid @RequestBody ReqCreateScheduleDto request
+    ) {
+
+        scheduleService.updateItem(user, schNo, request);
+
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "일정 수정 성공", null));
     }
 }
