@@ -19,7 +19,7 @@ public final class ScheduleColorPolicy {
 
 
 
-    public static String resolve(CalendarScope scope, String requestedColor) {
+    public static String resolve(CalendarScope scope) {
         if (scope == CalendarScope.COMPANY) return COMPANY_COLOR;
         if (scope == CalendarScope.DEPARTMENT) return DEPARTMENT_COLOR;
 
