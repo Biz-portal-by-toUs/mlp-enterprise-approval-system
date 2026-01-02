@@ -6,6 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.organization.department.service.Dep
 import com.multi.mlpenterpriseapprovalsystem.organization.orgChart.dto.ResOrgChartDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.orgChart.dto.ResOrgDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.orgChart.dto.ResOrgEmployeeDto;
+import com.multi.mlpenterpriseapprovalsystem.organization.orgChart.dto.ResOrgEmployeeSearchDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,5 +80,24 @@ public class OrgChartService {
         }
 
         return new ResOrgChartDto(depDtos);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ResOrgEmployeeSearchDto> searchEmployees(String comId, String keyword) {
+        String kw = (keyword == null) ? null : keyword.trim();
+        if (kw == null || kw.isEmpty()) return List.of();
+
+        return employeeRepository.searchOrgEmployees(comId, keyword).stream()
+                .map(r -> ResOrgEmployeeSearchDto.builder()
+                        .empNo(r.getEmpNo())
+                        .empId(r.getEmpId())
+                        .empName(r.getEmpName())
+                        .depId(r.getDepId())
+                        .depName(r.getDepName())
+                        .posName(r.getPosName())
+                        .posOrder(r.getPosOrder())
+                        .profileUrl(r.getObjectKey())
+                        .build())
+                .toList();
     }
 }
