@@ -1,689 +1,335 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
 <head>
     <meta charset="UTF-8">
     <title>상신한 문서 목록 - 기업용 전자결재시스템</title>
-    <style>
-        /* [공통 디자인 시스템] */
-        body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 0; padding: 40px; }
-        .main-container {
-            max-width: 1400px; margin: 0 auto; background: white; padding: 40px;
-            min-height: 850px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .page-header { margin-bottom: 20px; }
-        .page-title { font-size: 24px; font-weight: bold; color: #333; }
 
-        /* ✅ 정렬 옵션 - 드롭다운 + 클릭 방식 */
-        .sort-options {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            justify-content: flex-end;
-            margin-bottom: 15px;
-            padding: 10px 0;
-        }
-        .sort-basis-select {
-            padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;
-            font-size: 13px; outline: none; background: white; cursor: pointer;
-        }
-        .sort-basis-select:focus { border-color: #339af0; }
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* [기본 레이아웃 및 정렬] */
+            .sort-options { display: flex; gap: 15px; align-items: center; justify-content: flex-end; margin-bottom: 15px; padding: 10px 0; }
+            .sort-basis-select { padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; outline: none; background: white; cursor: pointer; }
+            .sort-basis-select:focus { border-color: #339af0; }
+            .sort-order-group { display: flex; gap: 15px; font-size: 13px; color: #666; }
+            .sort-order-group span { cursor: pointer; transition: color 0.2s; }
+            .sort-order-group span:hover { color: #339af0; }
+            .sort-order-group span.active { color: #339af0; font-weight: bold; text-decoration: underline; }
 
-        .sort-order-group { display: flex; gap: 15px; font-size: 13px; color: #666; }
-        .sort-order-group span { cursor: pointer; transition: color 0.2s; }
-        .sort-order-group span:hover { color: #339af0; }
-        .sort-order-group span.active { color: #339af0; font-weight: bold; text-decoration: underline; }
+            /* [검색창 스타일] */
+            .search-container { background: #f1f3f5; padding: 20px; border-radius: 6px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: center; }
+            .search-group { display: flex; align-items: center; gap: 10px; position: relative; }
+            .search-group label { font-size: 13px; font-weight: 600; color: #495057; width: 80px; }
+            .search-input, .search-select { flex: 1; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; outline: none; background: white; }
+            .search-input.disabled { background-color: #e9ecef; color: #495057; cursor: not-allowed; text-align: center; font-weight: bold; }
 
-        /* 검색창 스타일 */
-        .search-container {
-            background: #f1f3f5; padding: 20px; border-radius: 6px; margin-bottom: 25px;
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: center;
-        }
-        .search-group { display: flex; align-items: center; gap: 10px; position: relative; }
-        .search-group label { font-size: 13px; font-weight: 600; color: #495057; width: 80px; }
+            /* [커스텀 드롭다운] */
+            .custom-dropdown { position: relative; flex: 1; display: flex; }
+            .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #dee2e6; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+            .dropdown-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f8f9fa; }
+            .dropdown-item:last-child { border-bottom: none; }
+            .dropdown-item:hover { background-color: #e7f5ff; color: #339af0; }
+            .dropdown-item.no-result { color: #adb5bd; cursor: default; text-align: center; }
 
-        .search-input, .search-select {
-            flex: 1; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; outline: none; background: white;
-        }
+            .btn-search { grid-column: span 4; justify-self: end; padding: 10px 40px; background: #339af0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
+            .btn-search:hover { background: #228be6; }
 
-        /* ✅ 커스텀 검색 드롭다운 스타일 */
-        .custom-dropdown { position: relative; flex: 1; display: flex; }
-        .dropdown-list {
-            position: absolute; top: 100%; left: 0; right: 0;
-            background: white; border: 1px solid #dee2e6; border-radius: 4px;
-            max-height: 200px; overflow-y: auto; z-index: 1000;
-            display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .dropdown-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f8f9fa; }
-        .dropdown-item:last-child { border-bottom: none; }
-        .dropdown-item:hover { background-color: #e7f5ff; color: #339af0; }
-        .dropdown-item.no-result { color: #adb5bd; cursor: default; text-align: center; }
+            /* [테이블 및 문서 상태 배지] */
+            .doc-table { width: 100%; border-collapse: collapse; border-top: 2px solid #333; table-layout: auto; }
+            .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 12px 8px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
+            .doc-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
+            .title-cell { text-align: left !important; padding-left: 15px !important; cursor: pointer; font-weight: 500; word-break: break-all; }
+            .title-cell:hover { color: #339af0; text-decoration: underline; }
 
-        /* [UI] 비활성화/읽기전용 필드 스타일 (회색 배경) */
-        .search-input.disabled { background-color: #e9ecef; color: #495057; cursor: not-allowed; text-align: center; font-weight: bold; }
+            .doc-table .doc-badge { display: inline-block !important; padding: 4px 10px !important; border-radius: 4px !important; font-size: 12px !important; font-weight: bold !important; width: auto !important; position: static !important; border: none !important; }
+            .doc-table .doc-badge-AW { background: #e7f5ff !important; color: #228be6 !important; }
+            .doc-table .doc-badge-FI { background: #e6fcf5 !important; color: #0ca678 !important; }
+            .doc-table .doc-badge-RJ { background: #fff5f5 !important; color: #fa5252 !important; cursor: pointer !important; transition: all 0.2s !important; }
+            .doc-table .doc-badge-RJ:hover { background: #ffe0e0 !important; transform: scale(1.05); }
 
-        .btn-search {
-            grid-column: span 4; justify-self: end; padding: 10px 40px;
-            background: #339af0; color: white; border: none; border-radius: 4px;
-            cursor: pointer; font-weight: bold; font-size: 14px;
-        }
-        .btn-search:hover { background: #228be6; }
+            /* [페이지네이션 - 개선형] */
+            .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
+            .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; }
+            .page-btn-nav:disabled { background: #f1f3f5 !important; color: #adb5bd !important; cursor: not-allowed !important; border-color: #e9ecef !important; }
+            .page-btn-num { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
+            .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
 
-        /* 테이블 스타일 */
-        .doc-table { width: 100%; border-collapse: collapse; border-top: 2px solid #333; table-layout: fixed; }
-        .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 12px; border-bottom: 1px solid #dee2e6; }
-        .doc-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
-
-        .title-cell { text-align: left !important; padding-left: 15px !important; cursor: pointer; font-weight: 500; word-break: break-all; }
-        .title-cell:hover { color: #339af0; text-decoration: underline; }
-
-        /* 상태 배지 */
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .badge-AW { background: #e7f5ff; color: #228be6; }
-        .badge-FI { background: #e6fcf5; color: #0ca678; }
-        .badge-RJ { background: #fff5f5; color: #fa5252; cursor: pointer; transition: all 0.2s; }
-        .badge-RJ:hover { background: #ffe0e0; transform: scale(1.05); }
-
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
-        .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; }
-        .page-btn-num { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
-        .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
-
-        /* ✅ 모달 스타일 */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.2s;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.3s ease-out;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ✅ AI 요약 모달 스타일 */
-        .ai-modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.3s ease-out;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .ai-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #7950f2;
-            padding-bottom: 15px;
-        }
-
-        .ai-modal-title {
-            margin: 0;
-            color: #7950f2;
-            font-size: 22px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .ai-modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #868e96;
-            line-height: 1;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ai-modal-body {
-            background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%);
-            border: 1px solid #d0bfff;
-            border-radius: 10px;
-            padding: 25px;
-            min-height: 120px;
-            color: #333;
-            line-height: 1.8;
-            white-space: pre-wrap;
-            font-size: 15px;
-        }
-    </style>
+            /* [모달 스타일] */
+            .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
+            .modal-overlay.show { display: flex; }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            .modal-content { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); animation: slideUp 0.3s ease-out; max-height: 90vh; overflow-y: auto; }
+            @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            .ai-modal-content { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); animation: slideUp 0.3s ease-out; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+            .ai-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #7950f2; padding-bottom: 15px; }
+            .ai-modal-title { margin: 0; color: #7950f2; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+            .ai-modal-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #868e96; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+            .ai-modal-body { background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%); border: 1px solid #d0bfff; border-radius: 10px; padding: 25px; min-height: 120px; color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 15px; }
+            .page-with-subbar > div:last-child { background: #fff; padding: 22px 26px; }
+        </style>
+    </th:block>
 </head>
+
 <body>
-
-<div class="main-container">
-    <div class="page-header">
-        <div class="page-title">상신한 문서</div>
-    </div>
-
-    <div class="search-container">
-        <div class="search-group">
-            <label>카테고리</label>
-            <div class="custom-dropdown" id="cat-dropdown-wrapper">
-                <input type="text" id="search-docfoCatName" class="search-input" placeholder="카테고리 선택" autocomplete="off" maxlength="100">
-                <div id="cat-list" class="dropdown-list"></div>
-            </div>
-        </div>
-
-        <div class="search-group">
-            <label>작성부서</label>
-            <input type="text" id="search-writerDepName" class="search-input disabled" placeholder="불러오는 중..." readonly>
-        </div>
-        <div class="search-group">
-            <label>문서상태</label>
-            <select id="search-docStat" class="search-select">
-                <option value="">전체</option>
-                <option value="AW">결재중</option>
-                <option value="FI">최종승인</option>
-                <option value="RJ">반려</option>
-            </select>
-        </div>
-        <div class="search-group">
-            <label>내 결재상태</label>
-            <input type="text" class="search-input disabled" value="-" readonly>
-        </div>
-        <div class="search-group">
-            <label>문서코드</label>
-            <input type="text" id="search-docId" class="search-input" placeholder="문서코드 입력" maxlength="15">
-        </div>
-        <div class="search-group">
-            <label>제목</label>
-            <input type="text" id="search-title" class="search-input" placeholder="제목 입력" maxlength="100">
-        </div>
-
-        <div class="search-group">
-            <label>작성자명</label>
-            <input type="text" id="search-writerName" class="search-input disabled" placeholder="불러오는 중..." readonly>
-        </div>
-        <div class="search-group">
-            <label>사원번호</label>
-            <input type="text" id="search-writerId" class="search-input disabled" placeholder="불러오는 중..." readonly>
-        </div>
-        <button class="btn-search" onclick="loadData(0)">검색</button>
-    </div>
-
-    <!-- ✅ 드롭다운(정렬기준) + 클릭(정렬순서) 방식 -->
-    <div class="sort-options">
-        <select id="sort-basis" class="sort-basis-select" onchange="applySort()">
-            <option value="SUBMIT">상신일</option>
-            <option value="APPR">최근 결재일</option>
-        </select>
-        <div class="sort-order-group">
-            <span id="order-LATEST" class="active" onclick="changeOrder('LATEST')">최신순</span>
-            <span id="order-OLDEST" onclick="changeOrder('OLDEST')">오래된순</span>
-        </div>
-    </div>
-
-    <table class="doc-table">
-        <thead>
-        <tr>
-            <th style="width: 50px;">NO</th>
-            <th style="width: 140px;">문서코드</th>
-            <th style="width: 100px;">카테고리</th>
-            <th>제목</th>
-            <th style="width: 100px;">부서</th>
-            <th style="width: 100px;">작성자</th>
-            <th style="width: 90px;">문서 상태</th>
-            <th style="width: 120px;">최근 결재일</th>
-            <th style="width: 120px;">상신일</th>
-            <th style="width: 80px;">AI 요약</th>
-        </tr>
-        </thead>
-        <tbody id="document-list"></tbody>
-    </table>
-
-    <div id="pagination-nav" class="pagination"></div>
-</div>
-
-<!-- ✅ 반려 정보 모달 -->
-<div id="reject-modal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 700px; text-align: left;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #fa5252; padding-bottom: 15px;">
-            <h3 style="margin: 0; color: #fa5252; font-size: 22px; display: flex; align-items: center; gap: 10px;">
-                <span>❌</span>
-                <span>반려 정보</span>
-            </h3>
-            <button onclick="closeRejectModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #868e96; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
-        </div>
-
-        <div style="background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 10px; padding: 25px; margin-bottom: 25px;">
-            <div style="margin-bottom: 25px;">
-                <div style="font-weight: 600; color: #868e96; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                    <span>👤</span>
-                    <span>반려자 정보</span>
-                </div>
-                <div style="background: white; border: 1px solid #ffc9c9; border-radius: 8px; padding: 20px;">
-                    <div style="display: grid; grid-template-columns: 90px 1fr 90px 1fr; gap: 12px 20px; font-size: 14px;">
-                        <div style="color: #868e96; font-weight: 500;">이름</div>
-                        <div id="modal-rejecter-name" style="color: #333; font-weight: 600;">-</div>
-
-                        <div style="color: #868e96; font-weight: 500;">사번</div>
-                        <div id="modal-rejecter-id" style="color: #333; font-family: 'Courier New', monospace;">-</div>
-
-                        <div style="color: #868e96; font-weight: 500;">부서</div>
-                        <div id="modal-rejecter-dept" style="color: #333;">-</div>
-
-                        <div style="color: #868e96; font-weight: 500;">직급</div>
-                        <div id="modal-rejecter-pos" style="color: #333;">-</div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 15px; padding: 12px 20px; background: white; border: 1px solid #ffc9c9; border-radius: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">📅</span>
-                    <span style="font-weight: 600; color: #868e96; font-size: 14px;">반려일자</span>
-                </div>
-                <div id="modal-rejectDate" style="color: #333; font-size: 14px; font-weight: 500;">-</div>
-            </div>
-        </div>
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('submitted')}"></aside>
 
         <div>
-            <div style="font-weight: 600; color: #868e96; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                <span>💬</span>
-                <span>반려 사유</span>
+            <div style="margin-bottom: 20px;">
+                <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">상신한 문서</h1>
             </div>
-            <div id="modal-rejectReason" style="background: white; border: 2px solid #ffc9c9; border-radius: 10px; padding: 20px; min-height: 120px; color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 14px; max-height: 300px; overflow-y: auto;">-</div>
-        </div>
 
-        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 30px;">
-            <button onclick="goToRewriteFromModal()" style="padding: 12px 28px; background: #339af0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(51, 154, 240, 0.3);" onmouseover="this.style.background='#228be6'" onmouseout="this.style.background='#339af0'">재작성</button>
-            <button onclick="closeRejectModal()" style="padding: 12px 28px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.2s;" onmouseover="this.style.background='#dee2e6'" onmouseout="this.style.background='#e9ecef'">닫기</button>
+            <div class="search-container">
+                <div class="search-group">
+                    <label>카테고리</label>
+                    <div class="custom-dropdown" id="cat-dropdown-wrapper">
+                        <input type="text" id="search-docfoCatName" class="search-input" placeholder="카테고리 선택" autocomplete="off" maxlength="100">
+                        <div id="cat-list" class="dropdown-list"></div>
+                    </div>
+                </div>
+                <div class="search-group"><label>작성부서</label><input type="text" id="search-writerDepName" class="search-input disabled" placeholder="불러오는 중..." readonly></div>
+                <div class="search-group"><label>문서상태</label><select id="search-docStat" class="search-select"><option value="">전체</option><option value="AW">결재중</option><option value="FI">최종승인</option><option value="RJ">반려</option></select></div>
+                <div class="search-group"><label>내 결재상태</label><input type="text" class="search-input disabled" value="-" readonly></div>
+                <div class="search-group"><label>문서코드</label><input type="text" id="search-docId" class="search-input" placeholder="문서코드 입력" maxlength="15"></div>
+                <div class="search-group"><label>제목</label><input type="text" id="search-title" class="search-input" placeholder="제목 입력" maxlength="100"></div>
+                <div class="search-group"><label>작성자명</label><input type="text" id="search-writerName" class="search-input disabled" placeholder="불러오는 중..." readonly></div>
+                <div class="search-group"><label>사원번호</label><input type="text" id="search-writerId" class="search-input disabled" placeholder="불러오는 중..." readonly></div>
+                <button class="btn-search" onclick="loadData(0)">검색</button>
+            </div>
+
+            <div class="sort-options">
+                <select id="sort-basis" class="sort-basis-select" onchange="applySort()">
+                    <option value="SUBMIT">상신일</option>
+                    <option value="APPR">최근 결재일</option>
+                </select>
+                <div class="sort-order-group">
+                    <span id="order-LATEST" class="active" onclick="changeOrder('LATEST')">최신순</span>
+                    <span id="order-OLDEST" onclick="changeOrder('OLDEST')">오래된순</span>
+                </div>
+            </div>
+
+            <table class="doc-table">
+                <thead>
+                <tr>
+                    <th style="width: 50px;">NO</th>
+                    <th style="width: 140px;">문서코드</th>
+                    <th style="width: 100px;">카테고리</th>
+                    <th>제목</th>
+                    <th style="width: 100px;">부서</th>
+                    <th style="width: 100px;">작성자</th>
+                    <th style="width: 90px;">문서 상태</th>
+                    <th style="width: 120px;">최근 결재일</th>
+                    <th style="width: 120px;">상신일</th>
+                    <th style="width: 80px;">AI 요약</th>
+                </tr>
+                </thead>
+                <tbody id="document-list"></tbody>
+            </table>
+
+            <div id="pagination-nav" class="pagination"></div>
+        </div>
+    </section>
+
+    <div id="reject-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 700px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #fa5252; padding-bottom: 15px;">
+                <h3 style="margin: 0; color: #fa5252; font-size: 22px; display: flex; align-items: center; gap: 10px;">
+                    <span>❌</span><span>반려 정보</span>
+                </h3>
+                <button onclick="closeRejectModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #868e96; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <div style="background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 10px; padding: 25px; margin-bottom: 25px;">
+                <div style="margin-bottom: 25px;">
+                    <div style="font-weight: 600; color: #868e96; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        <span>👤</span><span>반려자 정보</span>
+                    </div>
+                    <div style="background: white; border: 1px solid #ffc9c9; border-radius: 8px; padding: 20px;">
+                        <div style="display: grid; grid-template-columns: 90px 1fr 90px 1fr; gap: 12px 20px; font-size: 14px;">
+                            <div style="color: #868e96; font-weight: 500;">이름</div><div id="modal-rejecter-name" style="color: #333; font-weight: 600;">-</div>
+                            <div style="color: #868e96; font-weight: 500;">사번</div><div id="modal-rejecter-id" style="color: #333; font-family: 'Courier New', monospace;">-</div>
+                            <div style="color: #868e96; font-weight: 500;">부서</div><div id="modal-rejecter-dept" style="color: #333;">-</div>
+                            <div style="color: #868e96; font-weight: 500;">직급</div><div id="modal-rejecter-pos" style="color: #333;">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px; padding: 12px 20px; background: white; border: 1px solid #ffc9c9; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">📅</span><span style="font-weight: 600; color: #868e96; font-size: 14px;">반려일자</span>
+                    </div>
+                    <div id="modal-rejectDate" style="color: #333; font-size: 14px; font-weight: 500;">-</div>
+                </div>
+            </div>
+            <div>
+                <div style="font-weight: 600; color: #868e96; margin-bottom: 12px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>💬</span><span>반려 사유</span>
+                </div>
+                <div id="modal-rejectReason" style="background: white; border: 2px solid #ffc9c9; border-radius: 10px; padding: 20px; min-height: 120px; color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 14px; max-height: 300px; overflow-y: auto;">-</div>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 30px;">
+                <button onclick="goToRewriteFromModal()" style="padding: 12px 28px; background: #339af0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px;">재작성</button>
+                <button onclick="closeRejectModal()" style="padding: 12px 28px; background: #e9ecef; color: #495057; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px;">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ai-summary-modal" class="modal-overlay">
+        <div class="ai-modal-content">
+            <div class="ai-modal-header">
+                <h3 class="ai-modal-title"><span>🤖</span><span>AI 요약</span></h3>
+                <button onclick="closeAiSummaryModal()" class="ai-modal-close">&times;</button>
+            </div>
+            <div id="ai-summary-text" class="ai-modal-body">AI 요약 내용이 표시됩니다.</div>
         </div>
     </div>
 </div>
 
-<!-- ✅ AI 요약 모달 -->
-<div id="ai-summary-modal" class="modal-overlay">
-    <div class="ai-modal-content">
-        <div class="ai-modal-header">
-            <h3 class="ai-modal-title">
-                <span>🤖</span>
-                <span>AI 요약</span>
-            </h3>
-            <button onclick="closeAiSummaryModal()" class="ai-modal-close">&times;</button>
-        </div>
-        <div id="ai-summary-text" class="ai-modal-body">
-            AI 요약 내용이 여기에 표시됩니다.
-        </div>
-    </div>
-</div>
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const API_URL = '/api/v1/documents/me?status=SUBMITTED';
+        let currentBasis = 'SUBMIT'; let currentOrder = 'LATEST'; let currentPage = 0;
+        let allCategories = []; let currentRejectDocNo = null;
 
-<script th:inline="javascript">
-    const API_URL = '/api/v1/documents/me?status=SUBMITTED';
-    let currentBasis = 'SUBMIT';
-    let currentOrder = 'LATEST';
-    let currentPage = 0;
-    let allCategories = [];
+        document.addEventListener('DOMContentLoaded', () => { fetchMyEmployeeInfo(); fetchCategoryNames(); initCustomDropdown(); loadData(0); });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        fetchMyEmployeeInfo();
-        fetchCategoryNames();
-        initCustomDropdown();
-        loadData(0);
-    });
+        async function fetchMyEmployeeInfo() {
+            try {
+                const response = await fetch('/api/v1/temp/employees/me', { credentials: 'include' });
+                const result = await response.json();
+                if (response.ok && result.data) {
+                    document.getElementById('search-writerName').value = result.data.empName;
+                    document.getElementById('search-writerId').value = result.data.empId;
+                    document.getElementById('search-writerDepName').value = result.data.department ? result.data.department.depName : "소속 없음";
+                }
+            } catch (e) { console.error(e); }
+        }
 
-    function applySort() {
-        currentBasis = document.getElementById('sort-basis').value;
-        currentPage = 0;
-        loadData(0);
-    }
+        async function fetchCategoryNames() {
+            try {
+                const response = await fetch('/api/v1/temp/documentFormCategoryNames', { credentials: 'include' });
+                const result = await response.json();
+                if (response.ok && result.data) { allCategories = result.data.map(name => name.trim()); renderDropdownItems(allCategories); }
+            } catch (e) { console.error(e); }
+        }
 
-    function changeOrder(order) {
-        currentOrder = order;
-        currentPage = 0;
+        function renderDropdownItems(list) {
+            const listEl = document.getElementById('cat-list');
+            listEl.innerHTML = '<div class="dropdown-item" data-value="전체">전체</div>';
+            if (list.length === 0) listEl.innerHTML += '<div class="dropdown-item no-result">검색 결과 없음</div>';
+            else list.forEach(name => { listEl.innerHTML += `<div class="dropdown-item" data-value="${name}">${name}</div>`; });
+        }
 
-        document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
-        document.getElementById('order-' + order).classList.add('active');
+        function initCustomDropdown() {
+            const input = document.getElementById('search-docfoCatName');
+            const listEl = document.getElementById('cat-list');
+            input.addEventListener('focus', () => { renderDropdownItems(allCategories); listEl.style.display = 'block'; });
+            input.addEventListener('input', (e) => { renderDropdownItems(allCategories.filter(cat => cat.toLowerCase().includes(e.target.value.trim().toLowerCase()))); listEl.style.display = 'block'; });
+            listEl.addEventListener('click', (e) => { if (e.target.classList.contains('dropdown-item') && !e.target.classList.contains('no-result')) { input.value = e.target.getAttribute('data-value'); listEl.style.display = 'none'; } });
+            document.addEventListener('click', (e) => { if (!document.getElementById('cat-dropdown-wrapper').contains(e.target)) listEl.style.display = 'none'; });
+        }
 
-        loadData(0);
-    }
-
-    async function fetchMyEmployeeInfo() {
-        try {
-            const response = await fetch('/api/v1/temp/employees/me', {
-                credentials: 'include'
+        async function loadData(page) {
+            currentPage = page;
+            const params = new URLSearchParams({
+                page: page, sort: `${currentBasis}_${currentOrder}`,
+                docfoCatName: document.getElementById('search-docfoCatName').value === '전체' ? '' : document.getElementById('search-docfoCatName').value,
+                writerDepName: document.getElementById('search-writerDepName').value,
+                docStat: document.getElementById('search-docStat').value,
+                docId: document.getElementById('search-docId').value,
+                title: document.getElementById('search-title').value
             });
-            const result = await response.json();
+            try {
+                const response = await fetch(`${API_URL}&${params.toString()}`, { credentials: 'include' });
+                const result = await response.json();
+                if (result.status === 200) { renderTable(result.data.content, page, result.data.size); renderPagination(result.data.totalPages, page); }
+            } catch (error) { console.error(error); }
+        }
 
-            if (response.ok && result.data) {
-                document.getElementById('search-writerName').value = result.data.empName;
-                document.getElementById('search-writerId').value = result.data.empId;
-                if (result.data.department) {
-                    document.getElementById('search-writerDepName').value = result.data.department.depName;
-                } else {
-                    document.getElementById('search-writerDepName').value = "소속 없음";
+        function renderTable(docs, currentPage, pageSize) {
+            const tbody = document.getElementById('document-list');
+            tbody.innerHTML = '';
+            if (!docs || docs.length === 0) { tbody.innerHTML = '<tr><td colspan="10" style="padding: 40px; color: #999;">문서가 없습니다.</td></tr>'; return; }
+
+            docs.forEach((doc, index) => {
+                const no = (currentPage * pageSize) + index + 1;
+                let latestDate = '-';
+                if (doc.resApprovalLineDtos) {
+                    const approvedLines = doc.resApprovalLineDtos.filter(line => line.endedAt && (line.apprStat === 'A' || line.apprStat === 'R')).sort((a, b) => new Date(b.endedAt) - new Date(a.endedAt));
+                    if (approvedLines.length > 0) latestDate = formatDate(approvedLines[0].endedAt);
+                }
+                const tr = document.createElement('tr');
+                if (doc.isResubmitted) { tr.style.backgroundColor = '#f1f3f5'; tr.style.opacity = '0.7'; }
+                const badge = doc.docStat === 'RJ' ? `<span class="doc-badge doc-badge-RJ" onclick="showRejectModal(${doc.docNo})">반려</span>` : `<span class="doc-badge doc-badge-${doc.docStat}">${getDocStatusName(doc.docStat)}</span>`;
+                const title = doc.isResubmitted ? `${doc.title} <span style="color:#868e96;font-size:11px;">(재상신됨)</span>` : doc.title;
+                tr.innerHTML = `<td>${no}</td><td>${doc.docId || '-'}</td><td>${doc.docFormCatName || '-'}</td><td class="title-cell" onclick="location.href='/documents/${doc.docNo}?status=SUBMITTED'">${title}</td><td>${doc.writerDepName || '-'}</td><td>${doc.writer}<br>${doc.writerId}</td><td>${badge}</td><td>${latestDate}</td><td>${formatDate(doc.submittedAt)}</td><td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /**
+         * ✅ [개선된 페이지네이션] 1...5 6 7 8 9...11 방식
+         */
+        function renderPagination(totalPages, currentPage) {
+            const nav = document.getElementById('pagination-nav');
+            if (!nav || totalPages <= 1) { nav.innerHTML = ''; return; }
+            nav.innerHTML = '';
+
+            const addBtn = (idx, text, className = '', disabled = false) => {
+                const btn = document.createElement('button');
+                btn.className = className; btn.innerText = text; btn.disabled = disabled;
+                if (!disabled) btn.onclick = () => loadData(idx);
+                nav.appendChild(btn);
+            };
+
+            addBtn(currentPage - 1, '이전', 'page-btn-nav', currentPage === 0);
+
+            const range = 2;
+            for (let i = 0; i < totalPages; i++) {
+                if (i === 0 || i === totalPages - 1 || (i >= currentPage - range && i <= currentPage + range)) {
+                    if (i === currentPage - range && i > 1) {
+                        const span = document.createElement('span'); span.innerText = '...'; span.style.margin = '0 5px'; span.style.color = '#ccc';
+                        nav.appendChild(span);
+                    }
+                    addBtn(i, i + 1, `page-btn-num ${i === currentPage ? 'active' : ''}`);
+                    if (i === currentPage + range && i < totalPages - 2) {
+                        const span = document.createElement('span'); span.innerText = '...'; span.style.margin = '0 5px'; span.style.color = '#ccc';
+                        nav.appendChild(span);
+                    }
                 }
             }
-        } catch (e) { console.error("사용자 정보 조회 실패", e); }
-    }
-
-    async function fetchCategoryNames() {
-        try {
-            const response = await fetch('/api/v1/temp/documentFormCategoryNames', {
-                credentials: 'include'
-            });
-            const result = await response.json();
-
-            if (response.ok && result.data) {
-                allCategories = result.data.map(name => name.trim());
-                renderDropdownItems(allCategories);
-            }
-        } catch (e) { console.error("카테고리 로드 실패", e); }
-    }
-
-    function renderDropdownItems(list) {
-        const listEl = document.getElementById('cat-list');
-        listEl.innerHTML = '<div class="dropdown-item" data-value="전체">전체</div>';
-
-        if (list.length === 0) {
-            listEl.innerHTML += '<div class="dropdown-item no-result">검색 결과가 없습니다.</div>';
-        } else {
-            list.forEach(name => {
-                listEl.innerHTML += `<div class="dropdown-item" data-value="${name}">${name}</div>`;
-            });
+            addBtn(currentPage + 1, '다음', 'page-btn-nav', currentPage === totalPages - 1);
         }
-    }
 
-    function initCustomDropdown() {
-        const input = document.getElementById('search-docfoCatName');
-        const listEl = document.getElementById('cat-list');
-
-        input.addEventListener('focus', () => {
-            renderDropdownItems(allCategories);
-            listEl.style.display = 'block';
-        });
-
-        input.addEventListener('input', (e) => {
-            const val = e.target.value.trim().toLowerCase();
-            const filtered = allCategories.filter(cat => cat.toLowerCase().includes(val));
-            renderDropdownItems(filtered);
-            listEl.style.display = 'block';
-        });
-
-        listEl.addEventListener('click', (e) => {
-            if (e.target.classList.contains('dropdown-item') && !e.target.classList.contains('no-result')) {
-                input.value = e.target.getAttribute('data-value');
-                listEl.style.display = 'none';
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!document.getElementById('cat-dropdown-wrapper').contains(e.target)) {
-                listEl.style.display = 'none';
-            }
-        });
-    }
-
-    async function loadData(page) {
-        currentPage = page;
-        const catValue = document.getElementById('search-docfoCatName').value;
-
-        const sortValue = `${currentBasis}_${currentOrder}`;
-
-        const params = new URLSearchParams({
-            page: page,
-            sort: sortValue,
-            docfoCatName: catValue === '전체' ? '' : catValue,
-            writerDepName: document.getElementById('search-writerDepName').value,
-            docStat: document.getElementById('search-docStat').value,
-            docId: document.getElementById('search-docId').value,
-            title: document.getElementById('search-title').value,
-            writerName: document.getElementById('search-writerName').value,
-            writerId: document.getElementById('search-writerId').value
-        });
-
-        try {
-            const response = await fetch(`${API_URL}&${params.toString()}`, {
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
+        async function showRejectModal(docNo) {
+            currentRejectDocNo = docNo;
+            try {
+                const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, { credentials: 'include' });
+                const result = await response.json();
+                if (response.ok && result.data) {
+                    const rejectedLine = result.data.resApprovalLineDtos?.find(line => line.apprStat === 'R');
+                    if (rejectedLine) {
+                        const elements = { 'modal-rejecter-name': rejectedLine.approverName, 'modal-rejecter-id': rejectedLine.approverId, 'modal-rejecter-dept': rejectedLine.approverDepName, 'modal-rejecter-pos': rejectedLine.approverPosName, 'modal-rejectDate': formatDateSimple(rejectedLine.endedAt), 'modal-rejectReason': rejectedLine.rejReason || '사유 없음' };
+                        for (const [id, val] of Object.entries(elements)) { const el = document.getElementById(id); if (el) el.textContent = val || '-'; }
+                        const modal = document.getElementById('reject-modal'); if (modal) modal.classList.add('show');
+                    }
                 }
-            });
-            const result = await response.json();
-            if (result.status === 200) {
-                renderTable(result.data.content, page, result.data.size);
-                renderPagination(result.data.totalPages, page);
-            }
-        } catch (error) { console.error('조회 실패'); }
-    }
-
-    function renderTable(docs, currentPage, pageSize) {
-        const tbody = document.getElementById('document-list');
-        tbody.innerHTML = '';
-
-        if (!docs || docs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="padding: 40px; color: #999;">상신된 문서가 없습니다.</td></tr>';
-            return;
+            } catch (error) { alert('정보 조회 실패'); }
         }
 
-        docs.forEach((doc, index) => {
-            const no = (currentPage * pageSize) + index + 1;
-
-            let latestApprovalDate = '-';
-            if (doc.resApprovalLineDtos && Array.isArray(doc.resApprovalLineDtos)) {
-                const approvedLines = doc.resApprovalLineDtos
-                    .filter(line => line.endedAt && (line.apprStat === 'A' || line.apprStat === 'R'))
-                    .sort((a, b) => new Date(b.endedAt) - new Date(a.endedAt));
-
-                if (approvedLines.length > 0) {
-                    latestApprovalDate = formatDate(approvedLines[0].endedAt);
-                }
-            }
-
-            const tr = document.createElement('tr');
-
-            // ✅ 재상신된 문서이면 배경 회색 + 투명도
-            const isResubmitted = doc.isResubmitted === true;
-            if (isResubmitted) {
-                tr.style.backgroundColor = '#f1f3f5';
-                tr.style.opacity = '0.7';
-            }
-
-            const statusBadgeHtml = doc.docStat === 'RJ'
-                ? `<span class="badge badge-${doc.docStat}" onclick="showRejectModal(${doc.docNo})" title="클릭하여 반려 정보 보기">${getDocStatusName(doc.docStat)}</span>`
-                : `<span class="badge badge-${doc.docStat}">${getDocStatusName(doc.docStat)}</span>`;
-
-            // ✅ 제목 옆에 재상신 표시 추가
-            const titleHtml = isResubmitted
-                ? `${doc.title} <span style="color: #868e96; font-size: 11px; font-weight: 500; margin-left: 6px;">(재상신됨)</span>`
-                : doc.title;
-
-            tr.innerHTML = `
-                <td>${no}</td>
-                <td>${doc.docId || '-'}</td>
-                <td>${doc.docFormCatName || '-'}</td>
-                <td class="title-cell" onclick="location.href='/documents/${doc.docNo}?status=SUBMITTED'">${titleHtml}</td>
-                <td>${doc.writerDepName || '-'}</td>
-                <td>${doc.writer}<br>${doc.writerId}</td>
-                <td>${statusBadgeHtml}</td>
-                <td>${latestApprovalDate}</td>
-                <td>${formatDate(doc.submittedAt)}</td>
-                <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        for (let i = docs.length; i < 10; i++) {
-            tbody.innerHTML += '<tr>' + '<td></td>'.repeat(10) + '</tr>';
-        }
-    }
-
-    function renderPagination(totalPages, currentPage) {
-        const nav = document.getElementById('pagination-nav');
-        nav.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        const addBtn = (idx, text) => {
-            const btn = document.createElement('button');
-            btn.className = `page-btn-num ${idx === currentPage ? 'active' : ''}`;
-            btn.innerText = text;
-            btn.onclick = () => loadData(idx);
-            nav.appendChild(btn);
-        };
-
-        const prev = document.createElement('button');
-        prev.className = 'page-btn-nav';
-        prev.innerText = '이전';
-        prev.disabled = (currentPage === 0);
-        prev.onclick = () => loadData(currentPage - 1);
-        nav.appendChild(prev);
-
-        for (let i = 0; i < totalPages; i++) {
-            if (i < 5 || i >= totalPages - 2) addBtn(i, i + 1);
-            else if (i === 5) nav.innerHTML += '<span style="color:#ccc; margin:0 4px;">...</span>';
-        }
-
-        const next = document.createElement('button');
-        next.className = 'page-btn-nav';
-        next.innerText = '다음';
-        next.disabled = (currentPage === totalPages - 1);
-        next.onclick = () => loadData(currentPage + 1);
-        nav.appendChild(next);
-    }
-
-    function getDocStatusName(stat) {
-        const map = { 'AW': '결재중', 'FI': '최종승인', 'RJ': '반려' };
-        return map[stat] || stat;
-    }
-
-    function formatDate(str) {
-        if (!str) return '-';
-        const d = new Date(str);
-        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/'/g, '&#39;')
-            .replace(/"/g, '&quot;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-    }
-
-    let currentRejectDocNo = null;
-
-    async function showRejectModal(docNo) {
-        currentRejectDocNo = docNo;
-
-        try {
-            const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, {
-                credentials: 'include'
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.data) {
-                const doc = result.data;
-                const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R');
-
-                if (rejectedLine) {
-                    document.getElementById('modal-rejecter-name').textContent = rejectedLine.approverName || '-';
-                    document.getElementById('modal-rejecter-id').textContent = rejectedLine.approverId || '-';
-                    document.getElementById('modal-rejecter-dept').textContent = rejectedLine.approverDepName || '-';
-                    document.getElementById('modal-rejecter-pos').textContent = rejectedLine.approverPosName || '-';
-                    document.getElementById('modal-rejectDate').textContent = formatDateSimple(rejectedLine.endedAt);
-                    document.getElementById('modal-rejectReason').textContent = rejectedLine.rejReason || '반려 사유가 입력되지 않았습니다.';
-                } else {
-                    document.getElementById('modal-rejecter-name').textContent = '-';
-                    document.getElementById('modal-rejecter-id').textContent = '-';
-                    document.getElementById('modal-rejecter-dept').textContent = '-';
-                    document.getElementById('modal-rejecter-pos').textContent = '-';
-                    document.getElementById('modal-rejectDate').textContent = '-';
-                    document.getElementById('modal-rejectReason').textContent = '반려 정보를 찾을 수 없습니다.';
-                }
-
-                document.getElementById('reject-modal').classList.add('show');
-            } else {
-                alert('문서 정보를 불러올 수 없습니다.');
-            }
-        } catch (error) {
-            console.error('문서 조회 실패:', error);
-            alert('문서 조회 중 오류가 발생했습니다.');
-        }
-    }
-
-    function closeRejectModal() {
-        document.getElementById('reject-modal').classList.remove('show');
-        currentRejectDocNo = null;
-    }
-
-    function goToRewriteFromModal() {
-        if (currentRejectDocNo) {
-            location.href = `/documents/${currentRejectDocNo}/rejected/rewrite`;
-        }
-    }
-
-    // ✅ AI 요약 모달 함수
-    function showAiSummaryModal(summary) {
-        document.getElementById('ai-summary-text').textContent = summary || 'AI 요약 내용이 없습니다.';
-        document.getElementById('ai-summary-modal').classList.add('show');
-    }
-
-    function closeAiSummaryModal() {
-        document.getElementById('ai-summary-modal').classList.remove('show');
-    }
-
-    function formatDateSimple(str) {
-        if (!str) return '-';
-        const d = new Date(str);
-        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }
-
-    // 모달 외부 클릭 시 닫기
-    document.addEventListener('click', (e) => {
-        const rejectModal = document.getElementById('reject-modal');
-        const aiModal = document.getElementById('ai-summary-modal');
-
-        if (e.target === rejectModal) {
-            closeRejectModal();
-        }
-        if (e.target === aiModal) {
-            closeAiSummaryModal();
-        }
-    });
-</script>
+        function closeRejectModal() { document.getElementById('reject-modal').classList.remove('show'); currentRejectDocNo = null; }
+        function goToRewriteFromModal() { if (currentRejectDocNo) location.href = `/documents/${currentRejectDocNo}/rejected/rewrite`; }
+        function showAiSummaryModal(summary) { document.getElementById('ai-summary-text').textContent = summary || '요약 없음'; document.getElementById('ai-summary-modal').classList.add('show'); }
+        function closeAiSummaryModal() { document.getElementById('ai-summary-modal').classList.remove('show'); }
+        function escapeHtml(text) { return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
+        function applySort() { currentBasis = document.getElementById('sort-basis').value; loadData(0); }
+        function changeOrder(order) { currentOrder = order; document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active')); document.getElementById('order-' + order).classList.add('active'); loadData(0); }
+        function getDocStatusName(stat) { return { 'AW': '결재중', 'FI': '최종승인', 'RJ': '반려' }[stat] || stat; }
+        function formatDate(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}<br>${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
+        function formatDateSimple(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+        document.addEventListener('click', (e) => { const rm = document.getElementById('reject-modal'); const am = document.getElementById('ai-summary-modal'); if (e.target === rm) closeRejectModal(); if (e.target === am) closeAiSummaryModal(); });
+    </script>
+</th:block>
 </body>
 </html>
