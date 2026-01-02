@@ -186,28 +186,19 @@ public class TokenService {
         try {
             // 1) refreshToken 쿠키가 없으면 = 이미 로그아웃 상태로 보고 UNAUTHORIZED
             String refreshToken = extractCookie(request, "refreshToken")
-                    .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+                    .orElse(null);
 
             // 2) RT 서명/만료 검증
-            if (!tokenProvider.validateToken(refreshToken)) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            if (refreshToken != null && tokenProvider.validateToken(refreshToken)) {
+                Claims rtClaims = tokenProvider.parseClaims(refreshToken);
+                Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
+                TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
+
+                var stored = refreshTokenRepository
+                        .findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
+
+                stored.forEach(RefreshToken::revoke);
             }
-
-            // 3) RT claims에서 사용자 식별값 추출
-            Claims rtClaims = tokenProvider.parseClaims(refreshToken);
-
-            Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
-            TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
-
-            // 4) DB에서 유효 RT들 revoke
-            var stored = refreshTokenRepository
-                    .findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
-
-            if (stored.isEmpty()) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-
-            stored.forEach(RefreshToken::revoke);
 
         } finally {
             // ✅ 성공/실패 상관없이 쿠키는 무조건 삭제
