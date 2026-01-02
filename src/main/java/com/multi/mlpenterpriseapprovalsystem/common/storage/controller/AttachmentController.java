@@ -104,4 +104,14 @@ public class AttachmentController {
                 attachmentQueryService.issueDownloadUrl(user.getComId(), attachmentId))
         );
     }
+
+    @PostMapping("/{attachmentId}/move")
+    public ResponseEntity<ResponseDto<Void>> move(
+            @PathVariable Long attachmentId,
+            @RequestParam Long toFolderNo,
+            @AuthenticationPrincipal CustomUser user
+    ){
+        attachmentService.moveCloudAttachment(user, attachmentId, toFolderNo);
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "이동 성공", null));
+    }
 }

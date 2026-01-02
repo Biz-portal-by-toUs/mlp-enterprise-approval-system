@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.cloud.controller;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
@@ -13,8 +14,26 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ViewCloudController {
 
+    /** 기본 진입: 공유함으로 */
     @GetMapping("/cloud")
-    public String page() {
+    public String root() {
+        return "redirect:/cloud/dept";
+    }
+
+    /** 공유함 */
+    @GetMapping("/cloud/dept")
+    public String dept(Model model) {
+        model.addAttribute("active", "dept"); // sidebar active 표시용
+        model.addAttribute("scope", "dept");  // JS 초기 scope용
+        return "cloud/cloud";
+    }
+
+    /** 개인함 */
+    @GetMapping("/cloud/prvt")
+    public String prvt(Model model) {
+        model.addAttribute("active", "prvt");
+        model.addAttribute("scope", "prvt");
         return "cloud/cloud";
     }
 }
+
