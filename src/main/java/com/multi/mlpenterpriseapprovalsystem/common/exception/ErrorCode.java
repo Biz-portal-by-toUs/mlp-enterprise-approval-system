@@ -121,6 +121,11 @@ public enum ErrorCode {
     START_MUST_BEFORE_END(HttpStatus.BAD_REQUEST,"START_MUST_BEFORE_END","endedAt은 startAt 이후여야 합니다"),
     MUST_STARTDATE_IF_ALLDAY_TRUE(HttpStatus.BAD_REQUEST,"MUST_STARTDATE_IF_ALLDAY_TRUE","allDay=true이면 startDate는 필수입니다"),
     MUST_STARTAT_ENDEDAT(HttpStatus.BAD_REQUEST,"MUST_STARTAT_ENDEDAT","allDay=false이면 startAt, endedAt은 필수입니다"),
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다"),
+    NOT_REGISTER(HttpStatus.BAD_REQUEST,"NOT_REGISTER","등록자만 삭제가 가능합니다"),
+    SCHEDULE_NOT_AUTH(HttpStatus.BAD_REQUEST,"SCHEDULE_NOT_AUTH","일정에 접근할 권한이 없습니다"),
+
+
 
 
     // 웹소켓 관련
