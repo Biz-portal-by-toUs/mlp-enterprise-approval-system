@@ -11,46 +11,49 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * FastAPI서버에 요청 보내는 서비스
+ * 챗봇 질의 요청 클라이언트
  *
  * @author : 김승기
- * @filename : MeetingAiClient
- * @since : 2025. 12. 26. 금요일
+ * @filename : ChatbotAiClient
+ * @since : 2026. 1. 1. 목요일
  */
 @Component
 @Slf4j
-public class MeetingAiClient {
+public class ChatbotAiClient {
 
-    private final WebClient fastApiWebClient; // 전역 Bean 사용
+    private final WebClient fastApiWebClient;
 
-    public MeetingAiClient(@Qualifier("fastApiWebClient") WebClient fastApiWebClient) {
+    public ChatbotAiClient(@Qualifier("fastApiWebClient") WebClient fastApiWebClient) {
         this.fastApiWebClient = fastApiWebClient;
     }
 
-    @Value("${internal.ai.meetings.callback-url}")
-    private String callbackUrlTemplate;
+    @Value("${internal.ai.chatbot.callback-url}")
+    private String callbackUrl;
 
     @Value("${internal.ai.callback-key}")
     private String callbackKey;
 
-    public void requestAi(Long meetNo, String objectKey, String title) {
-        String callbackUrl = String.format(callbackUrlTemplate, meetNo);
+
+    public void requestChatbotAnswer(String assistantMessageId, String empId, String comId, String question) {
 
         Map<String, Object> body = new HashMap<>();
-        body.put("meetNo", meetNo);
-        body.put("objectKey", objectKey);
+        body.put("messageId", assistantMessageId);
+        body.put("empId", empId);
+        body.put("comId", comId);
+        body.put("question", question);
+
+
         body.put("callbackUrl", callbackUrl);
         body.put("callbackKey", callbackKey);
-        body.put("meetingTitle", title.trim());
 
         fastApiWebClient.post()
-                .uri("/ai/meetings/run")
+                .uri("/ai/chatbot/run")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnNext(res -> log.info("[AI] requested meetNo={}, res={}", meetNo, res))
-                .doOnError(e -> log.error("[AI] request failed meetNo={}", meetNo, e))
+                .doOnNext(res -> log.info("[AI][CHATBOT] requested messageId={}, res={}", assistantMessageId, res))
+                .doOnError(e -> log.error("[AI][CHATBOT] request failed messageId={}", assistantMessageId, e))
                 .subscribe();
     }
 }

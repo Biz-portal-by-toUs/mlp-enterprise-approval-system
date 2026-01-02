@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/meetings/*/ai").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/prov-documents/*/embedding").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/chatbot/callback").permitAll()
 
                         .requestMatchers("/api/v1/prov-documents/**").hasRole("COM_ADMIN")
 
