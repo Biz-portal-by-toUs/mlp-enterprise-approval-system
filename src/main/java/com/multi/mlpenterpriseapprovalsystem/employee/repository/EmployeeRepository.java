@@ -212,4 +212,50 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         order by d.depName asc, p.posOrder asc, e.empName asc, e.empNo asc
     """)
     List<OrgEmployeeRow> findOrgChartRows(@Param("comId")String comId,@Param("depId") String depId);
+
+
+    // 조직도 조회 사원 검색
+    interface OrgEmployeeSearchRow {
+        Long getEmpNo();
+        String getEmpId();
+        String getEmpName();
+
+        String getDepId();
+        String getDepName();
+
+        String getPosName();
+        Integer getPosOrder();
+
+        String getObjectKey();
+    }
+
+    @Query("""
+        select
+          e.empNo as empNo,
+          e.empId as empId,
+          e.empName as empName,
+
+          d.depId as depId,
+          d.depName as depName,
+
+          p.posName as posName,
+          p.posOrder as posOrder,
+
+          e.objectKey as objectKey
+        from Employee e
+          join e.department d
+          join e.positions p
+        where e.company.comId = :comId
+          and (
+            :keyword is null or :keyword = ''
+            or lower(e.empName) like concat('%', lower(:keyword), '%')
+            or lower(e.empId)  like concat('%', lower(:keyword), '%')
+            or lower(e.email)  like concat('%', lower(:keyword), '%')
+          )
+        order by e.empName asc, e.empNo asc
+    """)
+    List<OrgEmployeeSearchRow> searchOrgEmployees(
+            @Param("comId") String comId,
+            @Param("keyword") String keyword
+    );
 }
