@@ -242,6 +242,7 @@ public class BoardService {
             String comId,
             String type,
             String keyword,
+            String catCode,
             LocalDate from,
             LocalDate to,
             Pageable pageable
@@ -261,6 +262,7 @@ public class BoardService {
         // ✅ type/keyword normalize
         String t = (type == null) ? "" : type.trim();
         String k = (keyword == null) ? "" : keyword.trim();
+        String c = (catCode == null) ? "" : catCode.trim();
 
         // ✅ 조건별 검색
         if ("date".equals(t)) {
@@ -277,6 +279,12 @@ public class BoardService {
                 spec = spec.and((root, query, cb) ->
                         cb.lessThan(root.get("createdAt"), toExclusive)
                 );
+            }
+
+        } else if ("catCode".equals(t)) {
+            // ✅ 카테고리 검색: catCode 파라미터로 동등 비교
+            if (!c.isBlank()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("catCode"), c));
             }
 
         } else {
