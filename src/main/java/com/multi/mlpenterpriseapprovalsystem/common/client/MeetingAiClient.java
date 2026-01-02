@@ -27,13 +27,15 @@ public class MeetingAiClient {
         this.fastApiWebClient = fastApiWebClient;
     }
 
-    @Value("${internal.ai.callback-url}")
-    private String callbackUrl;
+    @Value("${internal.ai.meetings.callback-url}")
+    private String callbackUrlTemplate;
 
     @Value("${internal.ai.callback-key}")
     private String callbackKey;
 
     public void requestAi(Long meetNo, String objectKey, String title) {
+        String callbackUrl = String.format(callbackUrlTemplate, meetNo);
+
         Map<String, Object> body = new HashMap<>();
         body.put("meetNo", meetNo);
         body.put("objectKey", objectKey);
