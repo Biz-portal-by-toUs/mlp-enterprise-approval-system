@@ -1,7 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.notification.service;
 
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.sse.SseManager;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
 import com.multi.mlpenterpriseapprovalsystem.notification.dto.NotificationResponseDto;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
     private final NotificationsRepository notificationsRepository;
     private final SseManager sseManager;
+    private final EmployeeRepository employeeRepository;
 
     @Transactional
     public void sendNotification(Employee receiver, NotificationType type, String content, String title, String url) {
@@ -51,6 +55,13 @@ public class NotificationService {
         data.put("unreadCount", unreadCount);
 
         sseManager.sendToUser(receiver.getEmpId(), "notification", data);
+    }
+
+    @Transactional
+    public void sendNotification(String empId, NotificationType type, String title, String content, String url) {
+        Employee receiver = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+        this.sendNotification(receiver, type, title, content, url);
     }
 
     @Transactional(readOnly = true)
