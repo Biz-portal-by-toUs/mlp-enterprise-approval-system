@@ -107,6 +107,7 @@ public class BoardController {
                                                                          @RequestParam(name = "size", defaultValue = "10") int size,
                                                                          @RequestParam(name = "type", required = false) String type,
                                                                          @RequestParam(name = "keyword", required = false) String keyword,
+                                                                         @RequestParam(name = "catCode", required = false) String catCode,
                                                                          @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                                                                          @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
@@ -118,9 +119,10 @@ public class BoardController {
 
         if (type != null) type = type.trim();
         if (keyword != null) keyword = keyword.trim();
+        if (catCode != null) catCode = catCode.trim();
         Pageable pageable = PageRequest.of(page, size, Sort.by("boardNo").descending());
 
-        Page<BoardListItemResDto> result = boardService.searchBoards(comId, type, keyword, from, to, pageable);
+        Page<BoardListItemResDto> result = boardService.searchBoards(comId, type, keyword, catCode, from, to, pageable);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "게시판 조회 성공", result));
     }
 
