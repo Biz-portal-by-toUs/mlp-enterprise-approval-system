@@ -35,5 +35,12 @@ public class PaymentMethod extends BaseEntity {
     private String cardType;
     private String billingKey;
     private String mask;
-    private Boolean active;
+
+    @Builder.Default
+    private Boolean active = true;
+
+    // 소프트 삭제
+    public void deactivate() {
+        this.active = false;
+    }
 }
