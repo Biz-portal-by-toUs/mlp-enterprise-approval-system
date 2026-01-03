@@ -65,7 +65,7 @@ public class SecurityConfig {
                                 "/meeting-rooms/**",
                                 "/admin/**",
                                 "/attachment-test",
-                                "/schedule/**").permitAll()
+                                "/schedule/**",
                                 "/api/v1/mails/**").permitAll()
                         .requestMatchers(
                                 "/uploads/**",

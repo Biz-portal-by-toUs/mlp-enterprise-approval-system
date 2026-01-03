@@ -1052,3 +1052,6 @@ ALTER TABLE document_form
 
 ALTER TABLE mail_user_state
     DROP COLUMN purged_at;
+
+
+
