@@ -26,9 +26,6 @@ public enum ErrorCode {
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "입력정보가 일치하지 않습니다"),
     NOT_BLANK(HttpStatus.BAD_REQUEST, "NOT_BLANK", "입력이 필수인 칸 입니다"),
 
-    //요금제 관련
-    SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND", "요금제를 찾을 수 없습니다"),
-
     // 문서 관련
     DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "문서를 찾을 수 없습니다"),
     DOCUMENT_ALREADY_APPROVED(HttpStatus.BAD_REQUEST, "DOCUMENT_ALREADY_APPROVED", "이미 승인된 문서입니다"),
@@ -107,6 +104,16 @@ public enum ErrorCode {
     PAYMENT_METHOD_DUPLICATE(HttpStatus.CONFLICT, "PAYMENT_METHOD_DUPLICATE", "이미 등록된 카드입니다"),
     BILLINGKEY_NOT_MATCH(HttpStatus.BAD_REQUEST, "BILLINGKEY_NOT_MATCH", "빌링키 정보가 일치하지 않습니다"),
     DUPLICATE_CARD(HttpStatus.CONFLICT, "DUPLICATE_CARD", "이미 등록된 카드입니다"),
+    NOT_YOUR_PAYMENT_METHOD(HttpStatus.FORBIDDEN, "NOT_YOUR_PAYMENT_METHOD", "자신의 결제수단이 아닙니다"),
+    CANNOT_DELETE_REPRESENTATIVE_CARD(HttpStatus.FORBIDDEN, "CANNOT_DELETE_REPRESENTATIVE_CARD", "대표결제수단은 삭제할 수 없습니다"),
+
+    // 요금제 관련
+    PLAN_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "요금제를 찾을 수 없습니다"),
+
+    // 회사의 구독 정보
+    SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND", "해당 회사의 구독 정보를 찾을 수 없습니다"),
+    ALREADY_FREE_PLAN(HttpStatus.CONFLICT, "ALREADY_FREE_PLAN", "이미 무료 요금제입니다"),
+    ALREADY_CANCELED_SUBSCRIPTION(HttpStatus.CONFLICT, "ALREADY_CANCELED_SUBSCRIPTION", "이미 해지 예약된 상태입니다"),
 
     // 결제 실패
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_FAILED", "결제에 실패했습니다"),
