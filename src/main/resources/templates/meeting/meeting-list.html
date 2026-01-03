@@ -18,6 +18,13 @@
             border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 0 14px;
         }
         .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; }
+
+        /* 돋보기 버튼 스타일 */
+        .searchBtn {
+            background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px;
+        }
+        .searchBtn:hover svg { stroke: var(--primary); }
+
         .btn {
             height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
             cursor: pointer; border: none; background: var(--primary); color: #fff;
@@ -71,6 +78,11 @@
 
                 <div class="searchWrap">
                     <input id="keyword" class="searchInput" placeholder="회의 제목을 입력하세요..." />
+                    <button id="searchBtn" class="searchBtn">
+                        <svg viewBox="0 0 24 24" width="20" fill="none" stroke="#666" stroke-width="3">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                        </svg>
+                    </button>
                 </div>
 
                 <button id="createBtn" class="btn">+ 새 회의</button>
@@ -253,16 +265,17 @@
             wrap.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
         }
 
-        // ✅ 날짜 입력 시 즉시 조회 기능 추가 (onchange 활용)
+        // 필터 변경 시 즉시 조회
         $("fromDate").onchange = () => loadPage(0);
         $("toDate").onchange = () => loadPage(0);
-
         $("depSelect").onchange = () => loadPage(0);
 
-        // 검색어 실시간 조회 (300ms 디바운스 적용)
-        $("keyword").oninput = () => {
-            clearTimeout(window.t);
-            window.t = setTimeout(() => loadPage(0), 300);
+        // ✅ 수정된 검색 이벤트: 버튼 클릭 또는 엔터
+        $("searchBtn").onclick = () => loadPage(0);
+        $("keyword").onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                loadPage(0);
+            }
         };
 
         $("createBtn").onclick = () => location.href = "/meeting/create";
