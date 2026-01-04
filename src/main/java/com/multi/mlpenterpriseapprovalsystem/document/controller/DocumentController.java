@@ -231,4 +231,17 @@ public class DocumentController {
     }
 
 
+    // 임시저장한 문서 삭제
+    @DeleteMapping("/documents/{docNo}")
+    public ResponseEntity<ResponseDto<Void>> deleteDocument(@PathVariable(name = "docNo") Long docNo,
+                                                            @AuthenticationPrincipal CustomUser customUser) {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        documentService.deleteDocument(comId, myEmpId, docNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "임시저장 문서가 삭제되었습니다.", null));
+    }
 }
