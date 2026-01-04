@@ -88,6 +88,7 @@ public class EmployeeService {
         return new ResChatEmployeeCursorDto(rows, nextCursor, hasNext);
     }
 
+    @Transactional(readOnly = true)
     public ResEmployeeDetailDto getEmployeeDetailById(String myEmpId) {
         Employee employee = employeeRepository.findByEmpId(myEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -95,6 +96,7 @@ public class EmployeeService {
         return ResEmployeeDetailDto.from(employee);
     }
 
+    @Transactional(readOnly = true)
     public List<ResEmployeeListDto> searchEmployees(String comId, Long depNo, Long posNo, Boolean isDeleted, String keyword) {
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return employeeRepository.searchEmployees(comId, depNo, posNo, isDeleted, searchKeyword);
@@ -181,7 +183,6 @@ public class EmployeeService {
         }
     }
 
-    @Transactional
     public void updateObjectKey(String comId, Long empNo, String objectKey) {
         Employee emp = employeeRepository.findByEmpNoAndCompany_ComId(empNo, comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
