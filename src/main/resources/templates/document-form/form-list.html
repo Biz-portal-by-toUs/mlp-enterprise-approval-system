@@ -8,7 +8,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>문서양식 목록</title>
 
-    <!-- 페이지 전용 스타일은 layout의 pageStyles fragment에 넣기 -->
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
@@ -17,6 +16,7 @@
             --bg:#f1f5f9;
             --card:#ffffff;
             --danger:#ef4444;
+            --primary:#2c5cff; /* ✅ 누락 보완 */
         }
 
         html,body{height:100%}
@@ -27,9 +27,6 @@
             background:var(--bg);
         }
 
-        /* ===============================
-           LAYOUT (meeting-list와 동일 톤)
-           =============================== */
         .page-with-subbar{
             display:grid;
             grid-template-columns:260px minmax(0,1fr);
@@ -38,19 +35,15 @@
             align-items:stretch;
         }
 
-        /* 메인 영역: meeting-list처럼 패딩 + min-width:0 */
         .page-main{
             padding:24px;
             min-width:0;
         }
 
-        /* ===============================
-           TOOLBAR (meeting-list 스타일)
-           =============================== */
         .toolbar{
             display:flex;
             align-items:center;
-            justify-content:space-between; /* ✅ 좌우 분리 */
+            justify-content:space-between;
             gap:12px;
             margin-bottom:16px;
         }
@@ -60,14 +53,14 @@
             align-items:center;
             gap:12px;
             min-width:0;
-            flex:1;           /* 왼쪽이 남은 공간 차지 */
+            flex:1;
         }
 
         .toolbar-right{
             display:flex;
             align-items:center;
             gap:10px;
-            flex-shrink:0;    /* 버튼 줄어들지 않게 */
+            flex-shrink:0;
         }
 
         .select{
@@ -116,28 +109,24 @@
         }
         .btn:hover{ filter:brightness(0.9); }
 
-        .btn.danger{
-            background:var(--danger);
-        }
+        .btn.danger{ background:var(--danger); }
 
         .btn.ghost{
             background:#fff;
             color:var(--fg);
             border:1px solid var(--line);
         }
-
         .btn.ghost:hover{
             background:#f8fafc;
-            filter:none; /* ghost는 밝기필터 대신 배경만 */
+            filter:none;
         }
 
-        /* 권한에 따른 버튼 숨김 유지 */
+        /* ✅ Employee는 버튼 자체 숨김 */
         html.role-employee #btnNew,
-        html.role-employee #btnDeleteSelected{ display:none !important; }
+        html.role-employee #btnDeleteSelected{
+            display:none !important;
+        }
 
-        /* ===============================
-           TABLE CARD (meeting-list의 tableWrap)
-           =============================== */
         .tableWrap{
             width:100%;
             background:#fff;
@@ -147,7 +136,6 @@
             box-shadow:0 1px 3px rgba(0,0,0,0.05);
         }
 
-        /* formTable도 meeting-list처럼 통일 */
         table.formTable{
             width:100%;
             border-collapse:collapse;
@@ -177,7 +165,6 @@
             cursor:pointer;
         }
 
-        /* 제목은 meeting-list처럼 왼쪽 정렬 + 굵게 */
         td.col-title{
             text-align:left !important;
             padding-left:20px !important;
@@ -194,12 +181,8 @@
             font-weight:800;
         }
 
-        /* 번호/체크 영역 폭 */
         th.col-no, td.col-no{ width:120px; }
 
-        /* ===============================
-           PAGER (meeting-list 스타일)
-           =============================== */
         .pager-wrapper{
             display:flex;
             align-items:center;
@@ -239,7 +222,19 @@
             align-items:center;
         }
 
-        /* 반응형 */
+        .muted{ color:var(--mut); }
+
+        /* (선택) 체크 + 번호 라벨 스타일 */
+        .selWrap{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+        }
+        .selWrap input[type="checkbox"]{
+            width:16px;
+            height:16px;
+        }
+
         @media (max-width:760px){
             .page-with-subbar{ grid-template-columns:1fr; }
             .page-main{ padding:14px; }
@@ -249,18 +244,13 @@
 </head>
 
 <body>
-<!-- layout.html의 content 자리에 들어갈 내용 -->
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <!-- 서브 사이드바 -->
         <div th:replace="~{sidebar/form-sidebar :: formSidebar('list')}"></div>
 
-        <!-- 메인 -->
         <main class="page-main">
 
-            <!-- 툴바 -->
             <div class="toolbar">
-                <!-- 왼쪽: 검색/필터 -->
                 <div class="toolbar-left">
                     <select id="size" class="select">
                         <option value="10">10</option>
@@ -272,22 +262,20 @@
                         <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
                     </div>
 
-                    <button class="btn ghost" id="btnSearch">조회</button>
+                    <button class="btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
-                <!-- 오른쪽: 액션 버튼 -->
                 <div class="toolbar-right">
-                    <button class="btn danger" id="btnDeleteSelected" disabled>선택 삭제</button>
-                    <button class="btn" id="btnNew">+ 새 양식</button>
+                    <button class="btn danger" id="btnDeleteSelected" type="button" disabled>선택 삭제</button>
+                    <button class="btn" id="btnNew" type="button">+ 새 양식</button>
                 </div>
             </div>
 
-            <!-- 표는 tableWrap 카드 안에서 100% 꽉 채움 -->
             <section class="tableWrap">
                 <table class="formTable">
                     <thead>
                     <tr>
-                        <th id="thSelect" class="col-no">번호</th>
+                        <th id="thSelect" class="col-no">선택/번호</th>
                         <th>제목</th>
                     </tr>
                     </thead>
@@ -295,25 +283,15 @@
                 </table>
             </section>
 
-            <!-- pager: meeting-list처럼 가운데 + 우측 상태 -->
             <div class="pager-wrapper">
-                <!-- 숫자 페이징 -->
                 <div id="pagerControls" class="pager"></div>
 
-                <!-- 우측 상태 -->
                 <div class="pager-status">
-                    <span id="countPill"
-                          style="font-size:14px; font-weight:600; color:var(--primary)">
-                        0건
-                    </span>
-                    <span id="pageInfo"
-                          style="font-size:13px; color:var(--mut)">
-                        page 1 / 1
-                    </span>
+                    <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
                 </div>
             </div>
 
-            <!-- 기존 스크립트 유지 -->
             <script type="module" src="/js/document-form/list.js"></script>
         </main>
     </div>

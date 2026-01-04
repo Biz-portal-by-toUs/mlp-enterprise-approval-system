@@ -1,14 +1,13 @@
+// /js/document-form/list.js
 (() => {
     const API_BASE = '/api/v1/forms';
     const VIEW_BASE = '/form';
 
+    // ✅ 승인된 것만 보이게(원하면 false로)
     const ONLY_APPROVED = true;
     const APPROVED_STATS = ['A', 'X'];
 
-    function isEmployee() {
-        return document.documentElement.classList.contains('role-employee');
-    }
-
+    // ===== DOM =====
     const elTbody = document.getElementById('tbody');
     const elInfo = document.getElementById('pageInfo');
     const elPager = document.getElementById('pagerControls');
@@ -18,26 +17,62 @@
 
     const btnDeleteSelected = document.getElementById('btnDeleteSelected');
     const btnCreate = document.getElementById('btnNew');
-    const btnRefresh = document.getElementById('btnRefresh');
     const btnSearch = document.getElementById('btnSearch');
-    const elToast = document.getElementById('toast');
 
     const elCountPill = document.getElementById('countPill');
 
-    const selected = new Set();
+    if (!elTbody || !elPager || !elQ || !elSize || !btnSearch) {
+        console.error('list page DOM missing');
+        return;
+    }
 
+    // ===== role (JWT -> html.class) =====
+    function parseJwtPayload(token) {
+        try {
+            const t = token.replace(/^Bearer\s+/i, '');
+            const base64 = t.split('.')[1];
+            if (!base64) return null;
+            const json = decodeURIComponent(
+                atob(base64.replace(/-/g, '+').replace(/_/g, '/'))
+                    .split('')
+                    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+            );
+            return JSON.parse(json);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function getUserRoleFromToken() {
+        const token = (localStorage.getItem('accessToken') || '').trim();
+        const p = parseJwtPayload(token) || {};
+        const role =
+            p.role ||
+            p.auth ||
+            (Array.isArray(p.authorities) ? p.authorities[0] : null) ||
+            (Array.isArray(p.roles) ? p.roles[0] : null) ||
+            '';
+        return String(role).replace(/^ROLE_/, '');
+    }
+
+    // 서버에서 th:classappend로 role-employee를 이미 넣었다면 이건 중복돼도 OK
+    (function ensureRoleClass() {
+        const r = getUserRoleFromToken();
+        if (r === 'EMPLOYEE') document.documentElement.classList.add('role-employee');
+    })();
+
+    function isEmployee() {
+        return document.documentElement.classList.contains('role-employee');
+    }
+
+    // ===== state =====
+    const selected = new Set();
     let page = 0;
     let totalPages = 1;
     let totalElements = 0;
 
-    function toast(msg) {
-        if (!elToast) return;
-        elToast.textContent = msg;
-        elToast.classList.add('show');
-        window.clearTimeout(toast._t);
-        toast._t = window.setTimeout(() => elToast.classList.remove('show'), 1400);
-    }
-
+    // ===== util =====
     function esc(s) {
         return String(s ?? '')
             .replaceAll('&', '&amp;')
@@ -70,6 +105,57 @@
         return fetch(url, { ...options, headers, credentials: 'same-origin' });
     }
 
+    function normalizePage(data) {
+        if (data && Array.isArray(data.content)) {
+            return {
+                items: data.content,
+                page: data.number ?? 0,
+                size: data.size ?? Number(elSize.value || 15),
+                totalPages: data.totalPages ?? 1,
+                totalElements: data.totalElements ?? data.content.length,
+            };
+        }
+        if (Array.isArray(data)) {
+            return { items: data, page: 0, size: data.length, totalPages: 1, totalElements: data.length };
+        }
+        if (data && data.data && Array.isArray(data.data.content)) {
+            return {
+                items: data.data.content,
+                page: data.data.number ?? 0,
+                size: data.data.size ?? Number(elSize.value || 15),
+                totalPages: data.data.totalPages ?? 1,
+                totalElements: data.data.totalElements ?? data.data.content.length,
+            };
+        }
+        return { items: [], page: 0, size: Number(elSize.value || 15), totalPages: 1, totalElements: 0 };
+    }
+
+    function buildUrl(statsCsvOrNull) {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('size', String(Number(elSize.value || 15)));
+
+        const q = (elQ.value || '').trim();
+        if (q) {
+            // 서버가 어떤 파라미터를 보든 잡히게 “다 넣기”
+            params.set('q', q);
+            params.set('docfoName', q);
+            params.set('keyword', q);
+        }
+
+        if (statsCsvOrNull) {
+            // Spring에서 List 파라미터 받는 방식에 따라
+            // 1) stat=A&stat=X 형태가 제일 안전하지만
+            // 너 코드에선 params.set('stat', ...)로 이미 쓰고 있어서 유지.
+            // (만약 서버에서 List로 못 받으면 아래를 stat 반복으로 바꿔줘야 함)
+            params.set('stat', statsCsvOrNull);
+            params.set('docfoStat', statsCsvOrNull);
+        }
+
+        return `${API_BASE}?${params.toString()}`;
+    }
+
+    // ===== UI helpers =====
     function openDetail(docfoNo) {
         if (docfoNo == null) return;
         const id = String(docfoNo);
@@ -79,6 +165,7 @@
             'width=1100,height=820,resizable=yes,scrollbars=yes'
         );
     }
+    window.openDetail = openDetail;
 
     function clearSelection() {
         selected.clear();
@@ -101,78 +188,29 @@
 
         btnDeleteSelected.style.display = '';
         const n = selected.size;
-
         btnDeleteSelected.textContent = n > 0 ? `선택 삭제 (${n})` : '선택 삭제';
         btnDeleteSelected.disabled = (n === 0);
         btnDeleteSelected.title = (n === 0) ? '삭제할 항목을 선택하세요.' : '';
     }
 
-    function normalizePage(data) {
-        if (data && Array.isArray(data.content)) {
-            return {
-                items: data.content,
-                page: data.number ?? 0,
-                size: data.size ?? Number(elSize?.value || 15),
-                totalPages: data.totalPages ?? 1,
-                totalElements: data.totalElements ?? data.content.length,
-            };
-        }
-        if (Array.isArray(data)) {
-            return { items: data, page: 0, size: data.length, totalPages: 1, totalElements: data.length };
-        }
-        if (data && data.data && Array.isArray(data.data.content)) {
-            return {
-                items: data.data.content,
-                page: data.data.number ?? 0,
-                size: data.data.size ?? Number(elSize?.value || 15),
-                totalPages: data.data.totalPages ?? 1,
-                totalElements: data.data.totalElements ?? data.data.content.length,
-            };
-        }
-        return { items: [], page: 0, size: Number(elSize?.value || 15), totalPages: 1, totalElements: 0 };
-    }
-
-    function buildUrl(statsCsvOrNull) {
-        const params = new URLSearchParams();
-        params.set('page', String(page));
-        params.set('size', String(Number(elSize?.value || 15)));
-
-        const q = (elQ?.value || '').trim();
-        if (q) {
-            params.set('q', q);
-            params.set('docfoName', q);
-            params.set('keyword', q);
-        }
-
-        if (statsCsvOrNull) {
-            params.set('stat', statsCsvOrNull);
-            params.set('docfoStat', statsCsvOrNull);
-        }
-
-        return `${API_BASE}?${params.toString()}`;
-    }
-
     function render(rows) {
-        if (!elTbody) return;
-
         if (!rows || rows.length === 0) {
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">조회 결과가 없어요.</td></tr>`;
             return;
         }
 
-        const size = Number(elSize?.value || 15);
+        const size = Number(elSize.value || 15);
         const employee = isEmployee();
 
         elTbody.innerHTML = rows.map((r, idx) => {
             const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
             const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
-
             const idStr = String(docfoNo ?? '');
 
-            // ✅ 1) 오름차순 번호 (page 기준)
+            // ✅ “오름차순 번호” (페이지 기준)
             const rowNo = (page * size) + idx + 1;
 
-            // ✅ 2) EMPLOYEE면 체크박스 DOM 자체를 생성하지 않음
+            // ✅ Employee면 체크박스 DOM 자체 생성 안 함
             const firstCol = employee
                 ? `<span>${rowNo}</span>`
                 : `
@@ -187,9 +225,9 @@
 
             return `
         <tr>
-          <td class="col-select">${firstCol}</td>
+          <td class="col-no">${firstCol}</td>
           <td class="col-title">
-            <a class="titleLink" href="javascript:void(0)" onclick="window.openDetail('${esc(idStr)}')">
+            <a class="titleLink" href="javascript:void(0)" data-open="${esc(idStr)}">
               ${esc(docfoName)}
             </a>
           </td>
@@ -201,8 +239,6 @@
     }
 
     function renderPager() {
-        if (!elPager) return;
-
         elPager.innerHTML = "";
 
         const tp = Math.max(1, Number(totalPages) || 1); // ✅ 최소 1
@@ -219,34 +255,27 @@
             b.className = `pageBtn ${active ? "active" : ""}`;
             b.textContent = txt;
             b.disabled = disabled;
+            b.type = 'button';
             b.onclick = () => {
                 page = target;
-                clearSelection();   // 선택 초기화 (유지하고 싶으면 제거)
+                clearSelection();
                 load();
             };
             return b;
         };
 
-        // 이전(<)
-        elPager.appendChild(
-            createBtn("<", cur - 1, false, cur <= 0)
-        );
+        elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
 
-        // 숫자 버튼 (1페이지여도 1 하나는 무조건 표시)
+        // ✅ tp=1이어도 1 버튼 생성됨
         for (let i = startPage; i <= endPage; i++) {
-            elPager.appendChild(
-                createBtn(String(i + 1), i, i === cur, i === cur)
-            );
+            elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
         }
 
-        // 다음(>)
-        elPager.appendChild(
-            createBtn(">", cur + 1, false, cur >= tp - 1)
-        );
+        elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
+    // ===== data load =====
     async function load() {
-        if (!elTbody) return;
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
@@ -272,12 +301,24 @@
         } catch (err) {
             console.error(err);
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
+            totalPages = 1;
             renderPager();
         }
     }
 
-    // checkbox select (EMPLOYEE는 체크박스가 생성되지 않으므로 이 이벤트도 사실상 영향 없음)
-    elTbody?.addEventListener('change', (e) => {
+    // ===== events =====
+    // row click: link open
+    elTbody.addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-open]');
+        if (a) {
+            const id = a.getAttribute('data-open');
+            openDetail(id);
+            return;
+        }
+    });
+
+    // checkbox select
+    elTbody.addEventListener('change', (e) => {
         const cb = e.target;
         if (!(cb instanceof HTMLInputElement)) return;
         if (cb.dataset.role !== 'rowCheck') return;
@@ -291,33 +332,8 @@
         updateBulkDeleteUI();
     });
 
-    // pager click
-    elPager?.addEventListener('click', (e) => {
-        const t = e.target;
-        if (!(t instanceof HTMLElement)) return;
-
-        const pageAttr = t.getAttribute('data-page');
-        if (pageAttr != null) {
-            const nextPage = Number(pageAttr);
-            if (Number.isFinite(nextPage)) {
-                page = nextPage;
-                clearSelection();
-                load();
-            }
-            return;
-        }
-
-        const go = t.getAttribute('data-go');
-        if (!go) return;
-
-        if (go === 'prev') page = Math.max(0, page - 1);
-        else if (go === 'next') page = Math.min(totalPages - 1, page + 1);
-
-        clearSelection();
-        load();
-    });
-
     async function softDelete(docfoNo) {
+        // 1) status patch(D) 시도
         const patchRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
             method: 'PATCH',
             body: JSON.stringify({ docfoStat: 'D' }),
@@ -325,6 +341,7 @@
 
         if (patchRes.ok) return true;
 
+        // 2) fallback DELETE
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
             const t = await delRes.text().catch(() => '');
@@ -338,19 +355,17 @@
         if (selected.size === 0) return;
 
         const ids = Array.from(selected);
-        if (!confirm(`선택한 ${ids.length}개를 삭제 처리할까요? (stat=D)`)) return;
+        if (!confirm(`선택한 ${ids.length}개를 삭제 처리할까요?`)) return;
 
         try {
             btnDeleteSelected.disabled = true;
-
             for (const docfoNo of ids) {
                 await softDelete(docfoNo);
             }
-
-            toast('선택 삭제 완료');
             selected.clear();
             markFormListDirty();
             await load();
+            alert('선택 삭제 완료');
         } catch (err) {
             console.error(err);
             alert('선택 삭제 실패: ' + (err?.message || err));
@@ -369,15 +384,13 @@
         );
     });
 
-    btnRefresh?.addEventListener('click', () => load());
-
-    btnSearch?.addEventListener('click', () => {
+    btnSearch.addEventListener('click', () => {
         page = 0;
         clearSelection();
         load();
     });
 
-    elQ?.addEventListener('keydown', (e) => {
+    elQ.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             page = 0;
             clearSelection();
@@ -385,14 +398,13 @@
         }
     });
 
-    elSize?.addEventListener('change', () => {
+    elSize.addEventListener('change', () => {
         page = 0;
         clearSelection();
         load();
     });
 
-    window.openDetail = openDetail;
-
+    // list dirty refresh (팝업에서 수정/삭제 후)
     window.addEventListener('storage', (e) => {
         if (e.key === 'list:dirty' && e.newValue === 'true') {
             try { localStorage.removeItem('list:dirty'); } catch (_) {}
@@ -400,7 +412,7 @@
         }
     });
 
-    // init
+    // init: Employee면 버튼 숨김 + 헤더 텍스트 변경
     if (isEmployee() && btnCreate) btnCreate.style.display = 'none';
     updateBulkDeleteUI();
     updateHeaderLabel();

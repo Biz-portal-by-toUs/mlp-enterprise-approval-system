@@ -76,6 +76,7 @@ const elAddRadioBtn = document.getElementById('addRadioBtn')
 
 const elSaveBtn = document.getElementById('saveBtn')
 const elCloseBtn = document.getElementById('closeBtn')
+const elTempSaveBtn = document.getElementById('tempSaveBtn')
 
 const fontSizeSelect = document.getElementById('fontSizeSelect')
 
@@ -1011,57 +1012,71 @@ function markEditablePolicyForTemplate(json) {
 }
 
 function wireSave(editor) {
-    elSaveBtn?.addEventListener('click', async () => {
+    async function submit(mode) {
         const docTitle = (elDocTitle?.value || '').trim()
 
         const rawJson = editor.getJSON()
         const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE)
-
-        // 템플릿 편집(create-docform)에서는 잠금(locked) 저장 금지
-        // 대신 '문서 작성 단계'에서 입력을 허용할 영역만 editable로 표시해 저장
         const templateJson = markEditablePolicyForTemplate(withTableFont)
 
         const categories = getCategoriesFromRadios()
-
-        // TipTap JSON/HTML (본문)
-        const cnttJson = JSON.stringify(templateJson) // ✅ editor 내용만 저장
+        const cnttJson = JSON.stringify(templateJson)
         const bodyHtml = editor.getHTML()
 
-        // 헤더표(고정 템플릿) + 전체 HTML 조립
         const headerHtml = extractHeaderHtmlFromTemplates()
-        const cnttHtml = buildFullHtml({
-            docfoName: docTitle,
-            categories,
-            headerHtml,
-            bodyHtml,
-        })
+        const cnttHtml = buildFullHtml({ docfoName: docTitle, categories, headerHtml, bodyHtml })
 
-        const payload = {
-            docfoName: docTitle,
-            cnttJson,
-            cnttHtml,
-            categories,
-        }
+        const payload = { docfoName: docTitle, cnttJson, cnttHtml, categories }
 
         const docfoNo = getDocfoNoFromServerInjected()
         const isEdit = Boolean(docfoNo)
-        const url = isEdit ? `/api/v1/forms/${encodeURIComponent(docfoNo)}` : '/api/v1/forms'
+
+        // ✅ 여기서만 분기
+        let url, method
+
+        if (mode === 'TEMP') {
+            if (isEdit) { url = `/api/v1/forms/${encodeURIComponent(docfoNo)}/temp`; method = 'PUT' }
+            else { url = `/api/v1/forms/temp`; method = 'POST' }
+        } else { // mode === 'SAVE'
+            if (isEdit) { url = `/api/v1/forms/${encodeURIComponent(docfoNo)}`; method = 'PUT' }
+            else { url = `/api/v1/forms`; method = 'POST' }
+        }
 
         const res = await apiFetch(url, {
-            method: isEdit ? 'PUT' : 'POST',
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         })
 
         if (!res.ok) {
             const t = await res.text().catch(() => '')
-            alert('저장 실패: ' + res.status + '\n' + t)
-            return
+            alert((mode === 'TEMP' ? '임시저장 실패: ' : '저장 실패: ') + res.status + '\n' + t)
+            return null
         }
 
-        // ✅ 목록 자동 갱신 신호
+        // 응답이 createTemp는 Long, saveTemp는 no content라 상황별 처리
+        if (method === 'POST') {
+            const id = await res.json().catch(() => null)
+            return id
+        }
+        return true
+    }
+
+    // 정식 저장 버튼
+    elSaveBtn?.addEventListener('click', async () => {
+        const ok = await submit('SAVE')
+        if (!ok) return
         markFormListDirty()
         window.close()
+    })
+
+    // 임시저장 버튼
+    const elTempBtn = document.getElementById('tempSaveBtn')
+    elTempBtn?.addEventListener('click', async () => {
+        const ok = await submit('TEMP')
+        if (!ok) return
+        alert('임시저장 완료')
+        markFormListDirty()
     })
 }
 
