@@ -1137,3 +1137,6 @@ VALUES
      '일반사원', 'e000004@c01.com', '010-0000-0004', '1004', 'F',
      NOW(), NULL, '서울특별시 강남구', 'EMPLOYEE', FALSE, 'c', 'c', NULL,
      '1993-04-04', NOW(6), NOW(6), NULL);
+
+
+select * from employee;

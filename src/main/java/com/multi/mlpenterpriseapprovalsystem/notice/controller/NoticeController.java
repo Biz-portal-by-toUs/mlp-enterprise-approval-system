@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +36,7 @@ public class NoticeController {
     private final NoticeService noticeService;
 
     //공지사항 등록
+    @PreAuthorize("hasRole('COM_ADMIN')")
     @PostMapping(value = "/notice", consumes = {"multipart/form-data"})
     public ResponseEntity<ResponseDto<NoticeResAllDto>> registNotice(@ModelAttribute NoticeReqDto dto, @AuthenticationPrincipal CustomUser customUser){
         dto.setComId(customUser.getComId());
@@ -93,6 +95,7 @@ public class NoticeController {
     }
 
     //공지사항 삭제
+    @PreAuthorize("hasRole('COM_ADMIN')")
     @DeleteMapping("/notice/{noticeNo}")
     public ResponseEntity<ResponseDto> delete(@PathVariable(name="noticeNo") Long noticeNo) {
         noticeService.deleteNotice(noticeNo);
@@ -108,6 +111,7 @@ public class NoticeController {
     }
 
     //공지사항 수정  --- 일련번호(key로 수정)  consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    @PreAuthorize("hasRole('COM_ADMIN')")
     @PutMapping(value = "/notice/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ResponseDto> update(@PathVariable(name="id") Long id,
                                               @ModelAttribute NoticeReqDto dto,
