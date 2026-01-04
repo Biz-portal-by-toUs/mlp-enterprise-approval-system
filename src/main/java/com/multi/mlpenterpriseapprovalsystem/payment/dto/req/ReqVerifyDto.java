@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.payment.dto;
+package com.multi.mlpenterpriseapprovalsystem.payment.dto.req;
 
 import lombok.Getter;
 import lombok.Setter;

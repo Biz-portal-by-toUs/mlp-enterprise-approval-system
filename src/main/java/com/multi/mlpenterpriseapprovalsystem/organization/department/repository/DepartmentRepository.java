@@ -24,4 +24,5 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     Optional<Department> findByCompanyAndDepNo(Company company, Long depNo);
 
+    List<Department> findAllByCompany_ComIdOrderByDepNameAsc(String comId); // 조직도
 }

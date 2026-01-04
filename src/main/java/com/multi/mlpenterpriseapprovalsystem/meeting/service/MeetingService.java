@@ -16,6 +16,8 @@ import com.multi.mlpenterpriseapprovalsystem.meeting.event.MeetingAiRequestedEve
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingDeptRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingEmpRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import jakarta.persistence.EntityManager;
@@ -56,6 +58,8 @@ public class MeetingService {
     private final EntityManager em;
 
     private final ApplicationEventPublisher publisher;
+
+    private final NotificationService notificationService;
 
     /**
      * [회의 목록 조회]
@@ -303,6 +307,8 @@ public class MeetingService {
             Employee p = employeeRepository.findByEmpId(pid)
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
             meetingEmpRepository.save(MeetingEmp.create(meeting, p));
+
+
         }
 
         if (!writerIncluded) {
@@ -367,6 +373,15 @@ public class MeetingService {
 
         meeting.markAiDone(request.getSttText(), request.getAiText());
         meeting.setAudioObjectKey(request.getObjectKey());
+
+        // ✅ 알림 전송 로직 추가 (작성자에게 알림)
+        notificationService.sendNotification(
+                meeting.getWriter(),
+                NotificationType.MEETING,
+                "회의록 요약 완료", // UI에 제목으로 표시됨
+                "\"" + meeting.getTitle() + "\" 회의의 AI 요약이 완료되었습니다.",
+                "/meeting/" + meeting.getMeetNo()
+        );
 
         return meeting.getMeetNo();
     }

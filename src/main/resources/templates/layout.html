@@ -1,4 +1,3 @@
-<!-- templates/layout.html -->
 <!DOCTYPE html>
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -31,9 +30,7 @@
             --topbar-h:64px;
             --footer-h:76px;
             --radius:14px;
-
-            /* ✅ 추가: "각지게" 라운드 값 */
-            --radius-sq: 10px;    /* 검색바/버튼 라운드 */
+            --radius-sq: 10px;
         }
 
         *{box-sizing:border-box}
@@ -111,15 +108,13 @@
             justify-content:flex-start;
         }
 
-        /* ✅ 검색바: 둥근 pill -> 각진 라운드 */
         .search{
             width:min(520px, 100%);
             margin-left:10px;
             display:flex;
             align-items:center;
             background:#fff;
-
-            border-radius: var(--radius-sq);              /* ✅ 변경 */
+            border-radius: var(--radius-sq);
             padding:6px 10px;
             gap:8px;
             box-shadow:0 6px 16px rgba(0,0,0,.14);
@@ -127,8 +122,7 @@
         .search .scope{
             border:0;
             background:#f3f4f6;
-
-            border-radius: 8px;                          /* ✅ 변경 */
+            border-radius: 8px;
             padding:7px 10px;
             font-size:12px;
             color:#374151;
@@ -161,13 +155,22 @@
             place-items:center;
             position:relative;
         }
+
+        /* ✅ 수정: 알림 배지 숫자용 스타일 */
         .badge{
             position:absolute;
-            right:6px; top:6px;
-            width:9px;height:9px;
-            background:#ef4444;
-            border-radius:50%;
+            right:2px; top:2px;
+            min-width:16px; height:16px;
+            background:var(--danger);
+            color: #fff;
+            border-radius:999px;
             border:2px solid var(--primary);
+            font-size: 10px;
+            font-weight: 800;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
         }
 
         .avatar{
@@ -197,28 +200,84 @@
         }
         .avatar-fallback svg{ width:18px; height:18px; opacity:.95; }
 
-        /* ✅ 로그아웃 버튼: 둥근 pill -> 각진 라운드 */
         .logout{
             border:0;
-            border-radius: var(--radius-sq);              /* ✅ 변경 */
+            border-radius: var(--radius-sq);
             padding:10px 14px;
             background:rgba(255,255,255,.16);
             color:#fff;
             cursor:pointer;
             font-weight:700;
         }
-        .logout:hover{
-            background:rgba(255,255,255,.22);
+        .logout:hover{ background:rgba(255,255,255,.22); }
+
+        /* ====== 알림 전용 패널 & 토스트 스타일 추가 ====== */
+        .noti-panel {
+            position: fixed;
+            right: 18px;
+            top: 70px;
+            width: 320px; /* 사이즈 조정 반영 */
+            height: 450px; /* 사이즈 조정 반영 */
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: none;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        .noti-panel.open { display: flex; }
+        .noti-head {
+            padding: 14px 18px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 800;
         }
 
-        /* ====== 본문 ====== */
+        /* ✅ 추가: 알림 센터 제목 옆 버튼 정렬용 */
+        .noti-head-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ✅ 추가: 모두 읽기 버튼 스타일 */
+        .read-all-btn {
+            font-size: 11px;
+            font-weight: 800;
+            color: #3b82f6;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .read-all-btn:hover { background: #dbeafe; }
+
+        .noti-body { flex: 1; overflow: hidden; }
+        .noti-iframe { width: 100%; height: 100%; border: none; }
+        .noti-close-btn { border:0; background:transparent; cursor:pointer; font-size:20px; color:#6b7280; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast {
+            background: #fff; border-left: 4px solid var(--primary); box-shadow: var(--shadow);
+            padding: 12px 20px; margin-bottom: 10px; border-radius: 8px; font-size: 14px;
+            font-weight: 600; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ====== 기존 본문 구조 ====== */
         .body{
             display:grid;
             grid-template-columns: var(--sidebar-w) 1fr;
             min-height: calc(100vh - var(--topbar-h));
         }
 
-        /* ====== 메뉴바(아이콘바) ====== */
         .iconbar{
             width:var(--sidebar-w);
             background:#fff;
@@ -228,7 +287,6 @@
             flex-direction:column;
             align-items:stretch;
             gap:6px;
-
             overflow:visible;
             position:relative;
             z-index:40;
@@ -254,18 +312,13 @@
             width:26px; height:26px;
             border-radius:8px;
             background:transparent;
-            box-shadow:none;
             display:grid;
             place-items:center;
             font-weight:900;
-            line-height:1;
             font-size:20px;
             color:var(--text);
         }
 
-        .nav-item.active{
-            background:transparent;
-        }
         .nav-item.active::before{
             content:"";
             position:absolute;
@@ -278,7 +331,6 @@
             background:var(--primary);
         }
 
-        /* ✅ hover 툴팁 */
         .nav-item::after{
             content: attr(data-tip);
             position:absolute;
@@ -313,143 +365,28 @@
             border:0;
         }
 
-        .content-wrap{
-            padding:22px 26px;
-            position:relative;
-        }
-        .content-surface{
-            min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px);
-        }
+        .content-wrap{ padding:22px 26px; position:relative; }
+        .content-surface{ min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px); }
+        .content-wrap:has(.page-with-subbar){ padding: 0; }
 
-        /* ✅ subbar가 있는 페이지는 "도킹" 느낌으로: 좌우 padding 제거 */
-        .content-wrap:has(.page-with-subbar){
-            padding: 0;
-        }
-
-        /* ====== 하단 푸터 ====== */
-        .footer{
-            background:#fff;
-            border-top:1px solid var(--line);
-            padding:14px 18px;
-        }
-        .footer-inner{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:16px;
-            flex-wrap:wrap;
-        }
-        .banners{
-            display:flex;
-            align-items:center;
-            gap:14px;
-            flex-wrap:wrap;
-            margin-left:70px;
-        }
-        .banner-btn{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            width: min(240px);
-            height:64px;
-            padding:6px;
-            background:#fff;
-            border:1px solid #d1d5db;
-            border-radius:18px;
-            box-shadow:0 8px 18px rgba(0,0,0,.06);
-            text-decoration:none;
-            transition:transform .15s ease, box-shadow .15s ease;
-        }
-        .banner-btn:hover{
-            transform:translateY(-1px);
-            box-shadow:0 12px 24px rgba(0,0,0,.10);
-        }
-        .banner-img{
-            width:100%;
-            height:100%;
-            object-fit:contain;
-            display:block;
-            border-radius:14px;
-        }
-        .footer-links{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            color:var(--muted);
-            font-size:12px;
-            flex-wrap:wrap;
-        }
-        .footer-links a{
-            color:var(--muted);
-            text-decoration:none;
-        }
+        .footer{ background:#fff; border-top:1px solid var(--line); padding:14px 18px; }
+        .footer-inner{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .banners{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-left:70px; }
+        .banner-btn{ display:inline-flex; align-items:center; justify-content:center; width: min(240px); height:64px; padding:6px; background:#fff; border:1px solid #d1d5db; border-radius:18px; box-shadow:0 8px 18px rgba(0,0,0,.06); text-decoration:none; transition:transform .15s ease, box-shadow .15s ease; }
+        .banner-btn:hover{ transform:translateY(-1px); box-shadow:0 12px 24px rgba(0,0,0,.10); }
+        .banner-img{ width:100%; height:100%; object-fit:contain; display:block; border-radius:14px; }
+        .footer-links{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; flex-wrap:wrap; }
+        .footer-links a{ color:var(--muted); text-decoration:none; }
         .footer-links a:hover{text-decoration:underline;}
 
         /* ====== 챗봇 ====== */
-        .chat-fab{
-            position:fixed;
-            right:18px;
-            bottom:18px;
-            width:52px;height:52px;
-            border-radius:999px;
-            border:0;
-            background:#e8f0ff;
-            color:var(--primary);
-            box-shadow:var(--shadow);
-            cursor:pointer;
-            display:grid;
-            place-items:center;
-            z-index:50;
-        }
-        /* layout.html의 스타일 영역 수정 */
-        .chat-panel {
-            position: fixed;
-            right: 18px;
-            bottom: 80px;
-            width: 350px; /* 기존 320px에서 약간 넓게 조정 추천 */
-            height: 500px; /* 기존 420px에서 높게 조정 추천 */
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            display: none;
-            z-index: 50;
-            /* ✅ 추가: 유연한 높이 관리를 위해 flex 설정 */
-            flex-direction: column;
-        }
-
-        .chat-panel.open { display: flex; } /* block 대신 flex로 변경 */
-
-        .chat-head {
-            padding: 12px 14px;
-            background: #f8fafc;
-            border-bottom: 1px solid var(--line);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-weight: 800;
-            flex-shrink: 0; /* 헤더 크기 고정 */
-        }
-
-        .chat-body {
-            flex: 1; /* 남은 영역 전체 차지 */
-            padding: 0 !important; /* ✅ 중요: iframe이 꽉 차도록 패딩 제거 */
-            overflow: hidden;
-        }
-
-        .chat-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .chat-close{
-            border:0;
-            background:transparent;
-            cursor:pointer;
-            font-size:18px;
-            color:#6b7280;
-        }
+        .chat-fab{ position:fixed; right:18px; bottom:18px; width:52px;height:52px; border-radius:999px; border:0; background:#e8f0ff; color:var(--primary); box-shadow:var(--shadow); cursor:pointer; display:grid; place-items:center; z-index:50; }
+        .chat-panel { position: fixed; right: 18px; bottom: 80px; width: 350px; height: 500px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; display: none; z-index: 50; flex-direction: column; }
+        .chat-panel.open { display: flex; }
+        .chat-head { padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; font-weight: 800; flex-shrink: 0; }
+        .chat-body { flex: 1; padding: 0 !important; overflow: hidden; }
+        .chat-iframe { width: 100%; height: 100%; border: none; }
+        .chat-close{ border:0; background:transparent; cursor:pointer; font-size:18px; color:#6b7280; }
 
         @media (max-width: 860px){
             .topbar-left,.topbar-right{min-width:auto}
@@ -457,114 +394,18 @@
             .brand a{font-size:18px;}
         }
 
-        /* ====== 서브 사이드바(관리자 메뉴) - "메뉴바에 붙는" 도킹 스타일 ====== */
-        .page-with-subbar{
-            display:grid;
-            grid-template-columns: 220px 1fr;
-            gap:0;
-            align-items: stretch;
-            min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px);
-        }
+        /* ====== 서브 사이드바 ====== */
+        .page-with-subbar{ display:grid; grid-template-columns: 220px 1fr; gap:0; align-items: stretch; min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px); transition: grid-template-columns .18s ease; }
+        .subbar{ height:100%; background: rgba(59,130,246,.08); border-right: 1px solid rgba(59,130,246,.14); box-shadow: 10px 0 24px rgba(17,24,39,.10); overflow:hidden; transition: opacity .18s ease; }
+        .subbar-title{ font-weight:700; font-size:12px; color: rgba(31,41,55,.72); padding: 12px 14px 10px; border-bottom: 1px solid rgba(59,130,246,.14); background: rgba(255,255,255,.30); }
+        .subbar-nav{ display:flex; flex-direction:column; padding: 10px 0; }
+        .subbar-item{ position:relative; display:flex; align-items:center; height:44px; padding: 0 14px 0 20px; text-decoration:none; font-size:13px; font-weight:600; color: var(--primary2); transition: background .12s ease, color .12s ease; }
+        .subbar-item:hover{ background: rgba(59,130,246,.08); }
+        .subbar-item.active{ background: rgba(59,130,246,.14); color:#1d4ed8; }
+        .subbar-item.active::before{ content:""; position:absolute; left:10px; top:50%; transform:translateY(-50%); width:3px; height:26px; border-radius:999px; background: var(--primary); }
 
-        .page-with-subbar > :nth-child(2){
-            padding: 0 26px;
-        }
-
-        .subbar{
-            height:100%;
-            align-self:stretch;
-            background: rgba(59,130,246,.08);
-            border-right: 1px solid rgba(59,130,246,.14);
-            border-top: 0;
-            border-left: 0;
-            border-bottom: 0;
-            border-radius: 0;
-            box-shadow: 10px 0 24px rgba(17,24,39,.10);
-            overflow:hidden;
-        }
-
-        .subbar-title{
-            font-weight:700;
-            font-size:12px;
-            color: rgba(31,41,55,.72);
-            padding: 12px 14px 10px;
-            margin:0;
-            border-bottom: 1px solid rgba(59,130,246,.14);
-            background: rgba(255,255,255,.30);
-        }
-
-        .subbar-nav{
-            display:flex;
-            flex-direction:column;
-            gap:0;
-            padding: 10px 0;
-        }
-
-        .subbar-item{
-            position:relative;
-            display:flex;
-            align-items:center;
-            height:44px;
-            padding: 0 14px 0 20px;
-            border-radius: 0;
-            text-decoration:none;
-            font-size:13px;
-            font-weight:600;
-            color: var(--primary2);
-            transition: background .12s ease, color .12s ease;
-        }
-
-        .subbar-item:hover{
-            background: rgba(59,130,246,.08);
-        }
-
-        .subbar-item.active{
-            background: rgba(59,130,246,.14);
-            color:#1d4ed8;
-        }
-
-        .subbar-item.active::before{
-            content:"";
-            position:absolute;
-            left:10px;
-            top:50%;
-            transform:translateY(-50%);
-            width:3px;
-            height:26px;
-            border-radius:999px;
-            background: var(--primary);
-        }
-
-        /* ✅ content padding은 nth-child보다 안전하게: "subbar 다음 요소" */
-        .page-with-subbar > .subbar + *{
-            padding: 22px 26px;
-            min-width: 0;
-        }
-
-        /* ✅ 접힘 상태: 첫 컬럼을 0으로, subbar는 grid에 남겨둔 채로 숨김 */
-        html.subbar-collapsed .page-with-subbar{
-            grid-template-columns: 0 minmax(0, 1fr);
-        }
-
-        /* ❗️display:none 금지 (grid에서 빠지면 콘텐츠가 0폭 컬럼으로 들어감) */
-        html.subbar-collapsed .page-with-subbar > .subbar{
-            overflow: hidden;
-            opacity: 0;
-            pointer-events: none;
-
-            /* 접힌 상태에서 남는 선/그림자 제거 */
-            border-right: 0;
-            box-shadow: none;
-        }
-
-        /* (선택) 애니메이션 주고 싶으면 */
-        .page-with-subbar{
-            transition: grid-template-columns .18s ease;
-        }
-        .subbar{
-            transition: opacity .18s ease;
-        }
-
+        html.subbar-collapsed .page-with-subbar{ grid-template-columns: 0 minmax(0, 1fr); }
+        html.subbar-collapsed .page-with-subbar > .subbar{ overflow: hidden; opacity: 0; pointer-events: none; border-right: 0; box-shadow: none; }
     </style>
 
     <th:block layout:fragment="pageStyles"></th:block>
@@ -601,20 +442,18 @@
                     <option value="label">Label</option>
                     <option value="all">All</option>
                 </select>
-
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <circle cx="11" cy="11" r="7" stroke-width="2"/>
                     <path d="M20 20L17 17" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-
                 <input type="text" name="q" placeholder="Search" autocomplete="off"/>
             </form>
         </div>
 
         <div class="topbar-right">
-            <button class="icon-btn" type="button" aria-label="알림">
-                <span class="badge" aria-hidden="true"></span>
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" aria-hidden="true">
+            <button class="icon-btn" type="button" aria-label="알림" onclick="toggleNoti()">
+                <span id="notiBadge" class="badge" aria-hidden="true">0</span>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
                     <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" stroke-width="2" stroke-linecap="round"/>
                     <path d="M13.73 21a2 2 0 01-3.46 0" stroke-width="2" stroke-linecap="round"/>
                 </svg>
@@ -691,7 +530,7 @@
                 <span class="sr-only">근태</span>
             </a>
 
-            <a class="nav-item" th:href="@{/org}" href="/org" data-tip="조직도" aria-label="조직도">
+            <a class="nav-item" th:href="@{/org-chart}" href="/org-chart" data-tip="조직도" aria-label="조직도">
                 <div class="nav-ico">👥</div>
                 <span class="sr-only">조직도</span>
             </a>
@@ -709,9 +548,6 @@
         <main class="content-wrap">
             <div class="content-surface" layout:fragment="content">
                 <h2 style="margin:0 0 8px 0;">콘텐츠 영역</h2>
-                <p style="margin:0;color:var(--muted);">
-                    각 기능 페이지에서 <code>layout:fragment="content"</code> 로 이 영역을 덮어씌웁니다.
-                </p>
             </div>
         </main>
     </div>
@@ -719,62 +555,132 @@
     <footer class="footer">
         <div class="footer-inner">
             <div class="banners">
-                <a class="banner-btn" href="https://www.nts.go.kr" target="_blank" rel="noopener" aria-label="국세청">
-                    <img class="banner-img"
-                         th:src="@{/images/nts.png}" src="/images/nts.png"
-                         alt="국세청 배너" />
-                </a>
-
-                <a class="banner-btn" href="https://www.gov.kr" target="_blank" rel="noopener" aria-label="정부24">
-                    <img class="banner-img"
-                         th:src="@{/images/gov24.png}" src="/images/gov24.png"
-                         alt="정부24 배너" />
-                </a>
+                <a class="banner-btn" href="https://www.nts.go.kr" target="_blank" rel="noopener"><img class="banner-img" th:src="@{/images/nts.png}" src="/images/nts.png" alt="국세청" /></a>
+                <a class="banner-btn" href="https://www.gov.kr" target="_blank" rel="noopener"><img class="banner-img" th:src="@{/images/gov24.png}" src="/images/gov24.png" alt="정부24" /></a>
             </div>
-
             <div class="footer-links">
-                <a th:href="@{/policy/privacy}" href="/policy/privacy">개인정보 처리방침</a>
-                <span>·</span>
-                <span>버전: <strong>1.0.0</strong></span>
-                <span>·</span>
+                <a th:href="@{/policy/privacy}" href="/policy/privacy">개인정보 처리방침</a><span>·</span>
+                <span>버전: <strong>1.0.0</strong></span><span>·</span>
                 <a th:href="@{/policy/terms}" href="/policy/terms">이용약관</a>
             </div>
         </div>
     </footer>
-
 </div>
 
-<div class="chat-panel" id="chatPanel" aria-label="챗봇">
+<div class="noti-panel" id="notiPanel">
+    <div class="noti-head">
+        <div class="noti-head-left">
+            <span>알림 센터</span>
+            <button type="button" class="read-all-btn" onclick="readAllInIframe()">모두 읽기</button>
+        </div>
+        <button class="noti-close-btn" type="button" onclick="toggleNoti(false)">×</button>
+    </div>
+    <div class="noti-body">
+        <iframe src="/notifications" class="noti-iframe" id="notiIframe" scrolling="no"></iframe>
+    </div>
+</div>
+
+<div class="chat-panel" id="chatPanel">
     <div class="chat-head">
         <span>비즈포탈 메신저</span>
-        <button class="chat-close" type="button" aria-label="닫기" onclick="toggleChat(false)">×</button>
+        <button class="chat-close" type="button" onclick="toggleChat(false)">×</button>
     </div>
     <div class="chat-body">
         <iframe src="/chat" class="chat-iframe" id="chatIframe"></iframe>
     </div>
 </div>
 
-<button class="chat-fab" type="button" aria-label="챗봇 열기" onclick="toggleChat()">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" aria-hidden="true">
-        <path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin="round"/>
-    </svg>
+<button class="chat-fab" type="button" onclick="toggleChat()">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin=\"round\"/></svg>
 </button>
 
 <script>
+    /* ✅ 1. 알림 관련 로직 */
+    function updateNotiBadge(count) {
+        const badge = document.getElementById('notiBadge');
+        if (!badge) return;
+        if (count > 0) {
+            badge.innerText = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function showNotiToast(message) {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span>🔔</span> <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 500);
+        }, 4000);
+    }
+
+    function toggleNoti(force) {
+        const panel = document.getElementById('notiPanel');
+        const isVisible = typeof force === 'boolean' ? force : !panel.classList.contains('open');
+        panel.classList.toggle('open', isVisible);
+        if (isVisible) {
+            toggleChat(false); // 채팅창 열려있으면 닫기
+            document.getElementById('notiIframe').contentWindow.location.reload();
+        }
+    }
+
+    /* ✅ 추가: Iframe 내부의 모두 읽기 함수 호출 */
+    async function readAllInIframe() {
+        const iframe = document.getElementById('notiIframe');
+        if (iframe && iframe.contentWindow.readAllNotifications) {
+            await iframe.contentWindow.readAllNotifications();
+        }
+    }
+
+    async function initNotificationSystem() {
+        const empId = document.getElementById('me')?.dataset?.empNo;
+        if (!empId) return;
+
+        // 초기 미읽음 알림 개수 조회
+        try {
+            const res = await fetch('/api/v1/notifications/unread-count');
+            if (res.ok) {
+                const result = await res.json();
+                updateNotiBadge(result.data);
+            }
+        } catch (e) { console.error("초기 알림 카운트 로드 실패", e); }
+
+        // SSE 연결 (기존 챗봇 채널 활용)
+        const eventSource = new EventSource('/api/v1/chatbot/stream');
+
+        eventSource.addEventListener('notification', (e) => {
+            const data = JSON.parse(e.data);
+            updateNotiBadge(data.unreadCount);
+            showNotiToast(data.notification.content);
+        });
+
+        eventSource.onerror = () => { console.warn("SSE 연결 끊김, 재연결 시도 중..."); };
+    }
+
+    /* ✅ 2. 기존 로직 (955줄에 있던 것들) */
     function toggleChat(force) {
         const panel = document.getElementById('chatPanel');
         const open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
         panel.classList.toggle('open', open);
+        if (open) toggleNoti(false); // 알림창 열려있으면 닫기
     }
 
     const SUBBAR_KEY = 'bizportal_subbar_collapsed';
 
     function setSubbarCollapsed(collapsed){
         document.documentElement.classList.toggle('subbar-collapsed', collapsed);
-
         const btn = document.getElementById('launcherBtn');
         if (btn) btn.setAttribute('aria-pressed', String(!collapsed));
-
         try { localStorage.setItem(SUBBAR_KEY, collapsed ? '1' : '0'); } catch (e) {}
     }
 
@@ -787,105 +693,50 @@
 
     document.getElementById('logoutForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-
         const form = e.currentTarget;
         const url = form.getAttribute('action') || '/auth/logout';
-
         const csrfParamEl = document.getElementById('csrfParam');
         const csrfHeaderEl = document.getElementById('csrfHeader');
-
         const headers = { 'Accept': 'application/json' };
-        if (csrfParamEl && csrfHeaderEl) {
-            headers[csrfHeaderEl.value] = csrfParamEl.value;
-        }
-
-        try {
-            await fetch(url, {
-                method: 'POST',
-                credentials: 'include',
-                headers
-            });
-        } finally {
-            location.href = '/auth/employee/login';
-        }
+        if (csrfParamEl && csrfHeaderEl) headers[csrfHeaderEl.value] = csrfParamEl.value;
+        try { await fetch(url, { method: 'POST', credentials: 'include', headers }); }
+        finally { location.href = '/auth/employee/login'; }
     });
 
     async function loadProfilePhoto() {
         const meEl = document.getElementById('me');
         const empNo = meEl?.dataset?.empNo;
         if (!empNo) return;
-
         const BASE = '/api/v1/attachments';
-
         const img = document.getElementById('profileImg');
         const fallback = document.getElementById('profileFallback');
         if (!img || !fallback) return;
 
-        function showFallback() {
-            img.style.display = 'none';
-            fallback.style.display = 'grid';
-        }
+        function showFallback() { img.style.display = 'none'; fallback.style.display = 'grid'; }
         function showImg(url) {
-            img.onload = () => {
-                img.style.display = 'block';
-                fallback.style.display = 'none';
-            };
+            img.onload = () => { img.style.display = 'block'; fallback.style.display = 'none'; };
             img.onerror = () => showFallback();
             img.src = url;
         }
-
         try {
-            const listRes = await fetch(`${BASE}?domain=EMPLOYEE&entityId=${encodeURIComponent(empNo)}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: { 'Accept': 'application/json' }
-            });
+            const listRes = await fetch(`${BASE}?domain=EMPLOYEE&entityId=${encodeURIComponent(empNo)}`, { credentials: 'include' });
             if (!listRes.ok) return showFallback();
-
             const listJson = await listRes.json();
-            const items = Array.isArray(listJson?.data) ? listJson.data : [];
+            const items = listJson?.data || [];
             if (!items.length) return showFallback();
-
-            const getId = (it) => it?.attachmentId ?? it?.id ?? it?.attachmentNo ?? it?.attachment_id;
-            const main = items.find(it => it?.isMain === true || it?.main === true);
-            let pickedId = getId(main);
-
-            if (!pickedId) {
-                const candidates = items.map(getId).filter(v => v !== undefined && v !== null);
-                if (!candidates.length) return showFallback();
-                pickedId = candidates
-                    .map(v => (typeof v === 'string' ? Number(v) : v))
-                    .filter(v => !Number.isNaN(v))
-                    .sort((a,b)=>b-a)[0];
-            }
-
+            const main = items.find(it => it.isMain === true);
+            const pickedId = main ? (main.attachmentId || main.id) : (items[0].attachmentId || items[0].id);
             if (!pickedId) return showFallback();
-
-            const previewRes = await fetch(`${BASE}/${pickedId}/preview-url`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: { 'Accept': 'application/json' }
-            });
+            const previewRes = await fetch(`${BASE}/${pickedId}/preview-url`, { credentials: 'include' });
             if (!previewRes.ok) return showFallback();
-
             const previewJson = await previewRes.json();
-            const url =
-                previewJson?.data?.url ||
-                previewJson?.data?.presignedUrl ||
-                previewJson?.data?.previewUrl;
-
-            if (!url) return showFallback();
-
-            showImg(url);
-
-        } catch (e) {
-            showFallback();
-        }
+            const url = previewJson?.data?.url || previewJson?.data?.previewUrl;
+            if (url) showImg(url); else showFallback();
+        } catch (e) { showFallback(); }
     }
 
     function normalizePath(p){
         if (!p) return '/';
-        // trailing slash 제거(단, 루트는 제외)
         return (p.length > 1 && p.endsWith('/')) ? p.slice(0, -1) : p;
     }
 
@@ -898,55 +749,29 @@
     function setActiveIconbarMenu() {
         const currentPath = normalizePath(window.location.pathname);
         const links = Array.from(document.querySelectorAll('.iconbar a.nav-item'));
-        if (!links.length) return;
-
         links.forEach(a => a.classList.remove('active'));
-
         let best = null;
         let bestLen = -1;
-
         links.forEach(a => {
             const candidates = [];
-
-            // 1) 기본 href 경로
-            try {
-                const hrefPath = new URL(a.href, window.location.origin).pathname;
-                candidates.push(hrefPath);
-            } catch (e) {}
-
-            // 2) data-active-prefix 경로(여러 개면 콤마로)
+            try { candidates.push(new URL(a.href, window.location.origin).pathname); } catch (e) {}
             const pref = a.getAttribute('data-active-prefix');
-            if (pref) {
-                pref.split(',')
-                    .map(s => s.trim())
-                    .filter(Boolean)
-                    .forEach(p => candidates.push(p));
-            }
-
-            // 후보들 중 가장 “긴” 매칭이 이기게(더 구체적인 메뉴 우선)
+            if (pref) pref.split(',').forEach(p => candidates.push(p.trim()));
             candidates.forEach(c => {
                 if (pathMatches(currentPath, c)) {
                     const len = normalizePath(c).length;
-                    if (len > bestLen) {
-                        bestLen = len;
-                        best = a;
-                    }
+                    if (len > bestLen) { bestLen = len; best = a; }
                 }
             });
         });
-
         if (best) best.classList.add('active');
     }
 
-
     window.addEventListener('DOMContentLoaded', () => {
-        try {
-            const saved = localStorage.getItem(SUBBAR_KEY);
-            if (saved === '1') setSubbarCollapsed(true);
-        } catch (e) {}
-
+        try { if (localStorage.getItem(SUBBAR_KEY) === '1') setSubbarCollapsed(true); } catch (e) {}
         loadProfilePhoto();
         setActiveIconbarMenu();
+        initNotificationSystem(); // 실시간 시스템 시작
     });
 </script>
 

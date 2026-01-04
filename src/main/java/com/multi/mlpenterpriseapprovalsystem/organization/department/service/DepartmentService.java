@@ -130,4 +130,30 @@ public class DepartmentService {
 
 
     }
+
+    //조직도 조회
+    @Transactional(readOnly = true)
+    public List<ResDepartmentDto> getDepartmentsOrderByName(String comId) {
+
+        // ✅ 조직도 전용: 부서명 오름차순
+        List<Department> departments =
+                departmentRepository.findAllByCompany_ComIdOrderByDepNameAsc(comId);
+
+        if (departments.isEmpty()) return List.of();
+
+        Map<String, Long> countMap = employeeRepository.countGroupByDepId(comId).stream()
+                .collect(Collectors.toMap(
+                        EmployeeRepository.DepCount::getDepId,
+                        EmployeeRepository.DepCount::getCnt
+                ));
+
+        return departments.stream()
+                .map(d -> ResDepartmentDto.builder()
+                        .depId(d.getDepId())
+                        .depName(d.getDepName())
+                        .depNo(d.getDepNo())
+                        .empCount(countMap.getOrDefault(d.getDepId(), 0L))
+                        .build())
+                .toList();
+    }
 }

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { margin: 0; font-family: system-ui; background: #fff; overflow-x: hidden; }
+        body::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+
+        /* ✅ 탭 메뉴: 가로 스크롤 및 텍스트 겹침 방지 */
+        .noti-tabs {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid rgba(17,24,39,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 0 5px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -ms-overflow-style: none; /* IE, Edge */
+            scrollbar-width: none;    /* Firefox */
+        }
+        .noti-tabs::-webkit-scrollbar { display: none; } /* Chrome, Safari */
+
+        .tab-item {
+            padding: 12px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: 0.2s;
+            flex-shrink: 0; /* 폭이 좁아져도 찌그러지지 않음 */
+        }
+        .tab-item.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+        /* ✅ 알림 목록 및 카드 디자인 (제공된 이미지 반영) */
+        .noti-list { height: calc(100vh - 45px); overflow-y: auto; }
+        .noti-list::-webkit-scrollbar {
+            display: none; /* 목록 스크롤바도 숨김 */
+        }
+        .noti-card {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px;
+            border-bottom: 1px solid rgba(17,24,39,0.05);
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+        }
+        .noti-card:hover { background: #f9fafb; }
+        .noti-card.unread { background: #f0f7ff; }
+
+        .noti-icon {
+            width: 32px; height: 32px; border-radius: 50%; background: #fff;
+            border: 1px solid #e2e8f0; display: grid; place-items: center;
+            margin-right: 12px; flex-shrink: 0; font-size: 16px;
+        }
+
+        .noti-info { flex: 1; min-width: 0; }
+
+        /* ✅ 백엔드 title 기반 제목 (가장 강조) */
+        .noti-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 상세 내용 */
+        .noti-content { font-size: 13.5px; color: #475569; line-height: 1.5; font-weight: 500; }
+
+        /* 날짜 */
+        .noti-date { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+
+        /* 삭제 버튼 (X) */
+        .noti-close {
+            background: none; border: none; font-size: 20px; color: #cbd5e1;
+            cursor: pointer; padding: 4px; position: absolute; right: 12px; top: 14px;
+            line-height: 1;
+        }
+        .noti-close:hover { color: #ef4444; }
+
+        #sentinel { height: 20px; }
+        .empty-msg { text-align: center; padding: 60px; color: #94a3b8; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="noti-tabs">
+    <div class="tab-item active" data-type="ALL">전체</div>
+    <div class="tab-item" data-type="APPROVAL">결재</div>
+    <div class="tab-item" data-type="MAIL">메일</div>
+    <div class="tab-item" data-type="MEETING">회의</div>
+    <div class="tab-item" data-type="SCHEDULE">캘린더</div>
+    <div class="tab-item" data-type="OTHER">사내 규정</div>
+</div>
+
+<div id="notiList" class="noti-list"></div>
+<div id="sentinel"></div>
+
+<script>
+    let lastAt = null, lastId = null, isLast = false, isLoading = false, type = 'ALL';
+
+    // 아이콘은 타입별로 유지
+    const iconMap = { 'APPROVAL': 'ℹ️', 'MAIL': '📧', 'MEETING': '💬', 'SCHEDULE': '📅', 'OTHER': '📜' };
+
+    async function load() {
+        if (isLoading || isLast) return;
+        isLoading = true;
+
+        let url = `/api/v1/notifications?size=15`;
+        if (type !== 'ALL') url += `&type=${type}`;
+        if (lastAt && lastId) url += `&lastNotifiedAt=${encodeURIComponent(lastAt)}&lastNotiNo=${lastId}`;
+
+        try {
+            const res = await fetch(url);
+            const result = await res.json();
+            const items = result.data;
+
+            if (!items || !items.length) {
+                isLast = true;
+                if(!lastId) document.getElementById('notiList').innerHTML='<div class="empty-msg">알림이 없습니다.</div>';
+                return;
+            }
+
+            items.forEach(it => {
+                const card = document.createElement('div');
+                card.className = `noti-card ${it.isRead ? '' : 'unread'}`;
+                card.innerHTML = `
+                        <div class="noti-icon">${iconMap[it.type] || '🔔'}</div>
+                        <div class="noti-info" onclick="handleRead(${it.notiNo}, '${it.url}')">
+                            <div class="noti-title">${it.title}</div>
+                            <div class="noti-content">${it.content}</div>
+                            <div class="noti-date">${new Date(it.createdAt).toLocaleString()}</div>
+                        </div>
+                        <button class="noti-close" onclick="event.stopPropagation(); deleteNoti(${it.notiNo}, this)">×</button>
+                    `;
+                document.getElementById('notiList').appendChild(card);
+            });
+
+            const last = items[items.length - 1];
+            lastAt = last.createdAt;
+            lastId = last.notiNo;
+        } catch (error) {
+            console.error("데이터 로드 중 오류:", error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function handleRead(id, url) {
+        await fetch(`/api/v1/notifications/${id}/read`, { method: 'PATCH' });
+
+        if(window.parent && window.parent.initNotificationSystem) {
+            window.parent.initNotificationSystem();
+        }
+
+        window.parent.location.href = url;
+    }
+
+    // ✅ [중요] 부모 창(layout.html)에서 호출하는 함수
+    window.readAllNotifications = async function() {
+        if(!confirm("모든 알림을 읽음 처리하시겠습니까?")) return;
+        try {
+            const res = await fetch(`/api/v1/notifications/read-all`, { method: 'PATCH' });
+            if (res.ok) {
+                // 화면의 읽지 않음 처리 배경 스타일 즉시 제거
+                document.querySelectorAll('.noti-card.unread').forEach(el => el.classList.remove('unread'));
+                // 부모창의 종 모양 배지 숫자 갱신 호출
+                if(window.parent && window.parent.initNotificationSystem) {
+                    window.parent.initNotificationSystem();
+                }
+            }
+        } catch (e) { console.error("전체 읽음 처리 실패", e); }
+    };
+
+    function deleteNoti(id, btn) {
+        if(!confirm("알림을 삭제하시겠습니까?")) return;
+        fetch(`/api/v1/notifications/${id}`, { method: 'DELETE' })
+            .then(res => {
+                if(res.ok) btn.closest('.noti-card').remove();
+            });
+    }
+
+    // 무한 스크롤
+    new IntersectionObserver(e => {
+        if(e[0].isIntersecting && !isLoading && !isLast) load();
+    }, { threshold: 0.1 }).observe(document.getElementById('sentinel'));
+
+    // 탭 전환
+    document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.onclick = () => {
+            if (tab.classList.contains('active')) return;
+            document.querySelector('.tab-item.active').classList.remove('active');
+            tab.classList.add('active');
+
+            type = tab.dataset.type;
+            document.getElementById('notiList').innerHTML = '';
+            lastAt = null;
+            lastId = null;
+            isLast = false;
+            load();
+        };
+    });
+
+    load();
+</script>
+</body>
+</html>

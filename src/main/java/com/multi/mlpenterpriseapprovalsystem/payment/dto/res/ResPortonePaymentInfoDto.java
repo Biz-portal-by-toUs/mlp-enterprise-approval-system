@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.payment.dto;
+package com.multi.mlpenterpriseapprovalsystem.payment.dto.res;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.payment.domain.PaymentMethod;
