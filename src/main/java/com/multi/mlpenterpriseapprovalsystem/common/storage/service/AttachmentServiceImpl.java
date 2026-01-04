@@ -3,12 +3,16 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.cloud.domain.Folder;
 import com.multi.mlpenterpriseapprovalsystem.cloud.repository.FolderRepository;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.domain.Attachment;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.AttachmentDto;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentFileType;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentStatus;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.repository.AttachmentRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +47,7 @@ public class AttachmentServiceImpl implements AttachmentService {
     private final AttachmentRepository attachmentRepository;
     private final S3Client s3Client;
     private final FolderRepository folderRepository;
+    private final EmployeeRepository employeeRepository;
 
     @Value("${app.s3.bucket}")
     private String bucket;
@@ -102,26 +107,31 @@ public class AttachmentServiceImpl implements AttachmentService {
                 // 4-1) 잠금 걸고 전체 첨부 읽기(삭제 포함) → display_order 유니크 충돌 방지
                 List<Attachment> all = attachmentRepository.findAllByRefForUpdate(comId, domain, req.entityId());
 
-                // 4-2) ACTIVE 첨부 5개 제한
-                long activeCount = all.stream().filter(Attachment::isActive).count();
-                if (activeCount >= 5) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "첨부파일은 최대 5개까지 가능합니다.");
-                }
+                // 4-2) 도메인별 정책 분기
+                Integer displayOrder;
 
-                // 4-3) 사용할 수 있는 display_order(1~5) 찾기
-                // ⚠️ 소프트삭제가 display_order를 점유하면 재사용 불가하므로, 전체(all) 기준으로 슬롯을 피해서 배정함
-                Set<Integer> usedOrders = new HashSet<>();
-                for (Attachment a : all) {
-                    if (a.getDisplayOrder() != null) usedOrders.add(a.getDisplayOrder());
-                }
+                if (domain == AttachmentDomain.CLOUD) {
+                    // ✅ CLOUD: display_order 안 씀 (DB 체크 1~5 회피)
+                    displayOrder = null;
+                } else {
+                    // ✅ 기존 정책 유지: ACTIVE 5개 제한 + 1~5 슬롯
+                    long activeCount = all.stream().filter(Attachment::isActive).count();
+                    if (activeCount >= 5) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "첨부파일은 최대 5개까지 가능합니다.");
+                    }
 
-                Integer displayOrder = findFirstFreeSlot(usedOrders);
-                if (displayOrder == null) {
-                    // ACTIVE는 5개 미만인데도 슬롯이 없다는 건, 삭제된 row가 슬롯을 점유 중이라는 뜻
-                    throw new ResponseStatusException(
-                            HttpStatus.CONFLICT,
-                            "사용 가능한 display_order가 없습니다. (소프트삭제로 슬롯이 점유 중일 수 있음)"
-                    );
+                    Set<Integer> usedOrders = new HashSet<>();
+                    for (Attachment a : all) {
+                        if (a.getDisplayOrder() != null) usedOrders.add(a.getDisplayOrder());
+                    }
+
+                    displayOrder = findFirstFreeSlot(usedOrders);
+                    if (displayOrder == null) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "사용 가능한 display_order가 없습니다. (소프트삭제로 슬롯이 점유 중일 수 있음)"
+                        );
+                    }
                 }
 
                 // 4-4) ext 추출(선택)
@@ -248,6 +258,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         Folder toFolder = folderRepository.findByFolderNoAndComId(toFolderNo, comId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "이동 대상 폴더가 없습니다."));
+
         if (!canView(toFolder, ownerId, depNo))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이동 대상 폴더 권한이 없습니다.");
 
@@ -310,11 +321,25 @@ public class AttachmentServiceImpl implements AttachmentService {
     }
 
     private Long resolveDepNo(CustomUser user) {
-        Object v = null;
-        try { v = user.getClass().getMethod("getDepNo").invoke(user); } catch (Exception ignored) {}
-        if (v == null) { try { v = user.getClass().getMethod("getDepId").invoke(user); } catch (Exception ignored) {} }
-        if (v == null) return null;
-        if (v instanceof Number n) return n.longValue();
-        return Long.valueOf(String.valueOf(v));
+        String empId = user.getUsername();
+
+        Employee emp = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        if (emp.getDepartment() == null || emp.getDepartment().getDepNo() == null) {
+            throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
+        }
+
+        return emp.getDepartment().getDepNo();
     }
+
+    private int nextDisplayOrderForCloud(List<Attachment> all) {
+        int max = 0;
+        for (Attachment a : all) {
+            Integer o = a.getDisplayOrder();
+            if (o != null && o > max) max = o;
+        }
+        return max + 1;
+    }
+
 }
