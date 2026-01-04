@@ -102,6 +102,12 @@ public class Document extends BaseEntity {
     @JoinColumn(name = "atte_no")
     private Attendance attendance; // 이 문서가 생성하거나 수정한 근태
 
+    // 재상신여부 초기화
+    public void clearResubmissionLink() {
+        this.isResubmitted = false;      // 다시 재상신 가능한 상태로 변경
+        this.resubmittedFor = null;      // 연결된 새 문서 정보 제거
+    }
+
     // 근태와 문서 연결
     public void linkAttendance(Attendance attendance) {
         this.attendance = attendance;
