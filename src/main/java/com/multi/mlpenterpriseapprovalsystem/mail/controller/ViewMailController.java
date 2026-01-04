@@ -26,8 +26,8 @@ public class ViewMailController {
     // 받은 메일함
     @GetMapping("/received")
     public String received() {
-        // templates/mail/recieved.html
-        return "mail/recieved";
+        // templates/mail/received.html
+        return "received";
     }
 
     // 보낸 메일함
@@ -49,5 +49,11 @@ public class ViewMailController {
     public String trash() {
         // templates/mail/trash.html
         return "mail/trash";
+    }
+
+    // 상세
+    @GetMapping("/{mailId}")
+    public String detail(@PathVariable String mailId) {
+        return "mail/detail";
     }
 }

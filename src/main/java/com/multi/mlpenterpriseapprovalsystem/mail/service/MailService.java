@@ -28,6 +28,8 @@ public interface MailService {
 
     ResMailDetailDto getDetail(String mailId, String viewerEmpId);
 
+    Page<ResMailListDto> getTrash(String userEmpId, Pageable pageable);
+
     void markAsRead(String mailId, String userEmpId);
 
     void moveToTrash(String mailId, String userEmpId);
