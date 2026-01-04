@@ -25,6 +25,7 @@
             --danger: #ef4444;
             --success: #10b981;
             --warn: #f59e0b;
+            --gray: #9ca3af;
 
             --sidebar-w:72px;
             --topbar-h:64px;
@@ -144,6 +145,7 @@
             min-width:220px;
             justify-content:flex-end;
         }
+
         .icon-btn{
             width:38px;height:38px;
             border:0;
@@ -210,6 +212,100 @@
             font-weight:700;
         }
         .logout:hover{ background:rgba(255,255,255,.22); }
+
+        /* ====== ✅ 메시지 상태 드롭다운 (각지게) ====== */
+        .status-dd{
+            position: relative;
+        }
+        .status-btn{
+            height:38px;
+            border:0;
+            border-radius: 10px;           /* ✅ 더 각지게 */
+            padding:0 12px;
+            background: rgba(255,255,255,.18);
+            color:#fff;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            box-shadow:none;
+            font-weight:900;
+        }
+        .status-btn:hover{ background: rgba(255,255,255,.24); }
+        .status-dot{
+            width:12px;height:12px;
+            border-radius: 50%;            /* ✅ 원형 말고 살짝 각진 점 */
+            background: rgba(255,255,255,.8);
+            box-shadow: 0 0 0 3px rgba(255,255,255,.08);
+            flex:0 0 auto;
+        }
+        .status-label{
+            font-size: 13px;
+            letter-spacing: .2px;
+            line-height:1;
+            white-space:nowrap;
+        }
+        .status-caret{
+            width:14px;height:14px;
+            opacity:.95;
+            flex:0 0 auto;
+        }
+
+        .status-menu{
+            position:absolute;
+            right:0;
+            top:44px;
+            width: 190px;
+            background:#fff;
+            color:var(--text);
+            border: 1px solid rgba(17,24,39,.10);
+            border-radius: 12px;          /* ✅ 패널도 각지게 */
+            box-shadow: var(--shadow2);
+            overflow:hidden;
+            display:none;
+            z-index: 1200;
+        }
+        .status-menu.open{ display:block; }
+
+        .status-item{
+            width:100%;
+            border:0;
+            background:#fff;
+            cursor:pointer;
+            padding: 10px 12px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            font-weight: 800;
+        }
+        .status-item:hover{ background:#f8fafc; }
+        .status-item:disabled{
+            cursor:not-allowed;
+            opacity:.55;
+            background:#fff;
+        }
+        .status-left{
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        .status-dot.sm{
+            width:10px;height:10px;
+            border-radius: 50%;
+            box-shadow:none;
+        }
+        .status-code{
+            font-size:11px;
+            color: var(--muted);
+            font-weight:800;
+        }
+
+        .dot-C{ background: var(--success) !important; }
+        .dot-M{ background: var(--gray) !important; }
+        .dot-D{ background: var(--warn) !important; }
+        .dot-X{ background: var(--danger) !important; }
+        .dot-H{ background: #64748b !important; } /* 출근 안함(비활성/강제) */
 
         /* ====== 알림 전용 패널 & 토스트 스타일 추가 ====== */
         .noti-panel {
@@ -512,6 +608,8 @@
             .topbar-left,.topbar-right{min-width:auto}
             .search{box-shadow:none; width:min(420px, 100%); margin-left:8px;}
             .brand a{font-size:18px;}
+            .status-btn{ padding:0 10px; }
+            .status-label{ display:none; } /* 좁으면 글자 숨김 */
         }
 
         /* ====== 서브 사이드바 ====== */
@@ -576,7 +674,41 @@
             </form>
         </div>
 
+        <!-- ✅ 순서 변경: (msgStat) (알림) (마이페이지) (로그아웃) -->
         <div class="topbar-right">
+
+            <!-- ✅ 메시지 상태 드롭다운 -->
+            <div class="status-dd" id="statusDd">
+                <button class="status-btn" type="button" id="statusBtn"
+                        aria-haspopup="menu" aria-expanded="false" onclick="toggleStatusMenu()">
+                    <span class="status-dot dot-C" id="statusDot"></span>
+                    <span class="status-label" id="statusLabel">근무 중</span>
+                    <svg class="status-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+
+                <div class="status-menu" id="statusMenu" role="menu" aria-label="메시지 상태">
+                    <button class="status-item" type="button" role="menuitem" onclick="setMsgStat('C')">
+                        <span class="status-left"><span class="status-dot sm dot-C"></span>근무 중</span>
+                        <span class="status-code">C</span>
+                    </button>
+                    <button class="status-item" type="button" role="menuitem" onclick="setMsgStat('M')">
+                        <span class="status-left"><span class="status-dot sm dot-M"></span>회의 중</span>
+                        <span class="status-code">M</span>
+                    </button>
+                    <button class="status-item" type="button" role="menuitem" onclick="setMsgStat('D')">
+                        <span class="status-left"><span class="status-dot sm dot-D"></span>업무 집중</span>
+                        <span class="status-code">D</span>
+                    </button>
+                    <button class="status-item" type="button" role="menuitem" onclick="setMsgStat('X')">
+                        <span class="status-left"><span class="status-dot sm dot-X"></span>자리 비움</span>
+                        <span class="status-code">X</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 알림 -->
             <button class="icon-btn" type="button" aria-label="알림" onclick="toggleNoti()">
                 <span id="notiBadge" class="badge" aria-hidden="true">0</span>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
@@ -585,7 +717,7 @@
                 </svg>
             </button>
 
-            <!-- ✅ 아바타 클릭 시 프로필 패널 토글 -->
+            <!-- 마이페이지 -->
             <button class="avatar" type="button" id="profileBtn" title="계정"
                     aria-haspopup="dialog" aria-expanded="false"
                     onclick="toggleProfile()">
@@ -598,6 +730,7 @@
                 </span>
             </button>
 
+            <!-- 로그아웃 -->
             <form id="logoutForm" th:action="@{/auth/logout}" method="post" style="display:inline;">
                 <input type="hidden" id="csrfParam" th:if="${_csrf != null}"
                        th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -716,7 +849,6 @@
         <div class="profile-name" id="profileName">내 계정</div>
         <div class="profile-email" id="profileEmail"></div>
 
-        <!-- ✅ 추가: 간단 정보 (이름/부서/직급/이메일/사내번호) -->
         <div class="profile-mini" id="profileMini">
             <div class="mini-row">
                 <span class="mini-k">부서</span>
@@ -770,6 +902,16 @@
 </button>
 
 <script>
+    /* ====== ✅ 공통: CSRF 헤더 얻기 ====== */
+    function getCsrfHeader(){
+        const csrfParamEl = document.getElementById('csrfParam');
+        const csrfHeaderEl = document.getElementById('csrfHeader');
+        if (csrfParamEl && csrfHeaderEl) {
+            return { [csrfHeaderEl.value]: csrfParamEl.value };
+        }
+        return {};
+    }
+
     /* ✅ 1. 알림 관련 로직 */
     function updateNotiBadge(count) {
         const badge = document.getElementById('notiBadge');
@@ -806,6 +948,7 @@
         if (isVisible) {
             toggleChat(false);
             toggleProfile(false);
+            toggleStatusMenu(false);
             document.getElementById('notiIframe').contentWindow.location.reload();
         }
     }
@@ -848,6 +991,7 @@
         if (open) {
             toggleNoti(false);
             toggleProfile(false);
+            toggleStatusMenu(false);
         }
     }
 
@@ -871,10 +1015,7 @@
         e.preventDefault();
         const form = e.currentTarget;
         const url = form.getAttribute('action') || '/auth/logout';
-        const csrfParamEl = document.getElementById('csrfParam');
-        const csrfHeaderEl = document.getElementById('csrfHeader');
-        const headers = { 'Accept': 'application/json' };
-        if (csrfParamEl && csrfHeaderEl) headers[csrfHeaderEl.value] = csrfParamEl.value;
+        const headers = { 'Accept': 'application/json', ...getCsrfHeader() };
         try { await fetch(url, { method: 'POST', credentials: 'include', headers }); }
         finally { location.href = '/auth/employee/login'; }
     });
@@ -959,6 +1100,7 @@
         if (open) {
             toggleNoti(false);
             toggleChat(false);
+            toggleStatusMenu(false);
             if (!_profileLoaded) loadMyProfileMenu();
             syncProfileImageToMenu();
         }
@@ -981,7 +1123,6 @@
         }
     }
 
-    /* ✅ FIX: 프로필 메뉴 정보는 "뷰(/employees/me)"가 아니라 "API(/api/v1/employees/me)"로 가져와야 함 */
     async function loadMyProfileMenu(){
         try {
             const res = await fetch('/api/v1/employees/me', {
@@ -1008,19 +1149,131 @@
         }
     }
 
-    window.addEventListener('click', (e) => {
-        const menu = document.getElementById('profileMenu');
-        const btn = document.getElementById('profileBtn');
+    /* ====== ✅ 4. 메시지 상태 드롭다운 로직 ====== */
+    const MSGSTAT_LABEL = {
+        C: '근무 중',
+        M: '회의 중',
+        D: '업무 집중',
+        X: '자리 비움',
+        H: '출근 안함'
+    };
+
+    function applyStatusUI(code){
+        const dot = document.getElementById('statusDot');
+        const label = document.getElementById('statusLabel');
+        if (!dot || !label) return;
+
+        const safe = code && MSGSTAT_LABEL[code] ? code : 'C';
+
+        dot.classList.remove('dot-C','dot-M','dot-D','dot-X','dot-H');
+        dot.classList.add('dot-' + safe);
+        label.textContent = MSGSTAT_LABEL[safe] || '근무 중';
+    }
+
+    function toggleStatusMenu(force){
+        const menu = document.getElementById('statusMenu');
+        const btn = document.getElementById('statusBtn');
         if (!menu || !btn) return;
 
-        if (menu.classList.contains('open')) {
+        const open = typeof force === 'boolean' ? force : !menu.classList.contains('open');
+        menu.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', String(open));
+
+        if (open){
+            toggleNoti(false);
+            toggleChat(false);
+            toggleProfile(false);
+        }
+    }
+
+    async function loadMyStatus(){
+        try{
+            const res = await fetch('/api/v1/employees/me', { credentials:'include', headers:{'Accept':'application/json'} });
+            if(!res.ok) return;
+            const json = await res.json();
+            const me = json?.data ?? json;
+
+            // atte가 휴가/출장이면 강제 H로 보여주고, 메뉴 비활성 처리(선택은 막음)
+            const atte = me?.atte;   // 예: V/B/C...
+            let code = me?.msgStat;  // 예: C/M/D/X/H
+
+            const mustOff = (atte === 'V' || atte === 'B');
+            if (mustOff) code = 'H';
+
+            applyStatusUI(code);
+
+            // 강제 H면 드롭다운 선택 막기
+            const menu = document.getElementById('statusMenu');
+            if (menu){
+                const items = Array.from(menu.querySelectorAll('button.status-item'));
+                items.forEach(b => b.disabled = !!mustOff);
+            }
+        }catch(e){
+            console.warn('msgStat 로드 실패', e);
+        }
+    }
+
+    async function setMsgStat(code){
+        // H는 로그인 후 선택 불가
+        if (code === 'H') return;
+
+        // UI 먼저 반영(낙관적)
+        applyStatusUI(code);
+        toggleStatusMenu(false);
+
+        // ✅ 너희 실제 API로 바꾸기
+        const url = '/api/v1/employees/me/msg-stat';
+
+        try{
+            const headers = {
+                'Content-Type':'application/json',
+                'Accept':'application/json',
+                ...getCsrfHeader()
+            };
+
+            const res = await fetch(url, {
+                method:'PATCH',
+                credentials:'include',
+                headers,
+                body: JSON.stringify({ code })
+            });
+
+            if (!res.ok){
+                // 실패하면 서버 값으로 재동기화
+                await loadMyStatus();
+            }
+        }catch(e){
+            await loadMyStatus();
+        }
+    }
+
+    /* ====== 패널/메뉴 외부 클릭 닫기 ====== */
+    window.addEventListener('click', (e) => {
+        // profile
+        const menu = document.getElementById('profileMenu');
+        const btn = document.getElementById('profileBtn');
+        if (menu && btn && menu.classList.contains('open')) {
             const inside = menu.contains(e.target) || btn.contains(e.target);
             if (!inside) toggleProfile(false);
+        }
+
+        // status
+        const sMenu = document.getElementById('statusMenu');
+        const sBtn = document.getElementById('statusBtn');
+        const sDd = document.getElementById('statusDd');
+        if (sMenu && sDd && sMenu.classList.contains('open')){
+            const inside = sDd.contains(e.target) || (sBtn && sBtn.contains(e.target));
+            if (!inside) toggleStatusMenu(false);
         }
     });
 
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') toggleProfile(false);
+        if (e.key === 'Escape'){
+            toggleProfile(false);
+            toggleStatusMenu(false);
+            toggleNoti(false);
+            toggleChat(false);
+        }
     });
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -1028,6 +1281,7 @@
         loadProfilePhoto();
         setActiveIconbarMenu();
         initNotificationSystem();
+        loadMyStatus();  // ✅ 상태는 헤더에 바로 표시
     });
 </script>
 
