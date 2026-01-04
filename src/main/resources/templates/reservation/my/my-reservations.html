@@ -9,108 +9,118 @@
     <meta charset="UTF-8" />
     <title>내 예약 조회</title>
 
-    <!-- 이 페이지 전용 CSS -->
     <th:block layout:fragment="pageStyles">
         <style>
-            * { box-sizing: border-box; }
+            h2 { margin-bottom: 16px; }
 
-            /* 오른쪽 콘텐츠 영역 */
-            .my-res-page{
-                padding: 28px 32px;
+            /* ===== 회의실 예약 페이지 느낌으로 맞춤 ===== */
+            .my-reservation-page{
+                font-family: Pretendard, Arial, sans-serif;
+                background:#f7f8fa;
+                width:100%;
+            }
+            .timetable-section{
+                padding: 20px 20px 32px; /* 회의실 예약과 동일 */
             }
 
-            .my-res-title{
-                margin: 0 0 28px 0;
-                font-size: 34px;
-                font-weight: 800;
-                line-height: 1.2;
-            }
-
+            /* ===== 상단 필터 ===== */
             .table-top{
-                display: flex;
-                justify-content: flex-end;
-                align-items: center;
-                margin-bottom: 14px;
+                display:flex;
+                justify-content:flex-end;
+                align-items:center;
+                margin: 10px 0 14px;
             }
 
             .filter-bar{
-                display: flex;
-                align-items: center;
-                gap: 10px;
+                display:flex;
+                align-items:center;
+                gap:10px;
+                flex-wrap:wrap;
             }
 
             .filter-bar input[type="date"],
             .filter-bar select{
-                height: 34px;
-                border: 1px solid #dfe3ea;
-                border-radius: 10px;
-                padding: 0 12px;
-                background: #fff;
-                font-size: 14px;
-                outline: none;
+                height:40px;                 /* 예약 페이지 버튼 높이와 맞춤 */
+                border:1px solid #dfe3ea;
+                border-radius:10px;
+                padding:0 12px;
+                background:#fff;
+                font-size:14px;
+                outline:none;
+                box-sizing:border-box;
             }
 
             .filter-bar input[type="date"]:focus,
             .filter-bar select:focus{
-                border-color: #1a73e8;
+                border-color: var(--primary);
                 box-shadow: 0 0 0 3px rgba(26,115,232,.12);
             }
 
             .tilde{
-                padding: 0 4px;
-                color: #666;
+                padding:0 4px;
+                color:#666;
             }
 
-            .btn-blue{
-                height: 34px;
-                background: #1a73e8;
-                color: #fff;
-                border: none;
-                border-radius: 10px;
-                padding: 0 14px;
-                font-weight: 800;
-                cursor: pointer;
-                box-shadow: 0 2px 10px rgba(26,115,232,.25);
+            /* ✅ 조회 버튼 = 예약 페이지 버튼 스타일 */
+            .reserve-action-btn{
+                height:40px;
+                padding:0 20px;
+                border-radius:8px;
+                font-size:14px;
+                font-weight:700;
+                cursor:pointer;
+                border:none;
+                background: var(--primary);
+                color:#fff;
+                white-space:nowrap;
+                transition:0.15s;
             }
-            .btn-blue:hover{ filter: brightness(.96); }
-            .btn-blue:active{ transform: translateY(1px); }
+            .reserve-action-btn:hover{ filter: brightness(0.9); }
+            .reserve-action-btn:active{ transform: translateY(1px); }
 
+            /* ===== 테이블 ===== */
             table{
-                width: 100%;
-                border-collapse: collapse;
-                background: #fff;
-                border-radius: 12px;
-                overflow: hidden;
+                width:100%;
+                border-collapse:collapse;
+                background:#fff;
+                border-radius:12px;
+                overflow:hidden;
+                border:1px solid #eef2f7;
             }
 
             thead th{
-                text-align: left;
-                padding: 12px 10px;
-                font-size: 15px;
-                font-weight: 800;
-                color: #111;
-                border-bottom: 1px solid #eef2f7;
-                background: #f9fafb;
+                text-align:left;
+                padding:12px 16px;
+                white-space: nowrap;
+                font-size:14px;
+                font-weight:800;
+                color:#111;
+                border-bottom:1px solid #eef2f7;
+                background:#f9fafb;
             }
 
             tbody td{
-                padding: 14px 10px;
-                font-size: 15px;
-                border-top: 1px solid #f4f6f9;
-                vertical-align: middle;
+                padding:14px 16px;
+                font-size:14px;
+                border-top:1px solid #f4f6f9;
+                vertical-align:middle;
             }
 
             .empty{
-                padding: 24px 10px;
-                color: #777;
-                text-align: center;
+                padding:24px 10px;
+                color:#777;
+                text-align:center;
+            }
+
+            /* 사용 목적(4번째 컬럼) 가운데 정렬 */
+            thead th:nth-child(4),
+            tbody td:nth-child(4){
+                text-align:center;
             }
 
             @media (max-width: 900px){
-                .my-res-page{ padding: 18px 16px; }
-                .my-res-title{ font-size: 28px; margin-bottom: 18px; }
-                .table-top{ justify-content: flex-start; }
-                .filter-bar{ flex-wrap: wrap; gap: 8px; }
+                .timetable-section{ padding:18px 16px; }
+                .table-top{ justify-content:flex-start; }
             }
         </style>
     </th:block>
@@ -120,55 +130,65 @@
 
 <div layout:fragment="content">
     <section class="page-with-subbar">
-        <!-- 🔹 왼쪽: 예약 서브 사이드바 (내 예약 조회 active) -->
+        <!-- 왼쪽: 예약 서브 사이드바 -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('my')"></aside>
 
-        <!-- 🔹 오른쪽: 기존 내 예약 조회 화면 그대로 -->
-        <div class="my-res-page">
-            <h1 class="my-res-title">내 예약 조회</h1>
+        <!-- 오른쪽 -->
+        <div class="my-reservation-page">
+            <div class="timetable-section">
+                <!-- ✅ 회의실 예약 페이지처럼 h2 사용 -->
+                <h2>내 예약 조회</h2>
+                <br><br>
 
-            <!-- 상단 필터 -->
-            <div class="table-top">
-                <div class="filter-bar">
-                    <input type="date" id="fromDate">
-                    <span class="tilde">~</span>
-                    <input type="date" id="toDate">
+                <!-- 상단 필터 -->
+                <div class="table-top">
+                    <div class="filter-bar">
+                        <input type="date" id="fromDate">
+                        <span class="tilde">~</span>
+                        <input type="date" id="toDate">
 
-                    <select id="domainFilter">
-                        <option value="ALL">전체</option>
-                        <option value="MEETING_ROOM">회의실</option>
-                        <option value="CORPORATE_CAR">법인 차량</option>
-                        <option value="SHARED_EQUIPMENT">공유 설비</option>
-                    </select>
+                        <select id="domainFilter">
+                            <option value="ALL">전체</option>
+                            <option value="MEETING_ROOM">회의실</option>
+                            <option value="CORPORATE_CAR">법인 차량</option>
+                            <option value="SHARED_EQUIPMENT">공유 설비</option>
+                        </select>
 
-                    <button id="btnSearch" class="btn-blue">조회</button>
+                        <!-- ✅ 버튼 스타일 통일 -->
+                        <button id="btnSearch" type="button" class="reserve-action-btn">조회</button>
+                    </div>
                 </div>
-            </div>
 
-            <table>
-                <thead>
-                <tr>
-                    <th style="width:140px;">예약대상</th>
-                    <th style="width:140px;">예약일자</th>
-                    <th style="width:160px;">예약시간</th>
-                    <th>사용 목적</th>
-                    <th style="width:140px;">장소</th>
-                    <th style="width:120px;">예약상태</th>
-                </tr>
-                </thead>
-                <tbody id="tbody">
-                <tr><td class="empty" colspan="6">기간을 선택하고 조회를 눌러주세요.</td></tr>
-                </tbody>
-            </table>
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:140px;">예약대상</th>
+                        <th style="width:140px;">예약일자</th>
+                        <th style="width:160px;">예약시간</th>
+                        <th>사용 목적</th>
+                        <th style="width:140px;">장소</th>
+                        <th style="width:120px;">예약상태</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody">
+                    <tr><td class="empty" colspan="6">기간을 선택하고 조회를 눌러주세요.</td></tr>
+                    </tbody>
+                </table>
+
+            </div>
         </div>
     </section>
 </div>
 
-<!-- 이 페이지 전용 JS -->
 <th:block layout:fragment="pageScripts">
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const API_BASE = window.location.origin;
+
+            const fromEl = document.getElementById("fromDate");
+            const toEl   = document.getElementById("toDate");
+            const domainEl = document.getElementById("domainFilter");
+            const btnSearch = document.getElementById("btnSearch");
 
             async function apiFetchJson(path) {
                 const res = await fetch(API_BASE + path, { credentials: "include" });
@@ -182,22 +202,103 @@
 
             function fmtDate(d){ return d.toISOString().slice(0,10); }
 
+            function addMonths(date, months){
+                const d = new Date(date);
+                d.setMonth(d.getMonth() + months);
+                return d;
+            }
+
+            function parseYMD(ymd){
+                const [y,m,d] = ymd.split("-").map(Number);
+                return new Date(y, m-1, d, 0,0,0,0);
+            }
+
+            function getMaxToDateStr(fromStr){
+                const maxTo = addMonths(parseYMD(fromStr), 1);
+                return fmtDate(maxTo);
+            }
+
+            function enforceDateRules(changedBy){
+                const from = fromEl.value;
+                const to   = toEl.value;
+
+                if (!from) return;
+
+                const maxToStr = getMaxToDateStr(from);
+                toEl.min = from;
+                toEl.max = maxToStr;
+
+                if (to) {
+                    if (to < from) {
+                        alert("종료일은 시작일보다 빠를 수 없습니다.");
+                        toEl.value = from;
+                    } else if (to > maxToStr) {
+                        alert("조회 기간은 최대 1개월까지만 가능합니다.");
+                        toEl.value = maxToStr;
+                    }
+                }
+
+                const fixedTo = toEl.value || from;
+                fromEl.max = fixedTo;
+                const minFromByTo = fmtDate(addMonths(parseYMD(fixedTo), -1));
+                fromEl.min = minFromByTo;
+            }
+
+            // ---- "사용중" 상태 계산 ----
+            function parseTimeRange(timeStr){
+                if (!timeStr) return null;
+                const cleaned = String(timeStr).trim();
+                const parts = cleaned.split(/\s*(~|∼|～)\s*/).filter(p => p && !/^(~|∼|～)$/.test(p));
+                if (parts.length < 2) return null;
+                const start = parts[0].trim();
+                const end   = parts[1].trim();
+                if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
+                return { start, end };
+            }
+
+            function isNowInReservation(dateStr, timeStr){
+                if (!dateStr || !timeStr) return false;
+                const range = parseTimeRange(timeStr);
+                if (!range) return false;
+
+                const startDt = new Date(`${dateStr}T${range.start}:00`);
+                const endDt   = new Date(`${dateStr}T${range.end}:00`);
+                const now = new Date();
+                return now >= startDt && now < endDt;
+            }
+
+            function computeStatus(r){
+                const raw = (r.status ?? "-");
+                const shouldOverride =
+                    typeof raw === "string" &&
+                    !raw.includes("취소") &&
+                    !raw.includes("완료") &&
+                    !raw.includes("종료") &&
+                    !raw.includes("반납");
+
+                if (shouldOverride && isNowInReservation(r.date, r.time)) return "사용중";
+                return raw;
+            }
+
             function render(rows){
                 const tbody = document.getElementById("tbody");
                 if (!rows || rows.length === 0){
                     tbody.innerHTML = `<tr><td class="empty" colspan="6">조회 결과가 없습니다.</td></tr>`;
                     return;
                 }
-                tbody.innerHTML = rows.map(r => `
-          <tr>
-            <td>${r.target ?? "-"}</td>
-            <td>${r.date ?? "-"}</td>
-            <td>${r.time ?? "-"}</td>
-            <td>${r.purpose ?? "-"}</td>
-            <td>${r.location ?? "-"}</td>
-            <td>${r.status ?? "-"}</td>
-          </tr>
-        `).join("");
+                tbody.innerHTML = rows.map(r => {
+                    const statusText = computeStatus(r);
+                    return `
+                      <tr>
+                        <td>${r.target ?? "-"}</td>
+                        <td>${r.date ?? "-"}</td>
+                        <td>${r.time ?? "-"}</td>
+                        <td>${r.purpose ?? "-"}</td>
+                        <td>${r.location ?? "-"}</td>
+                        <td>${statusText}</td>
+                      </tr>
+                    `;
+                }).join("");
             }
 
             let ALL_ROWS = [];
@@ -207,31 +308,68 @@
                 const rows = (domain === "ALL")
                     ? ALL_ROWS
                     : ALL_ROWS.filter(r => r.domain === domain);
-
                 render(rows);
             }
 
-            async function search() {
-                const from = document.getElementById("fromDate").value;
-                const to   = document.getElementById("toDate").value;
+            function validateBeforeSearch(){
+                const from = fromEl.value;
+                const to   = toEl.value;
 
-                const res = await apiFetchJson(`/api/v1/my-reservations?from=${from}&to=${to}`);
-                ALL_ROWS = res.data || [];
-
-                applyDomainFilter(selectedDomain);
+                if (!from || !to) {
+                    alert("시작일과 종료일을 모두 선택해주세요.");
+                    return false;
+                }
+                if (to < from) {
+                    alert("종료일은 시작일보다 빠를 수 없습니다.");
+                    return false;
+                }
+                const maxToStr = getMaxToDateStr(from);
+                if (to > maxToStr) {
+                    alert("조회 기간은 최대 1개월까지만 가능합니다.");
+                    return false;
+                }
+                return true;
             }
 
+            async function search() {
+                if (!validateBeforeSearch()) return;
+
+                const from = fromEl.value;
+                const to   = toEl.value;
+
+                try {
+                    const res = await apiFetchJson(`/api/v1/my-reservations?from=${from}&to=${to}`);
+                    ALL_ROWS = res.data || [];
+                    applyDomainFilter(selectedDomain);
+                } catch (err) {
+                    console.error(err);
+                    alert("서버에 연결할 수 없습니다. API 서버 상태/포트를 확인해주세요.");
+                }
+            }
+
+            // 초기값 세팅
             const today = new Date();
-            document.getElementById("fromDate").value = fmtDate(today);
+            fromEl.value = fmtDate(today);
+
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate()+1);
-            document.getElementById("toDate").value = fmtDate(tomorrow);
+            toEl.value = fmtDate(tomorrow);
 
-            document.getElementById("domainFilter").addEventListener("change", (e) => {
+            enforceDateRules("init");
+
+            fromEl.addEventListener("change", () => enforceDateRules("from"));
+            toEl.addEventListener("change",   () => enforceDateRules("to"));
+
+            domainEl.addEventListener("change", (e) => {
                 selectedDomain = e.target.value;
+                applyDomainFilter(selectedDomain);
             });
 
-            document.getElementById("btnSearch").addEventListener("click", search);
+            btnSearch.addEventListener("click", search);
+
+            setInterval(() => {
+                if (ALL_ROWS.length > 0) applyDomainFilter(selectedDomain);
+            }, 60_000);
         });
     </script>
 </th:block>
