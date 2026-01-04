@@ -61,6 +61,17 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK, "내 정보 조회 성공", myInfo));
     }
 
+    @PatchMapping("/employees/me")
+    public ResponseEntity<ResponseDto<Void>> updateMyProfile(
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody ReqUpdateMyProfileDto req
+    ) {
+        employeeService.updateMyProfile(user, req);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "내 정보 수정 성공", null));
+    }
+
     @GetMapping("/admin/employees")
     public ResponseEntity<ResponseDto<List<ResEmployeeListDto>>> getEmployees(
             @AuthenticationPrincipal CustomUser user,
