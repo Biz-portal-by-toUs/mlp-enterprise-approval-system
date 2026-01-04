@@ -19,14 +19,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/attendances")
 public class ViewAttendanceController {
 
+    // 내 휴가 관리 화면
     @GetMapping("/me/vacations")
     public String viewVacations() {
         return "attendance/vacation/list";
     }
 
+    // 내 출장 관리 화면
     @GetMapping("/me/business-trips")
     public String viewBusinessTrips() {
         return "attendance/business-trip/list";
+    }
+
+    // 전체 근태 조회 화면
+    @GetMapping("")
+    public String viewAttendances() {
+        return "attendance/list";
     }
 
 }
