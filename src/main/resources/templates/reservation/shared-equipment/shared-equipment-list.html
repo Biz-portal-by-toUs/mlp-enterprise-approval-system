@@ -12,14 +12,19 @@
     <!-- 이 페이지 전용 CSS -->
     <th:block layout:fragment="pageStyles">
         <style>
-            .shared-eq-page {
-                padding: 22px 26px;
+            /* ✅ 예약 페이지 타이틀 규격 */
+            h2 { margin-bottom: 16px; }
+
+            /* ✅ 예약 페이지 오른쪽 래퍼 느낌 */
+            .shared-eq-page-wrap{
+                font-family: Pretendard, Arial, sans-serif;
+                background:#f7f8fa;
+                width:100%;
             }
 
-            .page-title {
-                font-size: 20px;
-                font-weight: 800;
-                margin: 2px 0 14px;
+            /* ✅ 예약 페이지 섹션 패딩 규격 */
+            .shared-eq-page{
+                padding: 20px 20px 32px;
             }
 
             .grid {
@@ -132,15 +137,9 @@
             }
 
             /* 카드 선택 */
-            .card.selectable {
-                cursor: pointer;
-            }
-            .card.selected {
-                outline: 3px solid #3b82f6;
-            }
-            .card.selectable:hover {
-                box-shadow: 0 0 0 2px rgba(22,119,255,.4);
-            }
+            .card.selectable { cursor: pointer; }
+            .card.selected { outline: 3px solid #3b82f6; }
+            .card.selectable:hover { box-shadow: 0 0 0 2px rgba(22,119,255,.4); }
 
             /* 관리자 액션 바 (등록/수정/삭제 버튼) */
             .action-bar {
@@ -148,7 +147,6 @@
                 justify-content: flex-end;   /* 오른쪽 정렬 */
                 align-items: center;
                 gap: 10px;
-
                 margin-top: 12px;
                 margin-bottom: 12px;
                 padding-right: 4px;
@@ -158,31 +156,23 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-
                 padding: 8px 14px;
                 border-radius: 8px;
                 border: none;
                 font-size: 14px;
                 cursor: pointer;
-
                 background-color: #1677ff;
                 color: #fff;
                 transition: background-color 0.2s ease;
             }
 
-            .action-btn:hover:not(:disabled) {
-                background-color: #4096ff;
-            }
-
+            .action-btn:hover:not(:disabled) { background-color: #4096ff; }
             .action-btn:disabled {
                 background-color: #e5e7eb;
                 color: #9ca3af;
                 cursor: not-allowed;
             }
-
-            .action-btn.danger:not(:disabled) {
-                background-color: #ef4444;
-            }
+            .action-btn.danger:not(:disabled) { background-color: #ef4444; }
 
             /* 삭제 확인 모달 */
             .modal {
@@ -198,9 +188,7 @@
                 z-index: 1000;
             }
 
-            .hidden {
-                display: none;
-            }
+            .hidden { display: none; }
 
             .modal-content {
                 background: #fff;
@@ -210,10 +198,7 @@
                 text-align: center;
             }
 
-            .modal-title {
-                margin-bottom: 12px;
-                color: #d32f2f;
-            }
+            .modal-title { margin-bottom: 12px; color: #d32f2f; }
 
             .modal-text {
                 margin-bottom: 20px;
@@ -237,26 +222,66 @@
                 transition: background 0.2s, transform 0.1s;
             }
 
-            .modal .btn.cancel {
-                background: #e0e0e0;
-                color: #333;
+            .modal .btn.cancel { background: #e0e0e0; color: #333; }
+            .modal .btn.cancel:hover { background: #cfcfcf; }
+
+            .modal .btn.delete { background: #d32f2f; color: #fff; }
+            .modal .btn.delete:hover { background: #b71c1c; }
+
+            .modal .btn:hover { transform: translateY(-1px); }
+
+            /* =========================
+            ✅ 버튼 통일 (저장해둔 버튼 규격)
+            ========================= */
+            .action-bar{
+                display:none;
+                justify-content:flex-end;
+                align-items:center;
+                gap:10px;
+                margin-top:12px;
+                margin-bottom:12px;
+                padding-right:4px;
             }
 
-            .modal .btn.cancel:hover {
-                background: #cfcfcf;
+            /* 공통 버튼 규격 = 저장해둔 .btn */
+            .action-bar .action-btn{
+                height: 40px;
+                padding: 0 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                border: none;
+                white-space: nowrap;
+                transition: 0.15s;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
 
-            .modal .btn.delete {
-                background: #d32f2f;
+            .action-bar .action-btn:hover{ filter: brightness(0.9); }
+            .action-bar .action-btn:disabled{
+                opacity: .5;
+                cursor: not-allowed;
+                filter: none;
+            }
+
+            /* ✅ 등록(Primary) */
+            .action-bar .action-btn.create{
+                background: var(--primary);
                 color: #fff;
             }
 
-            .modal .btn.delete:hover {
-                background: #b71c1c;
+            /* ✅ 선택 수정(수정 버튼 색상: 연파랑 배경 + 파랑 글씨) */
+            .action-bar .action-btn.edit{
+                background: #eaf2ff;
+                color: #2b5db8;
             }
 
-            .modal .btn:hover {
-                transform: translateY(-1px);
+            /* ✅ 선택 삭제(삭제 버튼 색상: 연빨강 배경 + 빨강 글씨) */
+            .action-bar .action-btn.delete{
+                background: #fdecec;
+                color: #c62828;
             }
         </style>
     </th:block>
@@ -269,23 +294,26 @@
         <!-- 🔹 왼쪽: 예약 서브 사이드바 (공유 설비 예약 active) -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('equipment')"></aside>
 
-        <!-- 🔹 오른쪽: 공유 설비 조회 화면 -->
-        <main class="shared-eq-page">
-            <div class="page-title">공유 설비</div>
+        <!-- ✅ 오른쪽: 예약 페이지랑 동일한 배경/패딩/타이틀 구조로 통일 -->
+        <div class="shared-eq-page-wrap">
+            <main class="shared-eq-page">
+                <h2>공유 설비</h2>
+                <br><br>
 
-            <div class="error" id="errBox"></div>
+                <div class="error" id="errBox"></div>
 
-            <section class="grid" id="grid"></section>
+                <section class="grid" id="grid"></section>
 
-            <!-- 관리자일 때만 JS에서 보이게 -->
-            <div id="actionBar" class="action-bar">
-                <button id="btnCreate" class="action-btn">등록</button>
-                <button id="btnEdit" class="action-btn" disabled>선택 수정</button>
-                <button id="btnDelete" class="action-btn danger" disabled>선택 삭제</button>
-            </div>
+                <!-- 관리자일 때만 JS에서 보이게 -->
+                <div id="actionBar" class="action-bar">
+                    <button id="btnCreate" class="action-btn create" type="button">등록</button>
+                    <button id="btnEdit" class="action-btn edit" type="button" disabled>선택 수정</button>
+                    <button id="btnDelete" class="action-btn delete" type="button" disabled>선택 삭제</button>
+                </div>
 
-            <div class="paging" id="paging"></div>
-        </main>
+                <div class="paging" id="paging"></div>
+            </main>
+        </div>
     </section>
 
     <!-- 삭제 확인 모달 -->
@@ -311,10 +339,7 @@
         let selectedEqNo = null;
         let isAdmin = false;
 
-        // 이미지 없을 때 띄워줄 이미지
         const NO_IMAGE_URL = "/images/no-image.png";
-
-        // httpOnly cookie 방식: 같은 오리진이면 origin 쓰는 게 제일 안전
         const API_BASE = window.location.origin;
 
         const grid   = document.getElementById("grid");
@@ -322,7 +347,7 @@
         const errBox = document.getElementById("errBox");
 
         let state = {
-            page: 0,      // 0부터 시작 (Spring PageRequest)
+            page: 0,
             size: 6,
             totalPages: 0
         };
@@ -336,19 +361,15 @@
             errBox.textContent = "";
         }
 
-        // 쿠키 자동 포함 fetch
         async function apiFetch(path, options = {}) {
             const url = API_BASE + path;
 
             const res = await fetch(url, {
                 ...options,
-                credentials: "include", // httpOnly 쿠키 자동 포함
-                headers: {
-                    ...(options.headers || {})
-                }
+                credentials: "include",
+                headers: { ...(options.headers || {}) }
             });
 
-            // 인증 만료/미로그인
             if (res.status === 401 || res.status === 403) {
                 alert("로그인이 필요합니다. 다시 로그인 해주세요.");
                 location.href = "/login";
@@ -357,10 +378,8 @@
             return res;
         }
 
-        // JSON 응답 안전 파싱
         async function apiFetchJson(path, options = {}) {
             const res = await apiFetch(path, options);
-
             if (!res.ok) {
                 const text = await res.text();
                 throw new Error(text || `HTTP ${res.status}`);
@@ -451,10 +470,7 @@
                     method: "GET"
                 });
 
-                // ResponseDto 구조: { data: { isAdmin, data: Page } }
                 isAdmin = json?.data?.isAdmin === true;
-
-                // 관리자면 하단 액션 보이기
                 document.getElementById("actionBar").style.display = isAdmin ? "flex" : "none";
 
                 const pageData = json?.data?.data;
@@ -475,7 +491,6 @@
             }
         }
 
-        // 등록/수정 이동
         document.getElementById("btnCreate").onclick = () => {
             location.href = "/shared-equipment/register";
         };
@@ -485,7 +500,6 @@
             location.href = `/shared-equipment/${selectedEqNo}/edit`;
         };
 
-        // 삭제 모달
         const deleteModal      = document.getElementById("deleteModal");
         const cancelDeleteBtn  = document.getElementById("cancelDeleteBtn");
         const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
@@ -523,7 +537,7 @@
                 document.getElementById("btnEdit").disabled = true;
                 document.getElementById("btnDelete").disabled = true;
 
-                loadEq(state.page); // 현재 페이지 다시 조회
+                loadEq(state.page);
             } catch (e) {
                 console.error(e);
                 if (String(e.message || "").includes("UNAUTHORIZED")) return;
@@ -537,7 +551,6 @@
             }
         });
 
-        // 처음 로드
         document.addEventListener("DOMContentLoaded", () => {
             loadEq(0);
         });

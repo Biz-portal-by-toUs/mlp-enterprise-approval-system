@@ -30,14 +30,14 @@
             }
 
             .shared-eq-edit-page .form-inner {
-                max-width: 420px;          /* 입력칸 최대 폭 제한 */
-                margin: 0 auto;            /* 가운데 정렬 */
+                max-width: 420px;
+                margin: 0 auto;
             }
 
             .shared-eq-edit-page input,
             .shared-eq-edit-page textarea {
                 width: 100%;
-                box-sizing: border-box;    /* 삐져나오는 거 방지 */
+                box-sizing: border-box;
             }
 
             .shared-eq-edit-page .image-preview {
@@ -82,9 +82,7 @@
                 font-size: 14px;
             }
 
-            .shared-eq-edit-page textarea {
-                resize: none;
-            }
+            .shared-eq-edit-page textarea { resize: none; }
 
             .shared-eq-edit-page .btns {
                 display: flex;
@@ -108,7 +106,7 @@
             }
 
             .shared-eq-edit-page .submit.disabled {
-                background: #a5c8ff;   /* 연한 파랑 */
+                background: #a5c8ff;
                 cursor: not-allowed;
             }
 
@@ -131,6 +129,39 @@
                 object-fit: contain;
                 display: none;
             }
+
+            /* ===== 설비명/설비번호만: 힌트/카운터/에러/UI ===== */
+            .hint-row{
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-top:6px;
+                gap:10px;
+            }
+
+            .hint{
+                color:#6b7280;
+                font-size:12px;
+            }
+
+            .counter{
+                color:#6b7280;
+                font-size:12px;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .error{
+                display:block;
+                margin-top:6px;
+                color:#ef4444;
+                font-size:12px;
+                font-weight:600;
+            }
+
+            .input-invalid{
+                border-color:#ef4444 !important;
+                box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+            }
         </style>
     </th:block>
 </head>
@@ -142,20 +173,32 @@
         <!-- 🔹 왼쪽: 예약 서브 사이드바 (공유 설비 예약 active) -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('equipment')"></aside>
 
-        <!-- 🔹 오른쪽: 기존 공유 설비 수정 화면 -->
+        <!-- 🔹 오른쪽: 공유 설비 수정 화면 -->
         <div class="shared-eq-edit-page">
             <div class="card">
                 <h2>공유 설비 수정</h2>
 
                 <form id="editForm" enctype="multipart/form-data">
+                    <!-- ✅ 설비명: 카운터+에러 적용 -->
                     <div class="field">
                         <label>설비명</label>
-                        <input type="text" name="eqName" maxlength="20" required>
+                        <input type="text" name="eqName" id="eqName" maxlength="20" required>
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="eqNameCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="eqNameError" style="display:none;"></small>
                     </div>
 
+                    <!-- ✅ 설비번호: 카운터+에러 적용 -->
                     <div class="field">
                         <label>설비번호</label>
-                        <input type="text" name="eqId" maxlength="20">
+                        <input type="text" name="eqId" id="eqId" maxlength="20">
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="eqIdCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="eqIdError" style="display:none;"></small>
                     </div>
 
                     <div class="field">
@@ -165,7 +208,7 @@
 
                     <div class="field">
                         <label>보관위치</label>
-                        <input type="text" name="location" maxlength="20">
+                        <input type="text" name="location" maxlength="50">
                     </div>
 
                     <div class="field">
@@ -197,7 +240,7 @@
         /* ================== 공통 변수 ================== */
         const eqNo = /*[[${eqNo}]]*/ null;
 
-        // ✅ httpOnly cookie 기반 공통 fetch (쿠키 자동 포함)
+        // ✅ httpOnly cookie 기반 공통 fetch
         const API_BASE = window.location.origin;
 
         async function apiFetch(path, options = {}) {
@@ -206,12 +249,9 @@
             const res = await fetch(url, {
                 ...options,
                 credentials: "include",
-                headers: {
-                    ...(options.headers || {})
-                }
+                headers: { ...(options.headers || {}) }
             });
 
-            // 401/403이면 로그인으로
             if (res.status === 401 || res.status === 403) {
                 alert("로그인이 필요합니다. 다시 로그인 해주세요.");
                 location.href = "/login";
@@ -251,16 +291,83 @@
             reader.readAsDataURL(file);
         }
 
-        /* ================== 유효성 검사 ================== */
+        /* ================== 설비명/설비번호: 카운터/에러 UI ================== */
+        const eqNameInput   = document.getElementById("eqName");
+        const eqNameCounter = document.getElementById("eqNameCounter");
+        const eqNameError   = document.getElementById("eqNameError");
+
+        const eqIdInput   = document.getElementById("eqId");
+        const eqIdCounter = document.getElementById("eqIdCounter");
+        const eqIdError   = document.getElementById("eqIdError");
+
+        function setError(inputEl, errorEl, msg) {
+            if (!errorEl) return;
+
+            if (msg) {
+                errorEl.textContent = msg;
+                errorEl.style.display = "block";
+                inputEl?.classList.add("input-invalid");
+            } else {
+                errorEl.textContent = "";
+                errorEl.style.display = "none";
+                inputEl?.classList.remove("input-invalid");
+            }
+        }
+
+        function updateEqNameUI() {
+            if (!eqNameInput) return;
+
+            const len = eqNameInput.value.length;
+            if (eqNameCounter) eqNameCounter.textContent = `${len} / 20`;
+
+            if (!eqNameInput.value.trim()) {
+                setError(eqNameInput, eqNameError, "");
+                return;
+            }
+
+            if (len > 20) setError(eqNameInput, eqNameError, "설비명은 20자 이내여야 합니다.");
+            else setError(eqNameInput, eqNameError, "");
+        }
+
+        function updateEqIdUI() {
+            if (!eqIdInput) return;
+
+            const len = eqIdInput.value.length;
+            if (eqIdCounter) eqIdCounter.textContent = `${len} / 20`;
+
+            if (!eqIdInput.value.trim()) {
+                setError(eqIdInput, eqIdError, "");
+                return;
+            }
+
+            if (len > 20) setError(eqIdInput, eqIdError, "설비번호는 20자 이내여야 합니다.");
+            else setError(eqIdInput, eqIdError, "");
+        }
+
+        eqNameInput?.addEventListener("input", updateEqNameUI);
+        eqIdInput?.addEventListener("input", updateEqIdUI);
+
+        /* ================== 유효성 검사 (알럿 -> 인라인 에러로) ================== */
         function validateEditForm() {
-            const name = document.querySelector("[name=eqName]").value.trim();
+            const name = eqNameInput.value.trim();
+            const id   = eqIdInput.value.trim();
+
+            updateEqNameUI();
+            updateEqIdUI();
 
             if (!name) {
-                alert("설비명을 입력해주세요.");
+                setError(eqNameInput, eqNameError, "설비명을 입력해주세요.");
+                eqNameInput.focus();
                 return false;
             }
             if (name.length > 20) {
-                alert("설비명은 20자 이내입니다.");
+                setError(eqNameInput, eqNameError, "설비명은 20자 이내여야 합니다.");
+                eqNameInput.focus();
+                return false;
+            }
+            if (id.length > 20) {
+                setError(eqIdInput, eqIdError, "설비번호는 20자 이내여야 합니다.");
+                eqIdInput.focus();
                 return false;
             }
             return true;
@@ -271,10 +378,7 @@
 
         document.addEventListener("DOMContentLoaded", async () => {
             try {
-                // ✅ 조회는 GET
-                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
-                    method: "GET"
-                });
+                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, { method: "GET" });
 
                 if (!res.ok) {
                     const text = await res.text();
@@ -283,20 +387,23 @@
                     return;
                 }
 
-                // ResponseDto 형태면 보통 { data: ... } 라서 안전하게 처리
                 const json = await res.json();
                 const eq = json.data ?? json;
 
-                document.querySelector("[name=eqName]").value     = eq.eqName     ?? "";
-                document.querySelector("[name=eqId]").value        = eq.eqId       ?? "";
-                document.querySelector("[name=modelName]").value   = eq.modelName  ?? "";
-                document.querySelector("[name=location]").value    = eq.location   ?? "";
+                eqNameInput.value = eq.eqName ?? "";
+                eqIdInput.value   = eq.eqId ?? "";
+                document.querySelector("[name=modelName]").value = eq.modelName ?? "";
+                document.querySelector("[name=location]").value  = eq.location ?? "";
+
+                // ✅ 초기 카운터/에러 UI 반영
+                updateEqNameUI();
+                updateEqIdUI();
 
                 originalData = {
-                    eqName: eq.eqName ?? "",
-                    eqId: eq.eqId ?? "",
-                    modelName: eq.modelName ?? "",
-                    location: eq.location ?? "",
+                    eqName: (eq.eqName ?? ""),
+                    eqId: (eq.eqId ?? ""),
+                    modelName: (eq.modelName ?? ""),
+                    location: (eq.location ?? ""),
                     imageChanged: false
                 };
 
@@ -320,8 +427,6 @@
             const formData = new FormData(e.target);
 
             try {
-                // ✅ 쿠키 인증이면 Authorization 헤더 붙이지 말기
-                // ✅ FormData 보낼 땐 Content-Type도 넣지 말기(브라우저가 boundary 자동 세팅)
                 const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
                     method: "PUT",
                     body: formData
@@ -349,8 +454,8 @@
             if (!originalData) return false;
 
             const current = {
-                eqName: document.querySelector("[name=eqName]").value.trim(),
-                eqId: document.querySelector("[name=eqId]").value.trim(),
+                eqName: eqNameInput.value.trim(),
+                eqId: eqIdInput.value.trim(),
                 modelName: document.querySelector("[name=modelName]").value.trim(),
                 location: document.querySelector("[name=location]").value.trim(),
                 imageChanged: document.querySelector("[name=imageFile]").files.length > 0
