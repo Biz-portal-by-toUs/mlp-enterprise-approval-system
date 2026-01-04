@@ -30,4 +30,5 @@ public class ResOrgEmployeeDto {
     private String objectKey;
     private String workPhone;
     private String email;
+    private String atte;
 }
