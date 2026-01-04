@@ -3,6 +3,8 @@ package com.multi.mlpenterpriseapprovalsystem.subscription.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.payment.service.PortoneService;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResCompanySubscriptionDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.service.CompanySubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,18 @@ import org.springframework.web.bind.annotation.*;
 public class CompanySubscriptionController {
 
     private final PortoneService portoneService;
+    private final CompanySubscriptionService companySubscriptionService;
+
+    /**
+     * 내 회사의 현재 구독 정보 조회
+     * GET /api/v1/company/subscription/me
+     */
+    @GetMapping("/company/subscription/me")
+    public ResponseEntity<ResponseDto<ResCompanySubscriptionDto>> getMySubscription(@AuthenticationPrincipal CustomUser customUser) {
+        ResCompanySubscriptionDto data = companySubscriptionService.getCurrentSubscription(customUser.getComId());
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "내 구독 정보 조회 성공", data));
+    }
+
 
     /**
      * 요금제 구독 및 즉시 결제 요청
