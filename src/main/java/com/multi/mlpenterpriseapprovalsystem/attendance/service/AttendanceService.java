@@ -16,6 +16,8 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,7 +131,7 @@ public class AttendanceService {
         }
 
         // 등록할 근태가 이미 등록된 다른 근태와 날짜가 겹치는지 체크
-        if (attendanceRepository.existsByEmployeeAndDateOverlap(writer, info.getStartAt(), info.getEndAt())) {
+        if (attendanceRepository.existsByEmployeeAndDateOverlapAndIsDeletedFalse(writer, info.getStartAt(), info.getEndAt())) {
             throw new CustomException(ErrorCode.ATTENDANCE_ALREADY_EXISTS_IN_PERIOD);
         }
 
@@ -151,7 +153,7 @@ public class AttendanceService {
 //            }
 
             // 내가 휴가인 기간에 대직자도 휴가 일정이 있는지 체크
-            if (attendanceRepository.existsByEmployeeAndDateOverlap(delegate, info.getStartAt(), info.getEndAt())) {
+            if (attendanceRepository.existsByEmployeeAndDateOverlapAndIsDeletedFalse(delegate, info.getStartAt(), info.getEndAt())) {
                 throw new CustomException(ErrorCode.DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD);
             }
 
@@ -241,7 +243,7 @@ public class AttendanceService {
         validateModification(targetAttendance, info.getStartAt(), info.getEndAt());
 
         // 수정된 후의 근태가 이미 등록된 다른 근태와 날짜가 겹치는지 체크(대상 근태 제외)
-        boolean isOverlapped = attendanceRepository.existsByEmployeeAndDateOverlapExcludeSelf(
+        boolean isOverlapped = attendanceRepository.existsByEmployeeAndDateOverlapExcludeSelfAndIsDeletedFalse(
                 targetAttendance.getEmployee(),
                 info.getStartAt(),
                 info.getEndAt(),
@@ -267,7 +269,7 @@ public class AttendanceService {
 //            if ("V".equals(newDelegate.getAtte())) {
 //                throw new CustomException(ErrorCode.DELEGATE_IS_ON_VACATION);
 //            }
-            if (newDelegate != null && attendanceRepository.existsByEmployeeAndDateOverlap(newDelegate, info.getStartAt(), info.getEndAt())) {
+            if (newDelegate != null && attendanceRepository.existsByEmployeeAndDateOverlapAndIsDeletedFalse(newDelegate, info.getStartAt(), info.getEndAt())) {
                 throw new CustomException(ErrorCode.DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD);
             }
 
@@ -425,7 +427,10 @@ public class AttendanceService {
         }
 
         // 근태 삭제
-        attendanceRepository.delete(targetAttendance);
+        targetAttendance.softDelete();
+
+        // 이력 보존을 위해 문서와 연결 유지
+        document.linkAttendance(targetAttendance);
 
         log.info("근태 취소 완료: atteNo={}, empId={}, 기간={} ~ {}",
                 targetAttendance.getAtteNo(),
@@ -546,32 +551,33 @@ public class AttendanceService {
     }
 
     // 내 근태 정보 조회
-    public List<ResAttendanceDto> getMyAttendances(String comId, String myEmpId) {
-        List<Attendance> attendances = attendanceRepository.findByEmployee_EmpIdAndCompany_ComIdOrderByStartAtDesc(myEmpId, comId);
-
-        return attendances.stream()
-                .map(ResAttendanceDto::toDto)
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<ResAttendanceDto> getMyAttendances(String comId, String myEmpId) {
+//        List<Attendance> attendances = attendanceRepository.findByEmployee_EmpIdAndCompany_ComIdOrderByStartAtDesc(myEmpId, comId);
+//
+//        return attendances.stream()
+//                .map(ResAttendanceDto::toDto)
+//                .toList();
+//    }
 
     // 내 휴가 정보 조회
+    @Transactional(readOnly = true)
     public List<ResAttendanceDto> getMyVacations(String comId, String empId) {
-        List<Attendance> attendances = attendanceRepository
-                .findByEmployee_EmpIdAndCompany_ComIdAndTypeOrderByStartAtDesc(empId, comId, AtteType.V);
-
-        return attendances.stream()
-                .map(ResAttendanceDto::toDto)
-                .toList();
+        return attendanceRepository.findByEmployee_EmpIdAndCompany_ComIdAndTypeAndIsDeletedFalseOrderByStartAtDesc(empId, comId, AtteType.V)
+                .stream().map(ResAttendanceDto::toDto).toList();
     }
 
     // 내 출장 정보 조회
+    @Transactional(readOnly = true)
     public List<ResAttendanceDto> getMyBusinessTrips(String comId, String empId) {
-        List<Attendance> attendances = attendanceRepository
-                .findByEmployee_EmpIdAndCompany_ComIdAndTypeOrderByStartAtDesc(empId, comId, AtteType.B);
-
-        return attendances.stream()
-                .map(ResAttendanceDto::toDto)
-                .toList();
+        return attendanceRepository.findByEmployee_EmpIdAndCompany_ComIdAndTypeAndIsDeletedFalseOrderByStartAtDesc(empId, comId, AtteType.B)
+                .stream().map(ResAttendanceDto::toDto).toList();
     }
 
+    // 회사의 전체 근태 조회
+    @Transactional(readOnly = true)
+    public Page<ResAttendanceDto> getAllAttendances(String comId, Pageable pageable) {
+        return attendanceRepository.findByCompany_ComIdAndIsDeletedFalseOrderByStartAtDesc(comId, pageable)
+                .map(ResAttendanceDto::toDto);
+    }
 }
