@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.service;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
@@ -88,6 +89,7 @@ public class EmployeeService {
         return new ResChatEmployeeCursorDto(rows, nextCursor, hasNext);
     }
 
+    @Transactional(readOnly = true)
     public ResEmployeeDetailDto getEmployeeDetailById(String myEmpId) {
         Employee employee = employeeRepository.findByEmpId(myEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -95,6 +97,7 @@ public class EmployeeService {
         return ResEmployeeDetailDto.from(employee);
     }
 
+    @Transactional(readOnly = true)
     public List<ResEmployeeListDto> searchEmployees(String comId, Long depNo, Long posNo, Boolean isDeleted, String keyword) {
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return employeeRepository.searchEmployees(comId, depNo, posNo, isDeleted, searchKeyword);
@@ -181,7 +184,6 @@ public class EmployeeService {
         }
     }
 
-    @Transactional
     public void updateObjectKey(String comId, Long empNo, String objectKey) {
         Employee emp = employeeRepository.findByEmpNoAndCompany_ComId(empNo, comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -245,5 +247,57 @@ public class EmployeeService {
         String payload = (name == null ? "" : name) + "\n" + empNo;
         return Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // 마이페이지 정보 수정
+    public void updateMyProfile(CustomUser user, ReqUpdateMyProfileDto req) {
+        if (user == null || user.getSubjectId() == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        Long empNo = user.getSubjectId();
+
+        Employee emp = employeeRepository.findById(empNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        // ✅ 방식 A: 프론트에서 항상 전체 값을 보내므로 null 방어 + trim만 해주고 비교
+        String newEmail    = normalize(req.getEmail());
+        String newPhone    = normalize(req.getPhone());
+        String newWorkPhone= normalize(req.getWorkPhone());
+        String newAddr     = normalize(req.getAddr());
+
+        String curEmail     = normalize(emp.getEmail());
+        String curPhone     = normalize(emp.getPhone());
+        String curWorkPhone = normalize(emp.getWorkPhone());
+        String curAddr      = normalize(emp.getAddr());
+
+        // 1) email: 바뀐 경우에만 중복 체크 후 반영
+        if (!newEmail.equals(curEmail)) {
+            if (employeeRepository.existsByEmailAndEmpNoNot(newEmail, empNo)) {
+                throw new CustomException(ErrorCode.DUPLICATE_EMAIL); // 너 프로젝트 에러코드로
+            }
+            emp.setEmail(newEmail); // setter 막혀있으면 changeEmail로 변경
+        }
+
+        // 2) phone
+        if (!newPhone.equals(curPhone)) {
+            emp.setPhone(newPhone);
+        }
+
+        // 3) workPhone
+        if (!newWorkPhone.equals(curWorkPhone)) {
+            emp.setWorkPhone(newWorkPhone);
+        }
+
+        // 4) addr
+        if (!newAddr.equals(curAddr)) {
+            emp.setAddr(newAddr);
+        }
+
+        // dirty checking으로 자동 UPDATE
+    }
+
+    private String normalize(String v) {
+        return v == null ? "" : v.trim();
     }
 }

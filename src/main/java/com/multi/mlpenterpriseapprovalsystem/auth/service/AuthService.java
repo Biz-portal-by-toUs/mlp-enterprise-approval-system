@@ -15,6 +15,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.SubscriptionRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -47,6 +48,7 @@ public class AuthService {
     private final StorageService storageService;
     private final SubscriptionRepository subscriptionRepository;
     private final BusinessVerificationService businessVerificationService;
+    private final EmployeeRepository employeeRepository;
 
     private static final String DEFAULT_PASSWORD = "1234";
 
@@ -142,7 +144,11 @@ public class AuthService {
         // 3) 토큰 발급 + refresh 쿠키 세팅
         ResTokenDto res = tokenService.createToken(user, response);
 
+        employeeRepository.updateMsgStatByEmpNo(user.getSubjectId(), "C");
+
         boolean mustChange = passwordEncoder.matches(DEFAULT_PASSWORD, user.getPassword());
+
+
 
         return res.toBuilder()
                 .mustChangePassword(mustChange)

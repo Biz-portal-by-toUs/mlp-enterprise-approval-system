@@ -128,6 +128,7 @@ public class AuthController {
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "사원 인증 성공", res));
     }
 
+    //로그인 안하고 비밀번호 변경
     @PatchMapping("/password")
     public ResponseEntity<ResponseDto<ResChangePasswordDto>> changeMyPassword(
             @Valid @RequestBody ReqChangeMyPasswordDto req

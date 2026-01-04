@@ -258,4 +258,17 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             @Param("comId") String comId,
             @Param("keyword") String keyword
     );
+
+    // 이메일 중복 체크(본인 제외)
+    boolean existsByEmailAndEmpNoNot(String email, Long empNo);
+
+    // employee 로그인시 mstStat ="C"로 업데이트
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Employee e
+           set e.msgStat = :msgStat
+         where e.empNo = :empNo
+           and e.isDeleted = false
+    """)
+    int updateMsgStatByEmpNo(@Param("empNo") Long empNo, @Param("msgStat") String msgStat);
 }

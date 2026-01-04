@@ -9,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
@@ -21,6 +22,7 @@ import java.time.LocalDate;
  */
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "employee")
 public class Employee extends BaseEntity {
@@ -83,8 +85,7 @@ public class Employee extends BaseEntity {
     @Column(nullable = false, length = 1)
     private String atte; // 근태(출장 = B , 휴가 = V, 출근 = C) // default = C
 
-    @Column(name = "msg_stat", nullable = false, length = 1, columnDefinition = "H")
-
+    @Column(name = "msg_stat", nullable = false, length = 1, columnDefinition="char(1) default 'H'")
     private String msgStat ; // 메시지 상태 ( 근무 중 = C, 회의 중 = M, 업무 집중 = D, 자리 비움 = X, 출근 안함 = H) // default = H
 
     // Self Reference (대직자 - emp_id 참조 유지)

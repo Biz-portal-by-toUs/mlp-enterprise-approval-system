@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
+<head>
+    <meta charset="UTF-8"/>
+
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .mypage-wrap{
+                padding: 26px 26px 36px;
+                max-width: 1180px;
+                margin: 0 auto;
+            }
+            .mypage-grid{
+                display:grid;
+                grid-template-columns: 300px 1fr;
+                gap: 22px;
+                align-items: stretch;
+            }
+
+            .card{
+                background:#fff;
+                border-radius: 22px;
+                box-shadow: var(--shadow);
+                border: 1px solid rgba(17,24,39,.06);
+            }
+
+            /* ===== 왼쪽 프로필 ===== */
+            .profile-card{
+                padding: 18px;
+                display:flex;
+                flex-direction:column;
+                gap: 12px;
+                min-height: 640px;
+            }
+            .photo-box{
+                border-radius: 18px;
+                border: 1px solid rgba(17,24,39,.08);
+                overflow:hidden;
+                background:#f8fafc;
+                height: 280px;
+                display:grid;
+                place-items:center;
+            }
+            .photo-box img{
+                width:100%;
+                height:100%;
+                object-fit:cover;
+                display:none;
+            }
+            .photo-box .fallback{
+                width:100%;
+                height:100%;
+                display:grid;
+                place-items:center;
+                color:#1d4ed8;
+            }
+
+            .side-name{
+                font-size: 16px;
+                font-weight: 700;
+                color:#111827;
+                text-align:center;
+                margin-top: 2px;
+            }
+            .side-sub{
+                text-align:center;
+                color: var(--muted);
+                font-size: 13px;
+                font-weight: 500;
+                line-height: 1.6;
+            }
+            .pill{
+                align-self:center;
+                display:inline-flex;
+                align-items:center;
+                padding: 6px 10px;
+                border-radius:999px;
+                background:#eff6ff;
+                border:1px solid #dbeafe;
+                color:#1d4ed8;
+                font-weight: 600;
+                font-size: 12px;
+            }
+
+            /* ===== 오른쪽 상세 ===== */
+            .detail-card{
+                padding: 22px 26px;
+                min-height: 640px;
+            }
+
+            .section{
+                padding: 14px 0;
+                border-bottom: 1px solid rgba(17,24,39,.06);
+            }
+            .section:last-child{ border-bottom:0; }
+
+            .section-title{
+                font-size: 15px;
+                font-weight: 700;
+                color:#111827;
+                margin: 0 0 12px 0;
+            }
+
+            .rows{
+                display:flex;
+                flex-direction:column;
+                gap: 10px;
+            }
+
+            /* label/value 2열 */
+            .row{
+                display:grid;
+                grid-template-columns: 180px 1fr;
+                align-items:center;
+                gap: 14px;
+            }
+            .label{
+                color:#111827;
+                opacity:.9;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            .value{
+                text-align:left;
+                color:#374151;
+                font-weight: 600;
+                font-size: 14px;
+                word-break: break-word;
+            }
+            .value.muted{
+                color: var(--muted);
+                font-weight: 500;
+            }
+
+            .divider{
+                height: 1px;
+                background: rgba(17,24,39,.06);
+                margin: 14px 0;
+            }
+
+            .actions{
+                padding-top: 16px;
+                display:flex;
+                justify-content:flex-start;
+            }
+            .btn-primary{
+                height: 44px;
+                padding: 0 20px;
+                border-radius: 10px;
+                border:0;
+                cursor:pointer;
+                background: var(--primary);
+                color:#fff;
+                font-weight: 700;
+                box-shadow: 0 10px 22px rgba(59,130,246,.20);
+            }
+            .btn-primary:hover{ background: var(--primary2); }
+
+            @media (max-width: 980px){
+                .mypage-grid{ grid-template-columns: 1fr; }
+                .profile-card{ min-height:auto; }
+                .detail-card{ min-height:auto; }
+                .row{ grid-template-columns: 140px 1fr; }
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<th:block layout:fragment="content">
+    <div class="mypage-wrap">
+        <div class="mypage-grid">
+
+            <!-- 왼쪽 -->
+            <section class="card profile-card">
+                <div class="photo-box">
+                    <img id="mypagePhoto" alt="profile"/>
+                    <div id="mypagePhotoFallback" class="fallback" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="8" r="4" stroke-width="2"/>
+                            <path d="M4 21c2-4 6-6 8-6s6 2 8 6" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="side-name" id="sideName">-</div>
+                <div class="side-sub">
+                    <div id="sideCompany">-</div>
+                    <div id="sideDepPos">-</div>
+                </div>
+                <div class="pill" id="sideRole">-</div>
+            </section>
+
+            <!-- 오른쪽 -->
+            <section class="card detail-card">
+
+                <!-- 기본 정보 -->
+                <div class="section">
+                    <div class="section-title">기본 정보</div>
+                    <div class="rows">
+                        <!-- ✅ 이름 제일 위 -->
+                        <div class="row">
+                            <div class="label">이름</div>
+                            <div class="value" id="vEmpName">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">사번</div>
+                            <div class="value" id="vEmpId">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">성별</div>
+                            <div class="value" id="vGen">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">권한(Role)</div>
+                            <div class="value" id="vRole">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">입사일</div>
+                            <div class="value" id="vHireDate">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 조직 정보 -->
+                <div class="section">
+                    <div class="section-title">조직 정보</div>
+                    <div class="rows">
+                        <div class="row">
+                            <div class="label">회사</div>
+                            <div class="value" id="vComName">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">회사코드</div>
+                            <div class="value" id="vComId">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">부서</div>
+                            <div class="value" id="vDepName">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">직급</div>
+                            <div class="value" id="vPosName">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 연락처 -->
+                <div class="section">
+                    <div class="section-title">연락처</div>
+                    <div class="rows">
+                        <div class="row">
+                            <div class="label">이메일</div>
+                            <div class="value" id="vEmail">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">전화번호</div>
+                            <div class="value" id="vPhone">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">사내번호</div>
+                            <div class="value" id="vWorkPhone">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">주소</div>
+                            <div class="value" id="vAddr">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 상태 -->
+                <div class="section">
+                    <div class="section-title">상태</div>
+                    <div class="rows">
+                        <div class="row">
+                            <div class="label">메신저 상태(msgStat)</div>
+                            <div class="value" id="vMsgStat">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">비밀번호</div>
+                            <div class="value muted">********</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 대직자 -->
+                <div class="section">
+                    <div class="section-title">대직자</div>
+                    <div class="rows">
+                        <div class="row">
+                            <div class="label">대직자 성함</div>
+                            <div class="value" id="vDelegateName">-</div>
+                        </div>
+                        <div class="row">
+                            <div class="label">대직자 사번</div>
+                            <div class="value" id="vDelegateEmpId">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn-primary" type="button" onclick="location.href='/employees/me/edit'">
+                        정보 수정하기
+                    </button>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</th:block>
+
+<th:block layout:fragment="pageScripts">
+    <script>
+        // ✅ 너희 API 경로에 맞게 수정
+        const MY_API = '/api/v1/employees/me';
+
+        function setText(id, text){
+            const el = document.getElementById(id);
+            if (!el) return;
+            const v = (text ?? '');
+            el.textContent = (String(v).trim() === '' || v === 'null') ? '-' : String(v);
+        }
+
+        function fmtDate(iso){
+            if (!iso) return '-';
+            return String(iso).slice(0, 10);
+        }
+
+        async function loadMyInfo(){
+            try{
+                const res = await fetch(MY_API, { credentials:'include', headers:{'Accept':'application/json'}});
+                if (!res.ok) return;
+                const json = await res.json();
+                const me = json?.data ?? json;
+                if (!me) return;
+
+                // 기본
+                setText('vEmpName', me.empName);
+                setText('vEmpId', me.empId);
+                setText('vGen', me.gen);
+                setText('vRole', me.role);
+                setText('vHireDate', fmtDate(me.hireDate));
+
+                // 조직
+                setText('vComName', me.comName);
+                setText('vComId', me.comId);
+                setText('vDepName', me.depName);
+                setText('vPosName', me.posName);
+
+                // 연락처
+                setText('vEmail', me.email);
+                setText('vPhone', me.phone);
+                setText('vWorkPhone', me.workPhone);
+                setText('vAddr', me.addr);
+
+                // 상태
+                setText('vMsgStat', me.msgStat);
+
+                // 대직자
+                setText('vDelegateName', me.delegateName);
+                setText('vDelegateEmpId', me.delegateEmpId);
+
+                // 왼쪽 요약
+                setText('sideName', me.empName);
+                setText('sideCompany', me.comName);
+                setText('sideDepPos', `${me.depName ?? '-'} / ${me.posName ?? '-'}`);
+                setText('sideRole', me.role);
+
+            }catch(e){
+                console.warn('마이페이지 정보 로드 실패', e);
+            }
+        }
+
+        async function loadMyPhoto(){
+            const meEl = document.getElementById('me');
+            const empNo = meEl?.dataset?.empNo;
+            if (!empNo) return;
+
+            const img = document.getElementById('mypagePhoto');
+            const fallback = document.getElementById('mypagePhotoFallback');
+            if (!img || !fallback) return;
+
+            const BASE = '/api/v1/attachments';
+
+            function showFallback(){ img.style.display='none'; fallback.style.display='grid'; }
+            function showImg(url){
+                img.onload = () => { img.style.display='block'; fallback.style.display='none'; };
+                img.onerror = () => showFallback();
+                img.src = url;
+            }
+
+            try{
+                const listRes = await fetch(`${BASE}?domain=EMPLOYEE&entityId=${encodeURIComponent(empNo)}`, { credentials:'include' });
+                if (!listRes.ok) return showFallback();
+
+                const listJson = await listRes.json();
+                const items = listJson?.data || [];
+                if (!items.length) return showFallback();
+
+                const main = items.find(it => it.isMain === true);
+                const pickedId = main ? (main.attachmentId || main.id) : (items[0].attachmentId || items[0].id);
+                if (!pickedId) return showFallback();
+
+                const previewRes = await fetch(`${BASE}/${pickedId}/preview-url`, { credentials:'include' });
+                if (!previewRes.ok) return showFallback();
+
+                const previewJson = await previewRes.json();
+                const url = previewJson?.data?.url || previewJson?.data?.previewUrl;
+                if (url) showImg(url); else showFallback();
+
+            }catch(e){
+                showFallback();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadMyInfo();
+            loadMyPhoto();
+        });
+    </script>
+</th:block>
+
+</body>
+</html>
