@@ -1,6 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequiredArgsConstructor
 public class ViewEmployeeController {
 
+    private final EmployeeService employeeService;
+
     @GetMapping
     public String mainPage(@AuthenticationPrincipal CustomUser user, Model model) {
 
@@ -36,5 +40,14 @@ public class ViewEmployeeController {
         model.addAttribute("username", user != null ? user.getUsername() : "");
         model.addAttribute("comId", comId != null ? comId : "");
         return "employee/me";
+    }
+
+    @GetMapping("/me/edit")
+    public String meEdit(@AuthenticationPrincipal CustomUser user, Model model) {
+        if (user != null) {
+            ResEmployeeDetailDto myInfo = employeeService.getEmployeeDetailById(user.getUsername());
+            model.addAttribute("me", myInfo);
+        }
+        return "employee/me-edit";
     }
 }

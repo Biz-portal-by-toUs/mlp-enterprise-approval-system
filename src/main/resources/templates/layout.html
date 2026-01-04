@@ -216,8 +216,8 @@
             position: fixed;
             right: 18px;
             top: 70px;
-            width: 320px; /* 사이즈 조정 반영 */
-            height: 450px; /* 사이즈 조정 반영 */
+            width: 320px;
+            height: 450px;
             background: #fff;
             border: 1px solid var(--line);
             border-radius: 18px;
@@ -238,14 +238,12 @@
             font-weight: 800;
         }
 
-        /* ✅ 추가: 알림 센터 제목 옆 버튼 정렬용 */
         .noti-head-left {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        /* ✅ 추가: 모두 읽기 버튼 스타일 */
         .read-all-btn {
             font-size: 11px;
             font-weight: 800;
@@ -346,6 +344,35 @@
             color: var(--muted);
             margin-top:-6px;
         }
+
+        /* ✅ 추가: 프로필 패널 간단 정보 */
+        .profile-mini{
+            width:100%;
+            margin-top: 6px;
+            padding: 10px 12px;
+            border: 1px solid rgba(17,24,39,.08);
+            background: #fff;
+            border-radius: 14px;
+        }
+        .mini-row{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(17,24,39,.06);
+        }
+        .mini-row:last-child{ border-bottom:0; }
+        .mini-k{
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        .mini-v{
+            font-size: 12px;
+            color:#111827;
+            font-weight: 700;
+        }
+
         .profile-actions{
             width:100%;
             display:flex;
@@ -499,6 +526,12 @@
 
         html.subbar-collapsed .page-with-subbar{ grid-template-columns: 0 minmax(0, 1fr); }
         html.subbar-collapsed .page-with-subbar > .subbar{ overflow: hidden; opacity: 0; pointer-events: none; border-right: 0; box-shadow: none; }
+
+        /* ✅ FIX: 서브바 페이지 “붙어보임” 해결 (오른쪽 영역 여백 복구) */
+        .page-with-subbar{ gap: 18px; }
+        .page-with-subbar > :not(.subbar){
+            padding: 22px 26px;
+        }
     </style>
 
     <th:block layout:fragment="pageStyles"></th:block>
@@ -552,7 +585,7 @@
                 </svg>
             </button>
 
-            <!-- ✅ 수정: 아바타 클릭 시 바로 이동 X, 프로필 패널 토글 -->
+            <!-- ✅ 아바타 클릭 시 프로필 패널 토글 -->
             <button class="avatar" type="button" id="profileBtn" title="계정"
                     aria-haspopup="dialog" aria-expanded="false"
                     onclick="toggleProfile()">
@@ -683,6 +716,22 @@
         <div class="profile-name" id="profileName">내 계정</div>
         <div class="profile-email" id="profileEmail"></div>
 
+        <!-- ✅ 추가: 간단 정보 (이름/부서/직급/이메일/사내번호) -->
+        <div class="profile-mini" id="profileMini">
+            <div class="mini-row">
+                <span class="mini-k">부서</span>
+                <span class="mini-v" id="miniDep">-</span>
+            </div>
+            <div class="mini-row">
+                <span class="mini-k">직급</span>
+                <span class="mini-v" id="miniPos">-</span>
+            </div>
+            <div class="mini-row">
+                <span class="mini-k">사내번호</span>
+                <span class="mini-v" id="miniWorkPhone">-</span>
+            </div>
+        </div>
+
         <div class="profile-actions">
             <button class="profile-action" type="button" onclick="location.href='/employees/me'">
                 마이페이지로 이동
@@ -715,7 +764,9 @@
 </div>
 
 <button class="chat-fab" type="button" onclick="toggleChat()">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor">
+        <path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
 </button>
 
 <script>
@@ -753,13 +804,12 @@
         const isVisible = typeof force === 'boolean' ? force : !panel.classList.contains('open');
         panel.classList.toggle('open', isVisible);
         if (isVisible) {
-            toggleChat(false); // 채팅창 열려있으면 닫기
-            toggleProfile(false); // ✅ 추가: 프로필 패널 닫기
+            toggleChat(false);
+            toggleProfile(false);
             document.getElementById('notiIframe').contentWindow.location.reload();
         }
     }
 
-    /* ✅ 추가: Iframe 내부의 모두 읽기 함수 호출 */
     async function readAllInIframe() {
         const iframe = document.getElementById('notiIframe');
         if (iframe && iframe.contentWindow.readAllNotifications) {
@@ -771,7 +821,6 @@
         const empId = document.getElementById('me')?.dataset?.empNo;
         if (!empId) return;
 
-        // 초기 미읽음 알림 개수 조회
         try {
             const res = await fetch('/api/v1/notifications/unread-count');
             if (res.ok) {
@@ -780,7 +829,6 @@
             }
         } catch (e) { console.error("초기 알림 카운트 로드 실패", e); }
 
-        // SSE 연결 (기존 챗봇 채널 활용)
         const eventSource = new EventSource('/api/v1/chatbot/stream');
 
         eventSource.addEventListener('notification', (e) => {
@@ -792,14 +840,14 @@
         eventSource.onerror = () => { console.warn("SSE 연결 끊김, 재연결 시도 중..."); };
     }
 
-    /* ✅ 2. 기존 로직 (955줄에 있던 것들) */
+    /* ✅ 2. 기존 로직 */
     function toggleChat(force) {
         const panel = document.getElementById('chatPanel');
         const open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
         panel.classList.toggle('open', open);
         if (open) {
-            toggleNoti(false); // 알림창 열려있으면 닫기
-            toggleProfile(false); // ✅ 추가: 프로필 패널 닫기
+            toggleNoti(false);
+            toggleProfile(false);
         }
     }
 
@@ -933,23 +981,26 @@
         }
     }
 
+    /* ✅ FIX: 프로필 메뉴 정보는 "뷰(/employees/me)"가 아니라 "API(/api/v1/employees/me)"로 가져와야 함 */
     async function loadMyProfileMenu(){
         try {
-            // ✅ 네가 만든 API 그대로 사용
-            const res = await fetch('/employees/me', {
+            const res = await fetch('/api/v1/employees/me', {
                 credentials:'include',
                 headers:{ 'Accept':'application/json' }
             });
             if (!res.ok) return;
 
             const json = await res.json();
-            const me = json?.data ?? json; // 혹시 data 래핑이 없을 수도 있어서 방어
-
+            const me = json?.data ?? json;
             if (!me) return;
 
             document.getElementById('profileComName').innerText = me.comName || 'Bizportal';
             document.getElementById('profileName').innerText = me.empName || me.empId || '내 계정';
             document.getElementById('profileEmail').innerText = me.email || '';
+
+            document.getElementById('miniDep').innerText = me.depName || '-';
+            document.getElementById('miniPos').innerText = me.posName || '-';
+            document.getElementById('miniWorkPhone').innerText = me.workPhone || '-';
 
             _profileLoaded = true;
         } catch (e) {
@@ -957,7 +1008,6 @@
         }
     }
 
-    // ✅ 바깥 클릭 시 닫기 + ESC로 닫기
     window.addEventListener('click', (e) => {
         const menu = document.getElementById('profileMenu');
         const btn = document.getElementById('profileBtn');
@@ -977,7 +1027,7 @@
         try { if (localStorage.getItem(SUBBAR_KEY) === '1') setSubbarCollapsed(true); } catch (e) {}
         loadProfilePhoto();
         setActiveIconbarMenu();
-        initNotificationSystem(); // 실시간 시스템 시작
+        initNotificationSystem();
     });
 </script>
 
