@@ -71,4 +71,16 @@ public class TodoController {
         );
     }
 
+    @DeleteMapping("/{todoNo}")
+    public ResponseEntity<ResponseDto<Void>> delete(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="todoNo") Long todoNo
+    ) {
+        todoService.delete(user.getUsername(), todoNo);
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK, "투두 삭제 완료", null)
+        );
+    }
+
 }
