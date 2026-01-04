@@ -69,7 +69,7 @@ public class ResEmployeeDetailDto {
                 .hireDate(employee.getHireDate())
                 .addr(employee.getAddr())
                 .role(employee.getRole())
-                .msgStat(employee.getMsgStat())
+                .msgStat(employee.getMsgStat() == null ? null : String.valueOf(employee.getMsgStat().getCode()))
                 .delegateEmpId(employee.getDelegate() != null ? employee.getDelegate().getEmpId() : null)
                 .delegateName(employee.getDelegate() != null ? employee.getDelegate().getEmpName() : null)
                 .build();

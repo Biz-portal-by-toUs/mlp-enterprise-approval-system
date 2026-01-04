@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.employee.repository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -146,6 +147,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Optional<Employee> findByEmpNoAndIsDeletedFalse(Long empNo);
 
+    @Query("select e.atte from Employee e where e.empNo = :empNo")
+    String findAtteByEmpNo(@Param("empNo") Long empNo);
+
+
     interface PosCount {
         Long getPosNo();
         Long getCnt();
@@ -173,4 +178,104 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
                 group by e.department.depId
             """)
     List<DepCount> countGroupByDepId(@Param("comId") String comId);
+
+    //조직도용 사원 조회
+    interface OrgEmployeeRow {
+        Long getEmpNo();
+        String getEmpId();
+        String getEmpName();
+        String getEmail();
+        String getWorkPhone();
+        String getObjectKey();
+        String getAtte();
+
+        String getDepId();
+        String getDepName();
+
+        String getPosName();
+        Integer getPosOrder();
+    }
+
+    @Query("""
+        select
+          e.empNo as empNo,
+          e.empId as empId,
+          e.empName as empName,
+          e.email as email,
+          e.workPhone as workPhone,
+          e.objectKey as objectKey,
+          e.atte as atte,
+
+          d.depId as depId,
+          d.depName as depName,
+
+          p.posName as posName,
+          p.posOrder as posOrder
+        from Employee e
+          join e.department d
+          join e.positions p
+        where e.company.comId = :comId
+          and (:depId is null or d.depId = :depId)
+        order by d.depName asc, p.posOrder asc, e.empName asc, e.empNo asc
+    """)
+    List<OrgEmployeeRow> findOrgChartRows(@Param("comId")String comId,@Param("depId") String depId);
+
+
+    // 조직도 조회 사원 검색
+    interface OrgEmployeeSearchRow {
+        Long getEmpNo();
+        String getEmpId();
+        String getEmpName();
+
+        String getDepId();
+        String getDepName();
+
+        String getPosName();
+        Integer getPosOrder();
+
+        String getObjectKey();
+    }
+
+    @Query("""
+        select
+          e.empNo as empNo,
+          e.empId as empId,
+          e.empName as empName,
+
+          d.depId as depId,
+          d.depName as depName,
+
+          p.posName as posName,
+          p.posOrder as posOrder,
+
+          e.objectKey as objectKey
+        from Employee e
+          join e.department d
+          join e.positions p
+        where e.company.comId = :comId
+          and (
+            :keyword is null or :keyword = ''
+            or lower(e.empName) like concat('%', lower(:keyword), '%')
+            or lower(e.empId)  like concat('%', lower(:keyword), '%')
+            or lower(e.email)  like concat('%', lower(:keyword), '%')
+          )
+        order by e.empName asc, e.empNo asc
+    """)
+    List<OrgEmployeeSearchRow> searchOrgEmployees(
+            @Param("comId") String comId,
+            @Param("keyword") String keyword
+    );
+
+    // 이메일 중복 체크(본인 제외)
+    boolean existsByEmailAndEmpNoNot(String email, Long empNo);
+
+    // employee 로그인시 mstStat ="C"로 업데이트
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Employee e
+           set e.msgStat = :msgStat
+         where e.empNo = :empNo
+           and e.isDeleted = false
+    """)
+    int updateMsgStatByEmpNo(@Param("empNo") Long empNo, @Param("msgStat") MsgStat msgStat);
 }

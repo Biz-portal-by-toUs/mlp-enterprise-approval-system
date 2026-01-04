@@ -32,10 +32,14 @@ public class CommentController {
         return ResponseEntity.ok().body(new ResponseDto<CommentDto>(HttpStatus.OK, "댓글 조회 성공", commentService.getCommentById(commentNo)));
     }
 
-    @DeleteMapping("/comments/{commentNo}")
-    public ResponseEntity<String> delete(@PathVariable(name="commentNo") Long commentNo) {
+    @DeleteMapping("/comment/{commentNo}")
+    public ResponseEntity<ResponseDto> delete(@PathVariable(name="commentNo") Long commentNo) {
         commentService.deleteComment(commentNo);
-        return ResponseEntity.ok("댓글이 삭제되었습니다.");
+        //return ResponseEntity.ok("댓글이 삭제되었습니다.");
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<BoardResAllDto>(HttpStatus.OK, "댓글 삭제 성공", null));
+
     }
 
     @PostMapping(value ="/comment", consumes = {"multipart/form-data"})

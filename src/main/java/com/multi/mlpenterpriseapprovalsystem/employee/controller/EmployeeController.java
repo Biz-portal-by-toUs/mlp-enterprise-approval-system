@@ -6,6 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@Slf4j
 public class EmployeeController {
     private final EmployeeService employeeService;
 
@@ -59,6 +61,31 @@ public class EmployeeController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "내 정보 조회 성공", myInfo));
+    }
+
+    @PatchMapping("/employees/me")
+    public ResponseEntity<ResponseDto<Void>> updateMyProfile(
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody ReqUpdateMyProfileDto req
+    ) {
+        employeeService.updateMyProfile(user, req);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "내 정보 수정 성공", null));
+    }
+
+    @PatchMapping("/employees/me/msg-stat")
+    public ResponseEntity<ResponseDto<Void>> updateMsgStat(
+            @AuthenticationPrincipal CustomUser user,
+            @RequestBody ReqUpdateMsgStatDto req
+    ) {
+
+        employeeService.updateMsgStat(user.getSubjectId(), req);
+        log.info("[msgStat] empNo={}, code={}", user.getSubjectId(), req.getCode());
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "메시지 상태 수정 성공", null));
     }
 
     @GetMapping("/admin/employees")

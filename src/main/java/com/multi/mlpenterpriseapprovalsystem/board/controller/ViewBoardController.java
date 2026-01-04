@@ -1,8 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.board.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.BoardCatDto;
 import com.multi.mlpenterpriseapprovalsystem.board.service.BoardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,8 +40,13 @@ public class ViewBoardController {
 
     // 상세 조회
     @GetMapping("/{boardNo}")
-    public String boardDetail(@PathVariable("boardNo") int boardNo, Model model) {
+    public String boardDetail(@PathVariable("boardNo") int boardNo, Model model,
+                              @AuthenticationPrincipal CustomUser user) {
         model.addAttribute("boardNo", boardNo);
+        model.addAttribute("loginEmpId", user.getUsername());
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("COM_ADMIN"));
+        model.addAttribute("isAdmin", isAdmin);
         return "board/board-detail";
     }
 

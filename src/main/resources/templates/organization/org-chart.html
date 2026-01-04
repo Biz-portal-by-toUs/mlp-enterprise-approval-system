@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
+<div layout:fragment="content" class="org-page">
+
+    <style>
+        .org-page{padding:20px 18px}
+        .org-top{
+            display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+            flex-wrap:wrap; margin-bottom:12px;
+        }
+        .org-title{display:flex; flex-direction:column; gap:6px}
+        .org-title h2{margin:0; font-size:20px}
+        .org-title p{margin:0; color:#6b7280; font-size:13px}
+
+        /* ✅ 상단 컨트롤 영역 */
+        .org-controls{
+            display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+            margin:10px 0 6px;
+        }
+        .btn{
+            height:34px; padding:0 12px; border-radius:10px;
+            border:1px solid #e5e7eb; background:#fff; cursor:pointer; font-size:13px;
+            display:inline-flex; align-items:center; gap:8px;
+        }
+        .btn.primary{
+            border-color:#2f6fda;
+            color:#2f6fda;
+            background:rgba(47,111,218,0.06);
+        }
+        .btn.small{height:32px; padding:0 10px; font-size:12px;}
+        .btn .dot{
+            width:8px; height:8px; border-radius:999px;
+            background:#2f6fda;
+            display:inline-block;
+        }
+
+        .org-search{position:relative; width:min(520px, 100%);}
+        .org-search input{
+            width:100%; height:44px; padding:0 12px;
+            border:1px solid #e5e7eb; border-radius:12px; background:#fff;
+            outline:none; font-size:14px;
+        }
+        .org-search input:focus{border-color:#2f6fda; box-shadow:0 0 0 4px rgba(47,111,218,0.12);}
+        .org-search .dropdown{
+            position:absolute; left:0; right:0; top:48px;
+            background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+            box-shadow:0 10px 24px rgba(0,0,0,0.08);
+            max-height:320px; overflow:auto; z-index:20; display:none;
+        }
+        .org-search .dropdown.show{display:block;}
+        .org-search .item{
+            padding:10px 12px; display:flex; gap:10px; align-items:center; justify-content:space-between;
+            cursor:pointer;
+        }
+        .org-search .item:hover{background:#f8fafc;}
+        .org-search .left{display:flex; gap:10px; align-items:center; min-width:0;}
+        .org-search .avatar{
+            width:34px; height:34px; border-radius:10px; flex:0 0 auto;
+            background:#eef2ff; border:1px solid #e5e7eb;
+            display:flex; align-items:center; justify-content:center; overflow:hidden;
+            font-weight:800; color:#6b7280;
+        }
+        .org-search .avatar img{width:100%; height:100%; object-fit:cover;}
+        .org-search .meta{min-width:0;}
+        .org-search .name{font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .org-search .sub{font-size:12px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .org-search .hint{font-size:12px; color:#6b7280;}
+        .org-search .empty{padding:10px 12px; color:#6b7280; font-size:13px;}
+
+        .dept-filter{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 16px;}
+        .chip{
+            border:1px solid #e5e7eb; background:#fff; height:34px;
+            padding:0 12px; border-radius:999px; font-size:13px;
+            cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+        }
+        .chip.active{border-color:#2f6fda; box-shadow:0 0 0 4px rgba(47,111,218,0.10);}
+        .chip .count{font-size:12px; color:#6b7280; background:#f3f4f6; padding:2px 8px; border-radius:999px;}
+
+        .org-container{display:flex; flex-direction:column; gap:12px;}
+        .dept-card{background:#fff; border:1px solid #e5e7eb; border-radius:16px; overflow:hidden;}
+        .dept-head{
+            padding:12px 14px; display:flex; align-items:center; justify-content:space-between;
+            cursor:pointer; background:#fafafa;
+        }
+        .dept-head .left{display:flex; gap:10px; align-items:center;}
+        .dept-head .badge{
+            width:34px; height:34px; border-radius:12px;
+            display:flex; align-items:center; justify-content:center;
+            background:#eef2ff; color:#2f6fda; font-weight:800; border:1px solid #e5e7eb;
+        }
+        .dept-head .title{display:flex; flex-direction:column; gap:2px;}
+        .dept-head .title .name{font-weight:800;}
+        .dept-head .title .sub{font-size:12px; color:#6b7280;}
+        .dept-head .arrow{color:#6b7280; font-size:12px;}
+
+        .dept-body{padding:12px 14px; display:none;}
+        .dept-body.open{display:block;}
+
+        .emp-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px;}
+        .emp-card{
+            border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#fff;
+            display:flex; gap:12px; align-items:flex-start;
+        }
+        .emp-card .avatar{
+            width:46px; height:46px; border-radius:14px;
+            background:#f3f4f6; border:1px solid #e5e7eb;
+            overflow:hidden; flex:0 0 auto;
+            display:flex; align-items:center; justify-content:center;
+            font-weight:800; color:#6b7280;
+        }
+        .emp-card .avatar img{width:100%; height:100%; object-fit:cover;}
+        .emp-card .info{min-width:0; flex:1;}
+        .emp-card .row1{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+        .emp-card .name{font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .emp-card .tag{
+            font-size:12px; color:#2f6fda; background:rgba(47,111,218,0.10);
+            padding:4px 8px; border-radius:999px; white-space:nowrap;
+        }
+
+        /* ✅ 근태 배지 */
+        .emp-card .atte-tag{
+            font-size:12px;
+            padding:4px 8px;
+            border-radius:999px;
+            border:1px solid #e5e7eb;
+            background:#f9fafb;
+            color:#374151;
+            white-space:nowrap;
+        }
+
+        .emp-card .row2{margin-top:4px; font-size:12px; color:#6b7280; display:flex; gap:8px; flex-wrap:wrap;}
+        .emp-card .actions{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;}
+        .emp-extra{
+            margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb;
+            display:none; font-size:12px; color:#374151; line-height:1.6;
+        }
+        .emp-extra.show{display:block;}
+        .muted{color:#6b7280}
+        .emp-card.highlight{
+            outline:3px solid #2f6fda;
+            box-shadow:0 0 0 6px rgba(47,111,218,0.15);
+            transition:0.2s;
+        }
+        .org-state{margin-top:10px; color:#6b7280; font-size:13px;}
+    </style>
+
+    <div class="org-top">
+        <div class="org-title">
+            <h2>조직도</h2>
+            <p>부서별 사원을 확인하고, 검색으로 해당 사원 위치로 이동할 수 있어요.</p>
+        </div>
+
+        <div class="org-search">
+            <input id="empSearchInput" type="search" placeholder="이름 / 사번(empId) / 이메일로 검색" autocomplete="off">
+            <div id="searchDropdown" class="dropdown"></div>
+        </div>
+    </div>
+
+    <!-- ✅ 전체 접기/펼치기 토글 버튼 -->
+    <div class="org-controls">
+        <button id="toggleAllBtn" class="btn primary" type="button">
+            <span class="dot"></span>
+            <span id="toggleAllText">전체 접기</span>
+        </button>
+    </div>
+
+    <div class="dept-filter" id="deptFilter"></div>
+    <div id="orgContainer" class="org-container"></div>
+    <div id="orgState" class="org-state"></div>
+
+    <script>
+        (() => {
+            const API = {
+                orgChart: '/api/v1/org-chart',
+                search:   '/api/v1/org-chart/search'
+            };
+
+            const $ = (sel) => document.querySelector(sel);
+            const orgContainer = $('#orgContainer');
+            const deptFilter = $('#deptFilter');
+            const orgState = $('#orgState');
+            const searchInput = $('#empSearchInput');
+            const dropdown = $('#searchDropdown');
+
+            const toggleAllBtn = $('#toggleAllBtn');
+            const toggleAllText = $('#toggleAllText');
+
+            let orgData = null;
+            let activeDepId = null;
+            let openDeps = new Set();
+            let debounceTimer = null;
+
+            async function fetchJson(url) {
+                const res = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include' // ✅ httpOnly Cookie
+                });
+
+                if (!res.ok) {
+                    const text = await res.text().catch(() => '');
+                    throw new Error(`HTTP ${res.status} ${res.statusText} :: ${text}`);
+                }
+                return res.json();
+            }
+
+            function setStateText(msg) { orgState.textContent = msg || ''; }
+
+            function escapeHtml(s) {
+                return (s ?? '').toString()
+                    .replaceAll('&','&amp;')
+                    .replaceAll('<','&lt;')
+                    .replaceAll('>','&gt;')
+                    .replaceAll('"','&quot;')
+                    .replaceAll("'","&#039;");
+            }
+
+            function initials(name) {
+                const n = (name || '').trim();
+                return n ? n[0] : '?';
+            }
+
+            function clearDropdown() {
+                dropdown.classList.remove('show');
+                dropdown.innerHTML = '';
+            }
+
+            function showDropdown(html) {
+                dropdown.innerHTML = html;
+                dropdown.classList.add('show');
+            }
+
+            // ✅ 근태 코드 -> 표시 텍스트
+            function atteLabel(code) {
+                const c = (code ?? 'C').toString().trim().toUpperCase();
+                const map = { B: '출장 중', V: '휴가 중', C: '출근 중' };
+                return map[c] ?? '출근 중';
+            }
+
+            // ================================
+            // ✅ EMPLOYEE 사진: attachment -> presigned url -> img 적용
+            // ================================
+            const PHOTO = {
+                list: (empNo) => `/api/v1/attachments?domain=EMPLOYEE&entityId=${encodeURIComponent(empNo)}`,
+                preview: (attachmentId) => `/api/v1/attachments/${attachmentId}/preview-url`
+            };
+
+            const photoCache = new Map();      // empNo -> url|null
+            const photoPromise = new Map();    // empNo -> Promise(url|null)
+
+            function pickFirstAttachmentId(listItem) {
+                if (!listItem) return null;
+                return listItem.attachmentId ?? listItem.id ?? listItem.attId ?? listItem.fileId ?? null;
+            }
+
+            function pickPresignedUrl(data) {
+                if (!data) return null;
+                return data.url ?? data.presignedUrl ?? data.previewUrl ?? null;
+            }
+
+            async function resolveEmployeePhotoUrl(empNo) {
+                if (!empNo) return null;
+
+                if (photoCache.has(empNo)) return photoCache.get(empNo);
+                if (photoPromise.has(empNo)) return photoPromise.get(empNo);
+
+                const p = (async () => {
+                    try {
+                        const listJson = await fetchJson(PHOTO.list(empNo));
+                        const list = listJson.data ?? listJson;
+
+                        if (!Array.isArray(list) || list.length === 0) {
+                            photoCache.set(empNo, null);
+                            return null;
+                        }
+
+                        const attachmentId = pickFirstAttachmentId(list[0]);
+                        if (!attachmentId) {
+                            photoCache.set(empNo, null);
+                            return null;
+                        }
+
+                        const prevJson = await fetchJson(PHOTO.preview(attachmentId));
+                        const prevData = prevJson.data ?? prevJson;
+
+                        const url = pickPresignedUrl(prevData);
+                        photoCache.set(empNo, url || null);
+                        return url || null;
+
+                    } catch (e) {
+                        console.warn('[EMP PHOTO] failed', empNo, e);
+                        photoCache.set(empNo, null);
+                        return null;
+                    } finally {
+                        photoPromise.delete(empNo);
+                    }
+                })();
+
+                photoPromise.set(empNo, p);
+                return p;
+            }
+
+            async function hydrateEmployeeAvatars(rootEl) {
+                const els = Array.from(rootEl.querySelectorAll('.emp-avatar[data-emp-no]'));
+                if (els.length === 0) return;
+
+                const CONCURRENCY = 6;
+                let idx = 0;
+
+                async function worker() {
+                    while (idx < els.length) {
+                        const el = els[idx++];
+                        const empNo = el.getAttribute('data-emp-no');
+                        if (!empNo) continue;
+
+                        if (el.querySelector('img')) continue;
+
+                        const url = await resolveEmployeePhotoUrl(empNo);
+                        if (!url) continue;
+
+                        el.innerHTML = `<img src="${escapeHtml(url)}" alt="profile">`;
+                    }
+                }
+
+                await Promise.all(
+                    Array.from({ length: Math.min(CONCURRENCY, els.length) }, worker)
+                );
+            }
+
+            function isAllOpen() {
+                if (!orgData?.departments?.length) return false;
+                return openDeps.size === orgData.departments.length;
+            }
+
+            function updateToggleAllBtn() {
+                const allOpen = isAllOpen();
+                toggleAllText.textContent = allOpen ? '전체 접기' : '전체 펼치기';
+            }
+
+            function openAll() {
+                openDeps = new Set((orgData.departments || []).map(d => d.depId));
+            }
+
+            function closeAll() {
+                openDeps = new Set();
+            }
+
+            function renderDeptFilter(deps) {
+                const total = deps.reduce((acc, d) => acc + (d.empCount || 0), 0);
+
+                const chips = [];
+                chips.push(`
+          <button class="chip ${activeDepId ? '' : 'active'}" data-dep-id="">
+            전체 <span class="count">${total}</span>
+          </button>
+        `);
+
+                deps.forEach(d => {
+                    chips.push(`
+            <button class="chip ${activeDepId === d.depId ? 'active' : ''}" data-dep-id="${escapeHtml(d.depId)}">
+              ${escapeHtml(d.depName)} <span class="count">${d.empCount ?? 0}</span>
+            </button>
+          `);
+                });
+
+                deptFilter.innerHTML = chips.join('');
+
+                deptFilter.querySelectorAll('.chip').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const depId = btn.getAttribute('data-dep-id') || '';
+                        activeDepId = depId ? depId : null;
+
+                        if (activeDepId) openDeps = new Set([activeDepId]);
+
+                        renderAll();
+
+                        if (activeDepId) {
+                            requestAnimationFrame(() => {
+                                const el = document.getElementById(`dep-${activeDepId}`);
+                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            });
+                        }
+                    });
+                });
+            }
+
+            function renderOrgChart(deps) {
+                const parts = deps.map(dep => {
+                    const isOpen = openDeps.has(dep.depId);
+
+                    const empCards = (dep.employees || []).map(emp => {
+                        const empId = emp.empId;
+                        const empNo = emp.empNo;
+                        const extraId = `extra-${empId}`;
+
+                        const atteText = atteLabel(emp.atte); // ✅ 여기서 변환
+
+                        return `
+              <div class="emp-card" id="emp-${escapeHtml(empId)}" data-emp-id="${escapeHtml(empId)}" data-dep-id="${escapeHtml(dep.depId)}">
+                <div class="avatar emp-avatar" data-emp-no="${empNo ?? ''}" data-emp-name="${escapeHtml(emp.empName)}">
+                  ${escapeHtml(initials(emp.empName))}
+                </div>
+
+                <div class="info">
+                  <div class="row1">
+                    <div class="name">${escapeHtml(emp.empName)}</div>
+
+                    <!-- ✅ 우측 배지: 직급 + 근태 -->
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <div class="tag">${escapeHtml(emp.posName || '')}</div>
+                      <div class="atte-tag">${escapeHtml(atteText)}</div>
+                    </div>
+                  </div>
+
+                  <div class="row2">
+                    <span class="muted">${escapeHtml(dep.depName)}</span>
+                    <span class="muted">•</span>
+                    <span class="muted">사번 ${escapeHtml(emp.empId || '')}</span>
+                    <span class="muted">•</span>
+                    <span class="muted">근태 ${escapeHtml(atteText)}</span>
+                  </div>
+
+                  <div class="actions">
+                    <button class="btn small primary" data-toggle="${escapeHtml(extraId)}" type="button">자세히 보기</button>
+                  </div>
+
+                  <div class="emp-extra" id="${escapeHtml(extraId)}">
+                    <div>근태: <span class="muted">${escapeHtml(atteText)}</span></div>
+                    <div>사내번호: <span class="muted">${escapeHtml(emp.workPhone || '-')}</span></div>
+                    <div>메일: <span class="muted">${escapeHtml(emp.email || '-')}</span></div>
+                  </div>
+                </div>
+              </div>
+            `;
+                    }).join('');
+
+                    return `
+            <div class="dept-card" id="dep-${escapeHtml(dep.depId)}">
+              <div class="dept-head" data-dep="${escapeHtml(dep.depId)}">
+                <div class="left">
+                  <div class="badge">${escapeHtml((dep.depName || '').trim()[0] || 'D')}</div>
+                  <div class="title">
+                    <div class="name">${escapeHtml(dep.depName)} <span class="muted">(${dep.empCount ?? 0})</span></div>
+                    <div class="sub">사원은 직급 순서(posOrder)로 정렬됩니다</div>
+                  </div>
+                </div>
+                <div class="arrow">${isOpen ? '▲ 접기' : '▼ 펼치기'}</div>
+              </div>
+
+              <div class="dept-body ${isOpen ? 'open' : ''}">
+                ${empCards ? `<div class="emp-grid">${empCards}</div>` : `<div class="muted" style="padding:6px 2px;">사원이 없습니다.</div>`}
+              </div>
+            </div>
+          `;
+                });
+
+                orgContainer.innerHTML = parts.join('');
+
+                hydrateEmployeeAvatars(orgContainer);
+
+                orgContainer.querySelectorAll('.dept-head').forEach(head => {
+                    head.addEventListener('click', () => {
+                        const depId = head.getAttribute('data-dep');
+                        const body = head.parentElement.querySelector('.dept-body');
+                        const arrow = head.querySelector('.arrow');
+
+                        const willOpen = !body.classList.contains('open');
+                        body.classList.toggle('open', willOpen);
+                        arrow.textContent = willOpen ? '▲ 접기' : '▼ 펼치기';
+
+                        if (willOpen) openDeps.add(depId);
+                        else openDeps.delete(depId);
+
+                        updateToggleAllBtn();
+                    });
+                });
+
+                orgContainer.querySelectorAll('[data-toggle]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.getAttribute('data-toggle');
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        const open = !el.classList.contains('show');
+                        el.classList.toggle('show', open);
+                        btn.textContent = open ? '접기' : '자세히 보기';
+                    });
+                });
+            }
+
+            function renderAll() {
+                if (!orgData) return;
+
+                const deps = activeDepId
+                    ? orgData.departments.filter(d => d.depId === activeDepId)
+                    : orgData.departments;
+
+                renderDeptFilter(orgData.departments);
+                renderOrgChart(deps);
+                updateToggleAllBtn();
+                setStateText('');
+            }
+
+            async function loadOrgChart() {
+                setStateText('조직도 불러오는 중...');
+                try {
+                    const json = await fetchJson(API.orgChart);
+                    orgData = json.data ?? json;
+
+                    openAll();
+                    activeDepId = null;
+
+                    renderAll();
+                } catch (e) {
+                    console.error(e);
+                    setStateText('조직도를 불러오지 못했어요. (로그인/권한/서버 로그 확인)');
+                }
+            }
+
+            async function searchEmployees(keywordRaw) {
+                const kw = (keywordRaw ?? '').trim();
+                if (!kw) { clearDropdown(); return; }
+
+                try {
+                    const url = API.search + '?keyword=' + encodeURIComponent(kw);
+                    const json = await fetchJson(url);
+                    const rows = json.data ?? json;
+
+                    if (!Array.isArray(rows) || rows.length === 0) {
+                        showDropdown(`<div class="empty">검색 결과가 없어요.</div>`);
+                        return;
+                    }
+
+                    const html = rows.slice(0, 20).map(r => {
+                        const empNo = r.empNo;
+                        // 검색 드롭다운에도 근태 표시하고 싶으면 아래 한 줄 추가 가능
+                        // const atteText = atteLabel(r.atte);
+
+                        return `
+              <div class="item" data-emp-id="${escapeHtml(r.empId)}" data-dep-id="${escapeHtml(r.depId)}">
+                <div class="left">
+                  <div class="avatar emp-avatar" data-emp-no="${empNo ?? ''}" data-emp-name="${escapeHtml(r.empName)}">
+                    ${escapeHtml(initials(r.empName))}
+                  </div>
+                  <div class="meta">
+                    <div class="name">${escapeHtml(r.empName)} <span class="muted">(${escapeHtml(r.empId)})</span></div>
+                    <div class="sub">${escapeHtml(r.depName)} · ${escapeHtml(r.posName || '')}</div>
+                  </div>
+                </div>
+                <div class="hint">이동</div>
+              </div>
+            `;
+                    }).join('');
+
+                    showDropdown(html);
+                    hydrateEmployeeAvatars(dropdown);
+
+                    dropdown.querySelectorAll('.item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const depId = item.getAttribute('data-dep-id');
+                            const empId = item.getAttribute('data-emp-id');
+                            clearDropdown();
+                            searchInput.blur();
+                            focusEmployee(depId, empId);
+                        });
+                    });
+
+                } catch (e) {
+                    console.error(e);
+                    showDropdown(`<div class="empty">검색 중 오류가 발생했어요.</div>`);
+                }
+            }
+
+            function focusEmployee(depId, empId) {
+                activeDepId = depId || null;
+
+                if (activeDepId) openDeps = new Set([activeDepId]);
+
+                renderAll();
+
+                requestAnimationFrame(() => {
+                    const target = document.getElementById(`emp-${empId}`);
+                    if (!target) return;
+
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.classList.add('highlight');
+                    setTimeout(() => target.classList.remove('highlight'), 1500);
+                });
+            }
+
+            toggleAllBtn.addEventListener('click', () => {
+                if (!orgData) return;
+
+                const allOpen = isAllOpen();
+                if (allOpen) closeAll();
+                else openAll();
+
+                renderAll();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.org-search')) clearDropdown();
+            });
+
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => searchEmployees(searchInput.value), 300);
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    clearTimeout(debounceTimer);
+                    searchEmployees(searchInput.value);
+                }
+            });
+
+            loadOrgChart();
+        })();
+    </script>
+
+</div>
+</html>

@@ -11,18 +11,14 @@
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
-        /* ⚠️ layout.html에서 :root, body(배경/폰트/색)는 이미 잡고 있으니
-           여기서는 board-list 전용 스타일만 두는 게 안전함.
-           (원본에 있던 :root/body는 제거 권장) */
-
         *{ box-sizing: border-box; }
 
-        /* 전체 레이아웃 */
         .notice-container{
             width: 100%;
-            max-width: none;     /* ✅ 제한 해제 */
-            margin: 0;           /* ✅ 가운데 정렬 제거 */
-            padding: 0;          /* main이 이미 padding 24px을 갖고 있음 */
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            position: relative;
         }
 
         .notice-container > h2{
@@ -32,8 +28,6 @@
             letter-spacing: -0.3px;
             color: var(--text);
         }
-
-        .notice-container{ position: relative; }
 
         .top-bar{
             display: flex;
@@ -280,66 +274,109 @@
             padding: 24px;
         }
 
+        /* ✅ 자유게시판 리스트: "게시글 작성"을 회의 "+ 새 회의" 버튼과 완전 동일하게 */
+        .notice-container .top-bar a.btn.btn-create{
+            height: 40px !important;
+            padding: 0 20px !important;
+            border-radius: 8px !important;
+
+            background: var(--primary) !important;  /* 회의 버튼과 동일 */
+            color: #fff !important;                 /* 흰 글자 강제 */
+            border: none !important;
+
+            font-size: 14px !important;
+            font-weight: 700 !important;
+
+            box-shadow: none !important;            /* 리스트 버튼 그림자 제거 */
+            text-decoration: none !important;       /* a 태그 밑줄 제거 */
+
+            display: inline-flex !important;        /* 텍스트 완전 중앙 */
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+
+            transform: none !important;             /* 기존 hover translateY 제거 */
+            transition: 0.15s !important;
+        }
+
+        /* hover도 회의 버튼과 동일: 밝기만 살짝 다운 */
+        .notice-container .top-bar a.btn.btn-create:hover{
+            background: var(--primary) !important;
+            color: #fff !important;
+            filter: brightness(0.9) !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
     </style>
 </th:block>
 
-<!-- ✅ layout.html의 content 영역에 주입될 내용 -->
 <div layout:fragment="content">
     <div class="page-with-subbar">
         <!-- 게시판 서브바(공지/자유) -->
         <div th:replace="~{sidebar/board-sidebar :: boardSidebar('board')}"></div>
+
         <main class="subbar-main">
-        <!-- 자유게시판 목록 -->
-        <div class="container notice-container">
+            <div class="container notice-container">
 
-            <div class="top-bar">
-                <a href="/board/form" class="btn btn-create">게시글작성</a>
+                <div class="top-bar">
+                    <a href="/board/form" class="btn btn-create">게시글작성</a>
+                </div>
+
+                <div class="search-bar">
+                    <select id="searchType">
+                        <option value="">전체</option>
+                        <option value="title">제목</option>
+                        <option value="empName">작성자</option>
+                        <option value="depName">부서</option>
+                        <option value="catCode">카테고리</option>
+                        <option value="date">작성일</option>
+                    </select>
+
+                    <!-- ✅ 카테고리 선택(기본 hidden) -->
+                    <select id="categorySelect" class="hidden">
+                        <option value="">전체</option>
+                        <option value="N">공지</option>
+                        <option value="F">자유</option>
+                        <option value="Q">질문</option>
+                        <option value="P">프로젝트</option>
+                        <option value="E">이벤트</option>
+                        <option value="S">기타</option>
+                    </select>
+
+                    <input id="keyword" type="text" placeholder="키워드를 입력하세요" />
+
+                    <input id="fromDate" type="date" class="hidden" />
+                    <span id="dateTilde" class="hidden">~</span>
+                    <input id="toDate" type="date" class="hidden" />
+
+                    <button type="button" class="btn" onclick="applySearch()">검색</button>
+                    <button type="button" class="btn" onclick="resetSearch()">초기화</button>
+
+                    <span class="search-hint" id="searchHint"></span>
+                </div>
+
+                <table class="notice-table">
+                    <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th>구분</th>
+                        <th>제목</th>
+                        <th>부서</th>
+                        <th>작성자</th>
+                        <th>등록일</th>
+                        <th>조회건수</th>
+                    </tr>
+                    </thead>
+                    <tbody id="noticeTbody"></tbody>
+                </table>
+
+                <div class="pagination" id="pagination"></div>
+
             </div>
-
-            <div class="search-bar">
-                <select id="searchType">
-                    <option value="">전체</option>
-                    <option value="title">제목</option>
-                    <option value="empName">작성자</option>
-                    <option value="depName">부서</option>
-                    <option value="date">작성일</option>
-                </select>
-
-                <input id="keyword" type="text" placeholder="키워드를 입력하세요" />
-
-                <input id="fromDate" type="date" class="hidden" />
-                <span id="dateTilde" class="hidden">~</span>
-                <input id="toDate" type="date" class="hidden" />
-
-                <button type="button" class="btn" onclick="applySearch()">검색</button>
-                <button type="button" class="btn" onclick="resetSearch()">초기화</button>
-
-                <span class="search-hint" id="searchHint"></span>
-            </div>
-
-            <table class="notice-table">
-                <thead>
-                <tr>
-                    <th>번호</th>
-                    <th>구분</th>
-                    <th>제목</th>
-                    <th>부서</th>
-                    <th>작성자</th>
-                    <th>등록일</th>
-                    <th>조회건수</th>
-                </tr>
-                </thead>
-                <tbody id="noticeTbody"></tbody>
-            </table>
-
-            <div class="pagination" id="pagination"></div>
-        </div>
         </main>
     </div>
-
 </div>
 
-<!-- ✅ JS 포함(원본 그대로) -->
 <th:block layout:fragment="pageScripts">
     <script>
         const API_URL = "/api/v1/boards";
@@ -348,25 +385,32 @@
         let currentQuery = {
             type: "",
             keyword: "",
+            catCode: "",
             from: "",
             to: ""
         };
 
-        function setDateInputsVisible(visible) {
+        function setInputsVisibleByType(type) {
+            const keyword = document.getElementById("keyword");
+            const category = document.getElementById("categorySelect");
             const from = document.getElementById("fromDate");
             const to = document.getElementById("toDate");
             const tilde = document.getElementById("dateTilde");
-            const keyword = document.getElementById("keyword");
 
-            if (visible) {
+            // 일단 전부 숨김
+            keyword.classList.add("hidden");
+            category.classList.add("hidden");
+            from.classList.add("hidden");
+            to.classList.add("hidden");
+            tilde.classList.add("hidden");
+
+            if (type === "date") {
                 from.classList.remove("hidden");
                 to.classList.remove("hidden");
                 tilde.classList.remove("hidden");
-                keyword.classList.add("hidden");
+            } else if (type === "catCode") {
+                category.classList.remove("hidden");
             } else {
-                from.classList.add("hidden");
-                to.classList.add("hidden");
-                tilde.classList.add("hidden");
                 keyword.classList.remove("hidden");
             }
         }
@@ -380,6 +424,7 @@
             if (currentQuery.type === "title") hint.textContent = "제목에 포함된 키워드로 검색합니다.";
             if (currentQuery.type === "empName") hint.textContent = "작성자(사원명)에 포함된 키워드로 검색합니다.";
             if (currentQuery.type === "depName") hint.textContent = "부서명에 포함된 키워드로 검색합니다.";
+            if (currentQuery.type === "catCode") hint.textContent = "카테고리로 검색합니다. (예: 질문/프로젝트 등)";
             if (currentQuery.type === "date") hint.textContent = "작성일 범위(from~to)로 검색합니다.";
         }
 
@@ -393,6 +438,8 @@
             if (currentQuery.type === "date") {
                 if (currentQuery.from) params.set("from", currentQuery.from);
                 if (currentQuery.to) params.set("to", currentQuery.to);
+            } else if (currentQuery.type === "catCode") {
+                if (currentQuery.catCode) params.set("catCode", currentQuery.catCode);
             } else {
                 if (currentQuery.keyword) params.set("keyword", currentQuery.keyword);
             }
@@ -403,11 +450,13 @@
         function applySearch() {
             const type = document.getElementById("searchType").value;
             const keyword = document.getElementById("keyword").value.trim();
+            const catCode = document.getElementById("categorySelect").value;
             const from = document.getElementById("fromDate").value;
             const to = document.getElementById("toDate").value;
 
             currentQuery.type = type;
             currentQuery.keyword = keyword;
+            currentQuery.catCode = catCode;
             currentQuery.from = from;
             currentQuery.to = to;
 
@@ -418,11 +467,13 @@
         function resetSearch() {
             document.getElementById("searchType").value = "";
             document.getElementById("keyword").value = "";
+            document.getElementById("categorySelect").value = "";
             document.getElementById("fromDate").value = "";
             document.getElementById("toDate").value = "";
-            currentQuery = { type: "", keyword: "", from: "", to: "" };
 
-            setDateInputsVisible(false);
+            currentQuery = { type: "", keyword: "", catCode: "", from: "", to: "" };
+
+            setInputsVisibleByType("");
             updateHint();
             loadBoards(0);
         }
@@ -469,16 +520,16 @@
                     const no = startNo + index + 1;
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
-                      <td>${no}</td>
-                      <td>${categoryMap[board.catCode] ?? "알수없음"}</td>
-                      <td class="title">
-                        <a href="/board/${board.boardNo}">${board.title}</a>
-                      </td>
-                      <td>${board.depName ?? ""}</td>
-                      <td>${board.empName ?? ""}</td>
-                      <td>${board.createdAt?.substring(0, 10) ?? "-"}</td>
-                      <td>${board.rating}</td>
-                    `;
+            <td>${no}</td>
+            <td>${categoryMap[board.catCode] ?? "알수없음"}</td>
+            <td class="title">
+              <a href="/board/${board.boardNo}">${board.title}</a>
+            </td>
+            <td>${board.depName ?? ""}</td>
+            <td>${board.empName ?? ""}</td>
+            <td>${board.createdAt?.substring(0, 10) ?? "-"}</td>
+            <td>${board.rating}</td>
+          `;
                     tbody.appendChild(tr);
                 });
 
@@ -519,26 +570,38 @@
             }
         }
 
+        // ✅ 검색Type 변경 시: date / catCode / keyword 입력 UI 토글
         document.getElementById("searchType").addEventListener("change", (e) => {
             const type = e.target.value;
 
             document.getElementById("keyword").value = "";
+            document.getElementById("categorySelect").value = "";
             document.getElementById("fromDate").value = "";
             document.getElementById("toDate").value = "";
 
-            if (type === "date") {
-                setDateInputsVisible(true);
-            } else {
-                setDateInputsVisible(false);
-            }
+            setInputsVisibleByType(type);
         });
 
+        // ✅ Enter 키 검색: keyword input
         document.getElementById("keyword").addEventListener("keydown", (e) => {
             if (e.key === "Enter") applySearch();
         });
 
+        // ✅ Enter 키 검색: categorySelect
+        // (select는 보통 Enter가 자주 안 먹는 브라우저도 있어 keydown/keyup 모두 걸어둠)
+        const catSel = document.getElementById("categorySelect");
+        catSel.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") applySearch();
+        });
+        catSel.addEventListener("keyup", (e) => {
+            if (e.key === "Enter") applySearch();
+        });
+
+        // ✅ UX 보너스: 카테고리 선택 변경 즉시 검색하고 싶으면 아래 주석 해제
+        // catSel.addEventListener("change", () => applySearch());
+
         document.addEventListener("DOMContentLoaded", () => {
-            setDateInputsVisible(false);
+            setInputsVisibleByType("");
             updateHint();
             loadBoards(0);
         });

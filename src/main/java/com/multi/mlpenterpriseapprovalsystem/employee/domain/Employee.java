@@ -3,12 +3,14 @@ package com.multi.mlpenterpriseapprovalsystem.employee.domain;
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
@@ -21,6 +23,7 @@ import java.time.LocalDate;
  */
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "employee")
 public class Employee extends BaseEntity {
@@ -83,9 +86,8 @@ public class Employee extends BaseEntity {
     @Column(nullable = false, length = 1)
     private String atte; // 근태(출장 = B , 휴가 = V, 출근 = C) // default = C
 
-    @Column(name = "msg_stat", nullable = false, length = 1)
-
-    private String msgStat ; // 메시지 상태 ( 근무 중 = C, 회의 중 = M, 업무 집중 = D, 자리 비움 = X, 출근 안함 = H) // default = H
+    @Column(name = "msg_stat", nullable = false, length = 1, columnDefinition="char(1) default 'H'")
+    private MsgStat msgStat ; // 메시지 상태 ( 근무 중 = C, 회의 중 = M, 업무 집중 = D, 자리 비움 = X, 출근 안함 = H) // default = H
 
     // Self Reference (대직자 - emp_id 참조 유지)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -142,7 +144,7 @@ public class Employee extends BaseEntity {
         e.isDeleted = false;
         e.retDate = null;
         e.atte = "C";
-        e.msgStat = "H";
+        e.msgStat = MsgStat.OFF;
 
         return e;
     }
@@ -150,7 +152,7 @@ public class Employee extends BaseEntity {
 
     @PrePersist
     public void prePersist() {
-        if (msgStat == null) msgStat = "H";
+        if (msgStat == null) msgStat = MsgStat.OFF;
         if (atte == null) atte = "C";
         if (isDeleted == null) isDeleted = false;
     } // 사원 상태 기본 출근 전(로그인 시 근무 중), 근태 기본 출근, 삭제 여부 기본 false 세팅
@@ -181,7 +183,7 @@ public class Employee extends BaseEntity {
 
         // 휴가나 출장 중이면 메시지 상태를 '출근 안 함(H)'으로 강제 변경
         if ("V".equals(newAtte) || "B".equals(newAtte)) {
-            this.msgStat = "H";
+            this.msgStat = MsgStat.OFF;
         }
     }
 

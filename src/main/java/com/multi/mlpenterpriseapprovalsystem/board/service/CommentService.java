@@ -105,6 +105,7 @@ public class CommentService {
                 .company(company)
                 .employee(employee)
                 .contents(dto.getContents())
+                .createdAt(dto.getCreatedAt())
                 .build();
 
 //        reviewRepository.save(review);

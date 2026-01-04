@@ -88,6 +88,14 @@ public class PasswordService {
 
     public ResChangePasswordDto changePassword(CustomUser user, @Valid ReqChangeMyPasswordDto req) {
 
+        Employee emp = employeeRepository.findByEmpId(user.getUsername())
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        // 현재 비번 검증
+        if (!passwordEncoder.matches(req.getCurrentPassword(), emp.getPwd())) {
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+        }
+
         // 1) 새 비번/확인 일치 체크
         if (req == null || !req.isNewPasswordConfirmed()) {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);

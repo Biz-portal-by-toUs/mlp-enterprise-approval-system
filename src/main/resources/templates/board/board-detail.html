@@ -4,666 +4,144 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="layout">
 
-<!-- ✅ board-detail 전용 CSS는 pageStyles로 -->
 <th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
     <style>
-        /* ❌ :root, body는 layout.html이 담당(겹치면 전체 배경이 덮임) → 제거 권장
-           기존 board-detail의 컨텐츠 스타일만 유지 */
+        /* (원본 CSS 그대로) */
+        * { box-sizing: border-box; }
+        .subbar-main { flex: 1; min-width: 0; padding: 24px; }
+        h2 { margin: 0 0 14px; font-weight: 900; letter-spacing: -0.3px; }
+        .card { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); overflow: hidden; margin-bottom: 14px; }
+        .summary-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .summary-table th, .summary-table td { border-top: 1px solid rgba(17, 24, 39, .08); padding: 14px 14px; vertical-align: middle; }
+        .summary-table tr:first-child th, .summary-table tr:first-child td { border-top: 0; }
+        .summary-table th { width: 160px; background: rgba(17, 24, 39, .02); font-weight: 900; color: #111827; text-align: center; letter-spacing: -0.2px; }
+        .summary-table td { font-weight: 800; color: var(--text, #1f2937); }
 
-        * {
-            box-sizing: border-box;
-        }
+        .contents-card { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); overflow: hidden; margin-bottom: 14px; }
+        .contents-body { padding: 18px; background: #fff; }
+        #boardDescription { white-space: normal; line-height: 1.75; }
+        #boardDescription .ProseMirror { outline: none; white-space: pre-wrap; line-height: 1.75; }
+        #boardDescription h2 { margin: 12px 0 8px; font-size: 1.25rem; font-weight: 900; }
+        #boardDescription p { margin: 8px 0; }
+        #boardDescription ul, #boardDescription ol { padding-left: 22px; margin: 8px 0; }
+        #boardDescription blockquote { margin: 10px 0; padding: 10px 12px; border-left: 4px solid rgba(59, 130, 246, .35); background: rgba(59, 130, 246, .06); border-radius: 10px; }
+        #boardDescription pre { background: rgba(17, 24, 39, .06); padding: 12px; border-radius: 10px; overflow: auto; }
+        #boardDescription code { background: rgba(17, 24, 39, .06); padding: 2px 6px; border-radius: 8px; font-weight: 800; }
+        #boardDescription a { color: var(--primary2, #2563eb); font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
+        #boardDescription table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 10px 0; }
+        #boardDescription th, #boardDescription td { border: 1px solid rgba(17, 24, 39, .18); padding: 10px; vertical-align: top; word-break: break-word; position: relative; }
+        #boardDescription th { background: rgba(17, 24, 39, .03); font-weight: 900; color: var(--muted, #6b7280); }
+        #boardDescription .selectedCell:after { content: ""; position: absolute; inset: 0; background: rgba(59, 130, 246, .08); pointer-events: none; }
 
-        .subbar-main {
-            flex: 1;
-            min-width: 0; /* 테이블/에디터 overflow 방지 */
-            padding: 24px; /* meeting과 동일한 여백 */
-        }
+        .writer-wrap { display: inline-flex; align-items: center; gap: 8px; font-weight: 900; }
+        .writer-btn { appearance: none; border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--primary2, #2563eb); font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
+        .writer-btn:focus { outline: none; }
+        .tooltip-bubble { position: absolute; z-index: 50; min-width: 220px; max-width: 320px; padding: 10px 12px; border-radius: 12px; background: #111827; color: #fff; box-shadow: 0 16px 36px rgba(0, 0, 0, .18); border: 1px solid rgba(255, 255, 255, .12); transform: translateY(6px); opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
+        .tooltip-bubble::before { content: ""; position: absolute; top: -7px; left: 18px; width: 12px; height: 12px; background: #111827; transform: rotate(45deg); border-left: 1px solid rgba(255, 255, 255, .12); border-top: 1px solid rgba(255, 255, 255, .12); }
+        .tooltip-title { font-weight: 1000; margin-bottom: 6px; letter-spacing: -0.2px; }
+        .tooltip-row { display: flex; justify-content: space-between; gap: 10px; font-weight: 800; font-size: 13px; color: rgba(255, 255, 255, .92); }
+        .tooltip-row span:first-child { color: rgba(255, 255, 255, .70); }
+        .tooltip-host { position: relative; display: inline-flex; align-items: center; }
+        .tooltip-host.show .tooltip-bubble { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
-        h2 {
-            margin: 0 0 14px;
-            font-weight: 900;
-            letter-spacing: -0.3px;
-        }
+        .meta-inline { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; color: var(--muted, #6b7280); font-weight: 900; }
+        .meta-inline .meta-item { display: inline-flex; align-items: center; gap: 8px; }
+        .meta-inline .k { color: #111827; opacity: .65; font-weight: 900; }
+        .meta-inline .v { color: #111827; font-weight: 1000; }
 
-        .card {
-            background: var(--card, #ffffff);
-            border: 1px solid rgba(17, 24, 39, .10);
-            border-radius: 10px;
-            box-shadow: 0 10px 24px rgba(17, 24, 39, .06);
-            overflow: hidden;
-            margin-bottom: 14px;
-        }
+        .attach-card { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); padding: 14px; margin-bottom: 14px; }
+        .attach-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+        .attach-title { margin: 0; font-size: 1.05rem; font-weight: 900; letter-spacing: -0.2px; }
+        #attachList { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border-radius: 10px; }
+        #attachList th { text-align: left; font-size: .9rem; color: var(--muted, #6b7280); background: rgba(17, 24, 39, .03); padding: 12px; border-bottom: 1px solid rgba(17, 24, 39, .08); font-weight: 900; }
+        #attachList td { padding: 12px; border-bottom: 1px solid rgba(17, 24, 39, .06); font-size: .95rem; color: var(--text, #1f2937); font-weight: 700; }
+        #attachList tr:hover td { background: rgba(59, 130, 246, .05); }
 
-        .summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        .summary-table th,
-        .summary-table td {
-            border-top: 1px solid rgba(17, 24, 39, .08);
-            padding: 14px 14px;
-            vertical-align: middle;
-        }
-
-        .summary-table tr:first-child th,
-        .summary-table tr:first-child td {
-            border-top: 0;
-        }
-
-        .summary-table th {
-            width: 160px;
-            background: rgba(17, 24, 39, .02);
-            font-weight: 900;
-            color: #111827;
-            text-align: center;
-            letter-spacing: -0.2px;
-        }
-
-        .summary-table td {
-            font-weight: 800;
-            color: var(--text, #1f2937);
-        }
-
-        /* ===== Contents viewer card ===== */
-        .contents-card {
-            background: var(--card, #ffffff);
-            border: 1px solid rgba(17, 24, 39, .10);
-            border-radius: 10px;
-            box-shadow: 0 10px 24px rgba(17, 24, 39, .06);
-            overflow: hidden;
-            margin-bottom: 14px;
-        }
-
-        .contents-body {
-            padding: 18px;
-            background: #fff;
-        }
-
-        /* TipTap/HTML 공통 렌더 스타일 */
-        #boardDescription {
-            white-space: normal;
-            line-height: 1.75;
-        }
-
-        #boardDescription .ProseMirror {
-            outline: none;
-            white-space: pre-wrap;
-            line-height: 1.75;
-        }
-
-        #boardDescription h2 {
-            margin: 12px 0 8px;
-            font-size: 1.25rem;
-            font-weight: 900;
-        }
-
-        #boardDescription p {
-            margin: 8px 0;
-        }
-
-        #boardDescription ul, #boardDescription ol {
-            padding-left: 22px;
-            margin: 8px 0;
-        }
-
-        #boardDescription blockquote {
-            margin: 10px 0;
-            padding: 10px 12px;
-            border-left: 4px solid rgba(59, 130, 246, .35);
-            background: rgba(59, 130, 246, .06);
-            border-radius: 10px;
-        }
-
-        #boardDescription pre {
-            background: rgba(17, 24, 39, .06);
-            padding: 12px;
-            border-radius: 10px;
-            overflow: auto;
-        }
-
-        #boardDescription code {
-            background: rgba(17, 24, 39, .06);
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-weight: 800;
-        }
-
-        #boardDescription a {
-            color: var(--primary2, #2563eb);
-            font-weight: 900;
-            text-decoration: underline;
-            text-underline-offset: 3px;
-        }
-
-        #boardDescription table {
-            border-collapse: collapse;
-            width: 100%;
-            table-layout: fixed;
-            margin: 10px 0;
-        }
-
-        #boardDescription th, #boardDescription td {
-            border: 1px solid rgba(17, 24, 39, .18);
-            padding: 10px;
-            vertical-align: top;
-            word-break: break-word;
-            position: relative;
-        }
-
-        #boardDescription th {
-            background: rgba(17, 24, 39, .03);
-            font-weight: 900;
-            color: var(--muted, #6b7280);
-        }
-
-        #boardDescription .selectedCell:after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: rgba(59, 130, 246, .08);
-            pointer-events: none;
-        }
-
-        /* ===== Writer tooltip ===== */
-        .writer-wrap {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 900;
-        }
-
-        .writer-btn {
-            appearance: none;
-            border: 0;
-            background: transparent;
-            padding: 0;
-            cursor: pointer;
-            color: var(--primary2, #2563eb);
-            font-weight: 900;
-            text-decoration: underline;
-            text-underline-offset: 3px;
-        }
-
-        .writer-btn:focus {
-            outline: none;
-        }
-
-        .tooltip-bubble {
-            position: absolute;
-            z-index: 50;
-            min-width: 220px;
-            max-width: 320px;
-            padding: 10px 12px;
-            border-radius: 12px;
-            background: #111827;
-            color: #fff;
-            box-shadow: 0 16px 36px rgba(0, 0, 0, .18);
-            border: 1px solid rgba(255, 255, 255, .12);
-            transform: translateY(6px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity .15s ease, transform .15s ease;
-        }
-
-        .tooltip-bubble::before {
-            content: "";
-            position: absolute;
-            top: -7px;
-            left: 18px;
-            width: 12px;
-            height: 12px;
-            background: #111827;
-            transform: rotate(45deg);
-            border-left: 1px solid rgba(255, 255, 255, .12);
-            border-top: 1px solid rgba(255, 255, 255, .12);
-        }
-
-        .tooltip-title {
-            font-weight: 1000;
-            margin-bottom: 6px;
-            letter-spacing: -0.2px;
-        }
-
-        .tooltip-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            font-weight: 800;
-            font-size: 13px;
-            color: rgba(255, 255, 255, .92);
-        }
-
-        .tooltip-row span:first-child {
-            color: rgba(255, 255, 255, .70);
-        }
-
-        .tooltip-host {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .tooltip-host.show .tooltip-bubble {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        /* meta row */
-        .meta-inline {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            flex-wrap: wrap;
-            color: var(--muted, #6b7280);
-            font-weight: 900;
-        }
-
-        .meta-inline .meta-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .meta-inline .k {
-            color: #111827;
-            opacity: .65;
-            font-weight: 900;
-        }
-
-        .meta-inline .v {
-            color: #111827;
-            font-weight: 1000;
-        }
-
-        /* ===== Attach card ===== */
-        .attach-card {
-            background: var(--card, #ffffff);
-            border: 1px solid rgba(17, 24, 39, .10);
-            border-radius: 10px;
-            box-shadow: 0 10px 24px rgba(17, 24, 39, .06);
-            padding: 14px;
-            margin-bottom: 14px;
-        }
-
-        .attach-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .attach-title {
-            margin: 0;
-            font-size: 1.05rem;
-            font-weight: 900;
-            letter-spacing: -0.2px;
-        }
-
-        #attachList {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
-            border-radius: 10px;
-        }
-
-        #attachList th {
-            text-align: left;
-            font-size: .9rem;
-            color: var(--muted, #6b7280);
-            background: rgba(17, 24, 39, .03);
-            padding: 12px;
-            border-bottom: 1px solid rgba(17, 24, 39, .08);
-            font-weight: 900;
-        }
-
-        #attachList td {
-            padding: 12px;
-            border-bottom: 1px solid rgba(17, 24, 39, .06);
-            font-size: .95rem;
-            color: var(--text, #1f2937);
-            font-weight: 700;
-        }
-
-        #attachList tr:hover td {
-            background: rgba(59, 130, 246, .05);
-        }
-
-        .btn {
-            appearance: none;
-            border: 1px solid rgba(17, 24, 39, .12);
-            background: #fff;
-            padding: 12px 18px;
-            border-radius: 10px;
-            font-weight: 900;
-            color: var(--text, #1f2937);
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 8px 18px rgba(17, 24, 39, .06);
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 24px rgba(17, 24, 39, .10);
-            border-color: rgba(59, 130, 246, .28);
-            background: rgba(59, 130, 246, .05);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, rgba(220, 38, 38, .14), rgba(255, 255, 255, 0));
-            border-color: rgba(220, 38, 38, .25);
-            color: #991b1b;
-        }
-
-        .btn-danger:hover {
-            background: rgba(220, 38, 38, .06);
-            border-color: rgba(220, 38, 38, .40);
-        }
-
-        .btn-sm {
-            padding: 8px 10px;
-            font-weight: 900;
-            border-radius: 8px;
-            font-size: 12px;
-            box-shadow: 0 6px 14px rgba(17, 24, 39, .05);
-        }
-
-        .actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
+        .btn { appearance: none; border: 1px solid rgba(17, 24, 39, .12); background: #fff; padding: 12px 18px; border-radius: 10px; font-weight: 900; color: var(--text, #1f2937); text-decoration: none; cursor: pointer; box-shadow: 0 8px 18px rgba(17, 24, 39, .06); transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(17, 24, 39, .10); border-color: rgba(59, 130, 246, .28); background: rgba(59, 130, 246, .05); }
+        .btn-danger { background: linear-gradient(135deg, rgba(220, 38, 38, .14), rgba(255, 255, 255, 0)); border-color: rgba(220, 38, 38, .25); color: #991b1b; }
+        .btn-danger:hover { background: rgba(220, 38, 38, .06); border-color: rgba(220, 38, 38, .40); }
+        .btn-sm { padding: 8px 10px; font-weight: 900; border-radius: 8px; font-size: 12px; box-shadow: 0 6px 14px rgba(17, 24, 39, .05); }
+        .actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 
         @media (max-width: 720px) {
-            .summary-table th {
-                width: 110px;
-            }
-
-            .tooltip-bubble {
-                left: 0 !important;
-                right: auto !important;
-            }
+            .summary-table th { width: 110px; }
+            .tooltip-bubble { left: 0 !important; right: auto !important; }
         }
 
-        /* ===== Comment editor (matches board-detail cards/buttons) ===== */
-        .comment-editor{
-            background: var(--card, #ffffff);
-            border: 1px solid rgba(17,24,39,.10);
-            border-radius: 10px;
-            box-shadow: 0 10px 24px rgba(17,24,39,.06);
-            overflow: hidden;
-            margin: 12px 0 14px;
+        .comment-editor { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); overflow: hidden; margin: 12px 0 14px; }
+        .comment-editor textarea#commentContents { width: 100%; min-height: 120px; resize: vertical; border: 0; outline: none; padding: 14px 14px; background: #fff; color: var(--text, #1f2937); font-weight: 700; line-height: 1.65; }
+        .comment-editor textarea#commentContents::placeholder { color: rgba(107, 114, 128, .9); font-weight: 800; }
+        .comment-editor:focus-within { border-color: rgba(59, 130, 246, .35); box-shadow: 0 10px 24px rgba(17, 24, 39, .06), 0 0 0 4px rgba(59, 130, 246, .12); }
+
+        .comment-editor__footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid rgba(17, 24, 39, .10); background: rgba(17, 24, 39, .02); }
+        .comment-editor__counter { font-weight: 900; color: var(--muted, #6b7280); letter-spacing: -0.1px; white-space: nowrap; }
+        .comment-editor__counter #commentByte { color: #111827; font-weight: 1000; }
+        .comment-editor__actions { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .comment-editor__actions .btn.btn-sm { padding: 8px 12px; min-height: 34px; }
+        .comment-editor__actions #commentSubmitBtn { border-color: rgba(59, 130, 246, .25); }
+        .comment-editor__actions #commentSubmitBtn:hover { border-color: rgba(59, 130, 246, .40); background: rgba(59, 130, 246, .07); }
+        .comment-editor__actions #commentCancelBtn { color: var(--muted, #6b7280); }
+
+        @media (max-width: 720px) {
+            .comment-editor__footer { flex-direction: column; align-items: stretch; }
+            .comment-editor__actions { width: 100%; justify-content: flex-end; }
         }
 
-        /* textarea */
-        .comment-editor textarea#commentContents{
-            width: 100%;
-            min-height: 120px; /* rows=5 느낌 유지 */
-            resize: vertical;
-            border: 0;
-            outline: none;
-            padding: 14px 14px;
-            background: #fff;
-            color: var(--text, #1f2937);
-            font-weight: 700;
-            line-height: 1.65;
-        }
+        #comment { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); overflow: hidden; margin: 12px 0 14px; }
+        #commentList { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        #commentList thead th { text-align: left; font-size: .9rem; color: var(--muted, #6b7280); background: rgba(17, 24, 39, .03); padding: 12px; border-bottom: 1px solid rgba(17, 24, 39, .08); font-weight: 900; letter-spacing: -0.1px; white-space: nowrap; }
+        #commentList tbody td { padding: 12px; border-bottom: 1px solid rgba(17, 24, 39, .06); font-size: .95rem; color: var(--text, #1f2937); font-weight: 700; vertical-align: top; }
+        #commentList tbody tr:hover td { background: rgba(59, 130, 246, .05); }
+        #commentList td[colspan] { padding: 18px 12px; color: var(--muted, #6b7280); font-weight: 900; text-align: center; }
 
-        /* placeholder 톤 */
-        .comment-editor textarea#commentContents::placeholder{
-            color: rgba(107,114,128,.9);
-            font-weight: 800;
-        }
+        #commentList .comment-no { width: 64px; padding: 0; }
+        #commentList .comment-no > span, #commentList .comment-no { display: flex; align-items: center; justify-content: center; }
+        #commentList .comment-date { width: 130px; white-space: nowrap; color: var(--muted, #6b7280); font-weight: 900; }
+        #commentList .comment-content { white-space: pre-wrap; word-break: break-word; line-height: 1.6; font-weight: 700; }
+        #commentList .comment-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        #commentList .comment-meta .name { font-weight: 1000; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #commentList .comment-meta .dept { font-size: 12px; font-weight: 900; color: var(--muted, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* focus ring (board-form input 느낌) */
-        .comment-editor:focus-within{
-            border-color: rgba(59,130,246,.35);
-            box-shadow: 0 10px 24px rgba(17,24,39,.06), 0 0 0 4px rgba(59,130,246,.12);
-        }
-
-        /* footer (counter + actions) */
-        .comment-editor__footer{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 10px 12px;
-            border-top: 1px solid rgba(17,24,39,.10);
-            background: rgba(17,24,39,.02);
-        }
-
-        .comment-editor__counter{
-            font-weight: 900;
-            color: var(--muted, #6b7280);
-            letter-spacing: -0.1px;
-            white-space: nowrap;
-        }
-
-        .comment-editor__counter #commentByte{
-            color: #111827;
-            font-weight: 1000;
-        }
-
-        /* over-limit 시 JS로 .over를 붙이면 경고색 (선택) */
-        .comment-editor__counter.over,
-        .comment-editor__counter.over #commentByte{
-            color: #991b1b;
-        }
-
-        /* action buttons alignment */
-        .comment-editor__actions{
-            display: inline-flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        /* 버튼은 기존 .btn .btn-sm을 그대로 쓰되, 댓글 영역에서 조금 더 컴팩트하게 */
-        .comment-editor__actions .btn.btn-sm{
-            padding: 8px 12px;
-            min-height: 34px;
-        }
-
-        /* 등록 버튼을 살짝 강조(톤 유지하면서) */
-        .comment-editor__actions #commentSubmitBtn{
-            border-color: rgba(59,130,246,.25);
-        }
-        .comment-editor__actions #commentSubmitBtn:hover{
-            border-color: rgba(59,130,246,.40);
-            background: rgba(59,130,246,.07);
-        }
-
-        /* 취소 버튼은 덜 강조 */
-        .comment-editor__actions #commentCancelBtn{
-            color: var(--muted, #6b7280);
-        }
-
-        /* mobile */
-        @media (max-width: 720px){
-            .comment-editor__footer{
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .comment-editor__actions{
-                width: 100%;
-                justify-content: flex-end;
-            }
-        }
-
-        /* ===== Comment list card/table (matches attachList tone) ===== */
-        #comment{
-            background: var(--card, #ffffff);
-            border: 1px solid rgba(17,24,39,.10);
-            border-radius: 10px;
-            box-shadow: 0 10px 24px rgba(17,24,39,.06);
-            overflow: hidden;
-            margin: 12px 0 14px;
-        }
-
-        /* table base */
-        #commentList{
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            table-layout: fixed;
-        }
-
-        /* header */
-        #commentList thead th{
-            text-align: left;
-            font-size: .9rem;
-            color: var(--muted, #6b7280);
-            background: rgba(17,24,39,.03);
-            padding: 12px;
-            border-bottom: 1px solid rgba(17,24,39,.08);
-            font-weight: 900;
-            letter-spacing: -0.1px;
-            white-space: nowrap;
-        }
-
-        /* body cells */
-        #commentList tbody td{
-            padding: 12px;
-            border-bottom: 1px solid rgba(17,24,39,.06);
-            font-size: .95rem;
-            color: var(--text, #1f2937);
-            font-weight: 700;
-            vertical-align: top;
-        }
-
-        /* hover row */
-        #commentList tbody tr:hover td{
-            background: rgba(59,130,246,.05);
-        }
-
-        /* empty row (when no comments) */
-        #commentList td[colspan]{
-            padding: 18px 12px;
-            color: var(--muted, #6b7280);
-            font-weight: 900;
-            text-align: center;
-        }
-
-        /* column sizing */
-
-        #commentList .comment-no{
-            width: 64px;
-            padding: 0;
-        }
-
-        #commentList .comment-no > span,
-        #commentList .comment-no{
-            display: flex;
-            align-items: center;
-            justify-content: center;  /* ✅ 진짜 시각적 중앙 */
-        }
-
-
-
-
-        #commentList .comment-date{
-            width: 130px;
-            white-space: nowrap;
-            color: var(--muted, #6b7280);
-            font-weight: 900;
-        }
-
-        /* content block */
-        #commentList .comment-content{
-            white-space: pre-wrap;
-            word-break: break-word;
-            line-height: 1.6;
-            font-weight: 700;
-        }
-
-        /* meta block (writer/dept) */
-        #commentList .comment-meta{
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 0;
-        }
-        #commentList .comment-meta .name{
-            font-weight: 1000;
-            color: #111827;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        #commentList .comment-meta .dept{
-            font-size: 12px;
-            font-weight: 900;
-            color: var(--muted, #6b7280);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* make header/body align nicely on small screens */
-        @media (max-width: 900px){
-            /* 좁은 화면에서는 부서 컬럼 숨겨서 내용 폭 확보 */
+        @media (max-width: 900px) {
             #commentList thead th:nth-child(4),
-            #commentList tbody td:nth-child(4){
-                display: none;
-            }
+            #commentList tbody td:nth-child(4) { display: none; }
         }
-        @media (max-width: 720px){
-            /* 더 좁으면 등록일도 숨김 */
+        @media (max-width: 720px) {
             #commentList thead th:nth-child(5),
-            #commentList tbody td:nth-child(5){
-                display: none;
-            }
+            #commentList tbody td:nth-child(5) { display: none; }
         }
 
-        /* ===== Compact → Expandable comment textarea ===== */
-        .comment-editor textarea#commentContents{
+        .comment-editor textarea#commentContents {
             width: 100%;
-            height: 40px;              /* ✅ 기본 한 줄 */
+            height: 40px;
             min-height: 40px;
-            max-height: 240px;         /* 너무 커지지 않게 제한 */
-            resize: none;              /* 사용자가 드래그하지 않게 */
-            overflow: hidden;          /* 자동 확장용 */
-
+            max-height: 240px;
+            resize: none;
+            overflow: hidden;
             border: 0;
             outline: none;
             padding: 10px 14px;
             background: #fff;
-
             color: var(--text, #1f2937);
             font-weight: 700;
             line-height: 1.6;
-
             transition: height .18s ease, padding .18s ease;
         }
-
-        /* 포커스되면 기본 높이 살짝 키움 */
-        .comment-editor textarea#commentContents:focus{
-            height: 96px;
+        .comment-editor textarea#commentContents:focus { height: 96px; }
+        /* 툴팁이 카드 밖으로 나가도 안 잘리게 */
+        .card.card--overflow-visible{
+            overflow: visible;
         }
 
-
-
+        #delete-btn{ display:none; }
     </style>
 </th:block>
 
-<!-- ✅ layout content -->
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <!-- ✅ board-list와 동일하게 sidebar 도킹 -->
         <div th:replace="~{sidebar/board-sidebar :: boardSidebar('board')}"></div>
         <main class="subbar-main">
             <div class="container">
@@ -693,32 +171,35 @@
                         <tr>
                             <th>작성자</th>
                             <td>
-                          <span class="writer-wrap">
-                            <span class="tooltip-host" id="writerTooltipHost">
-                              <button type="button" class="writer-btn" id="boardWriterBtn">
-                                <span id="boardWriter">-</span>
-                              </button>
+                              <span class="writer-wrap">
+                                <span class="tooltip-host" id="writerTooltipHost">
+                                  <button type="button" class="writer-btn" id="boardWriterBtn">
+                                    <span id="boardWriter">-</span>
+                                  </button>
+                                  <div class="card card--overflow-visible">
+                                  <div class="tooltip-bubble" id="writerTooltip">
+                                    <div class="tooltip-title">작성자 정보</div>
+                                    <div class="tooltip-row"><span>부서</span><span id="boardDepart">-</span></div>
+                                    <div class="tooltip-row" style="margin-top:6px;">
+                                      <span>직번</span><span id="boardWriterId">-</span>
+                                    </div>
+                                  </div>
+                                  </div>
 
-                              <div class="tooltip-bubble" id="writerTooltip">
-                                <div class="tooltip-title">작성자 정보</div>
-                                <div class="tooltip-row"><span>부서</span><span id="boardDepart">-</span></div>
-                                <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span
-                                        id="boardWriterId">-</span></div>
-                              </div>
-                            </span>
-                          </span>
+                                </span>
+                              </span>
                             </td>
                         </tr>
                         <tr>
                             <th>정보</th>
                             <td>
                                 <div class="meta-inline">
-                              <span class="meta-item">
-                                <span class="k">등록일</span><span class="v" id="boardCreated">-</span>
-                              </span>
+                                  <span class="meta-item">
+                                    <span class="k">등록일</span><span class="v" id="boardCreated">-</span>
+                                  </span>
                                     <span class="meta-item">
-                                <span class="k">조회</span><span class="v" id="boardRating">-</span>
-                              </span>
+                                    <span class="k">조회</span><span class="v" id="boardRating">-</span>
+                                  </span>
                                 </div>
                             </td>
                         </tr>
@@ -737,17 +218,12 @@
                     <table id="commentList"></table>
                 </div>
 
-                <!-- ✅ 댓글 등록 입력란 -->
                 <div id="commentEditor" class="comment-editor">
-                    <textarea id="commentContents"
-                     placeholder="의견입력"
-                     rows="5"></textarea>
-
+                    <textarea id="commentContents" placeholder="의견입력" rows="5"></textarea>
                     <div class="comment-editor__footer">
                         <div class="comment-editor__counter">
                             <span id="commentByte">0</span>/600bytes
                         </div>
-
                         <div class="comment-editor__actions">
                             <button type="button" class="btn btn-sm" id="commentSubmitBtn">등록</button>
                             <button type="button" class="btn btn-sm" id="commentCancelBtn">취소</button>
@@ -757,8 +233,8 @@
 
                 <div class="actions">
                     <a href="/board/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
-                    <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteBoard()">
-                        <i class="fa-solid fa-trash"></i> 삭제
+                    <button id="delete-btn" class="btn btn-danger" type="button" style="display:none" onclick="deleteBoard()">
+                         삭제
                     </button>
                 </div>
             </div>
@@ -766,11 +242,10 @@
     </div>
 </div>
 
-<!-- ✅ JS는 pageScripts로 (생략 X) -->
 <th:block layout:fragment="pageScripts">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- ✅ TipTap viewer: JSON/HTML 자동 렌더 -->
+    <!-- TipTap viewer (원본 그대로) -->
     <script type="module">
         import {Editor} from "https://esm.sh/@tiptap/core@2.11.5";
         import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
@@ -855,7 +330,7 @@
                     viewer = null;
                     host.innerHTML = "";
                 }
-                host.innerHTML = raw; // ❗ 서버 sanitize 권장
+                host.innerHTML = raw; // 서버 sanitize 권장
                 return;
             }
 
@@ -868,25 +343,27 @@
         };
     </script>
 
+    <!-- ✅ 여기부터: 댓글 권한 포함 JS -->
     <script th:inline="javascript">
         const boardNo = [[${boardNo}]];
         const API_BASE = "http://localhost:8090";
+
+
+
+        // ✅ 서버에서 Thymeleaf로 주입 (컨트롤러에서 model.addAttribute로 넣기)
+        // 숫자/문자 섞여도 안전하게 비교하려고 String으로 처리할 예정
+        const currentEmpId = /*[[${loginEmpId}]]*/ null;
+        const isAdmin = /*[[${isAdmin}]]*/ false;
+
+        console.log("currentEmpId", currentEmpId, "isAdmin", isAdmin);
 
         function setupWriterTooltip() {
             const host = document.getElementById("writerTooltipHost");
             const btn = document.getElementById("boardWriterBtn");
 
-            function show() {
-                host.classList.add("show");
-            }
-
-            function hide() {
-                host.classList.remove("show");
-            }
-
-            function toggle() {
-                host.classList.toggle("show");
-            }
+            function show() { host.classList.add("show"); }
+            function hide() { host.classList.remove("show"); }
+            function toggle() { host.classList.toggle("show"); }
 
             host.addEventListener("mouseenter", show);
             host.addEventListener("mouseleave", hide);
@@ -935,12 +412,29 @@
                     initAttach();
                     initComment();
                     setupWriterTooltip();
+                    updateDeleteButtonVisibility(board); // ✅ 추가
                 }
             } catch (e) {
                 console.error(e);
                 alert("상세 로딩 중 오류가 발생했습니다.");
             }
         }
+
+        function updateDeleteButtonVisibility(board) {
+            const deleteBtn = document.getElementById("delete-btn");
+            if (!deleteBtn) return;
+
+            const isWriter =
+                currentEmpId != null &&
+                String(board.empId) === String(currentEmpId);
+
+            if (isAdmin === true || isWriter) {
+                deleteBtn.style.display = "inline-flex";
+            } else {
+                deleteBtn.style.display = "none";
+            }
+        }
+
 
         function unwrapMaybeResponseDto(obj) {
             if (obj && typeof obj === "object" && "data" in obj) return obj.data;
@@ -963,7 +457,7 @@
 
                     attachList.append(`
                       <tr>
-                        <th style="width:90px;">일련번호</th>
+                        <th style="width:90px;">번호</th>
                         <th>파일명</th>
                         <th style="width:120px;">size</th>
                         <th style="width:110px;">미리보기</th>
@@ -1099,84 +593,147 @@
             }
         }
 
+        // ✅ 댓글 삭제 가능 여부(UI용)
+        function canDeleteComment(c) {
+            // 서버가 canDelete 내려주면 그걸 우선(옵션)
+            if (typeof c?.canDelete === "boolean") return c.canDelete;
+
+            // 작성자(댓글 empId) == 로그인 사용자 empId 또는 관리자
+            return (currentEmpId != null && String(c.empId) === String(currentEmpId)) || isAdmin === true;
+        }
+
+        // ✅ 댓글 목록 로딩 + 권한에 따라 삭제 버튼 노출
         async function initComment() {
             try {
-
-                const response = await fetch(`http://localhost:8090/api/v1/boards/${boardNo}/comments`, {
-                    method: 'GET',
-                    credentials: "include"
-
+                const res = await fetch(`${API_BASE}/api/v1/boards/${boardNo}/comments`, {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {"Accept": "application/json"}
                 });
-                console.log("comments status:", response.status);
 
-                const result = await response.json();
+                const result = await res.json().catch(() => null);
+                const commentList = $("#commentList").empty();
 
-                const commentList = $('#commentList').empty();
+                commentList.append(`
+                  <thead>
+                    <tr>
+                      <th>번호</th>
+                      <th>내용</th>
+                      <th>작성자</th>
+                      <th>부서</th>
+                      <th>등록일자</th>
+                      <th>삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                `);
 
-                if (!result.data || result.data.length === 0) {
-                    commentList.html(`<tr><td colspan="5">등록된 댓글이 없습니다.</td></tr>`);
+                const tbody = commentList.find("tbody");
+
+                if (!result?.data || result.data.length === 0) {
+                    tbody.append(`<tr><td colspan="6">등록된 댓글이 없습니다.</td></tr>`);
                     return;
                 }
 
-                if (result.status === 200 && result.data) {
-                    const comments = result.data;
-                    console.log(comments);
-                    commentList.append(`
-                    <thead>
-                        <tr>
-                          <th>일련번호</th>
-                          <th>내용</th>
-                          <th>작성자</th>
-                          <th>부서</th>
-                          <th>등록일자</th>
-                        </tr>
-                      </thead>
-                      <tbody></tbody>
-                `);
+                if (result.status === 200 && Array.isArray(result.data)) {
+                    result.data.forEach((r, index) => {
+                        const createdAt = r.createdAt ? String(r.createdAt).substring(0, 10) : "-";
 
-                    const tbody = commentList.find("tbody");
-                    comments.forEach((r, index) => {
+                        const deleteCell = canDeleteComment(r)
+                            ? `
+                              <button type="button"
+                                      class="btn btn-danger btn-sm comment-delete-btn"
+                                      data-comment-no="${r.commentNo}">
+                                   삭제
+                              </button>
+                            `
+                            : `<span style="color: var(--muted,#6b7280); font-weight:900;">-</span>`;
 
-                        const createdAt = r.createdAt ? r.createdAt.substring(0, 10) : "-";
                         tbody.append(`
-                        <tr>
-                              <td class="comment-no">${index + 1}</td>
-                              <td><div class="comment-content">${r.contents ?? ""}</div></td>
-                              <td>
-                                <div class="comment-meta">
-                                  <div class="name">${r.empName ?? "-"}</div>
-                                </div>
-                              </td>
-                              <td>
-                                <div class="comment-meta">
-                                  <div class="dept">${r.depName ?? "-"}</div>
-                                </div>
-                              </td>
-                              <td class="comment-date">${createdAt}</td>
-                        </tr>
-                    `);
+                          <tr>
+                            <td class="comment-no"><span>${index + 1}</span></td>
+                            <td><div class="comment-content">${escapeHtml(r.contents ?? "")}</div></td>
+                            <td>
+                              <div class="comment-meta">
+                                <div class="name">${escapeHtml(r.empName ?? "-")}</div>
+                              </div>
+                            </td>
+                            <td>
+                              <div class="comment-meta">
+                                <div class="dept">${escapeHtml(r.depName ?? "-")}</div>
+                              </div>
+                            </td>
+                            <td class="comment-date">${createdAt}</td>
+                            <td>${deleteCell}</td>
+                          </tr>
+                        `);
                     });
-
                 } else {
-                    commentList.html('<tr><td colspan="4">관련 댓글이 없습니다.</td></tr>');
+                    tbody.append(`<tr><td colspan="6">댓글 로딩에 실패했습니다.</td></tr>`);
                 }
-            } catch (error) {
-                console.error('Failed to load board comments :', error);
+            } catch (e) {
+                console.error("Failed to load board comments:", e);
+                const commentList = $("#commentList").empty();
+                commentList.append(`
+                  <thead>
+                    <tr>
+                      <th>번호</th>
+                      <th>내용</th>
+                      <th>작성자</th>
+                      <th>부서</th>
+                      <th>등록일자</th>
+                      <th>삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="6">댓글 로딩 중 오류가 발생했습니다.</td></tr>
+                  </tbody>
+                `);
             }
         }
 
-        //=====================================================================================
-        // ✅ UTF-8 기준 bytes 계산
+        async function deleteComment(commentNo) {
+            if (!commentNo) return;
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/comment/${commentNo}`, {
+                    method: "DELETE",
+                    credentials: "include"
+                });
+
+                if (res.ok) {
+                    alert("댓글이 삭제되었습니다.");
+                    await initComment();
+                } else {
+                    const msg = await res.text().catch(() => "");
+                    if (res.status === 401) alert("로그인이 필요합니다.");
+                    else if (res.status === 403) alert("삭제 권한이 없습니다.");
+                    else alert("댓글 삭제 실패: " + (msg || res.status));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("삭제 중 오류 발생");
+            }
+        }
+
+        // ✅ 이벤트 위임: 동적으로 생성된 삭제 버튼도 동작
+        function bindCommentEvents() {
+            $("#commentList").off("click", ".comment-delete-btn");
+            $("#commentList").on("click", ".comment-delete-btn", function () {
+                const commentNo = Number($(this).data("comment-no"));
+                deleteComment(commentNo);
+            });
+        }
+
+        // ---- 이하(바이트 카운터/등록/취소/오토그로우) 원본 로직 유지 ----
         function getUtf8Bytes(str) {
             return new Blob([str ?? ""], {type: "text/plain; charset=UTF-8"}).size;
         }
 
-        // ✅ 600 bytes 제한(초과 시 잘라내기)
         function enforceByteLimit(text, limitBytes = 600) {
             if (!text) return "";
-
             let lo = 0, hi = text.length;
-            // 이진 탐색으로 limitBytes에 맞는 최대 길이 찾기
             while (lo < hi) {
                 const mid = Math.ceil((lo + hi) / 2);
                 const sliced = text.slice(0, mid);
@@ -1196,9 +753,7 @@
             counter.textContent = String(getUtf8Bytes(ta.value));
         }
 
-        // ✅ 댓글 등록
         async function submitComment() {
-
             const contentsEl = document.getElementById("commentContents");
             const contents = (contentsEl.value ?? "").trim();
 
@@ -1208,7 +763,6 @@
                 return;
             }
 
-            // FormData로 multipart/form-data 전송 (@ModelAttribute 매핑)
             const fd = new FormData();
             fd.append("boardNo", String(boardNo));
             fd.append("contents", contents);
@@ -1217,7 +771,6 @@
                 const res = await fetch(`${API_BASE}/api/v1/comment`, {
                     method: "POST",
                     credentials: "include",
-
                     body: fd
                 });
 
@@ -1229,14 +782,10 @@
                     return;
                 }
 
-                // 성공 처리
                 alert(json?.message ?? "댓글 등록 성공");
                 contentsEl.value = "";
                 updateCommentByteCounter();
-
-                // ✅ 댓글 목록 다시 불러오기
                 await initComment();
-
             } catch (e) {
                 console.error(e);
                 alert("댓글 등록 중 오류: " + (e?.message ?? e));
@@ -1251,6 +800,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             loadBoardDetail();
+
             const ta = document.getElementById("commentContents");
             const submitBtn = document.getElementById("commentSubmitBtn");
             const cancelBtn = document.getElementById("commentCancelBtn");
@@ -1261,38 +811,33 @@
             }
             if (submitBtn) submitBtn.addEventListener("click", submitComment);
             if (cancelBtn) cancelBtn.addEventListener("click", cancelComment);
+
+            bindCommentEvents();
         });
 
-        (function autoGrowCommentTextarea(){
+        (function autoGrowCommentTextarea() {
             const ta = document.getElementById("commentContents");
             if (!ta) return;
 
-            const COLLAPSED = 40;   // 한 줄 높이
-            const EXPANDED = 96;    // 포커스 시 기본 높이
-            const MAX = 240;        // 최대 높이
+            const COLLAPSED = 40;
+            const EXPANDED = 96;
+            const MAX = 240;
 
-            function resize(){
+            function resize() {
                 ta.style.height = "auto";
                 ta.style.height = Math.min(ta.scrollHeight, MAX) + "px";
             }
 
             ta.addEventListener("focus", () => {
-                if (!ta.value.trim()) {
-                    ta.style.height = EXPANDED + "px";
-                }
+                if (!ta.value.trim()) ta.style.height = EXPANDED + "px";
             });
 
             ta.addEventListener("input", resize);
 
             ta.addEventListener("blur", () => {
-                if (!ta.value.trim()) {
-                    ta.style.height = COLLAPSED + "px";
-                }
+                if (!ta.value.trim()) ta.style.height = COLLAPSED + "px";
             });
         })();
-
-
-        // document.addEventListener('DOMContentLoaded', loadBoardDetail);
     </script>
 </th:block>
 

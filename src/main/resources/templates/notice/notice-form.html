@@ -10,14 +10,12 @@
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
 
     <style>
-        /* ⚠️ 기존 notice-form의 :root, body 배경은 layout이 담당하므로 제거/미사용 권장
-           아래는 notice-form 전용 클래스들만 유지(원본 유지) */
         *{box-sizing:border-box}
 
         .subbar-main{
             flex: 1;
-            min-width: 0;      /* 테이블/에디터 overflow 방지 */
-            padding: 24px;     /* meeting과 동일한 여백 */
+            min-width: 0;
+            padding: 24px;
         }
 
         h2{
@@ -253,7 +251,20 @@
             padding: 16px;
             margin-bottom: 14px;
         }
-        .file-attach-header{ font-weight: 900; margin-bottom: 10px; }
+        .file-attach-header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            flex-wrap:wrap;
+            font-weight: 900;
+            margin-bottom: 10px; }
+        .file-attach-sub{
+            color: var(--muted, #6b7280);
+            font-weight: 800;
+            font-size: 12px;
+            margin-top: 2px;
+        }
         .file-input-wrapper{ position: relative; display: inline-block; }
         .file-input-wrapper input[type="file"]{ position:absolute; opacity:0; width:0; height:0; }
         .file-upload-btn{
@@ -267,6 +278,32 @@
             user-select:none;
             font-size: 13px;
         }
+
+        /* ✅ 드래그&드롭 영역 */
+        .dropzone{
+            margin-top: 10px;
+            padding: 18px 14px;
+            border: 2px dashed rgba(17,24,39,.18);
+            border-radius: 10px;
+            background: rgba(59,130,246,.03);
+            color: var(--muted, #6b7280);
+            font-weight: 900;
+            text-align: center;
+            user-select: none;
+        }
+        .dropzone .dropzone-hint{
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            opacity: .9;
+        }
+        .dropzone.is-dragover{
+            border-color: rgba(59,130,246,.55);
+            background: rgba(59,130,246,.08);
+            color: var(--text, #1f2937);
+            box-shadow: 0 0 0 4px rgba(59,130,246,.10);
+        }
+
         .file-list{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
         .file-item{
             display:flex; justify-content:space-between; align-items:center;
@@ -325,116 +362,149 @@
             .summary-date{ width: 100%; }
             .period-inline{ width:100%; }
         }
+
+        /* ✅ [notice-form 전용] bootstrap .badge 충돌 방지: 헤더 알림점만 복구 */
+        header .topbar-right .icon-btn > .badge{
+            position: absolute;
+            right: 6px;
+            top: 6px;
+            width: 9px;
+            height: 9px;
+
+            background: #ef4444;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+
+            padding: 0 !important;
+            min-width: 0 !important;
+            font-size: 0 !important;
+            line-height: 0 !important;
+            display: block !important;
+        }
     </style>
 </th:block>
 
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <!-- ✅ notice-list와 동일한 sidebar 도킹 -->
         <div th:replace="~{sidebar/board-sidebar :: boardSidebar('noticeForm')}"></div>
+
         <main class="subbar-main">
-        <div class="container">
+            <div class="container">
 
-            <form id="noticeForm" enctype="multipart/form-data">
+                <form id="noticeForm" enctype="multipart/form-data">
 
-                <div class="summary-card">
-                    <table class="summary-table">
-                        <tr>
-                            <th>제목</th>
-                            <td>
-                                <input type="text" id="title" name="title" class="summary-input"
-                                       placeholder="공지사항 제목을 입력하세요" required maxlength="100">
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>팝업여부</th>
-                            <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                                <select id="isPopupSelect" name="isPopup" class="summary-select" required>
-                                    <option value="true">사용</option>
-                                    <option value="false" selected>미사용</option>
-                                </select>
-                                <span class="hint">사용 선택 시 아래 ‘팝업기간’ 입력</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>팝업기간</th>
-                            <td>
-                                <div class="period-inline">
-                                    <input type="date" id="startedAt" name="startedAt" class="summary-date">
-                                    <span class="sep">~</span>
-                                    <input type="date" id="endedAt" name="endedAt" class="summary-date">
-                                    <span class="hint">(미사용이면 자동 비활성)</span>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <div class="editor-wrap">
-                    <div class="office-toolbar" id="ttToolbar">
-                        <select class="tb-select" id="headingSelect" title="서식">
-                            <option value="h2" selected>제목2</option>
-                            <option value="p">본문</option>
-                        </select>
-
-                        <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
-                        <button type="button" class="tb-btn" data-cmd="italic">기울임</button>
-                        <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
-                        <button type="button" class="tb-btn" data-cmd="strike">취소선</button>
-
-                        <span class="tb-sep"></span>
-
-                        <button type="button" class="tb-btn" data-cmd="alignLeft">왼쪽</button>
-                        <button type="button" class="tb-btn" data-cmd="alignCenter">가운데</button>
-                        <button type="button" class="tb-btn" data-cmd="alignRight">오른쪽</button>
-
-                        <span class="tb-sep"></span>
-
-                        <button type="button" class="tb-btn" data-cmd="bulletList">글머리</button>
-                        <button type="button" class="tb-btn" data-cmd="orderedList">번호</button>
-
-                        <span class="tb-sep"></span>
-
-                        <button type="button" class="tb-btn" data-cmd="insertTable">표 삽입</button>
-                        <button type="button" class="tb-btn" data-cmd="rowPlus">행 +</button>
-                        <button type="button" class="tb-btn" data-cmd="colPlus">열 +</button>
-                        <button type="button" class="tb-btn" data-cmd="rowMinus">행 -</button>
-                        <button type="button" class="tb-btn" data-cmd="colMinus">열 -</button>
-                        <button type="button" class="tb-btn" data-cmd="deleteTable">표 삭제</button>
-
-                        <span class="tb-sep"></span>
-
-                        <button type="button" class="tb-btn" data-cmd="undo">실행취소</button>
-                        <button type="button" class="tb-btn" data-cmd="redo">다시실행</button>
+                    <div class="summary-card">
+                        <table class="summary-table">
+                            <tr>
+                                <th>제목</th>
+                                <td>
+                                    <input type="text" id="title" name="title" class="summary-input"
+                                           placeholder="공지사항 제목을 입력하세요" required maxlength="100">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>팝업여부</th>
+                                <td style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                                    <select id="isPopupSelect" name="isPopup" class="summary-select" required>
+                                        <option value="true">사용</option>
+                                        <option value="false" selected>미사용</option>
+                                    </select>
+                                    <span class="hint">사용 선택 시 아래 ‘팝업기간’ 입력</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>팝업기간</th>
+                                <td>
+                                    <div class="period-inline">
+                                        <input type="date" id="startedAt" name="startedAt" class="summary-date">
+                                        <span class="sep">~</span>
+                                        <input type="date" id="endedAt" name="endedAt" class="summary-date">
+                                        <span class="hint">(미사용이면 자동 비활성)</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
 
+                    <div class="editor-wrap">
+                        <div class="office-toolbar" id="ttToolbar">
+                            <select class="tb-select" id="headingSelect" title="서식">
+                                <option value="h2" selected>제목2</option>
+                                <option value="p">본문</option>
+                            </select>
 
-                    <div id="contentsEditor" class="office-editor"></div>
+                            <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
+                            <button type="button" class="tb-btn" data-cmd="italic">기울임</button>
+                            <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
+                            <button type="button" class="tb-btn" data-cmd="strike">취소선</button>
 
-                    <div class="office-counter">
-                        <span id="charCount">0</span> / <span id="charLimit">1000</span>
+                            <span class="tb-sep"></span>
+
+                            <button type="button" class="tb-btn" data-cmd="alignLeft">왼쪽</button>
+                            <button type="button" class="tb-btn" data-cmd="alignCenter">가운데</button>
+                            <button type="button" class="tb-btn" data-cmd="alignRight">오른쪽</button>
+
+                            <span class="tb-sep"></span>
+
+                            <button type="button" class="tb-btn" data-cmd="bulletList">글머리</button>
+                            <button type="button" class="tb-btn" data-cmd="orderedList">번호</button>
+
+                            <span class="tb-sep"></span>
+
+                            <button type="button" class="tb-btn" data-cmd="insertTable">표 삽입</button>
+                            <button type="button" class="tb-btn" data-cmd="rowPlus">행 +</button>
+                            <button type="button" class="tb-btn" data-cmd="colPlus">열 +</button>
+                            <button type="button" class="tb-btn" data-cmd="rowMinus">행 -</button>
+                            <button type="button" class="tb-btn" data-cmd="colMinus">열 -</button>
+                            <button type="button" class="tb-btn" data-cmd="deleteTable">표 삭제</button>
+
+                            <span class="tb-sep"></span>
+
+                            <button type="button" class="tb-btn" data-cmd="undo">실행취소</button>
+                            <button type="button" class="tb-btn" data-cmd="redo">다시실행</button>
+                        </div>
+
+                        <div id="contentsEditor" class="office-editor"></div>
+
+                        <div class="office-counter">
+                            <span id="charCount">0</span> / <span id="charLimit">1000</span>
+                        </div>
+
+                        <input type="hidden" id="contents" name="contents" required>
                     </div>
 
-                    <input type="hidden" id="contents" name="contents" required>
-                </div>
+                    <div class="file-attach-section">
 
-                <div class="file-attach-section">
-                    <div class="file-attach-header">📎 첨부파일 (최대 5개, 개당 10MB)</div>
-                    <div class="file-input-wrapper">
-                        <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
-                        <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
-                    </div>
-                    <div class="file-list" id="file-list">
-                        <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
-                    </div>
-                </div>
+                        <div class="file-attach-header">
+                            <div>
+                                📎 첨부파일
+                                <div class="file-attach-sub">최대 5개, 개당 10MB</div>
+                            </div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn-submit" id="submitBtn">등록</button>
-                    <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
-                </div>
-            </form>
-        </div>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="file-input" multiple accept="*/*" onchange="handleFileSelect(event)">
+                                <label for="file-input" class="file-upload-btn">📁 파일 선택</label>
+                            </div>
+                        </div>
+
+                        <!-- ✅ 드래그&드롭 추가 -->
+                        <div class="dropzone" id="dropzone">
+                            여기로 파일을 드래그해서 놓으세요
+                            <div class="dropzone-hint">또는 “파일 선택”을 눌러 첨부</div>
+                        </div>
+
+                        <div class="file-list" id="file-list">
+                            <div style="color:#adb5bd; font-size:12px; padding:10px;">첨부된 파일이 없습니다.</div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-submit" id="submitBtn">등록</button>
+                        <a th:href="@{/notice/list}" class="btn-cancel">취소</a>
+                    </div>
+
+                </form>
+            </div>
         </main>
     </div>
 </div>
@@ -608,12 +678,13 @@
         window.__noticeEditorGetCount = () => editor.storage.characterCount.characters();
     </script>
 
-    <!-- ✅ 기존 로직 (팝업기간 토글/파일/등록) - 원본 그대로 -->
+    <!-- ✅ 기존 로직 (팝업기간 토글/파일/등록) + ✅ 드래그&드롭 추가 -->
     <script>
         let attachedFiles = [];
 
         window.addEventListener("DOMContentLoaded", async () => {
             setupPopupToggle();
+            setupDropzone(); // ✅ 추가
         });
 
         function setupPopupToggle() {
@@ -634,8 +705,41 @@
             togglePopupDates(select.value);
         }
 
+        /* ✅ 파일 선택(탐색기)도 addFiles로 통일 */
         function handleFileSelect(event) {
-            const files = Array.from(event.target.files);
+            addFiles(Array.from(event.target.files || []));
+            event.target.value = '';
+        }
+
+        /* ✅ 드래그&드롭 세팅 */
+        function setupDropzone(){
+            const dz = document.getElementById("dropzone");
+            if (!dz) return;
+
+            const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+            ["dragenter","dragover"].forEach(evt =>
+                dz.addEventListener(evt, (e)=>{
+                    prevent(e);
+                    dz.classList.add("is-dragover");
+                })
+            );
+
+            ["dragleave","dragend","drop"].forEach(evt =>
+                dz.addEventListener(evt, (e)=>{
+                    prevent(e);
+                    dz.classList.remove("is-dragover");
+                })
+            );
+
+            dz.addEventListener("drop", (e)=>{
+                const files = Array.from(e.dataTransfer?.files || []);
+                addFiles(files);
+            });
+        }
+
+        /* ✅ 기존 검증(최대 5개 / 10MB / 중복방지) 로직을 공통 함수로 */
+        function addFiles(files) {
             const maxSize = 10 * 1024 * 1024;
             const maxCount = 5;
 
@@ -655,7 +759,6 @@
                 attachedFiles.push(file);
             }
 
-            event.target.value = '';
             renderFileList();
         }
 
@@ -671,8 +774,8 @@
               <div class="file-item">
                 <div class="file-item-info">
                   <span style="font-size:18px;">📄</span>
-                  <div>
-                    <div class="file-item-name">${escapeHtml(file.name)}</div>
+                  <div style="min-width:0;">
+                    <div class="file-item-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
                     <div class="file-item-size">${formatFileSize(file.size)}</div>
                   </div>
                 </div>

@@ -39,7 +39,7 @@ public class ReqAdminEmployeeCreateDto {
     private String email;
 
     @NotBlank
-    @Size(max = 15)
+    @Size(max = 20)
     private String phone;
 
     @NotBlank
