@@ -6,6 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.domain.TodoList;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqCreateTodoDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqUpdateTodoDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ResTodoDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,5 +38,25 @@ public class TodoService {
 
         TodoList saved = todoRepository.save(todo);
         return ResTodoDto.from(saved);
+    }
+
+    @Transactional
+    public ResTodoDto update(String empId, Long todoNo, ReqUpdateTodoDto req) {
+        TodoList todo = todoRepository.findByTodoNoAndEmployeeEmpId(todoNo, empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+
+        todo.update(req.getTitle(), req.getIsDone());
+
+        return ResTodoDto.from(todo);
+    }
+
+    @Transactional
+    public ResTodoDto updateDone(String empId, Long todoNo, boolean isDone) {
+        TodoList todo = todoRepository.findByTodoNoAndEmployeeEmpId(todoNo, empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+
+        todo.setDone(isDone);
+
+        return ResTodoDto.from(todo);
     }
 }
