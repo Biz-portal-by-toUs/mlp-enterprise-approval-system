@@ -8,6 +8,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,6 +44,8 @@ public class TokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenProvider tokenProvider;
+
+    private final EmployeeRepository employeeRepository;
 
     /**
      * 로그인 성공 시 호출: access + refresh 발급
@@ -193,6 +196,11 @@ public class TokenService {
                 Claims rtClaims = tokenProvider.parseClaims(refreshToken);
                 Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
                 TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
+
+                // ✅ 0) 직원 로그아웃이면 msgStat = "H"
+                if (subjectType == TokenSubjectType.EMPLOYEE) {
+                    employeeRepository.updateMsgStatByEmpNo(subjectId, "H");
+                }
 
                 var stored = refreshTokenRepository
                         .findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
