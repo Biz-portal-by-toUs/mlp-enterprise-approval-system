@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.domain;
+package com.multi.mlpenterpriseapprovalsystem.schedule.todo.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 투두리스트 엔티티
  *
  * @author : 김승기
  * @filename : TodoList

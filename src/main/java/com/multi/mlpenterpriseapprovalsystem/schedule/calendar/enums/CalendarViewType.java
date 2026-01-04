@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.enums;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums;
 
 /**
  * 일정 조회 뷰 타입 (월별/주간별)

@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.service;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
@@ -8,13 +8,13 @@ import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepositor
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
-import com.multi.mlpenterpriseapprovalsystem.schedule.domain.EmpSchedule;
-import com.multi.mlpenterpriseapprovalsystem.schedule.domain.Schedule;
-import com.multi.mlpenterpriseapprovalsystem.schedule.dto.*;
-import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarScope;
-import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarViewType;
-import com.multi.mlpenterpriseapprovalsystem.schedule.repository.EmpScheduleRepository;
-import com.multi.mlpenterpriseapprovalsystem.schedule.repository.ScheduleRepository;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.EmpSchedule;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.Schedule;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarViewType;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.repository.EmpScheduleRepository;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.service;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.service;
 
-import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarScope;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope;
 
 /**
  * 색 정책 클래스

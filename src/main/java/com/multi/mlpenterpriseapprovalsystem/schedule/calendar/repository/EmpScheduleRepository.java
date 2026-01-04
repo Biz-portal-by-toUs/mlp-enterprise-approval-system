@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.repository;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.schedule.domain.EmpSchedule;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.EmpSchedule;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

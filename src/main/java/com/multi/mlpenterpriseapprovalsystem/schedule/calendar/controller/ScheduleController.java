@@ -1,9 +1,10 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.controller;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.schedule.dto.*;
-import com.multi.mlpenterpriseapprovalsystem.schedule.service.ScheduleService;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.service.ScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
