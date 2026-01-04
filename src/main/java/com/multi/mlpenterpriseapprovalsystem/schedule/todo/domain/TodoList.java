@@ -42,7 +42,7 @@ public class TodoList extends BaseEntity {
         if (isDone != null) this.isDone = isDone;
     }
 
-    public void toggleDone() {
-        this.isDone = (this.isDone == null) ? Boolean.TRUE : !this.isDone;
+    public void setDone(Boolean isDone) {
+        this.isDone = (isDone != null) ? isDone : this.isDone;
     }
 }
