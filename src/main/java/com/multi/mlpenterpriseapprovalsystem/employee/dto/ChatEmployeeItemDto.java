@@ -1,6 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.dto;
 
-import lombok.AllArgsConstructor;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import lombok.Getter;
 
 /**
@@ -11,18 +11,31 @@ import lombok.Getter;
  * @since : 2025. 12. 20. 토요일
  */
 @Getter
-@AllArgsConstructor
 public class ChatEmployeeItemDto {
-    private Long empNo;
-    private String empId;
-    private String empName;
+    private final Long empNo;
+    private final String empId;
+    private final String empName;
 
-    private String depName;
-    private String posName;
-    private Integer posOrder;
+    private final String depName;
+    private final String posName;
+    private final Integer posOrder;
 
-    private String msgStat; // c/m/d/x/h
-    private String atte;    // b/v/c
+    private final String msgStat; // c/m/d/x/h
+    private final String atte;    // b/v/c
 
-    private String email;
+    private final String email;
+
+    public ChatEmployeeItemDto(Long empNo, String empId, String empName,
+                               String depName, String posName, Integer posOrder,
+                               MsgStat msgStat, String atte, String email) {
+        this.empNo = empNo;
+        this.empId = empId;
+        this.empName = empName;
+        this.depName = depName;
+        this.posName = posName;
+        this.posOrder = posOrder;
+        this.msgStat = (msgStat == null ? null : String.valueOf(msgStat.getCode())); // 또는 msgStat.name()
+        this.atte = atte;
+        this.email = email;
+    }
 }

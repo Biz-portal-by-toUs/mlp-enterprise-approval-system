@@ -15,6 +15,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.SubscriptionRepository;
@@ -144,7 +145,10 @@ public class AuthService {
         // 3) 토큰 발급 + refresh 쿠키 세팅
         ResTokenDto res = tokenService.createToken(user, response);
 
-        employeeRepository.updateMsgStatByEmpNo(user.getSubjectId(), "C");
+        // 로그인 성공 후
+        String atte = employeeRepository.findAtteByEmpNo(user.getSubjectId()); // 쿼리 하나 추가
+        String next = ("V".equals(atte) || "B".equals(atte)) ? "OFF" : "WORKING";
+        employeeRepository.updateMsgStatByEmpNo(user.getSubjectId(), MsgStat.valueOf(next));
 
         boolean mustChange = passwordEncoder.matches(DEFAULT_PASSWORD, user.getPassword());
 

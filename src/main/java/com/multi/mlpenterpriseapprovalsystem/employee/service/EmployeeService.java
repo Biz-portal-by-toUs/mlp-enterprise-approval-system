@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
@@ -216,6 +217,23 @@ public class EmployeeService {
                 req.getGen(),   // "M" or "F"
                 req.getRole()
         );
+    }
+
+    public void updateMsgStat(Long empNo, ReqUpdateMsgStatDto req) {
+        if (req == null || req.getCode() == null || req.getCode().length() != 1) {
+            throw new CustomException(ErrorCode.INVALID_MSG_STAT_CODE); // 400 매핑
+        }
+
+        MsgStat next = MsgStat.fromCode(req.getCode().charAt(0));
+
+        if (!next.isSelectable()) {
+            throw new CustomException(ErrorCode.MSG_STAT_FORBIDDEN); // 403 매핑
+        }
+
+        Employee emp = employeeRepository.findById(empNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        emp.setMsgStat(next);
     }
 
     private record CursorKey(String name, Long no) {}

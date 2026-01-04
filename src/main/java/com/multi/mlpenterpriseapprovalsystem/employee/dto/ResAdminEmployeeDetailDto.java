@@ -108,7 +108,7 @@ public class ResAdminEmployeeDetailDto {
                 .role(e.getRole())
                 .isDeleted(e.getIsDeleted())
                 .atte(e.getAtte())
-                .msgStat(e.getMsgStat())
+                .msgStat(e.getMsgStat() == null ? null : String.valueOf(e.getMsgStat().getCode()))
 
                 // 재직
                 .hireDate(e.getHireDate())
