@@ -8,6 +8,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
@@ -199,7 +200,7 @@ public class TokenService {
 
                 // ✅ 0) 직원 로그아웃이면 msgStat = "H"
                 if (subjectType == TokenSubjectType.EMPLOYEE) {
-                    employeeRepository.updateMsgStatByEmpNo(subjectId, "H");
+                    employeeRepository.updateMsgStatByEmpNo(subjectId, MsgStat.OFF);
                 }
 
                 var stored = refreshTokenRepository
