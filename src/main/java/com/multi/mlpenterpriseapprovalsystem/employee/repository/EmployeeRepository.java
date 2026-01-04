@@ -187,6 +187,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         String getEmail();
         String getWorkPhone();
         String getObjectKey();
+        String getAtte();
 
         String getDepId();
         String getDepName();
@@ -203,6 +204,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
           e.email as email,
           e.workPhone as workPhone,
           e.objectKey as objectKey,
+          e.atte as atte,
 
           d.depId as depId,
           d.depName as depName,
