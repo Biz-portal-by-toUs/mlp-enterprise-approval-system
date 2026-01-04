@@ -125,10 +125,18 @@ public class ResDocumentDto {
                         document.getResubmittedBy().getDocNo() : null)
                 .build();
 
-        // empId가 전달되었다면 해당 사용자의 상태를 찾아 세팅
-        if (empId != null) {
+        // ✅ 수정된 로직: 본인이 원결재자이거나, 원결재자의 현재 대직자인 경우 상태 추출
+        if (empId != null && document.getApprovalLines() != null) {
             for (ApprovalLine line : document.getApprovalLines()) {
-                if (line.getApprover().getEmpId().equals(empId)) {
+                // 1. 내가 원결재자인지 확인
+                boolean isApprover = line.getApprover().getEmpId().equals(empId);
+
+                // 2. 내가 원결재자의 현재 대직자인지 확인 (Employee 테이블의 관계 확인)
+                boolean isCurrentDelegate = line.getApprover().getDelegate() != null &&
+                        line.getApprover().getDelegate().getEmpId().equals(empId);
+
+                if (isApprover || isCurrentDelegate) {
+                    // 원결재자든 대직자든, 해당 결재 순번의 상태(I/W/A/R)를 내 상태로 취급
                     resDocumentDto.setMyApprStat(line.getApprStat());
                     break;
                 }

@@ -64,6 +64,14 @@ public class Attendance extends BaseEntity {
     @OrderBy("submittedAt DESC") // 최신 문서가 위로 오도록 정렬
     private List<Document> documents = new ArrayList<>();
 
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean isDeleted = false;
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
+
     public void updateRecentDocument(Document document) {
         this.document = document;
     }

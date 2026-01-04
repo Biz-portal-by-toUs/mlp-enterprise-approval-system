@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import lombok.AllArgsConstructor;
@@ -34,8 +35,10 @@ public class ResApprovalLineDto {
     private int seq;
     private ApprStat apprStat;
     private LocalDateTime endedAt;
+    @JsonProperty("isActualAppr")
     private boolean isActualAppr;
     private String rejReason;
+    @JsonProperty("isDelegate")
     private boolean isDelegate;
 
     public static ResApprovalLineDto toDto(ApprovalLine approvalLine) {

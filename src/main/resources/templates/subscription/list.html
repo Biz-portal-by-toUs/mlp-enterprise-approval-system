@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - 요금제 안내</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --border:#d7d7d7;
+            --primary:#2f66d7;
+            --white:#ffffff;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{ min-height:100vh; border:2px solid #222; margin:12px; background:var(--bg); display:flex; flex-direction:column; }
+        header{ display:flex; align-items:center; justify-content:space-between; padding:26px 28px; }
+        .brand{ font-family: Georgia, serif; font-weight:700; font-size:40px; cursor:pointer; }
+
+        main{ flex:1; display:flex; flex-direction:column; align-items:center; padding:60px 24px; }
+        .title-section{ text-align:center; margin-bottom:60px; }
+        .title{ font-size:52px; font-weight:900; margin:0; letter-spacing:-1.5px; }
+        .desc{ color:#555; font-weight:600; margin-top:12px; font-size:18px; }
+
+        .plan-container{
+            display:flex;
+            gap:24px;
+            justify-content:center;
+            align-items: stretch;
+            width: 100%;
+            max-width: 1100px;
+            flex-wrap: wrap;
+        }
+
+        .plan-card{
+            background:var(--white);
+            border:1px solid var(--border);
+            border-radius:4px;
+            padding:40px 30px;
+            width: 320px;
+            display:flex;
+            flex-direction:column;
+            text-align:left;
+            transition: all 0.3s ease;
+        }
+
+        /* 현재 요금제 강조 스타일 */
+        .plan-card.featured{
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+            transform: scale(1.05);
+            box-shadow: 0 20px 40px rgba(47,102,215,0.2);
+            z-index: 10;
+        }
+
+        .plan-title{ font-size:24px; font-weight:800; color:var(--primary); margin-bottom:20px; }
+        .plan-card.featured .plan-title { color: var(--white); }
+
+        .plan-price{ font-size:44px; font-weight:900; margin-bottom:30px; }
+        .plan-price span{ font-size:18px; font-weight:600; }
+
+        .usage-period{
+            font-size:14px;
+            font-weight:700;
+            margin-top:-20px;
+            margin-bottom:25px;
+            opacity:0.95;
+        }
+        .plan-card.featured .usage-period { color: var(--white); }
+
+        .btn-plan{
+            appearance:none; border:none; background:var(--primary); color:var(--white);
+            padding:14px; font-size:16px; font-weight:800; border-radius:4px; cursor:pointer;
+            margin-bottom:30px; transition: all 0.2s;
+        }
+        .plan-card.featured .btn-plan { background: var(--white); color: var(--primary); }
+        .btn-plan:disabled { background: #e2e2e2; color: #999; cursor: default; }
+        .plan-card.featured .btn-plan:disabled { opacity:1; font-weight: 800; }
+
+        .feature-title { font-weight: 800; font-size: 14px; margin-bottom: 15px; }
+        .feature-list{ list-style:none; padding:0; margin:0; }
+        .feature-item{ font-size:15px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:10px; color: #555; }
+        .plan-card.featured .feature-item { color: rgba(255,255,255,0.9); }
+        .feature-item::before { content: '✓'; font-weight: 900; color: var(--primary); }
+        .plan-card.featured .feature-item::before { color: var(--white); }
+
+        /* SweetAlert 커스텀 스타일링 */
+        .swal2-popup { border-radius: 20px !important; font-family: inherit !important; }
+        .swal2-styled.swal2-confirm { background-color: var(--primary) !important; border-radius: 12px !important; font-weight: 800 !important; }
+        .swal2-styled.swal2-cancel { border-radius: 12px !important; font-weight: 800 !important; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="brand" onclick="location.href='/'">Bizportal</div>
+        <button class="btn" style="appearance:none; border:1px solid var(--border); background:#fff; padding:10px 18px; border-radius:10px; font-weight:800; cursor:pointer;" onclick="location.href='/company'">대시보드</button>
+    </header>
+
+    <main>
+        <section class="title-section">
+            <h1 class="title">요금제 안내</h1>
+            <p class="desc">귀하의 비즈니스 성장에 딱 맞는 요금제를 선택하세요.</p>
+        </section>
+
+        <div class="plan-container" id="planList"></div>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const planListEl = document.getElementById('planList');
+
+    // SweetAlert2 기반 토스트 설정
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'bottom',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+    });
+
+    // 1. 초기 데이터 로드
+    async function init() {
+        try {
+            const resMe = await fetch('/api/v1/company/subscription/me');
+            const meJson = await resMe.json();
+            const currentSub = meJson.data;
+
+            const resPlans = await fetch('/api/v1/subscriptions');
+            const plansJson = await resPlans.json();
+
+            renderPlans(plansJson.data, currentSub);
+        } catch (e) {
+            console.error("데이터 로드 실패", e);
+        }
+    }
+
+    // 2. 카드 렌더링 함수
+    function renderPlans(plans, currentSub) {
+        const currentSubNo = currentSub.subNo;
+        const status = currentSub.status;
+        const expiryDate = currentSub.nextBillingDate ? new Date(currentSub.nextBillingDate).toLocaleDateString() : null;
+
+        planListEl.innerHTML = plans.map(plan => {
+            const isCurrent = plan.subNo === currentSubNo;
+
+            return `
+                <div class="plan-card ${isCurrent ? 'featured' : ''}">
+                    <div class="plan-title">${plan.subName.toUpperCase()}</div>
+                    <div class="plan-price">
+                        ${plan.subPrice === 0 ? '무료' : '₩' + plan.subPrice.toLocaleString()}
+                        ${plan.subPrice !== 0 ? '<span>/월</span>' : ''}
+                    </div>
+
+                    <button class="btn-plan"
+                            onclick="handlePlanSelection(${plan.subNo})"
+                            ${isCurrent ? 'disabled' : ''}>
+                        ${isCurrent ? '현재 요금제' : '요금제 변경'}
+                    </button>
+
+                    ${isCurrent && expiryDate ? `
+                        <p class="usage-period">
+                            ${status === 'CANCELED' ? '만료 예정일: ' : '다음 결제일: '} ${expiryDate}
+                        </p>
+                    ` : ''}
+
+                    <div class="feature-title">주요 기능 :</div>
+                    <ul class="feature-list">
+                        <li class="feature-item">${plan.subDesc}</li>
+                        <li class="feature-item">모든 핵심 기능 포함</li>
+                        <li class="feature-item">연중무휴 기술 지원</li>
+                    </ul>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 3. 요금제 변경 로직 (SweetAlert2 적용)
+    async function handlePlanSelection(subNo) {
+        let url = '';
+        let method = '';
+        let title = '';
+        let text = '';
+
+        if (subNo === 1) { // 무료 요금제 선택 시 (해지 예약)
+            url = '/api/v1/company/subscription/cancel';
+            method = 'PATCH';
+            title = '구독 해지 예약';
+            text = "무료 요금제로 변경하시겠습니까? 다음 결제가 중단되며 만료일까지 유료 혜택이 유지됩니다.";
+        } else { // 유료 요금제 선택 시 (업그레이드)
+            url = `/api/v1/company/subscription/upgrade?subNo=${subNo}`;
+            method = 'POST';
+            title = '요금제 업그레이드';
+            text = "해당 요금제로 변경하시겠습니까? 확인 시 즉시 결제가 진행됩니다.";
+        }
+
+        // [SweetAlert2] 확인창 띄우기
+        const result = await Swal.fire({
+            title: title,
+            text: text,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '변경하기',
+            cancelButtonText: '취소'
+        });
+
+        if (result.isConfirmed) {
+            Swal.showLoading(); // 처리 중 로딩 표시
+            try {
+                const res = await fetch(url, { method: method });
+                const json = await res.json();
+                Swal.close();
+
+                if (res.ok) {
+                    await Swal.fire('처리 완료', '요금제 변경 요청이 정상적으로 처리되었습니다.', 'success');
+                    location.reload();
+                } else {
+                    Swal.fire('변경 실패', json.message || "오류가 발생했습니다.", 'error');
+                }
+            } catch (e) {
+                Swal.fire('통신 오류', '서버와 연결할 수 없습니다.', 'error');
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -499,43 +499,101 @@ public class DocumentService {
 //    }
 
     // 결재라인 생성 (대직자 포함)
+//    private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
+//        List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
+//                .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
+//                .toList();
+//
+//        for (int i = 0; i < sortedLines.size(); i++) {
+//            ReqApprovalLineDto lineDto = sortedLines.get(i);
+//            Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
+//                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+//
+//            ApprStat apprStat = isTemp ? ApprStat.W : (i == 0 ? ApprStat.I : ApprStat.W);
+//
+//            // 1. 원 결재자 추가 (A)
+//            ApprovalLine approverLine = ApprovalLine.toEntity(
+//                    document, approver, company, lineDto.getSeq(), apprStat, false, null
+//            );
+//            approvalLineRepository.save(approverLine);
+//
+//            // 2. 연쇄 대직자 추적 및 추가 (A -> B -> C -> D)
+//            Employee currentTarget = approver;
+//            // 현재 대상이 휴가 중(V)이고 대직자가 지정되어 있다면 계속 추적
+//            while ("V".equals(currentTarget.getAtte()) && currentTarget.getDelegate() != null) {
+//                Employee delegate = currentTarget.getDelegate();
+//
+//                // 대직자 라인 생성 (targetApprover는 바로 직전 단계의 사람)
+//                ApprovalLine delegateLine = ApprovalLine.toEntity(
+//                        document, delegate, company, lineDto.getSeq(), apprStat, true, currentTarget
+//                );
+//                approvalLineRepository.save(delegateLine);
+//
+//                log.info("연쇄 대직자 투입: {}의 대직자로 {} 지정 (seq: {})",
+//                        currentTarget.getEmpId(), delegate.getEmpId(), lineDto.getSeq());
+//
+//                // 다음 체인 확인을 위해 대상을 현재 대직자로 교체
+//                currentTarget = delegate;
+//
+//                // "휴가자는 대직자로 설정 불가" 규칙 덕분에 무한 루프에 빠지지 않고 결국 출근자에서 멈춤
+//            }
+//        }
+
+
     private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
+        // seq 기준 정렬
         List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
                 .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
                 .toList();
+
+        Employee writer = document.getWriter(); // ✅ 문서 작성자 정보
 
         for (int i = 0; i < sortedLines.size(); i++) {
             ReqApprovalLineDto lineDto = sortedLines.get(i);
             Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
                     .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
+            // 첫 결재자는 결재중(I), 나머지는 대기(W)
             ApprStat apprStat = isTemp ? ApprStat.W : (i == 0 ? ApprStat.I : ApprStat.W);
 
-            // 1. 원 결재자 추가 (A)
+            // 1. 원 결재자 추가
             ApprovalLine approverLine = ApprovalLine.toEntity(
                     document, approver, company, lineDto.getSeq(), apprStat, false, null
             );
             approvalLineRepository.save(approverLine);
 
-            // 2. 연쇄 대직자 추적 및 추가 (A -> B -> C -> D)
+            // 2. 대직자 체인 추적 및 추가
             Employee currentTarget = approver;
-            // 현재 대상이 휴가 중(V)이고 대직자가 지정되어 있다면 계속 추적
+
+            // 현재 대상이 휴가 중(V)이고 대직자가 있다면 추적 시작
             while ("V".equals(currentTarget.getAtte()) && currentTarget.getDelegate() != null) {
                 Employee delegate = currentTarget.getDelegate();
 
-                // 대직자 라인 생성 (targetApprover는 바로 직전 단계의 사람)
+                // ✅ [핵심 추가]: 대직자가 문서 작성자 본인인지 체크
+                if (delegate.getEmpId().equals(writer.getEmpId())) {
+                    log.info("문서 생성 시 대직자가 작성자 본인이므로 제외: 문서={}, 사번={}",
+                            document.getDocNo(), delegate.getEmpId());
+
+                    // 본인이라면 스킵하고, 이 대직자(나)도 휴가 중이라면 그다음 대직자를 찾음
+                    if ("V".equals(delegate.getAtte()) && delegate.getDelegate() != null) {
+                        currentTarget = delegate;
+                        continue;
+                    } else {
+                        break; // 더 이상 대행할 사람이 없으면 종료
+                    }
+                }
+
+                // 대직자 라인 생성
                 ApprovalLine delegateLine = ApprovalLine.toEntity(
                         document, delegate, company, lineDto.getSeq(), apprStat, true, currentTarget
                 );
                 approvalLineRepository.save(delegateLine);
 
-                log.info("연쇄 대직자 투입: {}의 대직자로 {} 지정 (seq: {})",
+                log.info("문서 생성 시 대직자 투입: {}의 대직자 {} (seq: {})",
                         currentTarget.getEmpId(), delegate.getEmpId(), lineDto.getSeq());
 
-                // 다음 체인 확인을 위해 대상을 현재 대직자로 교체
+                // 다음 체인 확인
                 currentTarget = delegate;
-
-                // "휴가자는 대직자로 설정 불가" 규칙 덕분에 무한 루프에 빠지지 않고 결국 출근자에서 멈춤
             }
         }
     }

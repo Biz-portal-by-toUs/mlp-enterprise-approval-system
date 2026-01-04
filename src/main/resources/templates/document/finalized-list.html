@@ -9,57 +9,361 @@
 
     <th:block layout:fragment="pageStyles">
         <style>
-            /* [정렬 옵션] */
-            .sort-options { display: flex; gap: 15px; align-items: center; justify-content: flex-end; margin-bottom: 15px; padding: 10px 0; }
-            .sort-basis-select { padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; outline: none; background: white; cursor: pointer; }
-            .sort-basis-select:focus { border-color: #339af0; }
-            .sort-order-group { display: flex; gap: 15px; font-size: 13px; color: #666; }
-            .sort-order-group span { cursor: pointer; transition: color 0.2s; }
-            .sort-order-group span:hover { color: #339af0; }
-            .sort-order-group span.active { color: #339af0; font-weight: bold; text-decoration: underline; }
+            /* [페이지 헤더] */
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+            }
+            .page-title {
+                font-size: 24px;
+                font-weight: bold;
+                color: #333;
+                margin: 0;
+            }
 
-            /* [상세 검색창] 4열 그리드 */
-            .search-container { background: #f1f3f5; padding: 20px; border-radius: 6px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: center; }
-            .search-group { display: flex; align-items: center; gap: 10px; position: relative; }
-            .search-group label { font-size: 13px; font-weight: 600; color: #495057; width: 80px; }
-            .search-input, .search-select { flex: 1; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; outline: none; background: white; }
-            .search-input.disabled { background-color: #e9ecef; color: #495057; cursor: not-allowed; text-align: center; font-weight: bold; }
+            /* [정렬 옵션] */
+            .sort-options {
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                justify-content: flex-end;
+                margin-bottom: 15px;
+                padding: 10px 0;
+            }
+            .sort-basis-select {
+                padding: 8px 12px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                outline: none;
+                background: white;
+                cursor: pointer;
+            }
+            .sort-basis-select:focus { border-color: var(--primary); }
+            .sort-order-group {
+                display: flex;
+                gap: 15px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+            }
+            .sort-order-group span {
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .sort-order-group span:hover { color: var(--primary); }
+            .sort-order-group span.active {
+                color: var(--primary);
+                font-weight: 800;
+                text-decoration: underline;
+            }
+
+            /* [상세 검색창] 4열 그리드 - 결재한 문서 목록과 동일하게 수정 */
+            .search-container {
+                background: #f8fafc;
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 16px;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px 20px;
+                align-items: center;
+                border: 1px solid var(--line);
+            }
+            .search-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                position: relative;
+            }
+            .search-group label {
+                font-size: 13px;
+                font-weight: 600;
+                color: #495057;
+                width: 75px;
+                flex-shrink: 0;
+                text-align: right;
+            }
+            .search-input, .search-select {
+                flex: 1;
+                padding: 8px 10px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-size: 13px;
+                outline: none;
+                background: white;
+            }
+            .search-input.disabled {
+                background-color: #e9ecef;
+                color: #495057;
+                cursor: not-allowed;
+                text-align: center;
+                font-weight: bold;
+            }
 
             /* [커스텀 드롭다운] */
-            .custom-dropdown { position: relative; flex: 1; display: flex; }
-            .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #dee2e6; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-            .dropdown-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f8f9fa; }
-            .dropdown-item:hover { background-color: #e7f5ff; color: #339af0; }
-            .dropdown-item.no-result { color: #adb5bd; cursor: default; text-align: center; }
+            .custom-dropdown {
+                position: relative;
+                flex: 1;
+                display: flex;
+            }
+            .dropdown-list {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                max-height: 200px;
+                overflow-y: auto;
+                z-index: 1000;
+                display: none;
+                box-shadow: var(--shadow);
+                margin-top: 4px;
+            }
+            .dropdown-item {
+                padding: 10px 12px;
+                font-size: 13px;
+                cursor: pointer;
+                border-bottom: 1px solid #f8f9fa;
+            }
+            .dropdown-item:last-child { border-bottom: none; }
+            .dropdown-item:hover {
+                background-color: #eff6ff;
+                color: var(--primary);
+            }
+            .dropdown-item.no-result {
+                color: var(--muted);
+                cursor: default;
+                text-align: center;
+            }
 
-            .btn-search { grid-column: span 4; justify-self: end; padding: 10px 40px; background: #339af0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
-            .btn-search:hover { background: #228be6; }
+            /* [검색 버튼] 결재한 문서 목록과 스타일 통일 */
+            .btn-search {
+                grid-column: span 4;
+                justify-self: end;
+                padding: 10px 40px;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 14px;
+                transition: 0.15s;
+                margin-top: 5px;
+            }
+            .btn-search:hover {
+                filter: brightness(0.9);
+            }
+
+            /* [테이블 래퍼] */
+            .tableWrap {
+                background: #fff;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
 
             /* [테이블 디자인] */
-            .doc-table { width: 100%; border-collapse: collapse; border-top: 2px solid #333; table-layout: auto; }
-            .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 12px 8px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
-            .doc-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
-            .title-cell { text-align: left !important; padding-left: 15px !important; cursor: pointer; font-weight: 500; word-break: break-all; }
-            .title-cell:hover { color: #339af0; text-decoration: underline; }
+            .doc-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: auto;
+            }
+            .doc-table thead th {
+                background: #f9fafb;
+                color: var(--muted);
+                font-size: 14px;
+                padding: 14px 10px;
+                border-bottom: 1px solid var(--line);
+                white-space: nowrap;
+                text-align: center;
+                font-weight: 600;
+            }
+            .doc-table tbody td {
+                padding: 12px 10px;
+                text-align: center;
+                border-bottom: 1px solid var(--line);
+                font-size: 15px;
+                font-weight: 500;
+                color: #333;
+                vertical-align: middle;
+                line-height: 1.4;
+            }
+            .doc-table tbody tr:hover td {
+                background: #fcfdfe;
+            }
 
-            /* [페이지네이션 - 개선형 슬라이딩 방식] */
-            .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
-            .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; }
-            .page-btn-nav:disabled { background: #f1f3f5 !important; color: #adb5bd !important; cursor: not-allowed !important; border-color: #e9ecef !important; }
-            .page-btn-num { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
-            .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
+            /* 제목 셀 중앙정렬 */
+            .title-cell {
+                text-align: center !important;
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                cursor: pointer;
+                font-weight: 700;
+                word-break: break-all;
+                transition: color 0.2s;
+            }
+            .title-cell:hover {
+                color: var(--primary);
+            }
+
+            /* [페이지네이션] */
+            .pager-wrapper {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                margin-top: 16px;
+            }
+            .pagination {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            .page-btn-nav {
+                min-width: 36px;
+                height: 36px;
+                border-radius: 6px;
+                border: 1px solid var(--line);
+                background: #fff;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: 0.15s;
+            }
+            .page-btn-nav:hover:not(:disabled) {
+                background: #f1f5f9;
+            }
+            .page-btn-nav:disabled {
+                background: #f1f3f5 !important;
+                color: #adb5bd !important;
+                cursor: not-allowed !important;
+                border-color: #e9ecef !important;
+            }
+            .page-btn-num {
+                min-width: 36px;
+                height: 36px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: #fff;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
+                color: inherit;
+                transition: 0.15s;
+            }
+            .page-btn-num:hover:not(.active) {
+                background: #f1f5f9;
+            }
+            .page-btn-num.active {
+                background-color: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
+            }
+            .page-btn-num.active:hover {
+                filter: brightness(0.9);
+            }
+
+            .pager-status {
+                position: absolute;
+                right: 0;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
 
             /* [모달 스타일] */
-            .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
+            .modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 9999;
+                align-items: center;
+                justify-content: center;
+                animation: fadeIn 0.2s;
+            }
             .modal-overlay.show { display: flex; }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-            .ai-modal-content { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); animation: slideUp 0.3s ease-out; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-            @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-            .ai-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #7950f2; padding-bottom: 15px; }
-            .ai-modal-title { margin: 0; color: #7950f2; font-size: 22px; display: flex; align-items: center; gap: 10px; }
-            .ai-modal-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #868e96; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-            .ai-modal-body { background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%); border: 1px solid #d0bfff; border-radius: 10px; padding: 25px; min-height: 120px; color: #333; line-height: 1.8; white-space: pre-wrap; font-size: 15px; }
-            .page-with-subbar > div:last-child { background: #fff; padding: 22px 26px; }
+
+            .ai-modal-content {
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.3s ease-out;
+                max-width: 600px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .ai-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 25px;
+                border-bottom: 2px solid #7950f2;
+                padding-bottom: 15px;
+            }
+            .ai-modal-title {
+                margin: 0;
+                color: #7950f2;
+                font-size: 22px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .ai-modal-close {
+                background: none;
+                border: none;
+                font-size: 28px;
+                cursor: pointer;
+                color: #868e96;
+                line-height: 1;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .ai-modal-body {
+                background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%);
+                border: 1px solid #d0bfff;
+                border-radius: 10px;
+                padding: 25px;
+                min-height: 120px;
+                color: #333;
+                line-height: 1.8;
+                white-space: pre-wrap;
+                font-size: 15px;
+            }
+
+            /* 로딩/공백 상태 */
+            .empty-msg {
+                padding: 40px 0;
+                color: var(--muted);
+                font-size: 15px;
+            }
         </style>
     </th:block>
 </head>
@@ -69,9 +373,9 @@
     <section class="page-with-subbar">
         <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('finalized')}"></aside>
 
-        <div>
-            <div style="margin-bottom: 20px;">
-                <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">최종 승인 문서</h1>
+        <main style="padding: 24px; min-width: 0; flex: 1;">
+            <div class="page-header">
+                <h1 class="page-title">최종 승인 문서</h1>
             </div>
 
             <div class="search-container">
@@ -82,13 +386,36 @@
                         <div id="cat-list" class="dropdown-list"></div>
                     </div>
                 </div>
-                <div class="search-group"><label>작성부서</label><select id="search-writerDepName" class="search-select"><option value="">전체 부서</option></select></div>
-                <div class="search-group"><label>문서상태</label><input type="text" class="search-input disabled" value="최종승인" readonly></div>
-                <div class="search-group"><label>내 결재상태</label><input type="text" class="search-input disabled" value="-" readonly></div>
-                <div class="search-group"><label>문서코드</label><input type="text" id="search-docId" class="search-input" placeholder="문서코드 입력" maxlength="15"></div>
-                <div class="search-group"><label>제목</label><input type="text" id="search-title" class="search-input" placeholder="제목 입력" maxlength="100"></div>
-                <div class="search-group"><label>작성자명</label><input type="text" id="search-writerName" class="search-input" placeholder="이름 입력" maxlength="20"></div>
-                <div class="search-group"><label>사원번호</label><input type="text" id="search-writerId" class="search-input" placeholder="사원번호 입력" maxlength="15"></div>
+                <div class="search-group">
+                    <label>작성부서</label>
+                    <select id="search-writerDepName" class="search-select">
+                        <option value="">전체 부서</option>
+                    </select>
+                </div>
+                <div class="search-group">
+                    <label>문서상태</label>
+                    <input type="text" class="search-input disabled" value="최종승인" readonly>
+                </div>
+                <div class="search-group">
+                    <label>내 결재상태</label>
+                    <input type="text" class="search-input disabled" value="-" readonly>
+                </div>
+                <div class="search-group">
+                    <label>문서코드</label>
+                    <input type="text" id="search-docId" class="search-input" placeholder="문서코드 입력" maxlength="15">
+                </div>
+                <div class="search-group">
+                    <label>제목</label>
+                    <input type="text" id="search-title" class="search-input" placeholder="제목 입력" maxlength="100">
+                </div>
+                <div class="search-group">
+                    <label>작성자명</label>
+                    <input type="text" id="search-writerName" class="search-input" placeholder="이름 입력" maxlength="20">
+                </div>
+                <div class="search-group">
+                    <label>사원번호</label>
+                    <input type="text" id="search-writerId" class="search-input" placeholder="사원번호 입력" maxlength="15">
+                </div>
                 <button class="btn-search" onclick="loadData(0)">검색</button>
             </div>
 
@@ -103,25 +430,34 @@
                 </div>
             </div>
 
-            <table class="doc-table">
-                <thead>
-                <tr>
-                    <th style="width: 50px;">NO</th>
-                    <th style="width: 140px;">문서코드</th>
-                    <th style="width: 100px;">카테고리</th>
-                    <th>제목</th>
-                    <th style="width: 100px;">부서</th>
-                    <th style="width: 100px;">작성자</th>
-                    <th style="width: 130px;">상신일</th>
-                    <th style="width: 130px;">최종승인일</th>
-                    <th style="width: 80px;">AI 요약</th>
-                </tr>
-                </thead>
-                <tbody id="document-list"></tbody>
-            </table>
+            <section class="tableWrap">
+                <table class="doc-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 60px;">NO</th>
+                        <th style="width: 140px;">문서코드</th>
+                        <th style="width: 120px;">카테고리</th>
+                        <th>제목</th>
+                        <th style="width: 100px;">부서</th>
+                        <th style="width: 120px;">작성자</th>
+                        <th style="width: 150px;">상신일</th>
+                        <th style="width: 150px;">최종승인일</th>
+                        <th style="width: 100px;">AI 요약</th>
+                    </tr>
+                    </thead>
+                    <tbody id="document-list">
+                    <tr><td colspan="9" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
+                    </tbody>
+                </table>
+            </section>
 
-            <div id="pagination-nav" class="pagination"></div>
-        </div>
+            <div class="pager-wrapper">
+                <div id="pagination-nav" class="pagination"></div>
+                <div class="pager-status">
+                    <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+                </div>
+            </div>
+        </main>
     </section>
 
     <div id="ai-summary-modal" class="modal-overlay">
@@ -138,11 +474,23 @@
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
         const API_URL = '/api/v1/documents?status=FINALIZED';
-        let currentBasis = 'FINALIZED'; let currentOrder = 'LATEST'; let currentPage = 0; let allCategories = [];
+        let currentBasis = 'FINALIZED';
+        let currentOrder = 'LATEST';
+        let currentPage = 0;
+        let allCategories = [];
 
-        document.addEventListener('DOMContentLoaded', () => { fetchDepartments(); fetchCategoryNames(); initCustomDropdown(); loadData(0); });
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDepartments();
+            fetchCategoryNames();
+            initCustomDropdown();
+            loadData(0);
+        });
 
-        function applySort() { currentBasis = document.getElementById('sort-basis').value; loadData(0); }
+        function applySort() {
+            currentBasis = document.getElementById('sort-basis').value;
+            loadData(0);
+        }
+
         function changeOrder(order) {
             currentOrder = order;
             document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
@@ -154,24 +502,54 @@
             try {
                 const response = await fetch('/api/v1/temp/documentFormCategoryNames', { credentials: 'include' });
                 const result = await response.json();
-                if (response.ok && result.data) { allCategories = result.data.map(name => name.trim()); renderDropdownItems(allCategories); }
+                if (response.ok && result.data) {
+                    allCategories = result.data.map(name => name.trim());
+                    renderDropdownItems(allCategories);
+                }
             } catch (e) { console.error(e); }
         }
 
         function renderDropdownItems(list) {
             const listEl = document.getElementById('cat-list');
             listEl.innerHTML = '<div class="dropdown-item" data-value="전체">전체</div>';
-            if (list.length === 0) listEl.innerHTML += '<div class="dropdown-item no-result">검색 결과 없음</div>';
-            else list.forEach(name => { listEl.innerHTML += `<div class="dropdown-item" data-value="${name}">${name}</div>`; });
+            if (list.length === 0) {
+                listEl.innerHTML += '<div class="dropdown-item no-result">검색 결과 없음</div>';
+            } else {
+                list.forEach(name => {
+                    listEl.innerHTML += `<div class="dropdown-item" data-value="${name}">${name}</div>`;
+                });
+            }
         }
 
         function initCustomDropdown() {
             const input = document.getElementById('search-docfoCatName');
             const listEl = document.getElementById('cat-list');
-            input.addEventListener('focus', () => { renderDropdownItems(allCategories); listEl.style.display = 'block'; });
-            input.addEventListener('input', (e) => { renderDropdownItems(allCategories.filter(cat => cat.toLowerCase().includes(e.target.value.trim().toLowerCase()))); listEl.style.display = 'block'; });
-            listEl.addEventListener('click', (e) => { if (e.target.classList.contains('dropdown-item') && !e.target.classList.contains('no-result')) { input.value = e.target.getAttribute('data-value'); listEl.style.display = 'none'; } });
-            document.addEventListener('click', (e) => { if (!document.getElementById('cat-dropdown-wrapper').contains(e.target)) listEl.style.display = 'none'; });
+
+            input.addEventListener('focus', () => {
+                renderDropdownItems(allCategories);
+                listEl.style.display = 'block';
+            });
+
+            input.addEventListener('input', (e) => {
+                renderDropdownItems(allCategories.filter(cat =>
+                    cat.toLowerCase().includes(e.target.value.trim().toLowerCase())
+                ));
+                listEl.style.display = 'block';
+            });
+
+            listEl.addEventListener('click', (e) => {
+                if (e.target.classList.contains('dropdown-item') &&
+                    !e.target.classList.contains('no-result')) {
+                    input.value = e.target.getAttribute('data-value');
+                    listEl.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('cat-dropdown-wrapper').contains(e.target)) {
+                    listEl.style.display = 'none';
+                }
+            });
         }
 
         async function fetchDepartments() {
@@ -180,7 +558,12 @@
                 const result = await response.json();
                 if (response.ok && result.data) {
                     const depSelect = document.getElementById('search-writerDepName');
-                    result.data.forEach(dept => { const option = document.createElement('option'); option.value = dept.depName; option.innerText = dept.depName; depSelect.appendChild(option); });
+                    result.data.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.depName;
+                        option.innerText = dept.depName;
+                        depSelect.appendChild(option);
+                    });
                 }
             } catch (e) { console.error(e); }
         }
@@ -188,7 +571,8 @@
         async function loadData(page) {
             currentPage = page;
             const params = new URLSearchParams({
-                page: page, sort: `${currentBasis}_${currentOrder}`,
+                page: page,
+                sort: `${currentBasis}_${currentOrder}`,
                 docfoCatName: document.getElementById('search-docfoCatName').value === '전체' ? '' : document.getElementById('search-docfoCatName').value,
                 writerDepName: document.getElementById('search-writerDepName').value,
                 docId: document.getElementById('search-docId').value,
@@ -196,63 +580,124 @@
                 writerName: document.getElementById('search-writerName').value,
                 writerId: document.getElementById('search-writerId').value
             });
+
             try {
                 const response = await fetch(`${API_URL}&${params.toString()}`, { credentials: 'include' });
                 const result = await response.json();
-                if (result.status === 200) { renderTable(result.data.content, page, result.data.size); renderPagination(result.data.totalPages, page); }
-            } catch (error) { console.error(error); }
+
+                if (result.status === 200) {
+                    const totalPages = result.data.totalPages;
+                    renderTable(result.data.content, page, result.data.size);
+                    renderPagination(totalPages, page);
+                    document.getElementById('pageInfo').textContent =
+                        `page ${page + 1} / ${Math.max(totalPages, 1)}`;
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('document-list').innerHTML =
+                    '<tr><td colspan="9" class="empty-msg" style="color:var(--danger);">데이터 로드 중 오류가 발생했습니다.</td></tr>';
+            }
         }
 
         function renderTable(docs, currentPage, pageSize) {
             const tbody = document.getElementById('document-list');
             tbody.innerHTML = '';
-            if (!docs || docs.length === 0) { tbody.innerHTML = '<tr><td colspan="9" style="padding: 40px; color: #999;">승인된 문서가 없습니다.</td></tr>'; return; }
+
+            if (!docs || docs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-msg">승인된 문서가 없습니다.</td></tr>';
+                return;
+            }
 
             docs.forEach((doc, index) => {
                 const no = (currentPage * pageSize) + index + 1;
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${no}</td><td>${doc.docId || '-'}</td><td>${doc.docFormCatName || '-'}</td><td class="title-cell" onclick="location.href='/documents/${doc.docNo}?status=FINALIZED'">${doc.title}</td><td>${doc.writerDepName || '-'}</td><td>${doc.writer}<br><span style="font-size:12px;color:#868e96;">${doc.writerId}</span></td><td>${formatDate(doc.submittedAt)}</td><td>${formatDate(doc.updatedAt)}</td><td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>`;
+                tr.innerHTML = `
+                    <td>${no}</td>
+                    <td>${doc.docId || '-'}</td>
+                    <td>${doc.docFormCatName || '-'}</td>
+                    <td class="title-cell" title="${doc.title}">${doc.title}</td>
+                    <td>${doc.writerDepName || '-'}</td>
+                    <td>${doc.writer}<br><span style="font-size:12px;color:#868e96;">${doc.writerId}</span></td>
+                    <td>${formatDate(doc.submittedAt)}</td>
+                    <td>${formatDate(doc.updatedAt)}</td>
+                    <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
+                `;
+
+                // ✅ 제목 셀에만 클릭 이벤트 직접 할당 (결재한 문서 목록과 동일한 로직)
+                const titleCell = tr.querySelector('.title-cell');
+                titleCell.addEventListener('click', () => {
+                    location.href = `/documents/${doc.docNo}?status=FINALIZED`;
+                });
+
                 tbody.appendChild(tr);
             });
         }
 
-        /**
-         * ✅ [개선된 페이지네이션] 슬라이딩 윈도우 방식
-         */
         function renderPagination(totalPages, currentPage) {
             const nav = document.getElementById('pagination-nav');
-            if (!nav || totalPages <= 1) { if(nav) nav.innerHTML = ''; return; }
+            if (!nav || totalPages <= 1) {
+                if(nav) nav.innerHTML = '';
+                return;
+            }
             nav.innerHTML = '';
 
-            const addBtn = (idx, text, className = '', disabled = false) => {
-                const btn = document.createElement('button');
-                btn.className = className; btn.innerText = text; btn.disabled = disabled;
-                if (!disabled) btn.onclick = () => loadData(idx);
-                nav.appendChild(btn);
+            const createBtn = (txt, target, active = false, disabled = false) => {
+                const b = document.createElement('button');
+                b.className = `page-btn-nav ${active ? 'active' : ''}`;
+                b.textContent = txt;
+                b.disabled = disabled;
+                if (!disabled) b.onclick = () => loadData(target);
+                return b;
             };
 
-            addBtn(currentPage - 1, '이전', 'page-btn-nav', currentPage === 0);
+            const createNumBtn = (num, target, active = false) => {
+                const b = document.createElement('button');
+                b.className = `page-btn-num ${active ? 'active' : ''}`;
+                b.textContent = num;
+                b.onclick = () => loadData(target);
+                return b;
+            };
 
-            const range = 2;
-            for (let i = 0; i < totalPages; i++) {
-                if (i === 0 || i === totalPages - 1 || (i >= currentPage - range && i <= currentPage + range)) {
-                    if (i === currentPage - range && i > 1) {
-                        const span = document.createElement('span'); span.innerText = '...'; span.style.margin = '0 5px'; span.style.color = '#ccc'; nav.appendChild(span);
-                    }
-                    addBtn(i, i + 1, `page-btn-num ${i === currentPage ? 'active' : ''}`);
-                    if (i === currentPage + range && i < totalPages - 2) {
-                        const span = document.createElement('span'); span.innerText = '...'; span.style.margin = '0 5px'; span.style.color = '#ccc'; nav.appendChild(span);
-                    }
-                }
+            // 이전 버튼
+            nav.appendChild(createBtn('<', currentPage - 1, false, currentPage === 0));
+
+            // 페이지 번호 (블록 단위)
+            const blockSize = 5;
+            const currentBlock = Math.floor(currentPage / blockSize);
+            const startPage = currentBlock * blockSize;
+            let endPage = startPage + blockSize - 1;
+            if (endPage > totalPages - 1) endPage = totalPages - 1;
+
+            for (let i = startPage; i <= endPage; i++) {
+                nav.appendChild(createNumBtn(i + 1, i, i === currentPage));
             }
-            addBtn(currentPage + 1, '다음', 'page-btn-nav', currentPage === totalPages - 1);
+
+            // 다음 버튼
+            nav.appendChild(createBtn('>', currentPage + 1, false, currentPage === totalPages - 1));
         }
 
-        function showAiSummaryModal(summary) { document.getElementById('ai-summary-text').textContent = summary || '내용 없음'; document.getElementById('ai-summary-modal').classList.add('show'); }
-        function closeAiSummaryModal() { document.getElementById('ai-summary-modal').classList.remove('show'); }
-        function escapeHtml(text) { return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
-        function formatDate(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}<br>${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
-        document.addEventListener('click', (e) => { if (e.target.id === 'ai-summary-modal') closeAiSummaryModal(); });
+        function showAiSummaryModal(summary) {
+            document.getElementById('ai-summary-text').textContent = summary || '내용 없음';
+            document.getElementById('ai-summary-modal').classList.add('show');
+        }
+
+        function closeAiSummaryModal() {
+            document.getElementById('ai-summary-modal').classList.remove('show');
+        }
+
+        function escapeHtml(text) {
+            return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        }
+
+        function formatDate(str) {
+            if (!str) return '-';
+            const d = new Date(str);
+            return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}<br>${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`;
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'ai-summary-modal') closeAiSummaryModal();
+        });
     </script>
 </th:block>
 </body>

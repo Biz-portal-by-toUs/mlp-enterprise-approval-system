@@ -1,9 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.attendance.dto.res;
 
 import com.multi.mlpenterpriseapprovalsystem.attendance.domain.Attendance;
-import com.multi.mlpenterpriseapprovalsystem.attendance.enums.AtteType;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -16,65 +17,75 @@ import java.time.LocalDateTime;
  */
 @Builder
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ResAttendanceDto {
     private Long atteNo;
 
+    // 회사 정보
     private Long comNo;
     private String comId;
 
-    private Long myEmpNo; // 본인(사원) 식별자
-    private String myEmpId; // 본인(사원) 사원번호
-    private String myEmpName; // 본인(사원) 이름
+    // 작성자(사원) 정보 - 필드명을 목록 페이지 로직과 통일
+    private String writer;        // 사원이름 (JS의 item.writer와 매핑)
+    private String writerId;      // 사원번호 (JS의 item.writerId와 매핑)
+    private String writerDepName; // 부서이름 (JS의 item.writerDepName과 매핑)
 
+    // 문서 정보
     private Long docNo;
     private String docId;
     private String docTitle;
 
-    private AtteType type; // V(휴가), B(출장)
-    private Integer day; // 일 수
+    // 근태 상세
+    private String atteType;      // JS의 item.atteType과 매핑 (V 또는 B)
+    private Integer day;          // 일 수
 
-    private Long delegateEmpNo; // 대직자 식별자
-    private String delegateEmpId; // 대직자 사원번호
-    private String delegateEmpName; // 대직자 이름
+    // 대직자 정보
+    private String delegateEmpId;
+    private String delegateEmpName;
 
     private LocalDateTime createdAt;
     private LocalDateTime startAt; // 시작일
-    private LocalDateTime endAt; // 종료일
-
+    private LocalDateTime endAt;   // 종료일
 
     public static ResAttendanceDto toDto(Attendance attendance) {
+        if (attendance == null) return null;
+
         ResAttendanceDtoBuilder builder = ResAttendanceDto.builder()
                 .atteNo(attendance.getAtteNo())
-                .type(attendance.getType())
+                .atteType(attendance.getType().name()) // Enum을 String으로 변환 (V, B)
                 .day(attendance.getDay())
                 .createdAt(attendance.getCreatedAt())
                 .startAt(attendance.getStartAt())
                 .endAt(attendance.getEndAt());
 
-        // 회사 정보
+        // 회사 정보 추출
         if (attendance.getCompany() != null) {
             builder.comNo(attendance.getCompany().getComNo())
                     .comId(attendance.getCompany().getComId());
         }
 
-        // 사원 정보 (본인)
+        // 작성자 및 부서 정보 추출 (핵심!)
         if (attendance.getEmployee() != null) {
-            builder.myEmpNo(attendance.getEmployee().getEmpNo())
-                    .myEmpId(attendance.getEmployee().getEmpId())
-                    .myEmpName(attendance.getEmployee().getEmpName());
+            builder.writer(attendance.getEmployee().getEmpName())
+                    .writerId(attendance.getEmployee().getEmpId());
+
+            // Employee -> Department 관계 추적
+            if (attendance.getEmployee().getDepartment() != null) {
+                builder.writerDepName(attendance.getEmployee().getDepartment().getDepName());
+            }
         }
 
-        // 문서 정보
+        // 문서 정보 추출
         if (attendance.getDocument() != null) {
             builder.docNo(attendance.getDocument().getDocNo())
                     .docId(attendance.getDocument().getDocId())
                     .docTitle(attendance.getDocument().getTitle());
         }
 
-        // 대직자 정보 (있을 경우에만)
+        // 대직자 정보 추출
         if (attendance.getDelegate() != null) {
-            builder.delegateEmpNo(attendance.getDelegate().getEmpNo())
-                    .delegateEmpId(attendance.getDelegate().getEmpId())
+            builder.delegateEmpId(attendance.getDelegate().getEmpId())
                     .delegateEmpName(attendance.getDelegate().getEmpName());
         }
 

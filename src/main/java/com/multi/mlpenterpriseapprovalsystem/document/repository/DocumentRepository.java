@@ -109,6 +109,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "JOIN d.approvalLines al " +
             "WHERE d.company.comId = :comId " +
             "AND d.docStat = :docStat " +
+            "AND d.writer.empId != :myEmpId " +
             // 본인이 결재자이거나 본인이 대직자인 경우
             "AND (al.approver.empId = :myEmpId OR al.approver.delegate.empId = :myEmpId) " +
             "AND al.apprStat IN :apprStats " +
@@ -248,14 +249,16 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     // 결재할 문서 검증: 결재라인에 내가 있고, 내 결재 상태가 I(진행) 또는 W(대기)이며 문서가 AW 상태인 경우
     @Query("""
-        SELECT DISTINCT d FROM Document d 
-        JOIN d.approvalLines al 
-        WHERE d.company.comId = :comId 
-          AND d.docNo = :docNo 
-          AND al.approver.empId = :myEmpId 
-          AND d.docStat = 'AW' 
-          AND al.apprStat IN ('I', 'W')
-    """)
+    SELECT DISTINCT d FROM Document d 
+    JOIN d.approvalLines al 
+    LEFT JOIN al.approver a 
+    WHERE d.company.comId = :comId 
+      AND d.docNo = :docNo 
+      AND d.docStat = 'AW' 
+      AND d.writer.empId != :myEmpId 
+      AND (a.empId = :myEmpId OR a.delegate.empId = :myEmpId) 
+      AND al.apprStat IN ('I', 'W')
+""")
     Optional<Document> findAwaitingDoc(@Param("comId") String comId,
                                        @Param("docNo") Long docNo,
                                        @Param("myEmpId") String myEmpId);

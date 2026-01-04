@@ -5,11 +5,11 @@
       layout:decorate="~{layout}">
 <head>
     <meta charset="UTF-8">
-    <title>내 출장 조회 - 기업용 전자결재시스템</title>
+    <title>내 출장 관리 - 기업용 전자결재시스템</title>
 
     <th:block layout:fragment="pageStyles">
         <style>
-            /* ✅ 여백 및 컨테이너 최적화 (다른 페이지들과 통일) */
+            /* 컨테이너 및 헤더 스타일 */
             .detail-content-area {
                 background: white;
                 padding: 40px;
@@ -29,27 +29,14 @@
 
             .page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
 
-            .btn-close {
-                padding: 10px 24px; background: #fff; color: #495057;
-                border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; font-size: 14px;
-                transition: all 0.2s;
-            }
-            .btn-close:hover { background: #f8f9fa; border-color: #adb5bd; }
-
-            /* 테이블 스타일 */
-            .doc-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+            /* 테이블 공통 스타일 */
+            .doc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 15px 12px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
-            .doc-table td { padding: 15px 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
+            .doc-table td { padding: 18px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; }
 
-            /* 배지 및 버튼 */
-            .doc-badge { display: inline-block !important; padding: 4px 10px !important; border-radius: 4px !important; font-size: 12px !important; font-weight: bold !important; position: static !important; border: none !important; }
-            .doc-badge-trip { background: #e7f5ff !important; color: #228be6 !important; }
-
-            /* ✅ 아이콘을 제거하고 심플하게 변경된 버튼 스타일 */
-            .btn-view {
-                padding: 8px 16px;
-                background: #339af0;
-                color: white;
+            /* ✅ 버튼 스타일 (휴가 관리와 통일) */
+            .btn-view, .btn-modify, .btn-cancel {
+                padding: 8px 12px;
                 border: none;
                 border-radius: 4px;
                 font-size: 13px;
@@ -57,12 +44,22 @@
                 cursor: pointer;
                 transition: all 0.2s;
                 text-align: center;
+                white-space: nowrap;
             }
+
+            .btn-view { background: #339af0; color: white; }
             .btn-view:hover { background: #228be6; }
 
-            .loading, .no-data { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
+            .btn-modify { background: #fd7e14; color: white; }
+            .btn-modify:hover { background: #e8590c; }
 
-            /* ✅ 레이아웃 상속 시 콘텐츠 영역 배경 및 패딩 정의 */
+            .btn-cancel { background: #fa5252; color: white; }
+            .btn-cancel:hover { background: #e03131; }
+
+            .action-buttons { display: flex; gap: 6px; justify-content: center; align-items: center; }
+            .loading { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
+
+            /* 레이아웃 상속 패딩 정의 */
             .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
         </style>
     </th:block>
@@ -81,24 +78,20 @@
 
                 <div id="loading" class="loading">출장 정보를 불러오는 중...</div>
 
-                <table class="doc-table" id="attendance-table" style="display: none;">
+                <table class="doc-table" id="attendance-table" style="display: table;">
                     <thead>
                     <tr>
                         <th style="width: 50px;">NO</th>
-                        <th style="width: 80px;">타입</th>
                         <th style="width: 140px;">시작일</th>
                         <th style="width: 140px;">종료일</th>
-                        <th style="width: 60px;">일수</th>
-                        <th style="width: 120px;">대직자</th>
-                        <th style="width: 130px;">문서번호</th>
+                        <th style="width: 70px;">일수</th>
+                        <th style="width: 140px;">문서번호</th>
                         <th>문서제목</th>
-                        <th style="width: 90px;">문서보기</th>
-                    </tr>
+                        <th style="width: 80px;">문서보기</th>
+                        <th style="width: 150px;">관리</th> </tr>
                     </thead>
                     <tbody id="attendance-list"></tbody>
                 </table>
-
-                <div id="no-data" class="no-data" style="display: none;">출장 정보가 없습니다.</div>
             </div>
         </div>
     </section>
@@ -106,66 +99,105 @@
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
-        document.addEventListener('DOMContentLoaded', () => {
+        let businessTripFormDocfoNo = null; // 출장 신청서 양식 번호 저장
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadBusinessTripFormDocfoNo();
             loadMyBusinessTrips();
         });
+
+        // ✅ 출장 신청서 양식 번호 가져오기
+        async function loadBusinessTripFormDocfoNo() {
+            try {
+                const response = await fetch('/api/v1/temp/documentForms', { credentials: 'include' });
+                const result = await response.json();
+                if (response.ok && result.data) {
+                    const tripForm = result.data.find(form => {
+                        const normalizedName = form.docfoName.replace(/\s+/g, '').toLowerCase();
+                        return normalizedName.includes('출장신청서');
+                    });
+                    if (tripForm) {
+                        businessTripFormDocfoNo = tripForm.docfoNo;
+                        console.log('✅ 출장 양식 확인:', businessTripFormDocfoNo);
+                    }
+                }
+            } catch (error) { console.error('양식 조회 실패:', error); }
+        }
 
         async function loadMyBusinessTrips() {
             try {
                 const response = await fetch('/api/v1/attendances/me/business-trips', {
                     credentials: 'include'
                 });
-
                 const result = await response.json();
-
                 document.getElementById('loading').style.display = 'none';
-
-                if (result.status === 200 && result.data && result.data.length > 0) {
-                    renderAttendances(result.data);
-                    document.getElementById('attendance-table').style.display = 'table';
-                } else {
-                    document.getElementById('no-data').style.display = 'block';
-                }
+                renderAttendances(result.data || []);
             } catch (error) {
                 console.error('출장 조회 실패:', error);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('no-data').style.display = 'block';
+                document.getElementById('loading').textContent = '데이터를 불러오는 중 오류가 발생했습니다.';
             }
         }
 
         function renderAttendances(attendances) {
             const tbody = document.getElementById('attendance-list');
             tbody.innerHTML = '';
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            if (attendances.length === 0) {
+                const emptyTr = document.createElement('tr');
+                emptyTr.innerHTML = `<td colspan="8" style="padding: 100px; color: #adb5bd; font-size: 16px;">출장 정보가 없습니다.</td>`;
+                tbody.appendChild(emptyTr);
+                return;
+            }
 
             attendances.forEach((att, index) => {
-                const no = index + 1;
-                const tr = document.createElement('tr');
+                const startDate = new Date(att.startAt); startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date(att.endAt); endDate.setHours(0, 0, 0, 0);
 
+                // ✅ 수정/취소 버튼 활성화 로직
+                // 수정: 시작일이 오늘 이후이거나, 현재 진행 중인 경우 가능
+                const showModifyButton = (startDate >= today) || (startDate < today && endDate >= today);
+                // 취소: 시작 전(오늘 포함 미래)인 경우에만 가능
+                const showCancelButton = startDate >= today;
+
+                let actionButtons = '';
+                if (showModifyButton || showCancelButton) {
+                    actionButtons = '<div class="action-buttons">';
+                    if (showModifyButton) actionButtons += `<button class="btn-modify" onclick="modifyTrip(${att.atteNo})">수정</button>`;
+                    if (showCancelButton) actionButtons += `<button class="btn-cancel" onclick="cancelTrip(${att.atteNo})">취소</button>`;
+                    actionButtons += '</div>';
+                } else {
+                    actionButtons = '<span style="color: #adb5bd;">-</span>';
+                }
+
+                const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${no}</td>
-                    <td><span class="doc-badge doc-badge-trip">출장</span></td>
+                    <td>${index + 1}</td>
                     <td>${formatDate(att.startAt)}</td>
                     <td>${formatDate(att.endAt)}</td>
                     <td>${att.day}일</td>
-                    <td>${att.delegateEmpName ? `${att.delegateEmpName}<br><small>${att.delegateEmpId}</small>` : '-'}</td>
                     <td>${att.docId || '-'}</td>
-                    <td style="text-align: left;">${att.docTitle || '-'}</td>
-                    <td>
-                        ${att.docNo ? `<button class="btn-view" onclick="viewDocument(${att.docNo})">보기</button>` : '-'}
-                    </td>
+                    <td>${att.docTitle || '-'}</td>
+                    <td>${att.docNo ? `<button class="btn-view" onclick="viewDocument(${att.docNo})">보기</button>` : '-'}</td>
+                    <td>${actionButtons}</td>
                 `;
                 tbody.appendChild(tr);
             });
-
-            // 10줄 고정 디자인을 위한 빈 행 추가
-            for (let i = attendances.length; i < 10; i++) {
-                tbody.innerHTML += '<tr style="height: 57px;"><td colspan="9"></td></tr>';
-            }
         }
 
-        function viewDocument(docNo) {
-            location.href = `/documents/${docNo}?status=SUBMITTED`;
+        // ✅ 수정 버튼 클릭 시
+        function modifyTrip(atteNo) {
+            if (!businessTripFormDocfoNo) { alert('출장 신청서 양식을 찾을 수 없습니다.'); return; }
+            location.href = `/documents/create?docfoNo=${businessTripFormDocfoNo}&atteNo=${atteNo}&category=출장수정신청`;
         }
+
+        // ✅ 취소 버튼 클릭 시
+        function cancelTrip(atteNo) {
+            if (!businessTripFormDocfoNo) { alert('출장 신청서 양식을 찾을 수 없습니다.'); return; }
+            location.href = `/documents/create?docfoNo=${businessTripFormDocfoNo}&atteNo=${atteNo}&category=출장취소신청`;
+        }
+
+        function viewDocument(docNo) { location.href = `/documents/${docNo}?status=SUBMITTED`; }
 
         function formatDate(str) {
             if (!str) return '-';

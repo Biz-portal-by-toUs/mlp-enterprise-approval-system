@@ -1220,6 +1220,15 @@
             return;
         }
 
+        const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
+
+        // ✅ 취소신청이면 근태 정보 섹션 전체 숨김
+        if (normalized === '휴가취소신청' || normalized === '출장취소신청') {
+            attendanceSection.style.display = 'none';
+            return;
+        }
+
+        // 여기부터는 취소신청이 아닌 경우만 실행
         attendanceSection.style.display = 'block';
 
         document.getElementById('startDate').value = '';
@@ -1233,10 +1242,15 @@
 
         applyDateConstraints(rule);
 
-        const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
+        // 날짜 선택 그리드 아이템들
+        const startDateItem = document.querySelector('.attendance-grid-item:has(#startDate)');
+        const endDateItem = document.querySelector('.attendance-grid-item:has(#endDate)');
 
         if (normalized.includes('휴가')) {
             attendanceTitle.textContent = '휴가 정보';
+
+            if (startDateItem) startDateItem.style.display = 'flex';
+            if (endDateItem) endDateItem.style.display = 'flex';
 
             if (normalized === '휴가신청' || normalized === '휴가수정신청') {
                 delegateSection.style.display = 'block';
@@ -1246,6 +1260,10 @@
             }
         } else if (normalized.includes('출장')) {
             attendanceTitle.textContent = '출장 정보';
+
+            if (startDateItem) startDateItem.style.display = 'flex';
+            if (endDateItem) endDateItem.style.display = 'flex';
+
             delegateSection.style.display = 'none';
             selectedDelegateSection.style.display = 'none';
         }
@@ -1577,13 +1595,21 @@
 
     async function searchDelegates(keyword = '') {
         try {
+            // 기존 API 그대로 사용
             let url = `/api/v1/employees?size=20&excludeMe=true`;
             if (keyword && keyword.trim().length > 0) {
                 url += `&keyword=${encodeURIComponent(keyword.trim())}`;
             }
             const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
-            renderDelegateResults(result.data?.items || []);
+
+            // ✅ 같은 부서만 필터링 (휴가중인 사람도 포함)
+            const myDept = document.getElementById('writer-dept').value;
+            const sameDeptEmployees = (result.data?.items || []).filter(emp =>
+                emp.depName === myDept
+            );
+
+            renderDelegateResults(sameDeptEmployees);
         } catch (e) {
             renderDelegateResults([]);
         }
@@ -1593,45 +1619,36 @@
         const container = document.getElementById('delegate-search-results');
 
         if (employees.length === 0) {
-            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">검색 결과 없음</div>';
+            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">같은 부서의 대직자가 없습니다.</div>';
             return;
         }
 
         container.innerHTML = employees.map(emp => {
             const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isLowerRank = emp.posOrder > myInfo.posOrder;
-            const isDisabled = isSelected || isLowerRank;
+            const isOnLeave = emp.atte !== 'C'; // 휴가중 또는 출장중
+            const isDisabled = isSelected || isOnLeave;
 
             let statusHtml = '';
             if (isSelected) {
                 statusHtml = '<span style="float: right; color: #40c057;">✓ 선택됨</span>';
-            } else if (isLowerRank) {
-                statusHtml = '<span style="float: right; color: #fa5252; font-size: 11px;">직급낮음</span>';
+            } else if (isOnLeave) {
+                const statusText = emp.atte === 'V' ? '휴가중' : emp.atte === 'B' ? '출장중' : '부재중';
+                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusText}</span>`;
             }
 
             return `
-                <div class="delegate-result-item"
-                     onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
-                     style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}">
-                    <strong>${emp.empName}</strong> | ${emp.posName || '사원'}
-                    <br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>
-                    ${statusHtml}
-                </div>
-            `;
+            <div class="delegate-result-item"
+                 onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
+                 style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}">
+                <strong>${emp.empName}</strong> | ${emp.posName || '사원'}
+                <br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>
+                ${statusHtml}
+            </div>
+        `;
         }).join('');
     }
 
     function selectDelegate(empId, empName, posName, depName, posOrder) {
-        if (posOrder > myInfo.posOrder) {
-            showModal(
-                '⚠️',
-                '직급 제한',
-                '대직자는 자신과 같거나 높은 직급만 선택할 수 있습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
-            return;
-        }
-
         selectedDelegate = {
             empId: empId,
             empName: empName,
