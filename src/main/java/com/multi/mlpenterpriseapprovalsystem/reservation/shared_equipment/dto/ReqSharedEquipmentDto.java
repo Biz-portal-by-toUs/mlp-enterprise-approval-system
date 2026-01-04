@@ -32,6 +32,6 @@ public class ReqSharedEquipmentDto {
     @Size(max = 255)
     private String imageUrl;        // 이미지 URL
 
-    @Size(max = 50, message = "보관 위치는 20자 이내여야 합니다.")
+    @Size(max = 50, message = "보관 위치는 50자 이내여야 합니다.")
     private String location;        // 보관 위치
 }

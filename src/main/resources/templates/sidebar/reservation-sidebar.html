@@ -1,52 +1,112 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <style>
+    /* details 기본 마커(삼각형) 제거 - 크롬/사파리 */
+    .subbar-details > summary::-webkit-details-marker { display: none; }
+
+    /* 파이어폭스 포함 표준 marker 제거 */
+    .subbar-details > summary::marker { content: ""; }
+
+    /* summary를 a처럼 보이게 */
+    .subbar-summary {
+      cursor: pointer;
+      user-select: none;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* 하위 메뉴 레이아웃 */
+    .subbar-submenu { display: grid; gap: 4px; margin-top: 4px; }
+    .subbar-subitem { padding-left: 24px; }
+
+    /* (화살표 쓸 때만 의미 있음) */
+    .subbar-details[open] .subbar-arrow { transform: rotate(180deg); }
+  </style>
+</head>
+
 <body>
 <aside class="subbar"
-       th:fragment="reservationSidebar(active)">
+       th:fragment="reservationSidebar(active)"
+       th:with="facilityActive=${active=='meeting' or active=='car' or active=='equipment'}">
+
   <div class="subbar-title">예약</div>
 
   <nav class="subbar-nav" aria-label="예약 메뉴">
     <!-- 회의실 예약 -->
     <a class="subbar-item"
        th:href="@{/meeting-rooms/reservation}"
-       href="/meeting-rooms/reservation"
-       th:classappend="${active}=='meeting' ? ' active' : ''">
+       th:classappend="${active}=='meeting-reservation' ? ' active' : ''">
       회의실 예약
     </a>
 
     <!-- 법인 차량 예약 -->
     <a class="subbar-item"
        th:href="@{/corporate-cars/reservation}"
-       href="/corporate-cars/reservation"
-       th:classappend="${active}=='car' ? ' active' : ''">
+       th:classappend="${active}=='car-reservation' ? ' active' : ''">
       법인 차량 예약
     </a>
 
     <!-- 공유 설비 예약 -->
     <a class="subbar-item"
        th:href="@{/shared-equipment/reservation}"
-       href="/shared-equipments/reservation"
-       th:classappend="${active}=='equipment' ? ' active' : ''">
+       th:classappend="${active}=='equipment-reservation' ? ' active' : ''">
       공유 설비 예약
     </a>
 
     <!-- 내 예약 조회 -->
     <a class="subbar-item"
        th:href="@{/my-reservations}"
-       href="/my-reservations"
        th:classappend="${active}=='my' ? ' active' : ''">
       내 예약 조회
     </a>
 
-    <!-- 공유 시설 조회 -->
-    <a class="subbar-item"
-       th:href="@{/meeting-rooms}"
-       href="/meeting-rooms"
-       th:classappend="${active}=='facility' ? ' active' : ''">
-      공유 시설 조회
-    </a>
+      <details class="subbar-details" id="facilityDetails">
+          <summary class="subbar-item subbar-summary">
+              공유 시설 조회
+          </summary>
+
+      <div class="subbar-submenu">
+        <a class="subbar-item subbar-subitem"
+           th:href="@{/meeting-rooms}"
+           th:classappend="${active}=='meeting' ? ' active' : ''">
+          회의실 조회
+        </a>
+
+        <a class="subbar-item subbar-subitem"
+           th:href="@{/corporate-cars}"
+           th:classappend="${active}=='car' ? ' active' : ''">
+          법인 차량 조회
+        </a>
+
+        <a class="subbar-item subbar-subitem"
+           th:href="@{/shared-equipment}"
+           th:classappend="${active}=='equipment' ? ' active' : ''">
+          공유 설비 조회
+        </a>
+      </div>
+    </details>
   </nav>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const details = document.getElementById("facilityDetails");
+        if (!details) return;
+
+        const KEY = "subbar:facilityDetailsOpen";
+
+        // 1) 저장된 값이 있으면 그걸로 복원
+        const saved = localStorage.getItem(KEY);
+        if (saved !== null) {
+            if (saved === "true") details.setAttribute("open", "");
+            else details.removeAttribute("open");
+        }
+
+        // 2) 사용자가 열고/닫을 때마다 저장
+        details.addEventListener("toggle", () => {
+            localStorage.setItem(KEY, String(details.open));
+        });
+    });
+</script>
 </aside>
 </body>
 </html>

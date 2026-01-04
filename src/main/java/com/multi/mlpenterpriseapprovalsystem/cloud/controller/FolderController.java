@@ -54,7 +54,7 @@ public class FolderController {
 
     @GetMapping("/dept")
     public ResponseEntity<ResponseDto<List<ResFolderDto>>> listDept(
-            @RequestParam(required = false) Long parentId,
+            @RequestParam(required = false, name = "parentId") Long parentId,
             @AuthenticationPrincipal CustomUser user
     ) {
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "부서 폴더 조회 성공",
@@ -63,7 +63,7 @@ public class FolderController {
 
     @GetMapping("/prvt")
     public ResponseEntity<ResponseDto<List<ResFolderDto>>> listPrvt(
-            @RequestParam(required = false) Long parentId,
+            @RequestParam(required = false, name = "parentId") Long parentId,
             @AuthenticationPrincipal CustomUser user
     ) {
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "개인 폴더 조회 성공",
@@ -72,7 +72,7 @@ public class FolderController {
 
     @PatchMapping("/{folderNo}/rename")
     public ResponseEntity<ResponseDto<ResFolderDto>> rename(
-            @PathVariable Long folderNo,
+            @PathVariable(name = "folderNo") Long folderNo,
             @RequestBody @Valid ReqRenameDto dto,
             @AuthenticationPrincipal CustomUser user
     ) {
@@ -82,7 +82,7 @@ public class FolderController {
 
     @DeleteMapping("/{folderNo}")
     public ResponseEntity<ResponseDto<Void>> delete(
-            @PathVariable Long folderNo,
+            @PathVariable(name = "folderNo") Long folderNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         folderService.delete(user, folderNo);
@@ -91,8 +91,8 @@ public class FolderController {
 
     @PostMapping("/attachments/{attachmentId}/move")
     public ResponseEntity<ResponseDto<Void>> moveAttachment(
-            @PathVariable Long attachmentId,
-            @RequestParam Long toFolderNo,
+            @PathVariable(name = "attachmentId") Long attachmentId,
+            @RequestParam(name = "toFolderNo") Long toFolderNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         folderService.moveCloudAttachment(user, attachmentId, toFolderNo);

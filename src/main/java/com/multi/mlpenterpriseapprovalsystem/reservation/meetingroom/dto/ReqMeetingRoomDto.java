@@ -33,7 +33,7 @@ public class ReqMeetingRoomDto {
     private Integer capacity;
 
     @NotBlank(message = "위치는 필수입니다.")
-    @Size(max = 20)
+    @Size(max = 50)
     private String location;
 
     private String imageUrl;

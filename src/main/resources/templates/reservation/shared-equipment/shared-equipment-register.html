@@ -30,31 +30,14 @@
             }
 
             .shared-eq-create-page .form-inner {
-                max-width: 420px;          /* 입력칸 최대 폭 제한 */
-                margin: 0 auto;            /* 가운데 정렬 */
+                max-width: 420px;
+                margin: 0 auto;
             }
 
             .shared-eq-create-page input,
             .shared-eq-create-page textarea {
                 width: 100%;
-                box-sizing: border-box;    /* 삐져나오는 거 방지 */
-            }
-
-            .shared-eq-create-page .image-preview {
-                width: 100%;
-                height: 220px;
-                background: #e5e7eb;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-            }
-
-            .shared-eq-create-page .image-preview img {
-                max-width: 100%;
-                max-height: 100%;
-                object-fit: contain;
+                box-sizing: border-box;
             }
 
             .shared-eq-create-page h2 {
@@ -82,9 +65,7 @@
                 font-size: 14px;
             }
 
-            .shared-eq-create-page textarea {
-                resize: none;
-            }
+            .shared-eq-create-page textarea { resize: none; }
 
             .shared-eq-create-page .btns {
                 display: flex;
@@ -125,6 +106,39 @@
                 object-fit: contain;
                 display: none;
             }
+
+            /* ===== 회의실 등록 페이지 방식 참고: 힌트/카운터/에러/UI ===== */
+            .hint-row{
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-top:6px;
+                gap:10px;
+            }
+
+            .hint{
+                color:#6b7280;
+                font-size:12px;
+            }
+
+            .counter{
+                color:#6b7280;
+                font-size:12px;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .error{
+                display:block;
+                margin-top:6px;
+                color:#ef4444;
+                font-size:12px;
+                font-weight:600;
+            }
+
+            .input-invalid{
+                border-color:#ef4444 !important;
+                box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+            }
         </style>
     </th:block>
 </head>
@@ -136,21 +150,33 @@
         <!-- 🔹 왼쪽: 예약 서브 사이드바 (공유 설비 예약 active) -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('equipment')"></aside>
 
-        <!-- 🔹 오른쪽: 기존 공유 설비 등록 화면 -->
+        <!-- 🔹 오른쪽: 공유 설비 등록 화면 -->
         <div class="shared-eq-create-page">
             <div class="card">
                 <h2>공유 설비 등록</h2>
 
                 <form id="eqForm" enctype="multipart/form-data">
 
+                    <!-- ✅ 설비명: 카운터+에러 적용 -->
                     <div class="field">
                         <label>설비명</label>
-                        <input type="text" name="eqName" maxlength="20" required>
+                        <input type="text" name="eqName" id="eqName" maxlength="20" required>
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="eqNameCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="eqNameError" style="display:none;"></small>
                     </div>
 
+                    <!-- ✅ 설비번호: 카운터+에러 적용 -->
                     <div class="field">
                         <label>설비번호</label>
-                        <input type="text" name="eqId" maxlength="20">
+                        <input type="text" name="eqId" id="eqId" maxlength="20">
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="eqIdCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="eqIdError" style="display:none;"></small>
                     </div>
 
                     <div class="field">
@@ -160,7 +186,7 @@
 
                     <div class="field">
                         <label>보관위치</label>
-                        <input type="text" name="location" maxlength="20">
+                        <input type="text" name="location" maxlength="50">
                     </div>
 
                     <div class="field">
@@ -199,12 +225,10 @@
 
             const res = await fetch(url, {
                 ...options,
-                credentials: "include",                 // ✅ 쿠키 자동 포함
-                headers: { ...(options.headers || {}) } // ✅ 기존 헤더 유지
-                // ✅ FormData면 Content-Type 절대 지정하지 말기
+                credentials: "include",
+                headers: { ...(options.headers || {}) }
             });
 
-            // Spring Security가 /login 으로 리다이렉트 시켜버리는 케이스 방어
             if ((res.redirected && res.url.includes("/login")) || res.status === 401 || res.status === 403) {
                 alert("로그인이 필요합니다. 다시 로그인 해 주세요.");
                 location.href = "/login";
@@ -214,6 +238,7 @@
             return res;
         }
 
+        /* ---------- image preview ---------- */
         function previewImage(input) {
             const preview = document.getElementById("imagePreview");
             if (!input.files || !input.files[0]) {
@@ -221,12 +246,14 @@
                 preview.src = "";
                 return;
             }
+
             const file = input.files[0];
             if (!file.type.startsWith("image/")) {
                 alert("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
                 return;
             }
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 preview.src = e.target.result;
@@ -235,19 +262,92 @@
             reader.readAsDataURL(file);
         }
 
+        /* ===== inline validation UI (eqName, eqId만) ===== */
+        const eqNameInput   = document.getElementById("eqName");
+        const eqNameCounter = document.getElementById("eqNameCounter");
+        const eqNameError   = document.getElementById("eqNameError");
+
+        const eqIdInput   = document.getElementById("eqId");
+        const eqIdCounter = document.getElementById("eqIdCounter");
+        const eqIdError   = document.getElementById("eqIdError");
+
+        function setError(inputEl, errorEl, msg) {
+            if (!errorEl) return;
+
+            if (msg) {
+                errorEl.textContent = msg;
+                errorEl.style.display = "block";
+                inputEl?.classList.add("input-invalid");
+            } else {
+                errorEl.textContent = "";
+                errorEl.style.display = "none";
+                inputEl?.classList.remove("input-invalid");
+            }
+        }
+
+        function updateEqNameUI() {
+            if (!eqNameInput) return;
+
+            const len = eqNameInput.value.length;
+            if (eqNameCounter) eqNameCounter.textContent = `${len} / 20`;
+
+            if (!eqNameInput.value.trim()) {
+                // required라 submit 때 잡고, 입력 중에는 에러 안띄움
+                setError(eqNameInput, eqNameError, "");
+                return;
+            }
+
+            if (len > 20) setError(eqNameInput, eqNameError, "설비명은 20자 이내여야 합니다.");
+            else setError(eqNameInput, eqNameError, "");
+        }
+
+        function updateEqIdUI() {
+            if (!eqIdInput) return;
+
+            const len = eqIdInput.value.length;
+            if (eqIdCounter) eqIdCounter.textContent = `${len} / 20`;
+
+            if (!eqIdInput.value.trim()) {
+                // 선택 항목이므로 빈 값이면 에러 없음
+                setError(eqIdInput, eqIdError, "");
+                return;
+            }
+
+            if (len > 20) setError(eqIdInput, eqIdError, "설비번호는 20자 이내여야 합니다.");
+            else setError(eqIdInput, eqIdError, "");
+        }
+
+        eqNameInput?.addEventListener("input", updateEqNameUI);
+        eqIdInput?.addEventListener("input", updateEqIdUI);
+
+        // 초기 표시
+        updateEqNameUI();
+        updateEqIdUI();
+
         async function submitSharedEquipmentForm(e) {
             e.preventDefault();
 
-            const name = document.querySelector("[name=eqName]").value.trim();
-            const eqId = document.querySelector("[name=eqId]").value.trim();
-            const modelName = document.querySelector("[name=modelName]").value.trim();
-            const loc = document.querySelector("[name=location]").value.trim();
+            const name = eqNameInput.value.trim();
+            const eqId = eqIdInput.value.trim();
 
-            if (!name) return alert("설비명을 입력해주세요.");
-            if (name.length > 20) return alert("설비명은 20자 이내여야 합니다.");
-            if (eqId.length > 20) return alert("설비 번호는 20자 이내여야 합니다.");
-            if (modelName.length > 20) return alert("모델명은 20자 이내여야 합니다.");
-            if (loc.length > 20) return alert("보관위치는 20자 이내여야 합니다.");
+            updateEqNameUI();
+            updateEqIdUI();
+
+            if (!name) {
+                setError(eqNameInput, eqNameError, "설비명을 입력해주세요.");
+                eqNameInput.focus();
+                return;
+            }
+            if (name.length > 20) {
+                setError(eqNameInput, eqNameError, "설비명은 20자 이내여야 합니다.");
+                eqNameInput.focus();
+                return;
+            }
+            if (eqId.length > 20) {
+                setError(eqIdInput, eqIdError, "설비번호는 20자 이내여야 합니다.");
+                eqIdInput.focus();
+                return;
+            }
 
             const form = document.getElementById("eqForm");
             const formData = new FormData(form);
@@ -258,7 +358,6 @@
                     body: formData
                 });
 
-                // ✅ 에러 응답이 JSON 아닐 수도 있어서 안전 파싱
                 const ct = res.headers.get("content-type") || "";
                 const payload = ct.includes("application/json") ? await res.json() : await res.text();
 
@@ -272,7 +371,7 @@
                 }
 
                 alert("공유 설비 등록 성공!");
-                location.href = "/shared-equipment"; // ✅ 뒤로가기 꼬임 방지
+                location.href = "/shared-equipment";
             } catch (err) {
                 if (err.message === "UNAUTHORIZED") return;
                 console.error(err);
@@ -280,7 +379,7 @@
             }
         }
 
-        document.getElementById("eqForm").addEventListener("submit", submitSharedEquipmentForm);
+        document.getElementById("eqForm")?.addEventListener("submit", submitSharedEquipmentForm);
     </script>
 </th:block>
 

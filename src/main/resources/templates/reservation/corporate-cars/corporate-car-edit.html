@@ -7,414 +7,573 @@
     <meta charset="UTF-8">
     <title>법인 차량 수정</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+    <!-- ✅ layout 안 깨지게 pageStyles로만 -->
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .corpcar-edit-page {
+                padding: 24px 26px;
+                background: #f4f6f8;
+                min-height: calc(100vh - 64px);
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+            }
 
-        .card {
-            width: 520px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-            padding: 28px;
-        }
+            .corpcar-edit-page .card {
+                width: 520px;
+                background: #fff;
+                border-radius: 16px;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+                padding: 28px;
+            }
 
-        .form-inner {
-            max-width: 420px; /* 입력칸 최대 폭 제한 */
-            margin: 0 auto; /* 가운데 정렬 */
-        }
+            .corpcar-edit-page h2 {
+                margin-top: 0;
+                text-align: center;
+            }
 
-        input,
-        textarea {
-            width: 100%;
-            box-sizing: border-box; /* 삐져나오는 거 방지 */
-        }
+            .corpcar-edit-page .form-inner {
+                max-width: 420px;
+                margin: 0 auto;
+            }
 
-        .image-preview {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
+            .corpcar-edit-page .field {
+                margin-bottom: 14px;
+            }
 
-        .image-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
+            .corpcar-edit-page label {
+                display: block;
+                font-size: 13px;
+                margin-bottom: 6px;
+                color: #555;
+            }
 
-        h2 {
-            margin-top: 0;
-            text-align: center;
-        }
+            .corpcar-edit-page input,
+            .corpcar-edit-page textarea {
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #ddd;
+                font-size: 14px;
+                box-sizing: border-box;
+            }
 
-        .field {
-            margin-bottom: 14px;
-        }
+            .corpcar-edit-page textarea {
+                resize: none;
+            }
 
-        label {
-            display: block;
-            font-size: 13px;
-            margin-bottom: 6px;
-            color: #555;
-        }
+            .corpcar-edit-page .preview-box {
+                width: 100%;
+                height: 220px;
+                background: #e5e7eb;
+                border-radius: 12px;
+                overflow: hidden;
+                margin-top: 10px;
+            }
 
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-        }
+            .corpcar-edit-page .preview-box img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: none;
+            }
 
-        textarea {
-            resize: none;
-        }
+            .corpcar-edit-page .btns {
+                display: flex;
+                gap: 10px;
+                margin-top: 18px;
+            }
 
-        .btns {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-        }
+            .corpcar-edit-page .btns button {
+                flex: 1;
+                padding: 10px;
+                border-radius: 8px;
+                border: none;
+                font-size: 14px;
+                cursor: pointer;
+            }
 
-        button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-        }
+            .corpcar-edit-page .submit {
+                background: #1677ff;
+                color: #fff;
+                cursor: pointer;
+            }
 
-        .submit {
-            background: #1677ff;
-            color: #fff;
-            cursor: pointer;
-        }
+            .corpcar-edit-page .submit.disabled {
+                background: #a5c8ff;
+                cursor: not-allowed;
+            }
 
-        .submit.disabled {
-            background: #a5c8ff; /* 연한 파랑 */
-            cursor: not-allowed;
-        }
+            .corpcar-edit-page .cancel {
+                background: #e5e7eb;
+            }
 
-        .cancel {
-            background: #e5e7eb;
-        }
+            /* ✅ 등록폼/회의실 등록과 동일한 hint UI */
+            .hint-row{
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-top:6px;
+                gap:10px;
+            }
 
-        .preview-box {
-            width: 100%;
-            height: 220px;
-            background: #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
+            .hint{
+                color:#6b7280;
+                font-size:12px;
+            }
 
-        .preview-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-    </style>
+            .counter{
+                color:#6b7280;
+                font-size:12px;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .error{
+                display:block;
+                margin-top:6px;
+                color:#ef4444;
+                font-size:12px;
+                font-weight:600;
+            }
+
+            .input-invalid{
+                border-color:#ef4444 !important;
+                box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+            }
+        </style>
+    </th:block>
 </head>
+
 <body>
 <div layout:fragment="content">
-
     <section class="page-with-subbar">
-        <!-- 왼쪽: 예약 사이드바 (법인 차량 메뉴 활성화) -->
+        <!-- ✅ 등록폼이랑 동일하게 car 메뉴로 -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('car')"></aside>
 
-<div class="card">
-    <h2>법인 차량 수정</h2>
+        <!-- ✅ 오른쪽 영역 wrapper -->
+        <div class="corpcar-edit-page">
+            <div class="card">
+                <h2>법인 차량 수정</h2>
 
-    <form id="editForm" enctype="multipart/form-data">
-        <div class="field">
-            <label>차량명</label>
-            <input type="text" name="carName" maxlength="20" required>
-        </div>
+                <form id="editForm" enctype="multipart/form-data" class="form-inner">
 
-        <div class="field">
-            <label>차량번호</label>
-            <input type="text" name="plateNo" maxlength="20" required>
-        </div>
+                    <!-- 차량명 -->
+                    <div class="field">
+                        <label>차량명</label>
+                        <input type="text" name="carName" id="carName" maxlength="20" required>
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="carNameCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="carNameError" style="display:none;"></small>
+                    </div>
 
-        <div class="field">
-            <label>차종</label>
-            <input type="text" name="carType" maxlength="20">
-        </div>
+                    <!-- 차량번호(번호판) -->
+                    <div class="field">
+                        <label>차량번호(번호판)</label>
+                        <input type="text" name="plateNo" id="plateNo" maxlength="20" required>
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="plateNoCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="plateNoError" style="display:none;"></small>
+                    </div>
 
-        <div class="field">
-            <label>연료</label>
-            <input type="text" name="fuel" maxlength="10">
-        </div>
+                    <!-- 수용 인원 -->
+                    <div class="field">
+                        <label>수용 인원</label>
+                        <input type="number" name="capacity" id="capacity" min="1" max="8" required>
+                        <div class="hint-row">
+                            <small class="hint">1~8명 입력 가능</small>
+                        </div>
+                        <small class="error" id="capError" style="display:none;"></small>
+                    </div>
 
-        <div class="field">
-            <label>수용 인원</label>
-            <input type="number" name="capacity" id="capacity" min="1" max="8" required>
-        </div>
+                    <div class="field">
+                        <label>차종</label>
+                        <input type="text" name="carType" id="carType" maxlength="20">
+                    </div>
 
-        <div class="field">
-            <label>법인 차량 이미지</label>
-            <input
-                    type="file"
-                    name="imageFile"
-                    id="imageFile"
-                    accept="image/*"
-                    onchange="previewImage(this)"
-            >
-        </div>
+                    <div class="field">
+                        <label>연료</label>
+                        <input type="text" name="fuel" id="fuel" maxlength="10">
+                    </div>
 
-        <div class="preview-box">
-            <img id="imagePreview" alt="미리보기 이미지"/>
-        </div>
+                    <div class="field">
+                        <label>법인 차량 이미지</label>
+                        <input
+                                type="file"
+                                name="imageFile"
+                                id="imageFile"
+                                accept="image/*"
+                                onchange="previewImage(this)"
+                        >
+                    </div>
 
-        <div class="btns">
-            <button type="submit" class="submit disabled" disabled>수정</button>
-            <button type="button" class="cancel" onclick="history.back()">취소</button>
+                    <div class="preview-box">
+                        <img id="imagePreview" alt="미리보기 이미지"/>
+                    </div>
+
+                    <div class="btns">
+                        <button type="submit" class="submit disabled" disabled>수정</button>
+                        <button type="button" class="cancel" onclick="history.back()">취소</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </form>
+    </section>
 </div>
 
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        /* ================== 공통 변수 ================== */
+        const carNo = /*[[${carNo}]]*/ null;
+        const API_BASE = window.location.origin;
 
-<script th:inline="javascript">
-    /* ================== 공통 변수 ================== */
-    const carNo = /*[[${carNo}]]*/ null;
-
-    const API_BASE = window.location.origin;
-
-    async function apiFetch(path, options = {}) {
-        const url = new URL(path, API_BASE).toString();
-
-        const res = await fetch(url, {
-            ...options,
-            credentials: "include",
-            headers: { ...(options.headers || {}) },
-        });
-
-        console.log("[apiFetch]", res.status, url);
-
-        if (res.status === 401 || res.status === 403) {
-            alert("로그인이 필요합니다.");
-            location.href = "/login";     // ✅ 추가
-            throw new Error("UNAUTHORIZED");
-        }
-        return res;
-    }
-
-    if (!carNo) {
-        alert("잘못된 접근입니다.");
-        location.href = "/corporate-cars";
-    }
-
-    /* ================== 이미지 미리보기 ================== */
-    function previewImage(input) {
-        const preview = document.getElementById("imagePreview");
-
-        if (!input.files || !input.files[0]) {
-            preview.style.display = "none";
-            preview.src = "";
-            return;
-        }
-
-        const file = input.files[0];
-
-        if (!file.type.startsWith("image/")) {
-            alert("이미지 파일만 업로드 가능합니다.");
-            input.value = "";
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = e => {
-            preview.src = e.target.result;
-            preview.style.display = "block";
-        };
-        reader.readAsDataURL(file);
-    }
-
-    /* ================== 유효성 검사 ================== */
-    function validateEditForm() {
-        const name = document.querySelector("[name=carName]").value.trim();
-        const capacity = Number(document.querySelector("[name=capacity]").value);
-
-        if (!name) {
-            alert("차량명을 입력해주세요.");
-            return false;
-        }
-
-        if (name.length > 20) {
-            alert("차량명은 20자 이내입니다.");
-            return false;
-        }
-
-        if (!capacity || capacity < 1 || capacity > 8) {
-            alert("수용 인원은 1~8명 사이여야 합니다.");
-            return false;
-        }
-
-        return true;
-    }
-
-    /* ================== 페이지 로드시 데이터 조회 ================== */
-    let originalData = null;
-
-    document.addEventListener("DOMContentLoaded", async () => {
-        try {
-            const res = await apiFetch(`/api/v1/corporate-cars/${carNo}`);
-
-            if (!res.ok) {
-                alert("법인 차량 정보를 불러오지 못했습니다.");
-                return;
-            }
-
-            const car = (await res.json()).data;
-
-            document.querySelector("[name=carName]").value = car.carName;
-            document.querySelector("[name=plateNo]").value = car.plateNo;
-            document.querySelector("[name=carType]").value = car.carType ?? "";
-            document.querySelector("[name=fuel]").value = car.fuel ?? "";
-            document.querySelector("[name=capacity]").value = car.capacity ?? "";
-
-            originalData = {
-                carName: car.carName,
-                plateNo: car.plateNo,
-                carType: car.carType ?? "",
-                fuel: car.fuel ?? "",
-                capacity: car.capacity ?? "",
-                imageChanged: false
-            };
-
-            if (car.imageUrl) {
-                const preview = document.getElementById("imagePreview");
-                preview.src = car.imageUrl;
-                preview.style.display = "block";
-            }
-
-        } catch (e) {
-            console.error(e);
-            alert("서버 오류가 발생했습니다.");
-        }
-    });
-
-    /* ================== 수정 submit ================== */
-    document.getElementById("editForm").addEventListener("submit", async e => {
-        e.preventDefault();
-
-        if (!validateEditForm()) return;
-
-        const formData = new FormData(e.target);
-
-        try {
-            const res = await apiFetch(`/api/v1/corporate-cars/${carNo}`, {
-                method: "PUT",
-                body: formData
+        async function apiFetch(path, options = {}) {
+            const url = new URL(path, API_BASE).toString();
+            const res = await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: { ...(options.headers || {}) },
             });
 
-// ✅ 204/빈응답 대비
-            let result = null;
-            const ct = res.headers.get("content-type") || "";
-            if (ct.includes("application/json")) {
-                result = await res.json();
-            }
-
-            if (!res.ok) {
-                alert(result?.message || "법인 차량 수정 실패했습니다.");
-                return;
-            }
-
-            alert("법인 차량이 수정되었습니다.");
-            location.href = "/corporate-cars";
-
-        } catch (e) {
-            console.error(e);
-            if (e.message === "UNAUTHORIZED") {
+            if (res.status === 401 || res.status === 403) {
+                alert("로그인이 필요합니다.");
                 location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
+            return res;
+        }
+
+        if (!carNo) {
+            alert("잘못된 접근입니다.");
+            location.href = "/corporate-cars";
+        }
+
+        /* ================== hint/counter/error UI ================== */
+        const carNameInput = document.getElementById("carName");
+        const carNameCounter = document.getElementById("carNameCounter");
+        const carNameError = document.getElementById("carNameError");
+
+        const plateNoInput = document.getElementById("plateNo");
+        const plateNoCounter = document.getElementById("plateNoCounter");
+        const plateNoError = document.getElementById("plateNoError");
+
+        const carTypeInput = document.getElementById("carType");
+        const carTypeCounter = document.getElementById("carTypeCounter");
+
+        const fuelInput = document.getElementById("fuel");
+        const fuelCounter = document.getElementById("fuelCounter");
+
+        const capInput = document.getElementById("capacity");
+        const capError = document.getElementById("capError");
+
+        const submitBtn = document.querySelector(".submit");
+
+        function setError(inputEl, errorEl, msg) {
+            if (!errorEl) return;
+
+            if (msg) {
+                errorEl.textContent = msg;
+                errorEl.style.display = "block";
+                inputEl?.classList.add("input-invalid");
+            } else {
+                errorEl.textContent = "";
+                errorEl.style.display = "none";
+                inputEl?.classList.remove("input-invalid");
+            }
+        }
+
+        function updateLenUI(inputEl, counterEl, max) {
+            if (!inputEl || !counterEl) return;
+            counterEl.textContent = `${inputEl.value.length} / ${max}`;
+        }
+
+        function updateCarNameUI() {
+            updateLenUI(carNameInput, carNameCounter, 20);
+
+            if (!carNameInput.value.trim()) {
+                setError(carNameInput, carNameError, "");
                 return;
             }
-            alert("서버 오류가 발생했습니다.");
-        }
-    });
-
-    const capacityInput = document.getElementById("capacity");
-
-    capacityInput.addEventListener("input", () => {
-        let value = capacityInput.value;
-
-        if (value === "") return;
-
-        value = Number(value);
-
-        if (isNaN(value)) {
-            capacityInput.value = "";
-            return;
+            if (carNameInput.value.length > 20) setError(carNameInput, carNameError, "차량명은 20자 이내여야 합니다.");
+            else setError(carNameInput, carNameError, "");
         }
 
-        if (value < 1) {
-            capacityInput.value = 1;
-            return;
+        function updatePlateNoUI() {
+            updateLenUI(plateNoInput, plateNoCounter, 20);
+
+            if (!plateNoInput.value.trim()) {
+                setError(plateNoInput, plateNoError, "");
+                return;
+            }
+            if (plateNoInput.value.length > 20) setError(plateNoInput, plateNoError, "차량번호(번호판)는 20자 이내여야 합니다.");
+            else setError(plateNoInput, plateNoError, "");
         }
 
-        if (value > 8) {
-            capacityInput.value = 8;
+        function updateCarTypeUI() {
+            updateLenUI(carTypeInput, carTypeCounter, 20);
         }
-    });
 
-    function hasChanged() {
-        if (!originalData) return false;
-
-        const current = {
-            carName: document.querySelector("[name=carName]").value.trim(),
-            plateNo: document.querySelector("[name=plateNo]").value.trim(),
-            carType: document.querySelector("[name=carType]").value.trim(),
-            fuel: document.querySelector("[name=fuel]").value.trim(),
-            capacity: Number(document.querySelector("[name=capacity]").value),
-            imageChanged: document.querySelector("[name=imageFile]").files.length > 0
-        };
-
-        return (
-            current.carName !== originalData.carName ||
-            current.plateNo !== originalData.plateNo ||
-            current.carType !== originalData.carType ||
-            current.fuel !== originalData.fuel ||
-            current.capacity !== originalData.capacity ||
-            current.imageChanged
-        );
-    }
-
-    const submitBtn = document.querySelector(".submit");
-
-    function updateSubmitButton() {
-        if (hasChanged()) {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove("disabled");
-        } else {
-            submitBtn.disabled = true;
-            submitBtn.classList.add("disabled");
+        function updateFuelUI() {
+            updateLenUI(fuelInput, fuelCounter, 10);
         }
-    }
 
-    document.querySelectorAll(
-        "input[name=carName], input[name=plateNo], input[name=carType], input[name=fuel], input[name=capacity]"
-    ).forEach(el => {
-        el.addEventListener("input", updateSubmitButton);
-    });
+        function updateCapUI() {
+            const v = capInput.value;
 
-    document.querySelector("[name=imageFile]")
-        .addEventListener("change", updateSubmitButton);
+            if (v === "") {
+                setError(capInput, capError, "");
+                return;
+            }
 
-</script>
+            const n = Number(v);
+            if (Number.isNaN(n)) {
+                setError(capInput, capError, "숫자만 입력해주세요.");
+                return;
+            }
+
+            if (n < 1 || n > 8) {
+                setError(capInput, capError, "수용 인원은 1~8명 사이여야 합니다.");
+                return;
+            }
+
+            setError(capInput, capError, "");
+        }
+
+        carNameInput?.addEventListener("input", () => { updateCarNameUI(); updateSubmitButton(); });
+        plateNoInput?.addEventListener("input", () => { updatePlateNoUI(); updateSubmitButton(); });
+        carTypeInput?.addEventListener("input", () => { updateCarTypeUI(); updateSubmitButton(); });
+        fuelInput?.addEventListener("input", () => { updateFuelUI(); updateSubmitButton(); });
+
+        capInput?.addEventListener("input", () => {
+            let value = capInput.value;
+
+            if (value === "") {
+                updateCapUI();
+                updateSubmitButton();
+                return;
+            }
+
+            const num = Number(value);
+
+            if (Number.isNaN(num)) {
+                capInput.value = "";
+                updateCapUI();
+                updateSubmitButton();
+                return;
+            }
+
+            if (num < 1) capInput.value = 1;
+            if (num > 8) capInput.value = 8;
+
+            updateCapUI();
+            updateSubmitButton();
+        });
+
+        /* ================== 이미지 미리보기 ================== */
+        function previewImage(input) {
+            const preview = document.getElementById("imagePreview");
+
+            if (!input.files || !input.files[0]) {
+                preview.style.display = "none";
+                preview.src = "";
+                updateSubmitButton();
+                return;
+            }
+
+            const file = input.files[0];
+
+            if (!file.type.startsWith("image/")) {
+                alert("이미지 파일만 업로드 가능합니다.");
+                input.value = "";
+                updateSubmitButton();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+
+            if (originalData) originalData.imageChanged = true;
+            updateSubmitButton();
+        }
+
+        /* ================== 유효성 검사 ================== */
+        function validateEditForm() {
+            const name = carNameInput.value.trim();
+            const plate = plateNoInput.value.trim();
+            const capacity = Number(capInput.value);
+
+            updateCarNameUI();
+            updatePlateNoUI();
+            updateCapUI();
+
+            if (!name) {
+                setError(carNameInput, carNameError, "차량명을 입력해주세요.");
+                carNameInput.focus();
+                return false;
+            }
+
+            if (name.length > 20) {
+                setError(carNameInput, carNameError, "차량명은 20자 이내여야 합니다.");
+                carNameInput.focus();
+                return false;
+            }
+
+            if (!plate) {
+                setError(plateNoInput, plateNoError, "차량번호(번호판)를 입력해주세요.");
+                plateNoInput.focus();
+                return false;
+            }
+
+            if (plate.length > 20) {
+                setError(plateNoInput, plateNoError, "차량번호(번호판)는 20자 이내여야 합니다.");
+                plateNoInput.focus();
+                return false;
+            }
+
+            if (!capacity || capacity < 1 || capacity > 8) {
+                setError(capInput, capError, "수용 인원은 1~8명 사이여야 합니다.");
+                capInput.focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        /* ================== 페이지 로드시 데이터 조회 ================== */
+        let originalData = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const res = await apiFetch(`/api/v1/corporate-cars/${carNo}`);
+
+                if (!res.ok) {
+                    alert("법인 차량 정보를 불러오지 못했습니다.");
+                    return;
+                }
+
+                const car = (await res.json()).data;
+
+                carNameInput.value = car.carName ?? "";
+                plateNoInput.value = car.plateNo ?? "";
+                carTypeInput.value = car.carType ?? "";
+                fuelInput.value = car.fuel ?? "";
+                capInput.value = car.capacity ?? "";
+
+                originalData = {
+                    carName: (car.carName ?? "").trim(),
+                    plateNo: (car.plateNo ?? "").trim(),
+                    carType: (car.carType ?? "").trim(),
+                    fuel: (car.fuel ?? "").trim(),
+                    capacity: Number(car.capacity ?? ""),
+                    imageChanged: false
+                };
+
+                if (car.imageUrl) {
+                    const preview = document.getElementById("imagePreview");
+                    preview.src = car.imageUrl;
+                    preview.style.display = "block";
+                }
+
+                // 초기 UI 동기화
+                updateCarNameUI();
+                updatePlateNoUI();
+                updateCarTypeUI();
+                updateFuelUI();
+                updateCapUI();
+                updateSubmitButton();
+
+            } catch (e) {
+                console.error(e);
+                alert("서버 오류가 발생했습니다.");
+            }
+        });
+
+        /* ================== 수정 submit ================== */
+        document.getElementById("editForm").addEventListener("submit", async e => {
+            e.preventDefault();
+            if (!validateEditForm()) return;
+
+            const formData = new FormData(e.target);
+
+            try {
+                const res = await apiFetch(`/api/v1/corporate-cars/${carNo}`, {
+                    method: "PUT",
+                    body: formData
+                });
+
+                // 204/빈응답 대비
+                let result = null;
+                const ct = res.headers.get("content-type") || "";
+                if (ct.includes("application/json")) result = await res.json();
+
+                if (!res.ok) {
+                    alert(result?.message || "법인 차량 수정 실패했습니다.");
+                    return;
+                }
+
+                alert("법인 차량이 수정되었습니다.");
+                location.href = "/corporate-cars";
+
+            } catch (e) {
+                console.error(e);
+                if (e.message === "UNAUTHORIZED") {
+                    location.href = "/login";
+                    return;
+                }
+                alert("서버 오류가 발생했습니다.");
+            }
+        });
+
+        /* ================== 변경 감지 ================== */
+        function hasChanged() {
+            if (!originalData) return false;
+
+            const current = {
+                carName: carNameInput.value.trim(),
+                plateNo: plateNoInput.value.trim(),
+                carType: carTypeInput.value.trim(),
+                fuel: fuelInput.value.trim(),
+                capacity: Number(capInput.value),
+                imageChanged: document.querySelector("[name=imageFile]").files.length > 0
+            };
+
+            return (
+                current.carName !== originalData.carName ||
+                current.plateNo !== originalData.plateNo ||
+                current.carType !== originalData.carType ||
+                current.fuel !== originalData.fuel ||
+                current.capacity !== originalData.capacity ||
+                current.imageChanged
+            );
+        }
+
+        function updateSubmitButton() {
+            if (!submitBtn) return;
+
+            if (hasChanged()) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove("disabled");
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.add("disabled");
+            }
+        }
+
+        document.querySelectorAll(
+            "input[name=carName], input[name=plateNo], input[name=carType], input[name=fuel], input[name=capacity]"
+        ).forEach(el => el.addEventListener("input", updateSubmitButton));
+
+        document.querySelector("[name=imageFile]")
+            .addEventListener("change", updateSubmitButton);
+    </script>
+</th:block>
 
 </body>
 </html>

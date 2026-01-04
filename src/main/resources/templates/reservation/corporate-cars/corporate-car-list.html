@@ -8,18 +8,21 @@
     <meta charset="utf-8" />
     <title>Bizportal - 법인 차량 조회</title>
 
-    <!-- ✅ 이 페이지 전용 CSS (카드/그리드/에러/모달 등만) -->
     <th:block layout:fragment="pageStyles">
         <style>
-            /* 페이지 루트 컨테이너 */
-            .corpcar-page {
-                padding: 22px 26px;
+            /* ✅ 예약 페이지 타이틀 규격 */
+            h2 { margin-bottom: 16px; }
+
+            /* ✅ 예약 페이지 오른쪽 래퍼 느낌 */
+            .corpcar-page-wrap{
+                font-family: Pretendard, Arial, sans-serif;
+                background:#f7f8fa;
+                width:100%;
             }
 
-            .corpcar-page .page-title {
-                font-size: 20px;
-                font-weight: 800;
-                margin: 2px 0 14px;
+            /* ✅ 예약 페이지 섹션 패딩 규격 */
+            .corpcar-page{
+                padding: 20px 20px 32px;
             }
 
             .corpcar-page .error {
@@ -40,15 +43,11 @@
             }
 
             @media (max-width: 1100px) {
-                .corpcar-page .grid {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
+                .corpcar-page .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             }
 
             @media (max-width: 720px) {
-                .corpcar-page .grid {
-                    grid-template-columns: 1fr;
-                }
+                .corpcar-page .grid { grid-template-columns: 1fr; }
             }
 
             .corpcar-page .card {
@@ -89,9 +88,7 @@
                 gap: 8px;
             }
 
-            .corpcar-page .car-name {
-                font-weight: 800;
-            }
+            .corpcar-page .car-name { font-weight: 800; }
 
             .corpcar-page .meta {
                 font-size: 12px;
@@ -138,17 +135,9 @@
             }
 
             /* 선택 가능 카드 + 선택 상태 */
-            .corpcar-page .card.selectable {
-                cursor: pointer;
-            }
-
-            .corpcar-page .card.selected {
-                outline: 3px solid #1677ff;
-            }
-
-            .corpcar-page .card.selectable:hover {
-                box-shadow: 0 0 0 2px rgba(22, 119, 255, .4);
-            }
+            .corpcar-page .card.selectable { cursor: pointer; }
+            .corpcar-page .card.selected { outline: 3px solid #1677ff; }
+            .corpcar-page .card.selectable:hover { box-shadow: 0 0 0 2px rgba(22, 119, 255, .4); }
 
             /* 관리자 액션 바 */
             .corpcar-page .action-bar {
@@ -175,19 +164,13 @@
                 transition: background-color 0.2s ease;
             }
 
-            .corpcar-page .action-btn:hover:not(:disabled) {
-                background-color: #4096ff;
-            }
-
+            .corpcar-page .action-btn:hover:not(:disabled) { background-color: #4096ff; }
             .corpcar-page .action-btn:disabled {
                 background-color: #e5e7eb;
                 color: #9ca3af;
                 cursor: not-allowed;
             }
-
-            .corpcar-page .action-btn.danger:not(:disabled) {
-                background-color: #ef4444;
-            }
+            .corpcar-page .action-btn.danger:not(:disabled) { background-color: #ef4444; }
 
             /* 삭제 모달 */
             .modal {
@@ -202,10 +185,7 @@
                 align-items: center;
                 z-index: 1000;
             }
-
-            .hidden {
-                display: none;
-            }
+            .hidden { display: none; }
 
             .modal-content {
                 background: #fff;
@@ -214,24 +194,14 @@
                 width: 360px;
                 text-align: center;
             }
-
-            .modal-title {
-                margin-bottom: 12px;
-                color: #d32f2f;
-            }
-
-            .modal-text {
-                margin-bottom: 20px;
-                font-size: 14px;
-                line-height: 1.5;
-            }
+            .modal-title { margin-bottom: 12px; color: #d32f2f; }
+            .modal-text { margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
 
             .modal-actions {
                 display: flex;
                 justify-content: space-between;
                 gap: 12px;
             }
-
             .modal-actions .btn {
                 flex: 1;
                 padding: 10px 0;
@@ -241,27 +211,64 @@
                 border: none;
                 transition: background 0.2s, transform 0.1s;
             }
+            .modal-actions .btn.cancel { background: #e0e0e0; color: #333; }
+            .modal-actions .btn.cancel:hover { background: #cfcfcf; }
+            .modal-actions .btn.delete { background: #d32f2f; color: #fff; }
+            .modal-actions .btn.delete:hover { background: #b71c1c; }
+            .modal-actions .btn:hover { transform: translateY(-1px); }
 
-            .modal-actions .btn.cancel {
-                background: #e0e0e0;
-                color: #333;
+            /* =========================
+          ✅ 버튼 통일 (저장해둔 버튼 규격)
+           ========================= */
+            .action-bar{
+                display:none;
+                justify-content:flex-end;
+                align-items:center;
+                gap:10px;
+                margin-top:12px;
+                margin-bottom:12px;
+                padding-right:4px;
             }
 
-            .modal-actions .btn.cancel:hover {
-                background: #cfcfcf;
+            /* 공통 버튼 규격 = 저장해둔 .btn */
+            .action-bar .action-btn{
+                height: 40px;
+                padding: 0 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                border: none;
+                white-space: nowrap;
+                transition: 0.15s;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
 
-            .modal-actions .btn.delete {
-                background: #d32f2f;
+            .action-bar .action-btn:hover{ filter: brightness(0.9); }
+            .action-bar .action-btn:disabled{
+                opacity: .5;
+                cursor: not-allowed;
+                filter: none;
+            }
+
+            /* ✅ 등록(Primary) */
+            .action-bar .action-btn.create{
+                background: var(--primary);
                 color: #fff;
             }
 
-            .modal-actions .btn.delete:hover {
-                background: #b71c1c;
+            /* ✅ 선택 수정(수정 버튼 색상: 연파랑 배경 + 파랑 글씨) */
+            .action-bar .action-btn.edit{
+                background: #eaf2ff;
+                color: #2b5db8;
             }
 
-            .modal-actions .btn:hover {
-                transform: translateY(-1px);
+            /* ✅ 선택 삭제(삭제 버튼 색상: 연빨강 배경 + 빨강 글씨) */
+            .action-bar .action-btn.delete{
+                background: #fdecec;
+                color: #c62828;
             }
         </style>
     </th:block>
@@ -269,27 +276,30 @@
 
 <body>
 
-<!-- 🔥 layout.html의 content 영역을 덮어씌움 -->
 <div layout:fragment="content">
     <section class="page-with-subbar">
         <!-- 왼쪽: 예약 사이드바 (법인 차량 메뉴 active) -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('car')"></aside>
 
-        <!-- 오른쪽: 실제 법인 차량 리스트 영역 -->
-        <div class="corpcar-page">
-            <div class="page-title">법인 차량</div>
+        <!-- ✅ 오른쪽 래퍼를 예약 페이지랑 통일 -->
+        <div class="corpcar-page-wrap">
+            <div class="corpcar-page">
+                <!-- ✅ 타이틀도 예약 페이지랑 통일 -->
+                <h2>법인 차량</h2>
+                <br><br>
 
-            <div class="error" id="errBox"></div>
+                <div class="error" id="errBox"></div>
 
-            <section class="grid" id="grid"></section>
+                <section class="grid" id="grid"></section>
 
-            <div id="actionBar" class="action-bar">
-                <button id="btnCreate" class="action-btn primary">등록</button>
-                <button id="btnEdit" class="action-btn primary" disabled>선택 수정</button>
-                <button id="btnDelete" class="action-btn danger" disabled>선택 삭제</button>
+                <div id="actionBar" class="action-bar">
+                    <button id="btnCreate" class="action-btn create" type="button">등록</button>
+                    <button id="btnEdit" class="action-btn edit" type="button" disabled>선택 수정</button>
+                    <button id="btnDelete" class="action-btn delete" type="button" disabled>선택 삭제</button>
+                </div>
+
+                <div class="paging" id="paging"></div>
             </div>
-
-            <div class="paging" id="paging"></div>
         </div>
     </section>
 
@@ -310,7 +320,6 @@
     </div>
 </div>
 
-<!-- 🔥 첨부1의 JS를 pageScripts로 옮김 -->
 <th:block layout:fragment="pageScripts">
     <script>
         let selectedCarNo = null;
@@ -439,7 +448,6 @@
                 const json = await res.json();
 
                 isAdmin = json?.data?.isAdmin === true;
-
                 document.getElementById("actionBar").style.display = isAdmin ? "flex" : "none";
 
                 if (!res.ok) {
@@ -528,7 +536,6 @@
             }
         });
 
-        // 초기 로드
         document.addEventListener("DOMContentLoaded", () => {
             loadCars(0);
         });

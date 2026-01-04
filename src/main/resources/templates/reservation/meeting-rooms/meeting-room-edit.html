@@ -8,7 +8,6 @@
     <meta charset="UTF-8">
     <title>회의실 수정</title>
 
-    <!-- 이 페이지 전용 CSS -->
     <th:block layout:fragment="pageStyles">
         <style>
             .meeting-edit-page-wrapper {
@@ -29,14 +28,14 @@
             }
 
             .meeting-edit-page-wrapper .form-inner {
-                max-width: 420px;          /* 입력칸 최대 폭 제한 */
-                margin: 0 auto;            /* 가운데 정렬 */
+                max-width: 420px;
+                margin: 0 auto;
             }
 
             .meeting-edit-page-wrapper input,
             .meeting-edit-page-wrapper textarea {
                 width: 100%;
-                box-sizing: border-box;    /* 삐져나오는 거 방지 */
+                box-sizing: border-box;
             }
 
             .meeting-edit-page-wrapper .image-preview {
@@ -107,7 +106,7 @@
             }
 
             .meeting-edit-page-wrapper .submit.disabled {
-                background: #a5c8ff;   /* 연한 파랑 */
+                background: #a5c8ff;
                 cursor: not-allowed;
             }
 
@@ -130,48 +129,89 @@
                 object-fit: contain;
                 display: none;
             }
+
+            /* ===== form hints / validation UI (등록 화면과 동일) ===== */
+            .hint-row{
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-top:6px;
+                gap:10px;
+            }
+
+            .hint{
+                color:#6b7280;
+                font-size:12px;
+            }
+
+            .counter{
+                color:#6b7280;
+                font-size:12px;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .error{
+                display:block;
+                margin-top:6px;
+                color:#ef4444;
+                font-size:12px;
+                font-weight:600;
+            }
+
+            .input-invalid{
+                border-color:#ef4444 !important;
+                box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+            }
         </style>
     </th:block>
 </head>
 
 <body>
 
-<!-- layout.html 의 content 영역 -->
 <div layout:fragment="content">
     <section class="page-with-subbar">
-        <!-- 🔹 왼쪽: 예약 사이드바 (회의실 메뉴 active) -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('meeting')"></aside>
 
-        <!-- 🔹 오른쪽: 회의실 수정 카드 -->
         <div class="meeting-edit-page-wrapper">
             <div class="card">
                 <h2>회의실 수정</h2>
 
                 <form id="editForm" enctype="multipart/form-data">
 
+                    <!-- 회의실명 -->
                     <div class="field">
                         <label>회의실명</label>
-                        <input type="text" name="roomName" maxlength="20" required>
+                        <input type="text" name="roomName" id="roomName" maxlength="20" required>
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="nameCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="nameError" style="display:none;"></small>
                     </div>
 
+                    <!-- 수용 인원 -->
                     <div class="field">
                         <label>수용 인원</label>
-                        <input type="number" name="capacity" id="capacity" min="1" max="100" required>
+                        <input type="number" name="capacity" id="capacity" min="1" max="20" required>
+                        <div class="hint-row">
+                            <small class="hint">1~20명 입력 가능</small>
+                        </div>
+                        <small class="error" id="capError" style="display:none;"></small>
                     </div>
 
                     <div class="field">
                         <label>위치</label>
-                        <input type="text" name="location" maxlength="20">
+                        <input type="text" name="location" id="location" maxlength="50">
                     </div>
 
                     <div class="field">
                         <label>주요 장비</label>
-                        <input type="text" name="equipList" maxlength="255">
+                        <input type="text" name="equipList" id="equipList" maxlength="255">
                     </div>
 
                     <div class="field">
                         <label>특이사항</label>
-                        <textarea name="note" rows="3" maxlength="255"></textarea>
+                        <textarea name="note" id="note" rows="3" maxlength="255"></textarea>
                     </div>
 
                     <div class="field">
@@ -197,10 +237,8 @@
     </section>
 </div>
 
-<!-- 이 페이지 전용 JS -->
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
-
         /* ================== 공통 ================== */
         const roomNo = /*[[${roomNo}]]*/ null;
         let originalData = null;
@@ -210,9 +248,102 @@
             location.href = "/meeting-rooms";
         }
 
+        /* ===== inline validation UI ===== */
+        const roomNameInput = document.getElementById("roomName");
+        const nameCounter = document.getElementById("nameCounter");
+        const nameError = document.getElementById("nameError");
+
+        const capInput = document.getElementById("capacity");
+        const capError = document.getElementById("capError");
+
+        const submitBtn = document.querySelector(".submit");
+
+        function setError(inputEl, errorEl, msg) {
+            if (!errorEl) return;
+
+            if (msg) {
+                errorEl.textContent = msg;
+                errorEl.style.display = "block";
+                inputEl?.classList.add("input-invalid");
+            } else {
+                errorEl.textContent = "";
+                errorEl.style.display = "none";
+                inputEl?.classList.remove("input-invalid");
+            }
+        }
+
+        function updateNameUI() {
+            if (!roomNameInput) return;
+
+            const len = roomNameInput.value.length;
+            if (nameCounter) nameCounter.textContent = `${len} / 20`;
+
+            if (!roomNameInput.value.trim()) {
+                // 비어있을 땐 경고 안 띄우고, submit 시에만 띄움(등록 화면과 동일한 느낌)
+                setError(roomNameInput, nameError, "");
+                return;
+            }
+
+            if (len > 20) setError(roomNameInput, nameError, "회의실명은 20자 이내여야 합니다.");
+            else setError(roomNameInput, nameError, "");
+        }
+
+        function updateCapUI() {
+            if (!capInput) return;
+
+            const v = capInput.value;
+
+            if (v === "") {
+                setError(capInput, capError, "");
+                return;
+            }
+
+            const n = Number(v);
+            if (Number.isNaN(n)) {
+                setError(capInput, capError, "숫자만 입력해주세요.");
+                return;
+            }
+
+            if (n < 1 || n > 20) {
+                setError(capInput, capError, "수용 인원은 1~20명 사이여야 합니다.");
+                return;
+            }
+
+            setError(capInput, capError, "");
+        }
+
+        roomNameInput?.addEventListener("input", () => {
+            updateNameUI();
+            updateSubmitButton();
+        });
+
+        capInput?.addEventListener("input", () => {
+            let value = capInput.value;
+
+            if (value === "") {
+                updateCapUI();
+                updateSubmitButton();
+                return;
+            }
+
+            const num = Number(value);
+
+            if (Number.isNaN(num)) {
+                capInput.value = "";
+                updateCapUI();
+                updateSubmitButton();
+                return;
+            }
+
+            if (num < 1) capInput.value = 1;
+            if (num > 20) capInput.value = 20;
+
+            updateCapUI();
+            updateSubmitButton();
+        });
+
         /* ================== 회의실 상세 조회 ================== */
         async function loadRoom() {
-
             const res = await fetch(`/api/v1/meeting-rooms/${roomNo}`, {
                 credentials: "include"
             });
@@ -230,18 +361,18 @@
 
             const room = (await res.json()).data;
 
-            document.querySelector("[name=roomName]").value   = room.roomName ?? "";
-            document.querySelector("[name=capacity]").value   = room.capacity ?? "";
-            document.querySelector("[name=location]").value   = room.location ?? "";
-            document.querySelector("[name=equipList]").value  = room.equipList ?? "";
-            document.querySelector("[name=note]").value       = room.note ?? "";
+            roomNameInput.value = room.roomName ?? "";
+            capInput.value = room.capacity ?? "";
+            document.querySelector("[name=location]").value  = room.location ?? "";
+            document.querySelector("[name=equipList]").value = room.equipList ?? "";
+            document.querySelector("[name=note]").value      = room.note ?? "";
 
             originalData = {
-                roomName: room.roomName ?? "",
-                capacity: room.capacity ?? "",
-                location: room.location ?? "",
-                equipList: room.equipList ?? "",
-                note: room.note ?? "",
+                roomName: (room.roomName ?? "").trim(),
+                capacity: Number(room.capacity ?? ""),
+                location: (room.location ?? "").trim(),
+                equipList: (room.equipList ?? "").trim(),
+                note: (room.note ?? "").trim(),
                 imageChanged: false
             };
 
@@ -250,6 +381,11 @@
                 preview.src = room.imageUrl;
                 preview.style.display = "block";
             }
+
+            // 초기 UI 동기화
+            updateNameUI();
+            updateCapUI();
+            updateSubmitButton();
         }
 
         /* ================== 이미지 미리보기 ================== */
@@ -259,6 +395,8 @@
             if (!input.files || !input.files[0]) {
                 preview.style.display = "none";
                 preview.src = "";
+                // 이미지 취소했을 때도 변경감지에 영향 줄 수 있어서 버튼 상태 갱신
+                updateSubmitButton();
                 return;
             }
 
@@ -267,6 +405,7 @@
             if (!file.type.startsWith("image/")) {
                 alert("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
+                updateSubmitButton();
                 return;
             }
 
@@ -277,27 +416,33 @@
             };
             reader.readAsDataURL(file);
 
-            originalData.imageChanged = true;
+            if (originalData) originalData.imageChanged = true;
             updateSubmitButton();
         }
 
-        /* ================== 유효성 검사 ================== */
+        /* ================== 유효성 검사(알럿 대신 small 에러도 같이) ================== */
         function validateEditForm() {
-            const name = document.querySelector("[name=roomName]").value.trim();
-            const capacity = Number(document.querySelector("[name=capacity]").value);
+            const name = roomNameInput.value.trim();
+            const capacity = Number(capInput.value);
+
+            updateNameUI();
+            updateCapUI();
 
             if (!name) {
-                alert("회의실명을 입력해주세요.");
+                setError(roomNameInput, nameError, "회의실명을 입력해주세요.");
+                roomNameInput.focus();
                 return false;
             }
 
             if (name.length > 20) {
-                alert("회의실명은 20자 이내입니다.");
+                setError(roomNameInput, nameError, "회의실명은 20자 이내여야 합니다.");
+                roomNameInput.focus();
                 return false;
             }
 
-            if (!capacity || capacity < 1 || capacity > 100) {
-                alert("수용 인원은 1~100명 사이여야 합니다.");
+            if (!capacity || capacity < 1 || capacity > 20) {
+                setError(capInput, capError, "수용 인원은 1~20명 사이여야 합니다.");
+                capInput.focus();
                 return false;
             }
 
@@ -314,7 +459,7 @@
 
             const res = await fetch(`/api/v1/meeting-rooms/${roomNo}`, {
                 method: "PUT",
-                credentials: "include",   // 🔥 쿠키로 인증
+                credentials: "include",
                 body: formData
             });
 
@@ -339,8 +484,8 @@
             if (!originalData) return false;
 
             const current = {
-                roomName: document.querySelector("[name=roomName]").value.trim(),
-                capacity: Number(document.querySelector("[name=capacity]").value),
+                roomName: roomNameInput.value.trim(),
+                capacity: Number(capInput.value),
                 location: document.querySelector("[name=location]").value.trim(),
                 equipList: document.querySelector("[name=equipList]").value.trim(),
                 note: document.querySelector("[name=note]").value.trim(),
@@ -357,9 +502,9 @@
             );
         }
 
-        const submitBtn = document.querySelector(".submit");
-
         function updateSubmitButton() {
+            if (!submitBtn) return;
+
             if (hasChanged()) {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove("disabled");
@@ -369,6 +514,7 @@
             }
         }
 
+        // 기존 변경감지 리스너 유지 (여기에 updateSubmitButton만 호출)
         document.querySelectorAll(
             "input[name=roomName], input[name=capacity], input[name=location], input[name=equipList], textarea[name=note]"
         ).forEach(el => el.addEventListener("input", updateSubmitButton));
@@ -378,7 +524,6 @@
 
         /* ================== 초기 실행 ================== */
         document.addEventListener("DOMContentLoaded", loadRoom);
-
     </script>
 </th:block>
 
