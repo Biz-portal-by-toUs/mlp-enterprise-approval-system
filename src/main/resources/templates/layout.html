@@ -271,6 +271,99 @@
         }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+        /* ====== ✅ 프로필(마이페이지) 패널 ====== */
+        .profile-menu{
+            position: fixed;
+            right: 18px;
+            top: 70px;
+            width: 320px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: none;
+            z-index: 1001;
+        }
+        .profile-menu.open{ display:block; }
+
+        .profile-menu-top{
+            padding: 14px 18px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--line);
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+        }
+        .profile-tenant{
+            font-weight: 900;
+            font-size: 13px;
+            color: #111827;
+        }
+        .profile-close-btn{
+            border:0;
+            background:transparent;
+            cursor:pointer;
+            font-size:20px;
+            color:#6b7280;
+        }
+
+        .profile-menu-body{
+            padding: 16px 18px 18px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:10px;
+        }
+        .profile-big{
+            width:72px;height:72px;
+            border-radius:999px;
+            background:#eef2ff;
+            overflow:hidden;
+            display:grid;
+            place-items:center;
+        }
+        .profile-big img{
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:none;
+        }
+        .profile-big .fallback{
+            display:grid;
+            place-items:center;
+            width:100%;
+            height:100%;
+        }
+        .profile-name{
+            font-weight: 900;
+            font-size: 16px;
+            color:#111827;
+        }
+        .profile-email{
+            font-size: 12px;
+            color: var(--muted);
+            margin-top:-6px;
+        }
+        .profile-actions{
+            width:100%;
+            display:flex;
+            gap:10px;
+            margin-top:8px;
+        }
+        .profile-action{
+            flex:1;
+            height:40px;
+            border-radius: 12px;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 900;
+            cursor:pointer;
+        }
+        .profile-action:hover{ background:#dbeafe; }
+
         /* ====== 기존 본문 구조 ====== */
         .body{
             display:grid;
@@ -459,8 +552,10 @@
                 </svg>
             </button>
 
-            <button class="avatar" type="button" title="마이페이지"
-                    onclick="location.href='/employees/mypage'">
+            <!-- ✅ 수정: 아바타 클릭 시 바로 이동 X, 프로필 패널 토글 -->
+            <button class="avatar" type="button" id="profileBtn" title="계정"
+                    aria-haspopup="dialog" aria-expanded="false"
+                    onclick="toggleProfile()">
                 <img id="profileImg" class="avatar-img" alt="profile"/>
                 <span id="profileFallback" class="avatar-fallback" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -567,6 +662,35 @@
     </footer>
 </div>
 
+<!-- ✅ 프로필(마이페이지) 패널 -->
+<div class="profile-menu" id="profileMenu" role="dialog" aria-label="계정">
+    <div class="profile-menu-top">
+        <div class="profile-tenant" id="profileComName">Bizportal</div>
+        <button class="profile-close-btn" type="button" onclick="toggleProfile(false)">×</button>
+    </div>
+
+    <div class="profile-menu-body">
+        <div class="profile-big">
+            <img id="profileMenuImg" alt="profile"/>
+            <span id="profileMenuFallback" class="fallback" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="8" r="4" stroke-width="2"/>
+                    <path d="M4 21c2-4 6-6 8-6s6 2 8 6" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </span>
+        </div>
+
+        <div class="profile-name" id="profileName">내 계정</div>
+        <div class="profile-email" id="profileEmail"></div>
+
+        <div class="profile-actions">
+            <button class="profile-action" type="button" onclick="location.href='/employees/me'">
+                마이페이지로 이동
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="noti-panel" id="notiPanel">
     <div class="noti-head">
         <div class="noti-head-left">
@@ -591,7 +715,7 @@
 </div>
 
 <button class="chat-fab" type="button" onclick="toggleChat()">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin=\"round\"/></svg>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin="round"/></svg>
 </button>
 
 <script>
@@ -630,6 +754,7 @@
         panel.classList.toggle('open', isVisible);
         if (isVisible) {
             toggleChat(false); // 채팅창 열려있으면 닫기
+            toggleProfile(false); // ✅ 추가: 프로필 패널 닫기
             document.getElementById('notiIframe').contentWindow.location.reload();
         }
     }
@@ -672,7 +797,10 @@
         const panel = document.getElementById('chatPanel');
         const open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
         panel.classList.toggle('open', open);
-        if (open) toggleNoti(false); // 알림창 열려있으면 닫기
+        if (open) {
+            toggleNoti(false); // 알림창 열려있으면 닫기
+            toggleProfile(false); // ✅ 추가: 프로필 패널 닫기
+        }
     }
 
     const SUBBAR_KEY = 'bizportal_subbar_collapsed';
@@ -766,6 +894,84 @@
         });
         if (best) best.classList.add('active');
     }
+
+    /* ✅ 3. 프로필(마이페이지) 패널 로직 */
+    let _profileLoaded = false;
+
+    function toggleProfile(force){
+        const menu = document.getElementById('profileMenu');
+        const btn = document.getElementById('profileBtn');
+        if (!menu || !btn) return;
+
+        const open = typeof force === 'boolean' ? force : !menu.classList.contains('open');
+
+        menu.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', String(open));
+
+        if (open) {
+            toggleNoti(false);
+            toggleChat(false);
+            if (!_profileLoaded) loadMyProfileMenu();
+            syncProfileImageToMenu();
+        }
+    }
+
+    function syncProfileImageToMenu(){
+        const headerImg = document.getElementById('profileImg');
+        const menuImg = document.getElementById('profileMenuImg');
+        const fallback = document.getElementById('profileMenuFallback');
+        if (!menuImg || !fallback) return;
+
+        const url = headerImg?.src;
+        if (url) {
+            menuImg.onload = () => { menuImg.style.display='block'; fallback.style.display='none'; };
+            menuImg.onerror = () => { menuImg.style.display='none'; fallback.style.display='grid'; };
+            menuImg.src = url;
+        } else {
+            menuImg.style.display='none';
+            fallback.style.display='grid';
+        }
+    }
+
+    async function loadMyProfileMenu(){
+        try {
+            // ✅ 네가 만든 API 그대로 사용
+            const res = await fetch('/employees/me', {
+                credentials:'include',
+                headers:{ 'Accept':'application/json' }
+            });
+            if (!res.ok) return;
+
+            const json = await res.json();
+            const me = json?.data ?? json; // 혹시 data 래핑이 없을 수도 있어서 방어
+
+            if (!me) return;
+
+            document.getElementById('profileComName').innerText = me.comName || 'Bizportal';
+            document.getElementById('profileName').innerText = me.empName || me.empId || '내 계정';
+            document.getElementById('profileEmail').innerText = me.email || '';
+
+            _profileLoaded = true;
+        } catch (e) {
+            console.warn('프로필 메뉴 정보 로드 실패', e);
+        }
+    }
+
+    // ✅ 바깥 클릭 시 닫기 + ESC로 닫기
+    window.addEventListener('click', (e) => {
+        const menu = document.getElementById('profileMenu');
+        const btn = document.getElementById('profileBtn');
+        if (!menu || !btn) return;
+
+        if (menu.classList.contains('open')) {
+            const inside = menu.contains(e.target) || btn.contains(e.target);
+            if (!inside) toggleProfile(false);
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') toggleProfile(false);
+    });
 
     window.addEventListener('DOMContentLoaded', () => {
         try { if (localStorage.getItem(SUBBAR_KEY) === '1') setSubbarCollapsed(true); } catch (e) {}
