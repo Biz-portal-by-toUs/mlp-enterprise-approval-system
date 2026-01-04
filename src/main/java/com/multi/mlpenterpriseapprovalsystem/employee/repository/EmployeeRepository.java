@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.employee.repository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -146,6 +147,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Optional<Employee> findByEmpNoAndIsDeletedFalse(Long empNo);
 
+    @Query("select e.atte from Employee e where e.empNo = :empNo")
+    String findAtteByEmpNo(@Param("empNo") Long empNo);
+
+
     interface PosCount {
         Long getPosNo();
         Long getCnt();
@@ -270,5 +275,5 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
          where e.empNo = :empNo
            and e.isDeleted = false
     """)
-    int updateMsgStatByEmpNo(@Param("empNo") Long empNo, @Param("msgStat") String msgStat);
+    int updateMsgStatByEmpNo(@Param("empNo") Long empNo, @Param("msgStat") MsgStat msgStat);
 }
