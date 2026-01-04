@@ -143,6 +143,9 @@ public enum ErrorCode {
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMPLOYEE_NOT_FOUND", "사원을 찾을 수 없습니다"),
     EMPLOYEE_ALREADY_RETIRED(HttpStatus.BAD_REQUEST,"EMPLOYEE_ALREADY_RETIRED","이미 퇴사 처리된 사원입니다"),
     ONLY_EMPLOYEE(HttpStatus.BAD_REQUEST,"ONLY_EMPLOYEE","사원 계정만 접근 가능합니다"),
+    INVALID_MSG_STAT_CODE(HttpStatus.BAD_REQUEST,"INVALID_MSG_STAT_CODE","유효하지 않은 메시지 상태입니다"),
+    MSG_STAT_FORBIDDEN(HttpStatus.BAD_REQUEST,"MSG_STAT_FORBIDDEN","선택할 수 없는 메시지 상태입니다"),
+
 
     // 일정 관련
     START_MUST_BEFORE_END(HttpStatus.BAD_REQUEST,"START_MUST_BEFORE_END","endedAt은 startAt 이후여야 합니다"),
