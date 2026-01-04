@@ -43,4 +43,15 @@ public interface DocumentFormService {
 
     // 승인/반려
     void changeApproveOrReject(Long docfoNo, String comId, DocumentFormStats next, String rejectReason);
+
+    Long createTemp(ReqDocumentFormTempDto req, String comId, String writerId);
+
+    void saveTemp(Long docfoNo, ReqDocumentFormTempDto req, String comId, String writerId);
+
+    Page<ResDocumentFormListDto> findMyTempList(
+            String comId,
+            String writerId,
+            String keyword,
+            Pageable pageable
+    );
 }

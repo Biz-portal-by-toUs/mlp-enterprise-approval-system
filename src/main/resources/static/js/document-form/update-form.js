@@ -35,6 +35,7 @@ const btnAddRadio = document.getElementById('addRadioBtn')
 
 const btnClose = document.getElementById('closeBtn')
 const btnSave = document.getElementById('saveBtn')
+const btnTempSave = document.getElementById('tempSaveBtn')
 
 const toolbar = document.getElementById('toolbar')
 const fontSizeSelect = document.getElementById('fontSizeSelect')
@@ -44,8 +45,8 @@ const editorMount = document.getElementById('editor')
 const presetLeftTemplate = document.getElementById('presetLeftTemplate')
 const presetRightTemplate = document.getElementById('presetRightTemplate')
 
-if (!elTitle || !elTypeRadios || !btnAddRadio || !btnClose || !btnSave || !toolbar || !fontSizeSelect || !editorMount) {
-    alert('update-form.html의 요소 ID가 JS와 맞지 않습니다. (docTitle/typeRadios/addRadioBtn/closeBtn/saveBtn/toolbar/fontSizeSelect/editor)')
+if (!elTitle || !elTypeRadios || !btnAddRadio || !btnClose || !btnSave || !btnTempSave || !toolbar || !fontSizeSelect || !editorMount) {
+    alert('update-form.html의 요소 ID가 JS와 맞지 않습니다. (docTitle/typeRadios/addRadioBtn/closeBtn/saveBtn/tempSaveBtn/toolbar/fontSizeSelect/editor)')
     throw new Error('DOM mapping mismatch')
 }
 
@@ -560,7 +561,7 @@ async function fetchDetail() {
     return await res.json()
 }
 
-async function saveUpdate({ editor, baseDetail }) {
+function buildPayload({ editor, baseDetail }) {
     const docfoName = elTitle.value.trim()
     if (!docfoName) {
         alert('양식 제목을 입력하세요.')
@@ -570,7 +571,6 @@ async function saveUpdate({ editor, baseDetail }) {
 
     const categories = getAllCategoryNames()
 
-    // make-form과 동일한 저장 포맷
     const rawJson = editor.getJSON()
     const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE)
     const templateJson = markEditablePolicyForTemplate(withTableFont)
@@ -581,16 +581,17 @@ async function saveUpdate({ editor, baseDetail }) {
     const headerHtml = extractHeaderHtmlFromTemplates()
     const cnttHtml = buildFullHtml({ docfoName, categories, headerHtml, bodyHtml })
 
-    const payload = {
-        docfoName,
-        cnttJson,
-        cnttHtml,
-        categories,
-    }
+    const payload = { docfoName, cnttJson, cnttHtml, categories }
 
-    // (옵션) 백엔드가 요구하면 유지
     if (baseDetail?.comId || baseDetail?.com_id) payload.comId = baseDetail.comId ?? baseDetail.com_id
     if (baseDetail?.writerId || baseDetail?.writer_id) payload.writerId = baseDetail.writerId ?? baseDetail.writer_id
+
+    return payload
+}
+
+async function saveUpdate({ editor, baseDetail }) {
+    const payload = buildPayload({ editor, baseDetail })
+    if (!payload) return null
 
     const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
         method: 'PUT',
@@ -604,6 +605,24 @@ async function saveUpdate({ editor, baseDetail }) {
     }
 
     return await res.json().catch(() => ({}))
+}
+
+async function saveTempUpdate({ editor, baseDetail }) {
+    const payload = buildPayload({ editor, baseDetail })
+    if (!payload) return null
+
+    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/temp`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+        const t = await res.text().catch(() => '')
+        throw new Error(`임시저장 실패 HTTP ${res.status} ${t}`)
+    }
+
+    return true
 }
 
 // ===== run =====
@@ -635,6 +654,20 @@ async function saveUpdate({ editor, baseDetail }) {
                 alert('저장 실패: ' + (e?.message || e))
             } finally {
                 btnSave.disabled = false
+            }
+        })
+
+        btnTempSave.addEventListener('click', async () => {
+            try {
+                btnTempSave.disabled = true
+                await saveTempUpdate({ editor, baseDetail: detail })
+                markFormListDirty()
+                location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}`
+            } catch (e) {
+                console.error(e)
+                alert('임시저장 실패: ' + (e?.message || e))
+            } finally {
+                btnTempSave.disabled = false
             }
         })
     } catch (e) {

@@ -20,5 +20,4 @@ public record ResDocumentFormDetailDto(
         String rejectReason,
         DocumentFormStats docfoStat,
         List<ResDocumentFormCategoryNameDto> categories
-) {
-}
+) {}
