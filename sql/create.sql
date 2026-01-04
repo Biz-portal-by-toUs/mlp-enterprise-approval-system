@@ -1052,3 +1052,19 @@ ALTER TABLE document_form
 
 ALTER TABLE mail_user_state
     DROP COLUMN purged_at;
+
+SHOW CREATE TABLE attachment;
+
+ALTER TABLE attachment
+    MODIFY display_order INT NULL;
+
+ALTER TABLE attachment DROP CHECK ck_display_order_1_5;
+
+ALTER TABLE attachment
+    ADD CONSTRAINT ck_display_order_cloud_or_1_5
+        CHECK (
+            domain = 'CLOUD'
+                OR (display_order BETWEEN 1 AND 5)
+            );
+
+
