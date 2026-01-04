@@ -59,4 +59,12 @@ public class TodoService {
 
         return ResTodoDto.from(todo);
     }
+
+    @Transactional
+    public void delete(String empId, Long todoNo) {
+        TodoList todo = todoRepository.findByTodoNoAndEmployeeEmpId(todoNo, empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+
+        todoRepository.delete(todo);
+    }
 }
