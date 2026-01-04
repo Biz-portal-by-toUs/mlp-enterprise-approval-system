@@ -49,8 +49,20 @@ public class ViewDocumentFormController {
         return "document-form/update-form";
     }
 
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @GetMapping("/pending")
     public String pendingList() {
         return "document-form/pending-form-list";
+    }
+
+    @GetMapping("/reject-reason")
+    public String rejectReasonPopup(
+            @RequestParam(required = false) Long docfoNo,
+            @RequestParam(defaultValue = "view") String mode,
+            Model model
+    ) {
+        model.addAttribute("docfoNo", docfoNo);
+        model.addAttribute("mode", mode); // view | reject | delReject
+        return "document-form/form-reject-reason";
     }
 }

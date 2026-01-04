@@ -1,116 +1,331 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko"
-      th:classappend="${#authorization.expression('hasRole(''EMPLOYEE'')')} ? 'role-employee' : ''">
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>문서양식 목록</title>
 
-    <style>
+    <!-- 페이지 전용 스타일은 layout의 pageStyles fragment에 넣기 -->
+    <style layout:fragment="pageStyles">
         :root{
-            --bg:#f4f6fb; --card:#fff; --line:#e1e3ea; --text:#111827; --muted:#6b7280; --primary:#2c5cff;
-            --danger:#ff4d4f;
+            --fg:#0f172a;
+            --mut:#64748b;
+            --line:#e2e8f0;
+            --bg:#f1f5f9;
+            --card:#ffffff;
+            --danger:#ef4444;
         }
-        *{box-sizing:border-box}
-        body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif; background:var(--bg); color:var(--text);}
-        .wrap{width:min(1100px, calc(100% - 32px)); margin:28px auto;}
-        .card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.06);}
-        .header{display:flex; align-items:flex-start; justify-content:space-between; padding:18px 18px 12px;}
-        .title{font-size:18px; font-weight:900; margin:0;}
-        .actions{display:flex; gap:10px; align-items:center;}
-        .btn{border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:800;}
-        .btn.primary{background:var(--primary); color:#fff; border-color:transparent;}
-        .btn.danger{background:var(--danger); color:#fff; border-color:transparent;}
-        .btn:disabled{opacity:.5; cursor:not-allowed}
 
-        .toolbar{display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 14px; align-items:center;}
-        .input, .select{border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:10px; outline:none;}
-        .input{min-width:260px;}
-        .select{min-width:140px;}
+        html,body{height:100%}
+        body{
+            margin:0;
+            font-family:ui-sans-serif,system-ui,"Pretendard","Apple SD Gothic Neo","Noto Sans KR";
+            color:var(--fg);
+            background:var(--bg);
+        }
 
-        .table-wrap{padding:0 18px 18px;}
-        table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--line); border-radius:12px;}
-        thead th{background:#fafbff; font-size:13px; color:#374151; padding:12px 10px; border-bottom:1px solid var(--line);}
+        /* ===============================
+           LAYOUT (meeting-list와 동일 톤)
+           =============================== */
+        .page-with-subbar{
+            display:grid;
+            grid-template-columns:260px minmax(0,1fr);
+            gap:0;
+            padding:0;
+            align-items:start;
+        }
+        .page-with-subbar > :first-child{
+            position:static;
+            top:auto;
+            height:auto;
+            min-width:260px;
+            overflow:visible;
+            background:#eaf3ff;
+            border-right:1px solid var(--line);
+        }
 
-        /* 첫 번째 열(선택/번호)만 중앙 정렬 */
-        th.col-select, td.col-select { text-align:center; }
+        /* 메인 영역: meeting-list처럼 패딩 + min-width:0 */
+        .page-main{
+            padding:24px;
+            min-width:0;
+        }
 
-        /* 제목 헤더만 중앙 / 본문은 왼쪽 유지 + 시작점 살짝 오른쪽 */
-        th.col-title { text-align:center; }
-        td.col-title { text-align:left; padding-left:30px; }
+        /* ===============================
+           TOOLBAR (meeting-list 스타일)
+           =============================== */
+        .toolbar{
+            display:flex;
+            align-items:center;
+            justify-content:space-between; /* ✅ 좌우 분리 */
+            gap:12px;
+            margin-bottom:16px;
+        }
 
-        /* 체크박스 + 번호 정렬용 래퍼 */
-        .selWrap{ display:inline-flex; align-items:center; justify-content:center; gap:10px; }
+        .toolbar-left{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-width:0;
+            flex:1;           /* 왼쪽이 남은 공간 차지 */
+        }
 
-        tbody td{padding:12px 10px; border-bottom:1px solid #f0f1f6; font-size:14px; vertical-align:middle;}
-        tbody tr:hover{background:#fbfcff;}
-        .muted{color:var(--muted); font-size:13px;}
+        .toolbar-right{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex-shrink:0;    /* 버튼 줄어들지 않게 */
+        }
 
-        .titleLink{color:inherit; text-decoration:none; font-weight:900; cursor:pointer;}
-        .titleLink:hover{color:var(--primary); text-decoration:underline;}
+        .select{
+            height:40px;
+            border-radius:8px;
+            border:1px solid var(--line);
+            background:#fff;
+            padding:0 12px;
+            font-size:14px;
+            font-weight:600;
+            outline:none;
+        }
 
-        .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; padding:10px 18px 18px;}
-        .pager .info{margin-right:auto; color:var(--muted); font-size:13px;}
-        .pager-controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-        .pager-controls .num{min-width:42px; text-align:center;}
-        .pager-controls .num.active{background:var(--primary); color:#fff; border-color:transparent;}
+        .searchWrap{
+            flex: 1;
+            max-width: 420px;
+            display:flex;
+            align-items:center;
+            height:40px;
+            border-radius:8px;
+            border:1px solid var(--line);
+            background:#fff;
+            padding:0 14px;
+            min-width:0;
+        }
+        .searchInput{
+            border:0;
+            outline:none;
+            width:100%;
+            font-size:14px;
+            background:transparent;
+        }
 
-        .toast{position:fixed; right:18px; bottom:18px; background:#111827; color:#fff; padding:10px 12px; border-radius:10px; opacity:0; transform:translateY(8px); transition:.18s;}
-        .toast.show{opacity:1; transform:translateY(0);}
+        .btn{
+            height:40px;
+            padding:0 20px;
+            border-radius:8px;
+            font-size:14px;
+            font-weight:700;
+            cursor:pointer;
+            border:none;
+            background:var(--primary);
+            color:#fff;
+            white-space:nowrap;
+            transition:0.15s;
+        }
+        .btn:hover{ filter:brightness(0.9); }
 
-        /* EMPLOYEE: 생성/삭제/선택 UI 제거 */
-        .role-employee #btnCreate,
-        .role-employee #btnDeleteSelected,
-        .role-employee input[data-role="rowCheck"]{
-            display:none !important;
+        .btn.danger{
+            background:var(--danger);
+        }
+
+        .btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+
+        .btn.ghost:hover{
+            background:#f8fafc;
+            filter:none; /* ghost는 밝기필터 대신 배경만 */
+        }
+
+        /* 권한에 따른 버튼 숨김 유지 */
+        html.role-employee #btnNew,
+        html.role-employee #btnDeleteSelected{ display:none !important; }
+
+        /* ===============================
+           TABLE CARD (meeting-list의 tableWrap)
+           =============================== */
+        .tableWrap{
+            width:100%;
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:12px;
+            overflow:hidden;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* formTable도 meeting-list처럼 통일 */
+        table.formTable{
+            width:100%;
+            border-collapse:collapse;
+            table-layout:fixed;
+        }
+        table.formTable thead th{
+            background:#f9fafb;
+            border-bottom:1px solid var(--line);
+            text-align:center;
+            padding:14px 10px;
+            font-size:14px;
+            color:var(--mut);
+            font-weight:600;
+        }
+        table.formTable tbody td{
+            border-bottom:1px solid var(--line);
+            text-align:center;
+            padding:12px 10px;
+            font-size:15px;
+            font-weight:500;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        table.formTable tbody tr:hover td{
+            background:#fcfdfe;
+            cursor:pointer;
+        }
+
+        /* 제목은 meeting-list처럼 왼쪽 정렬 + 굵게 */
+        td.col-title{
+            text-align:left !important;
+            padding-left:20px !important;
+            font-weight:700 !important;
+        }
+        .titleLink{
+            color:var(--primary);
+            text-decoration:none;
+            display:block;
+            width:100%;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+            font-weight:800;
+        }
+
+        /* 번호/체크 영역 폭 */
+        th.col-no, td.col-no{ width:120px; }
+
+        /* ===============================
+           PAGER (meeting-list 스타일)
+           =============================== */
+        .pager-wrapper{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            position:relative;
+            margin-top:16px;
+        }
+        .pager{
+            display:flex;
+            align-items:center;
+            gap:4px;
+        }
+        .pageBtn{
+            min-width:36px;
+            height:36px;
+            border-radius:6px;
+            border:1px solid var(--line);
+            background:#fff;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+            transition:0.15s;
+        }
+        .pageBtn:hover:not(.active):not(:disabled){ background:#f1f5f9; }
+        .pageBtn.active{
+            background:var(--primary);
+            color:#fff;
+            border-color:var(--primary);
+        }
+        .pageBtn.active:hover{ filter:brightness(0.9); }
+
+        .pager-status{
+            position:absolute;
+            right:0;
+            display:flex;
+            gap:12px;
+            align-items:center;
+        }
+
+        /* 반응형 */
+        @media (max-width:760px){
+            .page-with-subbar{ grid-template-columns:1fr; }
+            .page-main{ padding:14px; }
+            .pager-status{ position:static; margin-left:10px; }
         }
     </style>
 </head>
 
 <body>
-<div class="wrap card">
-    <div class="header">
-        <div>
-            <h1 class="title">문서양식 목록</h1>
-        </div>
-        <div class="actions">
-            <button class="btn" id="btnRefresh" type="button">새로고침</button>
-            <button class="btn primary" id="btnCreate" type="button">+ 새 양식 만들기</button>
-        </div>
-    </div>
+<!-- layout.html의 content 자리에 들어갈 내용 -->
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- 서브 사이드바 -->
+        <div th:replace="~{sidebar/form-sidebar :: formSidebar('list')}"></div>
 
-    <div class="toolbar">
-        <input class="input" id="q" placeholder="검색(양식명)" />
-        <select class="select" id="size">
-            <option value="15" selected>15개</option>
-            <option value="30">30개</option>
-        </select>
-        <button class="btn" id="btnSearch" type="button">검색</button>
-        <button class="btn danger" id="btnDeleteSelected" type="button" disabled>선택 삭제</button>
-    </div>
+        <!-- 메인 -->
+        <main class="page-main">
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-            <tr>
-                <th class="col-select" style="width:140px;">선택/번호</th>
-                <th class="col-title">제목</th>
-            </tr>
-            </thead>
-            <tbody id="tbody">
-            <tr><td colspan="2" class="muted">로딩 중...</td></tr>
-            </tbody>
-        </table>
-    </div>
+            <!-- 툴바 -->
+            <div class="toolbar">
+                <!-- 왼쪽: 검색/필터 -->
+                <div class="toolbar-left">
+                    <select id="size" class="select">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
 
-    <div class="pager">
-        <div class="info" id="pageInfo">-</div>
-        <div class="pager-controls" id="pagerControls"></div>
+                    <div class="searchWrap">
+                        <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
+                    </div>
+
+                    <button class="btn ghost" id="btnSearch">조회</button>
+                </div>
+
+                <!-- 오른쪽: 액션 버튼 -->
+                <div class="toolbar-right">
+                    <button class="btn danger" id="btnDeleteSelected" disabled>선택 삭제</button>
+                    <button class="btn" id="btnNew">+ 새 양식</button>
+                </div>
+            </div>
+
+            <!-- 표는 tableWrap 카드 안에서 100% 꽉 채움 -->
+            <section class="tableWrap">
+                <table class="formTable">
+                    <thead>
+                    <tr>
+                        <th id="thSelect" class="col-no">번호</th>
+                        <th>제목</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </section>
+
+            <!-- pager: meeting-list처럼 가운데 + 우측 상태 -->
+            <div class="pager-wrapper">
+                <!-- 숫자 페이징 -->
+                <div id="pagerControls" class="pager"></div>
+
+                <!-- 우측 상태 -->
+                <div class="pager-status">
+                    <span id="countPill"
+                          style="font-size:14px; font-weight:600; color:var(--primary)">
+                        0건
+                    </span>
+                    <span id="pageInfo"
+                          style="font-size:13px; color:var(--mut)">
+                        page 1 / 1
+                    </span>
+                </div>
+            </div>
+
+            <!-- 기존 스크립트 유지 -->
+            <script type="module" src="/js/document-form/list.js"></script>
+        </main>
     </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
-<script src="/js/document-form/list.js" defer></script>
 </body>
 </html>

@@ -1,18 +1,10 @@
 (() => {
-    // ViewDocumentFormController 기준
-    //  - 목록: /form/forms
-    //  - 상세: /form/{docfoNo}
-    //  - 생성: /form/new
     const API_BASE = '/api/v1/forms';
     const VIEW_BASE = '/form';
 
-    // "목록은 승인(A)만(+ X 포함)" 정책이면 true
     const ONLY_APPROVED = true;
+    const APPROVED_STATS = ['A', 'X'];
 
-    // ✅ 백엔드가 복수 상태(stat=A,X)를 지원하도록 바뀌었으니 여기서만 관리
-    const APPROVED_STATS = ['A', 'X']; // 필요 시 ['A','X','...']로 확장
-
-    // 권한(쿠키 인증일 때는 JS가 JWT를 못 읽으므로, 서버가 붙여준 class로 판단)
     function isEmployee() {
         return document.documentElement.classList.contains('role-employee');
     }
@@ -22,12 +14,15 @@
     const elPager = document.getElementById('pagerControls');
     const elQ = document.getElementById('q');
     const elSize = document.getElementById('size');
+    const elThSelect = document.getElementById('thSelect');
 
     const btnDeleteSelected = document.getElementById('btnDeleteSelected');
-    const btnCreate = document.getElementById('btnCreate');
+    const btnCreate = document.getElementById('btnNew');
     const btnRefresh = document.getElementById('btnRefresh');
     const btnSearch = document.getElementById('btnSearch');
     const elToast = document.getElementById('toast');
+
+    const elCountPill = document.getElementById('countPill');
 
     const selected = new Set();
 
@@ -56,8 +51,6 @@
         try { localStorage.setItem('list:dirty', 'true'); } catch (_) {}
     }
 
-    // 쿠키 인증이면 Authorization 헤더 없이도 동작해야 정상.
-    // (혹시 혼합구조라 localStorage accessToken도 쓰면 아래를 유지해도 됨)
     function getAccessToken() {
         return (localStorage.getItem('accessToken') || '').trim();
     }
@@ -85,6 +78,16 @@
             '_blank',
             'width=1100,height=820,resizable=yes,scrollbars=yes'
         );
+    }
+
+    function clearSelection() {
+        selected.clear();
+        updateBulkDeleteUI();
+    }
+
+    function updateHeaderLabel() {
+        if (!elThSelect) return;
+        elThSelect.textContent = isEmployee() ? '번호' : '선택/번호';
     }
 
     function updateBulkDeleteUI() {
@@ -129,7 +132,6 @@
         return { items: [], page: 0, size: Number(elSize?.value || 15), totalPages: 1, totalElements: 0 };
     }
 
-    // ✅ 백엔드 복수 상태 지원(stat=A,X) 반영
     function buildUrl(statsCsvOrNull) {
         const params = new URLSearchParams();
         params.set('page', String(page));
@@ -143,8 +145,8 @@
         }
 
         if (statsCsvOrNull) {
-            params.set('stat', statsCsvOrNull);       // 컨트롤러가 List로 받는 param
-            params.set('docfoStat', statsCsvOrNull);  // 혹시 다른 구현/레거시 대비
+            params.set('stat', statsCsvOrNull);
+            params.set('docfoStat', statsCsvOrNull);
         }
 
         return `${API_BASE}?${params.toString()}`;
@@ -158,7 +160,7 @@
             return;
         }
 
-        const startNo = page * Number(elSize?.value || 15);
+        const size = Number(elSize?.value || 15);
         const employee = isEmployee();
 
         elTbody.innerHTML = rows.map((r, idx) => {
@@ -166,10 +168,11 @@
             const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
 
             const idStr = String(docfoNo ?? '');
-            const checked = selected.has(idStr) ? 'checked' : '';
-            const rowNo = startNo + idx + 1;
 
-            // 1열: EMPLOYEE면 번호만 / 아니면 체크박스+번호
+            // ✅ 1) 오름차순 번호 (page 기준)
+            const rowNo = (page * size) + idx + 1;
+
+            // ✅ 2) EMPLOYEE면 체크박스 DOM 자체를 생성하지 않음
             const firstCol = employee
                 ? `<span>${rowNo}</span>`
                 : `
@@ -177,7 +180,7 @@
             <input type="checkbox"
                    data-role="rowCheck"
                    data-id="${esc(idStr)}"
-                   ${checked}/>
+                   ${selected.has(idStr) ? 'checked' : ''}/>
             <span>${rowNo}</span>
           </label>
         `;
@@ -200,39 +203,46 @@
     function renderPager() {
         if (!elPager) return;
 
-        const tp = Math.max(1, Number(totalPages) || 1);
-        const p = Math.min(Math.max(0, Number(page) || 0), tp - 1);
+        elPager.innerHTML = "";
 
-        if (tp <= 1) { elPager.innerHTML = ''; return; }
+        const tp = Math.max(1, Number(totalPages) || 1); // ✅ 최소 1
+        const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        let start = p - 2;
-        let end = p + 2;
+        const blockSize = 5;
+        const currentBlock = Math.floor(cur / blockSize);
+        const startPage = currentBlock * blockSize;
+        let endPage = startPage + blockSize - 1;
+        if (endPage > tp - 1) endPage = tp - 1;
 
-        if (start < 0) { end += (0 - start); start = 0; }
-        if (end > tp - 1) { start -= (end - (tp - 1)); end = tp - 1; }
-        start = Math.max(0, start);
-
-        const nums = [];
-        for (let i = start; i <= end; i++) nums.push(i);
-
-        const disableFirstPrev = (p <= 0);
-        const disableNextLast = (p >= tp - 1);
-
-        const btn = (label, disabled, go, extra = '') =>
-            `<button class="btn ${extra}" ${disabled ? 'disabled' : ''} data-go="${go}">${label}</button>`;
-
-        const numBtn = (i) => {
-            const active = i === p ? 'active' : '';
-            return `<button class="btn num ${active}" ${i === p ? 'disabled' : ''} data-page="${i}">${i + 1}</button>`;
+        const createBtn = (txt, target, active = false, disabled = false) => {
+            const b = document.createElement("button");
+            b.className = `pageBtn ${active ? "active" : ""}`;
+            b.textContent = txt;
+            b.disabled = disabled;
+            b.onclick = () => {
+                page = target;
+                clearSelection();   // 선택 초기화 (유지하고 싶으면 제거)
+                load();
+            };
+            return b;
         };
 
-        elPager.innerHTML = [
-            btn('&laquo;', disableFirstPrev, 'first'),
-            btn('&lsaquo;', disableFirstPrev, 'prev'),
-            ...nums.map(numBtn),
-            btn('&rsaquo;', disableNextLast, 'next'),
-            btn('&raquo;', disableNextLast, 'last'),
-        ].join('');
+        // 이전(<)
+        elPager.appendChild(
+            createBtn("<", cur - 1, false, cur <= 0)
+        );
+
+        // 숫자 버튼 (1페이지여도 1 하나는 무조건 표시)
+        for (let i = startPage; i <= endPage; i++) {
+            elPager.appendChild(
+                createBtn(String(i + 1), i, i === cur, i === cur)
+            );
+        }
+
+        // 다음(>)
+        elPager.appendChild(
+            createBtn(">", cur + 1, false, cur >= tp - 1)
+        );
     }
 
     async function load() {
@@ -240,7 +250,6 @@
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
-            // ✅ ONLY_APPROVED=true면 A,X를 한 번에 조회(페이징/정렬/총개수 모두 서버 기준으로 정상)
             const statsCsv = ONLY_APPROVED ? APPROVED_STATS.join(',') : null;
 
             const res = await apiFetch(buildUrl(statsCsv), { method: 'GET' });
@@ -255,7 +264,8 @@
             totalElements = pg.totalElements ?? 0;
             page = pg.page ?? page;
 
-            if (elInfo) elInfo.textContent = `page ${page + 1} / ${totalPages}  ·  total ${totalElements}`;
+            if (elInfo) elInfo.textContent = `page ${page + 1} / ${Math.max(totalPages, 1)}`;
+            if (elCountPill) elCountPill.textContent = `${totalElements}건`;
 
             renderPager();
             render(pg.items);
@@ -266,7 +276,7 @@
         }
     }
 
-    // checkbox select
+    // checkbox select (EMPLOYEE는 체크박스가 생성되지 않으므로 이 이벤트도 사실상 영향 없음)
     elTbody?.addEventListener('change', (e) => {
         const cb = e.target;
         if (!(cb instanceof HTMLInputElement)) return;
@@ -289,24 +299,24 @@
         const pageAttr = t.getAttribute('data-page');
         if (pageAttr != null) {
             const nextPage = Number(pageAttr);
-            if (Number.isFinite(nextPage)) { page = nextPage; load(); }
+            if (Number.isFinite(nextPage)) {
+                page = nextPage;
+                clearSelection();
+                load();
+            }
             return;
         }
 
         const go = t.getAttribute('data-go');
         if (!go) return;
 
-        if (go === 'first') page = 0;
-        else if (go === 'prev') page = Math.max(0, page - 1);
+        if (go === 'prev') page = Math.max(0, page - 1);
         else if (go === 'next') page = Math.min(totalPages - 1, page + 1);
-        else if (go === 'last') page = Math.max(0, totalPages - 1);
 
+        clearSelection();
         load();
     });
 
-    // 삭제 처리:
-    // 1) PATCH /api/v1/forms/{id}/status  body: { docfoStat:"D" }
-    // 2) (fallback) DELETE /api/v1/forms/{id}
     async function softDelete(docfoNo) {
         const patchRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
             method: 'PATCH',
@@ -323,7 +333,6 @@
         return true;
     }
 
-    // bulk delete
     btnDeleteSelected?.addEventListener('click', async () => {
         if (isEmployee()) { toast('권한이 없습니다.'); return; }
         if (selected.size === 0) return;
@@ -350,7 +359,6 @@
         }
     });
 
-    // create
     btnCreate?.addEventListener('click', () => {
         if (isEmployee()) { toast('권한이 없습니다.'); return; }
 
@@ -362,13 +370,29 @@
     });
 
     btnRefresh?.addEventListener('click', () => load());
-    btnSearch?.addEventListener('click', () => { page = 0; load(); });
-    elQ?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { page = 0; load(); } });
-    elSize?.addEventListener('change', () => { page = 0; load(); });
+
+    btnSearch?.addEventListener('click', () => {
+        page = 0;
+        clearSelection();
+        load();
+    });
+
+    elQ?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            page = 0;
+            clearSelection();
+            load();
+        }
+    });
+
+    elSize?.addEventListener('change', () => {
+        page = 0;
+        clearSelection();
+        load();
+    });
 
     window.openDetail = openDetail;
 
-    // storage listener (list:dirty)
     window.addEventListener('storage', (e) => {
         if (e.key === 'list:dirty' && e.newValue === 'true') {
             try { localStorage.removeItem('list:dirty'); } catch (_) {}
@@ -377,7 +401,8 @@
     });
 
     // init
-    if (isEmployee() && btnCreate) btnCreate.disabled = true;
+    if (isEmployee() && btnCreate) btnCreate.style.display = 'none';
     updateBulkDeleteUI();
+    updateHeaderLabel();
     load();
 })();

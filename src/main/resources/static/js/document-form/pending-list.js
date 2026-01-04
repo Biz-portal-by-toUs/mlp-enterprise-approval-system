@@ -1,107 +1,58 @@
 (() => {
-    const API_BASE = '/api/v1/forms';
-    // ViewDocumentFormController 기준: 상세 /form/{docfoNo}
-    const VIEW_BASE = '/form';
+    const API_BASE = "/api/v1/forms";
+    const VIEW_BASE = "/form";
 
-    const elApiLabel = document.getElementById('apiLabel');
-    if (elApiLabel) elApiLabel.textContent = API_BASE;
+    const PAGE_SIZE = 10;
+    const BIG = 1000;
 
-    const elTbody = document.getElementById('tbody');
-    const elInfo = document.getElementById('pageInfo');
-    const elPager = document.getElementById('pagerControls');
-
-    const elSize = document.getElementById('size');
-    const elMode = document.getElementById('statMode'); // ALL / P / R (드롭다운 라벨: 전체/대기/반려)
-    const elToast = document.getElementById('toast');
+    const elTbody = document.getElementById("tbody");
+    const elPager = document.getElementById("pager");
+    const elInfo = document.getElementById("pageInfo");
+    const elCountPill = document.getElementById("countPill");
+    const elMode = document.getElementById("statMode");
+    const elToast = document.getElementById("toast"); // layout에 있으면 사용
 
     let page = 0;
     let totalPages = 1;
     let totalElements = 0;
 
-    // Role 판단: JWT 파싱 ❌
-    // Thymeleaf에서 <html class="role-thr-admin"> 같은 방식으로 주입했다고 가정
+    // 인라인 반려사유 입력을 위한 상태
+    let editingId = null;        // docfoNo
+    let editingKind = null;      // 'REJECT' | 'DEL_REJECT'
+
+    // ===============================
+    // role
+    // ===============================
+    // Thymeleaf에서 <html class="role-thr-admin"> 형태로 주입되어 있다고 가정
     function isThrAdmin() {
-        return document.documentElement.classList.contains('role-thr-admin');
+        const cls = document.documentElement.classList;
+        return cls.contains("role-THR_ADMIN") || cls.contains("role-thr-admin") || cls.contains("role-thr_admin");
     }
 
+    // ===============================
+    // ui helpers
+    // ===============================
     function toast(msg) {
         if (!elToast) return;
         elToast.textContent = msg;
-        elToast.classList.add('show');
-        window.clearTimeout(toast._t);
-        toast._t = window.setTimeout(() => elToast.classList.remove('show'), 1400);
+        elToast.classList.add("show");
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => elToast.classList.remove("show"), 1400);
     }
 
     function esc(s) {
-        return String(s ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
+        return String(s ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
             .replaceAll("'", "&#39;");
     }
 
-    function markFormListDirty() {
-        try {
-            localStorage.setItem('list:dirty', 'true');
-        } catch (_) {
-        }
-    }
-
-    const _fetch = window.fetch.bind(window);
-
-    // 쿠키 기반 인증 (HttpOnly)
-    // - Authorization 헤더로 토큰 넣지 않음
-    // - credentials: 'same-origin' 으로 쿠키 자동 전송
-    async function apiFetch(url, options = {}) {
-        const headers = new Headers(options.headers || {});
-        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
-
-        const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-        if (options.body && !isFormData && !headers.has('Content-Type')) {
-            headers.set('Content-Type', 'application/json');
-        }
-
-        return _fetch(url, {
-            ...options,
-            headers,
-            credentials: 'same-origin',
-        });
-    }
-
-    function openDetail(docfoNo) {
-        if (docfoNo == null) return;
-        const id = String(docfoNo);
-        window.open(`${VIEW_BASE}/${encodeURIComponent(id)}`, '_blank',
-            'width=1100,height=820,resizable=yes,scrollbars=yes'
-        );
-    }
-
-    function normalizePage(data) {
-        if (data && Array.isArray(data.content)) {
-            return {
-                items: data.content,
-                page: data.number ?? 0,
-                size: data.size ?? Number(elSize?.value || 15),
-                totalPages: data.totalPages ?? 1,
-                totalElements: data.totalElements ?? data.content.length
-            };
-        }
-        return {items: [], page: 0, size: Number(elSize?.value || 15), totalPages: 1, totalElements: 0};
-    }
-
-    function buildUrl(stat, pageNo, sizeNo) {
-        const params = new URLSearchParams();
-        params.set('page', String(pageNo));
-        params.set('size', String(sizeNo));
-        params.set('stat', stat);
-        return `${API_BASE}?${params.toString()}`;
-    }
-
     function getWriterName(writer) {
-        if (!writer) return '-';
-        if (typeof writer === 'string') return writer;
-        return writer.empName ?? writer.name ?? writer.username ?? writer.empNm ?? writer.emp_id ?? writer.empId ?? '-';
+        if (!writer) return "-";
+        if (typeof writer === "string") return writer;
+        return writer.empName ?? writer.name ?? writer.username ?? writer.empNm ?? writer.emp_id ?? writer.empId ?? "-";
     }
 
     function getRejectReason(r) {
@@ -115,47 +66,110 @@
             ?? null;
     }
 
-    // 상태 라벨: 코드 제거 + W/X 추가
     function getStatPill(stat) {
-        const s = String(stat ?? '').trim() || '-';
-
+        const s = String(stat ?? "").trim() || "-";
         const map = {
-            P: {cls: 'P', label: '대기'},
-            R: {cls: 'R', label: '반려'},
-            A: {cls: 'A', label: '승인'},
-            W: {cls: 'W', label: '삭제대기'},
-            X: {cls: 'X', label: '삭제반려'},
-            D: {cls: 'D', label: '삭제'},
-            T: {cls: 'T', label: '임시저장'},
+            P: { cls: "P", label: "대기" },
+            W: { cls: "W", label: "삭제대기" },
+            R: { cls: "R", label: "반려" },
+            X: { cls: "X", label: "삭제반려" },
+            A: { cls: "A", label: "승인" },
         };
-
-        const it = map[s] || {cls: '', label: s};
+        const it = map[s] || { cls: "", label: s };
         return `<span class="statPill ${esc(it.cls)}">${esc(it.label)}</span>`;
+    }
+
+    function markFormListDirty() {
+        try { localStorage.setItem("list:dirty", "true"); } catch (_) {}
+    }
+
+    // ===============================
+    // api
+    // ===============================
+    async function apiFetch(url, options = {}) {
+        const headers = new Headers(options.headers || {});
+        if (!headers.has("Accept")) headers.set("Accept", "application/json");
+
+        const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+        if (options.body && !isFormData && !headers.has("Content-Type")) {
+            headers.set("Content-Type", "application/json");
+        }
+
+        return fetch(url, { ...options, headers, credentials: "same-origin" });
+    }
+
+    async function updateStatus(docfoNo, docfoStat, rejectReason) {
+        const payload = { docfoStat };
+        if (rejectReason != null && String(rejectReason).trim() !== "") {
+            payload.rejectReason = String(rejectReason).trim();
+        }
+
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`상태 변경 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
+        }
+        return true;
+    }
+
+    async function approveDelete(docfoNo) {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, { method: "PATCH" });
+        if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`삭제 승인 실패 HTTP ${res.status} ${t}`);
+        }
+        return true;
+    }
+
+    async function rejectDelete(docfoNo, rejectReason) {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
+            method: "PATCH",
+            body: JSON.stringify({ rejectReason: String(rejectReason).trim() }),
+        });
+        if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`삭제 반려 실패 HTTP ${res.status} ${t}`);
+        }
+        return true;
     }
 
     async function showRejectReason(docfoNo) {
         try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {method: 'GET'});
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            const reason = getRejectReason(data) ?? '사유가 저장되어 있지 않아요.';
+            const reason = getRejectReason(data) ?? "사유가 저장되어 있지 않아요.";
             alert(`사유:\n${reason}`);
         } catch (e) {
-            alert('사유 조회 실패: ' + (e?.message || e));
+            alert("사유 조회 실패: " + (e?.message || e));
         }
     }
 
-    // mode에 맞춰 상태 묶음 반환
+    function openDetail(docfoNo) {
+        if (!docfoNo) return;
+        window.open(
+            `${VIEW_BASE}/${encodeURIComponent(docfoNo)}`,
+            "_blank",
+            "width=1100,height=820,resizable=yes,scrollbars=yes"
+        );
+    }
+
+    // ===============================
+    // filter: mode -> stats (✅ W/X 유지)
+    // ===============================
     function getStatsByMode(mode) {
-        if (mode === 'P') return ['P', 'W'];
-        if (mode === 'R') return ['R', 'X'];
-        return ['P', 'W', 'R', 'X'];
+        if (mode === "P") return ["P", "W"];        // 대기 그룹
+        if (mode === "R") return ["R", "X"];        // 반려 그룹
+        return ["P", "W", "R", "X"];                // 모두
     }
 
-    function hasNonBlank(v) {
-        return v != null && String(v).trim() !== '';
-    }
-
+    // ===============================
+    // render
+    // ===============================
     function render(rows) {
         if (!elTbody) return;
 
@@ -164,44 +178,71 @@
             return;
         }
 
-        const startNo = page * Number(elSize?.value || 15);
+        const startNo = page * PAGE_SIZE;
         const thr = isThrAdmin();
 
         elTbody.innerHTML = rows.map((r, idx) => {
             const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
-            const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
-            const stat = r.docfoStat ?? r.docfo_stat ?? '-';
+            const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? "-";
+            const stat = r.docfoStat ?? r.docfo_stat ?? "-";
 
             const writerObj = r.writer ?? r.employee ?? r.writerInfo ?? null;
             const writerName = getWriterName(writerObj);
 
-            const idStr = String(docfoNo ?? '');
+            const idStr = String(docfoNo ?? "");
             const rowNo = startNo + idx + 1;
 
             const reasonInline = getRejectReason(r);
-            const isRejectedGroup = (stat === 'R' || stat === 'X');
+            const isPendingGroup = (stat === "P" || stat === "W");
+            const isRejectedGroup = (stat === "R" || stat === "X");
 
-            // 처리 버튼 정책
-            let actionHtml = '';
+            // 인라인 사유 입력 표시 여부
+            const isEditingThis = (editingId === idStr);
+            const showRejectBox = isEditingThis && editingKind === "REJECT";       // P 반려
+            const showDelRejectBox = isEditingThis && editingKind === "DEL_REJECT"; // W 삭제반려
 
+            let actionHtml = "";
+
+            // THIRD-ADMIN: 버튼 없음, 대기는 '-', 반려는 사유버튼(있으면)
             if (thr) {
-                actionHtml = hasNonBlank(reasonInline)
-                    ? `<button class="btn sm warn" onclick="window.showRejectReason('${esc(idStr)}')">사유</button>`
-                    : `<span class="muted">-</span>`;
-            } else {
-                if (stat === 'P') {
-                    actionHtml = `
-                        <button class="btn sm ok" onclick="window.approveOne('${esc(idStr)}')">승인</button>
-                        <button class="btn sm danger" onclick="window.rejectOne('${esc(idStr)}')">반려</button>
-                    `;
-                } else if (stat === 'W') {
-                    actionHtml = `
-                        <button class="btn sm ok" onclick="window.approveDeleteOne('${esc(idStr)}')">삭제승인</button>
-                        <button class="btn sm danger" onclick="window.rejectDeleteOne('${esc(idStr)}')">삭제반려</button>
-                    `;
+                if (isPendingGroup) {
+                    actionHtml = `<span class="muted">-</span>`;
                 } else if (isRejectedGroup) {
-                    actionHtml = hasNonBlank(reasonInline)
-                        ? `<button class="btn sm warn" onclick="window.showRejectReason('${esc(idStr)}')">사유</button>`
+                    actionHtml = reasonInline
+                        ? `<button class="btn sm warn" data-action="reason" data-id="${esc(idStr)}">사유</button>`
+                        : `<span class="muted">-</span>`;
+                } else {
+                    actionHtml = `<span class="muted">-</span>`;
+                }
+            } else {
+                // 그 외 권한자(승인/반려 가능)
+                if (stat === "P") {
+                    actionHtml = `
+            <button class="btn sm ok" data-action="approve" data-id="${esc(idStr)}">승인</button>
+            <button class="btn sm danger" data-action="reject" data-id="${esc(idStr)}">반려</button>
+            <span class="reasonWrap ${showRejectBox ? "show" : ""}" data-role="reasonWrap">
+              <input class="reasonInput" type="text" maxlength="200"
+                     placeholder="반려 사유 입력" value="${esc(showRejectBox ? (reasonInline ?? "") : "")}"
+                     data-role="reasonInput"/>
+              <button class="btn sm warn" data-action="rejectSubmit" data-id="${esc(idStr)}">확인</button>
+              <button class="btn sm ghost" data-action="rejectCancel" data-id="${esc(idStr)}">취소</button>
+            </span>
+          `;
+                } else if (stat === "W") {
+                    actionHtml = `
+            <button class="btn sm ok" data-action="delApprove" data-id="${esc(idStr)}">삭제승인</button>
+            <button class="btn sm danger" data-action="delReject" data-id="${esc(idStr)}">삭제반려</button>
+            <span class="reasonWrap ${showDelRejectBox ? "show" : ""}" data-role="reasonWrap">
+              <input class="reasonInput" type="text" maxlength="200"
+                     placeholder="삭제 반려 사유 입력" value="${esc(showDelRejectBox ? (reasonInline ?? "") : "")}"
+                     data-role="reasonInput"/>
+              <button class="btn sm warn" data-action="delRejectSubmit" data-id="${esc(idStr)}">확인</button>
+              <button class="btn sm ghost" data-action="rejectCancel" data-id="${esc(idStr)}">취소</button>
+            </span>
+          `;
+                } else if (isRejectedGroup) {
+                    actionHtml = reasonInline
+                        ? `<button class="btn sm warn" data-action="reason" data-id="${esc(idStr)}">사유</button>`
                         : `<span class="muted">-</span>`;
                 } else {
                     actionHtml = `<span class="muted">-</span>`;
@@ -211,297 +252,269 @@
             return `
         <tr>
           <td>${rowNo}</td>
-          <td>
-            <a class="titleLink" href="javascript:void(0)" onclick="window.openDetail('${esc(idStr)}')">
+          <td class="col-title">
+            <a class="titleLink" href="javascript:void(0)" data-action="detail" data-id="${esc(idStr)}">
               ${esc(docfoName)}
             </a>
           </td>
           <td>${esc(writerName)}</td>
           <td>${getStatPill(stat)}</td>
-          <td style="text-align:right;">
+          <td style="text-align:center;">
             <div class="row-actions">
               ${actionHtml}
             </div>
           </td>
         </tr>
       `;
-        }).join('');
+        }).join("");
     }
 
     function renderPager() {
         if (!elPager) return;
+        elPager.innerHTML = "";
 
         const tp = Math.max(1, Number(totalPages) || 1);
-        const p = Math.min(Math.max(0, Number(page) || 0), tp - 1);
+        const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        if (tp <= 1) {
-            elPager.innerHTML = '';
-            return;
-        }
+        const blockSize = 5;
+        const currentBlock = Math.floor(cur / blockSize);
+        const startPage = currentBlock * blockSize;
+        let endPage = startPage + blockSize - 1;
+        if (endPage > tp - 1) endPage = tp - 1;
 
-        let start = p - 2;
-        let end = p + 2;
-
-        if (start < 0) {
-            end += (0 - start);
-            start = 0;
-        }
-        if (end > tp - 1) {
-            start -= (end - (tp - 1));
-            end = tp - 1;
-        }
-        start = Math.max(0, start);
-
-        const nums = [];
-        for (let i = start; i <= end; i++) nums.push(i);
-
-        const disableFirstPrev = (p <= 0);
-        const disableNextLast = (p >= tp - 1);
-
-        const btn = (label, disabled, go, extra = '') =>
-            `<button class="btn ${extra}" ${disabled ? 'disabled' : ''} data-go="${go}">${label}</button>`;
-
-        const numBtn = (i) => {
-            const active = i === p ? 'active' : '';
-            return `<button class="btn num ${active}" ${i === p ? 'disabled' : ''} data-page="${i}">${i + 1}</button>`;
+        const createBtn = (label, target, active = false, disabled = false) => {
+            const b = document.createElement("button");
+            b.className = `pageBtn ${active ? "active" : ""}`;
+            b.textContent = label;
+            b.disabled = disabled;
+            b.onclick = () => {
+                page = target;
+                // 페이지 이동 시 인라인 사유 입력 닫기
+                editingId = null;
+                editingKind = null;
+                load();
+            };
+            return b;
         };
 
-        elPager.innerHTML = [
-            btn('&laquo;', disableFirstPrev, 'first'),
-            btn('&lsaquo;', disableFirstPrev, 'prev'),
-            ...nums.map(numBtn),
-            btn('&rsaquo;', disableNextLast, 'next'),
-            btn('&raquo;', disableNextLast, 'last')
-        ].join('');
+        // 이전
+        elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
+
+        // 숫자(1페이지도 표시)
+        for (let i = startPage; i <= endPage; i++) {
+            elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
+        }
+
+        // 다음
+        elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
+    // ===============================
+    // load (묶음 조회 -> 병합 -> 클라페이징)  ✅ W/X 포함 유지
+    // ===============================
     async function load() {
         if (!elTbody) return;
         elTbody.innerHTML = `<tr><td colspan="5" class="muted">로딩 중...</td></tr>`;
 
         try {
-            const sizeNo = Number(elSize?.value || 15);
-            const mode = elMode?.value || 'ALL'; // ALL / P / R
-
-            // 항상 "묶음"을 BIG로 가져와서 클라 페이징
-            const BIG = 1000;
+            const mode = elMode?.value || "ALL";
             const stats = getStatsByMode(mode);
 
             const results = await Promise.all(
-                stats.map(s => apiFetch(buildUrl(s, 0, BIG), {method: 'GET'}).then(async (res) => {
-                    if (!res.ok) {
-                        const t = await res.text().catch(() => '');
-                        throw new Error(`${s} 조회 실패 HTTP ${res.status} ${t}`);
-                    }
-                    return normalizePage(await res.json()).items;
-                }))
+                stats.map(s =>
+                    apiFetch(`${API_BASE}?stat=${encodeURIComponent(s)}&page=0&size=${BIG}`, { method: "GET" })
+                        .then(async (res) => {
+                            if (!res.ok) {
+                                const t = await res.text().catch(() => "");
+                                throw new Error(`${s} 조회 실패 HTTP ${res.status} ${t}`);
+                            }
+                            const json = await res.json();
+                            // 스프링 page 형태(content)만 사용
+                            const items = (json?.content && Array.isArray(json.content)) ? json.content
+                                : (json?.data?.content && Array.isArray(json.data.content)) ? json.data.content
+                                    : [];
+                            return items;
+                        })
+                )
             );
 
-            // 합치고 docfoNo 기준 중복 제거 + 정렬
-            const mergedMap = new Map();
+            // 중복 제거 + 정렬
+            const map = new Map();
             results.flat().forEach(it => {
-                const key = String(it.docfoNo ?? it.id ?? it.docfo_no ?? '');
+                const key = String(it.docfoNo ?? it.id ?? it.docfo_no ?? "");
                 if (!key) return;
-                mergedMap.set(key, it);
+                map.set(key, it);
             });
 
-            const merged = Array.from(mergedMap.values()).sort((a, b) => {
+            const merged = Array.from(map.values()).sort((a, b) => {
                 const ax = Number(a.docfoNo ?? a.id ?? a.docfo_no ?? 0);
                 const bx = Number(b.docfoNo ?? b.id ?? b.docfo_no ?? 0);
                 return ax - bx;
             });
 
             totalElements = merged.length;
-            totalPages = Math.max(1, Math.ceil(totalElements / sizeNo));
+            totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
             page = Math.min(Math.max(0, page), totalPages - 1);
 
-            const start = page * sizeNo;
-            const rows = merged.slice(start, start + sizeNo);
+            const start = page * PAGE_SIZE;
+            const rows = merged.slice(start, start + PAGE_SIZE);
 
-            if (elInfo) elInfo.textContent = `page ${page + 1} / ${totalPages}  ·  total ${totalElements}`;
+            if (elInfo) elInfo.textContent = `page ${page + 1} / ${Math.max(totalPages, 1)}`;
+            if (elCountPill) elCountPill.textContent = `${totalElements}건`;
+
             renderPager();
             render(rows);
-
         } catch (err) {
             console.error(err);
             elTbody.innerHTML = `<tr><td colspan="5" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
+            totalPages = 1;
+            if (elInfo) elInfo.textContent = "page 1 / 1";
+            if (elCountPill) elCountPill.textContent = "0건";
             renderPager();
         }
     }
 
-    // 승인/반려 처리 (P만 가능)
-    async function updateStatus(docfoNo, docfoStat, rejectReason) {
-        const payload = {docfoStat};
-        if (rejectReason != null && String(rejectReason).trim() !== '') {
-            payload.rejectReason = String(rejectReason).trim();
-        }
+    // ===============================
+    // events
+    // ===============================
+    // 필터 변경
+    elMode?.addEventListener("change", () => {
+        page = 0;
+        editingId = null;
+        editingKind = null;
+        load();
+    });
 
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-            const t = await res.text().catch(() => '');
-            throw new Error(`상태 변경 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
-        }
-        return true;
-    }
-
-    async function approveOne(docfoNo) {
-        if (!docfoNo) return;
-        try {
-            await updateStatus(docfoNo, 'A');
-            toast('승인 처리 완료');
-            markFormListDirty();
-            await load();
-        } catch (err) {
-            console.error(err);
-            alert('승인 실패: ' + (err?.message || err));
-        }
-    }
-
-    async function rejectOne(docfoNo) {
-        if (!docfoNo) return;
-
-        const reason = prompt('반려 사유(필수):', '');
-        if (reason === null) return; // 취소
-        if (String(reason).trim() === '') {
-            alert('반려 사유를 입력해주세요.');
-            return;
-        }
-
-        try {
-            await updateStatus(docfoNo, 'R', reason);
-            toast('반려 처리 완료');
-            markFormListDirty();
-            await load();
-        } catch (err) {
-            console.error(err);
-            alert('반려 실패: ' + (err?.message || err));
-        }
-    }
-
-    async function approveDeleteOne(docfoNo) {
-        if (!docfoNo) return;
-        if (!confirm('삭제 요청을 승인하시겠습니까?')) return;
-
-        try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, {
-                method: 'PATCH',
-            });
-
-            if (!res.ok) {
-                const t = await res.text().catch(() => '');
-                throw new Error(`삭제 승인 실패 HTTP ${res.status} ${t}`);
-            }
-
-            toast('삭제 승인 완료');
-            markFormListDirty();
-            await load();
-        } catch (err) {
-            console.error(err);
-            alert('삭제 승인 실패: ' + (err?.message || err));
-        }
-    }
-
-    async function rejectDeleteOne(docfoNo) {
-        if (!docfoNo) return;
-
-        const reason = prompt('삭제 반려 사유(필수):', '');
-        if (reason === null) return;
-        if (String(reason).trim() === '') {
-            alert('삭제 반려 사유를 입력해주세요.');
-            return;
-        }
-
-        try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
-                method: 'PATCH',
-                body: JSON.stringify({ rejectReason: String(reason).trim() }),
-            });
-
-            if (!res.ok) {
-                const t = await res.text().catch(() => '');
-                throw new Error(`삭제 반려 실패 HTTP ${res.status} ${t}`);
-            }
-
-            toast('삭제 반려 완료');
-            markFormListDirty();
-            await load();
-        } catch (err) {
-            console.error(err);
-            alert('삭제 반려 실패: ' + (err?.message || err));
-        }
-    }
-
-    // 전역 노출(HTML onclick에서 사용)
-    window.openDetail = openDetail;
-    window.showRejectReason = showRejectReason;
-    window.approveOne = approveOne;
-    window.rejectOne = rejectOne;
-    window.approveDeleteOne = approveDeleteOne;
-    window.rejectDeleteOne = rejectDeleteOne;
-
-    // pager click
-    elPager?.addEventListener('click', (e) => {
+    // tbody 이벤트 위임(버튼/링크)
+    elTbody?.addEventListener("click", async (e) => {
         const t = e.target;
         if (!(t instanceof HTMLElement)) return;
 
-        const pageAttr = t.getAttribute('data-page');
-        if (pageAttr != null) {
-            const nextPage = Number(pageAttr);
-            if (Number.isFinite(nextPage)) {
-                page = nextPage;
-                load();
-            }
+        const action = t.getAttribute("data-action");
+        const id = t.getAttribute("data-id");
+
+        if (action === "detail" && id) {
+            openDetail(id);
             return;
         }
 
-        const go = t.getAttribute('data-go');
-        if (!go) return;
+        if (!id) return;
 
-        if (go === 'first') page = 0;
-        else if (go === 'prev') page = Math.max(0, page - 1);
-        else if (go === 'next') page = Math.min(totalPages - 1, page + 1);
-        else if (go === 'last') page = Math.max(0, totalPages - 1);
-
-        load();
-    });
-
-    // controls
-    document.getElementById('btnRefresh')?.addEventListener('click', () => load());
-    elSize?.addEventListener('change', () => {
-        page = 0;
-        load();
-    });
-    elMode?.addEventListener('change', () => {
-        page = 0;
-        load();
-    });
-
-    // storage listener
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'list:dirty' && e.newValue === 'true') {
-            consumeDirtyAndReload();
-        }
-    });
-
-    function consumeDirtyAndReload() {
         try {
-            const v = localStorage.getItem('list:dirty');
-            if (v === 'true') {
-                localStorage.removeItem('list:dirty');
-                load();
+            if (action === "reason") {
+                await showRejectReason(id);
+                return;
             }
-        } catch (_) {
-        }
-    }
 
-    window.addEventListener('focus', consumeDirtyAndReload);
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) consumeDirtyAndReload();
+            // THIRD-ADMIN은 버튼 자체가 없지만, 혹시 DOM 남아도 무시
+            if (isThrAdmin()) return;
+
+            if (action === "approve") {
+                await updateStatus(id, "A");
+                toast("승인 처리 완료");
+                markFormListDirty();
+                editingId = null; editingKind = null;
+                await load();
+                return;
+            }
+
+            if (action === "reject") {
+                // 인라인 사유 입력 열기
+                editingId = id;
+                editingKind = "REJECT";
+                await load(); // 다시 렌더(해당 row reasonWrap show)
+                return;
+            }
+
+            if (action === "delApprove") {
+                if (!confirm("삭제 요청을 승인하시겠습니까?")) return;
+                await approveDelete(id);
+                toast("삭제 승인 완료");
+                markFormListDirty();
+                editingId = null; editingKind = null;
+                await load();
+                return;
+            }
+
+            if (action === "delReject") {
+                editingId = id;
+                editingKind = "DEL_REJECT";
+                await load();
+                return;
+            }
+
+            if (action === "rejectCancel") {
+                editingId = null;
+                editingKind = null;
+                await load();
+                return;
+            }
+
+            if (action === "rejectSubmit") {
+                // 같은 row의 input 값 읽기
+                const row = t.closest("tr");
+                const input = row?.querySelector('[data-role="reasonInput"]');
+                const reason = (input && input instanceof HTMLInputElement) ? input.value.trim() : "";
+
+                if (!reason) { alert("반려 사유를 입력해주세요."); return; }
+
+                await updateStatus(id, "R", reason);
+                toast("반려 처리 완료");
+                markFormListDirty();
+                editingId = null; editingKind = null;
+                await load();
+                return;
+            }
+
+            if (action === "delRejectSubmit") {
+                const row = t.closest("tr");
+                const input = row?.querySelector('[data-role="reasonInput"]');
+                const reason = (input && input instanceof HTMLInputElement) ? input.value.trim() : "";
+
+                if (!reason) { alert("삭제 반려 사유를 입력해주세요."); return; }
+
+                await rejectDelete(id, reason);
+                toast("삭제 반려 완료");
+                markFormListDirty();
+                editingId = null; editingKind = null;
+                await load();
+                return;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("처리 실패: " + (err?.message || err));
+        }
     });
 
+    // pager는 createBtn onclick에서 처리하므로 별도 이벤트 불필요
+
+    // init
+    window.openDetail = openDetail;
+    window.submitRejectFromPopup = async ({ kind, docfoNo, reason }) => {
+        try {
+            if (!docfoNo) throw new Error("docfoNo 누락");
+            if (!reason || !reason.trim()) throw new Error("반려 사유가 비어 있습니다.");
+
+            if (kind === "REJECT") {
+                // P → R
+                await updateStatus(docfoNo, "R", reason);
+                toast("반려 처리 완료");
+            } else if (kind === "DEL_REJECT") {
+                // W → X
+                await rejectDelete(docfoNo, reason);
+                toast("삭제 반려 완료");
+            } else {
+                throw new Error("알 수 없는 반려 타입");
+            }
+
+            markFormListDirty();
+            editingId = null;
+            editingKind = null;
+            await load();
+        } catch (e) {
+            console.error(e);
+            alert("처리 실패: " + (e?.message || e));
+        }
+    };
     load();
 })();
