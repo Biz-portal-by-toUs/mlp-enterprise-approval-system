@@ -1011,6 +1011,8 @@ ALTER TABLE emp_schedule
 
 ALTER TABLE schedule
     ADD COLUMN all_day TINYINT(1) NOT NULL DEFAULT 0 AFTER ended_at;
+
+
 drop table folder;
 -- 공유함 Folder 테이블 변경(드롭하고 실행해주세요)
 CREATE TABLE folder (
@@ -1052,3 +1054,32 @@ ALTER TABLE document_form
 
 ALTER TABLE mail_user_state
     DROP COLUMN purged_at;
+
+# 회원 상태 다 대문자로 바꾸기
+ALTER TABLE employee
+    MODIFY msg_stat CHAR(1) NOT NULL DEFAULT 'C';
+
+ALTER TABLE employee
+    MODIFY atte CHAR(1) NOT NULL DEFAULT 'C';
+
+UPDATE employee SET msg_stat = UPPER(msg_stat);
+UPDATE employee SET atte = UPPER(atte);
+
+UPDATE employee
+SET msg_stat = 'H'
+WHERE msg_stat IS NULL
+   OR TRIM(msg_stat) NOT IN ('C','M','D','X','H');
+
+UPDATE employee
+SET atte = 'C'
+WHERE atte IS NULL
+   OR TRIM(atte) NOT IN ('B','V','C');
+
+ALTER TABLE employee
+    ADD CONSTRAINT chk_employee_msg_stat
+        CHECK (msg_stat IN ('C','M','D','X','H'));
+
+ALTER TABLE employee
+    ADD CONSTRAINT chk_employee_atte
+        CHECK (atte IN ('B','V','C'));
+-- 여기까지 해주기
