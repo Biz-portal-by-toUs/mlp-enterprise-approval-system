@@ -6,13 +6,13 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -32,15 +32,15 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     // 내 모든 근태 정보 조회
-    @GetMapping("/me")
-    public ResponseEntity<ResponseDto<List<ResAttendanceDto>>> getMyAttendances(@AuthenticationPrincipal CustomUser customUser) {
-
-        List<ResAttendanceDto> resAttendanceDtos = attendanceService.getMyAttendances(customUser.getComId(), customUser.getUsername());
-
-        return ResponseEntity
-                .ok()
-                .body(new ResponseDto<>(HttpStatus.OK, "내 근태 정보 조회 성공", resAttendanceDtos));
-    }
+//    @GetMapping("/me")
+//    public ResponseEntity<ResponseDto<List<ResAttendanceDto>>> getMyAttendances(@AuthenticationPrincipal CustomUser customUser) {
+//
+//        List<ResAttendanceDto> resAttendanceDtos = attendanceService.getMyAttendances(customUser.getComId(), customUser.getUsername());
+//
+//        return ResponseEntity
+//                .ok()
+//                .body(new ResponseDto<>(HttpStatus.OK, "내 근태 정보 조회 성공", resAttendanceDtos));
+//    }
 
     // 내 휴가 정보 조회
     @GetMapping("/me/vacations")
@@ -82,5 +82,20 @@ public class AttendanceController {
         return ResponseEntity
                 .ok()
                 .body(new ResponseDto<>(HttpStatus.OK, "근태 정보 조회 성공", attendance));
+    }
+
+    // 전체 회사 근태 페이지별 조회
+    @GetMapping("")
+    public ResponseEntity<ResponseDto<Page<ResAttendanceDto>>> getAllAttendances(
+            @AuthenticationPrincipal CustomUser customUser,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ResAttendanceDto> resAttendanceDtos = attendanceService.getAllAttendances(customUser.getComId(), pageable);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "전체 근태 정보 조회 성공", resAttendanceDtos));
     }
 }
