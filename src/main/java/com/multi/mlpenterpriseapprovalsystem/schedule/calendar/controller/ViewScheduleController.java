@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.controller;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;

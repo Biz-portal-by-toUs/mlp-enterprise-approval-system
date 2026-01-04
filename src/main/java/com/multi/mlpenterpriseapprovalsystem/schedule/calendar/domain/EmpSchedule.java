@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.domain;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;

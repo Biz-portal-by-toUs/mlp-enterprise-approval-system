@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.dto;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto;
 
 import lombok.*;
 

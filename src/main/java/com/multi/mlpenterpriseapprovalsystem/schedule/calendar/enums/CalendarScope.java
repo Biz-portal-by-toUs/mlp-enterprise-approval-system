@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.enums;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums;
 
 /**
  * 달력 보는 범위 (회사/부서/사원)

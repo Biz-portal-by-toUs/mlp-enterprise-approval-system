@@ -154,6 +154,7 @@ public enum ErrorCode {
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다"),
     NOT_REGISTER(HttpStatus.BAD_REQUEST,"NOT_REGISTER","등록자만 삭제가 가능합니다"),
     SCHEDULE_NOT_AUTH(HttpStatus.BAD_REQUEST,"SCHEDULE_NOT_AUTH","일정에 접근할 권한이 없습니다"),
+    TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO_NOT_FOUND", "투두리스트를 찾을 수 없습니다"),
 
 
 

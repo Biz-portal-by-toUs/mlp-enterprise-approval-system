@@ -1,7 +1,7 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.dto;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto;
 
-import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarScope;
-import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarViewType;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarViewType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

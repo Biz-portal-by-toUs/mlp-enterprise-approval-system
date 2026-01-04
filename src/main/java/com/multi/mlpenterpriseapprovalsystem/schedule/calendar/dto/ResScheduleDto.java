@@ -1,8 +1,8 @@
-package com.multi.mlpenterpriseapprovalsystem.schedule.dto;
+package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto;
 
-import com.multi.mlpenterpriseapprovalsystem.schedule.domain.EmpSchedule;
-import com.multi.mlpenterpriseapprovalsystem.schedule.domain.Schedule;
-import com.multi.mlpenterpriseapprovalsystem.schedule.enums.CalendarScope;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.EmpSchedule;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.Schedule;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope;
 import lombok.*;
 
 import java.time.LocalDate;
