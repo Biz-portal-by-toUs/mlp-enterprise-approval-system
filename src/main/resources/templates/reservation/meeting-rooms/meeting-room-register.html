@@ -125,6 +125,39 @@
                 object-fit: contain;
                 display: none;
             }
+
+            /* ===== form hints / validation UI ===== */
+            .hint-row{
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-top:6px;
+                gap:10px;
+            }
+
+            .hint{
+                color:#6b7280;
+                font-size:12px;
+            }
+
+            .counter{
+                color:#6b7280;
+                font-size:12px;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .error{
+                display:block;
+                margin-top:6px;
+                color:#ef4444;
+                font-size:12px;
+                font-weight:600;
+            }
+
+            .input-invalid{
+                border-color:#ef4444 !important;
+                box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+            }
         </style>
     </th:block>
 </head>
@@ -145,17 +178,26 @@
 
                     <div class="field">
                         <label>회의실명</label>
-                        <input type="text" name="roomName" maxlength="20" required>
+                        <input type="text" name="roomName" id="roomName" maxlength="20" required>
+                        <div class="hint-row">
+                            <small class="hint">최대 20자까지 입력 가능</small>
+                            <small class="counter" id="nameCounter">0 / 20</small>
+                        </div>
+                        <small class="error" id="nameError" style="display:none;"></small>
                     </div>
 
                     <div class="field">
                         <label>수용 인원</label>
-                        <input type="number" name="capacity" id="capacity" min="1" max="100" required>
+                        <input type="number" name="capacity" id="capacity" min="1" max="20" required>
+                        <div class="hint-row">
+                            <small class="hint">1~20명 입력 가능</small>
+                        </div>
+                        <small class="error" id="capError" style="display:none;"></small>
                     </div>
 
                     <div class="field">
                         <label>위치</label>
-                        <input type="text" name="location" maxlength="20">
+                        <input type="text" name="location" maxlength="50">
                     </div>
 
                     <div class="field">
@@ -223,6 +265,96 @@
             reader.readAsDataURL(file);
         }
 
+        /* ===== inline validation UI ===== */
+        const roomNameInput = document.getElementById("roomName");
+        const nameCounter = document.getElementById("nameCounter");
+        const nameError = document.getElementById("nameError");
+
+        const capInput = document.getElementById("capacity");
+        const capError = document.getElementById("capError");
+
+        function setError(inputEl, errorEl, msg) {
+            if (!errorEl) return;
+
+            if (msg) {
+                errorEl.textContent = msg;
+                errorEl.style.display = "block";
+                inputEl?.classList.add("input-invalid");
+            } else {
+                errorEl.textContent = "";
+                errorEl.style.display = "none";
+                inputEl?.classList.remove("input-invalid");
+            }
+        }
+
+        function updateNameUI() {
+            if (!roomNameInput) return;
+
+            const len = roomNameInput.value.length;
+            if (nameCounter) nameCounter.textContent = `${len} / 20`;
+
+            if (!roomNameInput.value.trim()) {
+                setError(roomNameInput, nameError, "");
+                return;
+            }
+
+            if (len > 20) setError(roomNameInput, nameError, "회의실명은 20자 이내여야 합니다.");
+            else setError(roomNameInput, nameError, "");
+        }
+
+        function updateCapUI() {
+            if (!capInput) return;
+
+            const v = capInput.value;
+
+            if (v === "") {
+                setError(capInput, capError, "");
+                return;
+            }
+
+            const n = Number(v);
+            if (Number.isNaN(n)) {
+                setError(capInput, capError, "숫자만 입력해주세요.");
+                return;
+            }
+
+            if (n < 1 || n > 20) {
+                setError(capInput, capError, "수용 인원은 1~20명 사이여야 합니다.");
+                return;
+            }
+
+            setError(capInput, capError, "");
+        }
+
+        roomNameInput?.addEventListener("input", updateNameUI);
+
+        /* ---------- capacity guard + UI ---------- */
+        capInput?.addEventListener("input", () => {
+            let value = capInput.value;
+
+            if (value === "") {
+                updateCapUI();
+                return;
+            }
+
+            const num = Number(value);
+
+            if (Number.isNaN(num)) {
+                capInput.value = "";
+                updateCapUI();
+                return;
+            }
+
+            if (num < 1) capInput.value = 1;
+            if (num > 20) capInput.value = 20;
+
+            updateCapUI();
+        });
+
+        /* 초기 표시 */
+        updateNameUI();
+        updateCapUI();
+
         /* ---------- submit ---------- */
         async function submitMeetingRoomForm(e) {
             e.preventDefault();
@@ -232,30 +364,34 @@
             const form = document.getElementById("roomForm");
             const formData = new FormData(form);
 
-            // 🔎 기본 유효성
+            updateNameUI();
+            updateCapUI();
+
             if (!name) {
-                alert("회의실명을 입력해주세요.");
+                setError(roomNameInput, nameError, "회의실명을 입력해주세요.");
+                roomNameInput.focus();
                 return;
             }
 
             if (name.length > 20) {
-                alert("회의실명은 20자 이내여야 합니다.");
+                setError(roomNameInput, nameError, "회의실명은 20자 이내여야 합니다.");
+                roomNameInput.focus();
                 return;
             }
 
-            if (!capacity || capacity < 1 || capacity > 100) {
-                alert("수용 인원은 1~100명 사이여야 합니다.");
+            if (!capacity || capacity < 1 || capacity > 20) {
+                setError(capInput, capError, "수용 인원은 1~20명 사이여야 합니다.");
+                capInput.focus();
                 return;
             }
 
             try {
                 const res = await fetch("/api/v1/meeting-rooms", {
                     method: "POST",
-                    credentials: "include",        // 🔥 쿠키 자동 전송
-                    body: formData                 // ⚠️ Content-Type 지정 금지
+                    credentials: "include",
+                    body: formData
                 });
 
-                // 🔒 인증 만료/미로그인
                 if (res.status === 401) {
                     alert("로그인이 필요합니다.");
                     location.href = "/login";
@@ -272,42 +408,15 @@
 
                 alert("회의실 등록 성공!");
                 location.href = "/meeting-rooms";
-
             } catch (err) {
                 console.error(err);
                 alert("서버 오류가 발생했습니다.");
             }
         }
 
-        /* ---------- capacity guard ---------- */
-        const capacityInput = document.getElementById("capacity");
-
-        capacityInput.addEventListener("input", () => {
-            let value = capacityInput.value;
-
-            if (value === "") return;
-
-            value = Number(value);
-
-            if (isNaN(value)) {
-                capacityInput.value = "";
-                return;
-            }
-
-            if (value < 1) {
-                capacityInput.value = 1;
-                return;
-            }
-
-            if (value > 100) {
-                capacityInput.value = 100;
-            }
-        });
-
-        document
-            .getElementById("roomForm")
-            .addEventListener("submit", submitMeetingRoomForm);
+        document.getElementById("roomForm")?.addEventListener("submit", submitMeetingRoomForm);
     </script>
+
 </th:block>
 
 </body>
