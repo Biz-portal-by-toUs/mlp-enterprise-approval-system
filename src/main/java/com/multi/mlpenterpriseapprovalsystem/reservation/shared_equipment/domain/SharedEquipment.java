@@ -34,7 +34,7 @@ public class SharedEquipment {
     @Column(length = 255)
     private String imgUrl;
 
-    @Column(length = 20)
+    @Column(length = 50)
     private String loc;
 
     /**

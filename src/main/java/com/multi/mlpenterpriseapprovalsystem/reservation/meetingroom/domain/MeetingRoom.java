@@ -36,7 +36,7 @@ public class MeetingRoom {
     @Column(nullable = false)
     private Integer cap;
 
-    @Column(length = 20, nullable = false)
+    @Column(length = 50, nullable = false)
     private String loc;
 
     @Column(length = 255)
