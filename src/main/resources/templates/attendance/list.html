@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>전체 근태 조회 - 기업용 전자결재시스템</title>
+
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* 컨테이너 및 헤더 스타일 */
+            .detail-content-area {
+                background: white;
+                padding: 40px;
+                min-height: 850px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            }
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #339af0;
+                padding-bottom: 15px;
+            }
+            .page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
+
+            /* 테이블 공통 스타일 */
+            .doc-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+            .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 15px 12px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
+            /* ✅ 모든 td는 기본적으로 중앙 정렬 */
+            .doc-table td { padding: 15px 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; }
+
+            /* 근태 구분 배지 (V: 휴가-파랑, B: 출장-주황) */
+            .doc-badge { display: inline-block !important; padding: 4px 10px !important; border-radius: 4px !important; font-size: 12px !important; font-weight: bold !important; position: static !important; width: auto !important; border: none !important; }
+            .badge-V { background: #e7f5ff !important; color: #228be6 !important; } /* 휴가 */
+            .badge-B { background: #fff4e6 !important; color: #fd7e14 !important; } /* 출장 */
+
+            /* 심플 버튼 스타일 */
+            .btn-view { padding: 6px 16px; background: #339af0; color: white; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+            .btn-view:hover { background: #228be6; }
+
+            /* 페이지네이션 스타일 */
+            .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
+            .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+            .page-btn-nav:disabled { background: #f1f3f5 !important; color: #adb5bd !important; cursor: not-allowed !important; border-color: #e9ecef !important; }
+            .page-btn-num { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
+            .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
+
+            /* 레이아웃 내부 여백 설정 */
+            .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <section class="page-with-subbar">
+        <aside th:replace="~{sidebar/attendance-sidebar :: attendanceSidebar('all')}"></aside>
+
+        <div>
+            <div class="detail-content-area">
+                <div class="page-header">
+                    <h1 class="page-title">전체 근태 조회</h1>
+                </div>
+
+                <div id="loading" style="text-align:center; padding:100px; color:#868e96;">정보를 불러오는 중...</div>
+
+                <table class="doc-table" id="attendance-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 50px;">NO</th>
+                        <th style="width: 100px;">부서</th>
+                        <th style="width: 110px;">이름(사번)</th>
+                        <th style="width: 80px;">구분</th>
+                        <th style="width: 110px;">대직자</th>
+                        <th style="width: 140px;">시작일</th>
+                        <th style="width: 140px;">종료일</th>
+                        <th style="width: 60px;">일수</th>
+                        <th>관련 문서</th>
+                        <th style="width: 90px;">문서보기</th>
+                    </tr>
+                    </thead>
+                    <tbody id="attendance-list">
+                    </tbody>
+                </table>
+
+                <div id="pagination-nav" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        let currentPage = 0;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData(0);
+        });
+
+        async function loadData(page) {
+            currentPage = page;
+            try {
+                const response = await fetch(`/api/v1/attendances?page=${page}&size=10`, {
+                    credentials: 'include'
+                });
+                const result = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+
+                // 데이터 유무와 상관없이 renderTable 호출 (renderTable 내부에서 처리)
+                renderTable(result.data.content || [], result.data.number || 0, result.data.size || 10);
+                renderPagination(result.data.totalPages || 0, result.data.number || 0);
+
+            } catch (error) {
+                console.error('데이터 조회 실패:', error);
+                document.getElementById('loading').textContent = '데이터를 불러오는 중 오류가 발생했습니다.';
+            }
+        }
+
+        function renderTable(list, page, size) {
+            const tbody = document.getElementById('attendance-list');
+            tbody.innerHTML = '';
+
+            // ✅ 데이터가 없을 때 빈 행(colspan) 처리
+            if (list.length === 0) {
+                const emptyTr = document.createElement('tr');
+                emptyTr.innerHTML = `
+                    <td colspan="10" style="padding: 100px; color: #adb5bd; font-size: 16px;">
+                        조회된 근태 정보가 없습니다.
+                    </td>
+                `;
+                tbody.appendChild(emptyTr);
+                return;
+            }
+
+            list.forEach((item, index) => {
+                const no = (page * size) + index + 1;
+
+                const isVacation = (item.atteType === 'V');
+                const typeBadge = isVacation ? 'badge-V' : 'badge-B';
+                const typeName = isVacation ? '휴가' : '출장';
+
+                const delegateInfo = item.delegateEmpName
+                    ? `<strong>${item.delegateEmpName}</strong><br><small style="color:#868e96;">${item.delegateEmpId}</small>`
+                    : '-';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${no}</td>
+                    <td>${item.writerDepName || '-'}</td>
+                    <td><strong>${item.writer || '-'}</strong><br><small style="color:#868e96;">${item.writerId || ''}</small></td>
+                    <td><span class="doc-badge ${typeBadge}">${typeName}</span></td>
+                    <td>${delegateInfo}</td>
+                    <td>${formatDate(item.startAt)}</td>
+                    <td>${formatDate(item.endAt)}</td>
+                    <td>${item.day}일</td>
+                    <td>${item.docTitle || '-'}</td>
+                    <td>${item.docNo ? `<button class="btn-view" onclick="location.href='/documents/${item.docNo}?status=FINALIZED'">보기</button>` : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderPagination(totalPages, currentPage) {
+            const nav = document.getElementById('pagination-nav');
+            if (!nav) return;
+            if (totalPages <= 1) { nav.innerHTML = ''; return; }
+            nav.innerHTML = '';
+
+            const addBtn = (idx, text, className = '', disabled = false) => {
+                const btn = document.createElement('button');
+                btn.className = className; btn.innerText = text; btn.disabled = disabled;
+                if (!disabled) btn.onclick = () => loadData(idx);
+                nav.appendChild(btn);
+            };
+
+            addBtn(currentPage - 1, '이전', 'page-btn-nav', currentPage === 0);
+
+            const range = 2;
+            for (let i = 0; i < totalPages; i++) {
+                if (i === 0 || i === totalPages - 1 || (i >= currentPage - range && i <= currentPage + range)) {
+                    if (i === currentPage - range && i > 1) {
+                        const span = document.createElement('span'); span.innerText = '...'; span.style.margin = '0 5px'; span.style.color = '#ccc'; nav.appendChild(span);
+                    }
+                    addBtn(i, i + 1, `page-btn-num ${i === currentPage ? 'active' : ''}`);
+                    if (i === currentPage + range && i < totalPages - 2) {
+                        const span = document.createElement('span'); span.innerText = '...'; span.style.margin = '0 5px'; span.style.color = '#ccc'; nav.appendChild(span);
+                    }
+                }
+            }
+            addBtn(currentPage + 1, '다음', 'page-btn-nav', currentPage === totalPages - 1);
+        }
+
+        function formatDate(str) {
+            if (!str) return '-';
+            const d = new Date(str);
+            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br><small>${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</small>`;
+        }
+    </script>
+</th:block>
+</body>
+</html>

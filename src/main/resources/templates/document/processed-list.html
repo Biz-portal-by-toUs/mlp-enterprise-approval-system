@@ -9,7 +9,22 @@
 
     <th:block layout:fragment="pageStyles">
         <style>
-            /* ✅ 정렬 옵션: 드롭다운 + 클릭 방식 혼합 */
+            /* [페이지 헤더] */
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+            }
+            .page-title {
+                font-size: 24px;
+                font-weight: bold;
+                color: #333;
+                margin: 0;
+            }
+
+            /* [정렬 옵션] */
             .sort-options {
                 display: flex;
                 gap: 15px;
@@ -19,133 +34,299 @@
                 padding: 10px 0;
             }
             .sort-basis-select {
-                padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;
-                font-size: 13px; outline: none; background: white; cursor: pointer;
+                padding: 8px 12px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                outline: none;
+                background: white;
+                cursor: pointer;
             }
-            .sort-basis-select:focus { border-color: #339af0; }
+            .sort-basis-select:focus { border-color: var(--primary); }
 
-            .sort-order-group { display: flex; gap: 15px; font-size: 13px; color: #666; }
-            .sort-order-group span { cursor: pointer; transition: color 0.2s; }
-            .sort-order-group span:hover { color: #339af0; }
-            .sort-order-group span.active { color: #339af0; font-weight: bold; text-decoration: underline; }
+            .sort-order-group {
+                display: flex;
+                gap: 15px;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+            }
+            .sort-order-group span {
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .sort-order-group span:hover { color: var(--primary); }
+            .sort-order-group span.active {
+                color: var(--primary);
+                font-weight: 800;
+                text-decoration: underline;
+            }
 
+            /* [상세 검색창] */
             .search-container {
-                background: #f1f3f5; padding: 20px; border-radius: 6px; margin-bottom: 25px;
-                display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: center;
+                background: #f8fafc;
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 16px;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px 20px;
+                align-items: center;
+                border: 1px solid var(--line);
             }
-            .search-group { display: flex; align-items: center; gap: 10px; position: relative; }
-            .search-group label { font-size: 13px; font-weight: 600; color: #495057; width: 80px; }
+            .search-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                position: relative;
+            }
+            .search-group label {
+                font-size: 13px;
+                font-weight: 600;
+                color: #495057;
+                width: 75px;
+                flex-shrink: 0;
+                text-align: right;
+            }
 
             .search-input, .search-select {
-                flex: 1; padding: 8px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; outline: none; background: white;
+                flex: 1;
+                padding: 8px 10px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-size: 13px;
+                outline: none;
+                background: white;
             }
 
-            /* ✅ 커스텀 검색 드롭다운 스타일 */
-            .custom-dropdown { position: relative; flex: 1; display: flex; }
-            .dropdown-list {
-                position: absolute; top: 100%; left: 0; right: 0;
-                background: white; border: 1px solid #dee2e6; border-radius: 4px;
-                max-height: 200px; overflow-y: auto; z-index: 1000;
-                display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            /* [커스텀 드롭다운] */
+            .custom-dropdown {
+                position: relative;
+                flex: 1;
+                display: flex;
             }
-            .dropdown-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f8f9fa; }
+            .dropdown-list {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                max-height: 200px;
+                overflow-y: auto;
+                z-index: 1000;
+                display: none;
+                box-shadow: var(--shadow);
+                margin-top: 4px;
+            }
+            .dropdown-item {
+                padding: 10px 12px;
+                font-size: 13px;
+                cursor: pointer;
+                border-bottom: 1px solid #f8f9fa;
+            }
             .dropdown-item:last-child { border-bottom: none; }
-            .dropdown-item:hover { background-color: #e7f5ff; color: #339af0; }
-            .dropdown-item.no-result { color: #adb5bd; cursor: default; text-align: center; }
+            .dropdown-item:hover {
+                background-color: #eff6ff;
+                color: var(--primary);
+            }
+            .dropdown-item.no-result {
+                color: var(--muted);
+                cursor: default;
+                text-align: center;
+            }
 
             .btn-search {
-                grid-column: span 4; justify-self: end; padding: 10px 30px;
-                background: #339af0; color: white; border: none; border-radius: 4px;
-                cursor: pointer; font-weight: bold; font-size: 14px;
+                grid-column: span 4;
+                justify-self: end;
+                padding: 10px 40px;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 14px;
+                transition: 0.15s;
+                margin-top: 5px;
             }
-            .btn-search:hover { background: #228be6; }
+            .btn-search:hover {
+                filter: brightness(0.9);
+            }
 
-            /* ✅ 테이블 스타일 */
+            /* [테이블 래퍼] */
+            .tableWrap {
+                background: #fff;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
+
+            /* [테이블 디자인] */
             .doc-table {
                 width: 100%;
                 border-collapse: collapse;
-                border-top: 2px solid #333;
                 table-layout: auto;
             }
-            .doc-table th {
-                background-color: #f8f9fa;
-                color: #495057;
+            .doc-table thead th {
+                background: #f9fafb;
+                color: var(--muted);
                 font-size: 14px;
-                padding: 12px 8px;
-                border-bottom: 1px solid #dee2e6;
+                padding: 14px 10px;
+                border-bottom: 1px solid var(--line);
                 white-space: nowrap;
-            }
-            .doc-table td {
-                padding: 15px 8px;
                 text-align: center;
-                border-bottom: 1px solid #eee;
-                font-size: 14px;
+                font-weight: 600;
+            }
+            .doc-table tbody td {
+                padding: 12px 10px;
+                text-align: center;
+                border-bottom: 1px solid var(--line);
+                font-size: 15px;
+                font-weight: 500;
                 color: #333;
                 vertical-align: middle;
                 word-break: break-all;
                 line-height: 1.4;
             }
-            .title-cell {
-                text-align: left !important;
-                padding-left: 15px !important;
-                cursor: pointer;
-                font-weight: 500;
+            .doc-table tbody tr:hover td {
+                background: #fcfdfe;
             }
-            .title-cell:hover { color: #339af0; text-decoration: underline; }
 
-            /* ✅ 문서 상태 배지 */
+            /* ✅ 제목 셀 중앙정렬 수정 */
+            .title-cell {
+                text-align: center !important;
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                cursor: pointer;
+                font-weight: 700;
+                word-break: break-all;
+                transition: color 0.2s;
+            }
+            .title-cell:hover {
+                color: var(--primary);
+            }
+
+            /* [문서 상태 배지] */
             .doc-table .doc-badge {
-                display: inline-block !important;
+                display: inline-flex !important;
+                align-items: center !important;
                 position: static !important;
                 padding: 4px 10px !important;
-                border-radius: 4px !important;
+                border-radius: 20px !important;
                 font-size: 12px !important;
-                font-weight: bold !important;
+                font-weight: 700 !important;
                 width: auto !important;
                 height: auto !important;
                 border: none !important;
                 background: transparent !important;
             }
             .doc-table .doc-badge-AW {
-                background: #e7f5ff !important;
-                color: #228be6 !important;
+                background: #eff6ff !important;
+                color: #2b6ae6 !important;
+                border: 1px solid #bfdbfe !important;
             }
             .doc-table .doc-badge-FI {
-                background: #e6fcf5 !important;
-                color: #0ca678 !important;
+                background: #ecfdf5 !important;
+                color: #10b981 !important;
             }
             .doc-table .doc-badge-RJ {
-                background: #fff5f5 !important;
-                color: #fa5252 !important;
+                background: #fef2f2 !important;
+                color: #ef4444 !important;
                 cursor: pointer !important;
                 transition: all 0.2s !important;
             }
             .doc-table .doc-badge-RJ:hover {
-                background: #ffe0e0 !important;
+                background: #fee2e2 !important;
                 transform: scale(1.05);
             }
             .doc-table .doc-badge-A {
-                background: #e6fcf5 !important;
-                color: #0ca678 !important;
+                background: #ecfdf5 !important;
+                color: #10b981 !important;
             }
             .doc-table .doc-badge-R {
-                background: #fff5f5 !important;
-                color: #fa5252 !important;
+                background: #fef2f2 !important;
+                color: #ef4444 !important;
                 cursor: pointer !important;
                 transition: all 0.2s !important;
             }
             .doc-table .doc-badge-R:hover {
-                background: #ffe0e0 !important;
+                background: #fee2e2 !important;
                 transform: scale(1.05);
             }
 
-            .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
-            .page-btn-nav { padding: 6px 18px; border: 1px solid #dee2e6; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; }
-            .page-btn-nav:disabled { background: #f1f3f5 !important; color: #adb5bd !important; cursor: not-allowed !important; }
-            .page-btn-num { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border: 1px solid #dee2e6; border-radius: 50%; background: #fff; cursor: pointer; font-size: 13px; text-decoration: none; color: inherit; }
-            .page-btn-num.active { background-color: #339af0; color: #fff; border-color: #339af0; font-weight: bold; }
+            /* [페이지네이션] */
+            .pager-wrapper {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                margin-top: 16px;
+            }
+            .pagination {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            .page-btn-nav {
+                min-width: 36px;
+                height: 36px;
+                border-radius: 6px;
+                border: 1px solid var(--line);
+                background: #fff;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: 0.15s;
+            }
+            .page-btn-nav:hover:not(:disabled) {
+                background: #f1f5f9;
+            }
+            .page-btn-nav:disabled {
+                background: #f1f3f5 !important;
+                color: #adb5bd !important;
+                cursor: not-allowed !important;
+            }
+            .page-btn-num {
+                min-width: 36px;
+                height: 36px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: #fff;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
+                color: inherit;
+                transition: 0.15s;
+            }
+            .page-btn-num:hover:not(.active) {
+                background: #f1f5f9;
+            }
+            .page-btn-num.active {
+                background-color: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
+            }
+            .page-btn-num.active:hover {
+                filter: brightness(0.9);
+            }
 
-            /* ✅ 모달 스타일 */
+            .pager-status {
+                position: absolute;
+                right: 0;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+
+            /* [모달 스타일] */
             .modal-overlay {
                 display: none;
                 position: fixed;
@@ -190,7 +371,7 @@
                 }
             }
 
-            /* ✅ AI 요약 모달 스타일 */
+            /* [AI 요약 모달] */
             .ai-modal-content {
                 background: white;
                 padding: 30px;
@@ -247,10 +428,11 @@
                 font-size: 15px;
             }
 
-            /* ✅ 메인 콘텐츠 영역 배경색 */
-            .page-with-subbar > div:last-child {
-                background: #fff;
-                padding: 22px 26px;
+            /* 로딩/공백 상태 */
+            .empty-msg {
+                padding: 40px 0;
+                color: var(--muted);
+                font-size: 15px;
             }
         </style>
     </th:block>
@@ -259,12 +441,11 @@
 <body>
 <div layout:fragment="content">
     <section class="page-with-subbar">
-
         <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('processed')}"></aside>
 
-        <div>
-            <div style="margin-bottom: 20px;">
-                <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">결재한 문서</h1>
+        <main style="padding: 24px; min-width: 0; flex: 1;">
+            <div class="page-header">
+                <h1 class="page-title">결재한 문서</h1>
             </div>
 
             <div class="search-container">
@@ -329,28 +510,36 @@
                 </div>
             </div>
 
-            <table class="doc-table">
-                <thead>
-                <tr>
-                    <th style="width: 50px;">NO</th>
-                    <th style="width: 120px;">문서코드</th>
-                    <th style="width: 90px;">카테고리</th>
-                    <th>제목</th>
-                    <th style="width: 80px;">부서</th>
-                    <th style="width: 90px;">작성자</th>
-                    <th style="width: 80px;">문서 상태</th>
-                    <th style="width: 100px;">상신일</th>
-                    <th style="width: 70px;">내 결재</th>
-                    <th style="width: 100px;">내 결재일</th>
-                    <th style="width: 70px;">AI 요약</th>
-                </tr>
-                </thead>
-                <tbody id="document-list"></tbody>
-            </table>
+            <section class="tableWrap">
+                <table class="doc-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 60px;">NO</th>
+                        <th style="width: 120px;">문서코드</th>
+                        <th style="width: 100px;">카테고리</th>
+                        <th>제목</th>
+                        <th style="width: 100px;">부서</th>
+                        <th style="width: 110px;">작성자</th>
+                        <th style="width: 100px;">문서 상태</th>
+                        <th style="width: 130px;">상신일</th>
+                        <th style="width: 90px;">내 결재</th>
+                        <th style="width: 130px;">내 결재일</th>
+                        <th style="width: 90px;">AI 요약</th>
+                    </tr>
+                    </thead>
+                    <tbody id="document-list">
+                    <tr><td colspan="11" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
+                    </tbody>
+                </table>
+            </section>
 
-            <div class="pagination" id="pagination-nav"></div>
-        </div>
-
+            <div class="pager-wrapper">
+                <div class="pagination" id="pagination-nav"></div>
+                <div class="pager-status">
+                    <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+                </div>
+            </div>
+        </main>
     </section>
 
     <div id="reject-modal" class="modal-overlay">
@@ -575,11 +764,19 @@
                     credentials: 'include'
                 });
                 const result = await response.json();
+
                 if (result.status === 200) {
+                    const totalPages = result.data.totalPages;
                     renderTable(result.data.content, page, result.data.size);
-                    renderPagination(result.data.totalPages, page);
+                    renderPagination(totalPages, page);
+                    document.getElementById('pageInfo').textContent =
+                        `page ${page + 1} / ${Math.max(totalPages, 1)}`;
                 }
-            } catch (error) { console.error('데이터 조회 실패'); }
+            } catch (error) {
+                console.error('데이터 조회 실패', error);
+                document.getElementById('document-list').innerHTML =
+                    '<tr><td colspan="11" class="empty-msg" style="color:var(--danger);">데이터 로드 중 오류가 발생했습니다.</td></tr>';
+            }
         }
 
         function renderTable(docs, currentPage, pageSize) {
@@ -587,7 +784,7 @@
             tbody.innerHTML = '';
 
             if (!docs || docs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" style="padding: 40px; color: #999;">문서가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-msg">문서가 없습니다.</td></tr>';
                 return;
             }
 
@@ -620,7 +817,7 @@
                     <td>${no}</td>
                     <td>${doc.docId || '-'}</td>
                     <td>${doc.docFormCatName || '-'}</td>
-                    <td class="title-cell" onclick="location.href='/documents/${doc.docNo}?status=PROCESSED'">${doc.title}</td>
+                    <td class="title-cell" title="${doc.title}">${doc.title}</td>
                     <td>${doc.writerDepName || '-'}</td>
                     <td>
                         ${doc.writer}<br><span style="font-size:12px; color:#868e96;">${doc.writerId}</span>
@@ -631,12 +828,15 @@
                     <td>${myApprovalDate}</td>
                     <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
                 `;
+
+                // ✅ 행 전체 클릭 이벤트를 제거하고 제목 셀에만 클릭 이벤트를 할당합니다.
+                const titleCell = tr.querySelector('.title-cell');
+                titleCell.addEventListener('click', () => {
+                    location.href = `/documents/${doc.docNo}?status=PROCESSED`;
+                });
+
                 tbody.appendChild(tr);
             });
-
-            for (let i = docs.length; i < 10; i++) {
-                tbody.innerHTML += '<tr>' + '<td></td>'.repeat(11) + '</tr>';
-            }
         }
 
         async function showRejectModal(docNo) {
@@ -662,65 +862,68 @@
         }
 
         function closeRejectModal() { document.getElementById('reject-modal').classList.remove('show'); }
-        function showAiSummaryModal(summary) { document.getElementById('ai-summary-text').textContent = summary || 'AI 요약 내용이 없습니다.'; document.getElementById('ai-summary-modal').classList.add('show'); }
+        function showAiSummaryModal(summary) {
+            document.getElementById('ai-summary-text').textContent = summary || 'AI 요약 내용이 없습니다.';
+            document.getElementById('ai-summary-modal').classList.add('show');
+        }
         function closeAiSummaryModal() { document.getElementById('ai-summary-modal').classList.remove('show'); }
         function escapeHtml(text) { return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
 
-        /* ✅ [개선된 페이지네이션] 슬라이딩 윈도우 방식 */
         function renderPagination(totalPages, currentPage) {
             const nav = document.getElementById('pagination-nav');
-            if (!nav) return;
+            if (!nav || totalPages <= 1) {
+                if(nav) nav.innerHTML = '';
+                return;
+            }
             nav.innerHTML = '';
-            if (totalPages <= 1) return;
 
-            const addBtn = (idx, text, className = '', disabled = false) => {
-                const btn = document.createElement('button');
-                btn.className = className;
-                btn.innerText = text;
-                btn.disabled = disabled;
-                if (!disabled) btn.onclick = () => loadData(idx);
-                nav.appendChild(btn);
+            const createBtn = (txt, target, active = false, disabled = false) => {
+                const b = document.createElement('button');
+                b.className = `page-btn-nav ${active ? 'active' : ''}`;
+                b.textContent = txt;
+                b.disabled = disabled;
+                if (!disabled) b.onclick = () => loadData(target);
+                return b;
             };
 
-            // 1. [이전] 버튼
-            addBtn(currentPage - 1, '이전', 'page-btn-nav', currentPage === 0);
+            const createNumBtn = (num, target, active = false) => {
+                const b = document.createElement('button');
+                b.className = `page-btn-num ${active ? 'active' : ''}`;
+                b.textContent = num;
+                b.onclick = () => loadData(target);
+                return b;
+            };
 
-            // 2. 숫자 버튼 로직
-            const range = 2; // 현재 페이지 앞뒤로 보여줄 개수
-            for (let i = 0; i < totalPages; i++) {
-                // 첫 페이지, 마지막 페이지, 그리고 현재 페이지 앞뒤 범위만 출력
-                if (i === 0 || i === totalPages - 1 || (i >= currentPage - range && i <= currentPage + range)) {
+            // 이전 버튼
+            nav.appendChild(createBtn('<', currentPage - 1, false, currentPage === 0));
 
-                    // 중간에 갭이 생길 경우 '...' 표시 (첫 페이지와 범위 사이)
-                    if (i === currentPage - range && i > 1) {
-                        const span = document.createElement('span');
-                        span.innerText = '...';
-                        span.style.margin = '0 5px';
-                        span.style.color = '#ccc';
-                        nav.appendChild(span);
-                    }
+            // 페이지 번호 (블록 단위)
+            const blockSize = 5;
+            const currentBlock = Math.floor(currentPage / blockSize);
+            const startPage = currentBlock * blockSize;
+            let endPage = startPage + blockSize - 1;
+            if (endPage > totalPages - 1) endPage = totalPages - 1;
 
-                    addBtn(i, i + 1, `page-btn-num ${i === currentPage ? 'active' : ''}`);
-
-                    // 중간에 갭이 생길 경우 '...' 표시 (범위와 마지막 페이지 사이)
-                    if (i === currentPage + range && i < totalPages - 2) {
-                        const span = document.createElement('span');
-                        span.innerText = '...';
-                        span.style.margin = '0 5px';
-                        span.style.color = '#ccc';
-                        nav.appendChild(span);
-                    }
-                }
+            for (let i = startPage; i <= endPage; i++) {
+                nav.appendChild(createNumBtn(i + 1, i, i === currentPage));
             }
 
-            // 3. [다음] 버튼
-            addBtn(currentPage + 1, '다음', 'page-btn-nav', currentPage === totalPages - 1);
+            // 다음 버튼
+            nav.appendChild(createBtn('>', currentPage + 1, false, currentPage === totalPages - 1));
         }
 
         function getDocStatusName(stat) { return { 'AW': '결재중', 'FI': '최종승인', 'RJ': '반려' }[stat] || stat; }
         function getMyApprStatusName(stat) { return { 'A': '승인', 'R': '반려' }[stat] || stat || '-'; }
-        function formatDate(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`; }
-        function formatDateSimple(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
+        function formatDate(str) {
+            if (!str) return '-';
+            const d = new Date(str);
+            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br>${String(d.getHours()).padStart(2, '0')}시 ${String(d.getMinutes()).padStart(2, '0')}분`;
+        }
+        function formatDateSimple(str) {
+            if (!str) return '-';
+            const d = new Date(str);
+            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
 
         document.addEventListener('click', (e) => {
             const rm = document.getElementById('reject-modal');

@@ -63,20 +63,44 @@
             .info-value { font-size: 14px; color: #333; font-weight: 500; }
             .doc-id { font-size: 15px; font-weight: bold; color: #339af0; }
 
-            /* 결재라인 */
+            /* ✅ 결재라인 디자인 개선 (상신한 문서 상세와 일치) */
             .approval-section-title { font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 12px; padding-left: 10px; border-left: 3px solid #339af0; }
-            .approval-card-container { display: flex; gap: 8px; flex-wrap: nowrap; align-items: stretch; }
+            .approval-card-container { display: flex; gap: 10px; flex-wrap: nowrap; align-items: stretch; }
             .approval-card {
-                flex: 1 1 0; min-width: 90px; max-width: 150px; padding: 15px 8px;
-                border: 2px solid #e9ecef; border-radius: 10px;
-                text-align: center; background: #fff; transition: all 0.2s;
+                flex: 1 1 0;
+                min-width: 105px;
+                max-width: 160px;
+                padding: 18px 10px;
+                border: 1px solid #e9ecef;
+                border-radius: 12px;
+                text-align: center;
+                background: #fff;
+                transition: all 0.2s;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             }
-            .approval-card.approved { border-color: #51cf66; background: linear-gradient(180deg, #ebfbee 0%, #fff 100%); }
-            .approval-card.current { border-color: #339af0; background: linear-gradient(180deg, #e7f5ff 0%, #fff 100%); }
-            .approval-card.rejected { border-color: #ff6b6b; background: linear-gradient(180deg, #fff5f5 0%, #fff 100%); }
-            .approval-seq { font-size: 10px; color: #adb5bd; margin-bottom: 6px; font-weight: 600; }
-            .approval-name { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px; }
-            .approval-date { font-size: 10px; color: #868e96; line-height: 1.4; }
+            .approval-card.approved { border: 2px solid #51cf66; background: #fafffb; }
+            .approval-card.current { border: 2px solid #339af0; background: #f8fbff; }
+            .approval-card.rejected { border: 2px solid #ff6b6b; background: #fffafb; }
+
+            .approval-seq { font-size: 11px; color: #adb5bd; margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px; }
+            .approval-name { font-size: 16px; font-weight: 800; color: #212529; margin-bottom: 2px; }
+
+            .approval-info-group { margin-bottom: 12px; }
+            .approval-id { font-size: 12px; color: #868e96; margin-bottom: 2px; }
+            .approval-dep, .approval-pos { font-size: 12px; color: #495057; font-weight: 500; line-height: 1.3; }
+
+            .approval-date {
+                font-size: 10px;
+                color: #adb5bd;
+                margin-top: auto;
+                padding-top: 8px;
+                border-top: 1px solid #f1f3f5;
+                width: 100%;
+                line-height: 1.4;
+            }
             .approval-arrow { display: flex; align-items: center; color: #dee2e6; font-size: 16px; flex-shrink: 0; padding: 0 2px; }
 
             /* 문서 내용 */
@@ -323,26 +347,65 @@
             } catch (error) { showToast('다운로드 오류', 'error'); }
         }
 
+        /* ✅ 개선된 결재라인 렌더링 함수 */
         function renderApprovalLine(lines) {
             const container = document.getElementById('approval-line');
-            container.innerHTML = ''; if (!lines || lines.length === 0) return;
-            const approvers = lines.filter(line => !line.isDelegate).sort((a, b) => a.seq - b.seq);
-            approvers.forEach((line, index) => {
+            container.innerHTML = '';
+            if (!lines || lines.length === 0) return;
+
+            // 1. seq별로 그룹화
+            const lineBySeq = {};
+            lines.forEach(line => {
+                if (!lineBySeq[line.seq]) lineBySeq[line.seq] = [];
+                lineBySeq[line.seq].push(line);
+            });
+
+            // 2. 각 순번에서 보여줄 결재자 선별 (완료 시 실제결재자, 미완료 시 원결재자)
+            const sortedSeqs = Object.keys(lineBySeq).sort((a, b) => a - b);
+            const displayLines = [];
+
+            sortedSeqs.forEach(seq => {
+                const stepLines = lineBySeq[seq];
+                // 실제 결재한 사람이 있는지 확인 (isActualAppr: true)
+                const actualApprover = stepLines.find(l => l.isActualAppr === true);
+                if (actualApprover) {
+                    displayLines.push(actualApprover);
+                } else {
+                    // 완료되지 않았다면 대직자가 아닌 원결재자(!isDelegate)를 선택
+                    const originalApprover = stepLines.find(l => !l.isDelegate);
+                    if (originalApprover) displayLines.push(originalApprover);
+                }
+            });
+
+            // 3. 선별된 결재자 렌더링
+            displayLines.forEach((line, index) => {
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
-                const isDelegate = lines.find(l => l.seq === line.seq && l.isDelegate && l.isActualAppr);
+
+                // 실제 결재자가 대직자인 경우 확인
+                const isDelegate = line.isDelegate && line.isActualAppr;
+
                 card.innerHTML = `
-                    <div class="approval-seq">결재자${line.seq}</div>
-                    <div class="approval-name">${line.approverName}</div>
-                    ${isDelegate ? '<div style="font-size:10px;color:#fa5252;font-weight:600;">(대직)</div>' : ''}
-                    <div class="approval-id">${line.approverId || '-'}</div>
-                    <div class="approval-dep">${line.approverDepName || '-'}</div>
-                    <div class="approval-pos">${line.approverPosName || ''}</div>
-                    <div class="approval-date">${line.endedAt ? formatDateTimeInline(line.endedAt) : '-'}</div>
+                    <div class="approval-seq">결재자 ${line.seq}</div>
+                    <div class="approval-name">${line.approverName || '-'}</div>
+                    <div class="approval-info-group">
+                        <div class="approval-id">${line.approverId || '-'}</div>
+                        <div class="approval-dep">${line.approverDepName || '-'}</div>
+                        <div class="approval-pos">${line.approverPosName || ''}</div>
+                    </div>
+                    <div style="margin-top: auto; width: 100%;">
+                        ${isDelegate ? '<div style="font-size: 10px; color: #fa5252; font-weight: 700; margin-bottom: 4px;">-대직-</div>' : ''}
+                        <div class="approval-date" style="margin-top: 0; border-top: 1px solid #f1f3f5; padding-top: 8px;">
+                            ${line.endedAt ? formatDateTimeInline(line.endedAt) : '-'}
+                        </div>
+                    </div>
                 `;
                 container.appendChild(card);
-                if (index < approvers.length - 1) {
-                    const arrow = document.createElement('div'); arrow.className = 'approval-arrow'; arrow.innerHTML = '→'; container.appendChild(arrow);
+                if (index < displayLines.length - 1) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'approval-arrow';
+                    arrow.innerHTML = '→';
+                    container.appendChild(arrow);
                 }
             });
         }
