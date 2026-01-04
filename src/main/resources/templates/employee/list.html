@@ -88,12 +88,12 @@
                 padding:0 14px;
             }
             .btn.primary{
-                background:var(--primary2);
+                background:var(--primary);
                 color:#fff;
             }
             .btn.ghost{
                 background: rgba(59,130,246,.10);
-                color: var(--primary2);
+                color: var(--primary);
                 border:1px solid rgba(59,130,246,.18);
             }
 
@@ -140,27 +140,69 @@
                 font-weight:900;
             }
 
-            /* pager */
+            /* pager (slightly smaller) */
             .pager{
                 display:flex;
                 justify-content:center;
-                gap:8px;
-                padding:14px 0 6px;
-                color:var(--muted);
-                font-weight:900;
+                align-items:center;
+                gap:9px;
+                padding:12px 0 6px;
                 user-select:none;
             }
+
             .page-btn{
-                cursor:pointer;
-                padding:6px 10px;
-                border-radius:10px;
-                border:1px solid rgba(17,24,39,.08);
+                width:40px;
+                height:40px;
+
+                display:flex;
+                align-items:center;
+                justify-content:center;
+
+                border-radius:12px;
+                border:1px solid rgba(17,24,39,.10);
                 background:#fff;
+                box-shadow: 0 5px 10px rgba(0,0,0,.06);
+
+                font-weight:900;
+                font-size:15px;
+                cursor:pointer;
+
+                transition: transform .08s ease, box-shadow .12s ease, background .12s ease;
             }
+
+            .page-btn:hover{
+                transform: translateY(-1px);
+                box-shadow: 0 7px 12px rgba(0,0,0,.08);
+            }
+
             .page-btn.active{
-                background: rgba(59,130,246,.12);
-                color: var(--primary2);
-                border-color: rgba(59,130,246,.22);
+                background: var(--primary2);
+                border-color: rgba(59,130,246,.35);
+                color:#fff;
+            }
+
+            .page-btn.icon{
+                font-size:17px; /* << < > >> */
+                color:#9ca3af;
+            }
+
+            .page-btn.disabled{
+                opacity:.45;
+                cursor:not-allowed;
+                pointer-events:none;
+                box-shadow:none;
+                transform:none;
+            }
+
+            @media (max-width: 600px){
+                .pager{ gap:8px; }
+                .page-btn{
+                    width:36px;
+                    height:36px;
+                    border-radius:11px;
+                    font-size:14px;
+                }
+                .page-btn.icon{ font-size:16px; }
             }
 
             /* toast */
@@ -211,11 +253,8 @@
         <!-- ✅ 실제 페이지 콘텐츠 -->
         <div class="admin-page">
 
-            <div class="page-title">사원 관리</div>
-            <div class="page-sub">사원 조회</div>
-
             <!-- Filter card -->
-            <div class="card">
+            <div class="card" style="margin-top:30px;">
                 <div class="filter">
                     <div class="filter-grid">
                         <div class="field">
@@ -482,14 +521,46 @@
                 tbody.appendChild(tr);
             });
 
+            // ===== pager (new: 5개씩 + << < > >>) =====
             pager.innerHTML = "";
-            for(let i=1; i<=totalPages; i++){
-                const b = document.createElement("div");
-                b.className = "page-btn" + (i === state.page ? " active" : "");
-                b.textContent = String(i);
-                b.addEventListener("click", ()=> { state.page = i; renderEmployees(); });
-                pager.appendChild(b);
+
+            const windowSize = 5;
+
+// 현재 페이지가 속한 "구간" 계산 (1~5, 6~10 ...)
+            const windowStart = Math.floor((state.page - 1) / windowSize) * windowSize + 1;
+            const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+
+            function makeBtn(label, onClick, { active=false, disabled=false, icon=false } = {}){
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "page-btn"
+                    + (active ? " active" : "")
+                    + (icon ? " icon" : "")
+                    + (disabled ? " disabled" : "");
+                btn.textContent = label;
+                if(!disabled) btn.addEventListener("click", onClick);
+                return btn;
             }
+
+            pager.appendChild(
+                makeBtn("<<", ()=> { state.page = 1; renderEmployees(); }, { icon:true, disabled: state.page === 1 })
+            );
+            pager.appendChild(
+                makeBtn("<", ()=> { state.page = Math.max(1, state.page - 1); renderEmployees(); }, { icon:true, disabled: state.page === 1 })
+            );
+
+            for(let i = windowStart; i <= windowEnd; i++){
+                pager.appendChild(
+                    makeBtn(String(i), ()=> { state.page = i; renderEmployees(); }, { active: i === state.page })
+                );
+            }
+
+            pager.appendChild(
+                makeBtn(">", ()=> { state.page = Math.min(totalPages, state.page + 1); renderEmployees(); }, { icon:true, disabled: state.page === totalPages })
+            );
+            pager.appendChild(
+                makeBtn(">>", ()=> { state.page = totalPages; renderEmployees(); }, { icon:true, disabled: state.page === totalPages })
+            );
         }
 
         function onSearch(){
