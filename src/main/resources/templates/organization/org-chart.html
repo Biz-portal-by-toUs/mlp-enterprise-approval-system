@@ -120,6 +120,18 @@
             font-size:12px; color:#2f6fda; background:rgba(47,111,218,0.10);
             padding:4px 8px; border-radius:999px; white-space:nowrap;
         }
+
+        /* ✅ 근태 배지 */
+        .emp-card .atte-tag{
+            font-size:12px;
+            padding:4px 8px;
+            border-radius:999px;
+            border:1px solid #e5e7eb;
+            background:#f9fafb;
+            color:#374151;
+            white-space:nowrap;
+        }
+
         .emp-card .row2{margin-top:4px; font-size:12px; color:#6b7280; display:flex; gap:8px; flex-wrap:wrap;}
         .emp-card .actions{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;}
         .emp-extra{
@@ -222,6 +234,13 @@
                 dropdown.classList.add('show');
             }
 
+            // ✅ 근태 코드 -> 표시 텍스트
+            function atteLabel(code) {
+                const c = (code ?? 'C').toString().trim().toUpperCase();
+                const map = { B: '출장 중', V: '휴가 중', C: '출근 중' };
+                return map[c] ?? '출근 중';
+            }
+
             // ================================
             // ✅ EMPLOYEE 사진: attachment -> presigned url -> img 적용
             // ================================
@@ -235,7 +254,6 @@
 
             function pickFirstAttachmentId(listItem) {
                 if (!listItem) return null;
-                // 프로젝트 DTO 필드명이 다를 수 있어 후보로 대응
                 return listItem.attachmentId ?? listItem.id ?? listItem.attId ?? listItem.fileId ?? null;
             }
 
@@ -252,7 +270,6 @@
 
                 const p = (async () => {
                     try {
-                        // 1) attachment list
                         const listJson = await fetchJson(PHOTO.list(empNo));
                         const list = listJson.data ?? listJson;
 
@@ -267,7 +284,6 @@
                             return null;
                         }
 
-                        // 2) preview url
                         const prevJson = await fetchJson(PHOTO.preview(attachmentId));
                         const prevData = prevJson.data ?? prevJson;
 
@@ -301,7 +317,6 @@
                         const empNo = el.getAttribute('data-emp-no');
                         if (!empNo) continue;
 
-                        // 이미 이미지면 스킵
                         if (el.querySelector('img')) continue;
 
                         const url = await resolveEmployeePhotoUrl(empNo);
@@ -359,7 +374,6 @@
                         const depId = btn.getAttribute('data-dep-id') || '';
                         activeDepId = depId ? depId : null;
 
-                        // 필터 클릭 시: 해당 부서는 열어줌
                         if (activeDepId) openDeps = new Set([activeDepId]);
 
                         renderAll();
@@ -380,8 +394,10 @@
 
                     const empCards = (dep.employees || []).map(emp => {
                         const empId = emp.empId;
-                        const empNo = emp.empNo; // ✅ entityId로 사용
+                        const empNo = emp.empNo;
                         const extraId = `extra-${empId}`;
+
+                        const atteText = atteLabel(emp.atte); // ✅ 여기서 변환
 
                         return `
               <div class="emp-card" id="emp-${escapeHtml(empId)}" data-emp-id="${escapeHtml(empId)}" data-dep-id="${escapeHtml(dep.depId)}">
@@ -392,13 +408,20 @@
                 <div class="info">
                   <div class="row1">
                     <div class="name">${escapeHtml(emp.empName)}</div>
-                    <div class="tag">${escapeHtml(emp.posName || '')}</div>
+
+                    <!-- ✅ 우측 배지: 직급 + 근태 -->
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <div class="tag">${escapeHtml(emp.posName || '')}</div>
+                      <div class="atte-tag">${escapeHtml(atteText)}</div>
+                    </div>
                   </div>
 
                   <div class="row2">
                     <span class="muted">${escapeHtml(dep.depName)}</span>
                     <span class="muted">•</span>
                     <span class="muted">사번 ${escapeHtml(emp.empId || '')}</span>
+                    <span class="muted">•</span>
+                    <span class="muted">근태 ${escapeHtml(atteText)}</span>
                   </div>
 
                   <div class="actions">
@@ -406,6 +429,7 @@
                   </div>
 
                   <div class="emp-extra" id="${escapeHtml(extraId)}">
+                    <div>근태: <span class="muted">${escapeHtml(atteText)}</span></div>
                     <div>사내번호: <span class="muted">${escapeHtml(emp.workPhone || '-')}</span></div>
                     <div>메일: <span class="muted">${escapeHtml(emp.email || '-')}</span></div>
                   </div>
@@ -436,10 +460,8 @@
 
                 orgContainer.innerHTML = parts.join('');
 
-                // ✅ 렌더 후 S3 사진 적용
                 hydrateEmployeeAvatars(orgContainer);
 
-                // 부서 펼치기/접기
                 orgContainer.querySelectorAll('.dept-head').forEach(head => {
                     head.addEventListener('click', () => {
                         const depId = head.getAttribute('data-dep');
@@ -457,7 +479,6 @@
                     });
                 });
 
-                // 사원 "자세히 보기" 토글
                 orgContainer.querySelectorAll('[data-toggle]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const id = btn.getAttribute('data-toggle');
@@ -489,7 +510,6 @@
                     const json = await fetchJson(API.orgChart);
                     orgData = json.data ?? json;
 
-                    // ✅ 처음 로딩은 "전체 펼침"
                     openAll();
                     activeDepId = null;
 
@@ -515,7 +535,10 @@
                     }
 
                     const html = rows.slice(0, 20).map(r => {
-                        const empNo = r.empNo; // ✅ search 응답에도 empNo 필요
+                        const empNo = r.empNo;
+                        // 검색 드롭다운에도 근태 표시하고 싶으면 아래 한 줄 추가 가능
+                        // const atteText = atteLabel(r.atte);
+
                         return `
               <div class="item" data-emp-id="${escapeHtml(r.empId)}" data-dep-id="${escapeHtml(r.depId)}">
                 <div class="left">
@@ -533,8 +556,6 @@
                     }).join('');
 
                     showDropdown(html);
-
-                    // ✅ 검색 결과에도 S3 사진 적용
                     hydrateEmployeeAvatars(dropdown);
 
                     dropdown.querySelectorAll('.item').forEach(item => {
@@ -556,7 +577,6 @@
             function focusEmployee(depId, empId) {
                 activeDepId = depId || null;
 
-                // 검색으로 이동하면 해당 부서만 열기
                 if (activeDepId) openDeps = new Set([activeDepId]);
 
                 renderAll();
@@ -571,7 +591,6 @@
                 });
             }
 
-            // ✅ 전체 접기/펼치기 토글
             toggleAllBtn.addEventListener('click', () => {
                 if (!orgData) return;
 
@@ -582,18 +601,15 @@
                 renderAll();
             });
 
-            // 검색 드롭다운 닫기(바깥 클릭)
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.org-search')) clearDropdown();
             });
 
-            // 입력 디바운스(실시간 검색)
             searchInput.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => searchEmployees(searchInput.value), 300);
             });
 
-            // Enter 시 즉시 검색
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     clearTimeout(debounceTimer);

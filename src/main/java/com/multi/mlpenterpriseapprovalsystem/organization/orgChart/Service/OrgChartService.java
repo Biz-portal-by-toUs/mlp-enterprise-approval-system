@@ -76,6 +76,7 @@ public class OrgChartService {
                     .objectKey(r.getObjectKey())
                     .workPhone(r.getWorkPhone())
                     .email(r.getEmail())
+                    .atte(r.getAtte())
                     .build());
         }
 
