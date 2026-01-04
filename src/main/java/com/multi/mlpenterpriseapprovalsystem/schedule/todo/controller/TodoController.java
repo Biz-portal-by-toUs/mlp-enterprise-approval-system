@@ -2,10 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.schedule.todo.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqCreateTodoDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqUpdateTodoDoneDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqUpdateTodoDto;
-import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ResTodoDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.service.TodoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * 투두리스트 컨트롤러
@@ -80,6 +78,17 @@ public class TodoController {
 
         return ResponseEntity.ok(
                 new ResponseDto<>(HttpStatus.OK, "투두 삭제 완료", null)
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<ResponseDto<List<ResTodoDto>>> list(
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        List<ResTodoDto> grouped = todoService.listMyTodos(user.getUsername());
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK, "투두 목록 조회 완료", grouped)
         );
     }
 

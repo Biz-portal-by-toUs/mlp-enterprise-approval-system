@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 투두리스트 서비스
  *
@@ -66,5 +68,14 @@ public class TodoService {
                 .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
 
         todoRepository.delete(todo);
+    }
+
+
+    public List<ResTodoDto> listMyTodos(String empId) {
+
+        return todoRepository.findAllByEmployeeEmpIdOrderByTodoNoDesc(empId)
+                .stream()
+                .map(ResTodoDto::from)
+                .toList();
     }
 }

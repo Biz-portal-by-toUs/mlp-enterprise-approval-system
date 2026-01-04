@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.schedule.todo.repository;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.domain.TodoList;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,4 +16,7 @@ import java.util.Optional;
 public interface TodoRepository extends JpaRepository<TodoList, Long> {
 
     Optional<TodoList> findByTodoNoAndEmployeeEmpId(Long todoNo, String empId);
+
+    List<TodoList> findAllByEmployeeEmpIdOrderByTodoNoDesc(String empId);
+
 }

@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "todo_list")
 public class TodoList extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="todo_no")
     private Long todoNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -27,6 +28,8 @@ public class TodoList extends BaseEntity {
     private Employee employee;
 
     private String title;
+
+    @Column(name = "is_done")
     private Boolean isDone;
 
     public static TodoList create(Employee employee, String title) {
