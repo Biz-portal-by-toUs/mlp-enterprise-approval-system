@@ -3,6 +3,8 @@ package com.multi.mlpenterpriseapprovalsystem.schedule.todo.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqCreateTodoDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqUpdateTodoDoneDto;
+import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ReqUpdateTodoDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.dto.ResTodoDto;
 import com.multi.mlpenterpriseapprovalsystem.schedule.todo.service.TodoService;
 import jakarta.validation.Valid;
@@ -23,7 +25,7 @@ import java.net.URI;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/todo")
+@RequestMapping("/api/v1/todos")
 public class TodoController {
 
     private final TodoService todoService;
@@ -42,4 +44,31 @@ public class TodoController {
                 .created(location) // ✅ 201 + Location
                 .body(new ResponseDto<>(HttpStatus.CREATED, "투두 생성 완료", created));
     }
+
+    @PatchMapping("/{todoNo}")
+    public ResponseEntity<ResponseDto<ResTodoDto>> update(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="todoNo") Long todoNo,
+            @RequestBody @Valid ReqUpdateTodoDto req
+    ) {
+        ResTodoDto updated = todoService.update(user.getUsername(), todoNo, req);
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK, "투두 수정 완료", updated)
+        );
+    }
+
+    @PatchMapping("/{todoNo}/done")
+    public ResponseEntity<ResponseDto<ResTodoDto>> updateDone(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name="todoNo") Long todoNo,
+            @RequestBody @Valid ReqUpdateTodoDoneDto req
+    ) {
+        ResTodoDto updated = todoService.updateDone(user.getUsername(), todoNo, req.getIsDone());
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK, "투두 완료 상태 변경 완료", updated)
+        );
+    }
+
 }
