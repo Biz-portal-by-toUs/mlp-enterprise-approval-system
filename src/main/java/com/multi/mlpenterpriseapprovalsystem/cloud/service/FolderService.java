@@ -251,6 +251,10 @@ public class FolderService {
         String empId = user.getUsername();
         Employee emp = employeeRepository.findByEmpId(empId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        if (emp.getDepartment() == null || emp.getDepartment().getDepNo() == null) {
+            throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
+        }
         return emp.getDepartment().getDepNo();
     }
 
