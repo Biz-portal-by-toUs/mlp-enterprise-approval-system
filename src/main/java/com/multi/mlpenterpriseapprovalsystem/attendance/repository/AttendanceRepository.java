@@ -3,11 +3,12 @@ package com.multi.mlpenterpriseapprovalsystem.attendance.repository;
 import com.multi.mlpenterpriseapprovalsystem.attendance.domain.Attendance;
 import com.multi.mlpenterpriseapprovalsystem.attendance.enums.AtteType;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,98 +21,39 @@ import java.util.List;
  * @filename : AttendanceRepository
  * @since : 25. 12. 29. 월요일
  */
-@Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    /**
-     * 사원의 특정 기간 근태 조회 (취소 시 삭제 대상 찾기용)
-     */
+    // 전체 조회 (삭제 제외)
+    @EntityGraph(attributePaths = {"employee", "employee.department", "document", "delegate"})
+    Page<Attendance> findByCompany_ComIdAndIsDeletedFalseOrderByStartAtDesc(String comId, Pageable pageable);
+
+    // 내 근태 조회 (삭제 제외)
+    List<Attendance> findByEmployee_EmpIdAndCompany_ComIdAndTypeAndIsDeletedFalseOrderByStartAtDesc(
+            String empId, String comId, AtteType type);
+
     @Query("SELECT a FROM Attendance a " +
-            "WHERE a.employee.empId = :empId " +
-            "AND a.company.comId = :comId " +
-            "AND a.type = :type " +
-            "AND a.startAt = :startAt " +
-            "AND a.endAt = :endAt")
-    List<Attendance> findByEmployeeAndPeriod(
-            @Param("comId") String comId,
-            @Param("empId") String empId,
-            @Param("type") AtteType type,
-            @Param("startAt") LocalDateTime startAt,
-            @Param("endAt") LocalDateTime endAt
-    );
-
-    /**
-     * 사원의 특정 기간 근태 삭제 (취소 처리용)
-     */
-    @Modifying
-    @Query("DELETE FROM Attendance a " +
-            "WHERE a.employee.empId = :empId " +
-            "AND a.company.comId = :comId " +
-            "AND a.type = :type " +
-            "AND a.startAt = :startAt " +
-            "AND a.endAt = :endAt")
-    int deleteByEmployeeAndPeriod(
-            @Param("comId") String comId,
-            @Param("empId") String empId,
-            @Param("type") AtteType type,
-            @Param("startAt") LocalDateTime startAt,
-            @Param("endAt") LocalDateTime endAt
-    );
-
-    /**
-     * 문서 번호로 근태 조회
-     */
-    @Query("SELECT a FROM Attendance a WHERE a.document.docId = :docId")
-    List<Attendance> findByDocId(@Param("docId") String docId);
-
-
-    /**
-     * 사원의 특정 타입 근태 조회
-     */
-    List<Attendance> findByEmployee_EmpIdAndCompany_ComIdAndType(String empId, String comId, AtteType type);
-
-    /**
-     * 휴가(V) 타입이면서 오늘 시작하거나 어제 종료된 근태 조회
-     */
-    @Query("SELECT a FROM Attendance a " +
-            "WHERE a.type = 'V' " +
+            "WHERE a.isDeleted = false " +
             "AND (FUNCTION('DATE', a.startAt) = :today " +
             "OR FUNCTION('DATE', a.endAt) = :yesterday)")
-    List<Attendance> findByStartAtIsTodayOrEndAtIsYesterday(
+    List<Attendance> findByStartAtIsTodayOrEndAtIsYesterdayAndIsDeletedFalse(
             @Param("today") LocalDate today,
             @Param("yesterday") LocalDate yesterday
     );
 
-
-    /**
-     * 사원의 모든 근태 조회 (최신순 정렬)
-     */
-    List<Attendance> findByEmployee_EmpIdAndCompany_ComIdOrderByStartAtDesc(
-            String empId, String comId
-    );
-
-    /**
-     * 사원의 특정 타입 근태 조회 (최신순 정렬)
-     */
-    List<Attendance> findByEmployee_EmpIdAndCompany_ComIdAndTypeOrderByStartAtDesc(
-            String empId, String comId, AtteType type
-    );
-
-
-    // 근태 등록 시 날짜 중복 체크: (기존 시작일 <= 새 종료일) AND (기존 종료일 >= 새 시작일)
+    // ✅ 중복 체크 (삭제된 데이터는 무시해야 함)
     @Query("SELECT COUNT(a) > 0 FROM Attendance a " +
-            "WHERE a.employee = :employee " +
+            "WHERE a.isDeleted = false AND a.employee = :employee " +
             "AND a.startAt <= :endAt AND a.endAt >= :startAt")
-    boolean existsByEmployeeAndDateOverlap(
+    boolean existsByEmployeeAndDateOverlapAndIsDeletedFalse(
             @Param("employee") Employee employee,
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt);
 
-    // 근태 수정 시 날짜 중복 체크
+    // ✅ 수정 시 중복 체크 (본인 제외 + 삭제 제외)
     @Query("SELECT COUNT(a) > 0 FROM Attendance a " +
-            "WHERE a.employee = :employee AND a.atteNo != :excludeAtteNo " +
+            "WHERE a.isDeleted = false AND a.employee = :employee AND a.atteNo != :excludeAtteNo " +
             "AND a.startAt <= :endAt AND a.endAt >= :startAt")
-    boolean existsByEmployeeAndDateOverlapExcludeSelf(
+    boolean existsByEmployeeAndDateOverlapExcludeSelfAndIsDeletedFalse(
             @Param("employee") Employee employee,
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt,
