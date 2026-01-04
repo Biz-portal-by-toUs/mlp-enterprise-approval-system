@@ -65,4 +65,10 @@ public class ViewDocumentFormController {
         model.addAttribute("mode", mode); // view | reject | delReject
         return "document-form/form-reject-reason";
     }
+
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @GetMapping("/temp")
+    public String tempList() {
+        return "document-form/temp-form-list";
+    }
 }

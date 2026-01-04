@@ -1,23 +1,99 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
-<!-- active: 'list' | 'pending' -->
-<aside class="subbar" th:fragment="formSidebar(active)">
+
+<aside class="subbar form-subbar" th:fragment="formSidebar(active)">
+    <style>
+        .subbar.form-subbar{
+            min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px);
+            background: rgba(59,130,246,.08) !important;
+            border-right: 1px solid rgba(59,130,246,.14) !important;
+            box-shadow: 10px 0 24px rgba(17,24,39,.10) !important;
+            border-radius: 0 !important;
+            overflow: hidden !important;
+            align-self: stretch;
+        }
+
+        .subbar.form-subbar .subbar-title{
+            font-weight:700;
+            font-size:12px;
+            color: rgba(31,41,55,.72);
+            padding: 12px 14px 10px;
+            margin:0;
+            border-bottom: 1px solid rgba(59,130,246,.14);
+            background: rgba(255,255,255,.30);
+        }
+
+        .subbar.form-subbar .subbar-nav{
+            display:flex;
+            flex-direction:column;
+            gap:0;
+            padding: 10px 0;
+        }
+
+        .subbar.form-subbar .subbar-item{
+            position:relative;
+            display:flex;
+            align-items:center;
+            height:44px;
+            padding: 0 14px 0 20px;
+            text-decoration:none;
+            font-size:13px;
+            font-weight:600;
+            color: var(--primary2);
+            transition: background .12s ease, color .12s ease;
+        }
+
+        .subbar.form-subbar .subbar-item:hover{
+            background: rgba(59,130,246,.08);
+        }
+
+        .subbar.form-subbar .subbar-item.active{
+            background: rgba(59,130,246,.14);
+            color:#1d4ed8;
+        }
+
+        .subbar.form-subbar .subbar-item.active::before{
+            content:"";
+            position:absolute;
+            left:10px;
+            top:50%;
+            transform:translateY(-50%);
+            width:3px;
+            height:26px;
+            border-radius:999px;
+            background: var(--primary);
+        }
+    </style>
+
     <h3 class="subbar-title">문서양식</h3>
 
     <nav class="subbar-nav">
+        <!-- ✅ 전체 양식: 모두에게 노출 -->
         <a class="subbar-item"
            th:href="@{/form/forms}"
            th:classappend="${active} == 'list' ? ' active' : ''">
             전체 양식
         </a>
 
-        <a class="subbar-item"
-           th:href="@{/form/pending}"
-           th:classappend="${active} == 'pending' ? ' active' : ''">
-            승인 대기 문서 양식
-        </a>
+        <!-- ✅ 임시저장/승인대기: EMPLOYEE는 숨김 (관리자만 노출) -->
+        <th:block sec:authorize="hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')">
+            <a class="subbar-item"
+               th:href="@{/form/temp}"
+               th:classappend="${active} == 'temp' ? ' active' : ''">
+                임시 저장 문서
+            </a>
+
+            <a class="subbar-item"
+               th:href="@{/form/pending}"
+               th:classappend="${active} == 'pending' ? ' active' : ''">
+                승인 대기 문서 양식
+            </a>
+        </th:block>
     </nav>
 </aside>
+
 </body>
 </html>

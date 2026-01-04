@@ -3,8 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.ReqDocumentFormCreateDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.ReqDocumentFormStatusDto;
+import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
@@ -184,5 +183,44 @@ public class DocumentFormController {
 
         documentFormService.rejectDelete(docfoNo, customUser.getComId(), req.rejectReason());
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PostMapping("/temp")
+    public ResponseEntity<Long> createTemp(
+            @AuthenticationPrincipal CustomUser customUser,
+            @Valid @RequestBody ReqDocumentFormTempDto req
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+
+        Long docfoNo = documentFormService.createTemp(req, customUser.getComId(), customUser.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
+    }
+
+    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PutMapping("/{docfoNo}/temp")
+    public ResponseEntity<Void> saveTemp(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable Long docfoNo,
+            @Valid @RequestBody ReqDocumentFormTempDto req
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+
+        documentFormService.saveTemp(docfoNo, req, customUser.getComId(), customUser.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @GetMapping("/temp")
+    public ResponseEntity<Page<ResDocumentFormListDto>> getMyTempForms(
+            @AuthenticationPrincipal CustomUser customUser,
+            @RequestParam(name = "q", required = false) String q,
+            @PageableDefault(size = 15) Pageable pageable
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+
+        return ResponseEntity.ok(
+                documentFormService.findMyTempList(customUser.getComId(), customUser.getUsername(), q, pageable)
+        );
     }
 }
