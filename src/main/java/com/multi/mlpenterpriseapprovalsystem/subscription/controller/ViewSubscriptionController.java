@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.subscription.controller;
 
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResSubscriptionDto;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -16,8 +15,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class ViewSubscriptionController {
 
     @GetMapping("/subscriptions")
-    public String viewSubscriptions(ResSubscriptionDto resSubscriptionDto) {
-        return "subscription/subscriptions";
+    public String viewSubscriptions() {
+        return "subscription/list";
     }
+
+
 
 }
