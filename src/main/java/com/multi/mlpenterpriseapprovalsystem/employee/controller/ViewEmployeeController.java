@@ -29,4 +29,12 @@ public class ViewEmployeeController {
         model.addAttribute("comId", comId != null ? comId : "");
         return "employeeMainPage";
     }
+
+    @GetMapping("/me")
+    public String me(@AuthenticationPrincipal CustomUser user, Model model) {
+        String comId = (user != null ? user.getComId() : null);
+        model.addAttribute("username", user != null ? user.getUsername() : "");
+        model.addAttribute("comId", comId != null ? comId : "");
+        return "employee/me";
+    }
 }
