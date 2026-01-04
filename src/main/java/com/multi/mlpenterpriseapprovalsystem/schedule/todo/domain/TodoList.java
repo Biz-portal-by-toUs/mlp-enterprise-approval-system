@@ -28,4 +28,21 @@ public class TodoList extends BaseEntity {
 
     private String title;
     private Boolean isDone;
+
+    public static TodoList create(Employee employee, String title) {
+        TodoList t = new TodoList();
+        t.employee = employee;
+        t.title = title;
+        t.isDone = false;
+        return t;
+    }
+
+    public void update(String title, Boolean isDone) {
+        if (title != null) this.title = title;
+        if (isDone != null) this.isDone = isDone;
+    }
+
+    public void toggleDone() {
+        this.isDone = (this.isDone == null) ? Boolean.TRUE : !this.isDone;
+    }
 }
