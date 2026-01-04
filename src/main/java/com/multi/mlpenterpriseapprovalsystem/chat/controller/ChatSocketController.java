@@ -28,5 +28,4 @@ public class ChatSocketController {
         String empId = principal.getName();
         chatMessageService.sendMessage(req, empId);
     }
-
 }

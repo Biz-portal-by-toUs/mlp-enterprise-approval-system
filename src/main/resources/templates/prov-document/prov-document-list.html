@@ -6,11 +6,9 @@
 <head>
     <title>규정 목록 - Bizportal</title>
     <style>
-        /* ✅ list.html (직급 편성) 스타일 이식 */
         .prov-page .page-title { font-size: 34px; font-weight: 900; margin: 10px 0 8px; }
         .prov-page .page-sub { font-size: 18px; font-weight: 800; margin: 0 0 20px; color: #111; }
 
-        /* 상단 액션바 (검색 + 버튼) */
         .prov-page .actions {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px;
         }
@@ -26,6 +24,12 @@
         }
         .prov-page .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; font-weight: 700; }
 
+        /* 돋보기 버튼 스타일 */
+        .prov-page .searchBtn {
+            background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0;
+        }
+        .prov-page .searchBtn:hover svg { stroke: var(--primary); }
+
         .prov-page .btn {
             border: 0; border-radius: 12px; padding: 12px 24px; font-weight: 900; cursor: pointer;
             background: var(--primary); color: #fff; box-shadow: 0 10px 20px rgba(59,130,246,.22);
@@ -33,7 +37,6 @@
         }
         .prov-page .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
 
-        /* 테이블 스타일 (카드형 행) */
         .prov-page .card {
             background: #f1f3f6; border-radius: 18px; padding: 22px; min-height: 520px;
         }
@@ -49,13 +52,11 @@
         .prov-page .row td:first-child { border-top-left-radius: 14px; border-bottom-left-radius: 14px; text-align: center; }
         .prov-page .row td:last-child { border-top-right-radius: 14px; border-bottom-right-radius: 14px; text-align: center; }
 
-        /* 상태 배지 */
         .status-badge { padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 900; }
         .status-DONE { background: #f3fff6; color: #1b7f3a; }
         .status-FAILED { background: #fff5f4; color: #b42318; }
         .status-PROCESSING { background: #f0f7ff; color: #2b5db8; }
 
-        /* 페이징 버튼 */
         .pager .pageBtn {
             min-width: 38px; height: 38px; border-radius: 10px; border: 0; background: #fff;
             font-size: 14px; font-weight: 900; cursor: pointer; transition: 0.2s; color: #111;
@@ -81,8 +82,12 @@
                         <option value="false">비공개</option>
                     </select>
                     <div class="searchWrap">
-                        <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#666" stroke-width="3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                         <input id="keyword" class="searchInput" placeholder="규정 제목 검색..." />
+                        <button id="searchBtn" class="searchBtn" type="button">
+                            <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#666" stroke-width="3">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <button id="createBtn" class="btn" type="button">규정 등록</button>
@@ -125,7 +130,6 @@
             return `<span class="status-badge status-${s}">${label}</span>`;
         }
 
-        // ✅ 필터링 및 페이지 로드 통합 함수
         async function loadPage(page = 0){
             const qs = new URLSearchParams({
                 page: page,
@@ -133,11 +137,9 @@
                 sort: "createdAt,desc"
             });
 
-            // 키워드 검색 추가
             const kw = $("keyword").value.trim();
             if (kw) qs.set("keyword", kw);
 
-            // ✅ 공개/비공개 필터링 값 추출 및 파라미터 설정
             const pubValue = $("publicSelect").value;
             if (pubValue === "true" || pubValue === "false") {
                 qs.set("isPublic", pubValue);
@@ -198,23 +200,24 @@
             wrap.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
         }
 
-        // ✅ 초기화 및 이벤트 리스너 등록
         document.addEventListener("DOMContentLoaded", () => {
-            // 1. 초기 데이터 로드
             loadPage(0);
 
-            // 2. 공개/비공개 셀렉트 변경 시 즉시 필터링
             $("publicSelect").addEventListener("change", () => {
                 loadPage(0);
             });
 
-            // 3. 키워드 검색 (디바운싱 적용)
-            $("keyword").addEventListener("input", () => {
-                clearTimeout(window.searchTimer);
-                window.searchTimer = setTimeout(() => loadPage(0), 300);
+            // ✅ 수정된 검색 이벤트: 버튼 클릭 또는 엔터
+            $("searchBtn").addEventListener("click", () => {
+                loadPage(0);
             });
 
-            // 4. 새 규정 등록 버튼
+            $("keyword").addEventListener("keydown", (e) => {
+                if (e.key === 'Enter') {
+                    loadPage(0);
+                }
+            });
+
             $("createBtn").onclick = () => location.href = "/admin/prov-document/create";
         });
     </script>

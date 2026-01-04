@@ -46,6 +46,7 @@ public class ChatMessageController {
     }
 
 
+
     @GetMapping("/{roomNo}")
     public ResponseEntity<ResponseDto<List<ResChatMessageDto>>> getMessages(
             @PathVariable(name = "roomNo") Long roomNo,
@@ -65,4 +66,5 @@ public class ChatMessageController {
                 )
         );
     }
+
 }

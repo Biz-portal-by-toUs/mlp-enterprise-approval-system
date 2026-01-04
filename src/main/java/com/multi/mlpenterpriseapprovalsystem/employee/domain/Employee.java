@@ -83,7 +83,7 @@ public class Employee extends BaseEntity {
     @Column(nullable = false, length = 1)
     private String atte; // 근태(출장 = B , 휴가 = V, 출근 = C) // default = C
 
-    @Column(name = "msg_stat", nullable = false, length = 1)
+    @Column(name = "msg_stat", nullable = false, length = 1, columnDefinition = "H")
 
     private String msgStat ; // 메시지 상태 ( 근무 중 = C, 회의 중 = M, 업무 집중 = D, 자리 비움 = X, 출근 안함 = H) // default = H
 
