@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>반려 사유</title>
+
+    <style>
+        :root{
+            --fg:#0f172a;
+            --mut:#64748b;
+            --line:#e2e8f0;
+            --bg:#f1f5f9;
+            --card:#ffffff;
+
+            /* layout 없이도 primary 색을 쓰고 싶으면,
+               layout에 있는 값과 맞춰서 여기서 한 번 정의해두면 됨 */
+            --primary:#3b82f6;
+        }
+
+        html,body{height:100%}
+        body{
+            margin:0;
+            font-family:ui-sans-serif,system-ui,"Pretendard","Apple SD Gothic Neo","Noto Sans KR";
+            color:var(--fg);
+            background:var(--bg);
+        }
+
+        .wrap{
+            height:100%;
+            display:flex;
+            flex-direction:column;
+            padding:16px;
+            box-sizing:border-box;
+            gap:12px;
+        }
+
+        .head{
+            display:flex;
+            align-items:flex-end;
+            justify-content:space-between;
+            gap:12px;
+        }
+        .title{
+            margin:0;
+            font-size:18px;
+            font-weight:800;
+        }
+        .sub{
+            margin:4px 0 0;
+            font-size:12px;
+            color:var(--mut);
+        }
+
+        .card{
+            flex:1;
+            display:flex;
+            flex-direction:column;
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:12px;
+            overflow:hidden;
+        }
+
+        textarea{
+            flex:1;
+            width:100%;
+            border:0;
+            outline:none;
+            resize:none;
+            padding:14px;
+            font-size:14px;
+            line-height:1.5;
+            box-sizing:border-box;
+            background:#fff;
+        }
+
+        .foot{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            padding:12px 14px;
+            border-top:1px solid var(--line);
+            background:#fff;
+        }
+
+        .btn{
+            height:40px;
+            padding:0 18px;
+            border-radius:8px;
+            font-size:14px;
+            font-weight:800;
+            cursor:pointer;
+            border:1px solid transparent;
+            transition:.15s;
+            white-space:nowrap;
+        }
+        .btn:hover{ filter:brightness(.95); }
+
+        .btn.primary{
+            background:var(--primary);
+            color:#fff;
+            border:none;
+        }
+        .btn.primary:hover{ filter:brightness(.9); }
+
+        .btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+        .btn.ghost:hover{ background:#f8fafc; filter:none; }
+
+        .hint{
+            font-size:12px;
+            color:var(--mut);
+        }
+    </style>
+</head>
+
+<body>
+<div class="wrap">
+    <div class="head">
+        <div>
+            <h1 class="title" id="pageTitle">반려 사유</h1>
+            <p class="sub" id="pageSub">-</p>
+        </div>
+        <div class="hint" id="modeHint"></div>
+    </div>
+
+    <div class="card">
+        <textarea id="reason" placeholder="사유를 입력하세요..."></textarea>
+
+        <div class="foot">
+            <button class="btn ghost" id="btnCancel">취소</button>
+            <button class="btn primary" id="btnOk">확인</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    const API_BASE = "/api/v1/forms";
+
+    const qs = new URLSearchParams(location.search);
+    const mode = qs.get("mode") || "view";     // view | reject | delReject
+    const docfoNo = qs.get("docfoNo") || "";
+
+    const $ = (id) => document.getElementById(id);
+    const elTitle = $("pageTitle");
+    const elSub = $("pageSub");
+    const elHint = $("modeHint");
+    const elReason = $("reason");
+    const btnOk = $("btnOk");
+    const btnCancel = $("btnCancel");
+
+    function setUiForMode(){
+        if (mode === "view") {
+            elTitle.textContent = "반려 사유";
+            elHint.textContent = "읽기 전용";
+            elReason.readOnly = true;
+            elReason.placeholder = "";
+        } else if (mode === "reject") {
+            elTitle.textContent = "반려 사유 입력";
+            elHint.textContent = "반려 처리";
+            elReason.readOnly = false;
+        } else if (mode === "delReject") {
+            elTitle.textContent = "삭제 반려 사유 입력";
+            elHint.textContent = "삭제 반려 처리";
+            elReason.readOnly = false;
+        } else {
+            elTitle.textContent = "사유";
+            elHint.textContent = "";
+        }
+        elSub.textContent = docfoNo ? `문서번호: ${docfoNo}` : "-";
+    }
+
+    async function apiFetch(url, options = {}) {
+        const headers = new Headers(options.headers || {});
+        if (!headers.has("Accept")) headers.set("Accept", "application/json");
+        if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+        return fetch(url, { ...options, headers, credentials: "same-origin" });
+    }
+
+    function getRejectReason(data){
+        return data?.rejectReason
+            ?? data?.rejReason
+            ?? data?.reject_reason
+            ?? data?.rej_reason
+            ?? data?.reason
+            ?? data?.rejectMsg
+            ?? data?.reject_message
+            ?? "";
+    }
+
+    async function loadReasonIfView(){
+        if (mode !== "view") return;
+        if (!docfoNo) { elReason.value = ""; return; }
+
+        try{
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method:"GET" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            elReason.value = getRejectReason(data) || "사유가 저장되어 있지 않아요.";
+        }catch(e){
+            elReason.value = `사유 조회 실패: ${e.message}`;
+        }
+    }
+
+    btnCancel.onclick = () => window.close();
+
+    btnOk.onclick = async () => {
+        if (mode === "view") {
+            window.close();
+            return;
+        }
+
+        const reason = elReason.value.trim();
+        if (!reason) {
+            alert("사유를 입력해주세요.");
+            elReason.focus();
+            return;
+        }
+
+        // opener에 위임 (부모가 API 호출/리로드)
+        if (window.opener && typeof window.opener.submitRejectFromPopup === "function") {
+            await window.opener.submitRejectFromPopup({ mode, docfoNo, reason });
+            window.close();
+        } else {
+            alert("부모 창과 연결할 수 없어요. 창을 닫고 다시 시도해주세요.");
+        }
+    };
+
+    // init
+    setUiForMode();
+    loadReasonIfView();
+    elReason.focus();
+</script>
+</body>
+</html>

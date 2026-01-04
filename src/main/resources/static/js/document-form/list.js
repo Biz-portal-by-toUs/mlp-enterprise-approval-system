@@ -334,7 +334,7 @@
     }
 
     btnDeleteSelected?.addEventListener('click', async () => {
-        if (isEmployee()) { toast('권한이 없습니다.'); return; }
+        if (isEmployee()) { alert('권한이 없습니다.'); return; }
         if (selected.size === 0) return;
 
         const ids = Array.from(selected);
@@ -360,7 +360,7 @@
     });
 
     btnCreate?.addEventListener('click', () => {
-        if (isEmployee()) { toast('권한이 없습니다.'); return; }
+        if (isEmployee()) { alert('권한이 없습니다.'); return; }
 
         window.open(
             `${VIEW_BASE}/new`,

@@ -377,12 +377,12 @@ async function deleteForm(docfoNo) {
         }
 
         btnEdit.addEventListener('click', () => {
-            if (isEmployee) return
+            if (isEmployee) { alert('권한이 없습니다.'); return; }
             location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}/edit`
         })
 
         btnDelete.addEventListener('click', async () => {
-            if (isEmployee) return
+            if (isEmployee) { alert('권한이 없습니다.'); return; }
 
             const ok = confirm('정말 삭제할까요?')
             if (!ok) return

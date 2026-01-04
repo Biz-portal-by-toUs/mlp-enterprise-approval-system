@@ -23,7 +23,19 @@
     // ===============================
     // role
     // ===============================
-    // Thymeleaf에서 <html class="role-thr-admin"> 형태로 주입되어 있다고 가정
+    function isEmployee() {
+        const cls = document.documentElement.classList;
+        return cls.contains("role-employee") || cls.contains("role-EMPLOYEE");
+    }
+
+    // EMPLOYEE면 pending 페이지 접근 자체를 막고 팝업 안내
+    if (isEmployee()) {
+        alert("권한이 없습니다. (승인 대기 목록은 관리자만 접근 가능합니다.)");
+        // 원하는 이동 경로로 수정
+        location.replace("/form/forms");
+        return;
+    }
+
     function isThrAdmin() {
         const cls = document.documentElement.classList;
         return cls.contains("role-THR_ADMIN") || cls.contains("role-thr-admin") || cls.contains("role-thr_admin");

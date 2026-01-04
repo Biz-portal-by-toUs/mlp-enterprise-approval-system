@@ -74,6 +74,10 @@ public class SecurityConfig {
                                 "SEC_ADMIN",
                                 "THR_ADMIN",
                                 "EMPLOYEE")
+                        .requestMatchers("/api/v1/form/pending").hasAnyRole("SYS_ADMIN",
+                                "COM_ADMIN",
+                                "SEC_ADMIN",
+                                "THR_ADMIN")
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("COM_ADMIN")
