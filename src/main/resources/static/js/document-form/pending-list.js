@@ -1,3 +1,4 @@
+// /js/document-form/pending-list.js
 (() => {
     const API_BASE = "/api/v1/forms";
     const VIEW_BASE = "/form";
@@ -16,10 +17,6 @@
     let totalPages = 1;
     let totalElements = 0;
 
-    // 인라인 반려사유 입력을 위한 상태
-    let editingId = null;        // docfoNo
-    let editingKind = null;      // 'REJECT' | 'DEL_REJECT'
-
     // ===============================
     // role
     // ===============================
@@ -28,17 +25,21 @@
         return cls.contains("role-employee") || cls.contains("role-EMPLOYEE");
     }
 
-    // EMPLOYEE면 pending 페이지 접근 자체를 막고 팝업 안내
+    // EMPLOYEE면 pending 페이지 접근 자체를 막고 안내
     if (isEmployee()) {
         alert("권한이 없습니다. (승인 대기 목록은 관리자만 접근 가능합니다.)");
-        // 원하는 이동 경로로 수정
         location.replace("/form/forms");
         return;
     }
 
+    function hasRoleClass(name) {
+        const html = document.documentElement?.classList;
+        const body = document.body?.classList;
+        return (html && html.contains(name)) || (body && body.contains(name));
+    }
+
     function isThrAdmin() {
-        const cls = document.documentElement.classList;
-        return cls.contains("role-THR_ADMIN") || cls.contains("role-thr-admin") || cls.contains("role-thr_admin");
+        return hasRoleClass("role-thr-admin") || hasRoleClass("role-THR_ADMIN") || hasRoleClass("role-thr_admin");
     }
 
     // ===============================
@@ -68,31 +69,36 @@
     }
 
     function getRejectReason(r) {
-        return r?.rejectReason
-            ?? r?.rejReason
-            ?? r?.reject_reason
-            ?? r?.rej_reason
-            ?? r?.reason
-            ?? r?.rejectMsg
-            ?? r?.reject_message
-            ?? null;
+        return (
+            r?.rejectReason ??
+            r?.rejReason ??
+            r?.reject_reason ??
+            r?.rej_reason ??
+            r?.reason ??
+            r?.rejectMsg ??
+            r?.reject_message ??
+            null
+        );
     }
 
     function getStatPill(stat) {
         const s = String(stat ?? "").trim() || "-";
         const map = {
-            P: { cls: "P", label: "대기" },
-            W: { cls: "W", label: "삭제대기" },
-            R: { cls: "R", label: "반려" },
-            X: { cls: "X", label: "삭제반려" },
-            A: { cls: "A", label: "승인" },
+            P: {cls: "P", label: "대기"},
+            W: {cls: "W", label: "삭제대기"},
+            R: {cls: "R", label: "반려"},
+            X: {cls: "X", label: "삭제반려"},
+            A: {cls: "A", label: "승인"},
         };
-        const it = map[s] || { cls: "", label: s };
+        const it = map[s] || {cls: "", label: s};
         return `<span class="statPill ${esc(it.cls)}">${esc(it.label)}</span>`;
     }
 
     function markFormListDirty() {
-        try { localStorage.setItem("list:dirty", "true"); } catch (_) {}
+        try {
+            localStorage.setItem("list:dirty", "true");
+        } catch (_) {
+        }
     }
 
     // ===============================
@@ -107,11 +113,11 @@
             headers.set("Content-Type", "application/json");
         }
 
-        return fetch(url, { ...options, headers, credentials: "same-origin" });
+        return fetch(url, {...options, headers, credentials: "same-origin"});
     }
 
     async function updateStatus(docfoNo, docfoStat, rejectReason) {
-        const payload = { docfoStat };
+        const payload = {docfoStat};
         if (rejectReason != null && String(rejectReason).trim() !== "") {
             payload.rejectReason = String(rejectReason).trim();
         }
@@ -129,7 +135,7 @@
     }
 
     async function approveDelete(docfoNo) {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, { method: "PATCH" });
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, {method: "PATCH"});
         if (!res.ok) {
             const t = await res.text().catch(() => "");
             throw new Error(`삭제 승인 실패 HTTP ${res.status} ${t}`);
@@ -140,7 +146,7 @@
     async function rejectDelete(docfoNo, rejectReason) {
         const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
             method: "PATCH",
-            body: JSON.stringify({ rejectReason: String(rejectReason).trim() }),
+            body: JSON.stringify({rejectReason: String(rejectReason).trim()}),
         });
         if (!res.ok) {
             const t = await res.text().catch(() => "");
@@ -151,7 +157,7 @@
 
     async function showRejectReason(docfoNo) {
         try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {method: "GET"});
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const reason = getRejectReason(data) ?? "사유가 저장되어 있지 않아요.";
@@ -171,12 +177,23 @@
     }
 
     // ===============================
+    // A 방식: prompt로 사유 입력
+    // ===============================
+    function askReason(title) {
+        const reason = window.prompt(title, "");
+        if (reason == null) return null; // 취소
+        const trimmed = String(reason).trim();
+        if (!trimmed) return ""; // 빈 입력
+        return trimmed;
+    }
+
+    // ===============================
     // filter: mode -> stats (✅ W/X 유지)
     // ===============================
     function getStatsByMode(mode) {
-        if (mode === "P") return ["P", "W"];        // 대기 그룹
-        if (mode === "R") return ["R", "X"];        // 반려 그룹
-        return ["P", "W", "R", "X"];                // 모두
+        if (mode === "P") return ["P", "W"]; // 대기 그룹
+        if (mode === "R") return ["R", "X"]; // 반려 그룹
+        return ["P", "W", "R", "X"]; // 모두
     }
 
     // ===============================
@@ -193,92 +210,75 @@
         const startNo = page * PAGE_SIZE;
         const thr = isThrAdmin();
 
-        elTbody.innerHTML = rows.map((r, idx) => {
-            const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
-            const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? "-";
-            const stat = r.docfoStat ?? r.docfo_stat ?? "-";
+        elTbody.innerHTML = rows
+            .map((r, idx) => {
+                const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
+                const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? "-";
+                const stat = r.docfoStat ?? r.docfo_stat ?? "-";
 
-            const writerObj = r.writer ?? r.employee ?? r.writerInfo ?? null;
-            const writerName = getWriterName(writerObj);
+                const writerObj = r.writer ?? r.employee ?? r.writerInfo ?? null;
+                const writerName = getWriterName(writerObj);
 
-            const idStr = String(docfoNo ?? "");
-            const rowNo = startNo + idx + 1;
+                const idStr = String(docfoNo ?? "");
+                const rowNo = startNo + idx + 1;
 
-            const reasonInline = getRejectReason(r);
-            const isPendingGroup = (stat === "P" || stat === "W");
-            const isRejectedGroup = (stat === "R" || stat === "X");
+                const reasonInline = getRejectReason(r);
+                const isPendingGroup = stat === "P" || stat === "W";
+                const isRejectedGroup = stat === "R" || stat === "X";
 
-            // 인라인 사유 입력 표시 여부
-            const isEditingThis = (editingId === idStr);
-            const showRejectBox = isEditingThis && editingKind === "REJECT";       // P 반려
-            const showDelRejectBox = isEditingThis && editingKind === "DEL_REJECT"; // W 삭제반려
+                let actionHtml = "";
 
-            let actionHtml = "";
-
-            // THIRD-ADMIN: 버튼 없음, 대기는 '-', 반려는 사유버튼(있으면)
-            if (thr) {
-                if (isPendingGroup) {
-                    actionHtml = `<span class="muted">-</span>`;
-                } else if (isRejectedGroup) {
-                    actionHtml = reasonInline
-                        ? `<button class="btn sm warn" data-action="reason" data-id="${esc(idStr)}">사유</button>`
-                        : `<span class="muted">-</span>`;
+                // THIRD-ADMIN: 버튼 없음, 대기는 '-', 반려는 사유버튼(있으면)
+                if (thr) {
+                    if (isPendingGroup) {
+                        actionHtml = `<span class="muted">-</span>`;
+                    } else if (isRejectedGroup) {
+                        actionHtml = reasonInline
+                            ? `<button class="btn sm warn btn-reason" data-action="reason" data-id="${esc(idStr)}">사유</button>`
+                            : `<span class="muted">-</span>`;
+                    } else {
+                        actionHtml = `<span class="muted">-</span>`;
+                    }
                 } else {
-                    actionHtml = `<span class="muted">-</span>`;
+                    // 승인/반려 가능 권한자
+                    if (stat === "P") {
+                        actionHtml = `
+              <button class="btn sm ok" data-action="approve" data-id="${esc(idStr)}">승인</button>
+              <button class="btn sm danger" data-action="reject" data-id="${esc(idStr)}">반려</button>
+            `;
+                    } else if (stat === "W") {
+                        actionHtml = `
+              <button class="btn sm ok" data-action="delApprove" data-id="${esc(idStr)}">삭제승인</button>
+              <button class="btn sm danger" data-action="delReject" data-id="${esc(idStr)}">삭제반려</button>
+            `;
+                    } else if (isRejectedGroup) {
+                        actionHtml = reasonInline
+                            ? `<button class="btn sm warn" data-action="reason" data-id="${esc(idStr)}">사유</button>`
+                            : `<span class="muted">-</span>`;
+                    } else {
+                        actionHtml = `<span class="muted">-</span>`;
+                    }
                 }
-            } else {
-                // 그 외 권한자(승인/반려 가능)
-                if (stat === "P") {
-                    actionHtml = `
-            <button class="btn sm ok" data-action="approve" data-id="${esc(idStr)}">승인</button>
-            <button class="btn sm danger" data-action="reject" data-id="${esc(idStr)}">반려</button>
-            <span class="reasonWrap ${showRejectBox ? "show" : ""}" data-role="reasonWrap">
-              <input class="reasonInput" type="text" maxlength="200"
-                     placeholder="반려 사유 입력" value="${esc(showRejectBox ? (reasonInline ?? "") : "")}"
-                     data-role="reasonInput"/>
-              <button class="btn sm warn" data-action="rejectSubmit" data-id="${esc(idStr)}">확인</button>
-              <button class="btn sm ghost" data-action="rejectCancel" data-id="${esc(idStr)}">취소</button>
-            </span>
-          `;
-                } else if (stat === "W") {
-                    actionHtml = `
-            <button class="btn sm ok" data-action="delApprove" data-id="${esc(idStr)}">삭제승인</button>
-            <button class="btn sm danger" data-action="delReject" data-id="${esc(idStr)}">삭제반려</button>
-            <span class="reasonWrap ${showDelRejectBox ? "show" : ""}" data-role="reasonWrap">
-              <input class="reasonInput" type="text" maxlength="200"
-                     placeholder="삭제 반려 사유 입력" value="${esc(showDelRejectBox ? (reasonInline ?? "") : "")}"
-                     data-role="reasonInput"/>
-              <button class="btn sm warn" data-action="delRejectSubmit" data-id="${esc(idStr)}">확인</button>
-              <button class="btn sm ghost" data-action="rejectCancel" data-id="${esc(idStr)}">취소</button>
-            </span>
-          `;
-                } else if (isRejectedGroup) {
-                    actionHtml = reasonInline
-                        ? `<button class="btn sm warn" data-action="reason" data-id="${esc(idStr)}">사유</button>`
-                        : `<span class="muted">-</span>`;
-                } else {
-                    actionHtml = `<span class="muted">-</span>`;
-                }
-            }
 
-            return `
-        <tr>
-          <td>${rowNo}</td>
-          <td class="col-title">
-            <a class="titleLink" href="javascript:void(0)" data-action="detail" data-id="${esc(idStr)}">
-              ${esc(docfoName)}
-            </a>
-          </td>
-          <td>${esc(writerName)}</td>
-          <td>${getStatPill(stat)}</td>
-          <td style="text-align:center;">
-            <div class="row-actions">
-              ${actionHtml}
-            </div>
-          </td>
-        </tr>
-      `;
-        }).join("");
+                return `
+          <tr>
+            <td>${rowNo}</td>
+            <td class="col-title">
+              <a class="titleLink" href="javascript:void(0)" data-action="detail" data-id="${esc(idStr)}">
+                ${esc(docfoName)}
+              </a>
+            </td>
+            <td>${esc(writerName)}</td>
+            <td>${getStatPill(stat)}</td>
+            <td style="text-align:center;">
+              <div class="row-actions">
+                ${actionHtml}
+              </div>
+            </td>
+          </tr>
+        `;
+            })
+            .join("");
     }
 
     function renderPager() {
@@ -301,23 +301,17 @@
             b.disabled = disabled;
             b.onclick = () => {
                 page = target;
-                // 페이지 이동 시 인라인 사유 입력 닫기
-                editingId = null;
-                editingKind = null;
                 load();
             };
             return b;
         };
 
-        // 이전
         elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
 
-        // 숫자(1페이지도 표시)
         for (let i = startPage; i <= endPage; i++) {
             elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
         }
 
-        // 다음
         elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
@@ -333,26 +327,26 @@
             const stats = getStatsByMode(mode);
 
             const results = await Promise.all(
-                stats.map(s =>
-                    apiFetch(`${API_BASE}?stat=${encodeURIComponent(s)}&page=0&size=${BIG}`, { method: "GET" })
-                        .then(async (res) => {
-                            if (!res.ok) {
-                                const t = await res.text().catch(() => "");
-                                throw new Error(`${s} 조회 실패 HTTP ${res.status} ${t}`);
-                            }
-                            const json = await res.json();
-                            // 스프링 page 형태(content)만 사용
-                            const items = (json?.content && Array.isArray(json.content)) ? json.content
-                                : (json?.data?.content && Array.isArray(json.data.content)) ? json.data.content
+                stats.map((s) =>
+                    apiFetch(`${API_BASE}?stat=${encodeURIComponent(s)}&page=0&size=${BIG}`, {method: "GET"}).then(async (res) => {
+                        if (!res.ok) {
+                            const t = await res.text().catch(() => "");
+                            throw new Error(`${s} 조회 실패 HTTP ${res.status} ${t}`);
+                        }
+                        const json = await res.json();
+                        const items =
+                            json?.content && Array.isArray(json.content)
+                                ? json.content
+                                : json?.data?.content && Array.isArray(json.data.content)
+                                    ? json.data.content
                                     : [];
-                            return items;
-                        })
+                        return items;
+                    })
                 )
             );
 
-            // 중복 제거 + 정렬
             const map = new Map();
-            results.flat().forEach(it => {
+            results.flat().forEach((it) => {
                 const key = String(it.docfoNo ?? it.id ?? it.docfo_no ?? "");
                 if (!key) return;
                 map.set(key, it);
@@ -389,11 +383,8 @@
     // ===============================
     // events
     // ===============================
-    // 필터 변경
     elMode?.addEventListener("change", () => {
         page = 0;
-        editingId = null;
-        editingKind = null;
         load();
     });
 
@@ -418,23 +409,28 @@
                 return;
             }
 
-            // THIRD-ADMIN은 버튼 자체가 없지만, 혹시 DOM 남아도 무시
+            // THIRD-ADMIN은 버튼 자체가 없지만 혹시 남아도 무시
             if (isThrAdmin()) return;
 
             if (action === "approve") {
                 await updateStatus(id, "A");
                 toast("승인 처리 완료");
                 markFormListDirty();
-                editingId = null; editingKind = null;
                 await load();
                 return;
             }
 
             if (action === "reject") {
-                // 인라인 사유 입력 열기
-                editingId = id;
-                editingKind = "REJECT";
-                await load(); // 다시 렌더(해당 row reasonWrap show)
+                const reason = askReason("반려 사유를 입력하세요");
+                if (reason == null) return; // 취소
+                if (!reason) {
+                    alert("반려 사유를 입력해주세요.");
+                    return;
+                }
+                await updateStatus(id, "R", reason);
+                toast("반려 처리 완료");
+                markFormListDirty();
+                await load();
                 return;
             }
 
@@ -443,52 +439,20 @@
                 await approveDelete(id);
                 toast("삭제 승인 완료");
                 markFormListDirty();
-                editingId = null; editingKind = null;
                 await load();
                 return;
             }
 
             if (action === "delReject") {
-                editingId = id;
-                editingKind = "DEL_REJECT";
-                await load();
-                return;
-            }
-
-            if (action === "rejectCancel") {
-                editingId = null;
-                editingKind = null;
-                await load();
-                return;
-            }
-
-            if (action === "rejectSubmit") {
-                // 같은 row의 input 값 읽기
-                const row = t.closest("tr");
-                const input = row?.querySelector('[data-role="reasonInput"]');
-                const reason = (input && input instanceof HTMLInputElement) ? input.value.trim() : "";
-
-                if (!reason) { alert("반려 사유를 입력해주세요."); return; }
-
-                await updateStatus(id, "R", reason);
-                toast("반려 처리 완료");
-                markFormListDirty();
-                editingId = null; editingKind = null;
-                await load();
-                return;
-            }
-
-            if (action === "delRejectSubmit") {
-                const row = t.closest("tr");
-                const input = row?.querySelector('[data-role="reasonInput"]');
-                const reason = (input && input instanceof HTMLInputElement) ? input.value.trim() : "";
-
-                if (!reason) { alert("삭제 반려 사유를 입력해주세요."); return; }
-
+                const reason = askReason("삭제 반려 사유를 입력하세요");
+                if (reason == null) return; // 취소
+                if (!reason) {
+                    alert("삭제 반려 사유를 입력해주세요.");
+                    return;
+                }
                 await rejectDelete(id, reason);
                 toast("삭제 반려 완료");
                 markFormListDirty();
-                editingId = null; editingKind = null;
                 await load();
                 return;
             }
@@ -498,35 +462,7 @@
         }
     });
 
-    // pager는 createBtn onclick에서 처리하므로 별도 이벤트 불필요
-
     // init
     window.openDetail = openDetail;
-    window.submitRejectFromPopup = async ({ kind, docfoNo, reason }) => {
-        try {
-            if (!docfoNo) throw new Error("docfoNo 누락");
-            if (!reason || !reason.trim()) throw new Error("반려 사유가 비어 있습니다.");
-
-            if (kind === "REJECT") {
-                // P → R
-                await updateStatus(docfoNo, "R", reason);
-                toast("반려 처리 완료");
-            } else if (kind === "DEL_REJECT") {
-                // W → X
-                await rejectDelete(docfoNo, reason);
-                toast("삭제 반려 완료");
-            } else {
-                throw new Error("알 수 없는 반려 타입");
-            }
-
-            markFormListDirty();
-            editingId = null;
-            editingKind = null;
-            await load();
-        } catch (e) {
-            console.error(e);
-            alert("처리 실패: " + (e?.message || e));
-        }
-    };
     load();
 })();

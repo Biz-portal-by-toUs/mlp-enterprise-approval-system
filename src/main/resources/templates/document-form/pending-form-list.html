@@ -3,7 +3,10 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}"
-      th:classappend="${#authorization.expression('hasRole(''EMPLOYEE'')')} ? 'role-employee' : ''">
+      th:classappend="
+        ${#authorization.expression('hasRole(''EMPLOYEE'')')} ? ' role-employee' : ''
+        + (${#authorization.expression('hasRole(''THR_ADMIN'')')} ? ' role-thr-admin' : '')
+      ">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -249,28 +252,6 @@
             color: #111827;
         }
 
-        /* 인라인 반려사유 */
-        .reasonWrap {
-            display: none;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .reasonWrap.show {
-            display: flex;
-        }
-
-        .reasonInput {
-            height: 32px;
-            border-radius: 8px;
-            border: 1px solid var(--line);
-            padding: 0 10px;
-            font-size: 13px;
-            outline: none;
-            width: 240px;
-            background: #fff;
-        }
-
         /* pager */
         .pager-wrapper {
             display: flex;
@@ -318,6 +299,16 @@
             display: flex;
             gap: 12px;
             align-items: center;
+        }
+
+        html.role-thr-admin .row-actions button,
+        body.role-thr-admin .row-actions button{
+            display:none !important;
+        }
+
+        html.role-thr-admin .row-actions button.btn-reason,
+        body.role-thr-admin .row-actions button.btn-reason{
+            display:inline-flex !important;
         }
 
         @media (max-width: 760px) {
