@@ -135,6 +135,8 @@
         .card.card--overflow-visible{
             overflow: visible;
         }
+
+        #delete-btn{ display:none; }
     </style>
 </th:block>
 
@@ -231,8 +233,8 @@
 
                 <div class="actions">
                     <a href="/board/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
-                    <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteBoard()">
-                        <i class="fa-solid fa-trash"></i> 삭제
+                    <button id="delete-btn" class="btn btn-danger" type="button" style="display:none" onclick="deleteBoard()">
+                         삭제
                     </button>
                 </div>
             </div>
@@ -346,10 +348,14 @@
         const boardNo = [[${boardNo}]];
         const API_BASE = "http://localhost:8090";
 
+
+
         // ✅ 서버에서 Thymeleaf로 주입 (컨트롤러에서 model.addAttribute로 넣기)
         // 숫자/문자 섞여도 안전하게 비교하려고 String으로 처리할 예정
         const currentEmpId = /*[[${loginEmpId}]]*/ null;
         const isAdmin = /*[[${isAdmin}]]*/ false;
+
+        console.log("currentEmpId", currentEmpId, "isAdmin", isAdmin);
 
         function setupWriterTooltip() {
             const host = document.getElementById("writerTooltipHost");
@@ -406,12 +412,29 @@
                     initAttach();
                     initComment();
                     setupWriterTooltip();
+                    updateDeleteButtonVisibility(board); // ✅ 추가
                 }
             } catch (e) {
                 console.error(e);
                 alert("상세 로딩 중 오류가 발생했습니다.");
             }
         }
+
+        function updateDeleteButtonVisibility(board) {
+            const deleteBtn = document.getElementById("delete-btn");
+            if (!deleteBtn) return;
+
+            const isWriter =
+                currentEmpId != null &&
+                String(board.empId) === String(currentEmpId);
+
+            if (isAdmin === true || isWriter) {
+                deleteBtn.style.display = "inline-flex";
+            } else {
+                deleteBtn.style.display = "none";
+            }
+        }
+
 
         function unwrapMaybeResponseDto(obj) {
             if (obj && typeof obj === "object" && "data" in obj) return obj.data;
@@ -621,7 +644,7 @@
                               <button type="button"
                                       class="btn btn-danger btn-sm comment-delete-btn"
                                       data-comment-no="${r.commentNo}">
-                                <i class="fa-solid fa-trash"></i> 삭제
+                                   삭제
                               </button>
                             `
                             : `<span style="color: var(--muted,#6b7280); font-weight:900;">-</span>`;

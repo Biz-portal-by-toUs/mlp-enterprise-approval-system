@@ -45,7 +45,7 @@ public class ViewBoardController {
         model.addAttribute("boardNo", boardNo);
         model.addAttribute("loginEmpId", user.getUsername());
         boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(a -> a.getAuthority().equals("COM_ADMIN"));
         model.addAttribute("isAdmin", isAdmin);
         return "board/board-detail";
     }

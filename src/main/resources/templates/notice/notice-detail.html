@@ -406,7 +406,8 @@
         .popup-flag.on{ background:#16a34a; }
         .popup-flag.off{ background:#9ca3af; }
 
-
+        #update-btn{ display:none; }
+        #delete-btn{ display:none; }
     </style>
 </th:block>
 
@@ -498,8 +499,8 @@
 
             <div class="actions">
                 <a href="/notice/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
-                <button id="update-btn" class="btn btn-primary" type="button"><i class="fa-solid fa-pen"></i> 수정</button>
-                <button id="delete-btn" class="btn btn-danger" type="button" onclick="deleteNotice()"><i class="fa-solid fa-trash"></i> 삭제</button>
+                <button id="update-btn" class="btn btn-primary" type="button" style="display:none"> 수정</button>
+                <button id="delete-btn" class="btn btn-danger" type="button" style="display:none" onclick="deleteNotice()"> 삭제</button>
             </div>
         </div>
         </main>
@@ -599,9 +600,16 @@
     </script>
 
     <!-- ✅ 기존 script(원본 그대로) -->
-    <script>
+    <script th:inline="javascript">
         const noticeNo = [[${noticeNo}]];
         const API_BASE = "http://localhost:8090";
+
+        // ✅ 서버에서 Thymeleaf로 주입 (컨트롤러에서 model.addAttribute로 넣기)
+        // 숫자/문자 섞여도 안전하게 비교하려고 String으로 처리할 예정
+        const currentEmpId = /*[[${loginEmpId}]]*/ null;
+        const isAdmin = /*[[${isAdmin}]]*/ false;
+
+        console.log("currentEmpId", currentEmpId, "isAdmin", isAdmin);
 
         function setupWriterTooltip() {
             const host = document.getElementById("writerTooltipHost");
@@ -672,10 +680,30 @@
 
                     initAttach();
                     setupWriterTooltip();
+                    updateDeleteButtonVisibility(notice); // ✅ 추가
                 }
             }catch(e){
                 console.error(e);
                 alert("상세 로딩 중 오류가 발생했습니다.");
+            }
+        }
+
+        function updateDeleteButtonVisibility(notice) {
+            const updateBtn = document.getElementById("update-btn");
+            const deleteBtn = document.getElementById("delete-btn");
+            if (!updateBtn) return;
+            if (!deleteBtn) return;
+
+            const isWriter =
+                currentEmpId != null &&
+                String(notice.empId) === String(currentEmpId);
+
+            if (isAdmin === true || isWriter) {
+                updateBtn.style.display = "inline-flex";
+                deleteBtn.style.display = "inline-flex";
+            } else {
+                updateBtn.style.display = "none";
+                deleteBtn.style.display = "none";
             }
         }
 
@@ -704,7 +732,7 @@
 
                     attachList.append(`
                       <tr>
-                        <th style="width:90px;">일련번호</th>
+                        <th style="width:90px;">번호</th>
                         <th>파일명</th>
                         <th style="width:120px;">size</th>
                         <th style="width:110px;">미리보기</th>

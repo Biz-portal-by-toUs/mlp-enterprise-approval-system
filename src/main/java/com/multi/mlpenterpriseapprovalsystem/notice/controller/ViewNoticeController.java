@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.notice.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,8 +35,13 @@ public class ViewNoticeController {
 
     // 상세 조회
     @GetMapping("/{noticeNo}")
-    public String placeDetail(@PathVariable("noticeNo") Long noticeNo, Model model) {
+    public String placeDetail(@PathVariable("noticeNo") Long noticeNo, Model model,
+                              @AuthenticationPrincipal CustomUser user) {
         model.addAttribute("noticeNo", noticeNo);
+        model.addAttribute("loginEmpId", user.getUsername());
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("COM_ADMIN"));
+        model.addAttribute("isAdmin", isAdmin);
         return "notice/notice-detail";
     }
 
