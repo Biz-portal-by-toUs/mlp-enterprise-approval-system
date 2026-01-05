@@ -7,6 +7,8 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.EmpSchedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.Schedule;
@@ -44,6 +46,7 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final EmployeeRepository employeeRepository;
     private final CompanyRepository companyRepository;
+    private final NotificationService notificationService;
 
     public ResScheduleListDto getItems(CustomUser user, ReqScheduleDto req) {
         Range range = resolveRange(req);
@@ -198,6 +201,9 @@ public class ScheduleService {
     @Transactional
     public void updateItem(CustomUser user, Long schNo, ReqCreateScheduleDto req) {
 
+        Employee employee = employeeRepository.findByEmpId(user.getUsername())
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
         // ✅ 여기서 검증 + 정규화 한 번에 끝
         TimeBundle time = resolveTime(req);
 
@@ -224,6 +230,11 @@ public class ScheduleService {
             }
 
             s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
+
+            List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(employee.getDepartment().getDepNo());
+            for(Employee emp : emps) {
+                notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "부서 일정이 수정 되었습니다.","/schedule/calendar");
+            }
             return;
         }
 
@@ -236,6 +247,11 @@ public class ScheduleService {
             }
 
             s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
+
+            List<Employee> emps = employeeRepository.findAllByCompany_ComId(user.getComId());
+            for(Employee emp : emps) {
+                notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "회사 일정이 수정 되었습니다.","/schedule/calendar");
+            }
             return;
         }
 
@@ -320,6 +336,11 @@ public class ScheduleService {
             throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
         }
 
+        List<Employee> emps = employeeRepository.findAllByCompany_ComId(comId);
+        for(Employee emp : emps) {
+            notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "회사 일정이 추가 되었습니다.","/schedule/calendar");
+        }
+
 
         Schedule saved = scheduleRepository.save(
                 Schedule.create(company, null, register,
@@ -352,6 +373,11 @@ public class ScheduleService {
                         req.getTitle(), req.getContent(),
                         time.startAt, time.endedAt, time.allDay, finalColor)
         );
+
+        List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(department.getDepNo());
+        for(Employee emp : emps) {
+            notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "부서 일정이 추가 되었습니다.","/schedule/calendar");
+        }
 
         return ResScheduleDto.builder()
                 .schNo(saved.getSchNo())

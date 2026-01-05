@@ -9,24 +9,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
-        /* ❌ 기존 notice-detail의 :root, body는 layout이 담당하므로 제거 권장 (겹치면 전체 레이아웃 덮임)
-           필요한 스타일만(컨텐츠 영역 클래스들) 유지 */
-
         *{ box-sizing:border-box; }
 
         .subbar-main{
             flex: 1;
             min-width: 0;
-            padding: 24px; /* meeting 톤 */
+            padding: 24px;
         }
 
         .notice-detail-wrap{
             width: 100%;
-            max-width: none;   /* ✅ 제한 해제 */
-            margin: 0;         /* ✅ auto 제거 */
-            padding: 0;        /* ✅ main이 padding 갖고 있음 */
+            max-width: none;
+            margin: 0;
+            padding: 0;
         }
-
 
         h2{
             margin: 0 0 14px;
@@ -69,28 +65,6 @@
             color: var(--text, #1f2937);
         }
 
-        .badge{
-            display:inline-flex;
-            align-items:center;
-            gap:6px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 900;
-            border: 1px solid transparent;
-            line-height: 1;
-        }
-        .badge.success{
-            background: rgba(16,185,129,.12);
-            color: var(--success, #10b981);
-            border-color: rgba(16,185,129,.30);
-        }
-        .badge.muted{
-            background: rgba(107,114,128,.12);
-            color: var(--muted, #6b7280);
-            border-color: rgba(107,114,128,.30);
-        }
-
         .period-inline{
             display:flex;
             align-items:center;
@@ -118,13 +92,11 @@
             white-space: normal;
             line-height: 1.75;
         }
-
         #noticeDescription .ProseMirror{
             outline:none;
             white-space: pre-wrap;
             line-height: 1.75;
         }
-
         #noticeDescription h2{
             margin: 12px 0 8px;
             font-size: 1.25rem;
@@ -390,10 +362,7 @@
             .tooltip-bubble{ left: 0 !important; right: auto !important; }
         }
 
-        /* 툴팁이 카드 밖으로 나가도 안 잘리게 */
-        .card.card--overflow-visible{
-            overflow: visible;
-        }
+        .card.card--overflow-visible{ overflow: visible; }
 
         .popup-flag{
             display:inline-block;
@@ -408,110 +377,266 @@
 
         #update-btn{ display:none; }
         #delete-btn{ display:none; }
+
+        /* ============================================================
+           ✅ PRINT: "공지 상세 영역만" 용지 폭을 강제로 꽉 채우기
+           - layout의 max-width/패딩/그리드 영향 완전 차단(visibility + fixed)
+           ============================================================ */
+        @page{
+            size: auto;
+            margin: 3mm;
+        }
+
+        @media print{
+            *{
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            html, body{
+                background:#fff !important;
+                margin:0 !important;
+                padding:0 !important;
+                width:100% !important;
+            }
+
+            /* ✅ 1) 인쇄 시에는 일단 전부 숨기고(레이아웃 영향 제거) */
+            body *{
+                visibility: hidden !important;
+            }
+
+            /* ✅ 2) print-area만 보이게(그리고 용지 기준으로 고정 배치) */
+            #print-area,
+            #print-area *{
+                visibility: visible !important;
+            }
+
+            /* print-area를 페이지 기준으로 고정해서 부모 컨테이너 폭 제한을 무력화 */
+            #print-area{
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                right: 0 !important;
+                width: 100vw !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+
+            #print-area h2 {
+                display: none !important;
+            }
+
+            /* ✅ 3) 기존 요청: sidebar/헤더/푸터/네비는 인쇄에 안 나오게(혹시 visibility 누락 대비) */
+            header, nav, footer, aside{ display:none !important; }
+            [class*="sidebar" i],
+            [class*="side-bar" i],
+            [class*="sidenav" i],
+            [class*="lnb" i],
+            [class*="gnb" i],
+            [id*="sidebar" i],
+            [id*="side" i],
+            .subbar-sidebar, .subbar-aside, .subbar-nav{
+                display:none !important;
+            }
+
+            /* ✅ 4) notice-detail 내부 요소는 폭 100% 강제 */
+            .page-with-subbar,
+            .subbar-main,
+            .notice-detail-wrap{
+                width:100% !important;
+                max-width:none !important;
+                margin:0 !important;
+                padding:0 !important;
+                float:none !important;
+                display:block !important;
+            }
+
+            /* 카드: 인쇄에서 꽉 차게 + 깔끔하게 */
+            .card, .contents-card, .attach-card{
+                width:100% !important;
+                max-width:none !important;
+                box-shadow:none !important;
+                border:1px solid #d1d5db !important;
+                border-radius:0 !important;
+                margin:0 0 4mm 0 !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .contents-body{ padding:4mm !important; }
+            .attach-card{ padding:4mm !important; }
+
+            .summary-table,
+            #attachList,
+            #noticeDescription table{
+                width:100% !important;
+                max-width:none !important;
+                table-layout:fixed !important;
+            }
+
+            .summary-table th, .summary-table td,
+            #attachList th, #attachList td,
+            #noticeDescription th, #noticeDescription td{
+                word-break:break-word !important;
+                overflow-wrap:anywhere !important;
+            }
+
+            /* 툴팁 숨기고 작성자 클릭 비활성(텍스트만) */
+            .tooltip-bubble{ display:none !important; }
+            .writer-btn{
+                color:#111827 !important;
+                text-decoration:none !important;
+                cursor:default !important;
+                pointer-events:none !important;
+            }
+
+            /* ✅ 작성자 이름이 세로로(한 글자씩 줄바꿈) 되는 현상 방지 */
+            #noticeWriter,
+            #noticeWriterBtn,
+            .writer-btn {
+                display: inline-block !important;
+                writing-mode: horizontal-tb !important; /* 혹시라도 writing-mode 영향 있으면 차단 */
+                white-space: nowrap !important;         /* 줄바꿈 금지 */
+                word-break: keep-all !important;        /* 한글 글자 단위 쪼개기 방지 */
+                letter-spacing: normal !important;
+            }
+
+            /* (옵션) 작성자 셀이 너무 좁아지는 경우 대비 */
+            .summary-table td {
+                overflow: visible !important;
+            }
+
+            /* 액션 버튼 인쇄 제외 */
+            .actions{ display:none !important; }
+
+            /* 첨부파일 표: 인쇄 시 미리보기/다운로드 컬럼 숨김 */
+            #attachList th:nth-child(4),
+            #attachList td:nth-child(4),
+            #attachList th:nth-child(5),
+            #attachList td:nth-child(5){
+                display:none !important;
+            }
+
+            #noticeDescription .selectedCell:after{ background:transparent !important; }
+
+            #noticeDescription a{
+                color:#111827 !important;
+                text-decoration:underline !important;
+            }
+        }
     </style>
 </th:block>
 
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <!-- ✅ notice-list와 동일하게 게시판 서브바 도킹 -->
+        <!-- ✅ 화면에서는 그대로 존재 / 인쇄 시엔 숨김 처리됨 -->
         <div th:replace="~{sidebar/board-sidebar :: boardSidebar('notice')}"></div>
+
         <main class="subbar-main">
-        <!-- ✅ 상세 본문 -->
-        <div class="notice-detail-wrap">
-            <h2>공지사항 상세</h2>
+            <!-- ✅ 인쇄 시 이 영역만 "용지 폭 꽉" 채워서 출력되도록 wrapper 추가 -->
+            <div id="print-area">
+                <div class="notice-detail-wrap">
+                    <h2>공지사항 상세</h2>
 
-            <div class="card">
-                <table class="summary-table">
-                    <tr>
-                        <th>제목</th>
-                        <td><span id="noticeTitle"></span></td>
-                    </tr>
-                    <tr>
-                        <th>팝업여부</th>
-                        <td><span id="noticePopup"></span></td>
-                    </tr>
-                    <tr>
-                        <th>팝업기간</th>
-                        <td>
-                            <div class="period-inline">
-                                <span id="noticeStarted">-</span>
-                                <span class="sep">~</span>
-                                <span id="noticeEnded">-</span>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
+                    <div class="card">
+                        <table class="summary-table">
+                            <tr>
+                                <th>제목</th>
+                                <td><span id="noticeTitle"></span></td>
+                            </tr>
+                            <tr>
+                                <th>팝업여부</th>
+                                <td><span id="noticePopup"></span></td>
+                            </tr>
+                            <tr>
+                                <th>팝업기간</th>
+                                <td>
+                                    <div class="period-inline">
+                                        <span id="noticeStarted">-</span>
+                                        <span class="sep">~</span>
+                                        <span id="noticeEnded">-</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
 
-            <div class="contents-card">
-                <div class="contents-body">
-                    <div id="noticeDescription"></div>
+                    <div class="contents-card">
+                        <div class="contents-body">
+                            <div id="noticeDescription"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <table class="summary-table">
+                            <tr>
+                                <th>작성자</th>
+                                <td>
+                                    <span class="writer-wrap">
+                                      <span class="tooltip-host" id="writerTooltipHost">
+                                        <button type="button" class="writer-btn" id="noticeWriterBtn">
+                                          <span id="noticeWriter">-</span>
+                                        </button>
+
+                                        <div class="card card--overflow-visible">
+                                          <div class="tooltip-bubble" id="writerTooltip">
+                                            <div class="tooltip-title">작성자 정보</div>
+                                            <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
+                                            <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
+                                          </div>
+                                        </div>
+                                      </span>
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>정보</th>
+                                <td>
+                                    <div class="meta-inline">
+                                      <span class="meta-item">
+                                        <span class="k">등록일</span><span class="v" id="noticeCreated">-</span>
+                                      </span>
+                                        <span class="meta-item">
+                                        <span class="k">변경일</span><span class="v" id="noticeUpdated">-</span>
+                                      </span>
+                                        <span class="meta-item">
+                                        <span class="k">조회</span><span class="v" id="noticeRating">-</span>
+                                      </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="attach-card">
+                        <div class="attach-head">
+                            <h3 class="attach-title">첨부 파일</h3>
+                        </div>
+                        <table id="attachList"></table>
+                    </div>
+
+                    <div class="actions">
+                        <!-- ✅ 프린트 기능(화면에서만 보이고 인쇄에는 출력 안 됨) -->
+                        <button id="print-btn" class="btn" type="button" title="현재 공지사항을 인쇄합니다">
+                            <i class="fa-solid fa-print"></i> 프린트
+                        </button>
+
+                        <a href="/notice/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
+                        <button id="update-btn" class="btn btn-primary" type="button" style="display:none"> 수정</button>
+                        <button id="delete-btn" class="btn btn-danger" type="button" style="display:none" onclick="deleteNotice()"> 삭제</button>
+                    </div>
                 </div>
             </div>
-
-            <div class="card">
-                <table class="summary-table">
-                    <tr>
-                        <th>작성자</th>
-                        <td>
-                          <span class="writer-wrap">
-                            <span class="tooltip-host" id="writerTooltipHost">
-                              <button type="button" class="writer-btn" id="noticeWriterBtn">
-                                <span id="noticeWriter">-</span>
-                              </button>
-
-                              <div class="card card--overflow-visible">
-                                  <div class="tooltip-bubble" id="writerTooltip">
-                                    <div class="tooltip-title">작성자 정보</div>
-                                    <div class="tooltip-row"><span>부서</span><span id="noticeDepart">-</span></div>
-                                    <div class="tooltip-row" style="margin-top:6px;"><span>직번</span><span id="noticeWriterId">-</span></div>
-                                  </div>
-                              </div>
-                            </span>
-                          </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>정보</th>
-                        <td>
-                            <div class="meta-inline">
-                              <span class="meta-item">
-                                <span class="k">등록일</span><span class="v" id="noticeCreated">-</span>
-                              </span>
-                                <span class="meta-item">
-                                <span class="k">변경일</span><span class="v" id="noticeUpdated">-</span>
-                              </span>
-                                <span class="meta-item">
-                                <span class="k">조회</span><span class="v" id="noticeRating">-</span>
-                              </span>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-
-            <div class="attach-card">
-                <div class="attach-head">
-                    <h3 class="attach-title">첨부 파일</h3>
-                </div>
-                <table id="attachList"></table>
-            </div>
-
-            <div class="actions">
-                <a href="/notice/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
-                <button id="update-btn" class="btn btn-primary" type="button" style="display:none"> 수정</button>
-                <button id="delete-btn" class="btn btn-danger" type="button" style="display:none" onclick="deleteNotice()"> 삭제</button>
-            </div>
-        </div>
         </main>
     </div>
 </div>
 
 <th:block layout:fragment="pageScripts">
-    <!-- ✅ 기존에 head에 있던 jQuery 포함(생략 X) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- ✅ TipTap viewer (원본 그대로) -->
+    <!-- TipTap viewer (원본 그대로) -->
     <script type="module">
         import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
         import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
@@ -590,7 +715,7 @@
 
             if (isProbablyHtml(raw)) {
                 if (viewer) { viewer.destroy(); viewer = null; host.innerHTML = ""; }
-                host.innerHTML = raw; // ❗ 서버 sanitize 권장
+                host.innerHTML = raw;
                 return;
             }
 
@@ -599,17 +724,13 @@
         };
     </script>
 
-    <!-- ✅ 기존 script(원본 그대로) -->
+    <!-- ✅ 기존 로직 그대로 + 프린트 버튼만 추가 -->
     <script th:inline="javascript">
         const noticeNo = [[${noticeNo}]];
         const API_BASE = "http://localhost:8090";
 
-        // ✅ 서버에서 Thymeleaf로 주입 (컨트롤러에서 model.addAttribute로 넣기)
-        // 숫자/문자 섞여도 안전하게 비교하려고 String으로 처리할 예정
         const currentEmpId = /*[[${loginEmpId}]]*/ null;
         const isAdmin = /*[[${isAdmin}]]*/ false;
-
-        console.log("currentEmpId", currentEmpId, "isAdmin", isAdmin);
 
         function setupWriterTooltip() {
             const host = document.getElementById("writerTooltipHost");
@@ -650,8 +771,6 @@
                 if (result.status === 200 && result.data) {
                     const notice = result.data;
 
-                    console.log("notice keys:", Object.keys(notice), notice);
-
                     $('#noticeTitle').text(notice.title ?? "-");
 
                     if (window.renderNoticeContentsAuto) window.renderNoticeContentsAuto(notice.contents);
@@ -663,9 +782,6 @@
                             ? `<span class="popup-flag on">사용</span>`
                             : `<span class="popup-flag off">미사용</span>`
                     );
-                   // $('#noticePopup').html(
-                   //     isPopup ? `<span class="badge success">사용</span>` : `<span class="badge muted">미사용</span>`
-                   // );
 
                     $('#noticeStarted').text(notice.startedAt ? notice.startedAt.substring(0,10) : "-");
                     $('#noticeEnded').text(notice.endedAt ? notice.endedAt.substring(0,10) : "-");
@@ -680,7 +796,7 @@
 
                     initAttach();
                     setupWriterTooltip();
-                    updateDeleteButtonVisibility(notice); // ✅ 추가
+                    updateDeleteButtonVisibility(notice);
                 }
             }catch(e){
                 console.error(e);
@@ -731,25 +847,25 @@
                     const attachs = result.data;
 
                     attachList.append(`
-                      <tr>
-                        <th style="width:90px;">번호</th>
-                        <th>파일명</th>
-                        <th style="width:120px;">size</th>
-                        <th style="width:110px;">미리보기</th>
-                        <th style="width:110px;">다운로드</th>
-                      </tr>
-                    `);
+            <tr>
+              <th style="width:90px;">번호</th>
+              <th>파일명</th>
+              <th style="width:120px;">size</th>
+              <th style="width:110px;">미리보기</th>
+              <th style="width:110px;">다운로드</th>
+            </tr>
+          `);
 
                     attachs.forEach((r, index) => {
                         attachList.append(`
-                          <tr>
-                            <td>${index+1}</td>
-                            <td>${r.originalName}</td>
-                            <td>${formatFileSize(r.size)}</td>
-                            <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
-                            <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
-                          </tr>
-                        `);
+              <tr>
+                <td>${index+1}</td>
+                <td>${r.originalName}</td>
+                <td>${formatFileSize(r.size)}</td>
+                <td><button type="button" class="btn btn-sm" data-view="${r.attachmentId}">미리보기</button></td>
+                <td><button type="button" class="btn btn-sm" data-down="${r.attachmentId}">다운로드</button></td>
+              </tr>
+            `);
                     });
 
                     document.querySelectorAll("button[data-down]").forEach(btn => {
@@ -862,7 +978,16 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadPlaceDetail);
+        function setupPrintButton(){
+            const btn = document.getElementById("print-btn");
+            if (!btn) return;
+            btn.addEventListener("click", () => window.print());
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPlaceDetail();
+            setupPrintButton();
+        });
     </script>
 </th:block>
 

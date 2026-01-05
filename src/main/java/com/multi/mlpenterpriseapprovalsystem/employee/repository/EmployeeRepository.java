@@ -278,4 +278,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
            and e.isDeleted = false
     """)
     int updateMsgStatByEmpNo(@Param("empNo") Long empNo, @Param("msgStat") MsgStat msgStat);
+
+    List<Employee> findAllByCompany_ComId(String comId);
+
+    List<Employee> findAllByDepartment_DepNo(Long depNo);
 }

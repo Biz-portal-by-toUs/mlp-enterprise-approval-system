@@ -131,12 +131,148 @@
             transition: height .18s ease, padding .18s ease;
         }
         .comment-editor textarea#commentContents:focus { height: 96px; }
-        /* 툴팁이 카드 밖으로 나가도 안 잘리게 */
-        .card.card--overflow-visible{
-            overflow: visible;
-        }
+
+        .card.card--overflow-visible{ overflow: visible; }
 
         #delete-btn{ display:none; }
+
+        /* ============================================================
+           ✅ PRINT: 인쇄 시 "게시글 상세 + 첨부 + 댓글"만, 용지 폭 꽉 채워 출력
+           - 레이아웃(컨테이너/max-width/grid/flex) 영향 제거: visibility + fixed
+           ============================================================ */
+        @page{
+            size: auto;
+            margin: 3mm;
+        }
+        @media print{
+            *{
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            html, body{
+                background:#fff !important;
+                margin:0 !important;
+                padding:0 !important;
+                width:100% !important;
+            }
+
+            /* 1) 일단 전체 숨김(레이아웃 폭 제한 영향 제거) */
+            body *{
+                visibility: hidden !important;
+            }
+
+            /* 2) print-area만 보이게 */
+            #print-area,
+            #print-area *{
+                visibility: visible !important;
+            }
+
+            /* 3) print-area를 페이지 기준으로 고정 배치(부모 max-width 무력화) */
+            #print-area{
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                right: 0 !important;
+                width: 100vw !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+
+            /* 4) 혹시 남아있을 수 있는 layout/sidebar 계열 제거(이중 안전장치) */
+            header, nav, footer, aside{ display:none !important; }
+            [class*="sidebar" i],
+            [class*="side-bar" i],
+            [class*="sidenav" i],
+            [class*="lnb" i],
+            [class*="gnb" i],
+            [id*="sidebar" i],
+            [id*="side" i]{
+                display:none !important;
+            }
+
+            /* 5) 내부 폭 100% 강제 */
+            .subbar-main,
+            .container{
+                width:100% !important;
+                max-width:none !important;
+                margin:0 !important;
+                padding:0 !important;
+                display:block !important;
+            }
+
+            /* 인쇄 시: "자유게시판 상세" 문구는 제외(요청사항) */
+            #print-area .page-title{
+                display:none !important;
+            }
+
+            /* 카드/섹션: 인쇄용 깔끔하게 + 꽉 차게 */
+            .card, .contents-card, .attach-card, #comment{
+                width:100% !important;
+                max-width:none !important;
+                box-shadow:none !important;
+                border:1px solid #d1d5db !important;
+                border-radius:0 !important;
+                margin:0 0 4mm 0 !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .contents-body{ padding:4mm !important; }
+            .attach-card{ padding:4mm !important; }
+
+            .summary-table,
+            #attachList,
+            #boardDescription table,
+            #commentList{
+                width:100% !important;
+                max-width:none !important;
+                table-layout:fixed !important;
+            }
+
+            /* 작성자 이름 세로 방지(가로 고정) */
+            #boardWriter,
+            #boardWriterBtn,
+            .writer-btn{
+                writing-mode: horizontal-tb !important;
+                white-space: nowrap !important;
+                word-break: keep-all !important;
+                display: inline-block !important;
+            }
+
+            /* 툴팁/버튼류 인쇄 제외 */
+            .tooltip-bubble{ display:none !important; }
+
+            /* 첨부파일 표: 미리보기/다운로드 컬럼 숨김(폭 확보) */
+            #attachList th:nth-child(4),
+            #attachList td:nth-child(4),
+            #attachList th:nth-child(5),
+            #attachList td:nth-child(5){
+                display:none !important;
+            }
+
+            /* 댓글: 삭제 컬럼 숨김(폭 확보) + 삭제 버튼 숨김 */
+            #commentList thead th:nth-child(6),
+            #commentList tbody td:nth-child(6){
+                display:none !important;
+            }
+            .comment-delete-btn{
+                display:none !important;
+            }
+
+            /* 댓글 입력 영역/하단 액션(목록/삭제/프린트 등) 인쇄 제외 */
+            #commentEditor{ display:none !important; }
+            .actions{ display:none !important; }
+
+            /* ProseMirror 선택 강조 제거 */
+            #boardDescription .selectedCell:after{ background:transparent !important; }
+
+            /* 링크는 흑백 대비 */
+            #boardDescription a{
+                color:#111827 !important;
+                text-decoration: underline !important;
+            }
+        }
     </style>
 </th:block>
 
@@ -145,79 +281,83 @@
         <div th:replace="~{sidebar/board-sidebar :: boardSidebar('board')}"></div>
         <main class="subbar-main">
             <div class="container">
-                <h2>자유게시판 상세</h2>
+                <!-- 화면에서는 보이지만, 인쇄에서는 숨김 처리됨(.page-title) -->
+                <h2 class="page-title">자유게시판 상세</h2>
 
-                <div class="card">
-                    <table class="summary-table">
-                        <tr>
-                            <th>제목</th>
-                            <td><span id="boardTitle"></span></td>
-                        </tr>
-                        <tr>
-                            <th>카테고리</th>
-                            <td><span id="boardCategory"></span></td>
-                        </tr>
-                    </table>
-                </div>
-
-                <div class="contents-card">
-                    <div class="contents-body">
-                        <div id="boardDescription"></div>
+                <!-- ✅ 인쇄 시 이 영역만 출력되도록 래퍼 추가 -->
+                <div id="print-area">
+                    <div class="card">
+                        <table class="summary-table">
+                            <tr>
+                                <th>제목</th>
+                                <td><span id="boardTitle"></span></td>
+                            </tr>
+                            <tr>
+                                <th>카테고리</th>
+                                <td><span id="boardCategory"></span></td>
+                            </tr>
+                        </table>
                     </div>
-                </div>
 
-                <div class="card">
-                    <table class="summary-table">
-                        <tr>
-                            <th>작성자</th>
-                            <td>
-                              <span class="writer-wrap">
-                                <span class="tooltip-host" id="writerTooltipHost">
-                                  <button type="button" class="writer-btn" id="boardWriterBtn">
-                                    <span id="boardWriter">-</span>
-                                  </button>
-                                  <div class="card card--overflow-visible">
-                                  <div class="tooltip-bubble" id="writerTooltip">
-                                    <div class="tooltip-title">작성자 정보</div>
-                                    <div class="tooltip-row"><span>부서</span><span id="boardDepart">-</span></div>
-                                    <div class="tooltip-row" style="margin-top:6px;">
-                                      <span>직번</span><span id="boardWriterId">-</span>
+                    <div class="contents-card">
+                        <div class="contents-body">
+                            <div id="boardDescription"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <table class="summary-table">
+                            <tr>
+                                <th>작성자</th>
+                                <td>
+                                  <span class="writer-wrap">
+                                    <span class="tooltip-host" id="writerTooltipHost">
+                                      <button type="button" class="writer-btn" id="boardWriterBtn">
+                                        <span id="boardWriter">-</span>
+                                      </button>
+                                      <div class="card card--overflow-visible">
+                                        <div class="tooltip-bubble" id="writerTooltip">
+                                          <div class="tooltip-title">작성자 정보</div>
+                                          <div class="tooltip-row"><span>부서</span><span id="boardDepart">-</span></div>
+                                          <div class="tooltip-row" style="margin-top:6px;">
+                                            <span>직번</span><span id="boardWriterId">-</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </span>
+                                  </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>정보</th>
+                                <td>
+                                    <div class="meta-inline">
+                                      <span class="meta-item">
+                                        <span class="k">등록일</span><span class="v" id="boardCreated">-</span>
+                                      </span>
+                                        <span class="meta-item">
+                                        <span class="k">조회</span><span class="v" id="boardRating">-</span>
+                                      </span>
                                     </div>
-                                  </div>
-                                  </div>
-
-                                </span>
-                              </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>정보</th>
-                            <td>
-                                <div class="meta-inline">
-                                  <span class="meta-item">
-                                    <span class="k">등록일</span><span class="v" id="boardCreated">-</span>
-                                  </span>
-                                    <span class="meta-item">
-                                    <span class="k">조회</span><span class="v" id="boardRating">-</span>
-                                  </span>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <div class="attach-card">
-                    <div class="attach-head">
-                        <h3 class="attach-title">첨부 파일</h3>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
-                    <table id="attachList"></table>
+
+                    <div class="attach-card">
+                        <div class="attach-head">
+                            <h3 class="attach-title">첨부 파일</h3>
+                        </div>
+                        <table id="attachList"></table>
+                    </div>
+
+                    <h2 style="margin-top:18px;">관련 댓글</h2>
+                    <div id="comment">
+                        <table id="commentList"></table>
+                    </div>
                 </div>
 
-                <h2>관련 댓글</h2>
-                <div id="comment">
-                    <table id="commentList"></table>
-                </div>
-
+                <!-- 댓글 입력(화면 기능 유지 / 인쇄에서는 숨김) -->
                 <div id="commentEditor" class="comment-editor">
                     <textarea id="commentContents" placeholder="의견입력" rows="5"></textarea>
                     <div class="comment-editor__footer">
@@ -232,9 +372,14 @@
                 </div>
 
                 <div class="actions">
+                    <!-- ✅ 프린트 버튼: 기능 추가(화면에만 보이고 인쇄에는 출력 안 됨) -->
+                    <button id="print-btn" class="btn" type="button" title="현재 게시글을 인쇄합니다">
+                        <i class="fa-solid fa-print"></i> 프린트
+                    </button>
+
                     <a href="/board/list" class="btn"><i class="fa-solid fa-list"></i> 목록</a>
                     <button id="delete-btn" class="btn btn-danger" type="button" style="display:none" onclick="deleteBoard()">
-                         삭제
+                        삭제
                     </button>
                 </div>
             </div>
@@ -343,15 +488,11 @@
         };
     </script>
 
-    <!-- ✅ 여기부터: 댓글 권한 포함 JS -->
+    <!-- ✅ 기존 JS 그대로 + 프린트 버튼만 추가 -->
     <script th:inline="javascript">
         const boardNo = [[${boardNo}]];
         const API_BASE = "http://localhost:8090";
 
-
-
-        // ✅ 서버에서 Thymeleaf로 주입 (컨트롤러에서 model.addAttribute로 넣기)
-        // 숫자/문자 섞여도 안전하게 비교하려고 String으로 처리할 예정
         const currentEmpId = /*[[${loginEmpId}]]*/ null;
         const isAdmin = /*[[${isAdmin}]]*/ false;
 
@@ -412,7 +553,7 @@
                     initAttach();
                     initComment();
                     setupWriterTooltip();
-                    updateDeleteButtonVisibility(board); // ✅ 추가
+                    updateDeleteButtonVisibility(board);
                 }
             } catch (e) {
                 console.error(e);
@@ -434,7 +575,6 @@
                 deleteBtn.style.display = "none";
             }
         }
-
 
         function unwrapMaybeResponseDto(obj) {
             if (obj && typeof obj === "object" && "data" in obj) return obj.data;
@@ -593,16 +733,11 @@
             }
         }
 
-        // ✅ 댓글 삭제 가능 여부(UI용)
         function canDeleteComment(c) {
-            // 서버가 canDelete 내려주면 그걸 우선(옵션)
             if (typeof c?.canDelete === "boolean") return c.canDelete;
-
-            // 작성자(댓글 empId) == 로그인 사용자 empId 또는 관리자
             return (currentEmpId != null && String(c.empId) === String(currentEmpId)) || isAdmin === true;
         }
 
-        // ✅ 댓글 목록 로딩 + 권한에 따라 삭제 버튼 노출
         async function initComment() {
             try {
                 const res = await fetch(`${API_BASE}/api/v1/boards/${boardNo}/comments`, {
@@ -717,7 +852,6 @@
             }
         }
 
-        // ✅ 이벤트 위임: 동적으로 생성된 삭제 버튼도 동작
         function bindCommentEvents() {
             $("#commentList").off("click", ".comment-delete-btn");
             $("#commentList").on("click", ".comment-delete-btn", function () {
@@ -726,7 +860,6 @@
             });
         }
 
-        // ---- 이하(바이트 카운터/등록/취소/오토그로우) 원본 로직 유지 ----
         function getUtf8Bytes(str) {
             return new Blob([str ?? ""], {type: "text/plain; charset=UTF-8"}).size;
         }
@@ -798,6 +931,12 @@
             updateCommentByteCounter();
         }
 
+        function setupPrintButton(){
+            const btn = document.getElementById("print-btn");
+            if (!btn) return;
+            btn.addEventListener("click", () => window.print());
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadBoardDetail();
 
@@ -813,6 +952,7 @@
             if (cancelBtn) cancelBtn.addEventListener("click", cancelComment);
 
             bindCommentEvents();
+            setupPrintButton(); // ✅ 프린트 버튼만 추가
         });
 
         (function autoGrowCommentTextarea() {
