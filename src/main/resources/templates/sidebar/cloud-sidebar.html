@@ -1,17 +1,16 @@
-<!-- templates/sidebar/cloud-sidebar.html -->
 <!doctype html>
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 
-<aside class="subbar"
+<aside class="subbar cloud-subbar"
        sec:authorize="isAuthenticated()"
        th:fragment="cloudSidebar(active)">
 
     <div class="subbar-title">파일함</div>
 
-    <!-- ✅ 공유함/개인함: 탭(버튼) 형태 -->
+    <!-- ✅ 공유함/개인함 탭 -->
     <div class="cloud-scope-tabs" role="tablist" aria-label="파일함 전환">
         <a class="cloud-scope-tab"
            role="tab"
@@ -30,9 +29,20 @@
         </a>
     </div>
 
-    <!-- ✅ 트리 영역 -->
+    <!-- ✅ 트리(스크롤 영역) -->
     <div class="cloud-tree-panel">
         <ul class="cloud-tree" id="treeRoot"></ul>
+    </div>
+
+    <!-- ✅ 맨 아래 고정 휴지통 -->
+    <div class="cloud-sidebar-footer">
+        <a class="cloud-footer-link"
+           th:href="@{/cloud/trash(scope=${active}=='prvt' ? 'PRVT' : 'DEPT')}"
+           th:classappend="${active}=='trash' ? ' active' : ''"
+           href="/cloud/trash">
+            <span class="cloud-footer-ico" aria-hidden="true"></span>
+            <span class="cloud-footer-text">휴지통</span>
+        </a>
     </div>
 
 </aside>
