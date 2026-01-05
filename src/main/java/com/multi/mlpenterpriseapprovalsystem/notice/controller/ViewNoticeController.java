@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.util.Set;
+
 /**
  * Please explain the class!!!
  *
@@ -39,8 +41,19 @@ public class ViewNoticeController {
                               @AuthenticationPrincipal CustomUser user) {
         model.addAttribute("noticeNo", noticeNo);
         model.addAttribute("loginEmpId", user.getUsername());
+        Set<String> adminRoles = Set.of(
+                "ROLE_COM_ADMIN",
+                "ROLE_SEC_ADMIN",
+                "ROLE_THR_ADMIN"
+        );
+
         boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_COM_ADMIN"));
+                .map(a -> a.getAuthority())
+                .anyMatch(adminRoles::contains);
+
+
+       // boolean isAdmin = user.getAuthorities().stream()
+           //     .anyMatch(a -> a.getAuthority().equals("ROLE_COM_ADMIN"));
         model.addAttribute("isAdmin", isAdmin);
         return "notice/notice-detail";
     }
