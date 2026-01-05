@@ -40,7 +40,7 @@ public class ViewNoticeController {
         model.addAttribute("noticeNo", noticeNo);
         model.addAttribute("loginEmpId", user.getUsername());
         boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("COM_ADMIN"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COM_ADMIN"));
         model.addAttribute("isAdmin", isAdmin);
         return "notice/notice-detail";
     }
