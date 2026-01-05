@@ -71,7 +71,6 @@ function readPerms() {
         isEmployee: b(root.dataset.isEmployee),
         canEdit: b(root.dataset.canEdit),
         canDelete: b(root.dataset.canDelete),
-        canApprove: b(root.dataset.canApprove),
     }
 }
 const PERM = readPerms()
@@ -279,7 +278,7 @@ async function deleteForm(docfoNo) {
 
 // ===== UI perms apply =====
 function applyPermsUI({ stat }) {
-    // 1) 수정/삭제: 서버 perm 기준
+    // 수정/삭제는 그대로
     if (!PERM.canEdit) {
         btnEdit.style.display = 'none'
         btnEdit.disabled = true
@@ -296,16 +295,12 @@ function applyPermsUI({ stat }) {
         btnDelete.disabled = false
     }
 
-    // 2) 결재 버튼: (a) 서버 perm_canApprove AND (b) 상태 조건(너 기존 로직 유지)
-    // 기존 로직: stat === 'A' or 'X' 일 때만 결재 버튼 활성
-    const canApproveByStat = (stat === 'A' || stat === 'X')
-    const canApprove = PERM.canApprove && canApproveByStat
+    // 결재(문서작성 이동) 버튼: 권한이 아니라 상태만
+    const canGoWriteDoc = (stat === 'A' || stat === 'X')
 
-    btnApprove.style.display = canApprove ? '' : 'none'
-    btnApprove.disabled = !canApprove
-    btnApprove.title = canApprove
-        ? ''
-        : (!PERM.canApprove ? '결재 권한이 없습니다.' : '승인된(A) 또는 (X) 상태에서만 결재할 수 있습니다.')
+    btnApprove.style.display = canGoWriteDoc ? '' : 'none'
+    btnApprove.disabled = !canGoWriteDoc
+    btnApprove.title = canGoWriteDoc ? '' : '승인된(A) 또는 (X) 상태에서만 문서를 작성할 수 있습니다.'
 }
 
 ;(async function main() {
