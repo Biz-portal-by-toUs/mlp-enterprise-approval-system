@@ -49,34 +49,53 @@
                 transform: translateY(-1px);
             }
 
-            /* 테이블 */
-            .table-wrap{ padding:18px; }
+            /* ===== ✅ 테이블(회의 목록 느낌) ===== */
+            .table-wrap{
+                padding:0;
+                border-radius:18px;   /* 카드랑 같은 값 */
+                overflow:hidden; }  /* 회의 목록처럼 상단부터 꽉 차게 */
+
             table{
                 width:100%;
                 border-collapse:separate;
                 border-spacing:0;
                 table-layout:fixed;
+                border-radius:18px;
+                overflow:hidden;
             }
+
             thead th{
                 text-align:center;
-                font-size:12px;
+                font-size:13px;
                 color:#374151;
                 background:#f8fafc;
-                padding:12px 10px;
-                border-bottom:1px solid var(--line);
+                padding:16px 12px;
+                border-bottom:1px solid rgba(17,24,39,.08);
                 white-space:nowrap;
             }
+
             tbody td{
                 text-align:center;
-                padding:14px 10px;
+                padding:16px 12px;
                 border-bottom:1px solid rgba(17,24,39,.06);
                 font-size:14px;
                 overflow:hidden;
                 text-overflow:ellipsis;
                 white-space:nowrap;
             }
+
             tbody tr:hover td{
-                background: rgba(59,130,246,.04);
+                background: rgba(59,130,246,.03);
+            }
+
+            /* ✅ 비어있을 때 테이블 안 가운데 문구 */
+            tbody tr.empty-row td{
+                border-bottom:0;
+                padding:52px 12px;
+                color:var(--muted);
+                font-weight:900;
+                text-align:center;
+                background:#fff;
             }
 
             /* 관리 버튼: 테두리 없음 */
@@ -98,15 +117,6 @@
                 background: rgba(198,40,40,.10);
                 color:#c62828;
                 margin-left:8px;
-            }
-
-            /* empty */
-            .empty{
-                display:none;
-                padding:26px 10px;
-                text-align:center;
-                color:var(--muted);
-                font-weight:900;
             }
 
             /* toast */
@@ -151,10 +161,8 @@
         <!-- ✅ 페이지 콘텐츠 -->
         <div class="pos-page">
 
-            <!-- ✅ 타이틀/서브타이틀 제거(부서/사원 페이지처럼 깔끔) -->
-
             <!-- 상단 버튼 -->
-            <div class="top-row">
+            <div class="top-row" style="margin-top: 30px">
                 <button class="btn-primary" type="button"
                         onclick="location.href='/admin/positions/create'">직급 등록</button>
             </div>
@@ -180,8 +188,6 @@
                             </thead>
                             <tbody id="posTbody"></tbody>
                         </table>
-
-                        <div id="emptyBox" class="empty">등록된 직급이 없습니다.</div>
                     </div>
                 </div>
             </div>
@@ -252,11 +258,13 @@
             }
         }
 
+        function renderEmptyRow(tbody, message){
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${escapeHtml(message)}</td></tr>`;
+        }
+
         async function loadPositions() {
             const tbody = document.getElementById("posTbody");
-            const emptyBox = document.getElementById("emptyBox");
             tbody.innerHTML = "";
-            emptyBox.style.display = "none";
 
             const res = await fetch("/api/v1/positions", {
                 method: "GET",
@@ -264,13 +272,13 @@
                 headers: { "Accept": "application/json" }
             });
 
-            if (res.status === 401) { emptyBox.style.display="block"; emptyBox.textContent="로그인이 필요합니다. 다시 로그인 해주세요."; return; }
-            if (res.status === 403) { emptyBox.style.display="block"; emptyBox.textContent="권한이 없습니다. (COM_ADMIN만 가능)"; return; }
-            if (!res.ok) { emptyBox.style.display="block"; emptyBox.textContent="직급 조회 중 오류가 발생했습니다. ("+res.status+")"; return; }
+            if (res.status === 401) { renderEmptyRow(tbody, "로그인이 필요합니다. 다시 로그인 해주세요."); return; }
+            if (res.status === 403) { renderEmptyRow(tbody, "권한이 없습니다. (COM_ADMIN만 가능)"); return; }
+            if (!res.ok) { renderEmptyRow(tbody, "직급 조회 중 오류가 발생했습니다. ("+res.status+")"); return; }
 
             const json = await safeJson(res);
             const list = json.data || [];
-            if (!list.length) { emptyBox.style.display="block"; emptyBox.textContent="등록된 직급이 없습니다."; return; }
+            if (!list.length) { renderEmptyRow(tbody, "등록된 직급이 없습니다."); return; }
 
             list.forEach(p => {
                 const posNo = p.posNo ?? p.id ?? "";
@@ -294,9 +302,8 @@
         window.addEventListener("DOMContentLoaded", () => {
             loadPositions().catch(err => {
                 console.error(err);
-                const emptyBox = document.getElementById("emptyBox");
-                emptyBox.style.display = "block";
-                emptyBox.textContent = "직급 조회 중 예외가 발생했습니다.";
+                const tbody = document.getElementById("posTbody");
+                renderEmptyRow(tbody, "직급 조회 중 예외가 발생했습니다.");
             });
         });
     </script>

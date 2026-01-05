@@ -8,7 +8,6 @@
 <head>
     <title>사원 관리</title>
 
-    <!-- ✅ 이 페이지에서만 필요한 스타일만 추가 -->
     <th:block layout:fragment="pageStyles">
         <style>
             /* 페이지 타이틀 */
@@ -33,10 +32,8 @@
             }
             .card.pad{ padding:18px; }
 
-            /* 관리자 서브바 레이아웃 (layout.html에 정의된 page-with-subbar 사용) */
-            .admin-page{
-                display:block;
-            }
+            /* 관리자 서브바 레이아웃 */
+            .admin-page{ display:block; }
 
             /* 필터 */
             .filter{
@@ -97,26 +94,33 @@
                 border:1px solid rgba(59,130,246,.18);
             }
 
-            /* 테이블 */
-            .table-wrap{ padding:18px; }
+            /* ===== ✅ 테이블(회의 목록 느낌 + 상단 둥글게) ===== */
+            .table-wrap{
+                padding:0;           /* ✅ 기존 18px 제거 */
+                border-radius:18px;  /* ✅ */
+                overflow:hidden;     /* ✅ 헤더 배경도 같이 둥글게 */
+            }
+
             table{
                 width:100%;
                 border-collapse:separate;
                 border-spacing:0;
                 table-layout:fixed;
+                border-radius:18px;
+                overflow:hidden;
             }
             thead th{
                 text-align:center;
-                font-size:12px;
+                font-size:13px;      /* ✅ 살짝 키움 */
                 color:#374151;
                 background:#f8fafc;
-                padding:12px 10px;
-                border-bottom:1px solid var(--line);
+                padding:16px 12px;   /* ✅ 여백 키움 */
+                border-bottom:1px solid rgba(17,24,39,.08);
                 white-space:nowrap;
             }
             tbody td{
                 text-align:center;
-                padding:14px 10px;
+                padding:16px 12px;   /* ✅ 여백 키움 */
                 border-bottom:1px solid rgba(17,24,39,.06);
                 font-size:14px;
                 overflow:hidden;
@@ -124,20 +128,23 @@
                 white-space:nowrap;
             }
             tbody tr:hover td{
-                background: rgba(59,130,246,.04);
+                background: rgba(59,130,246,.03);
             }
+
             .link{
                 color: var(--primary2);
                 font-weight:900;
                 text-decoration:none;
             }
 
-            .empty{
-                display:none;
-                padding:26px 10px;
-                text-align:center;
+            /* ✅ 비어있을 때 테이블 안 가운데 문구 */
+            tbody tr.empty-row td{
+                border-bottom:0;
+                padding:52px 12px;
                 color:var(--muted);
                 font-weight:900;
+                text-align:center;
+                background:#fff;
             }
 
             /* pager (slightly smaller) */
@@ -239,18 +246,11 @@
 </head>
 
 <body>
-
-<!-- ✅ layout.html의 content 영역만 덮어쓰기 -->
 <div layout:fragment="content">
 
-    <!-- ✅ 관리자 서브바 도킹 레이아웃 사용 -->
     <section class="page-with-subbar">
-
-        <!-- ✅ 관리자 서브바(공통 파일로 빼둔 admin-sidebar.html을 쓴다는 전제) -->
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('emp')}"></aside>
 
-
-        <!-- ✅ 실제 페이지 콘텐츠 -->
         <div class="admin-page">
 
             <!-- Filter card -->
@@ -322,7 +322,6 @@
                         <tbody id="empTbody"></tbody>
                     </table>
 
-                    <div id="emptyBox" class="empty">조회 결과가 없습니다.</div>
                     <div id="pager" class="pager"></div>
                 </div>
             </div>
@@ -333,7 +332,6 @@
     <div id="toast" class="toast" aria-live="polite"></div>
 </div>
 
-<!-- ✅ page scripts -->
 <th:block layout:fragment="pageScripts">
     <script>
         const API = {
@@ -367,6 +365,12 @@
                 .replaceAll(">","&gt;")
                 .replaceAll("\"","&quot;")
                 .replaceAll("'","&#039;");
+        }
+
+        // ✅ empty-row 렌더
+        function renderEmptyRow(message){
+            const tbody = document.getElementById("empTbody");
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(message)}</td></tr>`;
         }
 
         // ===== API fetch helper (cookie auth) =====
@@ -449,9 +453,10 @@
 
         async function loadEmployees(){
             const tbody = document.getElementById("empTbody");
-            const empty = document.getElementById("emptyBox");
+            const pager = document.getElementById("pager");
+
             tbody.innerHTML = "";
-            empty.style.display = "none";
+            pager.innerHTML = "";
 
             try{
                 const qs = buildQuery();
@@ -459,8 +464,7 @@
 
                 const res = await apiFetch(url, { method:"GET" });
                 if(!res.ok){
-                    empty.style.display = "block";
-                    empty.textContent = `조회 중 오류가 발생했습니다. (${res.status})`;
+                    renderEmptyRow(`조회 중 오류가 발생했습니다. (${res.status})`);
                     return;
                 }
 
@@ -468,23 +472,21 @@
                 const list = json.data || [];
                 state.allEmployees = list;
                 state.page = 1;
+
                 renderEmployees();
             }catch(e){
                 if(String(e.message).includes("UNAUTHORIZED") || String(e.message).includes("FORBIDDEN")) return;
-                empty.style.display = "block";
-                empty.textContent = "조회 중 예외가 발생했습니다.";
+                renderEmptyRow("조회 중 예외가 발생했습니다.");
             }
         }
 
         function renderEmployees(){
             const tbody = document.getElementById("empTbody");
-            const empty = document.getElementById("emptyBox");
             const pager = document.getElementById("pager");
 
             const all = state.allEmployees || [];
             if(!all.length){
-                tbody.innerHTML = "";
-                empty.style.display = "block";
+                renderEmptyRow("조회 결과가 없습니다.");
                 pager.innerHTML = "";
                 return;
             }
@@ -525,8 +527,6 @@
             pager.innerHTML = "";
 
             const windowSize = 5;
-
-// 현재 페이지가 속한 "구간" 계산 (1~5, 6~10 ...)
             const windowStart = Math.floor((state.page - 1) / windowSize) * windowSize + 1;
             const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
 
