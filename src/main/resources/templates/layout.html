@@ -1283,13 +1283,26 @@
         }
     }
 
+    let chatbotWindow = null; // 열린 창을 저장할 변수
+
     function openChatbot() {
-        // window.open(URL, 창이름, 옵션)
-        // 채팅창과 비슷한 크기(가로 420, 세로 740)로 새 팝업창을 띄웁니다.
-        window.open("/chatbot", "ChatbotPopup", "width=420,height=740,resizable=yes,scrollbars=yes");
+        let sessionId = sessionStorage.getItem("MAIN_CHAT_SESSION_ID");
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            sessionStorage.setItem("MAIN_CHAT_SESSION_ID", sessionId);
+        }
+
+        const chatUrl = "/chatbot?sessionId=" + sessionId;
+
+        // 이미 창이 열려 있고 닫히지 않았다면?
+        if (chatbotWindow && !chatbotWindow.closed) {
+            chatbotWindow.focus(); // 새로고침 하지 않고 포커스만 줌 (대화 내용 유지)
+        } else {
+            // 창이 없거나 닫혔다면 새로 엶
+            chatbotWindow = window.open(chatUrl, "ChatbotPopup", "width=420,height=740");
+        }
     }
 
-    /* ====== 패널/메뉴 외부 클릭 닫기 ====== */
     window.addEventListener('click', (e) => {
         // profile
         const menu = document.getElementById('profileMenu');

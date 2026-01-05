@@ -1,5 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisSubscriber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +14,8 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
@@ -34,6 +41,61 @@ public class RedisConfig {
         t.setKeySerializer(new StringRedisSerializer());
         t.setValueSerializer(new StringRedisSerializer());
         return t;
+    }
+
+    /**
+     * 챗봇 메시지(객체) 저장용 템플릿
+     */
+    /**
+     * 챗봇 메시지 객체 저장용 템플릿 (JSON 직렬화 최신 방식)
+     */
+    @Bean(name = "chatbotRedisTemplate")
+    public RedisTemplate<String, Object> chatbotRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // 1. ObjectMapper 설정 (LocalDateTime 대응)
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // 다형성(Polymorphism)을 위한 타입 정보 저장 설정
+        mapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+
+        // 2. RedisSerializer 인터페이스 직접 구현 (익명 클래스 방식)
+        RedisSerializer<Object> serializer = new RedisSerializer<Object>() {
+            @Override
+            public byte[] serialize(Object value) {
+                if (value == null) return new byte[0];
+                try {
+                    return mapper.writeValueAsBytes(value);
+                } catch (Exception e) {
+                    throw new SerializationException("Redis 직렬화 에러: " + e.getMessage(), e);
+                }
+            }
+
+            @Override
+            public Object deserialize(byte[] bytes) throws SerializationException {
+                if (bytes == null || bytes.length == 0) return null;
+                try {
+                    return mapper.readValue(bytes, Object.class);
+                } catch (Exception e) {
+                    throw new SerializationException("Redis 역직렬화 에러: " + e.getMessage(), e);
+                }
+            }
+        };
+
+        // 3. 직렬화 적용
+        template.setKeySerializer(RedisSerializer.string());
+        template.setValueSerializer(serializer);
+        template.setHashKeySerializer(RedisSerializer.string());
+        template.setHashValueSerializer(serializer);
+
+        return template;
     }
 
     @Bean

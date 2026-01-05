@@ -30,12 +30,13 @@ public class ChatbotCallbackController {
             @RequestBody ReqChatbotCallbackDto request,
             @RequestHeader(value = "X-AI-CALLBACK-KEY", required = false) String key
     ) {
-        // callbackKey 검증(회의 AI랑 동일)
+
         if (callbackKey != null && !callbackKey.isBlank()) {
             if (key == null || !callbackKey.equals(key)) {
                 return ResponseEntity.status(401).build();
             }
         }
+
 
         chatbotService.handleCallback(request);
         return ResponseEntity.ok().build();
