@@ -7,6 +7,9 @@
     <!-- TipTap 번들 -->
     <script th:src="@{/js/tiptap.min.js}"></script>
 
+    <!-- ✅ SweetAlert2 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         :root {
             --primary-color: #339af0;
@@ -459,23 +462,6 @@
 
         .bottom-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
-        .alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 4px;
-            color: white;
-            z-index: 2000;
-            display: none;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 400px;
-            white-space: pre-line;
-        }
-        .alert-success { background: #40c057; }
-        .alert-error { background: #fa5252; }
-
         .char-counter {
             position: absolute;
             bottom: 10px;
@@ -487,114 +473,6 @@
             border-radius: 4px;
             z-index: 10;
             pointer-events: none;
-        }
-
-        /* 모달 스타일 */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-            animation: fadeIn 0.2s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-icon {
-            font-size: 48px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-dark);
-            text-align: center;
-            margin-bottom: 12px;
-        }
-
-        .modal-message {
-            font-size: 15px;
-            color: var(--text-muted);
-            text-align: center;
-            line-height: 1.6;
-            margin-bottom: 24px;
-            white-space: pre-line;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .modal-btn {
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: 0.2s;
-            min-width: 100px;
-        }
-
-        .modal-btn-primary {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .modal-btn-primary:hover {
-            background: #228be6;
-        }
-
-        .modal-btn-cancel {
-            background: #e9ecef;
-            color: var(--text-dark);
-        }
-
-        .modal-btn-cancel:hover {
-            background: #dee2e6;
-        }
-
-        .modal-btn-danger {
-            background: #fa5252;
-            color: white;
-        }
-
-        .modal-btn-danger:hover {
-            background: #e03131;
         }
 
         /* 근태 정보 섹션 스타일 */
@@ -813,7 +691,7 @@
             <div class="form-name-subtitle" id="form-name-subtitle">문서 로딩 중...</div>
         </div>
         <div class="header-btns">
-            <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
+            <button type="button" class="btn btn-temp" onclick="confirmTempSave()">임시저장</button>
         </div>
     </div>
 
@@ -952,20 +830,9 @@
             <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
                 <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
             </label>
-            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서 재상신</button>
-            <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
+            <button type="button" class="btn btn-primary" onclick="confirmSubmit()">문서 재상신</button>
+            <button type="button" class="btn btn-cancel" onclick="confirmCancel()">취소</button>
         </div>
-    </div>
-</div>
-
-<div id="custom-alert" class="alert"></div>
-
-<div id="modal-overlay" class="modal-overlay">
-    <div class="modal-content">
-        <div id="modal-icon" class="modal-icon">⚠️</div>
-        <h3 id="modal-title" class="modal-title">알림</h3>
-        <p id="modal-message" class="modal-message"></p>
-        <div id="modal-buttons" class="modal-buttons"></div>
     </div>
 </div>
 
@@ -1001,14 +868,70 @@
         document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
 
-    // ✅ 날짜 계산 헬퍼 함수
+    // ✅ 임시저장 확인
+    function confirmTempSave() {
+        Swal.fire({
+            title: '임시저장 확인',
+            text: '현재 작성 중인 문서를 임시저장하시겠습니까?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#339af0',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '임시저장',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveDocument(true);
+            }
+        });
+    }
+
+    // ✅ 문서재상신 확인
+    function confirmSubmit() {
+        Swal.fire({
+            title: '문서 재상신 확인',
+            text: '문서를 재상신하시겠습니까?\n재상신 후에는 수정이 불가능합니다.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#339af0',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '재상신',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveDocument(false);
+            }
+        });
+    }
+
+    // ✅ 취소 확인
+    function confirmCancel() {
+        Swal.fire({
+            title: '작성 취소',
+            text: '작성 중인 내용이 저장되지 않습니다.\n이전 페이지로 돌아가시겠습니까?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#fa5252',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '확인',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                history.back();
+            }
+        });
+    }
+
     function getDateString(type) {
         const date = new Date();
 
         if (type === 'today') {
             // 오늘
         } else if (type === 'yesterday') {
-            date.setDate(date.getDate() - 1); // ✅ 어제
+            date.setDate(date.getDate() - 1);
         } else if (type === '-6months') {
             date.setMonth(date.getMonth() - 6);
         } else if (type === '+6months') {
@@ -1018,11 +941,9 @@
         return date.toISOString().split('T')[0];
     }
 
-    // ✅ 카테고리별 날짜 규칙 판별
     function getCategoryRule(categoryName) {
         const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
 
-        // ✅ 휴가/출장 수정신청 - 시작일 제한 없음, 종료일은 어제부터 미래
         if (normalized.includes('수정신청')) {
             return {
                 startDate: { min: null, max: null },
@@ -1030,7 +951,6 @@
             };
         }
 
-        // ✅ 휴가/출장 신청, 취소신청 - 오늘부터 미래
         if (normalized.includes('휴가') || normalized.includes('출장')) {
             return {
                 startDate: { min: getDateString('today'), max: getDateString('+6months') },
@@ -1041,7 +961,6 @@
         return null;
     }
 
-    // ✅ 날짜 제약 적용
     function applyDateConstraints(rule) {
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
@@ -1054,7 +973,6 @@
             return;
         }
 
-        // ✅ 시작일 제약 (null이면 제약 없음)
         if (rule.startDate.min) {
             startDateInput.min = rule.startDate.min;
         } else {
@@ -1067,7 +985,6 @@
             startDateInput.removeAttribute('max');
         }
 
-        // ✅ 종료일 제약
         if (rule.endDate.min) {
             endDateInput.min = rule.endDate.min;
         } else {
@@ -1083,7 +1000,6 @@
         console.log('✅ 날짜 제약 적용:', rule);
     }
 
-    // ✅ 카테고리 변경 핸들러
     function onCategoryChange(categoryName) {
         console.log('📌 카테고리 변경:', categoryName);
 
@@ -1102,13 +1018,11 @@
 
         const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
 
-        // ✅ 취소신청이면 근태 정보 섹션 전체 숨김
         if (normalized === '휴가취소신청' || normalized === '출장취소신청') {
             attendanceSection.style.display = 'none';
             return;
         }
 
-        // 여기부터는 취소신청이 아닌 경우만 실행
         attendanceSection.style.display = 'block';
 
         document.getElementById('startDate').value = '';
@@ -1139,7 +1053,7 @@
 
         console.log('✅ 카테고리 설정 완료 - 대직자 표시:', delegateSection.style.display);
     }
-    // ✅ 시작일 변경 이벤트
+
     function onStartDateChange(e) {
         const startDate = e.target.value;
         const endDateInput = document.getElementById('endDate');
@@ -1153,30 +1067,29 @@
         }
 
         if (startDate && endDate && endDate < startDate) {
-            showModal(
-                '⚠️',
-                '날짜 오류',
-                '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '날짜 오류',
+                text: '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
             endDateInput.value = '';
         }
 
         updateTableDates();
     }
 
-    // ✅ 종료일 변경 이벤트
     function onEndDateChange(e) {
         const startDate = document.getElementById('startDate').value;
         const endDate = e.target.value;
 
         if (startDate && endDate && endDate < startDate) {
-            showModal(
-                '⚠️',
-                '날짜 오류',
-                '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '날짜 오류',
+                text: '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
             e.target.value = '';
             return;
         }
@@ -1184,7 +1097,6 @@
         updateTableDates();
     }
 
-    // ✅ 표에 날짜 업데이트
     function updateTableDates() {
         if (!tiptapEditor) return;
 
@@ -1223,7 +1135,6 @@
         console.log('✅ 표 날짜 업데이트 완료');
     }
 
-    // ✅ 표에 대직자 업데이트
     function updateTableDelegate() {
         if (!tiptapEditor) return;
 
@@ -1286,36 +1197,6 @@
         return category ? category.docfoCatName : '';
     }
 
-    function showModal(icon, title, message, buttons) {
-        const modal = document.getElementById('modal-overlay');
-        const modalIcon = document.getElementById('modal-icon');
-        const modalTitle = document.getElementById('modal-title');
-        const modalMessage = document.getElementById('modal-message');
-        const modalButtons = document.getElementById('modal-buttons');
-
-        modalIcon.textContent = icon;
-        modalTitle.textContent = title;
-        modalMessage.textContent = message;
-
-        modalButtons.innerHTML = '';
-        buttons.forEach(btn => {
-            const button = document.createElement('button');
-            button.className = `modal-btn ${btn.className}`;
-            button.textContent = btn.text;
-            button.onclick = () => {
-                closeModal();
-                if (btn.callback) btn.callback();
-            };
-            modalButtons.appendChild(button);
-        });
-
-        modal.style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('modal-overlay').style.display = 'none';
-    }
-
     async function loadOriginalDocumentData() {
         try {
             const response = await fetch(`/api/v1/documents/${originalDocNo}?status=SUBMITTED`, {
@@ -1340,7 +1221,6 @@
                     try {
                         let parsedJson = JSON.parse(doc.content);
 
-                        // ⭐ 근태 정보 복원
                         if (parsedJson.attendanceInfo) {
                             const attendanceInfo = parsedJson.attendanceInfo;
 
@@ -1351,7 +1231,6 @@
                                 document.getElementById('endDate').value = attendanceInfo.endDate;
                             }
 
-                            // ⭐ 대직자 정보 복원
                             if (attendanceInfo.delegate) {
                                 selectedDelegate = {
                                     empId: attendanceInfo.delegate.empId,
@@ -1401,7 +1280,6 @@
                     if (radio) {
                         radio.checked = true;
 
-                        // ✅ 선택된 카테고리로 근태 섹션 및 대직자 표시 결정
                         const categoryName = getCategoryNameByNo(doc.docFormCatNo);
                         if (categoryName) {
                             currentCategoryName = categoryName;
@@ -1418,7 +1296,6 @@
                                 const selectedDelegateSection = document.getElementById('selected-delegate-section');
                                 const attendanceTitle = document.getElementById('attendance-title');
 
-                                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 필드 표시
                                 if (normalized === '휴가신청' || normalized === '휴가수정신청') {
                                     attendanceTitle.textContent = '휴가 정보';
                                     delegateSection.style.display = 'block';
@@ -1457,8 +1334,12 @@
             }
         } catch (e) {
             console.error('데이터 로드 오류:', e);
-            showModal('❌', '오류 발생', '데이터 로드 중 오류가 발생했습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'error',
+                title: '오류 발생',
+                text: '데이터 로드 중 오류가 발생했습니다.',
+                confirmButtonColor: '#339af0'
+            });
         }
     }
 
@@ -1780,15 +1661,30 @@
 
         for (let file of files) {
             if (currentCount + newFiles.length >= maxCount) {
-                showAlert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`, "error");
+                Swal.fire({
+                    icon: 'warning',
+                    title: '첨부 제한',
+                    text: `최대 ${maxCount}개까지만 첨부할 수 있습니다.`,
+                    confirmButtonColor: '#339af0'
+                });
                 break;
             }
             if (file.size > maxSize) {
-                showAlert(`${file.name}은(는) 10MB를 초과합니다.`, "error");
+                Swal.fire({
+                    icon: 'warning',
+                    title: '파일 크기 초과',
+                    text: `${file.name}은(는) 10MB를 초과합니다.`,
+                    confirmButtonColor: '#339af0'
+                });
                 continue;
             }
             if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
-                showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
+                Swal.fire({
+                    icon: 'info',
+                    title: '중복 파일',
+                    text: `${file.name}은(는) 이미 첨부되었습니다.`,
+                    confirmButtonColor: '#339af0'
+                });
                 continue;
             }
             newFiles.push(file);
@@ -1872,8 +1768,12 @@
         const text = tiptapEditor.getText().trim();
 
         if (text.length < 100) {
-            return showModal('⚠️', 'AI 요약 오류', '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: 'AI 요약 오류',
+                text: '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
 
         const summaryBox = document.getElementById('ai-summary-box');
@@ -1899,8 +1799,12 @@
             }
         } catch (error) {
             summaryBox.style.display = 'none';
-            showModal('❌', 'AI 요약 실패', 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'error',
+                title: 'AI 요약 실패',
+                text: 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
     }
 
@@ -1923,12 +1827,20 @@
 
             if (!isTemp) {
                 if (!startDate || !endDate) {
-                    return showModal('⚠️', '입력 오류', '시작일과 종료일을 입력해주세요.',
-                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                    return Swal.fire({
+                        icon: 'warning',
+                        title: '입력 오류',
+                        text: '시작일과 종료일을 입력해주세요.',
+                        confirmButtonColor: '#339af0'
+                    });
                 }
                 if (startDate > endDate) {
-                    return showModal('⚠️', '입력 오류', '종료일이 시작일보다 빠를 수 없습니다.',
-                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                    return Swal.fire({
+                        icon: 'warning',
+                        title: '입력 오류',
+                        text: '종료일이 시작일보다 빠를 수 없습니다.',
+                        confirmButtonColor: '#339af0'
+                    });
                 }
             }
 
@@ -1937,7 +1849,6 @@
                 endDate: endDate
             };
 
-            // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 포함
             if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
                 contentJson.attendanceInfo.delegate = {
                     empId: selectedDelegate.empId,
@@ -1953,15 +1864,55 @@
         const includeAiSummary = document.getElementById('include-ai-summ').checked;
         const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
 
-        if (!title) return showModal('⚠️', '입력 오류', '제목을 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (title.length > 100) return showModal('⚠️', '입력 오류', '제목은 100자 이내로 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (!contentText) return showModal('⚠️', '입력 오류', '내용을 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (contentText.length > 1000) return showModal('⚠️', '입력 오류', '내용은 1000자 이내로 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (!checkedRadio) return showModal('⚠️', '입력 오류', '카테고리를 선택하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (!isTemp && selectedApprovers.length === 0) return showModal('⚠️', '입력 오류', '결재선을 최소 1명 지정하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+        if (!title) return Swal.fire({
+            icon: 'warning',
+            title: '입력 오류',
+            text: '제목을 입력하세요.',
+            confirmButtonColor: '#339af0'
+        });
+
+        if (title.length > 100) return Swal.fire({
+            icon: 'warning',
+            title: '입력 오류',
+            text: '제목은 100자 이내로 입력하세요.',
+            confirmButtonColor: '#339af0'
+        });
+
+        if (!contentText) return Swal.fire({
+            icon: 'warning',
+            title: '입력 오류',
+            text: '내용을 입력하세요.',
+            confirmButtonColor: '#339af0'
+        });
+
+        if (contentText.length > 1000) return Swal.fire({
+            icon: 'warning',
+            title: '입력 오류',
+            text: '내용은 1000자 이내로 입력하세요.',
+            confirmButtonColor: '#339af0'
+        });
+
+        if (!checkedRadio) return Swal.fire({
+            icon: 'warning',
+            title: '입력 오류',
+            text: '카테고리를 선택하세요.',
+            confirmButtonColor: '#339af0'
+        });
+
+        if (!isTemp && selectedApprovers.length === 0) return Swal.fire({
+            icon: 'warning',
+            title: '입력 오류',
+            text: '결재선을 최소 1명 지정하세요.',
+            confirmButtonColor: '#339af0'
+        });
 
         if (!isTemp && includeAiSummary && !hasAiSummary) {
-            return showModal('⚠️', 'AI 요약 오류', 'AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: 'AI 요약 오류',
+                text: 'AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
 
         let finalAiSummary = null;
@@ -2012,7 +1963,6 @@
                     await uploadFiles(newDocNo);
                 }
 
-                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 등록
                 if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && newDocNo) {
                     await registerDelegate(newDocNo, selectedDelegate.empId);
                 }
@@ -2020,14 +1970,30 @@
                 const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 재상신되었습니다.";
                 const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
 
-                showModal('✅', '완료', successMessage,
-                    [{ text: '확인', className: 'modal-btn-primary', callback: () => { location.href = targetUrl; } }]);
+                Swal.fire({
+                    icon: 'success',
+                    title: '완료',
+                    text: successMessage,
+                    confirmButtonColor: '#339af0'
+                }).then(() => {
+                    location.href = targetUrl;
+                });
             } else {
                 const err = await response.json().catch(() => ({}));
-                showModal('❌', '오류 발생', err.message || "처리 실패", [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                Swal.fire({
+                    icon: 'error',
+                    title: '오류 발생',
+                    text: err.message || "처리 실패",
+                    confirmButtonColor: '#339af0'
+                });
             }
         } catch (e) {
-            showModal('❌', '통신 오류', '서버 통신 오류', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'error',
+                title: '통신 오류',
+                text: '서버와의 통신에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
     }
 
@@ -2182,7 +2148,7 @@
                 document.getElementById('writer-phone').value = result.data.workPhone || "-";
             }
         } catch (e) {
-            showAlert("내 정보 로드 실패", "error");
+            console.error('❌ 내 정보 로드 실패:', e);
         }
     }
 
@@ -2237,7 +2203,6 @@
 
     async function searchDelegates(keyword = '') {
         try {
-            // 기존 API 그대로 사용
             let url = `/api/v1/employees?size=20&excludeMe=true`;
             if (keyword && keyword.trim().length > 0) {
                 url += `&keyword=${encodeURIComponent(keyword.trim())}`;
@@ -2245,7 +2210,6 @@
             const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
 
-            // ✅ 같은 부서만 필터링 (휴가중인 사람도 포함)
             const myDept = document.getElementById('writer-dept').value;
             const sameDeptEmployees = (result.data?.items || []).filter(emp =>
                 emp.depName === myDept
@@ -2267,7 +2231,7 @@
 
         container.innerHTML = employees.map(emp => {
             const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isOnLeave = emp.atte !== 'C'; // ✅ 휴가중 또는 출장중
+            const isOnLeave = emp.atte !== 'C';
             const isDisabled = isSelected || isOnLeave;
 
             let statusHtml = '';
@@ -2291,7 +2255,6 @@
     }
 
     function selectDelegate(empId, empName, posName, depName, posOrder) {
-        // ✅ 직급 제한 제거
         selectedDelegate = {
             empId: empId,
             empName: empName,
@@ -2383,21 +2346,41 @@
     function addApprover(id, name, pos, dept, posOrder) {
         if (selectedApprovers.some(a => a.approverId === id)) return;
         if (selectedApprovers.length >= 5) {
-            return showModal('⚠️', '최대 인원 초과', '결재선은 최대 5명까지만 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: '최대 인원 초과',
+                text: '결재선은 최대 5명까지만 지정할 수 있습니다.',
+                confirmButtonColor: '#339af0'
+            });
         }
         if (posOrder >= myInfo.posOrder) {
-            showModal('⚠️', '직급 제한', '자신보다 높은 직급만 결재선으로 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'warning',
+                title: '직급 제한',
+                text: '자신보다 높은 직급만 결재선으로 지정할 수 있습니다.',
+                confirmButtonColor: '#339af0'
+            });
             return;
         }
         if (selectedApprovers.some(a => a.posOrder === posOrder)) {
-            showModal('⚠️', '중복 직급', '같은 직급은 1명만 결재선으로 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'warning',
+                title: '중복 직급',
+                text: '같은 직급은 1명만 결재선으로 지정할 수 있습니다.',
+                confirmButtonColor: '#339af0'
+            });
             return;
         }
         if (selectedApprovers.length > 0) {
             const highestSelectedPosOrder = Math.min(...selectedApprovers.map(a => a.posOrder));
             if (posOrder > highestSelectedPosOrder) {
                 const highestRankName = selectedApprovers.find(a => a.posOrder === highestSelectedPosOrder).posName;
-                showModal('⚠️', '직급 순서 오류', `현재 선택된 가장 높은 직급(${highestRankName})보다\n낮은 직급은 추가할 수 없습니다.\n\n선택하려는 직급: ${pos}`, [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                Swal.fire({
+                    icon: 'warning',
+                    title: '직급 순서 오류',
+                    text: `현재 선택된 가장 높은 직급(${highestRankName})보다\n낮은 직급은 추가할 수 없습니다.\n\n선택하려는 직급: ${pos}`,
+                    confirmButtonColor: '#339af0'
+                });
                 return;
             }
         }
@@ -2445,14 +2428,6 @@
         if (currentResults.length > 0 && !currentResults[0].innerText.includes('검색창을 클릭')) {
             searchEmployees(document.getElementById('approver-search').value);
         }
-    }
-
-    function showAlert(msg, type) {
-        const alert = document.getElementById('custom-alert');
-        alert.innerText = msg;
-        alert.className = `alert alert-${type}`;
-        alert.style.display = 'block';
-        setTimeout(() => alert.style.display = 'none', 2500);
     }
 </script>
 </body>

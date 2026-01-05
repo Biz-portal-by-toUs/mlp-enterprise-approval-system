@@ -7,6 +7,9 @@
     <!-- TipTap 번들 -->
     <script th:src="@{/js/tiptap.min.js}"></script>
 
+    <!-- ✅ SweetAlert2 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         :root {
             --primary-color: #339af0;
@@ -462,23 +465,6 @@
 
         .bottom-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
-        .alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 4px;
-            color: white;
-            z-index: 2000;
-            display: none;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 400px;
-            white-space: pre-line;
-        }
-        .alert-success { background: #40c057; }
-        .alert-error { background: #fa5252; }
-
         .char-counter {
             position: absolute;
             bottom: 10px;
@@ -490,114 +476,6 @@
             border-radius: 4px;
             z-index: 10;
             pointer-events: none;
-        }
-
-        /* 모달 스타일 */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-            animation: fadeIn 0.2s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-icon {
-            font-size: 48px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-dark);
-            text-align: center;
-            margin-bottom: 12px;
-        }
-
-        .modal-message {
-            font-size: 15px;
-            color: var(--text-muted);
-            text-align: center;
-            line-height: 1.6;
-            margin-bottom: 24px;
-            white-space: pre-line;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .modal-btn {
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: 0.2s;
-            min-width: 100px;
-        }
-
-        .modal-btn-primary {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .modal-btn-primary:hover {
-            background: #228be6;
-        }
-
-        .modal-btn-cancel {
-            background: #e9ecef;
-            color: var(--text-dark);
-        }
-
-        .modal-btn-cancel:hover {
-            background: #dee2e6;
-        }
-
-        .modal-btn-danger {
-            background: #fa5252;
-            color: white;
-        }
-
-        .modal-btn-danger:hover {
-            background: #e03131;
         }
 
         /* 근태 정보 섹션 스타일 */
@@ -820,7 +698,7 @@
             <div class="form-name-subtitle" id="form-name-subtitle">양식 로딩 중...</div>
         </div>
         <div class="header-btns">
-            <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
+            <button type="button" class="btn btn-temp" onclick="confirmTempSave()">임시저장</button>
         </div>
     </div>
 
@@ -965,21 +843,9 @@
             <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
                 <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
             </label>
-            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서상신</button>
-            <button type="button" class="btn btn-cancel" onclick="goBackToFormSelection()">취소</button>
+            <button type="button" class="btn btn-primary" onclick="confirmSubmit()">문서상신</button>
+            <button type="button" class="btn btn-cancel" onclick="confirmCancel()">취소</button>
         </div>
-    </div>
-</div>
-
-<div id="custom-alert" class="alert"></div>
-
-<!-- 모달 -->
-<div id="modal-overlay" class="modal-overlay">
-    <div class="modal-content">
-        <div id="modal-icon" class="modal-icon">⚠️</div>
-        <h3 id="modal-title" class="modal-title">알림</h3>
-        <p id="modal-message" class="modal-message"></p>
-        <div id="modal-buttons" class="modal-buttons"></div>
     </div>
 </div>
 
@@ -1000,20 +866,18 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const urlParams = new URLSearchParams(window.location.search);
         currentDocfoNo = urlParams.get('docfoNo');
-        const atteNo = urlParams.get('atteNo'); // ✅ atteNo 파라미터 추출
-        const category = urlParams.get('category'); // ✅ category 파라미터 추출
+        const atteNo = urlParams.get('atteNo');
+        const category = urlParams.get('category');
 
         if (!currentDocfoNo) {
-            showModal(
-                '⚠️',
-                '양식이 선택되지 않음',
-                '문서 양식이 선택되지 않았습니다.\n양식 선택 페이지로 이동합니다.',
-                [{
-                    text: '확인',
-                    className: 'modal-btn-primary',
-                    callback: () => { window.location.href = '/document-forms'; }
-                }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '양식이 선택되지 않음',
+                text: '문서 양식이 선택되지 않았습니다.\n양식 선택 페이지로 이동합니다.',
+                confirmButtonColor: '#339af0'
+            }).then(() => {
+                window.location.href = '/document-forms';
+            });
             return;
         }
 
@@ -1024,24 +888,77 @@
 
         await fetchFormDetails();
 
-        // ✅ atteNo가 있으면 근태 정보 로드 (에디터 초기화 전에!)
         if (atteNo && category) {
             await loadAttendanceInfo(atteNo, category);
         }
 
         initTipTapEditor();
 
-        // ✅ atteNo가 없을 때만 첫 번째 카테고리의 날짜 제약 적용
         if (!atteNo && formCategories.length > 0) {
             onCategoryChange(formCategories[0].docfoCatName);
         }
 
-        // 날짜 입력 이벤트
         document.getElementById('startDate').addEventListener('change', onStartDateChange);
         document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
 
-    // ✅ 근태 정보 로드 및 자동 입력
+    // ✅ 임시저장 확인
+    function confirmTempSave() {
+        Swal.fire({
+            title: '임시저장 확인',
+            text: '현재 작성 중인 문서를 임시저장하시겠습니까?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#339af0',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '임시저장',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveDocument(true);
+            }
+        });
+    }
+
+    // ✅ 문서상신 확인
+    function confirmSubmit() {
+        Swal.fire({
+            title: '문서상신 확인',
+            text: '문서를 상신하시겠습니까?\n상신 후에는 수정이 불가능합니다.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#339af0',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '상신',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveDocument(false);
+            }
+        });
+    }
+
+    // ✅ 취소 확인
+    function confirmCancel() {
+        Swal.fire({
+            title: '작성 취소',
+            text: '작성 중인 내용이 저장되지 않습니다.\n양식 선택 페이지로 돌아가시겠습니까?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#fa5252',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '확인',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/document-forms';
+            }
+        });
+    }
+
     async function loadAttendanceInfo(atteNo, category) {
         try {
             const response = await fetch(`/api/v1/attendances/${atteNo}`, {
@@ -1057,11 +974,9 @@
 
             console.log('✅ 근태 정보 로드:', attendance);
 
-            // ✅ 시작일/종료일 자동 입력
             document.getElementById('startDate').value = attendance.startAt.split('T')[0];
             document.getElementById('endDate').value = attendance.endAt.split('T')[0];
 
-            // ✅ 대직자 자동 입력 (휴가수정신청인 경우)
             if (category === '휴가수정신청' && attendance.delegateEmpId) {
                 selectedDelegate = {
                     empId: attendance.delegateEmpId,
@@ -1073,7 +988,6 @@
                 renderSelectedDelegate();
             }
 
-            // ✅ 카테고리 자동 선택
             const categoryRadios = document.querySelectorAll('input[name="docfoCatNo"]');
             categoryRadios.forEach(radio => {
                 const label = radio.parentElement.textContent.trim();
@@ -1083,22 +997,21 @@
                 }
             });
 
-            // ✅ targetAtteNo 저장 (저장 시 사용)
             window.targetAtteNo = atteNo;
 
             console.log('✅ 근태 정보 자동 입력 완료');
 
         } catch (error) {
             console.error('❌ 근태 정보 로드 실패:', error);
-            showModal(
-                '❌',
-                '오류 발생',
-                '근태 정보를 불러오는데 실패했습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'error',
+                title: '오류 발생',
+                text: '근태 정보를 불러오는데 실패했습니다.',
+                confirmButtonColor: '#339af0'
+            });
         }
     }
-    // ✅ 표에 "수정/취소 대상" 근태 정보 업데이트
+
     function updateTableTargetAttendance(attendance) {
         if (!tiptapEditor) return;
 
@@ -1222,13 +1135,11 @@
 
         const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
 
-        // ✅ 취소신청이면 근태 정보 섹션 전체 숨김
         if (normalized === '휴가취소신청' || normalized === '출장취소신청') {
             attendanceSection.style.display = 'none';
             return;
         }
 
-        // 여기부터는 취소신청이 아닌 경우만 실행
         attendanceSection.style.display = 'block';
 
         document.getElementById('startDate').value = '';
@@ -1242,7 +1153,6 @@
 
         applyDateConstraints(rule);
 
-        // 날짜 선택 그리드 아이템들
         const startDateItem = document.querySelector('.attendance-grid-item:has(#startDate)');
         const endDateItem = document.querySelector('.attendance-grid-item:has(#endDate)');
 
@@ -1284,12 +1194,12 @@
         }
 
         if (startDate && endDate && endDate < startDate) {
-            showModal(
-                '⚠️',
-                '날짜 오류',
-                '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '날짜 오류',
+                text: '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
             endDateInput.value = '';
         }
 
@@ -1301,12 +1211,12 @@
         const endDate = e.target.value;
 
         if (startDate && endDate && endDate < startDate) {
-            showModal(
-                '⚠️',
-                '날짜 오류',
-                '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '날짜 오류',
+                text: '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
             e.target.value = '';
             return;
         }
@@ -1414,36 +1324,6 @@
         return category ? category.docfoCatName : '';
     }
 
-    function showModal(icon, title, message, buttons) {
-        const modal = document.getElementById('modal-overlay');
-        const modalIcon = document.getElementById('modal-icon');
-        const modalTitle = document.getElementById('modal-title');
-        const modalMessage = document.getElementById('modal-message');
-        const modalButtons = document.getElementById('modal-buttons');
-
-        modalIcon.textContent = icon;
-        modalTitle.textContent = title;
-        modalMessage.textContent = message;
-
-        modalButtons.innerHTML = '';
-        buttons.forEach(btn => {
-            const button = document.createElement('button');
-            button.className = `modal-btn ${btn.className}`;
-            button.textContent = btn.text;
-            button.onclick = () => {
-                closeModal();
-                if (btn.callback) btn.callback();
-            };
-            modalButtons.appendChild(button);
-        });
-
-        modal.style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('modal-overlay').style.display = 'none';
-    }
-
     async function fetchFormDetails() {
         const container = document.getElementById('category-radio-group');
 
@@ -1511,12 +1391,12 @@
 
         } catch (e) {
             console.error('❌ 카테고리 로드 실패:', e);
-            showModal(
-                '❌',
-                '오류 발생',
-                '문서 양식을 불러오는데 실패했습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'error',
+                title: '오류 발생',
+                text: '문서 양식을 불러오는데 실패했습니다.',
+                confirmButtonColor: '#339af0'
+            });
         }
     }
 
@@ -1540,7 +1420,6 @@
             }
         } catch (e) {
             console.error('❌ 내 정보 로드 실패:', e);
-            showAlert("내 정보 로드 실패", "error");
         }
     }
 
@@ -1595,7 +1474,6 @@
 
     async function searchDelegates(keyword = '') {
         try {
-            // 기존 API 그대로 사용
             let url = `/api/v1/employees?size=20&excludeMe=true`;
             if (keyword && keyword.trim().length > 0) {
                 url += `&keyword=${encodeURIComponent(keyword.trim())}`;
@@ -1603,7 +1481,6 @@
             const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
 
-            // ✅ 같은 부서만 필터링 (휴가중인 사람도 포함)
             const myDept = document.getElementById('writer-dept').value;
             const sameDeptEmployees = (result.data?.items || []).filter(emp =>
                 emp.depName === myDept
@@ -1625,7 +1502,7 @@
 
         container.innerHTML = employees.map(emp => {
             const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isOnLeave = emp.atte !== 'C'; // 휴가중 또는 출장중
+            const isOnLeave = emp.atte !== 'C';
             const isDisabled = isSelected || isOnLeave;
 
             let statusHtml = '';
@@ -1837,7 +1714,6 @@
 
         updateCharCounter();
 
-        // ✅ 에디터 초기화 완료 후 근태 정보가 있으면 표 업데이트
         if (window.targetAtteNo) {
             fetch(`/api/v1/attendances/${window.targetAtteNo}`, {
                 credentials: 'include'
@@ -1986,26 +1862,41 @@
     function addApprover(id, name, pos, dept, posOrder) {
         if (selectedApprovers.some(a => a.approverId === id)) return;
         if (selectedApprovers.length >= 5) {
-            return showModal('⚠️', '최대 인원 초과', '결재선은 최대 5명까지만 지정할 수 있습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: '최대 인원 초과',
+                text: '결재선은 최대 5명까지만 지정할 수 있습니다.',
+                confirmButtonColor: '#339af0'
+            });
         }
         if (posOrder >= myInfo.posOrder) {
-            showModal('⚠️', '직급 제한', '자신보다 높은 직급만 결재선으로 지정할 수 있습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'warning',
+                title: '직급 제한',
+                text: '자신보다 높은 직급만 결재선으로 지정할 수 있습니다.',
+                confirmButtonColor: '#339af0'
+            });
             return;
         }
         if (selectedApprovers.some(a => a.posOrder === posOrder)) {
-            showModal('⚠️', '중복 직급', '같은 직급은 1명만 결재선으로 지정할 수 있습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'warning',
+                title: '중복 직급',
+                text: '같은 직급은 1명만 결재선으로 지정할 수 있습니다.',
+                confirmButtonColor: '#339af0'
+            });
             return;
         }
         if (selectedApprovers.length > 0) {
             const highestSelectedPosOrder = Math.min(...selectedApprovers.map(a => a.posOrder));
             if (posOrder > highestSelectedPosOrder) {
                 const highestRankName = selectedApprovers.find(a => a.posOrder === highestSelectedPosOrder).posName;
-                showModal('⚠️', '직급 순서 오류',
-                    `현재 선택된 가장 높은 직급(${highestRankName})보다\n낮은 직급은 추가할 수 없습니다.\n\n선택하려는 직급: ${pos}`,
-                    [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                Swal.fire({
+                    icon: 'warning',
+                    title: '직급 순서 오류',
+                    text: `현재 선택된 가장 높은 직급(${highestRankName})보다\n낮은 직급은 추가할 수 없습니다.\n\n선택하려는 직급: ${pos}`,
+                    confirmButtonColor: '#339af0'
+                });
                 return;
             }
         }
@@ -2062,15 +1953,30 @@
 
         for (let file of files) {
             if (attachedFiles.length >= maxCount) {
-                showAlert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`, "error");
+                Swal.fire({
+                    icon: 'warning',
+                    title: '첨부 제한',
+                    text: `최대 ${maxCount}개까지만 첨부할 수 있습니다.`,
+                    confirmButtonColor: '#339af0'
+                });
                 break;
             }
             if (file.size > maxSize) {
-                showAlert(`${file.name}은(는) 10MB를 초과합니다.`, "error");
+                Swal.fire({
+                    icon: 'warning',
+                    title: '파일 크기 초과',
+                    text: `${file.name}은(는) 10MB를 초과합니다.`,
+                    confirmButtonColor: '#339af0'
+                });
                 continue;
             }
             if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
+                Swal.fire({
+                    icon: 'info',
+                    title: '중복 파일',
+                    text: `${file.name}은(는) 이미 첨부되었습니다.`,
+                    confirmButtonColor: '#339af0'
+                });
                 continue;
             }
             attachedFiles.push(file);
@@ -2137,12 +2043,20 @@
 
             if (!isTemp) {
                 if (!startDate || !endDate) {
-                    return showModal('⚠️', '입력 오류', '시작일과 종료일을 입력해주세요.',
-                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                    return Swal.fire({
+                        icon: 'warning',
+                        title: '입력 오류',
+                        text: '시작일과 종료일을 입력해주세요.',
+                        confirmButtonColor: '#339af0'
+                    });
                 }
                 if (startDate > endDate) {
-                    return showModal('⚠️', '입력 오류', '종료일이 시작일보다 빠를 수 없습니다.',
-                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                    return Swal.fire({
+                        icon: 'warning',
+                        title: '입력 오류',
+                        text: '종료일이 시작일보다 빠를 수 없습니다.',
+                        confirmButtonColor: '#339af0'
+                    });
                 }
             }
 
@@ -2151,12 +2065,10 @@
                 endDate: endDate
             };
 
-            // ✅ 수정/취소 대상 근태 식별자 포함
             if (window.targetAtteNo) {
                 contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
             }
 
-            // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 포함
             if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
                 contentJson.attendanceInfo.delegate = {
                     empId: selectedDelegate.empId,
@@ -2168,18 +2080,30 @@
         }
 
         if (!title || !contentText) {
-            return showModal('⚠️', '입력 오류', '제목과 내용을 모두 입력해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: '입력 오류',
+                text: '제목과 내용을 모두 입력해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
 
         if (!checkedRadio) {
-            return showModal('⚠️', '입력 오류', '카테고리를 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: '입력 오류',
+                text: '카테고리를 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
 
         if (!isTemp && selectedApprovers.length === 0) {
-            return showModal('⚠️', '입력 오류', '문서를 상신하려면 결재선을 최소 1명 이상 지정해야 합니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: '입력 오류',
+                text: '문서를 상신하려면 결재선을 최소 1명 이상 지정해야 합니다.',
+                confirmButtonColor: '#339af0'
+            });
         }
 
         try {
@@ -2215,7 +2139,6 @@
                     await uploadFiles(docNo);
                 }
 
-                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 등록
                 if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && docNo) {
                     await registerDelegate(docNo, selectedDelegate.empId);
                 }
@@ -2223,16 +2146,31 @@
                 const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.";
                 const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
 
-                showModal('✅', '완료', successMessage,
-                    [{ text: '확인', className: 'modal-btn-primary', callback: () => { location.href = targetUrl; } }]);
+                // ✅ 성공 메시지 표시 후 페이지 이동
+                Swal.fire({
+                    icon: 'success',
+                    title: '완료',
+                    text: successMessage,
+                    confirmButtonColor: '#339af0'
+                }).then(() => {
+                    location.href = targetUrl;
+                });
             } else {
                 const err = await response.json().catch(() => ({}));
-                showModal('❌', '오류 발생', err.message || "문서 처리에 실패했습니다.",
-                    [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                Swal.fire({
+                    icon: 'error',
+                    title: '오류 발생',
+                    text: err.message || "문서 처리에 실패했습니다.",
+                    confirmButtonColor: '#339af0'
+                });
             }
         } catch (e) {
-            showModal('❌', '통신 오류', '서버와의 통신에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'error',
+                title: '통신 오류',
+                text: '서버와의 통신에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
     }
 
@@ -2308,8 +2246,12 @@
         const text = tiptapEditor.getText().trim();
 
         if (text.length < 100) {
-            return showModal('⚠️', 'AI 요약 오류', '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            return Swal.fire({
+                icon: 'warning',
+                title: 'AI 요약 오류',
+                text: '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
 
         const summaryBox = document.getElementById('ai-summary-box');
@@ -2335,25 +2277,13 @@
             }
         } catch (error) {
             summaryBox.style.display = 'none';
-            showModal('❌', 'AI 요약 실패', 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({
+                icon: 'error',
+                title: 'AI 요약 실패',
+                text: 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                confirmButtonColor: '#339af0'
+            });
         }
-    }
-
-    function goBackToFormSelection() {
-        showModal('⚠️', '작성 취소', '작성 중인 내용이 저장되지 않습니다.\n양식 선택 페이지로 돌아가시겠습니까?',
-            [
-                { text: '취소', className: 'modal-btn-cancel', callback: null },
-                { text: '확인', className: 'modal-btn-danger', callback: () => { window.location.href = '/document-forms'; } }
-            ]);
-    }
-
-    function showAlert(msg, type) {
-        const alert = document.getElementById('custom-alert');
-        alert.innerText = msg;
-        alert.className = `alert alert-${type}`;
-        alert.style.display = 'block';
-        setTimeout(() => alert.style.display = 'none', 2500);
     }
 </script>
 </body>
