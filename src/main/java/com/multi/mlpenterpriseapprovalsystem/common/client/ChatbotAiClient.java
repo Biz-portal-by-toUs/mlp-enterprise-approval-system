@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,26 +35,44 @@ public class ChatbotAiClient {
     private String callbackKey;
 
 
-    public void requestChatbotAnswer(String assistantMessageId, String empId, String comId, String question) {
-
+    /**
+     * AI에게 질문 및 대화 문맥 전달
+     *
+     * @param assistantMessageId 답변을 매칭할 고유 ID (empId_sessionId_timestamp)
+     * @param empId             사번
+     * @param comId             회사 ID
+     * @param question          현재 질문
+     * @param history           Redis에서 조회한 이전 대화 내역 리스트
+     */
+    public void requestChatbotAnswer(
+            String assistantMessageId,
+            String empId,
+            String comId,
+            String question,
+            List<Map<String, String>> history
+    ) {
         Map<String, Object> body = new HashMap<>();
         body.put("messageId", assistantMessageId);
         body.put("empId", empId);
         body.put("comId", comId);
         body.put("question", question);
 
+        body.put("history", history);
 
         body.put("callbackUrl", callbackUrl);
         body.put("callbackKey", callbackKey);
 
+        log.info("[AI][CHATBOT] Requesting answer with context. messageId={}, historySize={}", assistantMessageId, history.size());
+
+        // 2. 비동기 POST 요청 실행
         fastApiWebClient.post()
                 .uri("/ai/chatbot/run")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnNext(res -> log.info("[AI][CHATBOT] requested messageId={}, res={}", assistantMessageId, res))
-                .doOnError(e -> log.error("[AI][CHATBOT] request failed messageId={}", assistantMessageId, e))
-                .subscribe();
+                .doOnNext(res -> log.info("[AI][CHATBOT] Request success. res={}", res))
+                .doOnError(e -> log.error("[AI][CHATBOT] Request failed. messageId={}, error={}", assistantMessageId, e.getMessage()))
+                .subscribe(); // 비동기 실행
     }
 }
