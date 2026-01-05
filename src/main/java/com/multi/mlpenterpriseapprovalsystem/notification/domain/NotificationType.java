@@ -8,5 +8,5 @@ package com.multi.mlpenterpriseapprovalsystem.notification.domain;
  * @since : 2026. 1. 3. 토요일
  */
 public enum NotificationType {
-    APPROVAL, MEETING, MAIL, CALENDAR, OTHER
+    APPROVAL, MEETING, MAIL, CALENDER, OTHER
 }

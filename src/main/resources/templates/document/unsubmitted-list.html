@@ -7,6 +7,8 @@
     <meta charset="UTF-8">
     <title>임시저장 문서 목록 - 기업용 전자결재시스템</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <th:block layout:fragment="pageStyles">
         <style>
             /* [페이지 헤더] */
@@ -68,7 +70,6 @@
                 background: #fcfdfe;
             }
 
-            /* ✅ 제목 셀 스타일 - 중앙 정렬 수정 */
             .title-cell {
                 text-align: center !important;
                 padding-left: 10px !important;
@@ -80,6 +81,26 @@
             }
             .title-cell:hover {
                 color: var(--primary);
+            }
+
+            /* ✅ 삭제 버튼 스타일 추가 */
+            .btn-delete {
+                padding: 6px 12px;
+                background-color: #fa5252; /* 빨간색 배경 */
+                color: white;             /* 하얀색 글씨 */
+                border: none;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s, transform 0.1s;
+            }
+            .btn-delete:hover {
+                background-color: #e03131;
+                transform: translateY(-1px);
+            }
+            .btn-delete:active {
+                transform: translateY(0);
             }
 
             /* [페이지네이션] */
@@ -151,7 +172,6 @@
                 align-items: center;
             }
 
-            /* 로딩/공백 상태 */
             .empty-msg {
                 padding: 40px 0;
                 color: var(--muted);
@@ -181,10 +201,10 @@
                         <th>제목</th>
                         <th style="width: 150px;">작성자</th>
                         <th style="width: 180px;">마지막 저장일</th>
-                    </tr>
+                        <th style="width: 100px;">관리</th> </tr>
                     </thead>
                     <tbody id="document-list">
-                    <tr><td colspan="5" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
+                    <tr><td colspan="6" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
                     </tbody>
                 </table>
             </section>
@@ -231,7 +251,7 @@
             } catch (error) {
                 console.error('조회 실패:', error);
                 document.getElementById('document-list').innerHTML =
-                    '<tr><td colspan="5" class="empty-msg" style="color:var(--danger);">데이터 로드 중 오류가 발생했습니다.</td></tr>';
+                    '<tr><td colspan="6" class="empty-msg" style="color:var(--danger);">데이터 로드 중 오류가 발생했습니다.</td></tr>';
             }
         }
 
@@ -240,29 +260,77 @@
             tbody.innerHTML = '';
 
             if (!docs || docs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">임시저장된 문서가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">임시저장된 문서가 없습니다.</td></tr>';
                 return;
             }
 
             docs.forEach((doc, index) => {
-                const rowNum = totalElements - (page * size) - index;
+                const rowNum = (page * size) + index + 1;
                 const tr = document.createElement('tr');
                 const editUrl = `/documents/${doc.docNo}?status=UNSUBMITTED`;
 
-                // ✅ 상태(Badge) 셀 제거
                 tr.innerHTML = `
                     <td>${rowNum}</td>
                     <td>${doc.docFormCatName || '-'}</td>
                     <td class="title-cell" title="${doc.title || '(제목 없음)'}">${doc.title || '(제목 없음)'}</td>
                     <td>${doc.writer}<br><small style="color:#868e96;">${doc.writerId}</small></td>
                     <td>${formatDate(doc.updatedAt)}</td>
+                    <td>
+                        <button class="btn-delete" onclick="confirmDelete(${doc.docNo})">삭제</button>
+                    </td>
                 `;
 
-                // ✅ 제목 클릭 시에만 이동하도록 설정 (행 전체 클릭 제거)
+                // 제목 클릭 시 수정 페이지 이동
                 const titleCell = tr.querySelector('.title-cell');
                 titleCell.onclick = () => location.href = editUrl;
 
                 tbody.appendChild(tr);
+            });
+        }
+
+        // ✅ 삭제 확인 및 실행 로직
+        async function confirmDelete(docNo) {
+            Swal.fire({
+                title: '정말 삭제하시겠습니까?',
+                text: "삭제된 문서는 복구할 수 없으며, 반려 문서의 재작성 링크도 해제됩니다.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#fa5252', // 삭제 버튼 색상 (빨간색)
+                cancelButtonColor: '#adb5bd',  // 취소 버튼 색상 (회색)
+                confirmButtonText: '삭제',
+                cancelButtonText: '취소',
+                reverseButtons: true // 버튼 순서 거꾸로 (취소를 왼쪽으로)
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/api/v1/documents/${docNo}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+
+                        const resData = await response.json();
+
+                        if (response.ok) {
+                            Swal.fire({
+                                title: '삭제 완료',
+                                text: '임시저장 문서가 성공적으로 삭제되었습니다.',
+                                icon: 'success',
+                                confirmButtonColor: '#339af0'
+                            });
+                            // 현재 페이지 데이터 다시 불러오기
+                            loadData(currentPage);
+                        } else {
+                            throw new Error(resData.message || '삭제 처리에 실패했습니다.');
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            title: '오류 발생',
+                            text: error.message,
+                            icon: 'error',
+                            confirmButtonColor: '#339af0'
+                        });
+                    }
+                }
             });
         }
 

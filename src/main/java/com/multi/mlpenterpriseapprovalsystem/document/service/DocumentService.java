@@ -1032,4 +1032,46 @@ public class DocumentService {
             throw new CustomException(ErrorCode.AI_SUMMARY_GENERATION_FAILED);
         }
     }
+
+
+    /**
+     * 임시저장 문서 삭제
+     */
+    public void deleteDocument(String comId, String myEmpId, Long docNo) {
+        // 1. 문서 조회
+        Document document = documentRepository.findById(docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 2. 본인 문서인지 확인
+        if (!document.getWriter().getEmpId().equals(myEmpId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 3. 회사 일치 확인
+        if (!document.getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
+        }
+
+        // 4. 임시저장(상신 전) 상태인지 확인 (이미 상신된 문서는 삭제 불가)
+        if (document.getDocStat() != DocStat.US || !Boolean.TRUE.equals(document.getTemp())) {
+            throw new CustomException(ErrorCode.CANNOT_DELETE_SUBMITTED_DOCUMENT); // 에러코드 추가 필요
+        }
+
+        if (document.getResubmittedBy() != null) {
+            Document originalDoc = document.getResubmittedBy();
+            originalDoc.clearResubmissionLink();
+            log.info("원본 문서(docNo={})의 재상신 잠금을 해제했습니다.", originalDoc.getDocNo());
+        }
+
+        // 5. 연관된 결재라인 먼저 삭제
+        approvalLineRepository.deleteByDocument_docNo(docNo);
+
+        // 6. 첨부파일이 있다면 여기서 처리 (필요 시 첨부파일 삭제 로직 호출)
+        // attachmentService.deleteAttachmentsByEntity("APPROVAL", docNo);
+
+        // 7. 문서 삭제
+        documentRepository.delete(document);
+
+        log.info("임시저장 문서 삭제 완료: docNo={}, writer={}", docNo, myEmpId);
+    }
 }

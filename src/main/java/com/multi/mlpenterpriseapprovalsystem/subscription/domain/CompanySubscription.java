@@ -5,9 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.payment.domain.PaymentMethod;
 import com.multi.mlpenterpriseapprovalsystem.subscription.enums.SubStatus;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +18,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "company_subscription")
 public class CompanySubscription extends BaseEntity {
@@ -37,7 +37,7 @@ public class CompanySubscription extends BaseEntity {
     private Subscription subscription; // 요금제 정보
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "paym_no")
+    @JoinColumn(name = "paym_no", nullable = true)
     private PaymentMethod paymentMethod; // 결제에 사용할 카드(빌링키)
 
     @Column(name = "next_billing_date", nullable = true)
@@ -90,5 +90,21 @@ public class CompanySubscription extends BaseEntity {
 
     public void updatePlan(Subscription plan) {
         this.subscription = plan;
+    }
+
+    public static CompanySubscription toEntity(Company company,
+                                        Subscription plan,
+                                        PaymentMethod paymentMethod,
+                                        LocalDateTime nextBillingDate,
+                                        Boolean autoRenewal,
+                                        SubStatus status) {
+        return CompanySubscription.builder()
+                .company(company)
+                .subscription(plan)
+                .paymentMethod(paymentMethod)
+                .nextBillingDate(nextBillingDate)
+                .autoRenewal(autoRenewal)
+                .status(status)
+                .build();
     }
 }

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>메일 상세</title>
+
+    <style layout:fragment="pageStyles">
+        :root{
+            --fg:#0f172a;
+            --mut:#64748b;
+            --line:#e2e8f0;
+            --danger:#ef4444;
+            --primary:#2c5cff;
+        }
+
+        .page-with-subbar{
+            display:grid;
+            grid-template-columns:260px minmax(0,1fr);
+            gap:0;
+            padding:0;
+            align-items:stretch;
+        }
+
+        .page-main{
+            padding:24px;
+            min-width:0;
+        }
+
+        .page-title{
+            margin:0 0 14px 0;
+            font-size:18px;
+            font-weight:900;
+        }
+
+        .card{
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:14px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            padding:18px;
+        }
+
+        .meta{
+            display:grid;
+            grid-template-columns: 120px 1fr;
+            gap:10px 12px;
+            padding-bottom:14px;
+            border-bottom:1px solid var(--line);
+            margin-bottom:14px;
+        }
+        .k{
+            color:var(--mut);
+            font-size:13px;
+            font-weight:900;
+        }
+        .v{
+            color:var(--fg);
+            font-size:14px;
+            font-weight:800;
+            min-width:0;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        .content{
+            font-size:14px;
+            line-height:1.6;
+            font-weight:600;
+            color:var(--fg);
+            white-space:pre-wrap; /* JSON 문자열도 일단 보이게 */
+        }
+
+        .actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top:14px;
+        }
+
+        .btn{
+            height:40px;
+            padding:0 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:900;
+            cursor:pointer;
+            border:none;
+            background:var(--primary);
+            color:#fff;
+            transition:0.15s;
+        }
+        .btn:hover{ filter:brightness(0.92); }
+
+        .btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+        .btn.ghost:hover{ background:#f8fafc; filter:none; }
+
+        .btn.danger{ background:var(--danger); }
+
+        @media (max-width:760px){
+            .page-with-subbar{ grid-template-columns:1fr; }
+            .page-main{ padding:14px; }
+            .meta{ grid-template-columns: 90px 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('received')}"></div>
+
+        <main class="page-main">
+            <h2 class="page-title">메일 상세</h2>
+
+            <section class="card">
+                <div class="meta">
+                    <div class="k">메일 ID</div>
+                    <div class="v" id="mailIdTxt">-</div>
+
+                    <div class="k">제목</div>
+                    <div class="v" id="titleTxt">-</div>
+
+                    <div class="k">보낸 사람</div>
+                    <div class="v" id="senderTxt">-</div>
+
+                    <div class="k">수신/발신일</div>
+                    <div class="v" id="createdAtTxt">-</div>
+
+                    <div class="k">내 역할</div>
+                    <div class="v" id="roleTxt">-</div>
+                </div>
+
+                <div class="content" id="contentBox">로딩 중...</div>
+
+                <div class="actions">
+                    <button class="btn ghost" type="button" id="btnBack">목록</button>
+                    <button class="btn ghost" type="button" id="btnRestore" style="display:none;">복원</button>
+                    <button class="btn danger" type="button" id="btnPurge" style="display:none;">완전삭제</button>
+                    <button class="btn danger" type="button" id="btnTrash">휴지통</button>
+                </div>
+            </section>
+
+            <script>
+                function getMeEmpId() {
+                    return document.getElementById('me')?.dataset?.empNo?.trim() || '';
+                }
+
+                function getMailIdFromPath() {
+                    // /mail/{mailId}
+                    const parts = window.location.pathname.split('/').filter(Boolean);
+                    return parts.length >= 2 ? parts[1] : '';
+                }
+
+                function fmtDate(iso) {
+                    if (!iso) return '-';
+                    try {
+                        const d = new Date(iso);
+                        if (isNaN(d.getTime())) return String(iso);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const hh = String(d.getHours()).padStart(2, '0');
+                        const mm = String(d.getMinutes()).padStart(2, '0');
+                        return `${y}-${m}-${day} ${hh}:${mm}`;
+                    } catch (e) {
+                        return String(iso);
+                    }
+                }
+
+                function setText(id, value) {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value ?? '-';
+                }
+
+                function show(elId, on) {
+                    const el = document.getElementById(elId);
+                    if (!el) return;
+                    el.style.display = on ? '' : 'none';
+                }
+
+                async function api(method, url) {
+                    const headers = { 'Accept': 'application/json' };
+
+                    // layout.html에 CSRF hidden input들이 있을 수 있어서 안전하게 처리(있으면 적용)
+                    const csrfParamEl = document.getElementById('csrfParam');
+                    const csrfHeaderEl = document.getElementById('csrfHeader');
+                    if (csrfParamEl && csrfHeaderEl) {
+                        headers[csrfHeaderEl.value] = csrfParamEl.value;
+                    }
+
+                    const res = await fetch(url, { method, headers, credentials: 'include' });
+                    if (!res.ok) {
+                        const t = await res.text().catch(() => '');
+                        throw new Error(`HTTP ${res.status} ${t}`);
+                    }
+                    // 204는 body 없음
+                    if (res.status === 204) return null;
+                    return res.json();
+                }
+
+                async function loadDetail() {
+                    const viewerEmpId = getMeEmpId();
+                    const mailId = getMailIdFromPath();
+
+                    if (!viewerEmpId) {
+                        document.getElementById('contentBox').textContent = '로그인 사용자 정보를 찾을 수 없습니다.';
+                        return;
+                    }
+                    if (!mailId) {
+                        document.getElementById('contentBox').textContent = 'mailId가 없습니다.';
+                        return;
+                    }
+
+                    // 상세 조회
+                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}?viewerEmpId=${encodeURIComponent(viewerEmpId)}`);
+
+                    // DTO 필드명 기준 (너의 ResMailDetailDto 생성자 순서)
+                    setText('mailIdTxt', data.mailId ?? mailId);
+                    setText('titleTxt', data.title ?? '-');
+                    setText('senderTxt', `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim());
+                    setText('createdAtTxt', fmtDate(data.createdAt));
+                    setText('roleTxt', data.role ?? '-');
+
+                    // cntt는 JSON 문자열일 수 있음 → 일단 텍스트로 보여주기
+                    document.getElementById('contentBox').textContent = data.cntt ?? '';
+
+                    // ✅ 읽음 처리(상세 진입 시)
+                    try {
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                    } catch (e) {
+                        // 읽음 실패는 UX에 치명적이지 않아서 무시 가능
+                    }
+
+                    // deletedAt이 있으면 휴지통 상태 → 복원/완전삭제 버튼 보이기
+                    const isTrashed = !!data.deletedAt;
+                    show('btnRestore', isTrashed);
+                    show('btnPurge', isTrashed);
+                    show('btnTrash', !isTrashed);
+
+                    // role에 따라 목록 돌아갈 곳 결정(간단히)
+                    const role = (data.role || '').toUpperCase();
+                    const backUrl = isTrashed ? '/mail/trash' : (role === 'SENDER' ? '/mail/sent' : '/mail/received');
+                    document.getElementById('btnBack').onclick = () => location.href = backUrl;
+
+                    // 휴지통 이동
+                    document.getElementById('btnTrash').onclick = async () => {
+                        if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/trash?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        location.href = '/mail/trash';
+                    };
+
+                    // 복원
+                    document.getElementById('btnRestore').onclick = async () => {
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/restore?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        // 복원하면 받은/보낸으로 돌아가야 하는데, role로 분기
+                        location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
+                    };
+
+                    // 완전 삭제
+                    document.getElementById('btnPurge').onclick = async () => {
+                        if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
+                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailId)}/purge?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        location.href = '/mail/trash';
+                    };
+                }
+
+                window.addEventListener('DOMContentLoaded', () => {
+                    loadDetail().catch(e => {
+                        console.error(e);
+                        document.getElementById('contentBox').textContent = '메일 상세 조회에 실패했습니다.';
+                    });
+                });
+            </script>
+        </main>
+    </div>
+</div>
+</body>
+</html>

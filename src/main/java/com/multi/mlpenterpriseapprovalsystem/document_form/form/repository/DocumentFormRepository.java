@@ -33,11 +33,11 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
-        update DocumentForm f
-           set f.docfoStat = :stat,
-               f.rejectReason = :reason
-         where f.docfoNo = :docfoNo
-    """)
+                update DocumentForm f
+                   set f.docfoStat = :stat,
+                       f.rejectReason = :reason
+                 where f.docfoNo = :docfoNo
+            """)
     int updateStatusAndReason(@Param("docfoNo") Long docfoNo,
                               @Param("stat") DocumentFormStats stat,
                               @Param("reason") String reason);
@@ -52,6 +52,56 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
             java.util.List<DocumentFormStats> stats,
             String comId,
             String docfoName,
+            Pageable pageable
+    );
+
+    @Modifying
+    @Query("""
+            update DocumentForm f
+               set f.docfoName = :name,
+                   f.cnttJson = :json,
+                   f.cnttHtml = :html,
+                   f.docfoStat = :stat,
+                   f.rejectReason = null
+             where f.docfoNo = :docfoNo
+            """)
+    int updateDraft(
+            @Param("docfoNo") Long docfoNo,
+            @Param("name") String name,
+            @Param("json") String json,
+            @Param("html") String html,
+            @Param("stat") DocumentFormStats stat
+    );
+
+    @Query("""
+                select f
+                  from DocumentForm f
+                 where f.company.comId = :comId
+                   and f.writer.empId = :writerId
+                   and f.docfoStat = :stat
+                 order by f.docfoNo desc
+            """)
+    Page<DocumentForm> findMyByStat(
+            @Param("comId") String comId,
+            @Param("writerId") String writerId,
+            @Param("stat") DocumentFormStats stat,
+            Pageable pageable
+    );
+
+    @Query("""
+                select f
+                  from DocumentForm f
+                 where f.company.comId = :comId
+                   and f.writer.empId = :writerId
+                   and f.docfoStat = :stat
+                   and lower(f.docfoName) like lower(concat('%', :keyword, '%'))
+                 order by f.docfoNo desc
+            """)
+    Page<DocumentForm> searchMyByStat(
+            @Param("comId") String comId,
+            @Param("writerId") String writerId,
+            @Param("stat") DocumentFormStats stat,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 }

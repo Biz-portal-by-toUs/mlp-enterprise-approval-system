@@ -199,6 +199,8 @@
             height:100%;
             padding:6px 8px 6px 10px;
             color:#0f172a;
+            --bpBg: rgba(59,130,246,0.12);
+            --bpColor: #3b82f6;
             background: var(--bpBg);
             box-shadow: inset 4px 0 0 var(--bpColor);
             overflow:hidden;
@@ -214,6 +216,11 @@
         .bp-evt-time{ display:none; }
 
         /* +n more 링크 */
+        /* FullCalendar 내부 스크롤 영역 */
+        #calendar .fc-scroller-harness,
+        #calendar .fc-scroller{
+            overflow: auto !important;
+        }
         #calendar .fc-daygrid-day-frame{ position:relative; }
         #calendar .fc-daygrid .fc-more-link,
         #calendar .fc-daygrid .fc-daygrid-more-link{
@@ -461,14 +468,177 @@
         #createPop{
             width: min(720px, 94vw);
         }
-
         #createPop .pop-body{
             max-height: min(72vh, 720px);
         }
-
-        /* 내용이 많아졌을 때 입력 영역이 더 시원하게 보이게 */
         #createPop textarea{
             min-height: 140px;
+        }
+
+        /* =========================
+           ✅ ToDo List UI (LEFT)  (✅ 날짜 제거 버전)
+        ========================= */
+        .todo-card{
+            margin-top:14px;
+            background: rgba(255,255,255,.40);
+            border:1px solid rgba(255,255,255,.35);
+            border-radius: 12px;
+            padding:12px;
+        }
+        .todo-top{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:10px;
+            margin-bottom:10px;
+        }
+        .todo-title{
+            font-weight:900;
+            color:#1f3b7a;
+            display:flex; align-items:center; gap:8px;
+        }
+        .todo-title .todo-title-badge{
+            width:10px; height:10px; border-radius:999px;
+            background:#334155;
+            display:inline-block;
+        }
+        .todo-count{
+            font-size:12px;
+            font-weight:800;
+            color:#64748b;
+            margin-top:4px;
+        }
+
+        .todo-list{
+            display:grid;
+            gap:8px;
+            margin-bottom:10px;
+            max-height: 380px; /* ✅ 더 길게 */
+            overflow:auto;
+            padding-right:4px;
+        }
+        .todo-item{
+            display:flex; align-items:center; justify-content:space-between;
+            gap:10px;
+            padding:10px 10px;
+            border-radius:12px;
+            background:rgba(15,23,42,.04);
+            border:1px solid rgba(15,23,42,.06);
+        }
+        .todo-left{
+            display:flex; align-items:flex-start;
+            gap:10px;
+            min-width:0;
+            flex:1;
+        }
+
+        .todo-check{
+            appearance:none;
+            -webkit-appearance:none;
+            width:18px; height:18px;
+            border-radius:999px;
+            border:2px solid rgba(15,23,42,.35);
+            background:transparent;
+            margin-top:2px;
+            cursor:pointer;
+            position:relative;
+            flex:0 0 auto;
+        }
+        .todo-check:checked{
+            border-color:#2563eb;
+            background:#2563eb;
+        }
+        .todo-check:checked::after{
+            content:"";
+            position:absolute;
+            left:5px; top:2px;
+            width:4px; height:8px;
+            border:2px solid #fff;
+            border-top:0; border-left:0;
+            transform:rotate(45deg);
+        }
+
+        /* ✅ bold 줄임 */
+        .todo-text{
+            font-weight:700;
+            font-size:14px;
+            color:#0f172a;
+            line-height:1.25;
+            word-break:break-word;
+            overflow:hidden;
+            cursor:default;
+        }
+        .todo-text.done{
+            color:#64748b;
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+            text-decoration-color: rgba(100,116,139,.55);
+        }
+
+        .todo-actions{
+            display:flex; align-items:center; gap:6px;
+            flex:0 0 auto;
+        }
+        .todo-del{
+            width:32px; height:32px;
+            border:1px solid rgba(17,24,39,.10);
+            background:rgba(255,255,255,.55);
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:900;
+        }
+        .todo-del:hover{ background:rgba(255,255,255,.75); }
+        .todo-empty{
+            padding:14px 10px;
+            text-align:center;
+            color:#64748b;
+            font-weight:800;
+            background:rgba(255,255,255,.35);
+            border:1px dashed rgba(15,23,42,.14);
+            border-radius:12px;
+        }
+
+        /* ✅ 입력/추가 버튼 작게 + 넘침 방지 */
+        .todo-add{
+            display:flex;
+            gap:8px;
+            align-items:center;
+            width:100%;
+        }
+        .todo-input{
+            flex:1;
+            min-width:0;              /* ✅ flex overflow 방지 핵심 */
+            height:36px;
+            border:1px solid rgba(17,24,39,.12);
+            border-radius:12px;
+            padding:0 12px;
+            font-weight:800;
+            outline:none;
+            background:rgba(255,255,255,.85);
+        }
+        .todo-create{
+            flex:0 0 auto;
+            height:36px;
+            padding:0 14px;
+            border:1px solid rgba(17,24,39,.10);
+            border-radius:12px;
+            background:rgba(255,255,255,.55);
+            font-weight:900;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+        .todo-create:hover{ background:rgba(255,255,255,.75); }
+
+        /* ✅ 인라인 편집 input */
+        .todo-edit{
+            width:100%;
+            border:1px solid rgba(17,24,39,.12);
+            border-radius:10px;
+            padding:8px 10px;
+            font-weight:700;
+            font-size:14px;
+            outline:none;
+            background:#fff;
         }
     </style>
 </th:block>
@@ -509,6 +679,28 @@
                 <div class="toggle-row">
                     <div class="tag"><span class="dot" style="background:#f59e0b"></span><span>개인</span></div>
                     <div class="switch on" id="tgPersonal" role="switch" aria-checked="true"></div>
+                </div>
+            </div>
+
+            <!-- ✅ ToDo List (날짜 제거, +버튼 제거) -->
+            <div class="todo-card" id="todoCard">
+                <div class="todo-top">
+                    <div>
+                        <div class="todo-title">
+                            <span class="todo-title-badge"></span>
+                            <span>ToDo List</span>
+                        </div>
+                        <div class="todo-count" id="todoCountLabel">0개</div>
+                    </div>
+                </div>
+
+                <div class="todo-list" id="todoList">
+                    <div class="todo-empty">할 일이 없어요 🙂</div>
+                </div>
+
+                <div class="todo-add">
+                    <input class="todo-input" id="todoNewInput" type="text" placeholder="할 일 추가..." maxlength="200" />
+                    <button class="todo-create" type="button" id="todoCreateBtn">추가</button>
                 </div>
             </div>
         </aside>
@@ -727,8 +919,15 @@
         const API_UPDATE = (schNo) => API_BASE + '/' + schNo;
 
         /* =========================
+           ✅ ToDo API (날짜 없는 버전)
+        ========================= */
+        const TODO_API_BASE = '/api/v1/todos';
+        const TODO_API_DONE   = (todoNo) => `${TODO_API_BASE}/${todoNo}/done`;
+        const TODO_API_ONE    = (todoNo) => `${TODO_API_BASE}/${todoNo}`;
+        const TODO_API_UPDATE = (todoNo) => `${TODO_API_BASE}/${todoNo}`;
+
+        /* =========================
            ✅ 현재 로그인 사용자(me) - 백엔드 API로만 결정
-           - /api/v1/employees/me -> ResEmployeeDetailDto(role 포함)
         ========================= */
         let CURRENT_ME = null;
 
@@ -843,6 +1042,286 @@
         function formatNice(dtStr){
             if (!dtStr) return '';
             return String(dtStr).replace('T',' ').replace(/(\.\d+)?Z?$/,'');
+        }
+
+        /* =========================
+           ✅ ToDo List state (날짜 없음)
+        ========================= */
+        const todoEls = {
+            list: document.getElementById('todoList'),
+            countLabel: document.getElementById('todoCountLabel'),
+            input: document.getElementById('todoNewInput'),
+            createBtn: document.getElementById('todoCreateBtn'),
+        };
+
+        let TODO_ITEMS = []; // [{todoNo, title, isDone}]
+
+        function safeData(json){
+            return (json && typeof json === 'object' && 'data' in json) ? json.data : json;
+        }
+
+        function normalizeTodo(it){
+            return {
+                todoNo: it.todoNo ?? it.id ?? it.todo_id,
+                title: it.title ?? it.todoTitle ?? it.content ?? '',
+                isDone: !!(it.isDone ?? it.done ?? it.completed),
+            };
+        }
+
+        async function todoFetchAll(){
+            const res = await fetch(TODO_API_BASE, { method:'GET', credentials:'include' });
+            if (res.status === 401) throw new Error('로그인이 필요해요.');
+            if (!res.ok) throw new Error('투두 조회 실패: ' + res.status);
+            const json = await res.json();
+            const payload = safeData(json);
+            return Array.isArray(payload) ? payload.map(normalizeTodo) : [];
+        }
+
+        function renderTodo(){
+            const items = TODO_ITEMS;
+
+            todoEls.countLabel.textContent = `${items.length}개`;
+            todoEls.list.innerHTML = '';
+
+            if (!items || items.length === 0){
+                const empty = document.createElement('div');
+                empty.className = 'todo-empty';
+                empty.textContent = '할 일이 없어요 🙂';
+                todoEls.list.appendChild(empty);
+                return;
+            }
+
+            items.forEach(it => {
+                const todoNo = it.todoNo;
+                const title = it.title ?? '';
+                const isDone = !!it.isDone;
+
+                const row = document.createElement('div');
+                row.className = 'todo-item';
+                row.dataset.todoNo = String(todoNo);
+
+                const left = document.createElement('div');
+                left.className = 'todo-left';
+
+                const ck = document.createElement('input');
+                ck.type = 'checkbox';
+                ck.className = 'todo-check';
+                ck.checked = isDone;
+
+                const text = document.createElement('div');
+                text.className = 'todo-text' + (isDone ? ' done' : '');
+                text.textContent = title;
+
+                ck.addEventListener('change', async () => {
+                    try{
+                        await todoSetDone(todoNo, ck.checked);
+                        // 상태만 로컬 반영
+                        it.isDone = ck.checked;
+                        text.classList.toggle('done', ck.checked);
+                    }catch(e){
+                        ck.checked = !ck.checked; // 롤백
+                        alert(e.message);
+                    }
+                });
+
+                // ✅ 더블클릭 인라인 수정
+                text.addEventListener('dblclick', () => {
+                    if (!todoNo) return;
+
+                    const original = it.title ?? '';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'todo-edit';
+                    input.value = original;
+
+                    // 교체
+                    text.replaceWith(input);
+                    input.focus();
+                    input.select();
+
+                    const finish = async (mode) => {
+                        const next = (input.value || '').trim();
+
+                        // 취소
+                        if (mode === 'cancel'){
+                            input.replaceWith(text);
+                            return;
+                        }
+
+                        // 빈값이면 저장 안 하고 복구
+                        if (!next){
+                            input.value = original;
+                            input.replaceWith(text);
+                            return;
+                        }
+
+                        // 변경 없으면 복구
+                        if (next === original){
+                            input.replaceWith(text);
+                            return;
+                        }
+
+                        try{
+                            await todoUpdateTitle(todoNo, next);
+                            it.title = next;
+                            text.textContent = next;
+                            input.replaceWith(text);
+                        }catch(e){
+                            alert(e.message);
+                            input.value = original;
+                            input.replaceWith(text);
+                        }
+                    };
+
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter'){
+                            e.preventDefault();
+                            finish('save');
+                        } else if (e.key === 'Escape'){
+                            e.preventDefault();
+                            finish('cancel');
+                        }
+                    });
+                    input.addEventListener('blur', () => finish('save'));
+                });
+
+                left.appendChild(ck);
+                left.appendChild(text);
+
+                const actions = document.createElement('div');
+                actions.className = 'todo-actions';
+
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'todo-del';
+                del.textContent = '🗑';
+                del.title = '삭제';
+                del.addEventListener('click', async () => {
+                    if (!confirm('이 투두를 삭제할까?')) return;
+                    try{
+                        await todoDelete(todoNo);
+                        await todoReload();
+                    }catch(e){
+                        alert(e.message);
+                    }
+                });
+
+                actions.appendChild(del);
+
+                row.appendChild(left);
+                row.appendChild(actions);
+
+                todoEls.list.appendChild(row);
+            });
+        }
+
+        async function todoCreate(title){
+            const res = await fetch(TODO_API_BASE, {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                credentials:'include',
+                body: JSON.stringify({ title })
+            });
+            if (!res.ok) throw new Error('투두 생성 실패: ' + res.status);
+            return await res.json();
+        }
+
+        async function todoSetDone(todoNo, isDone){
+            const res = await fetch(TODO_API_DONE(todoNo), {
+                method:'PATCH',
+                headers:{ 'Content-Type':'application/json' },
+                credentials:'include',
+                body: JSON.stringify({ isDone: !!isDone })
+            });
+            if (!res.ok) throw new Error('완료 상태 변경 실패: ' + res.status);
+            return await res.json();
+        }
+
+        async function todoUpdateTitle(todoNo, title){
+            const res = await fetch(TODO_API_UPDATE(todoNo), {
+                method:'PATCH',
+                headers:{ 'Content-Type':'application/json' },
+                credentials:'include',
+                body: JSON.stringify({ title })
+            });
+            if (!res.ok) throw new Error('투두 수정 실패: ' + res.status);
+            return await res.json();
+        }
+
+        async function todoDelete(todoNo){
+            const res = await fetch(TODO_API_ONE(todoNo), {
+                method:'DELETE',
+                credentials:'include'
+            });
+            if (!res.ok) throw new Error('투두 삭제 실패: ' + res.status);
+            return true;
+        }
+
+        async function todoReload(){
+            try{
+                const items = await todoFetchAll();
+                // 정렬(원하면): 최신이 위로 오게 todoNo desc
+                items.sort((a,b) => (b.todoNo||0) - (a.todoNo||0));
+                TODO_ITEMS = items;
+                renderTodo();
+            }catch(e){
+                console.warn('todoReload failed:', e);
+                // 실패해도 캘린더는 살아있게
+                TODO_ITEMS = [];
+                renderTodo();
+            }
+        }
+
+        function bindTodoUI(){
+            // ✅ 중복 바인딩 방지(혹시 init이 여러 번 도는 환경이면 필수)
+            if (todoEls.input.dataset.bound === '1') return;
+            todoEls.input.dataset.bound = '1';
+
+            let creating = false;
+
+            async function doCreate(){
+                const title = (todoEls.input.value || '').trim();
+                if (!title) return;
+
+                // ✅ 연타/중복 호출 방지
+                if (creating) return;
+                creating = true;
+
+                // ✅ UX: 처리 중 잠깐 잠금
+                todoEls.createBtn.disabled = true;
+                todoEls.input.disabled = true;
+
+                try{
+                    await todoCreate(title);
+                    todoEls.input.value = '';
+                    await todoReload();
+                    todoEls.input.focus();
+                }catch(e){
+                    alert(e.message);
+                }finally{
+                    creating = false;
+                    todoEls.createBtn.disabled = false;
+                    todoEls.input.disabled = false;
+                }
+            }
+
+            todoEls.createBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                doCreate();
+            });
+
+            todoEls.input.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+
+                // ✅ 한글 입력(IME) 조합 중 Enter면 무시
+                if (e.isComposing) return;
+
+                // ✅ Enter 누르고 있는 동안 keydown 반복 발생 방지
+                if (e.repeat) return;
+
+                e.preventDefault();
+                doCreate();
+            });
         }
 
         /* =========================
@@ -962,10 +1441,10 @@
             const d = new Date(year, monthIdx, 1);
 
             if (mode === 'MINI'){
-                miniCalendar.gotoDate(d);          // ✅ 미니만 이동
+                miniCalendar.gotoDate(d);
                 refreshMiniDots();
             }else{
-                mainCalendar.gotoDate(d);          // ✅ 메인만 이동
+                mainCalendar.gotoDate(d);
                 mainCalendar.refetchEvents();
             }
         }
@@ -1276,8 +1755,31 @@
         }
 
         /* =========================
-           API helpers
+           API helpers (calendar)
         ========================= */
+
+        function assertWorkHours(payload){
+            if (payload.allDay) return;
+
+            const startStr = payload.startAt;
+            const endStr   = payload.endedAt;
+            if (!startStr || !endStr) throw new Error("시작/종료 시간이 비어있어요.");
+
+            const start = new Date(startStr);
+            const end   = new Date(endStr);
+
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+                throw new Error("날짜/시간 형식이 올바르지 않아요.");
+            }
+
+            // ✅ 날짜 넘어가도 OK (단, 종료는 시작보다 뒤여야 함)
+            if (end.getTime() <= start.getTime()) {
+                throw new Error("종료 시간이 시작 시간보다 빠르거나 같아요.");
+            }
+
+
+        }
+
         async function apiGetItems({ scope, view, baseDate, weekStart }){
             const params = new URLSearchParams();
             params.set('scope', scope);
@@ -1296,6 +1798,7 @@
         }
 
         async function apiCreate(payload){
+            assertWorkHours(payload);
             const res = await fetch(API_BASE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1318,6 +1821,7 @@
         }
 
         async function apiUpdate(schNo, payload){
+            assertWorkHours(payload);
             const res = await fetch(API_UPDATE(schNo), {
                 method:'PATCH',
                 headers:{ 'Content-Type':'application/json' },
@@ -1417,13 +1921,24 @@
         }
 
         function buildMainCalendar(){
+
+
             mainCalendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                 initialView: 'timeGridWeek',
                 nowIndicator: true,
                 selectable: true,
                 selectMirror: true,
                 firstDay: (weekStart === 'SUNDAY') ? 0 : 1,
-                height: 'auto',
+
+
+
+                // ✅ 높이 고정 + 내부 스크롤
+                height: 1240,          // 여기 숫자를 "08~22가 딱 좋았던 높이"로 맞춰
+                expandRows: true,     // 행 높이를 꽉 채우지 않게 도움
+                handleWindowResize: true,
+
+                // ✅ 처음 열릴 때 스크롤 위치만 08:00으로
+                scrollTime: "08:00:00",
 
                 events: fetchEvents,
 
@@ -1432,11 +1947,15 @@
                 eventMaxStack: 2,
                 allDayMaxEventRows: false,
 
-                datesSet: function(){
-                    updateTitles();
-                },
+                datesSet: function(){ updateTitles(); },
 
                 select: function(selInfo){
+                    // 혹시라도 방어 (selectAllow로 이미 걸러짐)
+                    if (!overlapsWorkHours(selInfo.start, selInfo.end, selInfo.allDay)) {
+                        mainCalendar.unselect();
+                        return;
+                    }
+
                     const anchorRect = rectFromMouseEvent(selInfo.jsEvent);
 
                     if (selInfo.allDay){
@@ -1464,24 +1983,30 @@
 
                 dateClick: function(info){
                     const anchorRect = rectFromMouseEvent(info.jsEvent);
+
                     if (info.allDay){
                         const d = toDateKey(info.date);
                         openCreate({ anchorRect, center:false, prefill:{ allDay:true, startDate:d, endDate:d, scope:'PERSONAL' } });
-                    }else{
-                        const start = new Date(info.date);
-                        const end = new Date(start);
-                        end.setMinutes(end.getMinutes() + 30);
-                        openCreate({
-                            anchorRect,
-                            center:false,
-                            prefill:{
-                                allDay:false,
-                                startAt: toDatetimeLocalValue(start),
-                                endedAt: toDatetimeLocalValue(end),
-                                scope:'PERSONAL'
-                            }
-                        });
+                        return;
                     }
+
+                    // 30분 기본 생성도 "겹치기만 하면 OK"
+                    const start = new Date(info.date);
+                    const end = new Date(start);
+                    end.setMinutes(end.getMinutes() + 30);
+
+                    if (!overlapsWorkHours(start, end, false)) return;
+
+                    openCreate({
+                        anchorRect,
+                        center:false,
+                        prefill:{
+                            allDay:false,
+                            startAt: toDatetimeLocalValue(start),
+                            endedAt: toDatetimeLocalValue(end),
+                            scope:'PERSONAL'
+                        }
+                    });
                 },
 
                 eventClick: function(arg){
@@ -1492,20 +2017,17 @@
 
                 moreLinkClick: function(info){
                     info.jsEvent?.preventDefault?.();
-
                     const anchorRect =
                         info.moreEl?.getBoundingClientRect?.() ||
                         info.dayEl?.getBoundingClientRect?.() ||
                         rectFromMouseEvent(info.jsEvent);
 
                     const segs = info.allSegs || info.hiddenSegs || info.segs || [];
-
                     const items = segs.map(seg => {
                         const ev = seg.event;
                         const ext = ev.extendedProps || {};
                         const scope = ext.scope || 'PERSONAL';
                         const color = ext.color || scopeColor(scope);
-
                         return {
                             ...ext,
                             title: ev.title,
@@ -1517,13 +2039,7 @@
                     });
 
                     const t = info.allDay ? '' : (' ' + pad(info.date.getHours()) + ':' + pad(info.date.getMinutes()));
-
-                    openMore({
-                        anchorRect,
-                        title: toDateKey(info.date) + t + ' 일정',
-                        items
-                    });
-
+                    openMore({ anchorRect, title: toDateKey(info.date) + t + ' 일정', items });
                     return 'none';
                 },
 
@@ -1531,13 +2047,8 @@
                     const ext = arg.event.extendedProps || {};
                     const bar = (ext.color || scopeColor(ext.scope));
                     const bg  = hexToRgba(bar, 0.14);
-
                     const title = (arg.event.title || '');
-                    return {
-                        html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};">
-                          <div class="bp-evt-title">${title}</div>
-                        </div>`
-                    };
+                    return { html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};"><div class="bp-evt-title">${title}</div></div>` };
                 },
 
                 eventDidMount: function(arg){
@@ -1734,7 +2245,6 @@
                     refreshMiniDots();
                 },
 
-                // ✅ 미니에서 날짜 클릭할 때만 메인이 이동
                 dateClick: function(info){
                     mainCalendar.gotoDate(info.date);
                     mainCalendar.refetchEvents();
@@ -1796,6 +2306,14 @@
             setSwitch(tgPersonal, true);
 
             refreshMiniDots();
+
+            // ✅ ToDo init (캘린더 안 죽게 안전하게)
+            try{
+                bindTodoUI();
+                await todoReload();
+            }catch(e){
+                console.warn('Todo init failed:', e);
+            }
         })();
     </script>
 </th:block>

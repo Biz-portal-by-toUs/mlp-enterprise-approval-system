@@ -340,7 +340,7 @@
             gap: 8px;
         }
 
-        .read-all-btn {
+        .read-all-btn, .chatbot-btn {
             font-size: 11px;
             font-weight: 800;
             color: #3b82f6;
@@ -351,17 +351,24 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .read-all-btn:hover { background: #dbeafe; }
+        .read-all-btn:hover, .chatbot-btn:hover { background: #dbeafe; }
 
         .noti-body { flex: 1; overflow: hidden; }
         .noti-iframe { width: 100%; height: 100%; border: none; }
         .noti-close-btn { border:0; background:transparent; cursor:pointer; font-size:20px; color:#6b7280; }
 
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-container { position: fixed; top: calc(var(--topbar-h) + 16px); right: 20px; z-index: 9999; }
         .toast {
             background: #fff; border-left: 4px solid var(--primary); box-shadow: var(--shadow);
             padding: 12px 20px; margin-bottom: 10px; border-radius: 8px; font-size: 14px;
             font-weight: 600; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease-out;
+            /* ✅ 넓이 제한 설정 */
+            width: 320px;           /* 고정 넓이를 원할 때 */
+
+            /* ✅ 긴 텍스트 줄바꿈 설정 */
+            white-space: normal;    /* 기본 줄바꿈 허용 */
+            word-break: break-all;  /* 단어가 길어도 강제 줄바꿈 */
+            line-height: 1.4;       /* 줄 간격 살짝 넓혀서 가독성 확보 */
         }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
@@ -708,6 +715,17 @@
                 </div>
             </div>
 
+            <button class="icon-btn" type="button" aria-label="챗봇" onclick="openChatbot()" title="규정 챗봇">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 8V4M8 4h8" />
+                    <rect width="16" height="12" x="4" y="8" rx="2" />
+                    <path d="M2 14h2M20 14h2" />
+                    <line x1="9" y1="13" x2="9" y2="13" stroke-width="2.5" />
+                    <line x1="15" y1="13" x2="15" y2="13" stroke-width="2.5" />
+                    <path d="M9 17h6" />
+                </svg>
+            </button>
+
             <!-- 알림 -->
             <button class="icon-btn" type="button" aria-label="알림" onclick="toggleNoti()">
                 <span id="notiBadge" class="badge" aria-hidden="true">0</span>
@@ -753,7 +771,12 @@
                 <span class="sr-only">회의</span>
             </a>
 
-            <a class="nav-item" th:href="@{/mail}" href="/mail" data-tip="메일" aria-label="메일">
+            <a class="nav-item"
+               th:href="@{/mail/received}"
+               href="/mail/received"
+               data-tip="메일"
+               aria-label="메일"
+               data-active-prefix="/mail">
                 <div class="nav-ico">📧</div>
                 <span class="sr-only">메일</span>
             </a>
@@ -938,7 +961,7 @@
         setTimeout(() => {
             toast.style.opacity = '0';
             setTimeout(() => toast.remove(), 500);
-        }, 4000);
+        }, 6500);
     }
 
     function toggleNoti(force) {
@@ -972,7 +995,9 @@
             }
         } catch (e) { console.error("초기 알림 카운트 로드 실패", e); }
 
-        const eventSource = new EventSource('/api/v1/chatbot/stream');
+        const eventSource = new EventSource('/api/v1/notifications/stream', {
+            withCredentials: true
+        });
 
         eventSource.addEventListener('notification', (e) => {
             const data = JSON.parse(e.data);
@@ -1247,6 +1272,12 @@
         }
     }
 
+    function openChatbot() {
+        // window.open(URL, 창이름, 옵션)
+        // 채팅창과 비슷한 크기(가로 420, 세로 740)로 새 팝업창을 띄웁니다.
+        window.open("/chatbot", "ChatbotPopup", "width=420,height=740,resizable=yes,scrollbars=yes");
+    }
+
     /* ====== 패널/메뉴 외부 클릭 닫기 ====== */
     window.addEventListener('click', (e) => {
         // profile
@@ -1283,6 +1314,8 @@
         initNotificationSystem();
         loadMyStatus();  // ✅ 상태는 헤더에 바로 표시
     });
+
+
 </script>
 
 <th:block layout:fragment="pageScripts"></th:block>

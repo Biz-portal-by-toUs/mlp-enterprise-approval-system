@@ -8,7 +8,6 @@
 <head>
     <title>사원 관리</title>
 
-    <!-- ✅ 이 페이지에서만 필요한 스타일만 추가 -->
     <th:block layout:fragment="pageStyles">
         <style>
             /* 페이지 타이틀 */
@@ -33,10 +32,8 @@
             }
             .card.pad{ padding:18px; }
 
-            /* 관리자 서브바 레이아웃 (layout.html에 정의된 page-with-subbar 사용) */
-            .admin-page{
-                display:block;
-            }
+            /* 관리자 서브바 레이아웃 */
+            .admin-page{ display:block; }
 
             /* 필터 */
             .filter{
@@ -88,35 +85,42 @@
                 padding:0 14px;
             }
             .btn.primary{
-                background:var(--primary2);
+                background:var(--primary);
                 color:#fff;
             }
             .btn.ghost{
                 background: rgba(59,130,246,.10);
-                color: var(--primary2);
+                color: var(--primary);
                 border:1px solid rgba(59,130,246,.18);
             }
 
-            /* 테이블 */
-            .table-wrap{ padding:18px; }
+            /* ===== ✅ 테이블(회의 목록 느낌 + 상단 둥글게) ===== */
+            .table-wrap{
+                padding:0;           /* ✅ 기존 18px 제거 */
+                border-radius:18px;  /* ✅ */
+                overflow:hidden;     /* ✅ 헤더 배경도 같이 둥글게 */
+            }
+
             table{
                 width:100%;
                 border-collapse:separate;
                 border-spacing:0;
                 table-layout:fixed;
+                border-radius:18px;
+                overflow:hidden;
             }
             thead th{
                 text-align:center;
-                font-size:12px;
+                font-size:13px;      /* ✅ 살짝 키움 */
                 color:#374151;
                 background:#f8fafc;
-                padding:12px 10px;
-                border-bottom:1px solid var(--line);
+                padding:16px 12px;   /* ✅ 여백 키움 */
+                border-bottom:1px solid rgba(17,24,39,.08);
                 white-space:nowrap;
             }
             tbody td{
                 text-align:center;
-                padding:14px 10px;
+                padding:16px 12px;   /* ✅ 여백 키움 */
                 border-bottom:1px solid rgba(17,24,39,.06);
                 font-size:14px;
                 overflow:hidden;
@@ -124,43 +128,88 @@
                 white-space:nowrap;
             }
             tbody tr:hover td{
-                background: rgba(59,130,246,.04);
+                background: rgba(59,130,246,.03);
             }
+
             .link{
                 color: var(--primary2);
                 font-weight:900;
                 text-decoration:none;
             }
 
-            .empty{
-                display:none;
-                padding:26px 10px;
-                text-align:center;
+            /* ✅ 비어있을 때 테이블 안 가운데 문구 */
+            tbody tr.empty-row td{
+                border-bottom:0;
+                padding:52px 12px;
                 color:var(--muted);
                 font-weight:900;
+                text-align:center;
+                background:#fff;
             }
 
-            /* pager */
+            /* pager (slightly smaller) */
             .pager{
                 display:flex;
                 justify-content:center;
-                gap:8px;
-                padding:14px 0 6px;
-                color:var(--muted);
-                font-weight:900;
+                align-items:center;
+                gap:9px;
+                padding:12px 0 6px;
                 user-select:none;
             }
+
             .page-btn{
-                cursor:pointer;
-                padding:6px 10px;
-                border-radius:10px;
-                border:1px solid rgba(17,24,39,.08);
+                width:40px;
+                height:40px;
+
+                display:flex;
+                align-items:center;
+                justify-content:center;
+
+                border-radius:12px;
+                border:1px solid rgba(17,24,39,.10);
                 background:#fff;
+                box-shadow: 0 5px 10px rgba(0,0,0,.06);
+
+                font-weight:900;
+                font-size:15px;
+                cursor:pointer;
+
+                transition: transform .08s ease, box-shadow .12s ease, background .12s ease;
             }
+
+            .page-btn:hover{
+                transform: translateY(-1px);
+                box-shadow: 0 7px 12px rgba(0,0,0,.08);
+            }
+
             .page-btn.active{
-                background: rgba(59,130,246,.12);
-                color: var(--primary2);
-                border-color: rgba(59,130,246,.22);
+                background: var(--primary2);
+                border-color: rgba(59,130,246,.35);
+                color:#fff;
+            }
+
+            .page-btn.icon{
+                font-size:17px; /* << < > >> */
+                color:#9ca3af;
+            }
+
+            .page-btn.disabled{
+                opacity:.45;
+                cursor:not-allowed;
+                pointer-events:none;
+                box-shadow:none;
+                transform:none;
+            }
+
+            @media (max-width: 600px){
+                .pager{ gap:8px; }
+                .page-btn{
+                    width:36px;
+                    height:36px;
+                    border-radius:11px;
+                    font-size:14px;
+                }
+                .page-btn.icon{ font-size:16px; }
             }
 
             /* toast */
@@ -197,25 +246,15 @@
 </head>
 
 <body>
-
-<!-- ✅ layout.html의 content 영역만 덮어쓰기 -->
 <div layout:fragment="content">
 
-    <!-- ✅ 관리자 서브바 도킹 레이아웃 사용 -->
     <section class="page-with-subbar">
-
-        <!-- ✅ 관리자 서브바(공통 파일로 빼둔 admin-sidebar.html을 쓴다는 전제) -->
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('emp')}"></aside>
 
-
-        <!-- ✅ 실제 페이지 콘텐츠 -->
         <div class="admin-page">
 
-            <div class="page-title">사원 관리</div>
-            <div class="page-sub">사원 조회</div>
-
             <!-- Filter card -->
-            <div class="card">
+            <div class="card" style="margin-top:30px;">
                 <div class="filter">
                     <div class="filter-grid">
                         <div class="field">
@@ -283,7 +322,6 @@
                         <tbody id="empTbody"></tbody>
                     </table>
 
-                    <div id="emptyBox" class="empty">조회 결과가 없습니다.</div>
                     <div id="pager" class="pager"></div>
                 </div>
             </div>
@@ -294,7 +332,6 @@
     <div id="toast" class="toast" aria-live="polite"></div>
 </div>
 
-<!-- ✅ page scripts -->
 <th:block layout:fragment="pageScripts">
     <script>
         const API = {
@@ -328,6 +365,12 @@
                 .replaceAll(">","&gt;")
                 .replaceAll("\"","&quot;")
                 .replaceAll("'","&#039;");
+        }
+
+        // ✅ empty-row 렌더
+        function renderEmptyRow(message){
+            const tbody = document.getElementById("empTbody");
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(message)}</td></tr>`;
         }
 
         // ===== API fetch helper (cookie auth) =====
@@ -410,9 +453,10 @@
 
         async function loadEmployees(){
             const tbody = document.getElementById("empTbody");
-            const empty = document.getElementById("emptyBox");
+            const pager = document.getElementById("pager");
+
             tbody.innerHTML = "";
-            empty.style.display = "none";
+            pager.innerHTML = "";
 
             try{
                 const qs = buildQuery();
@@ -420,8 +464,7 @@
 
                 const res = await apiFetch(url, { method:"GET" });
                 if(!res.ok){
-                    empty.style.display = "block";
-                    empty.textContent = `조회 중 오류가 발생했습니다. (${res.status})`;
+                    renderEmptyRow(`조회 중 오류가 발생했습니다. (${res.status})`);
                     return;
                 }
 
@@ -429,23 +472,21 @@
                 const list = json.data || [];
                 state.allEmployees = list;
                 state.page = 1;
+
                 renderEmployees();
             }catch(e){
                 if(String(e.message).includes("UNAUTHORIZED") || String(e.message).includes("FORBIDDEN")) return;
-                empty.style.display = "block";
-                empty.textContent = "조회 중 예외가 발생했습니다.";
+                renderEmptyRow("조회 중 예외가 발생했습니다.");
             }
         }
 
         function renderEmployees(){
             const tbody = document.getElementById("empTbody");
-            const empty = document.getElementById("emptyBox");
             const pager = document.getElementById("pager");
 
             const all = state.allEmployees || [];
             if(!all.length){
-                tbody.innerHTML = "";
-                empty.style.display = "block";
+                renderEmptyRow("조회 결과가 없습니다.");
                 pager.innerHTML = "";
                 return;
             }
@@ -482,14 +523,44 @@
                 tbody.appendChild(tr);
             });
 
+            // ===== pager (new: 5개씩 + << < > >>) =====
             pager.innerHTML = "";
-            for(let i=1; i<=totalPages; i++){
-                const b = document.createElement("div");
-                b.className = "page-btn" + (i === state.page ? " active" : "");
-                b.textContent = String(i);
-                b.addEventListener("click", ()=> { state.page = i; renderEmployees(); });
-                pager.appendChild(b);
+
+            const windowSize = 5;
+            const windowStart = Math.floor((state.page - 1) / windowSize) * windowSize + 1;
+            const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+
+            function makeBtn(label, onClick, { active=false, disabled=false, icon=false } = {}){
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "page-btn"
+                    + (active ? " active" : "")
+                    + (icon ? " icon" : "")
+                    + (disabled ? " disabled" : "");
+                btn.textContent = label;
+                if(!disabled) btn.addEventListener("click", onClick);
+                return btn;
             }
+
+            pager.appendChild(
+                makeBtn("<<", ()=> { state.page = 1; renderEmployees(); }, { icon:true, disabled: state.page === 1 })
+            );
+            pager.appendChild(
+                makeBtn("<", ()=> { state.page = Math.max(1, state.page - 1); renderEmployees(); }, { icon:true, disabled: state.page === 1 })
+            );
+
+            for(let i = windowStart; i <= windowEnd; i++){
+                pager.appendChild(
+                    makeBtn(String(i), ()=> { state.page = i; renderEmployees(); }, { active: i === state.page })
+                );
+            }
+
+            pager.appendChild(
+                makeBtn(">", ()=> { state.page = Math.min(totalPages, state.page + 1); renderEmployees(); }, { icon:true, disabled: state.page === totalPages })
+            );
+            pager.appendChild(
+                makeBtn(">>", ()=> { state.page = totalPages; renderEmployees(); }, { icon:true, disabled: state.page === totalPages })
+            );
         }
 
         function onSearch(){

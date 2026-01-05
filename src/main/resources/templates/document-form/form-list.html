@@ -1,116 +1,132 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko"
-      th:classappend="${#authorization.expression('hasRole(''EMPLOYEE'')')} ? 'role-employee' : ''">
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}"
+      th:classappend="${perm_isEmployee} ? 'role-employee' : ''"
+      th:attr="
+        data-is-employee=${perm_isEmployee},
+        data-can-create=${perm_canCreateForm},
+        data-can-bulk-delete=${perm_canBulkDelete},
+        data-can-approve=${perm_canApprove},
+        data-can-use-temp=${perm_canUseTemp}
+      ">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>문서양식 목록</title>
 
-    <style>
+    <style layout:fragment="pageStyles">
+        /* 너가 올린 스타일 그대로 사용 가능 */
         :root{
-            --bg:#f4f6fb; --card:#fff; --line:#e1e3ea; --text:#111827; --muted:#6b7280; --primary:#2c5cff;
-            --danger:#ff4d4f;
+            --fg:#0f172a; --mut:#64748b; --line:#e2e8f0; --bg:#f1f5f9;
+            --card:#ffffff; --danger:#ef4444; --primary:#2c5cff;
         }
-        *{box-sizing:border-box}
-        body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif; background:var(--bg); color:var(--text);}
-        .wrap{width:min(1100px, calc(100% - 32px)); margin:28px auto;}
-        .card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.06);}
-        .header{display:flex; align-items:flex-start; justify-content:space-between; padding:18px 18px 12px;}
-        .title{font-size:18px; font-weight:900; margin:0;}
-        .actions{display:flex; gap:10px; align-items:center;}
-        .btn{border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:800;}
-        .btn.primary{background:var(--primary); color:#fff; border-color:transparent;}
-        .btn.danger{background:var(--danger); color:#fff; border-color:transparent;}
-        .btn:disabled{opacity:.5; cursor:not-allowed}
+        html,body{height:100%}
+        body{margin:0;font-family:ui-sans-serif,system-ui,"Pretendard","Apple SD Gothic Neo","Noto Sans KR";color:var(--fg);background:var(--bg);}
+        .page-with-subbar{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;padding:0;align-items:stretch;}
+        .page-main{padding:24px;min-width:0;}
+        .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .select{height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:14px;font-weight:600;outline:none;}
+        .searchWrap{flex:1;max-width:420px;display:flex;align-items:center;height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;}
+        .searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
+        .btn{height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;}
+        .btn:hover{filter:brightness(0.9);}
+        .btn.danger{background:var(--danger);}
+        .btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .btn.ghost:hover{background:#f8fafc;filter:none;}
 
-        .toolbar{display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 14px; align-items:center;}
-        .input, .select{border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:10px; outline:none;}
-        .input{min-width:260px;}
-        .select{min-width:140px;}
+        /* Employee는 버튼 숨김 (서버에서 th:if로도 제거하지만, 이중 안전) */
+        html.role-employee #btnNew,
+        html.role-employee #btnDeleteSelected{display:none !important;}
 
-        .table-wrap{padding:0 18px 18px;}
-        table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--line); border-radius:12px;}
-        thead th{background:#fafbff; font-size:13px; color:#374151; padding:12px 10px; border-bottom:1px solid var(--line);}
-
-        /* 첫 번째 열(선택/번호)만 중앙 정렬 */
-        th.col-select, td.col-select { text-align:center; }
-
-        /* 제목 헤더만 중앙 / 본문은 왼쪽 유지 + 시작점 살짝 오른쪽 */
-        th.col-title { text-align:center; }
-        td.col-title { text-align:left; padding-left:30px; }
-
-        /* 체크박스 + 번호 정렬용 래퍼 */
-        .selWrap{ display:inline-flex; align-items:center; justify-content:center; gap:10px; }
-
-        tbody td{padding:12px 10px; border-bottom:1px solid #f0f1f6; font-size:14px; vertical-align:middle;}
-        tbody tr:hover{background:#fbfcff;}
-        .muted{color:var(--muted); font-size:13px;}
-
-        .titleLink{color:inherit; text-decoration:none; font-weight:900; cursor:pointer;}
-        .titleLink:hover{color:var(--primary); text-decoration:underline;}
-
-        .pager{display:flex; gap:8px; align-items:center; justify-content:flex-end; padding:10px 18px 18px;}
-        .pager .info{margin-right:auto; color:var(--muted); font-size:13px;}
-        .pager-controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-        .pager-controls .num{min-width:42px; text-align:center;}
-        .pager-controls .num.active{background:var(--primary); color:#fff; border-color:transparent;}
-
-        .toast{position:fixed; right:18px; bottom:18px; background:#111827; color:#fff; padding:10px 12px; border-radius:10px; opacity:0; transform:translateY(8px); transition:.18s;}
-        .toast.show{opacity:1; transform:translateY(0);}
-
-        /* EMPLOYEE: 생성/삭제/선택 UI 제거 */
-        .role-employee #btnCreate,
-        .role-employee #btnDeleteSelected,
-        .role-employee input[data-role="rowCheck"]{
-            display:none !important;
+        .tableWrap{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+        table.formTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.formTable thead th{background:#f9fafb;border-bottom:1px solid var(--line);text-align:center;padding:14px 10px;font-size:14px;color:var(--mut);font-weight:600;}
+        table.formTable tbody td{border-bottom:1px solid var(--line);text-align:center;padding:12px 10px;font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        table.formTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
+        td.col-title{text-align:left !important;padding-left:20px !important;font-weight:700 !important;}
+        .titleLink{color:var(--primary);text-decoration:none;display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;}
+        th.col-no, td.col-no{width:120px;}
+        .pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .pager{display:flex;align-items:center;gap:4px;}
+        .pageBtn{min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:0.15s;}
+        .pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .pageBtn.active:hover{filter:brightness(0.9);}
+        .pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        .muted{color:var(--mut);}
+        .selWrap{display:inline-flex;align-items:center;gap:8px;}
+        .selWrap input[type="checkbox"]{width:16px;height:16px;}
+        @media (max-width:760px){
+            .page-with-subbar{grid-template-columns:1fr;}
+            .page-main{padding:14px;}
+            .pager-status{position:static;margin-left:10px;}
         }
     </style>
 </head>
 
 <body>
-<div class="wrap card">
-    <div class="header">
-        <div>
-            <h1 class="title">문서양식 목록</h1>
-        </div>
-        <div class="actions">
-            <button class="btn" id="btnRefresh" type="button">새로고침</button>
-            <button class="btn primary" id="btnCreate" type="button">+ 새 양식 만들기</button>
-        </div>
-    </div>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/form-sidebar :: formSidebar('list')}"></div>
 
-    <div class="toolbar">
-        <input class="input" id="q" placeholder="검색(양식명)" />
-        <select class="select" id="size">
-            <option value="15" selected>15개</option>
-            <option value="30">30개</option>
-        </select>
-        <button class="btn" id="btnSearch" type="button">검색</button>
-        <button class="btn danger" id="btnDeleteSelected" type="button" disabled>선택 삭제</button>
-    </div>
+        <main class="page-main">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <select id="size" class="select">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-            <tr>
-                <th class="col-select" style="width:140px;">선택/번호</th>
-                <th class="col-title">제목</th>
-            </tr>
-            </thead>
-            <tbody id="tbody">
-            <tr><td colspan="2" class="muted">로딩 중...</td></tr>
-            </tbody>
-        </table>
-    </div>
+                    <div class="searchWrap">
+                        <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
+                    </div>
 
-    <div class="pager">
-        <div class="info" id="pageInfo">-</div>
-        <div class="pager-controls" id="pagerControls"></div>
+                    <button class="btn ghost" id="btnSearch" type="button">조회</button>
+                </div>
+
+                <div class="toolbar-right">
+                    <!-- ✅ 서버 플래그로 버튼 자체를 렌더/미렌더 -->
+                    <button class="btn danger" id="btnDeleteSelected" type="button" disabled
+                            th:if="${perm_canBulkDelete}">
+                        선택 삭제
+                    </button>
+
+                    <button class="btn" id="btnNew" type="button"
+                            th:if="${perm_canCreateForm}">
+                        + 새 양식
+                    </button>
+                </div>
+            </div>
+
+            <section class="tableWrap">
+                <table class="formTable">
+                    <thead>
+                    <tr>
+                        <th id="thSelect" class="col-no">선택/번호</th>
+                        <th>제목</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </section>
+
+            <div class="pager-wrapper">
+                <div id="pagerControls" class="pager"></div>
+
+                <div class="pager-status">
+                    <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
+                </div>
+            </div>
+
+            <script type="module" src="/js/document-form/list.js"></script>
+        </main>
     </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
-<script src="/js/document-form/list.js" defer></script>
 </body>
 </html>

@@ -256,6 +256,116 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
         documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.X, normalized);
     }
+
+    @Override
+    @Transactional
+    public Long createTemp(ReqDocumentFormTempDto req, String comId, String writerId) {
+
+        validateDocfoNameForbidden(req.docfoName());
+
+        Company company = companyRepository.findByComId(comId)
+                .orElseThrow(() -> new EntityNotFoundException("회사 없음"));
+
+        Employee writer = employeeRepository.findByEmpId(writerId)
+                .orElseThrow(() -> new EntityNotFoundException("작성자 없음"));
+
+        DocumentForm form = DocumentForm.create(
+                company,
+                writer,
+                req.docfoName(),
+                ensureJsonString(req.cnttJson()),
+                req.cnttHtml()
+        );
+
+        // 임시저장 상태 강제
+        DocumentForm saved = documentFormRepository.save(form);
+
+        // 카테고리도 저장한다고 했으니 그대로
+        if (req.categories() != null && !req.categories().isEmpty()) {
+            List<DocumentFormCategory> categories =
+                    req.categories().stream()
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .distinct()
+                            .map(name -> DocumentFormCategory.create(company, saved, name))
+                            .toList();
+
+            documentFormCategoryRepository.saveAll(categories);
+        }
+
+        // 상태를 확실히 T로 맞추고 싶으면(도메인에서 T 보장 못할 때)
+        documentFormRepository.updateDraft(
+                saved.getDocfoNo(),
+                saved.getDocfoName(),
+                saved.getCnttJson(),
+                saved.getCnttHtml(),
+                DocumentFormStats.T
+        );
+
+        return saved.getDocfoNo();
+    }
+
+    @Override
+    @Transactional
+    public void saveTemp(Long docfoNo, ReqDocumentFormTempDto req, String comId, String writerId) {
+
+        validateDocfoNameForbidden(req.docfoName());
+
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("문서 양식 없음"));
+
+        // 회사 검증
+        validateCompany(form, comId);
+
+        // "내가 작성중이던 것만" 이 규칙이면 작성자 검증도 걸어줘야 함
+        if (!form.getWriter().getEmpId().equals(writerId)) {
+            throw new AccessDeniedException("본인이 작성한 임시양식만 수정할 수 있습니다.");
+        }
+
+        // 삭제 흐름/승인 흐름 막기 (임시저장은 T만 덮어쓰게 하는게 안전)
+        if (form.getDocfoStat() != DocumentFormStats.T) {
+            throw new IllegalStateException("임시저장(T) 상태에서만 임시저장 덮어쓰기가 가능합니다.");
+        }
+
+        documentFormRepository.updateDraft(
+                docfoNo,
+                req.docfoName().trim(),
+                ensureJsonString(req.cnttJson()),
+                req.cnttHtml(),
+                DocumentFormStats.T
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResDocumentFormListDto> findMyTempList(
+            String comId,
+            String writerId,
+            String keyword,
+            Pageable pageable
+    ) {
+        Page<DocumentForm> page;
+
+        if (keyword != null && !keyword.isBlank()) {
+            page = documentFormRepository.searchMyByStat(
+                    comId, writerId, DocumentFormStats.T, keyword.trim(), pageable
+            );
+        } else {
+            page = documentFormRepository.findMyByStat(
+                    comId, writerId, DocumentFormStats.T, pageable
+            );
+        }
+
+        return page.map(f -> new ResDocumentFormListDto(
+                f.getDocfoNo(),
+                f.getCompany(),
+                f.getWriter(),
+                f.getDocfoName(),
+                f.getDocfoStat(),
+                f.getRejectReason()
+        ));
+    }
+
     // 공통
     private String ensureJsonString(String raw) {
         if (raw == null || raw.trim().isEmpty()) throw new IllegalArgumentException("cnttJson is empty");
@@ -302,5 +412,46 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 throw new IllegalArgumentException("문서 양식 제목에 금칙어가 포함되어 생성/수정할 수 없습니다: " + w);
             }
         }
+    }
+
+    // 임시저장 덮어쓰기 허용 상태 검증 (추천: T/R만 허용)
+    private void validateTempUpdatableStatus(DocumentFormStats cur) {
+        if (cur == DocumentFormStats.T || cur == DocumentFormStats.R) return;
+
+        // 필요하면 P에서도 임시 덮어쓰기 허용 가능:
+        // if (cur == DocumentFormStats.P) return;
+
+        throw new IllegalStateException("임시저장은 T(임시) 또는 R(반려) 상태에서만 가능합니다.");
+    }
+
+    /**
+     * 임시저장 제목 정책
+     * - incoming이 비면 origin 유지
+     * - origin도 없으면 "임시 문서"
+     */
+    private String normalizeTempDocfoName(String incoming, String origin) {
+        if (incoming == null || incoming.trim().isEmpty()) {
+            if (origin == null || origin.isBlank()) return "임시 문서";
+            return origin;
+        }
+        return incoming.trim();
+    }
+
+    /**
+     * 임시저장 JSON 정책
+     * - null/blank면 기본 JSON("{}") 주입
+     * - 값이 있으면 최소 검증(HTML 방지 + JSON 형태 체크)
+     */
+    private String normalizeTempJson(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return "{}";
+
+        String s = raw.trim();
+        if (s.startsWith("<")) throw new IllegalArgumentException("cnttJson must be JSON");
+
+        boolean isObj = s.startsWith("{") && s.endsWith("}");
+        boolean isArr = s.startsWith("[") && s.endsWith("]");
+        if (!isObj && !isArr) throw new IllegalArgumentException("cnttJson must be JSON string");
+
+        return s;
     }
 }

@@ -1112,3 +1112,4 @@ ALTER TABLE folder
     ADD COLUMN delete_batch_id CHAR(36) NULL,
     ADD INDEX idx_folder_deleted (scope, dep_no, owner_id, deleted_at),
     ADD INDEX idx_folder_batch (delete_batch_id);
+-- 여기까지 해주기

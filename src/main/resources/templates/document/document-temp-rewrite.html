@@ -6,6 +6,8 @@
 
     <script th:src="@{/js/tiptap.min.js}"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         :root {
             --primary-color: #339af0;
@@ -458,23 +460,6 @@
 
         .bottom-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
-        .alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 4px;
-            color: white;
-            z-index: 2000;
-            display: none;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 400px;
-            white-space: pre-line;
-        }
-        .alert-success { background: #40c057; }
-        .alert-error { background: #fa5252; }
-
         .char-counter {
             position: absolute;
             bottom: 10px;
@@ -486,114 +471,6 @@
             border-radius: 4px;
             z-index: 10;
             pointer-events: none;
-        }
-
-        /* 모달 스타일 */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-            animation: fadeIn 0.2s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-icon {
-            font-size: 48px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-dark);
-            text-align: center;
-            margin-bottom: 12px;
-        }
-
-        .modal-message {
-            font-size: 15px;
-            color: var(--text-muted);
-            text-align: center;
-            line-height: 1.6;
-            margin-bottom: 24px;
-            white-space: pre-line;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .modal-btn {
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: 0.2s;
-            min-width: 100px;
-        }
-
-        .modal-btn-primary {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .modal-btn-primary:hover {
-            background: #228be6;
-        }
-
-        .modal-btn-cancel {
-            background: #e9ecef;
-            color: var(--text-dark);
-        }
-
-        .modal-btn-cancel:hover {
-            background: #dee2e6;
-        }
-
-        .modal-btn-danger {
-            background: #fa5252;
-            color: white;
-        }
-
-        .modal-btn-danger:hover {
-            background: #e03131;
         }
 
         /* 근태 정보 섹션 스타일 */
@@ -812,7 +689,7 @@
             <div class="form-name-subtitle" id="form-name-subtitle">문서 로딩 중...</div>
         </div>
         <div class="header-btns">
-            <button type="button" class="btn btn-temp" onclick="saveDocument(true)">임시저장</button>
+            <button type="button" class="btn btn-temp" onclick="confirmTempSave()">임시저장</button>
         </div>
     </div>
 
@@ -860,7 +737,6 @@
         </tr>
     </table>
 
-    <!-- 근태 정보 섹션 -->
     <div id="attendance-section" class="attendance-section" style="display: none;">
         <div class="attendance-section-title">
             📅 <span id="attendance-title">근태 정보</span>
@@ -951,20 +827,9 @@
             <label style="font-size: 13px; color: #666; cursor: pointer; margin-right: auto; display: flex; align-items: center; gap: 6px;">
                 <input type="checkbox" id="include-ai-summ"> 상신 시 AI 요약본 포함
             </label>
-            <button type="button" class="btn btn-primary" onclick="saveDocument(false)">문서 상신</button>
-            <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
+            <button type="button" class="btn btn-primary" onclick="confirmSubmit()">문서 상신</button>
+            <button type="button" class="btn btn-cancel" onclick="confirmCancel()">취소</button>
         </div>
-    </div>
-</div>
-
-<div id="custom-alert" class="alert"></div>
-
-<div id="modal-overlay" class="modal-overlay">
-    <div class="modal-content">
-        <div id="modal-icon" class="modal-icon">⚠️</div>
-        <h3 id="modal-title" class="modal-title">알림</h3>
-        <p id="modal-message" class="modal-message"></p>
-        <div id="modal-buttons" class="modal-buttons"></div>
     </div>
 </div>
 
@@ -1000,51 +865,96 @@
         document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
 
-    // ✅ 날짜 계산 헬퍼 함수
+    // ✅ 임시저장 확인
+    function confirmTempSave() {
+        Swal.fire({
+            title: '임시저장 확인',
+            text: '현재 수정 중인 내용을 임시저장하시겠습니까?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#339af0',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '임시저장',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveDocument(true);
+            }
+        });
+    }
+
+    // ✅ 문서상신 확인
+    function confirmSubmit() {
+        Swal.fire({
+            title: '문서상신 확인',
+            text: '문서를 상신하시겠습니까?\n상신 후에는 수정이 불가능합니다.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#339af0',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '상신',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveDocument(false);
+            }
+        });
+    }
+
+    // ✅ 취소 확인
+    function confirmCancel() {
+        Swal.fire({
+            title: '수정 취소',
+            text: '수정 중인 내용이 저장되지 않습니다.\n이전 페이지로 돌아가시겠습니까?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#fa5252',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: '확인',
+            cancelButtonText: '취소',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                history.back();
+            }
+        });
+    }
+
     function getDateString(type) {
         const date = new Date();
-
         if (type === 'today') {
-            // 오늘
         } else if (type === 'yesterday') {
-            date.setDate(date.getDate() - 1); // ✅ 어제
+            date.setDate(date.getDate() - 1);
         } else if (type === '-6months') {
             date.setMonth(date.getMonth() - 6);
         } else if (type === '+6months') {
             date.setMonth(date.getMonth() + 6);
         }
-
         return date.toISOString().split('T')[0];
     }
 
-    // ✅ 카테고리별 날짜 규칙 판별
     function getCategoryRule(categoryName) {
         const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
-
-        // ✅ 휴가/출장 수정신청 - 시작일 제한 없음, 종료일은 어제부터 미래
         if (normalized.includes('수정신청')) {
             return {
                 startDate: { min: null, max: null },
                 endDate: { min: getDateString('yesterday'), max: getDateString('+6months') }
             };
         }
-
-        // ✅ 휴가/출장 신청, 취소신청 - 오늘부터 미래
         if (normalized.includes('휴가') || normalized.includes('출장')) {
             return {
                 startDate: { min: getDateString('today'), max: getDateString('+6months') },
                 endDate: { min: getDateString('today'), max: getDateString('+6months') }
             };
         }
-
         return null;
     }
 
-    // ✅ 날짜 제약 적용
     function applyDateConstraints(rule) {
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
-
         if (!rule) {
             startDateInput.removeAttribute('min');
             startDateInput.removeAttribute('max');
@@ -1052,43 +962,31 @@
             endDateInput.removeAttribute('max');
             return;
         }
-
-        // ✅ 시작일 제약 (null이면 제약 없음)
         if (rule.startDate.min) {
             startDateInput.min = rule.startDate.min;
         } else {
             startDateInput.removeAttribute('min');
         }
-
         if (rule.startDate.max) {
             startDateInput.max = rule.startDate.max;
         } else {
             startDateInput.removeAttribute('max');
         }
-
-        // ✅ 종료일 제약
         if (rule.endDate.min) {
             endDateInput.min = rule.endDate.min;
         } else {
             endDateInput.removeAttribute('min');
         }
-
         if (rule.endDate.max) {
             endDateInput.max = rule.endDate.max;
         } else {
             endDateInput.removeAttribute('max');
         }
-
-        console.log('✅ 날짜 제약 적용:', rule);
     }
 
-    // ✅ 카테고리 변경 핸들러
     function onCategoryChange(categoryName) {
-        console.log('📌 카테고리 변경:', categoryName);
-
         currentCategoryName = categoryName;
         const rule = getCategoryRule(categoryName);
-
         const attendanceSection = document.getElementById('attendance-section');
         const delegateSection = document.getElementById('delegate-section');
         const selectedDelegateSection = document.getElementById('selected-delegate-section');
@@ -1100,30 +998,22 @@
         }
 
         const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
-
-        // ✅ 취소신청이면 근태 정보 섹션 전체 숨김
         if (normalized === '휴가취소신청' || normalized === '출장취소신청') {
             attendanceSection.style.display = 'none';
             return;
         }
 
-        // 여기부터는 취소신청이 아닌 경우만 실행
         attendanceSection.style.display = 'block';
-
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
-
         selectedDelegate = null;
         renderSelectedDelegate();
-
         updateTableDates();
         updateTableDelegate();
-
         applyDateConstraints(rule);
 
         if (normalized.includes('휴가')) {
             attendanceTitle.textContent = '휴가 정보';
-
             if (normalized === '휴가신청' || normalized === '휴가수정신청') {
                 delegateSection.style.display = 'block';
             } else {
@@ -1135,71 +1025,58 @@
             delegateSection.style.display = 'none';
             selectedDelegateSection.style.display = 'none';
         }
-
-        console.log('✅ 카테고리 설정 완료 - 대직자 표시:', delegateSection.style.display);
     }
-    // ✅ 시작일 변경 이벤트
+
     function onStartDateChange(e) {
         const startDate = e.target.value;
         const endDateInput = document.getElementById('endDate');
         const endDate = endDateInput.value;
-
         if (startDate) {
             const rule = getCategoryRule(currentCategoryName);
             if (rule) {
                 endDateInput.min = startDate;
             }
         }
-
         if (startDate && endDate && endDate < startDate) {
-            showModal(
-                '⚠️',
-                '날짜 오류',
-                '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '날짜 오류',
+                text: '종료일이 시작일보다 빠를 수 없습니다.\n종료일을 다시 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
             endDateInput.value = '';
         }
-
         updateTableDates();
     }
 
-    // ✅ 종료일 변경 이벤트
     function onEndDateChange(e) {
         const startDate = document.getElementById('startDate').value;
         const endDate = e.target.value;
-
         if (startDate && endDate && endDate < startDate) {
-            showModal(
-                '⚠️',
-                '날짜 오류',
-                '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]
-            );
+            Swal.fire({
+                icon: 'warning',
+                title: '날짜 오류',
+                text: '종료일이 시작일보다 빠를 수 없습니다.\n다시 선택해주세요.',
+                confirmButtonColor: '#339af0'
+            });
             e.target.value = '';
             return;
         }
-
         updateTableDates();
     }
 
-    // ✅ 표에 날짜 업데이트
     function updateTableDates() {
         if (!tiptapEditor) return;
-
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
-
         const json = tiptapEditor.getJSON();
         const table = findTableInContent(json.content);
         if (!table) return;
-
         table.content.forEach(row => {
             if (row.type === 'tableRow' && row.content) {
                 row.content.forEach(cell => {
                     if (cell.attrs && cell.attrs['data-field']) {
                         const field = cell.attrs['data-field'];
-
                         if (field === 'startDate') {
                             cell.content = [{
                                 type: 'paragraph',
@@ -1217,19 +1094,14 @@
                 });
             }
         });
-
         tiptapEditor.commands.setContent(json);
-        console.log('✅ 표 날짜 업데이트 완료');
     }
 
-    // ✅ 표에 대직자 업데이트
     function updateTableDelegate() {
         if (!tiptapEditor) return;
-
         const json = tiptapEditor.getJSON();
         const table = findTableInContent(json.content);
         if (!table) return;
-
         table.content.forEach(row => {
             if (row.type === 'tableRow' && row.content) {
                 row.content.forEach(cell => {
@@ -1254,18 +1126,13 @@
                 });
             }
         });
-
         tiptapEditor.commands.setContent(json);
-        console.log('✅ 표 대직자 업데이트 완료');
     }
 
     function findTableInContent(content) {
         if (!content || !Array.isArray(content)) return null;
-
         for (let node of content) {
-            if (node.type === 'table') {
-                return node;
-            }
+            if (node.type === 'table') return node;
             if (node.content) {
                 const found = findTableInContent(node.content);
                 if (found) return found;
@@ -1285,36 +1152,6 @@
         return category ? category.docfoCatName : '';
     }
 
-    function showModal(icon, title, message, buttons) {
-        const modal = document.getElementById('modal-overlay');
-        const modalIcon = document.getElementById('modal-icon');
-        const modalTitle = document.getElementById('modal-title');
-        const modalMessage = document.getElementById('modal-message');
-        const modalButtons = document.getElementById('modal-buttons');
-
-        modalIcon.textContent = icon;
-        modalTitle.textContent = title;
-        modalMessage.textContent = message;
-
-        modalButtons.innerHTML = '';
-        buttons.forEach(btn => {
-            const button = document.createElement('button');
-            button.className = `modal-btn ${btn.className}`;
-            button.textContent = btn.text;
-            button.onclick = () => {
-                closeModal();
-                if (btn.callback) btn.callback();
-            };
-            modalButtons.appendChild(button);
-        });
-
-        modal.style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('modal-overlay').style.display = 'none';
-    }
-
     async function loadOriginalDocumentData() {
         try {
             const response = await fetch(`/api/v1/documents/${originalDocNo}?status=UNSUBMITTED`, {
@@ -1325,7 +1162,6 @@
             if (response.ok && result.data) {
                 const doc = result.data;
                 document.getElementById('doc-title').value = doc.title || "";
-
                 currentDocfoNo = doc.docFormNo;
 
                 if (doc.aiSumm && doc.aiSumm.trim() !== '') {
@@ -1338,19 +1174,10 @@
                 if (doc.content) {
                     try {
                         let parsedJson = JSON.parse(doc.content);
-
-                        // ⭐ 근태 정보 복원
                         if (parsedJson.attendanceInfo) {
                             const attendanceInfo = parsedJson.attendanceInfo;
-
-                            if (attendanceInfo.startDate) {
-                                document.getElementById('startDate').value = attendanceInfo.startDate;
-                            }
-                            if (attendanceInfo.endDate) {
-                                document.getElementById('endDate').value = attendanceInfo.endDate;
-                            }
-
-                            // ⭐ 대직자 정보 복원
+                            if (attendanceInfo.startDate) document.getElementById('startDate').value = attendanceInfo.startDate;
+                            if (attendanceInfo.endDate) document.getElementById('endDate').value = attendanceInfo.endDate;
                             if (attendanceInfo.delegate) {
                                 selectedDelegate = {
                                     empId: attendanceInfo.delegate.empId,
@@ -1364,90 +1191,55 @@
 
                         function removeInputFields(obj) {
                             if (Array.isArray(obj)) {
-                                return obj.map(item => removeInputFields(item)).filter(item => {
-                                    return !(item && item.type === 'inputField');
-                                });
+                                return obj.map(item => removeInputFields(item)).filter(item => !(item && item.type === 'inputField'));
                             } else if (obj && typeof obj === 'object') {
                                 const newObj = {};
                                 for (let key in obj) {
-                                    if (key === 'attendanceInfo') {
-                                        newObj[key] = obj[key];
-                                    } else {
-                                        newObj[key] = removeInputFields(obj[key]);
-                                    }
+                                    if (key === 'attendanceInfo') newObj[key] = obj[key];
+                                    else newObj[key] = removeInputFields(obj[key]);
                                 }
                                 return newObj;
                             }
                             return obj;
                         }
-
                         originalDocumentJson = removeInputFields(parsedJson);
-                        console.log('✅ 문서 데이터 로드 완료:', originalDocumentJson);
                     } catch (e) {
-                        console.error('❌ content JSON 파싱 실패:', e);
                         originalDocumentJson = null;
                     }
                 }
 
                 initTipTapEditor();
-
-                if (currentDocfoNo) {
-                    await fetchFormDetailsForDocument(currentDocfoNo);
-                }
+                if (currentDocfoNo) await fetchFormDetailsForDocument(currentDocfoNo);
 
                 if (doc.docFormCatNo) {
                     const radio = document.querySelector(`input[name="docfoCatNo"][value="${doc.docFormCatNo}"]`);
                     if (radio) {
                         radio.checked = true;
-
-                        // ✅ 선택된 카테고리로 근태 섹션 및 대직자 표시 결정
                         const categoryName = getCategoryNameByNo(doc.docFormCatNo);
                         if (categoryName) {
                             currentCategoryName = categoryName;
-
                             const rule = getCategoryRule(categoryName);
                             if (rule) {
-                                const attendanceSection = document.getElementById('attendance-section');
-                                attendanceSection.style.display = 'block';
-
+                                document.getElementById('attendance-section').style.display = 'block';
                                 applyDateConstraints(rule);
-
                                 const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
-                                const delegateSection = document.getElementById('delegate-section');
-                                const selectedDelegateSection = document.getElementById('selected-delegate-section');
-                                const attendanceTitle = document.getElementById('attendance-title');
-
-                                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 필드 표시
                                 if (normalized === '휴가신청' || normalized === '휴가수정신청') {
-                                    attendanceTitle.textContent = '휴가 정보';
-                                    delegateSection.style.display = 'block';
-
-                                    if (selectedDelegate) {
-                                        renderSelectedDelegate();
-                                    }
+                                    document.getElementById('attendance-title').textContent = '휴가 정보';
+                                    document.getElementById('delegate-section').style.display = 'block';
+                                    if (selectedDelegate) renderSelectedDelegate();
                                 } else if (normalized.includes('휴가')) {
-                                    attendanceTitle.textContent = '휴가 정보';
-                                    delegateSection.style.display = 'none';
-                                    selectedDelegateSection.style.display = 'none';
+                                    document.getElementById('attendance-title').textContent = '휴가 정보';
                                 } else if (normalized.includes('출장')) {
-                                    attendanceTitle.textContent = '출장 정보';
-                                    delegateSection.style.display = 'none';
-                                    selectedDelegateSection.style.display = 'none';
+                                    document.getElementById('attendance-title').textContent = '출장 정보';
                                 }
                             }
                         }
                     }
                 }
-
                 await loadExistingAttachments(originalDocNo);
-
                 if (doc.resApprovalLineDtos && doc.resApprovalLineDtos.length > 0) {
-                    const filteredLines = doc.resApprovalLineDtos.filter(line => {
-                        const isDelegateValue = line.isDelegate ?? line.delegate ?? false;
-                        return !isDelegateValue;
-                    });
+                    const filteredLines = doc.resApprovalLineDtos.filter(line => !(line.isDelegate ?? line.delegate ?? false));
                     const sortedLines = filteredLines.sort((a, b) => a.seq - b.seq);
-
                     const detailPromises = sortedLines.map(line => fetchEmployeeDetailByKeyword(line.approverId));
                     const employeeDetails = await Promise.all(detailPromises);
                     selectedApprovers = employeeDetails.filter(emp => emp !== null);
@@ -1455,275 +1247,101 @@
                 }
             }
         } catch (e) {
-            console.error('데이터 로드 오류:', e);
-            showModal('❌', '오류 발생', '데이터 로드 중 오류가 발생했습니다.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({ icon: 'error', title: '오류 발생', text: '데이터 로드 중 오류가 발생했습니다.', confirmButtonColor: '#339af0' });
         }
     }
 
     async function loadExistingAttachments(docNo) {
         try {
-            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, {
-                credentials: 'include'
-            });
-
+            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, { credentials: 'include' });
             if (response.ok) {
                 const result = await response.json();
                 existingFiles = result.data || [];
-                console.log('✅ 기존 첨부파일 로드:', existingFiles);
                 renderFileList();
             }
-        } catch (e) {
-            console.error('❌ 첨부파일 로드 실패:', e);
-        }
+        } catch (e) {}
     }
 
     async function fetchFormDetailsForDocument(docfoNo) {
         const container = document.getElementById('category-radio-group');
         try {
-            const response = await fetch(`/api/v1/temp/documentForms/${docfoNo}`, {
-                credentials: 'include'
-            });
+            const response = await fetch(`/api/v1/temp/documentForms/${docfoNo}`, { credentials: 'include' });
             const result = await response.json();
-
             if (result.data && result.data.docfoName) {
                 currentFormName = result.data.docfoName;
                 document.getElementById('form-name-subtitle').textContent = `📄 ${currentFormName}`;
             }
-
             if (response.ok && result.data && result.data.tempResDocumentFormCategoryDtos) {
                 const categories = result.data.tempResDocumentFormCategoryDtos;
-
                 formCategories = categories;
-
                 if (categories.length > 0) {
-                    container.innerHTML = categories.map((cat, index) => `
+                    container.innerHTML = categories.map(cat => `
                     <label class="cat-item">
                         <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}">
                         <span>${cat.docfoCatName}</span>
                     </label>`).join('');
-
                     document.querySelectorAll('input[name="docfoCatNo"]').forEach(radio => {
-                        radio.addEventListener('change', (e) => {
-                            const selectedCategoryName = getCategoryNameByNo(e.target.value);
-                            onCategoryChange(selectedCategoryName);
-                        });
+                        radio.addEventListener('change', (e) => onCategoryChange(getCategoryNameByNo(e.target.value)));
                     });
-                } else {
-                    container.innerHTML = '<span style="color:#adb5bd; font-size:12px;">선택 가능한 카테고리가 없습니다.</span>';
                 }
             }
-
-        } catch (e) {
-            console.error('문서 카테고리 로드 실패:', e);
-        }
+        } catch (e) {}
     }
 
     async function fetchEmployeeDetailByKeyword(empId) {
         try {
-            const response = await fetch(`/api/v1/employees?keyword=${empId}&excludeMe=false`, {
-                credentials: 'include'
-            });
+            const response = await fetch(`/api/v1/employees?keyword=${empId}&excludeMe=false`, { credentials: 'include' });
             const result = await response.json();
             if (response.ok && result.data?.items && result.data.items.length > 0) {
                 const emp = result.data.items.find(item => item.empId === empId);
-                if (emp) {
-                    return {
-                        approverId: emp.empId,
-                        approverName: emp.empName,
-                        posName: emp.posName || '사원',
-                        depName: emp.depName || '부서미지정',
-                        posOrder: emp.posOrder || 999
-                    };
-                }
+                if (emp) return { approverId: emp.empId, approverName: emp.empName, posName: emp.posName || '사원', depName: emp.depName || '부서미지정', posOrder: emp.posOrder || 999 };
             }
             return null;
         } catch (e) { return null; }
     }
 
     function initTipTapEditor() {
-        const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader,
-            TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
-
+        const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader, TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
         const CustomTableCell = TableCell.extend({
             addAttributes() {
                 return {
                     ...this.parent?.(),
-                    'data-field': {
-                        default: null,
-                        parseHTML: element => element.getAttribute('data-field'),
-                        renderHTML: attributes => {
-                            if (attributes['data-field']) {
-                                return { 'data-field': attributes['data-field'] };
-                            }
-                            return {};
-                        },
-                    },
-                    editable: {
-                        default: true,
-                        parseHTML: element => {
-                            const attr = element.getAttribute('data-editable');
-                            return attr === 'false' ? false : true;
-                        },
-                        renderHTML: attributes => {
-                            if (attributes.editable === false) {
-                                return {
-                                    'data-editable': 'false',
-                                    'style': 'background-color: #f1f3f5;'
-                                };
-                            }
-                            return { 'data-editable': 'true' };
-                        },
-                    },
-                    colspan: {
-                        default: 1,
-                        parseHTML: element => {
-                            const colspan = element.getAttribute('colspan');
-                            return colspan ? parseInt(colspan, 10) : 1;
-                        },
-                    },
-                    rowspan: {
-                        default: 1,
-                        parseHTML: element => {
-                            const rowspan = element.getAttribute('rowspan');
-                            return rowspan ? parseInt(rowspan, 10) : 1;
-                        },
-                    },
-                    colwidth: {
-                        default: null,
-                        parseHTML: element => {
-                            const colwidth = element.getAttribute('colwidth');
-                            return colwidth ? colwidth.split(',').map(w => parseInt(w, 10)) : null;
-                        },
-                    },
+                    'data-field': { default: null, parseHTML: element => element.getAttribute('data-field'), renderHTML: attributes => attributes['data-field'] ? { 'data-field': attributes['data-field'] } : {} },
+                    editable: { default: true, parseHTML: element => element.getAttribute('data-editable') !== 'false', renderHTML: attributes => attributes.editable === false ? { 'data-editable': 'false', 'style': 'background-color: #f1f3f5;' } : { 'data-editable': 'true' } },
+                    colspan: { default: 1, parseHTML: element => parseInt(element.getAttribute('colspan') || '1', 10) },
+                    rowspan: { default: 1, parseHTML: element => parseInt(element.getAttribute('rowspan') || '1', 10) },
+                    colwidth: { default: null, parseHTML: element => element.getAttribute('colwidth') ? element.getAttribute('colwidth').split(',').map(w => parseInt(w, 10)) : null }
                 };
-            },
+            }
         });
-
         const initialContent = originalDocumentJson || '<p>문서 내용을 입력하세요.</p>';
-
         tiptapEditor = new Editor({
             element: document.querySelector('#editor-container'),
-            extensions: [
-                StarterKit,
-                Table.configure({ resizable: true }),
-                TableRow,
-                CustomTableCell,
-                TableHeader,
-                TextAlign.configure({ types: ['heading', 'paragraph'] }),
-                TextStyle,
-                Color,
-                FontFamily,
-                Highlight,
-                Image,
-                Link.configure({ openOnClick: false }),
-                Underline,
-            ],
+            extensions: [StarterKit, Table.configure({ resizable: true }), TableRow, CustomTableCell, TableHeader, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontFamily, Highlight, Image, Link.configure({ openOnClick: false }), Underline],
             content: initialContent,
             editable: true,
             autofocus: true,
-            editorProps: {
-                handleKeyDown: (view, event) => {
-                    const { state } = view;
-                    const { selection } = state;
-                    const { $from } = selection;
-
-                    for (let depth = $from.depth; depth > 0; depth--) {
-                        const node = $from.node(depth);
-                        if (node.type.name === 'tableCell' && node.attrs.editable === false) {
-                            const blockedKeys = ['Backspace', 'Delete', 'Enter'];
-                            if (event.key.length === 1 || blockedKeys.includes(event.key)) {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                },
-                handlePaste: (view) => {
-                    const { state } = view;
-                    const { selection } = state;
-                    const { $from } = selection;
-
-                    for (let depth = $from.depth; depth > 0; depth--) {
-                        const node = $from.node(depth);
-                        if (node.type.name === 'tableCell' && node.attrs.editable === false) {
-                            return true;
-                        }
-                    }
-                    return false;
-                },
-                handleDrop: (view, event, slice, moved) => {
-                    const { state } = view;
-                    const { selection } = state;
-                    const { $from } = selection;
-
-                    for (let depth = $from.depth; depth > 0; depth--) {
-                        const node = $from.node(depth);
-                        if (node.type.name === 'tableCell' && node.attrs.editable === false) {
-                            return true;
-                        }
-                    }
-                    return false;
-                },
-            },
-            onUpdate: ({ editor }) => {
-                updateCharCounter();
-                updateToolbarButtons();
-            },
-            onSelectionUpdate: ({ editor }) => {
-                updateToolbarButtons();
-            }
+            onUpdate: () => { updateCharCounter(); updateToolbarButtons(); },
+            onSelectionUpdate: () => updateToolbarButtons()
         });
-
-        console.log('✅ TipTap 에디터 초기화 완료');
-
-        document.querySelector('#editor-container').addEventListener('click', () => {
-            if (tiptapEditor && !tiptapEditor.isFocused) {
-                tiptapEditor.commands.focus('end');
-            }
-        });
-
         updateCharCounter();
     }
 
     function updateCharCounter() {
         if (!tiptapEditor) return;
-        const text = tiptapEditor.getText();
-        const length = text.length;
+        const length = tiptapEditor.getText().length;
         const counter = document.getElementById('char-counter');
         counter.textContent = `${length} / 1000`;
-        if (length >= 900) {
-            counter.style.color = '#fa5252';
-            counter.style.fontWeight = 'bold';
-        } else {
-            counter.style.color = '#868e96';
-            counter.style.fontWeight = 'normal';
-        }
+        counter.style.color = length >= 900 ? '#fa5252' : '#868e96';
+        counter.style.fontWeight = length >= 900 ? 'bold' : 'normal';
     }
 
     function updateToolbarButtons() {
         if (!tiptapEditor) return;
-        const buttons = {
-            'btn-bold': 'bold',
-            'btn-italic': 'italic',
-            'btn-underline': 'underline',
-            'btn-strike': 'strike',
-            'btn-bullet': 'bulletList',
-            'btn-ordered': 'orderedList',
-            'btn-blockquote': 'blockquote',
-            'btn-align-left': { textAlign: 'left' },
-            'btn-align-center': { textAlign: 'center' },
-            'btn-align-right': { textAlign: 'right' },
-        };
+        const buttons = { 'btn-bold': 'bold', 'btn-italic': 'italic', 'btn-underline': 'underline', 'btn-strike': 'strike', 'btn-bullet': 'bulletList', 'btn-ordered': 'orderedList', 'btn-blockquote': 'blockquote', 'btn-align-left': { textAlign: 'left' }, 'btn-align-center': { textAlign: 'center' }, 'btn-align-right': { textAlign: 'right' } };
         Object.entries(buttons).forEach(([btnId, format]) => {
             const btn = document.getElementById(btnId);
-            if (btn) {
-                if (typeof format === 'string') {
-                    btn.classList.toggle('is-active', tiptapEditor.isActive(format));
-                } else {
-                    btn.classList.toggle('is-active', tiptapEditor.isActive(format));
-                }
-            }
+            if (btn) btn.classList.toggle('is-active', tiptapEditor.isActive(format));
         });
     }
 
@@ -1731,65 +1349,27 @@
     function toggleItalic() { tiptapEditor.chain().focus().toggleItalic().run(); }
     function toggleUnderline() { tiptapEditor.chain().focus().toggleUnderline().run(); }
     function toggleStrike() { tiptapEditor.chain().focus().toggleStrike().run(); }
-    function setHeading(level) {
-        if (level === '') {
-            tiptapEditor.chain().focus().setParagraph().run();
-        } else {
-            tiptapEditor.chain().focus().setHeading({ level: parseInt(level) }).run();
-        }
-    }
+    function setHeading(level) { level === '' ? tiptapEditor.chain().focus().setParagraph().run() : tiptapEditor.chain().focus().setHeading({ level: parseInt(level) }).run(); }
     function setTextAlign(align) { tiptapEditor.chain().focus().setTextAlign(align).run(); }
     function toggleBulletList() { tiptapEditor.chain().focus().toggleBulletList().run(); }
     function toggleOrderedList() { tiptapEditor.chain().focus().toggleOrderedList().run(); }
     function toggleBlockquote() { tiptapEditor.chain().focus().toggleBlockquote().run(); }
-
     function insertTable() {
         const rows = prompt('행(row) 수를 입력하세요:', '3');
         const cols = prompt('열(column) 수를 입력하세요:', '3');
-        if (rows && cols && rows > 0 && cols > 0) {
-            tiptapEditor.chain().focus()
-                .insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: false })
-                .run();
-            setTimeout(() => {
-                const { state } = tiptapEditor;
-                const { doc } = state;
-                const lastNode = doc.lastChild;
-                if (lastNode && lastNode.type.name === 'table') {
-                    tiptapEditor.chain().focus('end').insertContent('<p></p>').focus('end').run();
-                }
-            }, 50);
-        }
+        if (rows > 0 && cols > 0) tiptapEditor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: false }).run();
     }
-
     function deleteTable() { tiptapEditor.chain().focus().deleteTable().run(); }
-    function insertLink() {
-        const url = prompt('링크 URL을 입력하세요:');
-        if (url) { tiptapEditor.chain().focus().setLink({ href: url }).run(); }
-    }
-    function insertImage() {
-        const url = prompt('이미지 URL을 입력하세요:');
-        if (url) { tiptapEditor.chain().focus().setImage({ src: url }).run(); }
-    }
+    function insertLink() { const url = prompt('링크 URL을 입력하세요:'); if (url) tiptapEditor.chain().focus().setLink({ href: url }).run(); }
+    function insertImage() { const url = prompt('이미지 URL을 입력하세요:'); if (url) tiptapEditor.chain().focus().setImage({ src: url }).run(); }
 
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
-        const maxCount = 5;
         const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
-
         for (let file of files) {
-            if (currentCount + newFiles.length >= maxCount) {
-                showAlert(`최대 ${maxCount}개까지만 첨부할 수 있습니다.`, "error");
-                break;
-            }
-            if (file.size > maxSize) {
-                showAlert(`${file.name}은(는) 10MB를 초과합니다.`, "error");
-                continue;
-            }
-            if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
-                showAlert(`${file.name}은(는) 이미 첨부되었습니다.`, "error");
-                continue;
-            }
+            if (currentCount >= 5) { Swal.fire({ icon: 'warning', title: '첨부 제한', text: '최대 5개까지만 첨부할 수 있습니다.', confirmButtonColor: '#339af0' }); break; }
+            if (file.size > maxSize) { Swal.fire({ icon: 'warning', title: '파일 크기 초과', text: `${file.name}은(는) 10MB를 초과합니다.`, confirmButtonColor: '#339af0' }); continue; }
             newFiles.push(file);
         }
         event.target.value = '';
@@ -1798,308 +1378,100 @@
 
     function renderFileList() {
         const container = document.getElementById('file-list');
-        const activeExistingFiles = existingFiles.filter(file =>
-            !filesToDelete.includes(file.attachmentId)
-        );
-        const totalFiles = activeExistingFiles.length + newFiles.length;
-
-        if (totalFiles === 0) {
-            container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>';
-            return;
-        }
-
-        let html = '';
-        activeExistingFiles.forEach(file => {
-            html += `
-                <div class="file-item" style="background: #f0f8ff;">
-                    <div class="file-item-info">
-                        <span style="font-size: 18px;">📄</span>
-                        <div>
-                            <div class="file-item-name">${file.originalName}</div>
-                            <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존 파일)</span></div>
-                        </div>
-                    </div>
-                    <span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span>
-                </div>
-            `;
-        });
-
-        newFiles.forEach((file, index) => {
-            html += `
-                <div class="file-item">
-                    <div class="file-item-info">
-                        <span style="font-size: 18px;">📄</span>
-                        <div>
-                            <div class="file-item-name">${file.name}</div>
-                            <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div>
-                        </div>
-                    </div>
-                    <span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span>
-                </div>
-            `;
-        });
-
+        const activeExisting = existingFiles.filter(file => !filesToDelete.includes(file.attachmentId));
+        if (activeExisting.length + newFiles.length === 0) { container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>'; return; }
+        let html = activeExisting.map(file => `
+            <div class="file-item" style="background: #f0f8ff;">
+                <div class="file-item-info"><span>📄</span><div><div class="file-item-name">${file.originalName}</div><div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존)</span></div></div></div>
+                <span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span>
+            </div>`).join('');
+        html += newFiles.map((file, index) => `
+            <div class="file-item">
+                <div class="file-item-info"><span>📄</span><div><div class="file-item-name">${file.name}</div><div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div></div></div>
+                <span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span>
+            </div>`).join('');
         container.innerHTML = html;
     }
 
-    function removeExistingFile(attachmentId) {
-        filesToDelete.push(attachmentId);
-        renderFileList();
-    }
-
-    function removeNewFile(index) {
-        newFiles.splice(index, 1);
-        renderFileList();
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
-
-    function getFileType(mimeType) {
-        if (mimeType.startsWith('image/')) return 'IMAGE';
-        if (mimeType.startsWith('audio/')) return 'AUDIO';
-        return 'DOC';
-    }
+    function removeExistingFile(id) { filesToDelete.push(id); renderFileList(); }
+    function removeNewFile(index) { newFiles.splice(index, 1); renderFileList(); }
+    function formatFileSize(bytes) { if (bytes === 0) return '0 Bytes'; const i = Math.floor(Math.log(bytes) / Math.log(1024)); return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + ['Bytes', 'KB', 'MB', 'GB'][i]; }
+    function getFileType(mime) { if (mime.startsWith('image/')) return 'IMAGE'; if (mime.startsWith('audio/')) return 'AUDIO'; return 'DOC'; }
 
     async function generateAiSummary() {
-        const html = tiptapEditor.getHTML();
         const text = tiptapEditor.getText().trim();
-
-        if (text.length < 100) {
-            return showModal('⚠️', 'AI 요약 오류', '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        }
-
+        if (text.length < 100) return Swal.fire({ icon: 'warning', title: 'AI 요약 오류', text: '내용이 100자 이상이어야 합니다.', confirmButtonColor: '#339af0' });
         const summaryBox = document.getElementById('ai-summary-box');
         const summaryText = document.getElementById('ai-summary-text');
         summaryBox.style.display = 'block';
         summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
-
         try {
-            const response = await fetch('/api/v1/documents/ai-summary', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: html })
-            });
-
-            if (!response.ok) throw new Error('AI 요약 생성 실패');
+            const response = await fetch('/api/v1/documents/ai-summary', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: tiptapEditor.getHTML() }) });
             const result = await response.json();
-
-            if (result.data) {
-                summaryText.innerText = result.data;
-            } else {
-                throw new Error('요약 데이터가 없습니다');
-            }
-        } catch (error) {
+            if (result.data) summaryText.innerText = result.data;
+            else throw new Error();
+        } catch (e) {
             summaryBox.style.display = 'none';
-            showModal('❌', 'AI 요약 실패', 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({ icon: 'error', title: 'AI 요약 실패', text: '잠시 후 다시 시도해주세요.', confirmButtonColor: '#339af0' });
         }
     }
 
     async function saveDocument(isTemp) {
         const title = document.getElementById('doc-title').value.trim();
         const contentJson = tiptapEditor.getJSON();
-        const contentHtml = tiptapEditor.getHTML();
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
-
-        let startDate = null;
-        let endDate = null;
-
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
-        const isAttendanceCategory = normalized.includes('휴가') || normalized.includes('출장');
 
-        if (isAttendanceCategory) {
-            startDate = document.getElementById('startDate').value;
-            endDate = document.getElementById('endDate').value;
+        if (!title || !contentText || !checkedRadio) return Swal.fire({ icon: 'warning', title: '입력 오류', text: '제목, 내용, 카테고리를 확인하세요.', confirmButtonColor: '#339af0' });
+        if (!isTemp && selectedApprovers.length === 0) return Swal.fire({ icon: 'warning', title: '결재선 미지정', text: '결재선을 최소 1명 지정해야 합니다.', confirmButtonColor: '#339af0' });
 
-            if (!isTemp) {
-                if (!startDate || !endDate) {
-                    return showModal('⚠️', '입력 오류', '시작일과 종료일을 입력해주세요.',
-                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-                }
-                if (startDate > endDate) {
-                    return showModal('⚠️', '입력 오류', '종료일이 시작일보다 빠를 수 없습니다.',
-                        [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-                }
-            }
-
-            contentJson.attendanceInfo = {
-                startDate: startDate,
-                endDate: endDate
-            };
-
-            // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 포함
+        if (normalized.includes('휴가') || normalized.includes('출장')) {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (!isTemp && (!start || !end)) return Swal.fire({ icon: 'warning', title: '날짜 미입력', text: '기간을 입력하세요.', confirmButtonColor: '#339af0' });
+            contentJson.attendanceInfo = { startDate: start, endDate: end };
             if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
-                contentJson.attendanceInfo.delegate = {
-                    empId: selectedDelegate.empId,
-                    empName: selectedDelegate.empName,
-                    posName: selectedDelegate.posName,
-                    depName: selectedDelegate.depName
-                };
+                contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName, posName: selectedDelegate.posName, depName: selectedDelegate.depName };
             }
         }
 
-        const aiSummaryBox = document.getElementById('ai-summary-box');
         const aiSummaryText = document.getElementById('ai-summary-text').innerText;
-        const includeAiSummary = document.getElementById('include-ai-summ').checked;
-        const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
-
-        if (!title) return showModal('⚠️', '입력 오류', '제목을 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (title.length > 100) return showModal('⚠️', '입력 오류', '제목은 100자 이내로 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (!contentText) return showModal('⚠️', '입력 오류', '내용을 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (contentText.length > 1000) return showModal('⚠️', '입력 오류', '내용은 1000자 이내로 입력하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (!checkedRadio) return showModal('⚠️', '입력 오류', '카테고리를 선택하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        if (!isTemp && selectedApprovers.length === 0) return showModal('⚠️', '입력 오류', '결재선을 최소 1명 지정하세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-
-        if (!isTemp && includeAiSummary && !hasAiSummary) {
-            return showModal('⚠️', 'AI 요약 오류', 'AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        }
-
-        let finalAiSummary = null;
-        if (isTemp) {
-            finalAiSummary = hasAiSummary ? aiSummaryText : null;
-        } else {
-            finalAiSummary = (includeAiSummary && hasAiSummary) ? aiSummaryText : null;
-        }
+        const includeAi = document.getElementById('include-ai-summ').checked;
+        const finalAiSumm = isTemp ? (aiSummaryText.includes('⏳') ? null : aiSummaryText) : (includeAi && !aiSummaryText.includes('⏳') ? aiSummaryText : null);
 
         try {
-            const payload = {
-                comId: myInfo.comId,
-                writerId: myInfo.empId,
-                docfoNo: currentDocfoNo,
-                docfoCatNo: parseInt(checkedRadio.value, 10),
-                title: title,
-                content: JSON.stringify(contentJson),
-                cnttHtml: contentHtml,
-                temp: isTemp,
-                aiSumm: finalAiSummary,
-                approvalLines: selectedApprovers.map((a, i) => ({
-                    approverId: a.approverId,
-                    seq: i + 1,
-                    apprStat: isTemp ? "W" : (i === 0 ? "I" : "W")
-                }))
-            };
-
-            const response = await fetch(`/api/v1/documents/${originalDocNo}`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const payload = { comId: myInfo.comId, writerId: myInfo.empId, docfoNo: currentDocfoNo, docfoCatNo: parseInt(checkedRadio.value, 10), title: title, content: JSON.stringify(contentJson), cnttHtml: tiptapEditor.getHTML(), temp: isTemp, aiSumm: finalAiSumm, approvalLines: selectedApprovers.map((a, i) => ({ approverId: a.approverId, seq: i + 1, apprStat: isTemp ? "W" : (i === 0 ? "I" : "W") })) };
+            const response = await fetch(`/api/v1/documents/${originalDocNo}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
             if (response.ok) {
-                if (filesToDelete.length > 0) {
-                    await deleteFiles(filesToDelete);
-                }
+                if (filesToDelete.length > 0) await deleteFiles(filesToDelete);
+                if (newFiles.length > 0) await uploadFiles(originalDocNo);
+                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) await registerDelegate(originalDocNo, selectedDelegate.empId);
 
-                if (newFiles.length > 0) {
-                    await uploadFiles(originalDocNo);
-                }
-
-                // ✅ "휴가신청" 또는 "휴가수정신청"일 때 대직자 등록
-                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && originalDocNo) {
-                    await registerDelegate(originalDocNo, selectedDelegate.empId);
-                }
-
-                const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.";
-                const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
-
-                showModal('✅', '완료', successMessage,
-                    [{ text: '확인', className: 'modal-btn-primary', callback: () => { location.href = targetUrl; } }]);
+                Swal.fire({ icon: 'success', title: '완료', text: isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.", confirmButtonColor: '#339af0' })
+                    .then(() => location.href = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED");
             } else {
                 const err = await response.json().catch(() => ({}));
-                showModal('❌', '오류 발생', err.message || "처리 실패", [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+                Swal.fire({ icon: 'error', title: '처리 실패', text: err.message || "오류가 발생했습니다.", confirmButtonColor: '#339af0' });
             }
         } catch (e) {
-            showModal('❌', '통신 오류', '서버 통신 오류', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
+            Swal.fire({ icon: 'error', title: '통신 오류', text: '서버와의 통신에 실패했습니다.', confirmButtonColor: '#339af0' });
         }
     }
 
-    async function registerDelegate(docNo, delegateEmpId) {
-        try {
-            const response = await fetch('/api/v1/delegates', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId })
-            });
-            if (response.ok) {
-                console.log('✅ 대직자 등록 성공');
-            }
-        } catch (e) {
-            console.warn('⚠️ 대직자 등록 실패:', e);
-        }
-    }
-
-    async function deleteFiles(attachmentIds) {
-        for (const attachmentId of attachmentIds) {
-            try {
-                await fetch(`/api/v1/attachments/${attachmentId}`, {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
-            } catch (e) {
-                console.error('파일 삭제 오류:', e);
-            }
-        }
-    }
-
+    async function registerDelegate(docNo, delegateEmpId) { try { await fetch('/api/v1/delegates', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId }) }); } catch (e) {} }
+    async function deleteFiles(ids) { for (const id of ids) { try { await fetch(`/api/v1/attachments/${id}`, { method: 'DELETE', credentials: 'include' }); } catch (e) {} } }
     async function uploadFiles(docNo) {
         for (const file of newFiles) {
             try {
-                const presignRes = await fetch('/api/v1/attachments/presign', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        domain: 'APPROVAL',
-                        entityId: docNo,
-                        fileType: getFileType(file.type),
-                        originalName: file.name,
-                        contentType: file.type,
-                        size: file.size
-                    })
-                });
+                const presignRes = await fetch('/api/v1/attachments/presign', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), originalName: file.name, contentType: file.type, size: file.size }) });
                 if (!presignRes.ok) continue;
-
-                const presignData = await presignRes.json();
-                const { objectKey, uploadUrl } = presignData.data;
-
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': file.type },
-                    body: file
-                });
+                const { objectKey, uploadUrl } = (await presignRes.json()).data;
+                const uploadRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
                 if (!uploadRes.ok) continue;
-
-                const etag = uploadRes.headers.get('ETag');
-
-                await fetch('/api/v1/attachments/complete', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        domain: 'APPROVAL',
-                        entityId: docNo,
-                        fileType: getFileType(file.type),
-                        objectKey: objectKey,
-                        originalName: file.name,
-                        contentType: file.type,
-                        size: file.size,
-                        etag: etag ? etag.replace(/"/g, '') : null
-                    })
-                });
-            } catch (e) {
-                console.error('파일 업로드 오류:', e);
-            }
+                await fetch('/api/v1/attachments/complete', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), objectKey: objectKey, originalName: file.name, contentType: file.type, size: file.size, etag: uploadRes.headers.get('ETag')?.replace(/"/g, '') }) });
+            } catch (e) {}
         }
     }
 
@@ -2107,140 +1479,76 @@
         try {
             const response = await fetch('/api/v1/temp/employees/me', { credentials: 'include' });
             const result = await response.json();
-
             if (response.ok && result.data) {
-                myInfo = {
-                    empId: result.data.empId,
-                    comId: result.data.comId || "C01",
-                    posOrder: result.data.position?.posOrder || 999
-                };
-
+                myInfo = { empId: result.data.empId, comId: result.data.comId || "C01", posOrder: result.data.position?.posOrder || 999 };
                 document.getElementById('writer-name').value = result.data.empName;
                 document.getElementById('writer-dept').value = result.data.department?.depName || "총무팀";
                 document.getElementById('writer-phone').value = result.data.workPhone || "-";
             }
-        } catch (e) {
-            showAlert("내 정보 로드 실패", "error");
-        }
+        } catch (e) {}
     }
 
     async function searchEmployees(keyword = '') {
         try {
             let url = `/api/v1/employees?size=20&excludeMe=true`;
-            if (keyword && keyword.trim().length > 0) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            const res = await fetch(url, { credentials: 'include' });
-            const result = await res.json();
+            if (keyword.trim()) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
+            const result = await (await fetch(url, { credentials: 'include' })).json();
             renderSearchResults(result.data?.items || []);
         } catch (e) { renderSearchResults([]); }
     }
 
     function initApproverSearch() {
         const searchInput = document.getElementById('approver-search');
-        const searchResults = document.getElementById('search-results');
         searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
         searchInput.addEventListener('input', (e) => {
-            if (searchTimeout) clearTimeout(searchTimeout);
+            clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => searchEmployees(e.target.value), 300);
         });
         document.addEventListener('click', (e) => {
-            if (!document.querySelector('.search-container').contains(e.target)) {
-                searchResults.innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
-            }
+            if (!document.querySelector('.search-container').contains(e.target)) document.getElementById('search-results').innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
         });
     }
 
     function initDelegateSearch() {
         const searchInput = document.getElementById('delegate-search');
-        const searchResults = document.getElementById('delegate-search-results');
-
-        searchInput.addEventListener('focus', () => {
-            searchDelegates(searchInput.value);
-            searchResults.classList.add('show');
-        });
-
+        const results = document.getElementById('delegate-search-results');
+        searchInput.addEventListener('focus', () => { searchDelegates(searchInput.value); results.classList.add('show'); });
         searchInput.addEventListener('input', (e) => {
-            if (delegateSearchTimeout) clearTimeout(delegateSearchTimeout);
-            delegateSearchTimeout = setTimeout(() => {
-                searchDelegates(e.target.value);
-                searchResults.classList.add('show');
-            }, 300);
+            clearTimeout(delegateSearchTimeout);
+            delegateSearchTimeout = setTimeout(() => { searchDelegates(e.target.value); results.classList.add('show'); }, 300);
         });
-
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.delegate-search-wrapper')) {
-                searchResults.classList.remove('show');
-            }
-        });
+        document.addEventListener('click', (e) => { if (!e.target.closest('.delegate-search-wrapper')) results.classList.remove('show'); });
     }
 
     async function searchDelegates(keyword = '') {
         try {
-            // 기존 API 그대로 사용
             let url = `/api/v1/employees?size=20&excludeMe=true`;
-            if (keyword && keyword.trim().length > 0) {
-                url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            }
-            const res = await fetch(url, { credentials: 'include' });
-            const result = await res.json();
-
-            // ✅ 같은 부서만 필터링 (휴가중인 사람도 포함)
+            if (keyword.trim()) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
+            const result = await (await fetch(url, { credentials: 'include' })).json();
             const myDept = document.getElementById('writer-dept').value;
-            const sameDeptEmployees = (result.data?.items || []).filter(emp =>
-                emp.depName === myDept
-            );
-
-            renderDelegateResults(sameDeptEmployees);
-        } catch (e) {
-            renderDelegateResults([]);
-        }
+            renderDelegateResults((result.data?.items || []).filter(emp => emp.depName === myDept));
+        } catch (e) { renderDelegateResults([]); }
     }
 
     function renderDelegateResults(employees) {
         const container = document.getElementById('delegate-search-results');
-
-        if (employees.length === 0) {
-            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">같은 부서의 대직자가 없습니다.</div>';
-            return;
-        }
-
+        if (employees.length === 0) { container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">같은 부서 대직자가 없습니다.</div>'; return; }
         container.innerHTML = employees.map(emp => {
-            const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isOnLeave = emp.atte !== 'C'; // ✅ 휴가중 또는 출장중
+            const isSelected = selectedDelegate?.empId === emp.empId;
+            const isOnLeave = emp.atte !== 'C';
             const isDisabled = isSelected || isOnLeave;
-
-            let statusHtml = '';
-            if (isSelected) {
-                statusHtml = '<span style="float: right; color: #40c057;">✓ 선택됨</span>';
-            } else if (isOnLeave) {
-                const statusText = emp.atte === 'V' ? '휴가중' : emp.atte === 'B' ? '출장중' : '부재중';
-                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusText}</span>`;
-            }
-
+            let statusHtml = isSelected ? '<span style="float: right; color: #40c057;">✓ 선택됨</span>' : (isOnLeave ? `<span style="float: right; color: #fa5252; font-size: 11px;">부재중</span>` : '');
             return `
-            <div class="delegate-result-item"
-                 onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
-                 style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}">
-                <strong>${emp.empName}</strong> | ${emp.posName || '사원'}
-                <br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>
-                ${statusHtml}
-            </div>
-        `;
+            <div class="delegate-result-item" onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}" style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}">
+                <strong>${emp.empName}</strong> | ${emp.posName || '사원'}<br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>${statusHtml}
+            </div>`;
         }).join('');
     }
 
     function selectDelegate(empId, empName, posName, depName, posOrder) {
-        // ✅ 직급 제한 제거
-        selectedDelegate = {
-            empId: empId,
-            empName: empName,
-            posName: posName,
-            depName: depName,
-            posOrder: posOrder
-        };
-
+        selectedDelegate = { empId, empName, posName, depName, posOrder };
         renderSelectedDelegate();
         updateTableDelegate();
-
         document.getElementById('delegate-search').value = '';
         document.getElementById('delegate-search-results').classList.remove('show');
     }
@@ -2248,150 +1556,53 @@
     function renderSelectedDelegate() {
         const container = document.getElementById('selected-delegate-display');
         const section = document.getElementById('selected-delegate-section');
-
-        if (!selectedDelegate) {
-            container.innerHTML = '';
-            section.style.display = 'none';
-            return;
-        }
-
+        if (!selectedDelegate) { container.innerHTML = ''; section.style.display = 'none'; return; }
         section.style.display = 'flex';
-        container.innerHTML = `
-            <div class="selected-delegate">
-                <span class="delegate-icon">👤</span>
-                <div class="delegate-info">
-                    <span class="delegate-name">${selectedDelegate.empName} | ${selectedDelegate.posName}</span>
-                    <span class="delegate-detail">${selectedDelegate.depName} | ${selectedDelegate.empId}</span>
-                </div>
-                <span class="delegate-remove" onclick="removeDelegate()">×</span>
-            </div>
-        `;
+        container.innerHTML = `<div class="selected-delegate"><span class="delegate-icon">👤</span><div class="delegate-info"><span class="delegate-name">${selectedDelegate.empName} | ${selectedDelegate.posName}</span><span class="delegate-detail">${selectedDelegate.depName} | ${selectedDelegate.empId}</span></div><span class="delegate-remove" onclick="removeDelegate()">×</span></div>`;
     }
 
-    function removeDelegate() {
-        selectedDelegate = null;
-        renderSelectedDelegate();
-        updateTableDelegate();
-    }
+    function removeDelegate() { selectedDelegate = null; renderSelectedDelegate(); updateTableDelegate(); }
 
     function renderSearchResults(employees) {
         const container = document.getElementById('search-results');
-        if (employees.length === 0) {
-            container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>';
-            return;
-        }
-
-        const highestSelectedPosOrder = selectedApprovers.length > 0
-            ? Math.min(...selectedApprovers.map(a => a.posOrder))
-            : Infinity;
-
+        if (employees.length === 0) { container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>'; return; }
+        const highestOrder = selectedApprovers.length > 0 ? Math.min(...selectedApprovers.map(a => a.posOrder)) : Infinity;
         container.innerHTML = employees.map(emp => {
             const isAdded = selectedApprovers.some(a => a.approverId === emp.empId);
-            const isSameOrLowerRank = emp.posOrder >= myInfo.posOrder;
-            const hasSameRank = selectedApprovers.some(a => a.posOrder === emp.posOrder);
-            const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
-            const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
-
-            let statusText = '';
-            let statusColor = '';
-            if (isAdded) {
-                statusText = '추가됨'; statusColor = '#adb5bd';
-            } else if (isSameOrLowerRank) {
-                statusText = '직급낮음'; statusColor = '#fa5252';
-            } else if (hasSameRank) {
-                statusText = '중복직급'; statusColor = '#fa5252';
-            } else if (isLowerThanSelected) {
-                statusText = '순서오류'; statusColor = '#fa5252';
-            } else {
-                statusText = '+'; statusColor = 'var(--primary-color)';
-            }
-
+            const isSameOrLower = emp.posOrder >= myInfo.posOrder;
+            const isDupRank = selectedApprovers.some(a => a.posOrder === emp.posOrder);
+            const isLowerThanSelected = emp.posOrder > highestOrder;
+            const isDisabled = isAdded || isSameOrLower || isDupRank || isLowerThanSelected;
+            let statusText = isAdded ? '추가됨' : (isSameOrLower ? '직급낮음' : (isDupRank ? '중복직급' : (isLowerThanSelected ? '순서오류' : '+')));
             return `
-                <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
-                     style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
-                    <div>
-                        <strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span>
-                        <br><small>${emp.depName || '-'} | ${emp.empId}</small>
-                    </div>
-                    <div style="color:${statusColor}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
-                </div>`;
+            <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}" style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
+                <div><strong>${emp.empName}</strong> | ${emp.posName || '사원'}<br><small>${emp.depName || '-'} | ${emp.empId}</small></div>
+                <div style="color:${statusText === '+' ? 'var(--primary-color)' : '#fa5252'}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
+            </div>`;
         }).join('');
     }
 
     function addApprover(id, name, pos, dept, posOrder) {
-        if (selectedApprovers.some(a => a.approverId === id)) return;
-        if (selectedApprovers.length >= 5) {
-            return showModal('⚠️', '최대 인원 초과', '결재선은 최대 5명까지만 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-        }
-        if (posOrder >= myInfo.posOrder) {
-            showModal('⚠️', '직급 제한', '자신보다 높은 직급만 결재선으로 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-            return;
-        }
-        if (selectedApprovers.some(a => a.posOrder === posOrder)) {
-            showModal('⚠️', '중복 직급', '같은 직급은 1명만 결재선으로 지정할 수 있습니다.', [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-            return;
-        }
-        if (selectedApprovers.length > 0) {
-            const highestSelectedPosOrder = Math.min(...selectedApprovers.map(a => a.posOrder));
-            if (posOrder > highestSelectedPosOrder) {
-                const highestRankName = selectedApprovers.find(a => a.posOrder === highestSelectedPosOrder).posName;
-                showModal('⚠️', '직급 순서 오류', `현재 선택된 가장 높은 직급(${highestRankName})보다\n낮은 직급은 추가할 수 없습니다.\n\n선택하려는 직급: ${pos}`, [{ text: '확인', className: 'modal-btn-primary', callback: null }]);
-                return;
-            }
-        }
-
-        selectedApprovers.push({
-            approverId: id,
-            approverName: name,
-            posName: pos || '사원',
-            depName: dept,
-            posOrder: posOrder
-        });
-
+        if (selectedApprovers.length >= 5) return Swal.fire({ icon: 'warning', title: '최대 인원 초과', text: '결재선은 최대 5명까지입니다.', confirmButtonColor: '#339af0' });
+        if (posOrder >= myInfo.posOrder) return Swal.fire({ icon: 'warning', title: '직급 제한', text: '자신보다 높은 직급만 지정 가능합니다.', confirmButtonColor: '#339af0' });
+        if (selectedApprovers.some(a => a.posOrder === posOrder)) return Swal.fire({ icon: 'warning', title: '중복 직급', text: '동일 직급은 1명만 가능합니다.', confirmButtonColor: '#339af0' });
+        if (selectedApprovers.length > 0 && posOrder > Math.min(...selectedApprovers.map(a => a.posOrder))) return Swal.fire({ icon: 'warning', title: '순서 오류', text: '상위 직급보다 낮은 직급은 추가할 수 없습니다.', confirmButtonColor: '#339af0' });
+        selectedApprovers.push({ approverId: id, approverName: name, posName: pos || '사원', depName: dept, posOrder: posOrder });
         renderSelectedTags();
-        document.getElementById('approver-search').value = '';
-
-        const currentResults = Array.from(document.getElementById('search-results').children);
-        if (currentResults.length > 0 && !currentResults[0].innerText.includes('검색창을 클릭')) {
-            searchEmployees(document.getElementById('approver-search').value);
-        } else {
-            document.getElementById('search-results').innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
-        }
+        searchEmployees(document.getElementById('approver-search').value);
     }
 
     function renderSelectedTags() {
         const container = document.getElementById('selected-list');
-        if (selectedApprovers.length === 0) {
-            container.innerHTML = '<span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>';
-            return;
-        }
+        if (selectedApprovers.length === 0) { container.innerHTML = '<span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>'; return; }
         container.innerHTML = selectedApprovers.map((a, i) => `
             <span class="approver-tag">
-                <span class="seq-badge">${i + 1}</span>
-                <span class="info">
-                    <span class="name-pos">${a.approverName} | ${a.posName}</span>
-                    <span class="dept-id">${a.depName} | ${a.approverId}</span>
-                </span>
-                <span class="remove-btn" onclick="event.stopPropagation(); removeApprover('${a.approverId}')">×</span>
+                <span class="seq-badge">${i + 1}</span><span class="info"><span class="name-pos">${a.approverName} | ${a.posName}</span><span class="dept-id">${a.depName} | ${a.approverId}</span></span>
+                <span class="remove-btn" onclick="removeApprover('${a.approverId}')">×</span>
             </span>`).join('');
     }
 
-    function removeApprover(id) {
-        selectedApprovers = selectedApprovers.filter(a => a.approverId !== id);
-        renderSelectedTags();
-        const currentResults = Array.from(document.getElementById('search-results').children);
-        if (currentResults.length > 0 && !currentResults[0].innerText.includes('검색창을 클릭')) {
-            searchEmployees(document.getElementById('approver-search').value);
-        }
-    }
-
-    function showAlert(msg, type) {
-        const alert = document.getElementById('custom-alert');
-        alert.innerText = msg;
-        alert.className = `alert alert-${type}`;
-        alert.style.display = 'block';
-        setTimeout(() => alert.style.display = 'none', 2500);
-    }
+    function removeApprover(id) { selectedApprovers = selectedApprovers.filter(a => a.approverId !== id); renderSelectedTags(); searchEmployees(document.getElementById('approver-search').value); }
 </script>
 </body>
 </html>

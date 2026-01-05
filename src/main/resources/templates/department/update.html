@@ -7,27 +7,27 @@
 <head>
     <title>Bizportal - 부서 수정</title>
 
-    <!-- ✅ layout.html의 <th:block layout:fragment="pageStyles"> 로 주입됨 -->
     <th:block layout:fragment="pageStyles">
         <style>
-            /* ✅ 이 페이지 전용(스코프) */
+            /* ✅ 페이지 스코프 */
             .dept-edit-page{
-                padding-top: 6px;
+                width:min(1100px, 100%);
+                margin:0 auto;
+                padding: 0 26px;
             }
 
             .dept-edit-page .page-kicker{
                 font-size:14px;
                 color:var(--muted);
-                margin: 0 0 10px;
+                margin: 6px 0 10px;
+                font-weight:800;
             }
-
             .dept-edit-page .page-title{
                 font-size:34px;
                 font-weight:900;
                 margin: 0 0 22px;
-                letter-spacing: -.2px;
+                letter-spacing:-.2px;
             }
-
             .dept-edit-page .section-title{
                 font-size:22px;
                 font-weight:900;
@@ -42,27 +42,29 @@
                 box-shadow: 0 10px 24px rgba(17,24,39,.06);
             }
 
-            .dept-edit-page .form-wrap{
-                background:#f3f4f6;
-                border-radius: 18px;
-                padding: 26px;
+            /* ✅ 회색 바탕 제거 + 세로 1열 폼 */
+            .dept-edit-page .form-grid{
+                display:grid;
+                grid-template-columns: 1fr;
+                gap:18px;
             }
 
-            .dept-edit-page .field{ margin: 18px 0; }
+            .dept-edit-page .field{ margin:0; }
             .dept-edit-page .label{
-                font-weight: 800;
-                margin-bottom: 10px;
+                font-weight:900;
+                margin-bottom:10px;
+                font-size:14px;
             }
 
             .dept-edit-page .input{
                 width:100%;
                 height:48px;
-                border-radius: 12px;
-                border: 1px solid var(--line);
-                padding: 0 14px;
-                font-size: 14px;
-                outline: none;
-                background: #fff;
+                border-radius:12px;
+                border:1px solid var(--line);
+                padding:0 14px;
+                font-size:14px;
+                outline:none;
+                background:#fff;
             }
             .dept-edit-page .input:focus{
                 border-color: rgba(59,130,246,.55);
@@ -70,47 +72,50 @@
             }
 
             .dept-edit-page .hint{
-                margin-top: 8px;
-                font-size: 12px;
-                color: var(--muted);
+                margin-top:8px;
+                font-size:12px;
+                color:var(--muted);
+                font-weight:800;
             }
 
             .dept-edit-page .actions{
                 display:flex;
                 justify-content:flex-end;
-                gap:12px;
-                margin-top: 22px;
+                gap:10px;
+                margin-top: 6px;
             }
 
             .dept-edit-page .btn{
-                height:50px;
-                min-width:140px;
+                height:44px;
+                min-width:110px;
                 border:none;
-                border-radius: 14px;
-                font-weight: 900;
+                border-radius:12px;
+                font-weight:900;
                 cursor:pointer;
-                padding: 0 18px;
+                padding:0 14px;
             }
 
-            .dept-edit-page .btn-cancel{
-                background:#e5e7eb;
-                color:#374151;
+            /* ✅ 취소: 흰색 + 검정 글자 */
+            .dept-edit-page .btn.ghost{
+                background:#fff;
+                color:#111;
+                border:1px solid rgba(17,24,39,.10);
+                box-shadow:none;
             }
-            .dept-edit-page .btn-cancel:hover{ filter: brightness(0.98); }
 
-            .dept-edit-page .btn-primary{
+            /* ✅ 저장: 헤더색(= primary) */
+            .dept-edit-page .btn.primary{
                 background: var(--primary);
                 color:#fff;
                 box-shadow: 0 10px 22px rgba(59,130,246,.22);
             }
-            .dept-edit-page .btn-primary:hover{ filter: brightness(0.98); }
-            .dept-edit-page .btn-primary:active{ transform: translateY(1px); }
+            .dept-edit-page .btn.primary:active{ transform: translateY(1px); }
 
             .dept-edit-page .msg{
                 margin-top:14px;
                 font-size:13px;
                 display:none;
-                font-weight:800;
+                font-weight:900;
             }
             .dept-edit-page .msg.ok{ color:#0f766e; }
             .dept-edit-page .msg.err{ color:#b91c1c; }
@@ -119,56 +124,31 @@
 </head>
 
 <body>
-
-<!-- ✅ layout.html의 content 영역으로 들어감 -->
 <th:block layout:fragment="content">
-
     <div class="page-with-subbar">
-
-        <!-- ✅ 관리자 사이드바(fragment) -->
         <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('dept')}"></div>
 
-        <!-- ✅ 오른쪽 콘텐츠 -->
         <section class="dept-edit-page">
-            <p class="page-kicker">부서 편성(수정)</p>
-            <h1 class="page-title">부서 편성</h1>
-            <h2 class="section-title">부서 수정</h2>
 
-            <div class="card">
-                <div class="form-wrap">
-
-                    <!-- 서버에서 내려주는 값 -->
+            <div class="card" style="margin-top: 30px">
+                <div class="form-grid">
                     <input type="hidden" id="depNo" th:value="${depNo}" />
 
                     <div class="field">
                         <div class="label">부서 코드</div>
-                        <input class="input"
-                               id="depId"
-                               maxlength="3"
-                               placeholder="예) A01"
-                               th:value="${depId}" />
+                        <input class="input" id="depId" maxlength="3" placeholder="예) A01" th:value="${depId}" />
                         <div class="hint">최대 3자</div>
                     </div>
 
                     <div class="field">
                         <div class="label">부서 이름</div>
-                        <input class="input"
-                               id="depName"
-                               maxlength="10"
-                               placeholder="예) 인사팀"
-                               th:value="${depName}" />
+                        <input class="input" id="depName" maxlength="10" placeholder="예) 인사팀" th:value="${depName}" />
                         <div class="hint">최대 10자</div>
                     </div>
 
                     <div class="actions">
-                        <button class="btn btn-cancel" type="button"
-                                onclick="location.href='/admin/departments/list'">
-                            취소
-                        </button>
-
-                        <button class="btn btn-primary" id="submitBtn" type="button">
-                            수정 완료
-                        </button>
+                        <button class="btn ghost" type="button" onclick="location.href='/admin/departments/list'">취소</button>
+                        <button class="btn primary" id="submitBtn" type="button">수정 완료</button>
                     </div>
 
                     <div id="resultMsg" class="msg"></div>
@@ -176,10 +156,8 @@
             </div>
         </section>
     </div>
-
 </th:block>
 
-<!-- ✅ layout.html의 pageScripts 영역으로 들어감 -->
 <th:block layout:fragment="pageScripts">
     <script>
         const API_URL = "/api/v1/admin/departments";
@@ -193,9 +171,7 @@
             el.textContent = text;
 
             clearTimeout(window.__msgTimer);
-            window.__msgTimer = setTimeout(() => {
-                el.style.display = "none";
-            }, 2800);
+            window.__msgTimer = setTimeout(() => { el.style.display = "none"; }, 2800);
         }
 
         async function safeJson(res) {
@@ -223,10 +199,7 @@
                     const res = await fetch(`${API_URL}/${encodeURIComponent(depNo)}`, {
                         method: "PUT",
                         credentials: "include",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Accept": "application/json"
-                        },
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
                         body: JSON.stringify({ depId, depName })
                     });
 
@@ -235,9 +208,7 @@
 
                     if (res.ok) {
                         showMsg("부서 정보가 수정되었습니다.", true);
-                        setTimeout(() => {
-                            window.location.href = "/admin/departments/list";
-                        }, 700);
+                        setTimeout(() => window.location.href = "/admin/departments/list", 700);
                         return;
                     }
 
@@ -252,6 +223,5 @@
         });
     </script>
 </th:block>
-
 </body>
 </html>

@@ -1,48 +1,47 @@
+// /js/document-form/list.js
 (() => {
-    // ViewDocumentFormController 기준
-    //  - 목록: /form/forms
-    //  - 상세: /form/{docfoNo}
-    //  - 생성: /form/new
     const API_BASE = '/api/v1/forms';
     const VIEW_BASE = '/form';
 
-    // "목록은 승인(A)만(+ X 포함)" 정책이면 true
+    // ✅ 승인된 것만 보이게(원하면 false로)
     const ONLY_APPROVED = true;
+    const APPROVED_STATS = ['A', 'X'];
 
-    // ✅ 백엔드가 복수 상태(stat=A,X)를 지원하도록 바뀌었으니 여기서만 관리
-    const APPROVED_STATS = ['A', 'X']; // 필요 시 ['A','X','...']로 확장
-
-    // 권한(쿠키 인증일 때는 JS가 JWT를 못 읽으므로, 서버가 붙여준 class로 판단)
-    function isEmployee() {
-        return document.documentElement.classList.contains('role-employee');
-    }
-
+    // ===== DOM =====
     const elTbody = document.getElementById('tbody');
     const elInfo = document.getElementById('pageInfo');
     const elPager = document.getElementById('pagerControls');
     const elQ = document.getElementById('q');
     const elSize = document.getElementById('size');
+    const elThSelect = document.getElementById('thSelect');
 
-    const btnDeleteSelected = document.getElementById('btnDeleteSelected');
-    const btnCreate = document.getElementById('btnCreate');
-    const btnRefresh = document.getElementById('btnRefresh');
+    const btnDeleteSelected = document.getElementById('btnDeleteSelected'); // th:if로 없을 수도 있음
+    const btnCreate = document.getElementById('btnNew');                    // th:if로 없을 수도 있음
     const btnSearch = document.getElementById('btnSearch');
-    const elToast = document.getElementById('toast');
 
-    const selected = new Set();
+    const elCountPill = document.getElementById('countPill');
 
-    let page = 0;
-    let totalPages = 1;
-    let totalElements = 0;
-
-    function toast(msg) {
-        if (!elToast) return;
-        elToast.textContent = msg;
-        elToast.classList.add('show');
-        window.clearTimeout(toast._t);
-        toast._t = window.setTimeout(() => elToast.classList.remove('show'), 1400);
+    if (!elTbody || !elPager || !elQ || !elSize || !btnSearch) {
+        console.error('list page DOM missing');
+        return;
     }
 
+    // ===== 서버에서 내려준 플래그 읽기 (html dataset) =====
+    // html 태그에 th:attr로 data-* 내려줬음
+    const root = document.documentElement;
+    const PERM = {
+        isEmployee: (root.dataset.isEmployee === 'true'),
+        canCreate: (root.dataset.canCreate === 'true'),
+        canBulkDelete: (root.dataset.canBulkDelete === 'true'),
+        canApprove: (root.dataset.canApprove === 'true'),
+        canUseTemp: (root.dataset.canUseTemp === 'true'),
+    };
+
+    function isEmployee() {
+        return PERM.isEmployee;
+    }
+
+    // ===== util =====
     function esc(s) {
         return String(s ?? '')
             .replaceAll('&', '&amp;')
@@ -56,14 +55,18 @@
         try { localStorage.setItem('list:dirty', 'true'); } catch (_) {}
     }
 
-    // 쿠키 인증이면 Authorization 헤더 없이도 동작해야 정상.
-    // (혹시 혼합구조라 localStorage accessToken도 쓰면 아래를 유지해도 됨)
-    function getAccessToken() {
-        return (localStorage.getItem('accessToken') || '').trim();
+    // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
+    async function refreshAccessTokenIfPossible() {
+        // AuthController에 이미 있음: POST /auth/refresh
+        const res = await fetch('/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        });
+        return res.ok;
     }
 
-    async function apiFetch(url, options = {}) {
-        const token = getAccessToken();
+    async function apiFetch(url, options = {}, _retried = false) {
         const headers = new Headers(options.headers || {});
         if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
@@ -72,36 +75,21 @@
             headers.set('Content-Type', 'application/json');
         }
 
-        if (token) headers.set('Authorization', /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`);
+        const res = await fetch(url, {
+            ...options,
+            headers,
+            credentials: 'same-origin', // ✅ 같은 origin이면 쿠키(JWT) 자동 포함
+        });
 
-        return fetch(url, { ...options, headers, credentials: 'same-origin' });
-    }
-
-    function openDetail(docfoNo) {
-        if (docfoNo == null) return;
-        const id = String(docfoNo);
-        window.open(
-            `${VIEW_BASE}/${encodeURIComponent(id)}`,
-            '_blank',
-            'width=1100,height=820,resizable=yes,scrollbars=yes'
-        );
-    }
-
-    function updateBulkDeleteUI() {
-        if (!btnDeleteSelected) return;
-
-        if (isEmployee()) {
-            btnDeleteSelected.style.display = 'none';
-            btnDeleteSelected.disabled = true;
-            return;
+        // 만료 등으로 401이면 refresh 시도 후 1회 재시도
+        if (res.status === 401 && !_retried) {
+            const ok = await refreshAccessTokenIfPossible().catch(() => false);
+            if (ok) {
+                return apiFetch(url, options, true);
+            }
         }
 
-        btnDeleteSelected.style.display = '';
-        const n = selected.size;
-
-        btnDeleteSelected.textContent = n > 0 ? `선택 삭제 (${n})` : '선택 삭제';
-        btnDeleteSelected.disabled = (n === 0);
-        btnDeleteSelected.title = (n === 0) ? '삭제할 항목을 선택하세요.' : '';
+        return res;
     }
 
     function normalizePage(data) {
@@ -109,7 +97,7 @@
             return {
                 items: data.content,
                 page: data.number ?? 0,
-                size: data.size ?? Number(elSize?.value || 15),
+                size: data.size ?? Number(elSize.value || 15),
                 totalPages: data.totalPages ?? 1,
                 totalElements: data.totalElements ?? data.content.length,
             };
@@ -121,21 +109,26 @@
             return {
                 items: data.data.content,
                 page: data.data.number ?? 0,
-                size: data.data.size ?? Number(elSize?.value || 15),
+                size: data.data.size ?? Number(elSize.value || 15),
                 totalPages: data.data.totalPages ?? 1,
                 totalElements: data.data.totalElements ?? data.data.content.length,
             };
         }
-        return { items: [], page: 0, size: Number(elSize?.value || 15), totalPages: 1, totalElements: 0 };
+        return { items: [], page: 0, size: Number(elSize.value || 15), totalPages: 1, totalElements: 0 };
     }
 
-    // ✅ 백엔드 복수 상태 지원(stat=A,X) 반영
+    // ===== state =====
+    const selected = new Set();
+    let page = 0;
+    let totalPages = 1;
+    let totalElements = 0;
+
     function buildUrl(statsCsvOrNull) {
         const params = new URLSearchParams();
         params.set('page', String(page));
-        params.set('size', String(Number(elSize?.value || 15)));
+        params.set('size', String(Number(elSize.value || 15)));
 
-        const q = (elQ?.value || '').trim();
+        const q = (elQ.value || '').trim();
         if (q) {
             params.set('q', q);
             params.set('docfoName', q);
@@ -143,50 +136,88 @@
         }
 
         if (statsCsvOrNull) {
-            params.set('stat', statsCsvOrNull);       // 컨트롤러가 List로 받는 param
-            params.set('docfoStat', statsCsvOrNull);  // 혹시 다른 구현/레거시 대비
+            params.set('stat', statsCsvOrNull);
+            params.set('docfoStat', statsCsvOrNull);
         }
 
         return `${API_BASE}?${params.toString()}`;
     }
 
-    function render(rows) {
-        if (!elTbody) return;
+    // ===== UI helpers =====
+    function openDetail(docfoNo) {
+        if (docfoNo == null) return;
+        const id = String(docfoNo);
+        window.open(
+            `${VIEW_BASE}/${encodeURIComponent(id)}`,
+            '_blank',
+            'width=1100,height=820,resizable=yes,scrollbars=yes'
+        );
+    }
+    window.openDetail = openDetail;
 
+    function clearSelection() {
+        selected.clear();
+        updateBulkDeleteUI();
+    }
+
+    function updateHeaderLabel() {
+        if (!elThSelect) return;
+        elThSelect.textContent = isEmployee() ? '번호' : '선택/번호';
+    }
+
+    function updateBulkDeleteUI() {
+        // th:if로 버튼이 없을 수도 있음
+        if (!btnDeleteSelected) return;
+
+        // 서버 플래그 기준
+        if (!PERM.canBulkDelete || isEmployee()) {
+            btnDeleteSelected.style.display = 'none';
+            btnDeleteSelected.disabled = true;
+            return;
+        }
+
+        btnDeleteSelected.style.display = '';
+        const n = selected.size;
+        btnDeleteSelected.textContent = n > 0 ? `선택 삭제 (${n})` : '선택 삭제';
+        btnDeleteSelected.disabled = (n === 0);
+        btnDeleteSelected.title = (n === 0) ? '삭제할 항목을 선택하세요.' : '';
+    }
+
+    function render(rows) {
         if (!rows || rows.length === 0) {
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">조회 결과가 없어요.</td></tr>`;
             return;
         }
 
-        const startNo = page * Number(elSize?.value || 15);
+        const size = Number(elSize.value || 15);
         const employee = isEmployee();
+        const showCheckbox = PERM.canBulkDelete && !employee;
 
         elTbody.innerHTML = rows.map((r, idx) => {
             const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
             const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
-
             const idStr = String(docfoNo ?? '');
-            const checked = selected.has(idStr) ? 'checked' : '';
-            const rowNo = startNo + idx + 1;
 
-            // 1열: EMPLOYEE면 번호만 / 아니면 체크박스+번호
-            const firstCol = employee
-                ? `<span>${rowNo}</span>`
-                : `
+            // “오름차순 번호”(페이지 기준)
+            const rowNo = (page * size) + idx + 1;
+
+            const firstCol = showCheckbox
+                ? `
           <label class="selWrap">
             <input type="checkbox"
                    data-role="rowCheck"
                    data-id="${esc(idStr)}"
-                   ${checked}/>
+                   ${selected.has(idStr) ? 'checked' : ''}/>
             <span>${rowNo}</span>
           </label>
-        `;
+        `
+                : `<span>${rowNo}</span>`;
 
             return `
         <tr>
-          <td class="col-select">${firstCol}</td>
+          <td class="col-no">${firstCol}</td>
           <td class="col-title">
-            <a class="titleLink" href="javascript:void(0)" onclick="window.openDetail('${esc(idStr)}')">
+            <a class="titleLink" href="javascript:void(0)" data-open="${esc(idStr)}">
               ${esc(docfoName)}
             </a>
           </td>
@@ -198,52 +229,58 @@
     }
 
     function renderPager() {
-        if (!elPager) return;
+        elPager.innerHTML = "";
 
         const tp = Math.max(1, Number(totalPages) || 1);
-        const p = Math.min(Math.max(0, Number(page) || 0), tp - 1);
+        const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        if (tp <= 1) { elPager.innerHTML = ''; return; }
+        const blockSize = 5;
+        const currentBlock = Math.floor(cur / blockSize);
+        const startPage = currentBlock * blockSize;
+        let endPage = startPage + blockSize - 1;
+        if (endPage > tp - 1) endPage = tp - 1;
 
-        let start = p - 2;
-        let end = p + 2;
-
-        if (start < 0) { end += (0 - start); start = 0; }
-        if (end > tp - 1) { start -= (end - (tp - 1)); end = tp - 1; }
-        start = Math.max(0, start);
-
-        const nums = [];
-        for (let i = start; i <= end; i++) nums.push(i);
-
-        const disableFirstPrev = (p <= 0);
-        const disableNextLast = (p >= tp - 1);
-
-        const btn = (label, disabled, go, extra = '') =>
-            `<button class="btn ${extra}" ${disabled ? 'disabled' : ''} data-go="${go}">${label}</button>`;
-
-        const numBtn = (i) => {
-            const active = i === p ? 'active' : '';
-            return `<button class="btn num ${active}" ${i === p ? 'disabled' : ''} data-page="${i}">${i + 1}</button>`;
+        const createBtn = (txt, target, active = false, disabled = false) => {
+            const b = document.createElement("button");
+            b.className = `pageBtn ${active ? "active" : ""}`;
+            b.textContent = txt;
+            b.disabled = disabled;
+            b.type = 'button';
+            b.onclick = () => {
+                page = target;
+                clearSelection();
+                load();
+            };
+            return b;
         };
 
-        elPager.innerHTML = [
-            btn('&laquo;', disableFirstPrev, 'first'),
-            btn('&lsaquo;', disableFirstPrev, 'prev'),
-            ...nums.map(numBtn),
-            btn('&rsaquo;', disableNextLast, 'next'),
-            btn('&raquo;', disableNextLast, 'last'),
-        ].join('');
+        elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
+        for (let i = startPage; i <= endPage; i++) {
+            elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
+        }
+        elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
+    // ===== data load =====
     async function load() {
-        if (!elTbody) return;
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
-            // ✅ ONLY_APPROVED=true면 A,X를 한 번에 조회(페이징/정렬/총개수 모두 서버 기준으로 정상)
             const statsCsv = ONLY_APPROVED ? APPROVED_STATS.join(',') : null;
 
             const res = await apiFetch(buildUrl(statsCsv), { method: 'GET' });
+
+            // 401/403 처리
+            if (res.status === 401) {
+                // refresh까지 실패한 상태
+                elTbody.innerHTML = `<tr><td colspan="2" class="muted">로그인이 만료되었습니다. 다시 로그인 해주세요.</td></tr>`;
+                return;
+            }
+            if (res.status === 403) {
+                elTbody.innerHTML = `<tr><td colspan="2" class="muted">권한이 없습니다.</td></tr>`;
+                return;
+            }
+
             if (!res.ok) {
                 const t = await res.text().catch(() => '');
                 throw new Error(`HTTP ${res.status} ${t}`);
@@ -255,19 +292,29 @@
             totalElements = pg.totalElements ?? 0;
             page = pg.page ?? page;
 
-            if (elInfo) elInfo.textContent = `page ${page + 1} / ${totalPages}  ·  total ${totalElements}`;
+            if (elInfo) elInfo.textContent = `page ${page + 1} / ${Math.max(totalPages, 1)}`;
+            if (elCountPill) elCountPill.textContent = `${totalElements}건`;
 
             renderPager();
             render(pg.items);
         } catch (err) {
             console.error(err);
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
+            totalPages = 1;
             renderPager();
         }
     }
 
-    // checkbox select
-    elTbody?.addEventListener('change', (e) => {
+    // ===== events =====
+    elTbody.addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-open]');
+        if (a) {
+            openDetail(a.getAttribute('data-open'));
+            return;
+        }
+    });
+
+    elTbody.addEventListener('change', (e) => {
         const cb = e.target;
         if (!(cb instanceof HTMLInputElement)) return;
         if (cb.dataset.role !== 'rowCheck') return;
@@ -281,33 +328,8 @@
         updateBulkDeleteUI();
     });
 
-    // pager click
-    elPager?.addEventListener('click', (e) => {
-        const t = e.target;
-        if (!(t instanceof HTMLElement)) return;
-
-        const pageAttr = t.getAttribute('data-page');
-        if (pageAttr != null) {
-            const nextPage = Number(pageAttr);
-            if (Number.isFinite(nextPage)) { page = nextPage; load(); }
-            return;
-        }
-
-        const go = t.getAttribute('data-go');
-        if (!go) return;
-
-        if (go === 'first') page = 0;
-        else if (go === 'prev') page = Math.max(0, page - 1);
-        else if (go === 'next') page = Math.min(totalPages - 1, page + 1);
-        else if (go === 'last') page = Math.max(0, totalPages - 1);
-
-        load();
-    });
-
-    // 삭제 처리:
-    // 1) PATCH /api/v1/forms/{id}/status  body: { docfoStat:"D" }
-    // 2) (fallback) DELETE /api/v1/forms/{id}
     async function softDelete(docfoNo) {
+        // 서버가 이 API를 막으면 403이 떨어질 것(정상)
         const patchRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
             method: 'PATCH',
             body: JSON.stringify({ docfoStat: 'D' }),
@@ -315,6 +337,7 @@
 
         if (patchRes.ok) return true;
 
+        // status API가 역할상 막혀있을 수 있으니 fallback DELETE(삭제요청)
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
             const t = await delRes.text().catch(() => '');
@@ -323,25 +346,23 @@
         return true;
     }
 
-    // bulk delete
     btnDeleteSelected?.addEventListener('click', async () => {
-        if (isEmployee()) { toast('권한이 없습니다.'); return; }
+        // 서버 플래그 기준으로 1차 차단(보안은 서버가 최종)
+        if (!PERM.canBulkDelete || isEmployee()) { alert('권한이 없습니다.'); return; }
         if (selected.size === 0) return;
 
         const ids = Array.from(selected);
-        if (!confirm(`선택한 ${ids.length}개를 삭제 처리할까요? (stat=D)`)) return;
+        if (!confirm(`선택한 ${ids.length}개를 삭제 처리할까요?`)) return;
 
         try {
             btnDeleteSelected.disabled = true;
-
             for (const docfoNo of ids) {
                 await softDelete(docfoNo);
             }
-
-            toast('선택 삭제 완료');
             selected.clear();
             markFormListDirty();
             await load();
+            alert('선택 삭제 완료');
         } catch (err) {
             console.error(err);
             alert('선택 삭제 실패: ' + (err?.message || err));
@@ -350,9 +371,8 @@
         }
     });
 
-    // create
     btnCreate?.addEventListener('click', () => {
-        if (isEmployee()) { toast('권한이 없습니다.'); return; }
+        if (!PERM.canCreate || isEmployee()) { alert('권한이 없습니다.'); return; }
 
         window.open(
             `${VIEW_BASE}/new`,
@@ -361,14 +381,27 @@
         );
     });
 
-    btnRefresh?.addEventListener('click', () => load());
-    btnSearch?.addEventListener('click', () => { page = 0; load(); });
-    elQ?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { page = 0; load(); } });
-    elSize?.addEventListener('change', () => { page = 0; load(); });
+    btnSearch.addEventListener('click', () => {
+        page = 0;
+        clearSelection();
+        load();
+    });
 
-    window.openDetail = openDetail;
+    elQ.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            page = 0;
+            clearSelection();
+            load();
+        }
+    });
 
-    // storage listener (list:dirty)
+    elSize.addEventListener('change', () => {
+        page = 0;
+        clearSelection();
+        load();
+    });
+
+    // list dirty refresh (팝업에서 수정/삭제 후)
     window.addEventListener('storage', (e) => {
         if (e.key === 'list:dirty' && e.newValue === 'true') {
             try { localStorage.removeItem('list:dirty'); } catch (_) {}
@@ -377,7 +410,9 @@
     });
 
     // init
-    if (isEmployee() && btnCreate) btnCreate.disabled = true;
-    updateBulkDeleteUI();
-    load();
+    (function init() {
+        updateBulkDeleteUI();
+        updateHeaderLabel();
+        load();
+    })();
 })();

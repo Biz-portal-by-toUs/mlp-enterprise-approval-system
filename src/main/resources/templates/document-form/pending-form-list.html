@@ -1,233 +1,313 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko"
-      th:classappend="${#authorization.expression('hasRole(''THR_ADMIN'')')} ? 'role-thr-admin' : ''">
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}"
+      th:classappend="${perm_isEmployee} ? ' role-employee' : ''"
+      th:attr="
+        data-can-approve-form=${perm_canApproveForm},
+        data-can-reject-form=${perm_canRejectForm},
+        data-can-view-reason=${perm_canViewReason}
+      ">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>결재함 (대기/반려)</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>승인 대기 문서 양식</title>
 
-    <style>
+    <style layout:fragment="pageStyles">
         :root {
-            --bg: #f4f6fb;
-            --card: #fff;
-            --line: #e1e3ea;
-            --text: #111827;
-            --muted: #6b7280;
-            --primary: #2c5cff;
-            --danger: #ff4d4f;
-            --ok: #16a34a;
+            --fg: #0f172a;
+            --mut: #64748b;
+            --line: #e2e8f0;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --danger: #ef4444;
+            --ok: #10b981;
             --warn: #f59e0b;
         }
-        * { box-sizing: border-box }
+
+        html, body { height: 100% }
         body {
             margin: 0;
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+            font-family: ui-sans-serif, system-ui, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR";
+            color: var(--fg);
             background: var(--bg);
-            color: var(--text);
         }
-        .wrap { width: min(1250px, calc(100% - 32px)); margin: 28px auto; }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, .06);
+
+        .page-with-subbar {
+            display: grid;
+            grid-template-columns:260px minmax(0, 1fr);
+            gap: 0;
+            padding: 0;
+            align-items:stretch;
         }
-        .header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            padding: 18px 18px 12px;
-        }
-        .title { font-size: 18px; font-weight: 900; margin: 0; }
-        .sub { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
-        .actions { display: flex; gap: 10px; align-items: center; }
-        .btn {
-            border: 1px solid var(--line);
-            background: #fff;
-            padding: 10px 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-        .btn.primary { background: var(--primary); color: #fff; border-color: transparent; }
-        .btn.ok { background: var(--ok); color: #fff; border-color: transparent; }
-        .btn.danger { background: var(--danger); color: #fff; border-color: transparent; }
-        .btn.warn { background: var(--warn); color: #111827; border-color: transparent; }
-        .btn.sm { padding: 7px 10px; border-radius: 9px; font-weight: 900; font-size: 12px; }
-        .btn:disabled { opacity: .55; cursor: not-allowed }
+
+        .page-main { padding: 24px; min-width: 0; }
+
         .toolbar {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            padding: 0 18px 14px;
             align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
         }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .toolbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
         .select {
+            height: 40px;
+            border-radius: 8px;
             border: 1px solid var(--line);
             background: #fff;
-            padding: 10px 12px;
-            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 600;
             outline: none;
-            min-width: 160px;
         }
-        .rightHint { margin-left: auto; color: var(--muted); font-size: 13px; }
-        code.k { background: #1118270d; padding: 2px 6px; border-radius: 6px; }
 
-        .table-wrap { padding: 0 18px 18px; }
-        table {
+        .helperText {
+            margin: 0;
+            font-size: 13px;
+            color: var(--mut);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        code.k {
+            background: #0f172a;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .tableWrap {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
+            background: #fff;
             border: 1px solid var(--line);
             border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
         thead th {
-            background: #fafbff;
-            text-align: left;
-            font-size: 13px;
-            color: #374151;
-            padding: 12px 10px;
+            background: #f9fafb;
             border-bottom: 1px solid var(--line);
-        }
-        tbody td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #f0f1f6;
+            text-align: center;
+            padding: 14px 10px;
             font-size: 14px;
-            vertical-align: middle;
+            color: var(--mut);
+            font-weight: 600;
         }
-        tbody tr:hover { background: #fbfcff; }
-        .muted { color: var(--muted); font-size: 13px; }
+
+        tbody td {
+            border-bottom: 1px solid var(--line);
+            text-align: center;
+            padding: 12px 10px;
+            font-size: 15px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover td { background: #fcfdfe; }
+
+        td.col-title {
+            text-align: left !important;
+            padding-left: 20px !important;
+            font-weight: 700 !important;
+        }
+
         .titleLink {
-            color: inherit;
+            color: var(--primary);
             text-decoration: none;
-            font-weight: 900;
-            cursor: pointer;
+            display: block;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 800;
         }
-        .titleLink:hover { color: var(--primary); text-decoration: underline; }
 
         .statPill {
             display: inline-flex;
             align-items: center;
-            padding: 3px 10px;
+            padding: 4px 10px;
             border-radius: 999px;
-            font-weight: 900;
             font-size: 12px;
+            font-weight: 800;
             border: 1px solid var(--line);
+            background: #f8fafc;
+            color: var(--mut);
         }
-        .statPill.P { background: #fff7ed; border-color: #fed7aa; color: #9a3412; } /* pending */
-        .statPill.R { background: #fff1f2; border-color: #fecdd3; color: #9f1239; } /* reject */
-        .statPill.A { background: #f0fdf4; border-color: #bbf7d0; color: #166534; } /* approve */
+
+        .statPill.P, .statPill.W {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #2563eb;
+        }
+
+        .statPill.R, .statPill.X {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #ef4444;
+        }
+
+        .statPill.A {
+            background: #ecfdf5;
+            border-color: #bbf7d0;
+            color: #10b981;
+        }
 
         .row-actions {
             display: flex;
             gap: 8px;
-            justify-content: flex-end;
+            justify-content: center;
             align-items: center;
             flex-wrap: wrap;
         }
 
-        .pager {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 10px 18px 18px;
-        }
-        .pager .info { margin-right: auto; color: var(--muted); font-size: 13px; }
-        .pager-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .pager-controls .num { min-width: 42px; text-align: center; }
-        .pager-controls .num.active {
+        .btn {
+            height: 40px;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
             background: var(--primary);
             color: #fff;
-            border-color: transparent;
+            white-space: nowrap;
+            transition: 0.15s;
         }
 
-        .toast {
-            position: fixed;
-            right: 18px;
-            bottom: 18px;
-            background: #111827;
+        .btn:hover { filter: brightness(0.9); }
+
+        .btn.sm {
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .btn.ok { background: var(--ok); }
+        .btn.danger { background: var(--danger); }
+        .btn.warn { background: var(--warn); color: #111827; }
+
+        .pager-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-top: 16px;
+        }
+
+        .pager { display: flex; align-items: center; gap: 4px; }
+
+        .pageBtn {
+            min-width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .pageBtn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
+
+        .pageBtn.active {
+            background: var(--primary);
             color: #fff;
-            padding: 10px 12px;
-            border-radius: 10px;
-            opacity: 0;
-            transform: translateY(8px);
-            transition: .18s;
+            border-color: var(--primary);
         }
-        .toast.show { opacity: 1; transform: translateY(0); }
 
-        .statPill.W { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
-        .statPill.X { background:#fdf2f8; border-color:#fbcfe8; color:#9d174d; }
+        .pageBtn.active:hover { filter: brightness(0.9); }
+
+        .pager-status {
+            position: absolute;
+            right: 0;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        @media (max-width: 760px) {
+            .page-with-subbar { grid-template-columns:1fr; }
+            .page-main { padding: 14px; }
+            .pager-status { position: static; margin-left: 10px; }
+        }
     </style>
 </head>
 
 <body>
-<div class="wrap card">
-    <div class="header">
-        <div>
-            <h1 class="title">결재함 (대기/반려)</h1>
-            <p class="sub">
-                이 페이지는 <code class="k">P(대기)</code> 와 <code class="k">R(반려)</code> 문서를 조회해요.<br/>
-                승인/반려 처리 후에는 목록이 자동 갱신됩니다.
-            </p>
-        </div>
-        <div class="actions">
-            <button class="btn" id="btnRefresh">새로고침</button>
-        </div>
-    </div>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/form-sidebar :: formSidebar('pending')}"></div>
 
-    <div class="toolbar">
-        <select class="select" id="statMode">
-            <option value="ALL" selected>전체</option>
-            <option value="P">대기</option>
-            <option value="R">반려</option>
-        </select>
+        <main class="page-main">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <select id="statMode" class="select">
+                        <option value="ALL">모두</option>
+                        <option value="P">대기</option>
+                        <option value="R">반려</option>
+                    </select>
 
-        <select class="select" id="size">
-            <option value="15" selected>15개</option>
-            <option value="30">30개</option>
-        </select>
+                    <p class="helperText">
+                        <span>표시 상태:</span>
+                        <code class="k">P/W(대기)</code>
+                        <span>·</span>
+                        <code class="k">R/X(반려)</code>
+                    </p>
+                </div>
+                <div class="toolbar-right"></div>
+            </div>
 
-        <div class="rightHint">
-            API: <code class="k" id="apiLabel">/api/v1/forms</code>
-        </div>
-    </div>
+            <section class="tableWrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:120px;">번호</th>
+                        <th>제목</th>
+                        <th style="width:220px;">작성자</th>
+                        <th style="width:120px;">상태</th>
+                        <th style="width:200px;">처리</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </section>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-            <tr>
-                <th style="width:120px;">번호</th>
-                <th>제목</th>
-                <th style="width:220px;">작성자</th>
-                <th style="width:120px;">상태</th>
-                <th style="width:260px; text-align:right;">처리</th>
-            </tr>
-            </thead>
-            <tbody id="tbody">
-            <tr>
-                <td colspan="5" class="muted">로딩 중...</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+            <div class="pager-wrapper">
+                <div id="pager" class="pager"></div>
+                <div class="pager-status">
+                    <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
+                </div>
+            </div>
 
-    <div class="pager">
-        <div class="info" id="pageInfo">-</div>
-        <div class="pager-controls" id="pagerControls"></div>
+            <script type="module" src="/js/document-form/pending-list.js"></script>
+        </main>
     </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
-<!-- ✅ 스크립트 분리 -->
-<script src="/js/document-form/pending-list.js"></script>
 </body>
 </html>
