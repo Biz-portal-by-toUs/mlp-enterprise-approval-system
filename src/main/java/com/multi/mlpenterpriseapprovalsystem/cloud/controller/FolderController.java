@@ -80,15 +80,6 @@ public class FolderController {
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "폴더명 변경 성공", res));
     }
 
-    @DeleteMapping("/{folderNo}")
-    public ResponseEntity<ResponseDto<Void>> delete(
-            @PathVariable(name = "folderNo") Long folderNo,
-            @AuthenticationPrincipal CustomUser user
-    ) {
-        folderService.delete(user, folderNo);
-        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "폴더 삭제 성공", null));
-    }
-
     @PostMapping("/attachments/{attachmentId}/move")
     public ResponseEntity<ResponseDto<Void>> moveAttachment(
             @PathVariable(name = "attachmentId") Long attachmentId,
@@ -97,6 +88,13 @@ public class FolderController {
     ) {
         folderService.moveCloudAttachment(user, attachmentId, toFolderNo);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "파일 이동 성공", null));
+    }
+
+    @DeleteMapping("/{folderNo}")
+    public ResponseEntity<ResponseDto<Void>> delete(@PathVariable(name = "folderNo") Long folderNo,
+                                                    @AuthenticationPrincipal CustomUser user) {
+        folderService.deleteFolderTree(user, folderNo);
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "폴더 삭제 성공", null));
     }
 }
 
