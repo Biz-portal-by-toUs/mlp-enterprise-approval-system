@@ -114,4 +114,15 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             @Param("userEmpId") String userEmpId,
             Pageable pageable
     );
+
+    // 보낸 메일 상세에서 "수신인(이름+사번)" 뽑기 (RECIPIENT만)
+    @Query("""
+        select concat(mus.user.empName, '(', mus.user.empId, ')')
+        from MailUserState mus
+        where mus.mail.mailId = :mailId
+          and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
+          and mus.deletedAt is null
+        order by mus.user.empName asc
+    """)
+    List<String> findRecipientDisplayByMailId(@Param("mailId") String mailId);
 }

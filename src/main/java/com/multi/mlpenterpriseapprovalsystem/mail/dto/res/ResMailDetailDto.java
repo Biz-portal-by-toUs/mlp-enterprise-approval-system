@@ -22,6 +22,8 @@ public record ResMailDetailDto(
         String senderEmpId,
         String senderEmpName,
 
+        String receivers,
+
         MailRole role,
         boolean isRead,
         boolean isPrior,

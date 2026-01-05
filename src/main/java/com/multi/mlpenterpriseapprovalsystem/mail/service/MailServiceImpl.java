@@ -91,10 +91,19 @@ public class MailServiceImpl implements MailService {
 
         Mail mail = mus.getMail();
 
-        // ✅ 여기서 cnttHtml을 갖고 있으면 넣고, 없으면 null
-        // (Mail 엔티티에 cnttHtml이 없다면 null 유지)
         String cnttJson = mail.getCntt();
         String cnttHtml = null;
+
+        String receivers = null;
+        if (mus.getRole() == MailRole.SENDER) {
+            List<String> receiverDisplays = mailUserStateRepository.findRecipientDisplayByMailId(mailId);
+
+            // 혹시 데이터에 중복이 있으면 방어적으로 중복 제거
+            receivers = receiverDisplays.stream()
+                    .distinct()
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("");
+        }
 
         return new ResMailDetailDto(
                 mail.getMailId(),
@@ -103,6 +112,7 @@ public class MailServiceImpl implements MailService {
                 cnttHtml,
                 mail.getSender().getEmpId(),
                 mail.getSender().getEmpName(),
+                receivers,
                 mus.getRole(),
                 Boolean.TRUE.equals(mus.getIsRead()),
                 Boolean.TRUE.equals(mus.getIsPrior()),

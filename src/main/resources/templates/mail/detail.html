@@ -16,7 +16,7 @@
             --danger:#ef4444;
             --primary:#2c5cff;
         }
-        .page-with-subbar{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;padding:0;align-items:stretch;}
+        .page-with-subbar{display:grid;grid-template-columns:260px minmax(0, 1fr);gap:0;padding:0;align-items:stretch;}
         .page-main{padding:24px;min-width:0;}
         .page-title{margin:0 0 14px 0;font-size:18px;font-weight:900;}
         .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:18px;}
@@ -30,7 +30,11 @@
         .btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
         .btn.ghost:hover{background:#f8fafc;filter:none;}
         .btn.danger{background:var(--danger);}
-        @media (max-width:760px){.page-with-subbar{grid-template-columns:1fr;}.page-main{padding:14px;}.meta{grid-template-columns:90px 1fr;}}
+        @media (max-width:760px){
+            .page-with-subbar{grid-template-columns:1fr;}
+            .page-main{padding:14px;}
+            .meta{grid-template-columns:90px 1fr;}
+        }
     </style>
 </head>
 
@@ -46,9 +50,11 @@
                 <div class="meta">
                     <div class="k">메일 ID</div><div class="v" id="mailIdTxt">-</div>
                     <div class="k">제목</div><div class="v" id="titleTxt">-</div>
-                    <div class="k">보낸 사람</div><div class="v" id="senderTxt">-</div>
+
+                    <!-- 라벨/값을 동적으로 바꿀 영역 -->
+                    <div class="k" id="partyLabel">-</div><div class="v" id="partyTxt">-</div>
+
                     <div class="k">수신/발신일</div><div class="v" id="createdAtTxt">-</div>
-                    <div class="k">내 역할</div><div class="v" id="roleTxt">-</div>
                 </div>
 
                 <div class="content" id="contentBox">로딩 중...</div>
@@ -77,6 +83,18 @@
                     const hh = String(d.getHours()).padStart(2, '0');
                     const mm = String(d.getMinutes()).padStart(2, '0');
                     return `${y}-${m}-${day} ${hh}:${mm}`;
+                }
+
+                function setSidebarActive(key){
+                    const nav = document.getElementById('mailNav');
+                    if (!nav) return;
+
+                    nav.dataset.active = key;
+
+                    nav.querySelectorAll('.subbar-item').forEach(a => {
+                        const k = a.dataset.key;
+                        a.classList.toggle('active', k === key);
+                    });
                 }
 
                 function setText(id, value) {
@@ -111,7 +129,7 @@
                     return res.json();
                 }
 
-                // ✅ Tiptap JSON -> HTML 렌더러
+                // Tiptap JSON -> HTML 렌더러
                 async function renderTiptap(jsonOrString) {
                     const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.2');
                     const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.2')).default;
@@ -123,6 +141,30 @@
                     return generateHTML(doc, [StarterKit]);
                 }
 
+                // 수신인 표시 문자열 만들기
+                function buildReceiversText(data){
+                    // 1) 서버가 이미 사원번호 문자열을 내려주는 경우
+                    if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
+
+                    // 2) 배열로 내려주는 경우
+                    const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
+                    const names = Array.isArray(data.receiverEmpNames) ? data.receiverEmpNames : null;
+
+                    if (ids && ids.length){
+                        if (names && names.length === ids.length){
+                            return ids.map((id, i) => `${names[i] ?? ''} (${id ?? ''})`.trim()).join(', ');
+                        }
+                        return ids.join(', ');
+                    }
+
+                    // 3) 단건 필드로 내려주는 경우(가정)
+                    if (data.receiverEmpId || data.receiverEmpName){
+                        return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
+                    }
+
+                    return '-';
+                }
+
                 async function loadDetail() {
                     const mailId = getMailIdFromPath();
                     if (!mailId) {
@@ -130,17 +172,29 @@
                         return;
                     }
 
-                    // ✅ 서버 인증 기반: viewerEmpId 파라미터 제거
                     const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}`);
 
                     setText('mailIdTxt', data.mailId ?? mailId);
                     setText('titleTxt', data.title ?? '-');
-                    setText('senderTxt', `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim());
                     setText('createdAtTxt', fmtDate(data.createdAt));
-                    setText('roleTxt', data.role ?? '-');
 
-                    // ✅ 1) cnttHtml 있으면 그대로 렌더
-                    // ✅ 2) 없으면 cnttJson을 tiptap 렌더러로 HTML 생성
+                    // 역할 텍스트 삭제 대신 라벨/값을 역할에 따라 변경
+                    const role = String(data.role || '').toUpperCase();
+
+                    const partyLabelEl = document.getElementById('partyLabel');
+                    const partyTxtEl = document.getElementById('partyTxt');
+
+                    if (role === 'SENDER') {
+                        // 내가 보낸 메일 → "수신인"
+                        partyLabelEl.textContent = '수신인';
+                        partyTxtEl.textContent = buildReceiversText(data);
+                    } else {
+                        // 내가 받은 메일(기본) → "발신인"
+                        partyLabelEl.textContent = '발신인';
+                        partyTxtEl.textContent = `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
+                    }
+
+                    // 내용 렌더
                     const box = document.getElementById('contentBox');
                     try {
                         if (data.cnttHtml && String(data.cnttHtml).trim()) {
@@ -153,19 +207,22 @@
                         }
                     } catch (e) {
                         console.error(e);
-                        // 렌더 실패시 안전하게 텍스트로
                         box.textContent = data.cnttJson ?? '';
                     }
 
-                    // ✅ 읽음 처리: userEmpId 파라미터 제거
+                    // 읽음 처리
                     try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read`); } catch (e) {}
 
                     const isTrashed = !!data.deletedAt;
+
+                    if (isTrashed) setSidebarActive('trash');
+                    else if (role === 'SENDER') setSidebarActive('sent');
+                    else setSidebarActive('received');
+
                     show('btnRestore', isTrashed);
                     show('btnPurge', isTrashed);
                     show('btnTrash', !isTrashed);
 
-                    const role = String(data.role || '').toUpperCase();
                     const backUrl = isTrashed ? '/mail/trash' : (role === 'SENDER' ? '/mail/sent' : '/mail/received');
                     document.getElementById('btnBack').onclick = () => location.href = backUrl;
 
