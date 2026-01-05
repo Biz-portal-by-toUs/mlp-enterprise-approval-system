@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -110,4 +111,13 @@ public class NotificationService {
     public long getUnreadCount(String empId) {
         return notificationsRepository.countByReceiver_EmpIdAndIsReadFalse(empId);
     }
+
+    public SseEmitter connectUserStream(String empId) {
+        // connect는 SseManager에 구현되어 있어야 함
+        return sseManager.connect(empId);
+    }
+
+
+
+
 }
