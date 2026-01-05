@@ -27,6 +27,7 @@ public class ResProvDocumentListItemDto {
     private String fileName;
     private Long fileSize;
 
+
     private ProvProcStat procStat;
     private Integer chunkCnt;
 

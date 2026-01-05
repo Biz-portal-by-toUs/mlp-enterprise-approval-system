@@ -27,4 +27,15 @@ public interface ProvDocumentRepository extends JpaRepository<ProvDocument, Long
             @Param("isPublic") Boolean isPublic,
             Pageable pageable
     );
+
+    @Query("""
+        SELECT d FROM ProvDocument d
+        WHERE d.company.comId = :comId
+          AND d.isPublic = true
+          AND d.procStat = 'DONE'
+    """)
+    Page<ProvDocument> findChatbotAvailableDocuments(
+            @Param("comId") String comId,
+            Pageable pageable
+    );
 }
