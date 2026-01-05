@@ -107,8 +107,7 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK, "사원 목록 조회 성공", list));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
-    @GetMapping("/admin/employees/{empNo}") // ✅ 요청하신 POST 방식
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")    @GetMapping("/admin/employees/{empNo}") // ✅ 요청하신 POST 방식
     public ResponseEntity<ResponseDto<ResAdminEmployeeDetailDto>> getEmployeeDetail(
             @AuthenticationPrincipal CustomUser user,
             @PathVariable(name="empNo") Long empNo
@@ -120,8 +119,7 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK, "사원 상세 조회 성공", dto));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
-    @PatchMapping("/admin/employees/{empNo}/retire")
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")    @PatchMapping("/admin/employees/{empNo}/retire")
     public ResponseEntity<ResponseDto<Void>> retireEmployee(
             @AuthenticationPrincipal CustomUser user,
             @PathVariable(name="empNo") Long empNo
@@ -135,7 +133,7 @@ public class EmployeeController {
         ));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")
     @PostMapping("/admin/employees")
     public ResponseEntity<ResponseDto<ResAdminEmployeeCreateDto>> createEmployee(
             @AuthenticationPrincipal CustomUser user,
@@ -149,6 +147,7 @@ public class EmployeeController {
         ));
     }
 
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")
     @PatchMapping("/admin/employees/{empNo}/object-key")
     public void updateEmployeeObjectKey(@PathVariable(name="empNo") Long empNo,
                                         @Valid @RequestBody ReqEmployeeObjectKeyUpdateDto req,
@@ -158,6 +157,7 @@ public class EmployeeController {
         employeeService.updateObjectKey(comId, empNo, req.getObjectKey());
     }
 
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")
     @PatchMapping("/admin/employees/{empNo}")
     public ResponseEntity<ResponseDto<Void>> updateEmployee(
             @AuthenticationPrincipal CustomUser user,

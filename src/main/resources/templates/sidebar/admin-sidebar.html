@@ -3,14 +3,16 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
+
+<!-- =========================
+     COM_ADMIN: 전체 관리자 메뉴
+     ========================= -->
 <aside class="subbar"
        sec:authorize="hasRole('COM_ADMIN')"
        th:fragment="adminSidebar(active)">
     <div class="subbar-title">관리자</div>
 
-    <!-- ✅ subnav -> subbar-nav -->
     <nav class="subbar-nav" aria-label="관리자 메뉴">
-        <!-- ✅ subnav-item -> subbar-item -->
         <a class="subbar-item"
            th:href="@{/admin/departments/list}" href="/admin/departments/list"
            th:classappend="${active}=='dept' ? ' active' : ''">
@@ -36,5 +38,23 @@
         </a>
     </nav>
 </aside>
+
+<!-- =========================
+     SEC_ADMIN: 사원 관리만
+     ========================= -->
+<aside class="subbar"
+       sec:authorize="hasRole('SEC_ADMIN')"
+       th:fragment="adminSidebar(active)">
+    <div class="subbar-title">관리자</div>
+
+    <nav class="subbar-nav" aria-label="관리자 메뉴">
+        <a class="subbar-item"
+           th:href="@{/admin/employees/list}" href="/admin/employees/list"
+           th:classappend="${active}=='emp' ? ' active' : ''">
+            사원 관리
+        </a>
+    </nav>
+</aside>
+
 </body>
 </html>

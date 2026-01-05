@@ -87,7 +87,7 @@ public class SecurityConfig {
                                 "THR_ADMIN")
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("COM_ADMIN")
+                        .requestMatchers("/api/v1/admin/departments/**", "/api/v1/admin/positions/**").hasAnyRole("COM_ADMIN")
                         .anyRequest().authenticated()
                 )
 
