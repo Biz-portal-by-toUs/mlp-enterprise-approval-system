@@ -86,4 +86,13 @@ public class NotificationController {
         );
     }
 
+    @DeleteMapping("/{notiNo}")
+    public ResponseEntity<ResponseDto<Void>> deleteNotification(@AuthenticationPrincipal CustomUser user, @PathVariable(name = "notiNo") Long notiNo) {
+        notificationService.deleteNotification(user.getUsername(),notiNo);
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK,"알림 삭제 성공",null)
+        );
+    }
+
 }
