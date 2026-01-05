@@ -11,16 +11,6 @@ import org.springframework.http.*;
 import org.springframework.security.core.*;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-
-/**
- * Please explain the class!!!
- *
- * @author : 정종원
- * @filename : MailController
- * @since : 2025-12-30 화요일
- */
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/mails")
@@ -28,14 +18,14 @@ public class MailController {
 
     private final MailService mailService;
 
-    // 메일 전송
-    // - senderEmpId: 로그인 사용자로 대체 예정 (지금은 파라미터로 받음)
+    // 메일 전송 (발신자 empId는 서버 인증에서 획득)
     @PostMapping
     public ResponseEntity<ResMailSendDto> sendMail(
-            @RequestParam("senderEmpId") String senderEmpId,
-            @RequestBody ReqMailSendDto req
+            @RequestBody ReqMailSendDto req,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(mailService.sendMail(senderEmpId, req));
+        String empId = authentication.getName();
+        return ResponseEntity.ok(mailService.sendMail(empId, req));
     }
 
     // 받은 메일함(역할 1개)
@@ -45,22 +35,11 @@ public class MailController {
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
             Authentication authentication
     ) {
-        // 예시: authentication에서 사번 꺼내기
-        String empId = authentication.getName(); // 또는 커스텀 principal에서 getEmpId()
+        String empId = authentication.getName();
         return ResponseEntity.ok(mailService.getInbox(empId, role, pageable));
     }
 
-    // 받은 메일함(역할 여러개) - 추후 확장용
-    @GetMapping("/inbox/roles")
-    public ResponseEntity<Page<ResMailListDto>> inboxByRoles(
-            @RequestParam("userEmpId") String userEmpId,
-            @RequestParam("roles") List<MailRole> roles,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
-    ) {
-        return ResponseEntity.ok(mailService.getInboxByRoles(userEmpId, roles, pageable));
-    }
-
-    // 보낸 메일함
+    // 보낸 메일함(서버 인증 기반)
     @GetMapping("/sent")
     public ResponseEntity<Page<ResMailListDto>> sent(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
@@ -70,61 +49,67 @@ public class MailController {
         return ResponseEntity.ok(mailService.getSent(empId, pageable));
     }
 
-    // 휴지통 조회
+    // 휴지통 조회(서버 인증 기반)
     @GetMapping("/trash")
     public ResponseEntity<Page<ResMailListDto>> trash(
-            @RequestParam("userEmpId") String userEmpId,
-            @PageableDefault(size = 20, sort = "deletedAt") Pageable pageable
+            @PageableDefault(size = 20, sort = "deletedAt") Pageable pageable,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(mailService.getTrash(userEmpId, pageable));
+        String empId = authentication.getName();
+        return ResponseEntity.ok(mailService.getTrash(empId, pageable));
     }
 
-    // 메일 상세 조회
+    // 메일 상세 조회(서버 인증 기반)
     @GetMapping("/{mailId}")
     public ResponseEntity<ResMailDetailDto> detail(
-            @PathVariable(name = "mailId") String mailId,
-            @RequestParam("viewerEmpId") String viewerEmpId
+            @PathVariable String mailId,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(mailService.getDetail(mailId, viewerEmpId.trim()));
+        String empId = authentication.getName();
+        return ResponseEntity.ok(mailService.getDetail(mailId, empId));
     }
 
-    // 읽음 처리
+    // 읽음 처리(서버 인증 기반)
     @PatchMapping("/{mailId}/read")
     public ResponseEntity<Void> markRead(
-            @PathVariable(name = "mailId") String mailId,
-            @RequestParam("userEmpId") String userEmpId
+            @PathVariable String mailId,
+            Authentication authentication
     ) {
-        mailService.markAsRead(mailId, userEmpId);
+        String empId = authentication.getName();
+        mailService.markAsRead(mailId, empId);
         return ResponseEntity.noContent().build();
     }
 
-    // 휴지통 이동
+    // 휴지통 이동(서버 인증 기반)
     @PatchMapping("/{mailId}/trash")
     public ResponseEntity<Void> moveToTrash(
-            @PathVariable(name = "mailId") String mailId,
-            @RequestParam("userEmpId") String userEmpId
+            @PathVariable String mailId,
+            Authentication authentication
     ) {
-        mailService.moveToTrash(mailId, userEmpId);
+        String empId = authentication.getName();
+        mailService.moveToTrash(mailId, empId);
         return ResponseEntity.noContent().build();
     }
 
-    // 휴지통 복원
+    // 휴지통 복원(서버 인증 기반)
     @PatchMapping("/{mailId}/restore")
     public ResponseEntity<Void> restore(
             @PathVariable String mailId,
-            @RequestParam("userEmpId") String userEmpId
+            Authentication authentication
     ) {
-        mailService.restoreFromTrash(mailId, userEmpId);
+        String empId = authentication.getName();
+        mailService.restoreFromTrash(mailId, empId);
         return ResponseEntity.noContent().build();
     }
 
-    // 완전 삭제
+    // 완전 삭제(서버 인증 기반)
     @DeleteMapping("/{mailId}/purge")
     public ResponseEntity<Void> purge(
             @PathVariable String mailId,
-            @RequestParam("userEmpId") String userEmpId
+            Authentication authentication
     ) {
-        mailService.purge(mailId, userEmpId);
+        String empId = authentication.getName();
+        mailService.purge(mailId, empId);
         return ResponseEntity.noContent().build();
     }
 }

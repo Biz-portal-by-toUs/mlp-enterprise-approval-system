@@ -15,6 +15,7 @@
             --line:#e2e8f0;
             --danger:#ef4444;
             --primary:#2c5cff;
+            --card:#fff;
         }
 
         .page-with-subbar{
@@ -24,14 +25,10 @@
             padding:0;
             align-items:stretch;
         }
-
-        .page-main{
-            padding:24px;
-            min-width:0;
-        }
+        .page-main{ padding:24px; min-width:0; }
 
         .card{
-            background:#fff;
+            background:var(--card);
             border:1px solid var(--line);
             border-radius:14px;
             box-shadow:0 1px 3px rgba(0,0,0,0.05);
@@ -42,40 +39,128 @@
             display:grid;
             grid-template-columns:120px 1fr;
             gap:10px 12px;
-            align-items:center;
+            align-items:start;
             margin-bottom:12px;
         }
-
         .k{
             color:var(--mut);
             font-size:13px;
             font-weight:900;
+            padding-top:10px;
         }
 
-        .input, .textarea{
+        .input{
             width:100%;
             border:1px solid var(--line);
             border-radius:10px;
             padding:10px 12px;
             font-size:14px;
-            font-weight:700;
+            font-weight:800;
             outline:none;
+            background:#fff;
         }
-
-        .textarea{
-            min-height:260px;
-            resize:vertical;
-            font-weight:600;
-            line-height:1.6;
+        .input:focus{
+            border-color: rgba(44,92,255,.55);
+            box-shadow: 0 0 0 4px rgba(44,92,255,.10);
         }
 
         .help{
-            margin-top:-6px;
-            margin-bottom:12px;
+            margin-top:6px;
             color:var(--mut);
             font-size:12px;
             font-weight:700;
         }
+
+        /* ===== TipTap Editor ===== */
+        .editor-wrap{
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .office-toolbar{
+            display:flex;
+            flex-wrap: nowrap;
+            align-items:center;
+            gap: 6px;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(15,23,42,.10);
+            background:#fff;
+            overflow-x:auto;
+            white-space:nowrap;
+            -webkit-overflow-scrolling:touch;
+        }
+        .office-toolbar::-webkit-scrollbar{ height:0; }
+        .office-toolbar{ scrollbar-width:none; }
+
+        .tb-select{
+            height: 32px;
+            min-width: 100px;
+            border: 1px solid rgba(15,23,42,.14);
+            border-radius: 8px;
+            padding: 0 10px;
+            font-weight: 900;
+            font-size: 13px;
+            background:#fff;
+            flex: 0 0 auto;
+        }
+
+        .tb-btn{
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid rgba(15,23,42,.14);
+            border-radius: 8px;
+            background:#fff;
+            font-weight: 900;
+            font-size: 13px;
+            cursor:pointer;
+            user-select:none;
+            flex: 0 0 auto;
+        }
+        .tb-btn:hover{
+            background: rgba(44,92,255,.06);
+            border-color: rgba(44,92,255,.35);
+        }
+        .tb-btn.is-active{
+            background: var(--primary);
+            border-color: var(--primary);
+            color:#fff;
+        }
+        .tb-btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+        .tb-sep{
+            width:1px;
+            height:20px;
+            background:rgba(15,23,42,.12);
+            margin: 0 2px;
+            flex: 0 0 auto;
+        }
+
+        .office-editor{
+            min-height: 360px;
+            padding: 16px;
+            background:#fff;
+        }
+        .office-editor .ProseMirror{
+            outline:none;
+            min-height: 360px;
+            line-height: 1.75;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--fg);
+            white-space: pre-wrap;
+        }
+
+        .office-counter{
+            padding: 8px 12px;
+            border-top: 1px solid rgba(15,23,42,.10);
+            text-align:right;
+            font-weight: 900;
+            color: var(--mut);
+            background:#fff;
+        }
+        .office-counter.over{ color: var(--danger); }
 
         .actions{
             display:flex;
@@ -83,7 +168,6 @@
             gap:10px;
             margin-top:14px;
         }
-
         .btn{
             height:40px;
             padding:0 18px;
@@ -116,6 +200,7 @@
             .page-with-subbar{ grid-template-columns:1fr; }
             .page-main{ padding:14px; }
             .row{ grid-template-columns: 1fr; }
+            .k{ padding-top:0; }
         }
     </style>
 </head>
@@ -127,26 +212,65 @@
 
         <main class="page-main">
             <section class="card">
+
                 <div class="row">
                     <div class="k">받는 사람</div>
                     <div>
-                        <input id="receivers" class="input" type="text" placeholder="사번을 콤마로 구분 (예: E000001,E000002)">
-                        <div class="help">※ 현재 API는 receiverEmpIds 배열을 받습니다. 여기서는 콤마로 입력받아 배열로 변환해 전송합니다.</div>
+                        <input id="receivers" class="input" type="text"
+                               placeholder="사번을 콤마로 구분 (예: E000001,E000002)">
+                        <div class="help">콤마(,)로 구분해서 입력하면 receiverEmpIds 배열로 전송합니다.</div>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="k">제목</div>
                     <div>
-                        <input id="title" class="input" type="text" placeholder="제목 입력">
+                        <input id="title" class="input" type="text" placeholder="제목 입력" maxlength="100">
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="k">내용(JSON)</div>
+                    <div class="k">내용</div>
                     <div>
-                        <textarea id="cntt" class="textarea" placeholder='여기에 JSON 문자열을 넣거나 임시로 텍스트를 넣어도 됩니다.'></textarea>
-                        <div class="help">※ cnttJson은 JSON 컬럼이라, 최종적으로는 Tiptap JSON을 문자열로 보내는 형태를 권장합니다.</div>
+                        <div class="editor-wrap">
+                            <div class="office-toolbar" id="ttToolbar">
+                                <select class="tb-select" id="headingSelect" title="서식">
+                                    <option value="h2">제목2</option>
+                                    <option value="p" selected>본문</option>
+                                </select>
+
+                                <button type="button" class="tb-btn" data-cmd="bold">굵게</button>
+                                <button type="button" class="tb-btn" data-cmd="italic">기울임</button>
+                                <button type="button" class="tb-btn" data-cmd="underline">밑줄</button>
+                                <button type="button" class="tb-btn" data-cmd="strike">취소선</button>
+
+                                <span class="tb-sep"></span>
+
+                                <button type="button" class="tb-btn" data-cmd="alignLeft">왼쪽</button>
+                                <button type="button" class="tb-btn" data-cmd="alignCenter">가운데</button>
+                                <button type="button" class="tb-btn" data-cmd="alignRight">오른쪽</button>
+
+                                <span class="tb-sep"></span>
+
+                                <button type="button" class="tb-btn" data-cmd="bulletList">글머리</button>
+                                <button type="button" class="tb-btn" data-cmd="orderedList">번호</button>
+
+                                <span class="tb-sep"></span>
+
+                                <button type="button" class="tb-btn" data-cmd="undo">실행취소</button>
+                                <button type="button" class="tb-btn" data-cmd="redo">다시실행</button>
+                            </div>
+
+                            <div id="mailEditor" class="office-editor"></div>
+
+                            <div class="office-counter">
+                                <span id="charCount">0</span> / <span id="charLimit">5000</span>
+                            </div>
+                        </div>
+
+                        <!-- 서버로 보낼 TipTap JSON -->
+                        <input type="hidden" id="cnttJson" />
+                        <div class="help">TipTap 내용은 JSON으로 저장되어 서버에 cnttJson으로 전송됩니다.</div>
                     </div>
                 </div>
 
@@ -158,9 +282,131 @@
                 </div>
             </section>
 
-            <script>
-                function getMeEmpId(){ return document.getElementById('me')?.dataset?.empNo?.trim() || ''; }
+            <!-- ✅ TipTap: 표 기능 제외 -->
+            <script type="module">
+                const LIMIT = 5000;
 
+                import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+                import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+                import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
+                import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
+                import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
+
+                const hidden = document.getElementById("cnttJson");
+                const editorEl = document.getElementById("mailEditor");
+                const toolbar = document.getElementById("ttToolbar");
+                const headingSelect = document.getElementById("headingSelect");
+
+                const charCountEl = document.getElementById("charCount");
+                const charLimitEl = document.getElementById("charLimit");
+                const counterWrap = document.querySelector(".office-counter");
+
+                charLimitEl.textContent = String(LIMIT);
+
+                const editor = new Editor({
+                    element: editorEl,
+                    extensions: [
+                        StarterKit,
+                        Underline,
+                        TextAlign.configure({ types: ["heading", "paragraph"] }),
+                        CharacterCount.configure({ limit: LIMIT }),
+                    ],
+                    content: { type: "doc", content: [{ type: "paragraph" }] },
+                    onCreate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+                    onUpdate(){ syncHidden(); refreshToolbar(); refreshCount(); },
+                    onSelectionUpdate(){ refreshToolbar(); }
+                });
+
+                function syncHidden(){
+                    hidden.value = JSON.stringify(editor.getJSON());
+                }
+
+                function refreshCount(){
+                    const count = editor.storage.characterCount.characters();
+                    charCountEl.textContent = String(count);
+                    counterWrap.classList.toggle("over", count > LIMIT);
+                }
+
+                function setActive(btn, on){
+                    btn.classList.toggle("is-active", !!on);
+                }
+
+                function refreshToolbar(){
+                    const activeMap = {
+                        bold: editor.isActive("bold"),
+                        italic: editor.isActive("italic"),
+                        underline: editor.isActive("underline"),
+                        strike: editor.isActive("strike"),
+                        bulletList: editor.isActive("bulletList"),
+                        orderedList: editor.isActive("orderedList"),
+                        alignLeft: editor.isActive({ textAlign: "left" }) ||
+                            (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
+                        alignCenter: editor.isActive({ textAlign: "center" }),
+                        alignRight: editor.isActive({ textAlign: "right" }),
+                    };
+
+                    toolbar.querySelectorAll(".tb-btn").forEach(btn=>{
+                        const cmd = btn.dataset.cmd;
+                        if (!cmd) return;
+
+                        setActive(btn, activeMap[cmd]);
+
+                        if (cmd === "undo") btn.disabled = !editor.can().chain().focus().undo().run();
+                        if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
+                    });
+
+                    if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
+                    else headingSelect.value = "p";
+                }
+
+                headingSelect.addEventListener("change", ()=>{
+                    const v = headingSelect.value;
+                    const chain = editor.chain().focus();
+                    if (v === "h2") chain.setHeading({ level: 2 }).run();
+                    else chain.setParagraph().run();
+                    refreshToolbar(); syncHidden(); refreshCount();
+                });
+
+                toolbar.addEventListener("click", (e)=>{
+                    const btn = e.target.closest(".tb-btn");
+                    if (!btn) return;
+
+                    const cmd = btn.dataset.cmd;
+                    if (!cmd) return;
+
+                    const chain = editor.chain().focus();
+
+                    switch(cmd){
+                        case "bold": chain.toggleBold().run(); break;
+                        case "italic": chain.toggleItalic().run(); break;
+                        case "underline": chain.toggleUnderline().run(); break;
+                        case "strike": chain.toggleStrike().run(); break;
+
+                        case "alignLeft": chain.setTextAlign("left").run(); break;
+                        case "alignCenter": chain.setTextAlign("center").run(); break;
+                        case "alignRight": chain.setTextAlign("right").run(); break;
+
+                        case "bulletList": chain.toggleBulletList().run(); break;
+                        case "orderedList": chain.toggleOrderedList().run(); break;
+
+                        case "undo": chain.undo().run(); break;
+                        case "redo": chain.redo().run(); break;
+                        default: break;
+                    }
+
+                    refreshToolbar();
+                    syncHidden();
+                    refreshCount();
+                });
+
+                // submit 쪽에서 접근 가능하도록 노출
+                window.__mailEditorGetJsonString = () => hidden.value || JSON.stringify(editor.getJSON());
+                window.__mailEditorGetText = () => editor.getText();
+                window.__mailEditorGetCount = () => editor.storage.characterCount.characters();
+            </script>
+
+            <!-- ✅ 전송 로직 (서버 인증 기반) -->
+            <script>
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
@@ -184,21 +430,23 @@
                 document.getElementById('btnSend').addEventListener('click', async () => {
                     showErr('');
 
-                    const me = getMeEmpId();
-                    if(!me) return showErr('로그인 사용자(empId)를 찾을 수 없습니다.');
-
                     const receivers = parseReceivers(document.getElementById('receivers').value);
                     const title = (document.getElementById('title').value || '').trim();
-                    const cnttJson = (document.getElementById('cntt').value || '').trim();
+
+                    const cnttJson = (window.__mailEditorGetJsonString ? window.__mailEditorGetJsonString() : '').trim();
+                    const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
+                    const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
 
                     if (!receivers.length) return showErr('받는 사람을 1명 이상 입력하세요.');
                     if (!title) return showErr('제목을 입력하세요.');
-                    if (!cnttJson) return showErr('내용을 입력하세요.');
+                    if (!text) return showErr('내용을 입력하세요.');
+                    if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
                     const body = { title, cnttJson, receiverEmpIds: receivers };
 
                     try{
-                        const res = await fetch(`/api/v1/mails?senderEmpId=${encodeURIComponent(me)}`, {
+                        // ✅ 서버 인증 기반: senderEmpId 파라미터 제거
+                        const res = await fetch(`/api/v1/mails`, {
                             method:'POST',
                             credentials:'include',
                             headers:{
@@ -214,7 +462,6 @@
                             throw new Error(`전송 실패: HTTP ${res.status} ${t}`);
                         }
 
-                        // 전송 성공 → 보낸메일함으로
                         location.href = '/mail/sent';
                     }catch(e){
                         console.error(e);

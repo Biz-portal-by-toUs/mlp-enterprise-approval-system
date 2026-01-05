@@ -10,11 +10,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * MailUserState JPA Repository
- *
- * - 각 유저의 메일함 상태(읽음/중요/삭제/역할)를 관리
- */
 public interface MailUserStateRepository extends JpaRepository<MailUserState, Long> {
 
     // 특정 메일에서 특정 유저의 상태 row 단건 조회
@@ -34,12 +29,13 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
     // 특정 메일 전체 참여자 상태들 조회
     List<MailUserState> findAllByMail_MailId(String mailId);
 
-    // 보낸 메일함에서 "수신인 이름들" 뽑기
+    // 보낸 메일함에서 "수신인 이름들" 뽑기 (RECIPIENT만)
     @Query("""
         select mus.user.empName
         from MailUserState mus
         where mus.mail.mailId = :mailId
           and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
+          and mus.deletedAt is null
         order by mus.user.empName asc
     """)
     List<String> findRecipientNamesByMailId(@Param("mailId") String mailId);
@@ -70,32 +66,6 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             Pageable pageable
     );
 
-    // 받은메일함(역할 여러개)
-    @Query(
-            value = """
-                select mus
-                from MailUserState mus
-                join fetch mus.mail m
-                join fetch m.sender s
-                where mus.user.empId = :userEmpId
-                  and mus.deletedAt is null
-                  and mus.role in :roles
-                order by m.createdAt desc
-            """,
-            countQuery = """
-                select count(mus)
-                from MailUserState mus
-                where mus.user.empId = :userEmpId
-                  and mus.deletedAt is null
-                  and mus.role in :roles
-            """
-    )
-    Page<MailUserState> findInboxByRoles(
-            @Param("userEmpId") String userEmpId,
-            @Param("roles") List<MailRole> roles,
-            Pageable pageable
-    );
-
     // 보낸 메일함 (Sent)
     @Query(
             value = """
@@ -122,7 +92,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             Pageable pageable
     );
 
-    // 휴지통 (Trash)
+    // 휴지통 (Trash) - mail + sender fetch
     @Query(
             value = """
                 select mus
@@ -140,8 +110,8 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
                   and mus.deletedAt is not null
             """
     )
-    Page<MailUserState> findTrash(@Param("userEmpId") String userEmpId, Pageable pageable);
-
-    @Query(value = "select database()", nativeQuery = true)
-    String currentDatabase();
+    Page<MailUserState> findTrash(
+            @Param("userEmpId") String userEmpId,
+            Pageable pageable
+    );
 }

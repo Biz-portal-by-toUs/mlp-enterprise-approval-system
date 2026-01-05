@@ -22,8 +22,6 @@ public interface MailService {
 
     Page<ResMailListDto> getInbox(String userEmpId, MailRole role, Pageable pageable);
 
-    Page<ResMailListDto> getInboxByRoles(String userEmpId, List<MailRole> roles, Pageable pageable); // 추후 확장 시 사용
-
     Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable);
 
     ResMailDetailDto getDetail(String mailId, String viewerEmpId);

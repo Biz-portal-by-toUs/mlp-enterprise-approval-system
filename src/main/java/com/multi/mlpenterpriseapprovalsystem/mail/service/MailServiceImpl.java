@@ -14,6 +14,7 @@ import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailUserStateReposi
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +22,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * MailService 구현체
- */
 @Service
 @RequiredArgsConstructor
 public class MailServiceImpl implements MailService {
@@ -68,43 +66,12 @@ public class MailServiceImpl implements MailService {
                 .map(this::toListDto);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ResMailListDto> getInboxByRoles(String userEmpId, List<MailRole> roles, Pageable pageable) {
-        return mailUserStateRepository.findInboxByRoles(userEmpId, roles, pageable)
-                .map(this::toListDto);
-    }
-
     // 보낸 메일함
     @Override
     @Transactional(readOnly = true)
     public Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable) {
-
-        // senderEmpId는 "보낸 사람(로그인 사용자)"의 empId
         return mailUserStateRepository.findSent(senderEmpId, MailRole.SENDER, pageable)
-                .map(mus -> {
-                    Mail m = mus.getMail();
-
-                    // 수신인 이름들
-                    List<String> names = mailUserStateRepository.findRecipientNamesByMailId(m.getMailId());
-                    String receivers = (names == null || names.isEmpty()) ? "-" : String.join(", ", names);
-
-                    return new ResMailListDto(
-                            m.getMailId(),
-                            m.getTitle(),
-
-                            m.getSender().getEmpId(),
-                            m.getSender().getEmpName(),
-
-                            receivers,
-                            MailRole.SENDER,
-
-                            true,
-                            Boolean.TRUE.equals(mus.getIsPrior()),
-                            mus.getDeletedAt(),
-                            m.getCreatedAt()
-                    );
-                });
+                .map(this::toListDto);
     }
 
     // 휴지통 조회
@@ -119,16 +86,21 @@ public class MailServiceImpl implements MailService {
     @Override
     @Transactional(readOnly = true)
     public ResMailDetailDto getDetail(String mailId, String viewerEmpId) {
-        Mail mail = mailRepository.findDetailByMailId(mailId)
-                .orElseThrow(() -> new NoSuchElementException("메일 없음: " + mailId));
-
         MailUserState mus = mailUserStateRepository.findState(mailId, viewerEmpId)
-                .orElseThrow(() -> new NoSuchElementException("메일 상태 없음. mailId=" + mailId + ", viewer=" + viewerEmpId));
+                .orElseThrow(() -> new AccessDeniedException("해당 메일에 대한 접근 권한이 없습니다."));
+
+        Mail mail = mus.getMail();
+
+        // ✅ 여기서 cnttHtml을 갖고 있으면 넣고, 없으면 null
+        // (Mail 엔티티에 cnttHtml이 없다면 null 유지)
+        String cnttJson = mail.getCntt();
+        String cnttHtml = null;
 
         return new ResMailDetailDto(
                 mail.getMailId(),
                 mail.getTitle(),
-                mail.getCntt(),
+                cnttJson,
+                cnttHtml,
                 mail.getSender().getEmpId(),
                 mail.getSender().getEmpName(),
                 mus.getRole(),
@@ -144,7 +116,7 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public void markAsRead(String mailId, String userEmpId) {
         MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new NoSuchElementException("메일 상태 없음. mailId=" + mailId + ", user=" + userEmpId));
+                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
         mus.markRead();
     }
 
@@ -153,7 +125,7 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public void moveToTrash(String mailId, String userEmpId) {
         MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new NoSuchElementException("메일 상태 없음. mailId=" + mailId + ", user=" + userEmpId));
+                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
         mus.moveToTrash(LocalDateTime.now());
     }
 
@@ -162,7 +134,7 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public void restoreFromTrash(String mailId, String userEmpId) {
         MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new NoSuchElementException("메일 상태 없음. mailId=" + mailId + ", user=" + userEmpId));
+                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
         mus.restore();
     }
 
@@ -171,26 +143,30 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public void purge(String mailId, String userEmpId) {
         MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new NoSuchElementException("메일 상태 없음. mailId=" + mailId + ", user=" + userEmpId));
+                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
 
         if (mus.getDeletedAt() == null) {
             throw new IllegalStateException("완전 삭제는 휴지통을 거친 메일만 가능합니다. mailId=" + mailId);
         }
-
         mailUserStateRepository.delete(mus);
     }
 
-    // Mapper (inbox/trash 공용)
+    // 목록 DTO 변환
     private ResMailListDto toListDto(MailUserState mus) {
         Mail m = mus.getMail();
+
+        String receivers = null;
+        if (mus.getRole() == MailRole.SENDER) {
+            List<String> names = mailUserStateRepository.findRecipientNamesByMailId(m.getMailId());
+            receivers = (names == null || names.isEmpty()) ? "-" : String.join(", ", names);
+        }
+
         return new ResMailListDto(
                 m.getMailId(),
                 m.getTitle(),
-
                 m.getSender().getEmpId(),
                 m.getSender().getEmpName(),
-
-                null, // ✅ inbox/trash에서는 사용 안 하면 null로
+                receivers,
                 mus.getRole(),
                 Boolean.TRUE.equals(mus.getIsRead()),
                 Boolean.TRUE.equals(mus.getIsPrior()),
