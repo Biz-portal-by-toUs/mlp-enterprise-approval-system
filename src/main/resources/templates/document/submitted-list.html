@@ -460,7 +460,7 @@
                     <label>사원번호</label>
                     <input type="text" id="search-writerId" class="search-input disabled" placeholder="불러오는 중..." readonly>
                 </div>
-                <button class="btn-search" onclick="loadData(0)">검색</button>
+                <button class="btn-search" onclick="handleSearch()">검색</button>
             </div>
 
             <div class="sort-options">
@@ -573,10 +573,19 @@
         let currentRejectDocNo = null;
         let currentRejectDocIsResubmitted = false;
 
+        // ✅ 실제 "적용된" 검색 필터를 저장하는 객체
+        let appliedSearchFilters = {
+            docfoCatName: '',
+            docStat: '',
+            docId: '',
+            title: ''
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchMyEmployeeInfo();
             fetchCategoryNames();
             initCustomDropdown();
+            // 초기 로드 시에는 필터가 비어있는 상태로 loadData 호출
             loadData(0);
         });
 
@@ -646,16 +655,35 @@
             });
         }
 
+        /**
+         * ✅ 검색 버튼 클릭 시 실행되는 함수
+         * 현재 입력창의 값들을 appliedSearchFilters 스냅샷에 저장하고 0페이지를 로드함
+         */
+        function handleSearch() {
+            appliedSearchFilters.docfoCatName = document.getElementById('search-docfoCatName').value === '전체' ? '' : document.getElementById('search-docfoCatName').value;
+            appliedSearchFilters.docStat = document.getElementById('search-docStat').value;
+            appliedSearchFilters.docId = document.getElementById('search-docId').value;
+            appliedSearchFilters.title = document.getElementById('search-title').value;
+
+            loadData(0);
+        }
+
+        /**
+         * ✅ 데이터를 불러오는 핵심 함수
+         * 입력창이 아닌 'appliedSearchFilters'에 저장된 값을 기준으로 요청을 보냄
+         */
         async function loadData(page) {
             currentPage = page;
             const params = new URLSearchParams({
                 page: page,
                 sort: `${currentBasis}_${currentOrder}`,
-                docfoCatName: document.getElementById('search-docfoCatName').value === '전체' ? '' : document.getElementById('search-docfoCatName').value,
-                writerDepName: document.getElementById('search-writerDepName').value,
-                docStat: document.getElementById('search-docStat').value,
-                docId: document.getElementById('search-docId').value,
-                title: document.getElementById('search-title').value
+                // 스냅샷된 필터값 사용
+                docfoCatName: appliedSearchFilters.docfoCatName,
+                docStat: appliedSearchFilters.docStat,
+                docId: appliedSearchFilters.docId,
+                title: appliedSearchFilters.title,
+                // 작성부서는 고정값이므로 그대로 유지
+                writerDepName: document.getElementById('search-writerDepName').value
             });
 
             try {
@@ -723,7 +751,6 @@
                     <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
                 `;
 
-                // ✅ 행 전체 클릭 이벤트를 제거하고, 제목 셀에만 클릭 이벤트를 직접 할당합니다.
                 const titleCell = tr.querySelector('.title-cell');
                 titleCell.addEventListener('click', () => {
                     location.href = `/documents/${doc.docNo}?status=SUBMITTED`;
@@ -837,6 +864,7 @@
 
         function applySort() {
             currentBasis = document.getElementById('sort-basis').value;
+            // 정렬 기준이 바뀌면 현재 검색 상태(appliedSearchFilters)를 유지한 채 0페이지로 이동
             loadData(0);
         }
 
@@ -844,6 +872,7 @@
             currentOrder = order;
             document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
             document.getElementById('order-' + order).classList.add('active');
+            // 정렬 순서가 바뀌면 현재 검색 상태(appliedSearchFilters)를 유지한 채 0페이지로 이동
             loadData(0);
         }
 
