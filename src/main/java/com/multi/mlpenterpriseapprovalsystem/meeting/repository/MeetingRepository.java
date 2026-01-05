@@ -67,6 +67,30 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     );
 
     /**
+     * [휴지통 탭]
+     * - 내가 작성자이면서 삭제된(isDeleted=true) 회의만 노출
+     * - 제목검색, startedAt 날짜검색 적용
+     */
+    @Query("""
+    select m
+    from Meeting m
+    where m.company.comId = :comId
+      and m.isDeleted = true
+      and m.writer.empId = :empId
+      and (:keyword is null or :keyword = '' or lower(m.title) like lower(concat('%', :keyword, '%')))
+      and (:from is null or m.startedAt >= :from)
+      and (:toEx is null or m.startedAt < :toEx)
+    """)
+    Page<Meeting> findDeletedMeetings(
+            @Param("comId") String comId,
+            @Param("empId") String empId,
+            @Param("keyword") String keyword,
+            @Param("from") LocalDateTime from,
+            @Param("toEx") LocalDateTime toEx,
+            Pageable pageable
+    );
+
+    /**
      * [내 부서 회의 탭]
      * - meeting_dept에 내 부서(depNo)가 포함된 회의만
      * - 제목검색, startedAt 날짜검색 적용

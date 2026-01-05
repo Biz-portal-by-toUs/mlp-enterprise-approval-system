@@ -18,7 +18,6 @@
         .btn { height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; gap: 8px; transition: 0.15s; }
         .btn:hover:not(:disabled) { filter: brightness(0.92); }
         .btn.primary { background: var(--primary); color: #fff; border: none; }
-        .btn.danger-outline { color: var(--danger); border-color: var(--danger); }
         .selected-box { min-height: 52px; padding: 8px; background: #f9fafb; border: 1px dashed var(--line); border-radius: 10px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 6px; }
         .pill { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: var(--primary); border: 1px solid var(--primary); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 800; }
         .pill button { border: none; background: none; color: var(--danger); cursor: pointer; font-size: 14px; }
@@ -38,7 +37,6 @@
             <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
                 <button class="btn" onclick="history.back()">← 취소</button>
                 <div style="display:flex; gap:12px">
-                    <button class="btn danger-outline" id="deleteBtn">회의 삭제</button>
                     <button class="btn primary" id="updateBtn">수정 완료</button>
                 </div>
             </div>
@@ -84,61 +82,121 @@
         const API_BASE = "http://localhost:8090";
         const selectedEmployees = new Map();
         const selectedDepartments = new Map();
-        const getMeetNo = () => { const parts = location.pathname.split("/").filter(Boolean); return parts[1] && !isNaN(parts[1]) ? parts[1] : null; };
-        function getCookie(name) { let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)")); return matches ? decodeURIComponent(matches[1]) : undefined; }
-        const authHeaders = () => { const token = getCookie("accessToken"); const headers = { "Content-Type": "application/json" }; if (token) headers["Authorization"] = `Bearer ${token}`; return headers; };
-        function formatForInput(isoStr) { if (!isoStr) return ""; return isoStr.replace(" ", "T").slice(0, 16); }
+
+        const getMeetNo = () => {
+            const parts = location.pathname.split("/").filter(Boolean);
+            return parts[1] && !isNaN(parts[1]) ? parts[1] : null;
+        };
+
+        function getCookie(name) {
+            let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+            return matches ? decodeURIComponent(matches[1]) : undefined;
+        }
+
+        const authHeaders = () => {
+            const token = getCookie("accessToken");
+            const headers = { "Content-Type": "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+            return headers;
+        };
+
+        function formatForInput(isoStr) {
+            if (!isoStr) return "";
+            return isoStr.replace(" ", "T").slice(0, 16);
+        }
 
         async function loadDepartments() {
             try {
                 const res = await fetch(`${API_BASE}/api/v1/departments`, { headers: authHeaders(), credentials: 'include' });
-                const json = await res.json(); const data = json.data || json;
-                const sel = $("depSelect"); data.forEach(d => { const opt = document.createElement("option"); opt.value = d.depNo; opt.textContent = d.depName; sel.appendChild(opt); });
+                const json = await res.json();
+                const data = json.data || json;
+                const sel = $("depSelect");
+                data.forEach(d => {
+                    const opt = document.createElement("option");
+                    opt.value = d.depNo;
+                    opt.textContent = d.depName;
+                    sel.appendChild(opt);
+                });
             } catch (e) { console.error(e); }
         }
+
         $("depSelect").onchange = function() {
             const val = this.value; const opt = this.options[this.selectedIndex];
             if (!val || selectedDepartments.has(val)) return;
-            selectedDepartments.set(val, opt.text); opt.disabled = true; renderSelectedDeps(); this.value = "";
+            selectedDepartments.set(val, opt.text);
+            opt.disabled = true;
+            renderSelectedDeps();
+            this.value = "";
         };
+
         function renderSelectedDeps() {
             const box = $("selectedDepBox"); box.innerHTML = "";
-            if (selectedDepartments.size === 0) { box.innerHTML = `<div style="color:var(--muted); font-size:12px; width:100%; text-align:center">부서를 추가하세요.</div>`; return; }
+            if (selectedDepartments.size === 0) {
+                box.innerHTML = `<div style="color:var(--muted); font-size:12px; width:100%; text-align:center">부서를 추가하세요.</div>`;
+                return;
+            }
             [...selectedDepartments.entries()].forEach(([id, name]) => {
                 const pill = document.createElement("div"); pill.className = "pill";
                 pill.innerHTML = `<span>${name}</span><button type="button" onclick="removeSelectedDep('${id}')">×</button>`;
                 box.appendChild(pill);
             });
         }
+
         window.removeSelectedDep = (depNo) => {
             selectedDepartments.delete(depNo);
             const sel = $("depSelect");
-            for (let i = 0; i < sel.options.length; i++) { if (sel.options[i].value === String(depNo)) { sel.options[i].disabled = false; break; } }
+            for (let i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === String(depNo)) {
+                    sel.options[i].disabled = false; break;
+                }
+            }
             renderSelectedDeps();
         };
 
         async function loadData() {
-            const meetNo = getMeetNo(); if (!meetNo) return setError("정보를 찾을 수 없습니다.");
+            const meetNo = getMeetNo();
+            if (!meetNo) return setError("정보를 찾을 수 없습니다.");
             try {
                 await loadDepartments();
                 const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, { headers: authHeaders(), credentials: 'include' });
                 const d = (await res.json()).data;
-                $("title").value = d.title || ""; $("status").value = String(d.status); $("startedAt").value = formatForInput(d.startAt);
-                $("sttText").value = d.sttText || ""; $("aiText").value = d.aiText || "";
-                if (d.departments) { d.departments.forEach(dept => { const dNo = String(dept.depNo); selectedDepartments.set(dNo, dept.depName); const sel = $("depSelect"); for(let i=0; i<sel.options.length; i++) { if(sel.options[i].value === dNo) sel.options[i].disabled = true; } }); renderSelectedDeps(); }
-                if (d.participants) { d.participants.forEach(p => selectedEmployees.set(p.empId, { empId: p.empId, empName: p.empName })); renderSelected(); }
+                $("title").value = d.title || "";
+                $("status").value = String(d.status);
+                $("startedAt").value = formatForInput(d.startAt);
+                $("sttText").value = d.sttText || "";
+                $("aiText").value = d.aiText || "";
+
+                if (d.departments) {
+                    d.departments.forEach(dept => {
+                        const dNo = String(dept.depNo);
+                        selectedDepartments.set(dNo, dept.depName);
+                        const sel = $("depSelect");
+                        for(let i=0; i<sel.options.length; i++) {
+                            if(sel.options[i].value === dNo) sel.options[i].disabled = true;
+                        }
+                    });
+                    renderSelectedDeps();
+                }
+                if (d.participants) {
+                    d.participants.forEach(p => selectedEmployees.set(p.empId, { empId: p.empId, empName: p.empName }));
+                    renderSelected();
+                }
             } catch (e) { setError("로드 실패: " + e.message); }
         }
 
         function renderSelected() {
             const box = $("selectedBox"); box.innerHTML = "";
-            if (selectedEmployees.size === 0) { box.innerHTML = '<div style="color:var(--muted); font-size:12px; width:100%; text-align:center">참석자를 추가하세요.</div>'; return; }
+            if (selectedEmployees.size === 0) {
+                box.innerHTML = '<div style="color:var(--muted); font-size:12px; width:100%; text-align:center">참석자를 추가하세요.</div>';
+                return;
+            }
             [...selectedEmployees.values()].forEach(e => {
                 const pill = document.createElement("div"); pill.className = "pill";
                 pill.innerHTML = `<span>${e.empName}</span><button type="button" onclick="removeSelected('${e.empId}')">×</button>`;
                 box.appendChild(pill);
             });
         }
+
         window.removeSelected = (id) => { selectedEmployees.delete(id); renderSelected(); };
         window.addSelected = (id, name) => { if (selectedEmployees.has(id)) return; selectedEmployees.set(id, { empId: id, empName: name }); renderSelected(); };
 
@@ -146,11 +204,16 @@
         async function loadMoreEmp(isReset = false) {
             if (loading || (!isReset && !hasNext)) return;
             if (isReset) { cursor = null; hasNext = true; $("empList").innerHTML = ""; }
-            loading = true; const kw = $("empSearchKeyword").value.trim(); const qs = new URLSearchParams({ size: "20", excludeMe: "true" });
-            if (kw) qs.set("keyword", kw); if (cursor) qs.set("cursor", cursor);
+            loading = true;
+            const kw = $("empSearchKeyword").value.trim();
+            const qs = new URLSearchParams({ size: "20", excludeMe: "true" });
+            if (kw) qs.set("keyword", kw);
+            if (cursor) qs.set("cursor", cursor);
             try {
                 const res = await fetch(`${API_BASE}/api/v1/employees?${qs.toString()}`, { headers: authHeaders(), credentials: 'include' });
-                const payload = (await res.json()).data; cursor = payload.nextCursor; hasNext = !!payload.hasNext;
+                const payload = (await res.json()).data;
+                cursor = payload.nextCursor;
+                hasNext = !!payload.hasNext;
                 payload.items.forEach(e => {
                     const row = document.createElement("div"); row.className = "emp-row";
                     row.innerHTML = `<div class="emp-info"><b>${e.empName}</b> <small>(${e.empId})</small></div><button class="btn" onclick="addSelected('${e.empId}', '${e.empName}')">추가</button>`;
@@ -161,8 +224,6 @@
 
         $("updateBtn").onclick = async () => {
             const meetNo = getMeetNo();
-
-            // ✅ 제목 글자 수 검증 로직 추가
             const titleValue = $("title").value.trim();
             if (!titleValue) return alert("회의 제목을 입력하세요.");
             if (titleValue.length > 30) return alert("회의 제목은 30글자 이내로 입력해주세요.");
@@ -178,15 +239,34 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, { method: "PUT", headers: authHeaders(), credentials: 'include', body: JSON.stringify(body) });
-                if (res.ok) { alert("수정되었습니다."); location.href = `/meeting/${meetNo}`; } else setError("수정 실패");
+                const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                    method: "PUT",
+                    headers: authHeaders(),
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                    alert("수정되었습니다.");
+                    location.href = `/meeting/${meetNo}`;
+                } else setError("수정 실패");
             } catch (e) { setError("연결 실패"); }
         };
 
-        $("deleteBtn").onclick = async () => { if (!confirm("삭제하시겠습니까?")) return; try { const res = await fetch(`${API_BASE}/api/v1/meetings/${getMeetNo()}`, { method: "DELETE", headers: authHeaders(), credentials: 'include' }); if (res.ok) { alert("삭제되었습니다."); location.href = "/meeting"; } else setError("삭제 실패"); } catch (e) { setError("삭제 오류"); } };
-        $("empSearchKeyword").oninput = () => { clearTimeout(kwTimer); kwTimer = setTimeout(() => loadMoreEmp(true), 300); };
-        $("empList").onscroll = (e) => { if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreEmp(); };
-        function setError(msg) { const b = $("error"); b.style.display = "block"; b.textContent = msg; }
+        $("empSearchKeyword").oninput = () => {
+            clearTimeout(kwTimer);
+            kwTimer = setTimeout(() => loadMoreEmp(true), 300);
+        };
+
+        $("empList").onscroll = (e) => {
+            if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreEmp();
+        };
+
+        function setError(msg) {
+            const b = $("error");
+            b.style.display = "block";
+            b.textContent = msg;
+        }
+
         window.onload = () => { loadData(); loadMoreEmp(true); };
     </script>
 </th:block>
