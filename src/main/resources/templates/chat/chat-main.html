@@ -4,7 +4,14 @@
     <meta charset="UTF-8"/>
     <title>Chat Main</title>
     <style>
-        /* CSS 디자인은 수정하지 않았습니다. */
+        /* CSS 변수 설정 */
+        :root {
+            --danger: #ef4444;
+            --success: #10b981;
+            --warn: #f59e0b;
+            --gray: #9ca3af;
+        }
+
         body { font-family: sans-serif; margin: 0; overflow: hidden; }
         .app { height: 100vh; display: flex; flex-direction: column; }
         .tabs { display: flex; border-bottom: 1px solid #ddd; background: #fff; flex-shrink: 0; }
@@ -27,9 +34,23 @@
         .last-msg-time { font-size: 11px; color: #999; margin-bottom: 6px; white-space: nowrap; }
         .badge { background: #ff3b30; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: bold; }
         .hint { padding: 10px 12px; font-size: 12px; color: #777; border-bottom: 1px solid #f7f7f7; background: #fafafa; }
-        .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
-        .status-online { background-color: #28a745; border: 1px solid #28a745; }
-        .status-offline { background-color: transparent; border: 1px solid #ccc; }
+
+        /* 상태 점 기본 스타일 */
+        .status-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* ✅ 상태별 색상 적용 */
+        .dot-C { background-color: var(--success) !important; } /* 온라인 */
+        .dot-M { background-color: var(--gray) !important; }    /* 자리비움 */
+        .dot-D { background-color: var(--warn) !important; }    /* 방해금지 */
+        .dot-X { background-color: var(--danger) !important; }  /* 오프라인/로그아웃 */
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
@@ -72,7 +93,6 @@
 
 <script>
     // ---------------- 공통 유틸 ----------------
-    // ✅ HttpOnly 쿠키 사용을 위해 localStorage 관련 로직 및 Authorization 헤더 명시적 추가 제거
     function authHeaders() {
         return { 'Content-Type': 'application/json' };
     }
@@ -81,6 +101,11 @@
         return String(str ?? "").replace(/[&<>"']/g, s => ({
             "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
         }[s]));
+    }
+
+    // ✅ 상태 코드를 기반으로 클래스 반환 (기본값 X)
+    function getStatusClass(stat) {
+        return 'dot-' + (stat || 'X');
     }
 
     function formatTime(dateStr) {
@@ -102,13 +127,9 @@
 
     function connectWs() {
         if (wsInitialized) return;
-
-        // ✅ 브라우저가 HttpOnly 쿠키를 자동으로 전송하므로 별도의 토큰 추출 로직 불필요
         const socket = new SockJS('/ws-chat');
         stompClient = Stomp.over(socket);
         stompClient.debug = null;
-
-        // ✅ connect 시 헤더에 토큰을 담지 않음 (쿠키가 자동으로 전송됨)
         stompClient.connect({}, function () {
             wsInitialized = true;
             stompClient.subscribe('/user/sub/chat/room-updates', function (message) {
@@ -143,7 +164,6 @@
         if (keyword) qs.set("keyword", keyword);
         if (empCursor) qs.set("cursor", empCursor);
 
-        // ✅ 헤더에서 토큰 제거
         const res = await fetch("/api/v1/employees?" + qs.toString());
         const result = await res.json();
         const payload = result.data || result;
@@ -152,7 +172,8 @@
         payload.items.forEach(e => {
             const div = document.createElement("div");
             div.className = "row";
-            const statusClass = (e.msgStat === 'C') ? 'status-online' : 'status-offline';
+            // ✅ 수정한 부분: e.msgStat을 직접 dot-클래스에 반영
+            const statusClass = getStatusClass(e.msgStat);
             div.innerHTML = `
                 <div class="title"><span class="status-dot ${statusClass}"></span>${escapeHtml(e.empName)}</div>
                 <div class="sub">${escapeHtml(e.depName)} · ${escapeHtml(e.posName)}</div>
@@ -165,19 +186,19 @@
 
     function onEmpSearchInput() { clearTimeout(empKwTimer); empKwTimer = setTimeout(initEmployees, 300); }
 
-    // ✅ 사용자 정보는 토큰 대신 /api/v1/employees/me 엔드포인트를 호출하여 가져옴
     async function loadMyInfo() {
         try {
             const res = await fetch("/api/v1/employees/me");
             const result = await res.json();
             const me = result.data;
-            const statusClass = (me.msgStat === 'C') ? 'status-online' : 'status-offline';
+            // ✅ 수정한 부분: 내 프로필 상태 점 반영
+            const statusClass = getStatusClass(me.msgStat);
             document.getElementById("myName").innerHTML = `<span class="status-dot ${statusClass}"></span>${escapeHtml(me.empName)}`;
             document.getElementById("myDept").innerText = `${me.depName} · ${me.posName}`;
         } catch (err) { console.error(err); }
     }
 
-    // ---------------- 채팅방 목록 ----------------
+    // ---------------- 채팅방 목록 (기존 로직 유지) ----------------
     let roomCursor = null, roomHasNext = true, roomLoading = false, roomKwTimer = null;
     async function initRooms() { resetRooms(); await loadMoreRooms(); }
     function resetRooms() { roomCursor = null; roomHasNext = true; document.getElementById("roomList").innerHTML = ""; }
@@ -269,10 +290,6 @@
         const row = document.getElementById("room-row-" + roomNo);
         if (row) { const badge = row.querySelector(".badge"); if (badge) badge.remove(); }
     };
-    window.handleLeaveRoom = function (roomNo) {
-        const row = document.getElementById("room-row-" + roomNo);
-        if (row) row.remove();
-    };
 
     document.getElementById("empList").addEventListener("scroll", (e) => {
         if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreEmployees();
@@ -293,7 +310,7 @@
         try {
             const res = await fetch("/api/v1/chat", {
                 method: "POST",
-                headers: authHeaders(), // 토큰 없이 Content-Type만 전달
+                headers: authHeaders(),
                 body: JSON.stringify({roomType: "ONE", memberIds: [targetId]})
             });
             const result = await res.json();
