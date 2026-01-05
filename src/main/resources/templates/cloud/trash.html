@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Cloud Trash</title>
+
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* =========================================================
+               0) LAYOUT (cloud 공통)
+            ========================================================= */
+            .content-wrap:has(.cloud-page){ padding:0; }
+            .cloud-page{
+                height: calc(100vh - var(--topbar-h) - var(--footer-h));
+                background: var(--bg);
+            }
+            .cloud-page .page-with-subbar{
+                display:grid;
+                grid-template-columns: 220px 1fr;
+                min-height: calc(100vh - var(--topbar-h) - var(--footer-h));
+            }
+
+            /* =========================================================
+               1) SIDEBAR (tabs / tree / footer dock)
+               - 휴지통 페이지에서도 sidebar 깨지지 않게 필요한 것만 포함
+            ========================================================= */
+            .cloud-page .subbar{ display:flex; flex-direction:column; }
+
+            /* 트리만 스크롤 + footer 고정 */
+            .cloud-subbar{
+                display:flex;
+                flex-direction:column;
+                height:100%;
+                min-height:0;
+            }
+            .cloud-tree-panel{
+                flex:1;
+                overflow:auto;
+                min-height:0;
+                padding: 10px 10px 12px;
+            }
+            .cloud-tree{ list-style:none; margin:0; padding:0; }
+
+            /* scope tabs */
+            .cloud-scope-tabs{
+                display:grid;
+                grid-template-columns: 1fr 1fr;
+                gap:8px;
+                padding: 10px 12px 12px;
+                border-bottom: 1px solid rgba(59,130,246,.14);
+                background: rgba(255,255,255,.30);
+            }
+            .cloud-scope-tab{
+                height:34px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                border-radius:10px;
+                text-decoration:none;
+                font-weight:900;
+                font-size:13px;
+                color:#1d4ed8;
+                background: rgba(59,130,246,.12);
+                border:1px solid rgba(59,130,246,.10);
+            }
+            .cloud-scope-tab:hover{ background: rgba(59,130,246,.18); }
+            .cloud-scope-tab.active{
+                background: var(--primary);
+                color:#fff;
+                border-color:transparent;
+            }
+
+            /* footer(휴지통) */
+
+            .cloud-sidebar-footer {
+                flex: 0 0 auto;
+                padding: 10px 12px 12px;
+                border-top: 1px solid rgba(59, 130, 246, .14);
+                background: rgba(255, 255, 255, .30);
+            }
+            .cloud-footer-link{
+                display: grid;
+                grid-template-columns: 18px 1fr 18px; /* 좌/우 동일 폭 */
+                align-items: center;
+                height: 38px;
+                padding: 0 12px;
+                border-radius: 12px;
+                text-decoration: none;
+
+                font-weight: 900;
+                font-size: 13px;
+                color:#1d4ed8;
+                background: rgba(59,130,246,.12);
+                border: 1px solid rgba(59,130,246,.10);
+            }
+
+            .cloud-footer-link:hover{ background: rgba(59,130,246,.18); }
+
+            .cloud-footer-ico{
+                width: 18px;
+                height: 18px;
+                justify-self: start;
+                display: inline-block;
+                background: url("/images/icons/trash.png") center/contain no-repeat;
+                opacity: .95;
+            }
+
+            .cloud-footer-text{
+                justify-self: center;
+                text-align: center;
+                min-width: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* 오른쪽 균형용 더미 */
+            .cloud-footer-spacer{
+                width: 18px;
+                height: 18px;
+                justify-self: end;
+            }
+
+            .cloud-footer-link.active{
+                background: var(--primary);
+                color:#fff;
+                border-color:transparent;
+            }
+            .cloud-footer-link.active .cloud-footer-ico{
+                filter: brightness(0) invert(1);
+                opacity:1;
+            }
+
+            /* =========================================================
+               2) MAIN (topbar / actions / body)
+            ========================================================= */
+            .cloud-main{ display:flex; flex-direction:column; min-width:0; background: var(--bg); }
+
+            .cloud-topbar{
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:12px;
+                padding:16px 18px;
+                background:#fff;
+                border-bottom:1px solid rgba(17,24,39,.08);
+            }
+            .cloud-title{
+                font-size:24px;
+                font-weight:900;
+                margin:0;
+                color: var(--text);
+            }
+            .cloud-actions{ display:flex; gap:10px; align-items:center; }
+
+            .cloud-body{ flex:1; overflow:auto; padding:18px; }
+
+            /* 버튼 통일 */
+            .cloud-page .btn{
+                height:34px;
+                padding: 0 12px;
+                border-radius:10px;
+                border: 1px solid rgba(17,24,39,.10);
+                background:#fff;
+                font-weight:900;
+                cursor:pointer;
+                color: var(--text);
+            }
+            .cloud-page .btn.primary{
+                border:0;
+                background: var(--primary);
+                color:#fff;
+            }
+            .cloud-page .btn.primary:hover{ background: var(--primary2); }
+            .cloud-page .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+            /* =========================================================
+               3) TRASH (hint / empty / grid cards)
+            ========================================================= */
+            .trash-wrap{ max-width:1080px; }
+            .trash-hint{
+                font-weight:800;
+                color: rgba(17,24,39,.55);
+                margin-bottom:10px;
+            }
+            .empty{
+                color: rgba(17,24,39,.55);
+                font-weight:900;
+                padding: 18px 4px;
+            }
+
+            /* 카드 그리드 */
+            .file-grid{
+                display:flex;
+                flex-wrap:wrap;
+                gap:10px;
+                align-content:flex-start;
+            }
+
+            .folder-card, .file-card{
+                width:110px;
+                padding: 8px 6px;
+                border: 1px solid transparent;
+                border-radius:10px;
+                background: transparent;
+                text-align:center;
+                cursor:pointer;
+                position:relative;
+                user-select:none;
+            }
+            .folder-card:hover, .file-card:hover{
+                background: rgba(59,130,246,.10);
+                border-color: rgba(59,130,246,.18);
+            }
+            .folder-card.selected, .file-card.selected{
+                background: rgba(59,130,246,.16);
+                border-color: rgba(59,130,246,.45);
+            }
+
+            .folder-ico-large, .file-ico{
+                width:84px;
+                height:84px;
+                margin: 0 auto 6px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+            }
+            .folder-ico-large{
+                background: url("/images/icons/folder-large.png") center/contain no-repeat;
+            }
+            .file-ico img{
+                width:180%;
+                height:180%;
+                object-fit:contain;
+                display:block;
+            }
+
+            .folder-name, .file-name{
+                font-size:12px;
+                font-weight:800;
+                color:#111827;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+            }
+            .file-size{
+                margin-top:2px;
+                font-size:11px;
+                color: var(--muted);
+                font-weight:700;
+            }
+            .trash-meta{
+                margin-top:2px;
+                font-size:11px;
+                color: rgba(17,24,39,.55);
+                font-weight:700;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+            }
+
+            /* 삭제 묶음 배지(개수만 표시) */
+            .batch-badge{
+                position:absolute;
+                top:6px;
+                right:6px;
+                font-size:11px;
+                font-weight:900;
+                color: rgba(17,24,39,.70);
+                background: rgba(255,255,255,.85);
+                border: 1px solid rgba(17,24,39,.10);
+                padding: 3px 7px;
+                border-radius:999px;
+                backdrop-filter: blur(6px);
+            }
+
+            .trash-ctx{
+                position: fixed;
+                z-index: 9999;
+                min-width: 220px;
+                background: #fff;
+                border: 1px solid rgba(17,24,39,.10);
+                border-radius: 12px;
+                box-shadow: 0 14px 30px rgba(0,0,0,.16);
+                padding: 6px;
+            }
+
+            .trash-ctx .ctx-btn{
+                width: 100%;
+                border: 0;
+                background: transparent;
+                text-align: left;
+                padding: 10px 10px;
+                border-radius: 10px;
+                font-weight: 900;
+                cursor: pointer;
+                color: #111827;
+            }
+            .trash-ctx .ctx-btn:hover{ background: rgba(59,130,246,.10); }
+            .trash-ctx .ctx-btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+            .trash-ctx .sep{
+                height: 1px;
+                background: rgba(17,24,39,.08);
+                margin: 6px 4px;
+                border-radius: 999px;
+            }
+
+            .trash-ctx .ctx-info{ padding: 6px 8px 8px; }
+            .trash-ctx .ctx-info-title{
+                font-weight: 900;
+                font-size: 12px;
+                color: rgba(17,24,39,.65);
+                margin-bottom: 6px;
+            }
+
+            .trash-ctx .ctx-row{
+                display: grid;
+                grid-template-columns: 74px 1fr;
+                gap: 8px;
+                align-items: center;
+                padding: 4px 0;
+                font-size: 12px;
+            }
+            .trash-ctx .ctx-row .k{ color: rgba(17,24,39,.55); font-weight: 800; }
+            .trash-ctx .ctx-row .v{
+                color: #111827;
+                font-weight: 900;
+                min-width: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content" class="cloud-page">
+    <div class="page-with-subbar">
+
+        <!-- ✅ 왼쪽 sidebar 동일 -->
+        <th:block th:replace="~{sidebar/cloud-sidebar :: cloudSidebar(${active})}"></th:block>
+
+        <!-- ✅ 오른쪽: 휴지통 -->
+        <section class="cloud-main">
+            <div class="cloud-topbar">
+                <h1 class="cloud-title">휴지통</h1>
+
+                <div class="cloud-actions">
+                    <!-- PRVT일 때만 비우기 -->
+                    <button class="btn" id="btnEmpty" th:if="${trashScope} == 'PRVT'">휴지통 비우기</button>
+
+                    <button class="btn" id="btnReload">새로고침</button>
+                </div>
+            </div>
+
+            <div class="cloud-body">
+                <div class="trash-wrap">
+                    <div class="trash-hint">
+                        삭제된 폴더/파일이 함께 표시됩니다. (복구는 내부적으로 삭제 묶음(batchId) 단위로 동작)
+                    </div>
+
+                    <div class="file-grid" id="trashGrid"></div>
+                    <div class="empty" id="trashEmpty" style="display:none;">휴지통이 비어있습니다.</div>
+                </div>
+            </div>
+        </section>
+        <!-- ✅ 휴지통 우클릭 메뉴(기본은 숨김) -->
+        <div class="trash-ctx" id="trashCtx" role="menu" aria-label="휴지통 메뉴" style="display:none;">
+            <button type="button" class="ctx-btn" id="ctxRestore" role="menuitem">복구</button>
+            <button type="button" class="ctx-btn" id="ctxInfoToggle" role="menuitem">삭제 상세 정보</button>
+
+            <div class="sep"></div>
+
+            <!-- ✅ 상세 정보: 기본은 숨김 -->
+            <div class="ctx-info" id="ctxInfo" aria-label="삭제 정보" style="display:none;">
+                <div class="ctx-info-title">삭제 정보</div>
+
+                <div class="ctx-row">
+                    <span class="k">파일명</span>
+                    <span class="v" id="infoName">-</span>
+                </div>
+                <div class="ctx-row">
+                    <span class="k">파일 크기</span>
+                    <span class="v" id="infoSize">-</span>
+                </div>
+                <div class="ctx-row">
+                    <span class="k">삭제 날짜</span>
+                    <span class="v" id="infoDeletedAt">-</span>
+                </div>
+                <div class="ctx-row">
+                    <span class="k">삭제한 사람</span>
+                    <span class="v" id="infoDeletedBy">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        const TRASH_SCOPE = /*[[${trashScope}]]*/ "DEPT"; // "DEPT" | "PRVT"
+        const SCOPE = String(TRASH_SCOPE || "DEPT").toUpperCase();
+
+        const state = {
+            selectedBatchId: null,
+            selectedCardEl: null,
+        };
+
+        const el = {
+            grid: document.getElementById("trashGrid"),
+            empty: document.getElementById("trashEmpty"),
+            btnReload: document.getElementById("btnReload"),
+            btnEmpty: document.getElementById("btnEmpty"),
+        };
+
+        // ✅ 우클릭 메뉴 상태
+        const ctx = {
+            el: document.getElementById("trashCtx"),
+            btnRestore: document.getElementById("ctxRestore"),
+            btnInfo: document.getElementById("ctxInfoToggle"),
+
+            infoWrap: document.getElementById("ctxInfo"),
+            infoName: document.getElementById("infoName"),
+            infoSize: document.getElementById("infoSize"),
+            infoDeletedAt: document.getElementById("infoDeletedAt"),
+            infoDeletedBy: document.getElementById("infoDeletedBy"),
+
+            currentBatchId: null,
+            currentItem: null,
+            isInfoOpen: false,
+        };
+
+        function closeTrashCtx(){
+            if (!ctx.el) return;
+            ctx.el.style.display = "none";
+            ctx.currentBatchId = null;
+            ctx.currentItem = null;
+        }
+
+        function openTrashCtx(x, y, item, batchId){
+            if (!ctx.el) return;
+
+            ctx.currentItem = item;
+            ctx.currentBatchId = batchId || null;
+
+            // ✅ 정보 채우기(필드명은 서버에 맞게 여러 후보로)
+            const name = safe(item?.originalName || item?.name || item?.title || ("item-" + item?.id));
+            const deletedAt = fmtDate(item?.deletedAt);
+            const deletedBy =
+                safe(item?.deletedByName || item?.deletedBy || item?.deletedUserName || item?.deletedUser || item?.deleterName) || "-";
+
+            const isFolder = isFolderKind(item?.kind);
+            const sizeText = isFolder ? "폴더" : (item?.size != null ? humanBytes(item.size) : "-");
+
+            ctx.infoName.textContent = name || "-";
+            ctx.infoSize.textContent = sizeText || "-";
+            ctx.infoDeletedAt.textContent = deletedAt || "-";
+            ctx.infoDeletedBy.textContent = deletedBy || "-";
+
+            // ✅ batchId 없으면 복구 비활성
+            const b = String(batchId ?? "").trim();
+            ctx.currentBatchId = b || null;
+            ctx.btnRestore.disabled = (b.length === 0);
+
+            // ✅ 메뉴 열 때 상세정보는 항상 닫고 시작
+            ctx.isInfoOpen = false;
+            if (ctx.infoWrap) ctx.infoWrap.style.display = "none";
+            if (ctx.btnInfo) ctx.btnInfo.textContent = "삭제 상세 정보";
+
+            // ✅ 화면 밖으로 안 나가게 위치 잡기 (처음은 대략 값)
+            const menuW = 240;
+            const menuH = 110; // 상세정보 닫힌 상태 기준
+            const pad = 8;
+
+            let left = x;
+            let top = y;
+
+            const maxL = window.innerWidth - menuW - pad;
+            const maxT = window.innerHeight - menuH - pad;
+
+            if (left > maxL) left = maxL;
+            if (top > maxT) top = maxT;
+
+            ctx.el.style.left = left + "px";
+            ctx.el.style.top = top + "px";
+            ctx.el.style.display = "block";
+
+
+        }
+
+        ctx.btnInfo?.addEventListener("click", () => {
+            if (!ctx.infoWrap) return;
+
+            ctx.isInfoOpen = !ctx.isInfoOpen;
+            ctx.infoWrap.style.display = ctx.isInfoOpen ? "block" : "none";
+            ctx.btnInfo.textContent = ctx.isInfoOpen ? "삭제 상세 정보 숨기기" : "삭제 상세 정보";
+
+            // ✅ 펼쳤을 때 화면 밖으로 나가면 위로 올려주기
+            const rect = ctx.el.getBoundingClientRect();
+            const pad = 8;
+            const overflowBottom = rect.bottom - (window.innerHeight - pad);
+            if (overflowBottom > 0) {
+                const newTop = Math.max(pad, rect.top - overflowBottom);
+                ctx.el.style.top = newTop + "px";
+            }
+        });
+
+        // ✅ 복구 클릭
+        ctx.btnRestore?.addEventListener("click", async () => {
+            const batchId = ctx.currentBatchId;
+            if (!batchId) return;
+
+            closeTrashCtx();
+            await restoreBatch(batchId); // 네가 이미 만든 함수(Confirm+API+reload)
+        });
+
+        // ✅ 바깥 클릭/스크롤/ESC 닫기
+        document.addEventListener("click", (e) => {
+            if (!ctx.el) return;
+            if (ctx.el.style.display === "block" && !e.target.closest("#trashCtx")) closeTrashCtx();
+        });
+        document.addEventListener("scroll", closeTrashCtx, true);
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrashCtx(); });
+
+        async function apiJson(url, opt = {}) {
+            const res = await fetch(url, {
+                credentials: "include",
+                headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
+                ...opt,
+            });
+
+            const text = await res.text();
+
+            let json = null;
+            try { json = text ? JSON.parse(text) : null; }
+            catch { throw new Error("서버 응답이 JSON이 아닙니다. (로그인 만료/에러 페이지일 수 있어요)"); }
+
+            if (!res.ok) {
+                const msg = json?.message || json?.error || res.statusText;
+                throw new Error(msg);
+            }
+            return (json && typeof json === "object" && "data" in json) ? json.data : json;
+        }
+
+        function safe(s){ return (s == null) ? "" : String(s); }
+
+        function fmtDate(dt){
+            if (!dt) return "";
+            const d = new Date(dt);
+            if (isNaN(d.getTime())) return String(dt);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth()+1).padStart(2,"0");
+            const dd = String(d.getDate()).padStart(2,"0");
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function isFolder(it){
+            return String(it?.type || "").toUpperCase() === "FOLDER";
+        }
+
+        function getBatchId(it){
+            const raw =
+                it?.deleteBatchId
+                ?? it?.batchId
+                ?? it?.deletedBatchId
+                ?? it?.delete_batch_id
+                ?? it?.batch
+                ?? it?.extra1;
+
+            card.addEventListener("click", () => {
+                console.log("clicked item:", it, "deleteBatchId:", it.deleteBatchId, "batchId:", getBatchId(it));
+                selectCard(card, getBatchId(it));
+            });
+
+            return raw == null ? "" : String(raw).trim();
+        }
+
+        function humanBytes(n){
+            if (n == null) return "";
+            let v = Number(n);
+            const units = ["B","KB","MB","GB","TB"];
+            let i = 0;
+            while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+            return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+        }
+
+        // (선택) 파일 아이콘: ext로 대략 매칭. 없으면 unknown 사용
+        function resolveFileIcon(it){
+            const ICONS = {
+                word: "/images/icons/word.png",
+                excel: "/images/icons/excel.png",
+                ppt: "/images/icons/PPT.png",
+                pdf: "/images/icons/PDF.png",
+                image: "/images/icons/image-large.png",
+                zip: "/images/icons/zip.png",
+                code: "/images/icons/code.png",
+                unknown: "/images/icons/unknown.png",
+            };
+
+            const EXT_GROUPS = {
+                word: ["doc","docx"],
+                excel: ["xls","xlsx","csv"],
+                ppt: ["ppt","pptx"],
+                pdf: ["pdf"],
+                image: ["png","jpg","jpeg","gif","webp","svg","bmp","tif","tiff","heic"],
+                zip: ["zip","rar","7z","tar","gz","bz2","xz"],
+                code: ["js","ts","jsx","tsx","html","css","scss","less","json","xml","yml","yaml","md","py","java","c","cpp","go","rs","php","rb","kt","swift","sh","sql"],
+            };
+
+            const name = safe(it.originalName || it.name || it.title || "");
+            let ext = safe(it.ext || "").toLowerCase();
+            if (!ext && name.includes(".")) ext = name.split(".").pop().toLowerCase();
+
+            let type = "unknown";
+            for (const [k, arr] of Object.entries(EXT_GROUPS)) {
+                if (arr.includes(ext)) { type = k; break; }
+            }
+            return ICONS[type] || ICONS.unknown;
+        }
+
+        function clearSelection(){
+            state.selectedBatchId = null;
+            if (state.selectedCardEl) state.selectedCardEl.classList.remove("selected");
+            state.selectedCardEl = null;
+        }
+
+        function selectCard(cardEl, batchId){
+            if (state.selectedCardEl) state.selectedCardEl.classList.remove("selected");
+            cardEl.classList.add("selected");
+
+            state.selectedCardEl = cardEl;
+
+            const b = (batchId == null) ? "" : String(batchId).trim();
+            state.selectedBatchId = b || null;
+        }
+
+        function render(items){
+            el.grid.innerHTML = "";
+            el.empty.style.display = (items.length === 0) ? "block" : "none";
+            clearSelection();
+            if (items.length === 0) return;
+
+            // batch 개수 계산(배지용)
+            const batchCount = new Map();
+            for (const it of items){
+                const b = getBatchId(it);
+                if (!b) continue;
+                batchCount.set(b, (batchCount.get(b) || 0) + 1);
+            }
+
+            // 최신 삭제순
+            const sorted = [...items].sort((a,b) => {
+                const ta = new Date(a.deletedAt || 0).getTime();
+                const tb = new Date(b.deletedAt || 0).getTime();
+                return tb - ta;
+            });
+
+            for (const it of sorted) {
+                const card = document.createElement("div");           // ✅ 추가
+                const batchId = getBatchId(it);                       // ✅ getBatchId는 값만 반환
+                const count = batchId ? (batchCount.get(batchId) || 1) : 1;
+
+                const folder = isFolder(it);                          // ✅ folder boolean
+                card.className = folder ? "folder-card" : "file-card";
+
+                const badgeNeeded = count > 1;
+                if (badgeNeeded) {
+                    const badge = document.createElement("div");
+                    badge.className = "batch-badge";
+                    badge.textContent = `${count}개`;
+                    card.appendChild(badge);
+                }
+
+                if (folder) {                                         // ✅ isFolder 말고 folder 사용
+                    const ico = document.createElement("div");
+                    ico.className = "folder-ico-large";
+
+                    const name = document.createElement("div");
+                    name.className = "folder-name";
+                    name.textContent = safe(it.name || ("folder-" + it.id));
+
+                    const meta = document.createElement("div");
+                    meta.className = "trash-meta";
+                    meta.textContent = `삭제됨 · ${fmtDate(it.deletedAt) || "-"}`;
+
+                    card.appendChild(ico);
+                    card.appendChild(name);
+                    card.appendChild(meta);
+                } else {
+                    const ico = document.createElement("div");
+                    ico.className = "file-ico";
+
+                    const img = document.createElement("img");
+                    img.src = resolveFileIcon(it);
+                    img.alt = "파일";
+                    ico.appendChild(img);
+
+                    const name = document.createElement("div");
+                    name.className = "file-name";
+                    name.textContent = safe(it.name || ("file-" + it.id));
+
+                    const size = document.createElement("div");
+                    size.className = "file-size";
+                    size.textContent = it.size != null ? humanBytes(it.size) : "";
+
+                    const meta = document.createElement("div");
+                    meta.className = "trash-meta";
+                    meta.textContent = `삭제됨 · ${fmtDate(it.deletedAt) || "-"}`;
+
+                    card.appendChild(ico);
+                    card.appendChild(name);
+                    card.appendChild(size);
+                    card.appendChild(meta);
+                }
+
+                card.addEventListener("click", () => {
+                    console.log("clicked item:", it,
+                        "deleteBatchId:", it?.deleteBatchId,
+                        "delete_batch_id:", it?.delete_batch_id,
+                        "resolved batchId:", batchId
+                    );
+                    selectCard(card, batchId);
+                });
+
+                card.addEventListener("dblclick", async () => {
+                    if (!batchId) return;
+                    await restoreBatch(batchId);
+                });
+
+                card.addEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectCard(card, batchId);
+                    openTrashCtx(e.clientX, e.clientY, it, batchId);
+                });
+
+                el.grid.appendChild(card);
+            }
+        }
+
+        async function loadTrash(){
+            const items = await apiJson(`/api/v1/cloud/trash?scope=${encodeURIComponent(SCOPE)}&limit=200&offset=0`);
+            const arr =
+                Array.isArray(items) ? items :
+                    Array.isArray(items?.content) ? items.content :
+                        Array.isArray(items?.list) ? items.list :
+                            [];
+            render(arr);
+        }
+
+        async function restoreBatch(batchId){
+            if (!batchId) return;
+            if (!confirm("복구할까요? (해당 항목이 속한 삭제 묶음(batchId) 단위로 복구됩니다)")) return;
+
+            try{
+                await apiJson(`/api/v1/cloud/trash/restore/${encodeURIComponent(batchId)}?scope=${encodeURIComponent(SCOPE)}`, {
+                    method: "POST"
+                });
+                await loadTrash();
+                alert("복구 완료!");
+            }catch(e){
+                alert(e.message);
+            }
+        }
+
+
+        el.btnReload?.addEventListener("click", () => loadTrash().catch(e => alert(e.message)));
+
+        // PRVT 비우기
+        el.btnEmpty?.addEventListener("click", async () => {
+            if (!confirm("휴지통을 비울까요? (개인함만 가능)")) return;
+            try{
+                await apiJson(`/api/v1/cloud/trash/empty/prvt`, { method: "POST" });
+                await loadTrash();
+                alert("휴지통 비우기 완료!");
+            }catch(e){
+                alert(e.message);
+            }
+        });
+
+        window.addEventListener("DOMContentLoaded", () => {
+            loadTrash().catch(e => alert(e.message));
+        });
+    </script>
+</th:block>
+
+</body>
+</html>
