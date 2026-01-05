@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>메일 쓰기</title>
+
+    <style layout:fragment="pageStyles">
+        :root{
+            --fg:#0f172a;
+            --mut:#64748b;
+            --line:#e2e8f0;
+            --danger:#ef4444;
+            --primary:#2c5cff;
+        }
+
+        .page-with-subbar{
+            display:grid;
+            grid-template-columns:260px minmax(0,1fr);
+            gap:0;
+            padding:0;
+            align-items:stretch;
+        }
+
+        .page-main{
+            padding:24px;
+            min-width:0;
+        }
+
+        .card{
+            background:#fff;
+            border:1px solid var(--line);
+            border-radius:14px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            padding:18px;
+        }
+
+        .row{
+            display:grid;
+            grid-template-columns:120px 1fr;
+            gap:10px 12px;
+            align-items:center;
+            margin-bottom:12px;
+        }
+
+        .k{
+            color:var(--mut);
+            font-size:13px;
+            font-weight:900;
+        }
+
+        .input, .textarea{
+            width:100%;
+            border:1px solid var(--line);
+            border-radius:10px;
+            padding:10px 12px;
+            font-size:14px;
+            font-weight:700;
+            outline:none;
+        }
+
+        .textarea{
+            min-height:260px;
+            resize:vertical;
+            font-weight:600;
+            line-height:1.6;
+        }
+
+        .help{
+            margin-top:-6px;
+            margin-bottom:12px;
+            color:var(--mut);
+            font-size:12px;
+            font-weight:700;
+        }
+
+        .actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top:14px;
+        }
+
+        .btn{
+            height:40px;
+            padding:0 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:900;
+            cursor:pointer;
+            border:none;
+            background:var(--primary);
+            color:#fff;
+            transition:0.15s;
+        }
+        .btn:hover{ filter:brightness(0.92); }
+
+        .btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+        .btn.ghost:hover{ background:#f8fafc; filter:none; }
+
+        .err{
+            color:#ef4444;
+            font-weight:900;
+            margin-top:10px;
+            display:none;
+        }
+
+        @media (max-width:760px){
+            .page-with-subbar{ grid-template-columns:1fr; }
+            .page-main{ padding:14px; }
+            .row{ grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('write')}"></div>
+
+        <main class="page-main">
+            <section class="card">
+                <div class="row">
+                    <div class="k">받는 사람</div>
+                    <div>
+                        <input id="receivers" class="input" type="text" placeholder="사번을 콤마로 구분 (예: E000001,E000002)">
+                        <div class="help">※ 현재 API는 receiverEmpIds 배열을 받습니다. 여기서는 콤마로 입력받아 배열로 변환해 전송합니다.</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="k">제목</div>
+                    <div>
+                        <input id="title" class="input" type="text" placeholder="제목 입력">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="k">내용(JSON)</div>
+                    <div>
+                        <textarea id="cntt" class="textarea" placeholder='여기에 JSON 문자열을 넣거나 임시로 텍스트를 넣어도 됩니다.'></textarea>
+                        <div class="help">※ cnttJson은 JSON 컬럼이라, 최종적으로는 Tiptap JSON을 문자열로 보내는 형태를 권장합니다.</div>
+                    </div>
+                </div>
+
+                <div id="err" class="err"></div>
+
+                <div class="actions">
+                    <button class="btn ghost" type="button" onclick="history.back()">취소</button>
+                    <button class="btn" type="button" id="btnSend">전송</button>
+                </div>
+            </section>
+
+            <script>
+                function getMeEmpId(){ return document.getElementById('me')?.dataset?.empNo?.trim() || ''; }
+
+                function getCsrfHeaders(){
+                    const csrfParamEl = document.getElementById('csrfParam');
+                    const csrfHeaderEl = document.getElementById('csrfHeader');
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
+
+                function showErr(msg){
+                    const el = document.getElementById('err');
+                    el.style.display = msg ? 'block' : 'none';
+                    el.textContent = msg || '';
+                }
+
+                function parseReceivers(raw){
+                    return (raw || '')
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                }
+
+                document.getElementById('btnSend').addEventListener('click', async () => {
+                    showErr('');
+
+                    const me = getMeEmpId();
+                    if(!me) return showErr('로그인 사용자(empId)를 찾을 수 없습니다.');
+
+                    const receivers = parseReceivers(document.getElementById('receivers').value);
+                    const title = (document.getElementById('title').value || '').trim();
+                    const cnttJson = (document.getElementById('cntt').value || '').trim();
+
+                    if (!receivers.length) return showErr('받는 사람을 1명 이상 입력하세요.');
+                    if (!title) return showErr('제목을 입력하세요.');
+                    if (!cnttJson) return showErr('내용을 입력하세요.');
+
+                    const body = { title, cnttJson, receiverEmpIds: receivers };
+
+                    try{
+                        const res = await fetch(`/api/v1/mails?senderEmpId=${encodeURIComponent(me)}`, {
+                            method:'POST',
+                            credentials:'include',
+                            headers:{
+                                'Content-Type':'application/json',
+                                'Accept':'application/json',
+                                ...getCsrfHeaders()
+                            },
+                            body: JSON.stringify(body)
+                        });
+
+                        if(!res.ok){
+                            const t = await res.text().catch(()=> '');
+                            throw new Error(`전송 실패: HTTP ${res.status} ${t}`);
+                        }
+
+                        // 전송 성공 → 보낸메일함으로
+                        location.href = '/mail/sent';
+                    }catch(e){
+                        console.error(e);
+                        showErr('메일 전송에 실패했습니다. 콘솔 로그를 확인하세요.');
+                    }
+                });
+            </script>
+        </main>
+    </div>
+</div>
+</body>
+</html>

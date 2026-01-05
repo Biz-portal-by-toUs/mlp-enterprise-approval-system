@@ -66,6 +66,15 @@ public class MailController {
         return ResponseEntity.ok(mailService.getSent(senderEmpId, pageable));
     }
 
+    // 휴지통 조회
+    @GetMapping("/trash")
+    public ResponseEntity<Page<ResMailListDto>> trash(
+            @RequestParam("userEmpId") String userEmpId,
+            @PageableDefault(size = 20, sort = "deletedAt") Pageable pageable
+    ) {
+        return ResponseEntity.ok(mailService.getTrash(userEmpId, pageable));
+    }
+
     // 메일 상세 조회
     @GetMapping("/{mailId}")
     public ResponseEntity<ResMailDetailDto> detail(

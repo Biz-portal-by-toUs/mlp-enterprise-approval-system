@@ -91,6 +91,14 @@ public class MailServiceImpl implements MailService{
                 ));
     }
 
+    //휴지통 조회
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResMailListDto> getTrash(String userEmpId, Pageable pageable) {
+        return mailUserStateRepository.findTrash(userEmpId, pageable)
+                .map(this::toListDto);
+    }
+
     // 상세 조회
     @Override
     @Transactional(readOnly = true)
