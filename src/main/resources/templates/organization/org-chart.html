@@ -127,6 +127,18 @@
             color:#374151;
             white-space:nowrap;
         }
+        /* ✅ 출장 = 초록 */
+        .emp-card .atte-tag.trip{
+            border-color: rgba(16,185,129,.30);
+            background: rgba(16,185,129,.10);
+            color: #047857;
+        }
+        /* ✅ 휴가 = 빨강 */
+        .emp-card .atte-tag.vac{
+            border-color: rgba(239,68,68,.28);
+            background: rgba(239,68,68,.10);
+            color: #b91c1c;
+        }
 
         .emp-card .row2{margin-top:4px; font-size:12px; color:#6b7280; display:flex; gap:8px; flex-wrap:wrap;}
         .emp-card .actions{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;}
@@ -194,7 +206,7 @@
                 const res = await fetch(url, {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' },
-                    credentials: 'include' // ✅ httpOnly Cookie
+                    credentials: 'include'
                 });
 
                 if (!res.ok) {
@@ -230,11 +242,20 @@
                 dropdown.classList.add('show');
             }
 
-            // ✅ 근태 코드 -> 표시 텍스트
-            function atteLabel(code) {
+            // ✅ 근태: "자세히 보기"에는 출근/출장/휴가 모두 보여야 함
+            function atteLabelFull(code) {
                 const c = (code ?? 'C').toString().trim().toUpperCase();
-                const map = { B: '출장 중', V: '휴가 중', C: '출근' };
-                return map[c] ?? '출근';
+                if (c === 'B') return '출장';
+                if (c === 'V') return '휴가';
+                return '출근';
+            }
+
+            // ✅ 배지: 출장/휴가만 표시 (출근은 배지 없음)
+            function atteBadge(code){
+                const c = (code ?? 'C').toString().trim().toUpperCase();
+                if (c === 'B') return { text:'출장', cls:'trip' };
+                if (c === 'V') return { text:'휴가', cls:'vac' };
+                return null;
             }
 
             // ================================
@@ -245,8 +266,8 @@
                 preview: (attachmentId) => `/api/v1/attachments/${attachmentId}/preview-url`
             };
 
-            const photoCache = new Map();      // empNo -> url|null
-            const photoPromise = new Map();    // empNo -> Promise(url|null)
+            const photoCache = new Map();
+            const photoPromise = new Map();
 
             function pickFirstAttachmentId(listItem) {
                 if (!listItem) return null;
@@ -350,17 +371,17 @@
 
                 const chips = [];
                 chips.push(`
-          <button class="chip ${activeDepId ? '' : 'active'}" data-dep-id="">
-            전체 <span class="count">${total}</span>
-          </button>
-        `);
+                  <button class="chip ${activeDepId ? '' : 'active'}" data-dep-id="">
+                    전체 <span class="count">${total}</span>
+                  </button>
+                `);
 
                 deps.forEach(d => {
                     chips.push(`
-            <button class="chip ${activeDepId === d.depId ? 'active' : ''}" data-dep-id="${escapeHtml(d.depId)}">
-              ${escapeHtml(d.depName)} <span class="count">${d.empCount ?? 0}</span>
-            </button>
-          `);
+                      <button class="chip ${activeDepId === d.depId ? 'active' : ''}" data-dep-id="${escapeHtml(d.depId)}">
+                        ${escapeHtml(d.depName)} <span class="count">${d.empCount ?? 0}</span>
+                      </button>
+                    `);
                 });
 
                 deptFilter.innerHTML = chips.join('');
@@ -393,64 +414,69 @@
                         const empNo = emp.empNo;
                         const extraId = `extra-${empId}`;
 
-                        const atteText = atteLabel(emp.atte); // ✅ 여기서 변환
+                        const badge = atteBadge(emp.atte);                 // ✅ 출장/휴가만
+                        const atteTextFull = atteLabelFull(emp.atte);      // ✅ 자세히 보기용(항상)
+
+                        const badgeHtml = badge
+                            ? `<div class="atte-tag ${escapeHtml(badge.cls)}">${escapeHtml(badge.text)}</div>`
+                            : ``;
 
                         return `
-              <div class="emp-card" id="emp-${escapeHtml(empId)}" data-emp-id="${escapeHtml(empId)}" data-dep-id="${escapeHtml(dep.depId)}">
-                <div class="avatar emp-avatar" data-emp-no="${empNo ?? ''}" data-emp-name="${escapeHtml(emp.empName)}">
-                  ${escapeHtml(initials(emp.empName))}
-                </div>
+                          <div class="emp-card" id="emp-${escapeHtml(empId)}" data-emp-id="${escapeHtml(empId)}" data-dep-id="${escapeHtml(dep.depId)}">
+                            <div class="avatar emp-avatar" data-emp-no="${empNo ?? ''}" data-emp-name="${escapeHtml(emp.empName)}">
+                              ${escapeHtml(initials(emp.empName))}
+                            </div>
 
-                <div class="info">
-                  <div class="row1">
-                    <div class="name">${escapeHtml(emp.empName)}</div>
+                            <div class="info">
+                              <div class="row1">
+                                <div class="name">${escapeHtml(emp.empName)}</div>
 
-                    <!-- ✅ 우측 배지: 직급 + 근태 -->
-                    <div style="display:flex; gap:6px; align-items:center;">
-                      <div class="tag">${escapeHtml(emp.posName || '')}</div>
-                      <div class="atte-tag">${escapeHtml(atteText)}</div>
-                    </div>
-                  </div>
+                                <!-- ✅ 우측 배지: 직급 + (출장/휴가만) -->
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                  <div class="tag">${escapeHtml(emp.posName || '')}</div>
+                                  ${badgeHtml}
+                                </div>
+                              </div>
 
-                  <div class="row2">
-                    <span class="muted">${escapeHtml(dep.depName)}</span>
-                    <span class="muted">•</span>
-                    <span class="muted">사번 ${escapeHtml(emp.empId || '')}</span>
-                    <span class="muted">•</span>
-                    <span class="muted">근태 ${escapeHtml(atteText)}</span>
-                  </div>
+                              <!-- ✅ row2: 근태는 출근/출장/휴가 전부 표시 안 함 -->
+                              <div class="row2">
+                                <span class="muted">${escapeHtml(dep.depName)}</span>
+                                <span class="muted">•</span>
+                                <span class="muted">사번 ${escapeHtml(emp.empId || '')}</span>
+                              </div>
 
-                  <div class="actions">
-                    <button class="btn small primary" data-toggle="${escapeHtml(extraId)}" type="button">자세히 보기</button>
-                  </div>
+                              <div class="actions">
+                                <button class="btn small primary" data-toggle="${escapeHtml(extraId)}" type="button">자세히 보기</button>
+                              </div>
 
-                  <div class="emp-extra" id="${escapeHtml(extraId)}">
-                    <div>근태: <span class="muted">${escapeHtml(atteText)}</span></div>
-                    <div>사내번호: <span class="muted">${escapeHtml(emp.workPhone || '-')}</span></div>
-                    <div>메일: <span class="muted">${escapeHtml(emp.email || '-')}</span></div>
-                  </div>
-                </div>
-              </div>
-            `;
+                              <!-- ✅ 자세히 보기: 근태는 출근/출장/휴가 전부 표시 -->
+                              <div class="emp-extra" id="${escapeHtml(extraId)}">
+                                <div>근태: <span class="muted">${escapeHtml(atteTextFull)}</span></div>
+                                <div>사내번호: <span class="muted">${escapeHtml(emp.workPhone || '-')}</span></div>
+                                <div>메일: <span class="muted">${escapeHtml(emp.email || '-')}</span></div>
+                              </div>
+                            </div>
+                          </div>
+                        `;
                     }).join('');
 
                     return `
-            <div class="dept-card" id="dep-${escapeHtml(dep.depId)}">
-              <div class="dept-head" data-dep="${escapeHtml(dep.depId)}">
-                <div class="left">
-                  <div class="title">
-                    <div class="name">${escapeHtml(dep.depName)} <span class="muted">(${dep.empCount ?? 0})</span></div>
-                    <div class="sub">사원은 직급 순으로 정렬됩니다</div>
-                  </div>
-                </div>
-                <div class="arrow">${isOpen ? '▲ 접기' : '▼ 펼치기'}</div>
-              </div>
+                      <div class="dept-card" id="dep-${escapeHtml(dep.depId)}">
+                        <div class="dept-head" data-dep="${escapeHtml(dep.depId)}">
+                          <div class="left">
+                            <div class="title">
+                              <div class="name">${escapeHtml(dep.depName)} <span class="muted">(${dep.empCount ?? 0})</span></div>
+                              <div class="sub">사원은 직급 순으로 정렬됩니다</div>
+                            </div>
+                          </div>
+                          <div class="arrow">${isOpen ? '▲ 접기' : '▼ 펼치기'}</div>
+                        </div>
 
-              <div class="dept-body ${isOpen ? 'open' : ''}">
-                ${empCards ? `<div class="emp-grid">${empCards}</div>` : `<div class="muted" style="padding:6px 2px;">사원이 없습니다.</div>`}
-              </div>
-            </div>
-          `;
+                        <div class="dept-body ${isOpen ? 'open' : ''}">
+                          ${empCards ? `<div class="emp-grid">${empCards}</div>` : `<div class="muted" style="padding:6px 2px;">사원이 없습니다.</div>`}
+                        </div>
+                      </div>
+                    `;
                 });
 
                 orgContainer.innerHTML = parts.join('');
@@ -531,23 +557,20 @@
 
                     const html = rows.slice(0, 20).map(r => {
                         const empNo = r.empNo;
-                        // 검색 드롭다운에도 근태 표시하고 싶으면 아래 한 줄 추가 가능
-                        // const atteText = atteLabel(r.atte);
-
                         return `
-              <div class="item" data-emp-id="${escapeHtml(r.empId)}" data-dep-id="${escapeHtml(r.depId)}">
-                <div class="left">
-                  <div class="avatar emp-avatar" data-emp-no="${empNo ?? ''}" data-emp-name="${escapeHtml(r.empName)}">
-                    ${escapeHtml(initials(r.empName))}
-                  </div>
-                  <div class="meta">
-                    <div class="name">${escapeHtml(r.empName)} <span class="muted">(${escapeHtml(r.empId)})</span></div>
-                    <div class="sub">${escapeHtml(r.depName)} · ${escapeHtml(r.posName || '')}</div>
-                  </div>
-                </div>
-                <div class="hint">이동</div>
-              </div>
-            `;
+                          <div class="item" data-emp-id="${escapeHtml(r.empId)}" data-dep-id="${escapeHtml(r.depId)}">
+                            <div class="left">
+                              <div class="avatar emp-avatar" data-emp-no="${empNo ?? ''}" data-emp-name="${escapeHtml(r.empName)}">
+                                ${escapeHtml(initials(r.empName))}
+                              </div>
+                              <div class="meta">
+                                <div class="name">${escapeHtml(r.empName)} <span class="muted">(${escapeHtml(r.empId)})</span></div>
+                                <div class="sub">${escapeHtml(r.depName)} · ${escapeHtml(r.posName || '')}</div>
+                              </div>
+                            </div>
+                            <div class="hint">이동</div>
+                          </div>
+                        `;
                     }).join('');
 
                     showDropdown(html);
