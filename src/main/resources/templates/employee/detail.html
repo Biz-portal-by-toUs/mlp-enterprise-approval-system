@@ -10,94 +10,203 @@
 
     <th:block layout:fragment="pageStyles">
         <style>
-            .crumb{font-size:13px;color:var(--muted);font-weight:800;margin:2px 0 8px;}
-            .page-title{font-size:28px;font-weight:900;margin:0 0 6px;letter-spacing:-.2px;}
-            .page-sub{margin:0 0 16px;color:var(--muted);font-weight:700;}
+            /* ===== Layout / Container ===== */
+            .detail-wrap{
+                width:100%;
+                max-width: 1220px;            /* ✅ 더 넓게 */
+                margin: 0 auto;               /* ✅ 중앙 */
+                padding: 6px 26px 24px;
+            }
 
             .card{
-                width:min(980px, 100%);
-                background:#fff;
+                background: var(--white);
                 border:1px solid var(--line);
                 border-radius:18px;
                 box-shadow: var(--shadow2);
-                padding:18px;
-            }
-            .panel{
-                background:#f8fafc;
-                border:1px solid rgba(17,24,39,.06);
-                border-radius:18px;
-                padding:18px;
+                padding:22px;
             }
 
+            /* ===== Top header inside card ===== */
+            .card-head{
+                display:flex;
+                align-items:flex-start;
+                justify-content:space-between;
+                gap:14px;
+                margin-bottom:16px;
+            }
+            .head-left{
+                display:flex;
+                flex-direction:column;
+                gap:6px;
+                min-width:0;
+            }
+            .head-title{
+                font-size:18px;
+                font-weight:950;
+                letter-spacing:-.2px;
+                color:#111827;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+            }
+            .head-sub{
+                display:flex;
+                align-items:center;
+                gap:10px;
+                color:var(--muted);
+                font-weight:800;
+                font-size:13px;
+            }
+
+            /* ===== Actions (top-right) ===== */
+            .head-actions{
+                display:flex;
+                gap:10px;
+                flex-wrap:wrap;
+                justify-content:flex-end;
+            }
+            .btn{
+                height:36px;
+                min-width:96px;
+                padding:0 12px;
+                border:0;
+                border-radius:10px;
+                font-weight:900;
+                cursor:pointer;
+            }
+            /* 수정 버튼(연한 하늘 + 파란 글자) */
+            .btn.primary{
+                background: rgba(59,130,246,.10);
+                color: var(--primary2);
+                box-shadow: none;
+            }
+            .btn.primary:hover{
+                filter: none;
+                transform: translateY(-1px);
+            }
+            .btn.danger{
+                background: rgba(198,40,40,.10);
+                color:#c62828;
+            }
+
+            /* ===== Body Grid ===== */
             .detail-grid{
                 display:grid;
-                grid-template-columns: 260px 1fr;
-                gap:18px;
+                grid-template-columns: 240px 1fr; /* ✅ 더 컴팩트하게 */
+                gap:22px;
                 align-items:start;
             }
 
+            /* Photo */
             .photo-box{
-                width:220px;height:260px;border-radius:14px;background:#e5e7eb;
-                display:grid;place-items:center;color:#6b7280;font-weight:900;
-                margin:0 auto;
-                border:1px solid #d9dde5;
-                position:relative;
+                width:100%;
+                height:240px;
+                border-radius:16px;
+                background:#f3f4f6;
+                border:1px solid rgba(17,24,39,.08);
+                display:grid;
+                place-items:center;
                 overflow:hidden;
+                position:relative;
             }
-            .photo-box img{ width:100%;height:100%;object-fit:cover;display:none; }
-            .photo-placeholder{ position:absolute; inset:0; display:grid; place-items:center; }
+            .photo-box img{ width:100%; height:100%; object-fit:cover; display:none; }
+            .photo-placeholder{
+                position:absolute; inset:0;
+                display:grid; place-items:center;
+                font-weight:900; color:#9ca3af;
+            }
 
-            .section-title{
-                font-weight:950;font-size:14px;margin:0 0 10px;
-                display:flex;align-items:center;gap:10px;
+            /* Right content sections (2-column on wide screens) */
+            .right{
+                min-width:0;
             }
+            .blocks{
+                display:grid;
+                grid-template-columns: 1fr 1fr;   /* ✅ 화면 꽉 차게 쓰기 */
+                gap:14px;
+            }
+            .block{
+                border:1px solid rgba(17,24,39,.08);
+                border-radius:16px;
+                background:#fff;
+                padding:16px;
+            }
+            .block-title{
+                font-weight:950;
+                font-size:13px;
+                color:#111827;
+                margin:0 0 12px;
+                display:flex;
+                align-items:center;
+                gap:10px;
+            }
+
             .kv{
                 display:grid;
-                grid-template-columns: 160px 1fr;
-                row-gap:12px;
-                column-gap:18px;
-                padding:6px 0;
+                grid-template-columns: 140px 1fr;
+                row-gap:10px;
+                column-gap:14px;
             }
-            .k{color:#111;font-weight:900;}
-            .v{color:#334155;font-weight:800;}
-            .v.muted{color:var(--muted);font-weight:800;}
-            .divider{height:1px;background:rgba(17,24,39,.08);margin:14px 0}
+            .k{ color:#111827; font-weight:900; font-size:13px; }
+            .v{ color:#334155; font-weight:850; font-size:13px; }
+            .v.muted{ color:var(--muted); }
 
+            /* pill */
             .pill{
-                display:inline-flex;align-items:center;justify-content:center;
-                padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;
-                border:1px solid rgba(17,24,39,.08);background:#fff;color:#111;
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                padding:6px 10px;
+                border-radius:999px;
+                font-size:12px;
+                font-weight:900;
+                border:1px solid rgba(17,24,39,.08);
+                background:#fff;
+                color:#111;
             }
-            .pill.ok{background:#eafbf0;border-color:#bfe7c9;color:#0f6b2f}
-            .pill.danger{background:#fdecec;border-color:#ffd0cc;color:#b42318}
+            .pill.ok{ background:#eafbf0; border-color:#bfe7c9; color:#0f6b2f; }
+            .pill.danger{ background:#fdecec; border-color:#ffd0cc; color:#b42318; }
 
-            .actions{
-                display:flex;justify-content:flex-end;gap:10px;margin-top:16px;
+            /* Footer actions (optional) */
+            .actions-bottom{
+                display:flex;
+                justify-content:flex-end;
+                gap:10px;
+                margin-top:16px;
             }
-            .btn{
-                min-width:120px;height:42px;border-radius:12px;border:0;
-                font-weight:900;cursor:pointer;
-                padding:0 14px;
-            }
-            .btn.primary{background: rgba(59,130,246,.10); color: var(--primary2); border:1px solid rgba(59,130,246,.18)}
-            .btn.warn{background:#ffecec;color:#b42318;border:1px solid #ffd0cc}
 
+            /* toast */
             .toast{
-                position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
-                background:#111;color:#fff;padding:12px 14px;border-radius:12px;
-                font-weight:900;font-size:14px;box-shadow:0 14px 28px rgba(0,0,0,.18);
-                opacity:0;pointer-events:none;transition:opacity .18s ease, transform .18s ease;
+                position:fixed;
+                left:50%;
+                bottom:22px;
+                transform:translateX(-50%);
+                background:#111;
+                color:#fff;
+                padding:12px 14px;
+                border-radius:12px;
+                font-weight:900;
+                font-size:14px;
+                box-shadow:0 14px 28px rgba(0,0,0,.18);
+                opacity:0;
+                pointer-events:none;
+                transition:opacity .18s ease, transform .18s ease;
                 z-index:9999;
             }
-            .toast.show{opacity:1;transform:translateX(-50%) translateY(-2px)}
-            .toast.ok{background:#0f6b2f}
-            .toast.err{background:#c62828}
+            .toast.show{ opacity:1; transform:translateX(-50%) translateY(-2px); }
+            .toast.ok{ background:#0f6b2f; }
+            .toast.err{ background:#c62828; }
 
+            @media (max-width: 1100px){
+                .blocks{ grid-template-columns:1fr; }
+            }
             @media (max-width: 980px){
-                .detail-grid{grid-template-columns:1fr}
-                .kv{grid-template-columns:140px 1fr}
-                .photo-box{width:100%;height:220px}
-                .actions{justify-content:center}
+                .detail-wrap{ padding: 6px 16px 24px; }
+                .detail-grid{ grid-template-columns:1fr; }
+                .photo-box{ height:200px; }
+                .card-head{ flex-direction:column; align-items:stretch; }
+                .head-actions{ justify-content:flex-start; }
+                .actions-bottom{ justify-content:flex-start; }
             }
         </style>
     </th:block>
@@ -109,87 +218,109 @@
     <section class="page-with-subbar">
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('emp')}"></aside>
 
-        <div>
-            <div class="crumb">사원 관리(상세 조회)</div>
-            <div class="page-title">사원 관리</div>
-            <div class="page-sub">사원 상세 조회</div>
+        <!-- ✅ 중앙 + 넓게 -->
+        <div class="detail-wrap">
 
             <section class="card">
-                <div class="panel">
-                    <div class="detail-grid">
-                        <!-- Photo -->
-                        <div>
-                            <div class="photo-box">
-                                <img id="empPhoto" alt="사원 사진"/>
-                                <div class="photo-placeholder" id="photoPlaceholder">사진</div>
-                            </div>
+
+                <!-- ✅ 상단: 사원관리 글자 대신, 현재 사원 이름/사번만 간단히 -->
+                <div class="card-head">
+                    <div class="head-left">
+                        <div class="head-title" id="headName">사원 상세</div>
+                        <div class="head-sub">
+                            <span id="headEmpId">-</span>
+                            <span id="headStatus"></span>
+                        </div>
+                    </div>
+
+                    <div class="head-actions">
+                        <button class="btn primary" type="button" onclick="goEdit()">수정</button>
+                        <button class="btn danger" type="button" onclick="retireEmployee()">퇴사</button>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <!-- Photo -->
+                    <div>
+                        <div class="photo-box">
+                            <img id="empPhoto" alt="사원 사진"/>
+                            <div class="photo-placeholder" id="photoPlaceholder">사진</div>
+                        </div>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="right">
+                        <div class="blocks">
+
+                            <section class="block">
+                                <div class="block-title">기본 정보</div>
+                                <div class="kv">
+                                    <div class="k">이름</div><div class="v" id="empName">-</div>
+                                    <div class="k">사번</div><div class="v" id="empId">-</div>
+                                    <div class="k">성별</div><div class="v" id="gen">-</div>
+                                    <div class="k">권한(Role)</div><div class="v" id="role">-</div>
+                                    <div class="k">생년월일</div><div class="v" id="birth">-</div>
+                                    <div class="k">나이</div><div class="v" id="age">-</div>
+                                </div>
+                            </section>
+
+                            <section class="block">
+                                <div class="block-title">조직 정보</div>
+                                <div class="kv">
+                                    <div class="k">회사</div><div class="v" id="company">-</div>
+                                    <div class="k">회사코드</div><div class="v muted" id="comId">-</div>
+                                    <div class="k">부서</div><div class="v" id="department">-</div>
+                                    <div class="k">직급</div><div class="v" id="position">-</div>
+                                </div>
+                            </section>
+
+                            <section class="block">
+                                <div class="block-title">연락처</div>
+                                <div class="kv">
+                                    <div class="k">이메일</div><div class="v" id="email">-</div>
+                                    <div class="k">전화번호</div><div class="v" id="phone">-</div>
+                                    <div class="k">사내번호</div><div class="v" id="workPhone">-</div>
+                                    <div class="k">주소</div><div class="v" id="addr">-</div>
+                                </div>
+                            </section>
+
+                            <section class="block">
+                                <div class="block-title">상태</div>
+                                <div class="kv">
+                                    <div class="k">입사일</div><div class="v" id="hireDate">-</div>
+                                    <div class="k">퇴사일</div><div class="v" id="retDate">-</div>
+                                    <div class="k">재직 상태</div><div class="v" id="employmentStatus">-</div>
+                                    <div class="k">근태</div><div class="v" id="atte">-</div>
+                                    <div class="k">메신저 상태</div><div class="v" id="msgStat">-</div>
+                                </div>
+                            </section>
+
+                            <section class="block">
+                                <div class="block-title">대직자</div>
+                                <div class="kv">
+                                    <div class="k">대직자 사번</div><div class="v" id="delegateEmpId">-</div>
+                                    <div class="k">대직자 이름</div><div class="v" id="delegateName">-</div>
+                                </div>
+                            </section>
+
+                            <section class="block">
+                                <div class="block-title">시스템 정보</div>
+                                <div class="kv">
+                                    <div class="k">empNo</div><div class="v muted" id="empNo">-</div>
+                                    <div class="k">createdAt</div><div class="v muted" id="createdAt">-</div>
+                                    <div class="k">updatedAt</div><div class="v muted" id="updatedAt">-</div>
+                                </div>
+                            </section>
+
                         </div>
 
-                        <!-- Details -->
-                        <div>
-                            <div class="section-title">기본 정보</div>
-                            <div class="kv">
-                                <div class="k">이름</div><div class="v" id="empName">-</div>
-                                <div class="k">사번</div><div class="v" id="empId">-</div>
-                                <div class="k">성별</div><div class="v" id="gen">-</div>
-                                <div class="k">권한(Role)</div><div class="v" id="role">-</div>
-                                <div class="k">생년월일</div><div class="v" id="birth">-</div>
-                                <div class="k">나이</div><div class="v" id="age">-</div>
-                            </div>
-
-                            <div class="divider"></div>
-
-                            <div class="section-title">조직 정보</div>
-                            <div class="kv">
-                                <div class="k">회사</div><div class="v" id="company">-</div>
-                                <div class="k">회사코드</div><div class="v muted" id="comId">-</div>
-                                <div class="k">부서</div><div class="v" id="department">-</div>
-                                <div class="k">직급</div><div class="v" id="position">-</div>
-                            </div>
-
-                            <div class="divider"></div>
-
-                            <div class="section-title">연락처</div>
-                            <div class="kv">
-                                <div class="k">이메일</div><div class="v" id="email">-</div>
-                                <div class="k">전화번호</div><div class="v" id="phone">-</div>
-                                <div class="k">사내번호</div><div class="v" id="workPhone">-</div>
-                                <div class="k">주소</div><div class="v" id="addr">-</div>
-                            </div>
-
-                            <div class="divider"></div>
-
-                            <div class="section-title">상태</div>
-                            <div class="kv">
-                                <div class="k">입사일</div><div class="v" id="hireDate">-</div>
-                                <div class="k">퇴사일</div><div class="v" id="retDate">-</div>
-                                <div class="k">재직 상태</div><div class="v" id="employmentStatus">-</div>
-                                <div class="k">근태(atte)</div><div class="v" id="atte">-</div>
-                                <div class="k">메신저 상태(msgStat)</div><div class="v" id="msgStat">-</div>
-                            </div>
-
-                            <div class="divider"></div>
-
-                            <div class="section-title">대직자</div>
-                            <div class="kv">
-                                <div class="k">대직자 사번</div><div class="v" id="delegateEmpId">-</div>
-                                <div class="k">대직자 이름</div><div class="v" id="delegateName">-</div>
-                            </div>
-
-                            <div class="divider"></div>
-
-                            <div class="section-title">시스템 정보</div>
-                            <div class="kv">
-                                <div class="k">empNo</div><div class="v muted" id="empNo">-</div>
-                                <div class="k">createdAt</div><div class="v muted" id="createdAt">-</div>
-                                <div class="k">updatedAt</div><div class="v muted" id="updatedAt">-</div>
-                            </div>
-
-                            <div class="actions">
-                                <button class="btn primary" type="button" onclick="goEdit()">수정</button>
-                                <button class="btn warn" type="button" onclick="retireEmployee()">퇴사</button>
-                            </div>
+                        <!-- (원하면 유지) 하단 버튼도 필요하면 살려둬 -->
+                        <!--
+                        <div class="actions-bottom">
+                            <button class="btn primary" type="button" onclick="goEdit()">수정</button>
+                            <button class="btn danger" type="button" onclick="retireEmployee()">퇴사</button>
                         </div>
+                        -->
                     </div>
                 </div>
             </section>
@@ -269,6 +400,14 @@
             pill.className = "pill " + (isDeleted ? "danger" : "ok");
             pill.textContent = isDeleted ? "퇴사" : "재직";
             el.appendChild(pill);
+
+            // ✅ 상단 헤더에도 표시
+            const head = document.getElementById("headStatus");
+            if(head){
+                head.innerHTML = "";
+                const p2 = pill.cloneNode(true);
+                head.appendChild(p2);
+            }
         }
 
         function unwrap(maybe){
@@ -399,6 +538,12 @@
 
             setText("createdAt", fmtDateTime(d.createdAt));
             setText("updatedAt", fmtDateTime(d.updatedAt));
+
+            // ✅ 상단 헤더에 이름/사번도 표시
+            const hn = document.getElementById("headName");
+            const hi = document.getElementById("headEmpId");
+            if(hn) hn.textContent = `${safe(d.empName)} 님`;
+            if(hi) hi.textContent = safe(d.empId);
 
             loadPhoto().catch(console.error);
         }

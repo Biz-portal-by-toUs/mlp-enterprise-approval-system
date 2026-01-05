@@ -199,6 +199,8 @@
             height:100%;
             padding:6px 8px 6px 10px;
             color:#0f172a;
+            --bpBg: rgba(59,130,246,0.12);
+            --bpColor: #3b82f6;
             background: var(--bpBg);
             box-shadow: inset 4px 0 0 var(--bpColor);
             overflow:hidden;
@@ -214,6 +216,11 @@
         .bp-evt-time{ display:none; }
 
         /* +n more 링크 */
+        /* FullCalendar 내부 스크롤 영역 */
+        #calendar .fc-scroller-harness,
+        #calendar .fc-scroller{
+            overflow: auto !important;
+        }
         #calendar .fc-daygrid-day-frame{ position:relative; }
         #calendar .fc-daygrid .fc-more-link,
         #calendar .fc-daygrid .fc-daygrid-more-link{
@@ -490,7 +497,7 @@
             color:#1f3b7a;
             display:flex; align-items:center; gap:8px;
         }
-        .todo-title .badge{
+        .todo-title .todo-title-badge{
             width:10px; height:10px; border-radius:999px;
             background:#334155;
             display:inline-block;
@@ -680,7 +687,7 @@
                 <div class="todo-top">
                     <div>
                         <div class="todo-title">
-                            <span class="badge"></span>
+                            <span class="todo-title-badge"></span>
                             <span>ToDo List</span>
                         </div>
                         <div class="todo-count" id="todoCountLabel">0개</div>
@@ -1750,6 +1757,29 @@
         /* =========================
            API helpers (calendar)
         ========================= */
+
+        function assertWorkHours(payload){
+            if (payload.allDay) return;
+
+            const startStr = payload.startAt;
+            const endStr   = payload.endedAt;
+            if (!startStr || !endStr) throw new Error("시작/종료 시간이 비어있어요.");
+
+            const start = new Date(startStr);
+            const end   = new Date(endStr);
+
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+                throw new Error("날짜/시간 형식이 올바르지 않아요.");
+            }
+
+            // ✅ 날짜 넘어가도 OK (단, 종료는 시작보다 뒤여야 함)
+            if (end.getTime() <= start.getTime()) {
+                throw new Error("종료 시간이 시작 시간보다 빠르거나 같아요.");
+            }
+
+
+        }
+
         async function apiGetItems({ scope, view, baseDate, weekStart }){
             const params = new URLSearchParams();
             params.set('scope', scope);
@@ -1768,6 +1798,7 @@
         }
 
         async function apiCreate(payload){
+            assertWorkHours(payload);
             const res = await fetch(API_BASE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1790,6 +1821,7 @@
         }
 
         async function apiUpdate(schNo, payload){
+            assertWorkHours(payload);
             const res = await fetch(API_UPDATE(schNo), {
                 method:'PATCH',
                 headers:{ 'Content-Type':'application/json' },
@@ -1889,13 +1921,24 @@
         }
 
         function buildMainCalendar(){
+
+
             mainCalendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                 initialView: 'timeGridWeek',
                 nowIndicator: true,
                 selectable: true,
                 selectMirror: true,
                 firstDay: (weekStart === 'SUNDAY') ? 0 : 1,
-                height: 'auto',
+
+
+
+                // ✅ 높이 고정 + 내부 스크롤
+                height: 1240,          // 여기 숫자를 "08~22가 딱 좋았던 높이"로 맞춰
+                expandRows: true,     // 행 높이를 꽉 채우지 않게 도움
+                handleWindowResize: true,
+
+                // ✅ 처음 열릴 때 스크롤 위치만 08:00으로
+                scrollTime: "08:00:00",
 
                 events: fetchEvents,
 
@@ -1904,11 +1947,15 @@
                 eventMaxStack: 2,
                 allDayMaxEventRows: false,
 
-                datesSet: function(){
-                    updateTitles();
-                },
+                datesSet: function(){ updateTitles(); },
 
                 select: function(selInfo){
+                    // 혹시라도 방어 (selectAllow로 이미 걸러짐)
+                    if (!overlapsWorkHours(selInfo.start, selInfo.end, selInfo.allDay)) {
+                        mainCalendar.unselect();
+                        return;
+                    }
+
                     const anchorRect = rectFromMouseEvent(selInfo.jsEvent);
 
                     if (selInfo.allDay){
@@ -1936,24 +1983,30 @@
 
                 dateClick: function(info){
                     const anchorRect = rectFromMouseEvent(info.jsEvent);
+
                     if (info.allDay){
                         const d = toDateKey(info.date);
                         openCreate({ anchorRect, center:false, prefill:{ allDay:true, startDate:d, endDate:d, scope:'PERSONAL' } });
-                    }else{
-                        const start = new Date(info.date);
-                        const end = new Date(start);
-                        end.setMinutes(end.getMinutes() + 30);
-                        openCreate({
-                            anchorRect,
-                            center:false,
-                            prefill:{
-                                allDay:false,
-                                startAt: toDatetimeLocalValue(start),
-                                endedAt: toDatetimeLocalValue(end),
-                                scope:'PERSONAL'
-                            }
-                        });
+                        return;
                     }
+
+                    // 30분 기본 생성도 "겹치기만 하면 OK"
+                    const start = new Date(info.date);
+                    const end = new Date(start);
+                    end.setMinutes(end.getMinutes() + 30);
+
+                    if (!overlapsWorkHours(start, end, false)) return;
+
+                    openCreate({
+                        anchorRect,
+                        center:false,
+                        prefill:{
+                            allDay:false,
+                            startAt: toDatetimeLocalValue(start),
+                            endedAt: toDatetimeLocalValue(end),
+                            scope:'PERSONAL'
+                        }
+                    });
                 },
 
                 eventClick: function(arg){
@@ -1964,20 +2017,17 @@
 
                 moreLinkClick: function(info){
                     info.jsEvent?.preventDefault?.();
-
                     const anchorRect =
                         info.moreEl?.getBoundingClientRect?.() ||
                         info.dayEl?.getBoundingClientRect?.() ||
                         rectFromMouseEvent(info.jsEvent);
 
                     const segs = info.allSegs || info.hiddenSegs || info.segs || [];
-
                     const items = segs.map(seg => {
                         const ev = seg.event;
                         const ext = ev.extendedProps || {};
                         const scope = ext.scope || 'PERSONAL';
                         const color = ext.color || scopeColor(scope);
-
                         return {
                             ...ext,
                             title: ev.title,
@@ -1989,13 +2039,7 @@
                     });
 
                     const t = info.allDay ? '' : (' ' + pad(info.date.getHours()) + ':' + pad(info.date.getMinutes()));
-
-                    openMore({
-                        anchorRect,
-                        title: toDateKey(info.date) + t + ' 일정',
-                        items
-                    });
-
+                    openMore({ anchorRect, title: toDateKey(info.date) + t + ' 일정', items });
                     return 'none';
                 },
 
@@ -2003,13 +2047,8 @@
                     const ext = arg.event.extendedProps || {};
                     const bar = (ext.color || scopeColor(ext.scope));
                     const bg  = hexToRgba(bar, 0.14);
-
                     const title = (arg.event.title || '');
-                    return {
-                        html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};">
-                          <div class="bp-evt-title">${title}</div>
-                        </div>`
-                    };
+                    return { html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};"><div class="bp-evt-title">${title}</div></div>` };
                 },
 
                 eventDidMount: function(arg){
