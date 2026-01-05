@@ -87,10 +87,10 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long notiNo, String empId) {
         Notifications notification = notificationsRepository.findById(notiNo)
-                .orElseThrow(() -> new IllegalArgumentException("해당 알림이 존재하지 않습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!notification.getReceiver().getEmpId().equals(empId)) {
-            throw new IllegalStateException("알림 읽음 권한이 없습니다.");
+            throw new CustomException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
         }
 
         notification.markAsRead();
@@ -118,6 +118,15 @@ public class NotificationService {
     }
 
 
+    @Transactional
+    public void deleteNotification(String username, Long notiNo) {
+        Notifications notification = notificationsRepository.findById(notiNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
+        if (!notification.getReceiver().getEmpId().equals(username)) {
+            throw new CustomException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
+        }
 
+        notificationsRepository.delete(notification);
+    }
 }
