@@ -129,7 +129,7 @@ public class AuthService {
 
         companyRepository.save(company);
 
-//        사원 등록
+        // 사원 등록
         Department defaultDept = departmentRepository.save(
                 Department.of(company, "ADM", "관리부")
         );
