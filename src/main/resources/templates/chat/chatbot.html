@@ -10,7 +10,6 @@
             --primary-color: #4f46e5;
             --primary-hover: #4338ca;
             --bg-main: #f9fafb;
-            --bg-card: #ffffff;
             --text-main: #111827;
             --text-muted: #6b7280;
             --border-color: #e5e7eb;
@@ -63,21 +62,6 @@
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; }
         .status-dot.on { background: #10b981; box-shadow: 0 0 8px #10b981; }
 
-        /* 토글 버튼 스타일 */
-        .history-toggle-btn {
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background: white;
-            color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .history-toggle-btn:hover { background: #f3f4f6; border-color: #bbb; }
-        .history-toggle-btn.active { background: #e0e7ff; color: var(--primary-color); border-color: var(--primary-color); }
-
         .msgs {
             flex: 1;
             overflow-y: auto;
@@ -86,23 +70,6 @@
             flex-direction: column;
             gap: 24px;
             scroll-behavior: smooth;
-        }
-
-        /* 이전 대화 컨테이너 (토글 대상) */
-        #historyArea {
-            display: none; /* 기본 숨김 */
-            flex-direction: column;
-            gap: 24px;
-            padding-bottom: 24px;
-            border-bottom: 1px dashed var(--border-color);
-        }
-
-        /* 구분선 스타일 */
-        .history-divider {
-            text-align: center;
-            font-size: 12px;
-            color: #9ca3af;
-            margin: 10px 0;
         }
 
         .msg-group {
@@ -143,7 +110,7 @@
             background: linear-gradient(135deg, #f5f7ff 0%, #ffffff 100%);
             border: 1px solid #e0e7ff;
             color: var(--primary-color);
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .time-info { font-size: 11px; color: var(--text-muted); margin-top: 6px; display: block; }
@@ -177,21 +144,16 @@
                 <h1>사내 규정 어시스턴트</h1>
                 <div class="status-area">
                     <span id="connDot" class="status-dot"></span>
-                    <span id="statusText">연결 확인 중...</span>
+                    <span id="statusText">연결 대기 중</span>
                 </div>
             </div>
         </div>
         <div class="actions">
-            <button id="historyToggleBtn" class="history-toggle-btn" onclick="toggleHistory()">이전 대화 보기</button>
+            <button style="border:none; background:none; color:var(--text-muted); font-size:12px; cursor:pointer;" onclick="location.reload()">새로고침</button>
         </div>
     </div>
 
     <div class="msgs" id="messages">
-        <div id="guideArea"></div>
-
-        <div id="historyArea"></div>
-
-        <div id="currentArea"></div>
     </div>
 
     <div class="bottom-area">
@@ -203,23 +165,53 @@
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:#9ca3af; padding: 0 4px;">
             <span id="byteInfo">0 / 61440 bytes</span>
-            <span>AI는 실수를 할 수 있으니 중요 정보는 다시 확인하세요.</span>
+            <span>대화 맥락은 세션 동안 유지됩니다.</span>
         </div>
     </div>
 </div>
 
 <script>
-    function authHeaders() { return { 'Content-Type': 'application/json' }; }
+    /**
+     * 세션 ID 관리 (sessionStorage 사용)
+     * 탭을 닫거나 새로고침하면 초기화되어 '초기 진입' 상태를 만듭니다.
+     */
+    function getSessionId() {
+        // 1. 우선 URL 주소창에서 sessionId가 있는지 확인합니다.
+        const urlParams = new URLSearchParams(window.location.search);
+        let sessionId = urlParams.get('sessionId');
+
+        // 2. 만약 URL에 없다면(직접 접속 등), 현재 창의 sessionStorage를 확인합니다.
+        if (!sessionId) {
+            sessionId = sessionStorage.getItem("CHAT_SESSION_ID");
+        }
+
+        // 3. 둘 다 없으면 최후의 수단으로 새로 생성합니다.
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+        }
+
+        // 4. 가져온 ID를 현재 창의 세션스토리지에 저장하여 새로고침 시에도 유지되게 합니다.
+        sessionStorage.setItem("CHAT_SESSION_ID", sessionId);
+        return sessionId;
+    }
+
+    function authHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'X-Session-Id': getSessionId()
+        };
+    }
+
     function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
     function linkify(text) { return text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" style="color:inherit; font-weight:600;">${url}</a>`); }
     function nowTime() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 
     const msgDomMap = new Map();
 
-    // 메시지 추가 위치를 지정할 수 있도록 수정
-    function appendBubble({ role, senderLabel, content, messageId, createdAt, targetId = "currentArea" }) {
-        const box = document.getElementById(targetId);
+    function appendBubble({ role, senderLabel, content, messageId, createdAt }) {
+        const box = document.getElementById("messages");
         const group = document.createElement("div");
+
         const isGuide = senderLabel === "시스템 가이드";
         group.className = (role === "USER") ? "msg-group me" : (isGuide ? "msg-group bot guide" : "msg-group bot");
 
@@ -245,28 +237,11 @@
             msgDomMap.set(messageId, { bubbleEl: group.querySelector(".bubble"), timeEl: group.querySelector(".time-info") });
         }
 
-        const msgsContainer = document.getElementById("messages");
-        msgsContainer.scrollTop = msgsContainer.scrollHeight;
+        box.scrollTop = box.scrollHeight;
         return group;
     }
 
-    // [토글 기능] 이전 대화 보기/숨기기
-    function toggleHistory() {
-        const historyArea = document.getElementById("historyArea");
-        const btn = document.getElementById("historyToggleBtn");
-
-        if (historyArea.style.display === "none" || historyArea.style.display === "") {
-            historyArea.style.display = "flex";
-            btn.innerText = "이전 대화 숨기기";
-            btn.classList.add("active");
-        } else {
-            historyArea.style.display = "none";
-            btn.innerText = "이전 대화 보기";
-            btn.classList.remove("active");
-        }
-    }
-
-    // [1번 방식: 실시간 가이드] - 항상 최상단 guideArea에 렌더링
+    // [시스템 가이드] 탭 진입 시 최초 노출
     async function showDocumentGuide() {
         try {
             const res = await fetch("/api/v1/prov-documents/chatbot?size=100", { method: "GET", headers: authHeaders() });
@@ -274,33 +249,14 @@
             const raw = await res.json();
             const docs = raw?.data?.content ?? [];
             if (docs.length > 0) {
-                document.getElementById("guideArea").innerHTML = ""; // 초기화
+                const listText = docs.map(d => `• ${d.docTitle}`).join("\n");
                 appendBubble({
                     role: "ASSISTANT",
                     senderLabel: "시스템 가이드",
-                    content: `반갑습니다! 현재 아래 규정들에 대해 답변이 가능합니다.\n\n${docs.map(d => `• ${d.docTitle}`).join("\n")}`,
-                    targetId: "guideArea"
+                    content: `안녕하세요! 😊 현재 아래 규정들에 대해 질문하실 수 있습니다.\n\n${listText}\n\n무엇이 궁금하신가요?`
                 });
             }
-        } catch (e) { console.error(e); }
-    }
-
-    // [이전 대화 로드] - historyArea에 렌더링
-    async function loadRecent() {
-        const res = await fetch("/api/v1/chatbot/messages?limit=50", { method: "GET", headers: authHeaders() });
-        const raw = await res.json();
-        const msgs = (raw?.data ?? []).reverse();
-
-        const historyArea = document.getElementById("historyArea");
-        historyArea.innerHTML = `<div class="history-divider">여기까지 이전 대화 내용입니다</div>`;
-
-        msgs.forEach(m => appendBubble({
-            role: m.role,
-            content: m.content,
-            messageId: m.id,
-            createdAt: m.createdAt,
-            targetId: "historyArea"
-        }));
+        } catch (e) { console.error("가이드 로드 실패:", e); }
     }
 
     async function sendQuestion() {
@@ -308,25 +264,34 @@
         const question = input.value.trim();
         if (!question) return;
 
-        appendBubble({ role: "USER", content: question, targetId: "currentArea" });
+        appendBubble({ role: "USER", content: question });
         input.value = "";
         input.style.height = "auto";
 
-        const res = await fetch("/api/v1/chatbot/messages", { method: "POST", headers: authHeaders(), body: JSON.stringify({ question }) });
-        const raw = await res.json();
-        if(raw.data?.assistantMessageId) {
-            msgDomMap.set(raw.data.assistantMessageId, { bubbleEl: appendBubble({role:"ASSISTANT", messageId:raw.data.assistantMessageId, content:"", targetId: "currentArea"}).querySelector(".bubble") });
-        }
+        try {
+            const res = await fetch("/api/v1/chatbot/messages", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({ question })
+            });
+            const raw = await res.json();
+            if(raw.data?.assistantMessageId) {
+                // 답변을 위한 빈 버블 미리 생성
+                appendBubble({role:"ASSISTANT", messageId:raw.data.assistantMessageId, content:""});
+            }
+        } catch (e) { console.error("전송 오류:", e); }
     }
 
-    // SSE 및 연결 상태 처리 (생략 없이 포함)
     let es = null;
     function connectSse() {
-        es = new EventSource("/api/v1/chatbot/stream", { withCredentials: true });
+        const sId = getSessionId();
+        es = new EventSource(`/api/v1/chatbot/stream?sessionId=${sId}`, { withCredentials: true });
+
         es.addEventListener("connected", () => {
             document.getElementById("statusText").innerText = "온라인";
             document.getElementById("connDot").classList.add("on");
         });
+
         es.addEventListener("chunk", (e) => {
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
@@ -336,6 +301,7 @@
                 msgsContainer.scrollTop = msgsContainer.scrollHeight;
             }
         });
+
         es.addEventListener("done", (e) => {
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
@@ -345,16 +311,27 @@
 
     window.addEventListener("load", () => {
         connectSse();
-        showDocumentGuide(); // 1. 가이드 먼저 호출 (최상단)
-        loadRecent();        // 2. 기록 호출 (가이드 아래, 숨김 상태)
+        showDocumentGuide();
 
         const input = document.getElementById("messageInput");
+
+        // 자동 높이 조절 및 바이트 체크
         input.addEventListener("input", function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
             document.getElementById("byteInfo").innerText = `${new TextEncoder().encode(this.value).length} / 61440 bytes`;
         });
-        input.addEventListener("keydown", e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendQuestion(); } });
+
+        // [수정된 부분] 한글 입력 중복 방지 로직 (e.isComposing)
+        input.addEventListener("keydown", e => {
+            // 한글 조합 중일 때는 엔터 이벤트를 무시하여 중복 전송 방지
+            if (e.isComposing) return;
+
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendQuestion();
+            }
+        });
     });
 </script>
 </body>
