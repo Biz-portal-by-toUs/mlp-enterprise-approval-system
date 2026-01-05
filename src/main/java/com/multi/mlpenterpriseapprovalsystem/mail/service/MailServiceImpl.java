@@ -75,7 +75,7 @@ public class MailServiceImpl implements MailService {
                 .map(this::toListDto);
     }
 
-    // ✅ 보낸 메일함 (MailUserState 기반 + 수신인 receivers 포함)
+    // 보낸 메일함
     @Override
     @Transactional(readOnly = true)
     public Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable) {
@@ -96,12 +96,12 @@ public class MailServiceImpl implements MailService {
                             m.getSender().getEmpId(),
                             m.getSender().getEmpName(),
 
-                            receivers,                 // ✅ sent 화면용
+                            receivers,
                             MailRole.SENDER,
 
-                            true,                      // 발신자는 읽음 true 처리
+                            true,
                             Boolean.TRUE.equals(mus.getIsPrior()),
-                            mus.getDeletedAt(),         // sent에서도 삭제상태 보려면 여기 사용 가능
+                            mus.getDeletedAt(),
                             m.getCreatedAt()
                     );
                 });

@@ -34,7 +34,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
     // 특정 메일 전체 참여자 상태들 조회
     List<MailUserState> findAllByMail_MailId(String mailId);
 
-    // ✅ (추가) 보낸 메일함에서 "수신인 이름들"을 뽑기 위한 메서드
+    // 보낸 메일함에서 "수신인 이름들" 뽑기
     @Query("""
         select mus.user.empName
         from MailUserState mus
@@ -96,7 +96,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             Pageable pageable
     );
 
-    // ✅ 보낸 메일함 (Sent) - sender 이름도 필요해서 sender fetch
+    // 보낸 메일함 (Sent)
     @Query(
             value = """
                 select mus
