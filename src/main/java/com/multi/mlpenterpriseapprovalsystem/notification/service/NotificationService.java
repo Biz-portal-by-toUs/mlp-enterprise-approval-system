@@ -37,7 +37,7 @@ public class NotificationService {
     private final EmployeeRepository employeeRepository;
 
     @Transactional
-    public void sendNotification(Employee receiver, NotificationType type, String content, String title, String url) {
+    public void sendNotification(Employee receiver, NotificationType type, String title, String content, String url) {
         Notifications noti = Notifications.builder()
                 .receiver(receiver)
                 .company(receiver.getCompany())
