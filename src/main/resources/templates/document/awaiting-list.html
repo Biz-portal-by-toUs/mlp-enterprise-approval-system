@@ -422,7 +422,7 @@
                     <label>사원번호</label>
                     <input type="text" id="search-writerId" class="search-input" placeholder="사원번호 입력" maxlength="15">
                 </div>
-                <button class="btn-search" onclick="loadData(0)">검색</button>
+                <button class="btn-search" onclick="handleSearch()">검색</button>
             </div>
 
             <div class="sort-options">
@@ -477,10 +477,21 @@
         let currentPage = 0;
         let allCategories = [];
 
+        // ✅ 검색 버튼 클릭 시 확정된 필터값을 저장할 객체
+        let appliedSearchFilters = {
+            docfoCatName: '',
+            writerDepName: '',
+            myApprStat: '',
+            title: '',
+            writerName: '',
+            writerId: ''
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchDepartments();
             fetchCategoryNames();
             initCustomDropdown();
+            // 초기 로드
             loadData(0);
         });
 
@@ -554,6 +565,23 @@
             } catch (e) { console.error(e); }
         }
 
+        /**
+         * ✅ 검색 버튼 클릭 시 실행
+         */
+        function handleSearch() {
+            const catValue = document.getElementById('search-docfoCatName').value;
+
+            // 현재 입력창의 값들을 스냅샷으로 저장
+            appliedSearchFilters.docfoCatName = catValue === '전체' ? '' : catValue;
+            appliedSearchFilters.writerDepName = document.getElementById('search-writerDepName').value;
+            appliedSearchFilters.myApprStat = document.getElementById('search-myApprStat').value;
+            appliedSearchFilters.title = document.getElementById('search-title').value;
+            appliedSearchFilters.writerName = document.getElementById('search-writerName').value;
+            appliedSearchFilters.writerId = document.getElementById('search-writerId').value;
+
+            loadData(0);
+        }
+
         function changeSort(sort) {
             currentSort = sort;
             currentPage = 0;
@@ -564,16 +592,17 @@
 
         async function loadData(page) {
             currentPage = page;
-            const catValue = document.getElementById('search-docfoCatName').value;
+
+            // ✅ 입력창(DOM)이 아닌 appliedSearchFilters(저장된 값)를 사용
             const params = new URLSearchParams({
                 page: page,
                 sort: currentSort,
-                docfoCatName: catValue === '전체' ? '' : catValue,
-                writerDepName: document.getElementById('search-writerDepName').value,
-                myApprStat: document.getElementById('search-myApprStat').value,
-                title: document.getElementById('search-title').value,
-                writerName: document.getElementById('search-writerName').value,
-                writerId: document.getElementById('search-writerId').value
+                docfoCatName: appliedSearchFilters.docfoCatName,
+                writerDepName: appliedSearchFilters.writerDepName,
+                myApprStat: appliedSearchFilters.myApprStat,
+                title: appliedSearchFilters.title,
+                writerName: appliedSearchFilters.writerName,
+                writerId: appliedSearchFilters.writerId
             });
 
             try {
