@@ -233,7 +233,7 @@ public class ScheduleService {
 
             List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(employee.getDepartment().getDepNo());
             for(Employee emp : emps) {
-                notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "부서 일정이 수정 되었습니다.","/schedule/calendar");
+                notificationService.sendNotification(emp, NotificationType.CALENDER, "부서 일정", "\""+req.getTitle()+"\" 부서 일정이 수정 되었습니다.","/schedule/calendar");
             }
             return;
         }
@@ -250,7 +250,7 @@ public class ScheduleService {
 
             List<Employee> emps = employeeRepository.findAllByCompany_ComId(user.getComId());
             for(Employee emp : emps) {
-                notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "회사 일정이 수정 되었습니다.","/schedule/calendar");
+                notificationService.sendNotification(emp, NotificationType.CALENDER, "회사 일정", "\""+req.getTitle()+"\" 회사 일정이 수정 되었습니다.","/schedule/calendar");
             }
             return;
         }
@@ -338,7 +338,7 @@ public class ScheduleService {
 
         List<Employee> emps = employeeRepository.findAllByCompany_ComId(comId);
         for(Employee emp : emps) {
-            notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "회사 일정이 추가 되었습니다.","/schedule/calendar");
+            notificationService.sendNotification(emp, NotificationType.CALENDER, "회사 일정", "\""+req.getTitle()+"\" 회사 일정이 추가 되었습니다.","/schedule/calendar");
         }
 
 
@@ -376,7 +376,7 @@ public class ScheduleService {
 
         List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(department.getDepNo());
         for(Employee emp : emps) {
-            notificationService.sendNotification(emp, NotificationType.CALENDER, req.getTitle(), "부서 일정이 추가 되었습니다.","/schedule/calendar");
+            notificationService.sendNotification(emp, NotificationType.CALENDER, "부서 일정", "\""+req.getTitle()+"\" 부서 일정이 추가 되었습니다.","/schedule/calendar");
         }
 
         return ResScheduleDto.builder()
