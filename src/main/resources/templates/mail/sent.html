@@ -147,9 +147,15 @@
             cursor:pointer;
         }
 
-        th.col-no, td.col-no{ width:120px; }
+        /* ===== 칼럼 폭: 제목 최대로 ===== */
+        th.col-no, td.col-no{ width:90px; }
         th.col-date, td.col-date{ width:180px; }
+        th.col-recv, td.col-recv{ width:180px; } /* 수신인 고정폭 */
 
+        th.col-title-h{
+            text-align:left;
+            padding-left:20px;
+        }
         td.col-title{
             text-align:left !important;
             padding-left:20px !important;
@@ -209,6 +215,7 @@
             .page-main{ padding:14px; }
             .pager-status{ position:static; margin-left:10px; }
             th.col-date, td.col-date{ width:140px; }
+            th.col-recv, td.col-recv{ width:140px; }
         }
     </style>
 </head>
@@ -244,8 +251,8 @@
                     <thead>
                     <tr>
                         <th class="col-no">번호</th>
-                        <th>제목</th>
-                        <th>발신자</th>
+                        <th class="col-recv">수신인</th>
+                        <th class="col-title-h">제목</th>
                         <th class="col-date">발신일</th>
                     </tr>
                     </thead>
@@ -263,8 +270,6 @@
             </div>
 
             <script>
-                function getMeEmpId(){ return document.getElementById('me')?.dataset?.empNo?.trim() || ''; }
-
                 function fmtDate(iso){
                     if (!iso) return '-';
                     try{
@@ -303,7 +308,7 @@
                         return b;
                     };
 
-                    const current = page;
+                    const current = page; // 0-base
                     const last = Math.max(totalPages - 1, 0);
 
                     pager.appendChild(mkBtn('«', 0, current === 0, false));
@@ -358,15 +363,19 @@
                     items.forEach((it, idx) => {
                         const num = totalElements - (page * size) - idx;
                         const title = escapeHtml(it.title);
-                        const senderName = escapeHtml(it.senderEmpName);
-                        const senderId = escapeHtml(it.senderEmpId);
+
+                        // ✅ 백엔드에서 내려주는 수신인 표시 문자열(예: "홍길동, 김철수")
+                        const receivers = escapeHtml(it.receivers);
+
                         const createdAt = fmtDate(it.createdAt);
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td class="col-no">${num}</td>
-                            <td class="col-title"><a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a></td>
-                            <td>${senderName} (${senderId})</td>
+                            <td class="col-recv">${receivers || '-'}</td>
+                            <td class="col-title">
+                                <a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                            </td>
                             <td class="col-date">${createdAt}</td>
                         `;
                         tr.addEventListener('click', (e) => {
@@ -378,17 +387,12 @@
                 }
 
                 async function load(){
-                    const me = getMeEmpId();
-                    if(!me){
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="4" style="padding:18px; color:#ef4444; font-weight:900;">로그인 정보(empId)를 찾을 수 없습니다.</td></tr>`;
-                        return;
-                    }
-
                     const st = getState();
                     document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    const url = `/api/v1/mails/sent?senderEmpId=${encodeURIComponent(me)}&page=${st.page}&size=${st.size}&sort=createdAt,desc`;
+                    // ✅ 인증 기반 sent: senderEmpId 파라미터 제거
+                    const url = `/api/v1/mails/sent?page=${st.page}&size=${st.size}&sort=createdAt,desc`;
                     const data = await fetchJson(url);
 
                     const items = data.content || [];

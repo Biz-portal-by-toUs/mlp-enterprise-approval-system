@@ -63,10 +63,11 @@ public class MailController {
     // 보낸 메일함
     @GetMapping("/sent")
     public ResponseEntity<Page<ResMailListDto>> sent(
-            @RequestParam("senderEmpId") String senderEmpId,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(mailService.getSent(senderEmpId, pageable));
+        String empId = authentication.getName();
+        return ResponseEntity.ok(mailService.getSent(empId, pageable));
     }
 
     // 휴지통 조회

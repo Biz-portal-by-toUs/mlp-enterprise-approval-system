@@ -1,31 +1,33 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.service;
 
-import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.employee.repository.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.repository.*;
-import lombok.*;
-import org.springframework.data.domain.*;
-import org.springframework.stereotype.*;
-import org.springframework.transaction.annotation.*;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.mail.domain.Mail;
+import com.multi.mlpenterpriseapprovalsystem.mail.domain.MailUserState;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailListDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
+import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailRepository;
+import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailUserStateRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.*;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * Please explain the class!!!
- *
- * @author : 정종원
- * @filename : MailServiceImpl
- * @since : 2025-12-30 화요일
+ * MailService 구현체
  */
-
 @Service
 @RequiredArgsConstructor
-public class MailServiceImpl implements MailService{
+public class MailServiceImpl implements MailService {
+
     private final MailRepository mailRepository;
     private final MailUserStateRepository mailUserStateRepository;
     private final EmployeeRepository employeeRepository;
@@ -42,7 +44,7 @@ public class MailServiceImpl implements MailService{
         Mail mail = Mail.create(mailId, req.title(), req.cnttJson(), sender);
         Mail saved = mailRepository.save(mail);
 
-        // 발신자 상태 row (보낸 메일함/삭제 상태 관리용)
+        // 발신자 상태 row
         mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.SENDER));
 
         // 수신자 상태 rows
@@ -73,25 +75,39 @@ public class MailServiceImpl implements MailService{
                 .map(this::toListDto);
     }
 
-    // 보낸 메일함
+    // ✅ 보낸 메일함 (MailUserState 기반 + 수신인 receivers 포함)
     @Override
     @Transactional(readOnly = true)
     public Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable) {
-        return mailRepository.findSentMails(senderEmpId, pageable)
-                .map(m -> new ResMailListDto(
-                        m.getMailId(),
-                        m.getTitle(),
-                        m.getSender().getEmpId(),
-                        m.getSender().getEmpName(),
-                        MailRole.SENDER,
-                        true,          // 발신자는 읽음 true 처리
-                        false,
-                        null,          // sent 목록에서 deletedAt은 “발신자 userState”를 조회해야 정확
-                        m.getCreatedAt()
-                ));
+
+        // senderEmpId는 "보낸 사람(로그인 사용자)"의 empId
+        return mailUserStateRepository.findSent(senderEmpId, MailRole.SENDER, pageable)
+                .map(mus -> {
+                    Mail m = mus.getMail();
+
+                    // 수신인 이름들
+                    List<String> names = mailUserStateRepository.findRecipientNamesByMailId(m.getMailId());
+                    String receivers = (names == null || names.isEmpty()) ? "-" : String.join(", ", names);
+
+                    return new ResMailListDto(
+                            m.getMailId(),
+                            m.getTitle(),
+
+                            m.getSender().getEmpId(),
+                            m.getSender().getEmpName(),
+
+                            receivers,                 // ✅ sent 화면용
+                            MailRole.SENDER,
+
+                            true,                      // 발신자는 읽음 true 처리
+                            Boolean.TRUE.equals(mus.getIsPrior()),
+                            mus.getDeletedAt(),         // sent에서도 삭제상태 보려면 여기 사용 가능
+                            m.getCreatedAt()
+                    );
+                });
     }
 
-    //휴지통 조회
+    // 휴지통 조회
     @Override
     @Transactional(readOnly = true)
     public Page<ResMailListDto> getTrash(String userEmpId, Pageable pageable) {
@@ -114,7 +130,7 @@ public class MailServiceImpl implements MailService{
                 mail.getTitle(),
                 mail.getCntt(),
                 mail.getSender().getEmpId(),
-                mail.getSender().getEmpName(), // Employee 필드명 맞춰서 수정
+                mail.getSender().getEmpName(),
                 mus.getRole(),
                 Boolean.TRUE.equals(mus.getIsRead()),
                 Boolean.TRUE.equals(mus.getIsPrior()),
@@ -164,14 +180,17 @@ public class MailServiceImpl implements MailService{
         mailUserStateRepository.delete(mus);
     }
 
-    // Mapper
+    // Mapper (inbox/trash 공용)
     private ResMailListDto toListDto(MailUserState mus) {
         Mail m = mus.getMail();
         return new ResMailListDto(
                 m.getMailId(),
                 m.getTitle(),
+
                 m.getSender().getEmpId(),
-                m.getSender().getEmpName(), // Employee 필드명 맞춰서 수정
+                m.getSender().getEmpName(),
+
+                null, // ✅ inbox/trash에서는 사용 안 하면 null로
                 mus.getRole(),
                 Boolean.TRUE.equals(mus.getIsRead()),
                 Boolean.TRUE.equals(mus.getIsPrior()),
