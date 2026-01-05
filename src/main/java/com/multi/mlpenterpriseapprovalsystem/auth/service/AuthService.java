@@ -17,9 +17,16 @@ import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepositor
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.document_form.form.repository.DocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqAdminEmployeeCreateDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResAdminEmployeeCreateDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.repository.PositionsRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.CompanySubscriptionRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.SubscriptionRepository;
@@ -31,6 +38,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 
 /**
  * 회원가입, 로그인, 로그아웃 부분 서비스
@@ -55,6 +64,9 @@ public class AuthService {
     private final BusinessVerificationService businessVerificationService;
     private final EmployeeRepository employeeRepository;
     private final CompanySubscriptionRepository companySubscriptionRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionsRepository positionsRepository;
+    private final EmployeeService employeeService;
 
     private static final String DEFAULT_PASSWORD = "1234";
     private final DocumentRepository documentRepository;
@@ -71,7 +83,7 @@ public class AuthService {
         return true;
     }
 
-    public ResponseDto<Void> signUpCompany(ReqCompanySignupDto reqCompanySignupDto, MultipartFile logo) {
+    public ResponseDto<ResAdminEmployeeCreateDto> signUpCompany(ReqCompanySignupDto reqCompanySignupDto, MultipartFile logo) {
 
 
         // 1) 이메일 중복 체크
@@ -116,6 +128,33 @@ public class AuthService {
         );
 
         companyRepository.save(company);
+
+//        사원 등록
+        Department defaultDept = departmentRepository.save(
+                Department.of(company, "ADM", "관리부")
+        );
+        Positions defaultPos = positionsRepository.save(
+                Positions.of(company, "회사 관리자", 1)
+        );
+
+        ReqAdminEmployeeCreateDto adminReq = new ReqAdminEmployeeCreateDto();
+        adminReq.setDepNo(defaultDept.getDepNo());
+        adminReq.setPosNo(defaultPos.getPosNo());
+
+        adminReq.setEmpName(company.getComName()); // ✅ 자동
+        adminReq.setEmail(company.getEmail());               // ✅ DTO에서 가져옴
+        adminReq.setPhone("01000000000");                    // ✅ 기본값(임시)
+        adminReq.setWorkPhone("0000");                         // ✅ 없으면 null
+        adminReq.setGen(null);                               // ✅ 없으면 null (컬럼 nullable이어야)
+        adminReq.setHireDate(LocalDate.now());               // ✅ 오늘 날짜로 자동
+        adminReq.setRole(RoleType.COM_ADMIN);
+        adminReq.setAddr(company.getAddr());                 // ✅ DTO에서 가져옴
+        adminReq.setObjectKey(null);
+        adminReq.setBirth(null);
+
+        ResAdminEmployeeCreateDto createEmployee = employeeService.createEmployee(company.getComId(), adminReq);
+
+
 
 // todo: COM_ADMIN사원 만들면 문서양식 작성자에 넣고 주석풀기
 //        // 회사 요금제 정보 등록
@@ -229,7 +268,7 @@ public class AuthService {
 //        documentFormCategoryRepository.save(newDocFormCat10);
 //        documentFormCategoryRepository.save(newDocFormCat11);
         
-        return new ResponseDto<>(HttpStatus.CREATED, "회사 회원가입 성공", null);
+        return new ResponseDto<>(HttpStatus.CREATED, "회사 회원가입 성공", createEmployee);
     }
 
     public ResTokenDto loginCompany(ReqCompanyLoginDto reqCompanyLoginDto, HttpServletResponse response) {
@@ -251,8 +290,10 @@ public class AuthService {
 
     public ResTokenDto loginEmployee(ReqEmployeeLoginDto reqEmployeeLoginDto, HttpServletResponse response) {
 
+        String empId = normalizeEmpId(reqEmployeeLoginDto.getEmpId());
+
         // 1) 회사 사용자 조회 (CompanyUserDetailService가 CustomUser를 반환하도록 구현)
-        CustomUser user = employeeUserDetailService.loadUserByUsername(reqEmployeeLoginDto.getEmpId());
+        CustomUser user = employeeUserDetailService.loadUserByUsername(empId);
 
         log.info("username>>>>>>>>>>>>>>>>>>>> " + user.getUsername());
 
@@ -277,6 +318,11 @@ public class AuthService {
         return res.toBuilder()
                 .mustChangePassword(mustChange)
                 .build();
+    }
+
+    private String normalizeEmpId(String empId) {
+        if (empId == null) return null;
+        return empId.trim().toUpperCase();
     }
 
 
