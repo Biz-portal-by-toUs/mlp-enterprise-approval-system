@@ -63,6 +63,27 @@ public class MeetingController {
                 .body(new ResponseDto<>(HttpStatus.OK, "회의 목록 조회 성공", res));
     }
 
+    @GetMapping("/trash")
+    public ResponseEntity<ResponseDto<ResMeetingListDto>> deletedMeetingList(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(name = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @PageableDefault(size = 10, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        // 현재 로그인한 사용자의 ID 추출
+        String empId = user.getUsername();
+
+        // 서비스에서 삭제된 회의 목록만 가져오는 메서드 호출
+        ResMeetingListDto res = meetingService.getDeletedMeetingList(
+                empId, keyword, fromDate, toDate, pageable
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "휴지통 목록 조회 성공", res));
+    }
+
     // 회의 상세 조회
     @GetMapping("/{meetNo}")
     public ResponseEntity<ResponseDto<ResMeetingDetailDto>> meetingDetail(
@@ -115,6 +136,39 @@ public class MeetingController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "회의 삭제 성공", deletedMeetNo));
     }
+
+    // ✅ (추가) 회의 영구 삭제 (물리 삭제)
+    @DeleteMapping("/{meetNo}/hard")
+    public ResponseEntity<ResponseDto<Long>> hardDeleteMeeting(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+
+        // 서비스에서 실제 DB 삭제 로직 호출
+        Long deletedMeetNo = meetingService.hardDeleteMeeting(empId, meetNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의 영구 삭제 성공", deletedMeetNo));
+    }
+
+    // ✅ (추가) 휴지통 회의 복구 (isDeleted = false로 변경)
+    @PatchMapping("/{meetNo}/restore")
+    public ResponseEntity<ResponseDto<Long>> restoreMeeting(
+            @PathVariable(name = "meetNo") Long meetNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+
+        // 서비스에서 복구 로직 호출
+        Long restoredMeetNo = meetingService.restoreMeeting(empId, meetNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "회의 복구 성공", restoredMeetNo));
+    }
+
 
     // =========================================================
     // ✅ (추가1) 프론트 -> AI 처리 요청
