@@ -134,4 +134,7 @@ public class Meeting extends BaseEntity {
         this.sttText = sttText;
     }
 
+    public void setDeleted(boolean b) {
+        this.isDeleted = b;
+    }
 }
