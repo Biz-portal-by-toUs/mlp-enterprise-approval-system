@@ -15,8 +15,8 @@
     const elSize = document.getElementById('size');
     const elThSelect = document.getElementById('thSelect');
 
-    const btnDeleteSelected = document.getElementById('btnDeleteSelected');
-    const btnCreate = document.getElementById('btnNew');
+    const btnDeleteSelected = document.getElementById('btnDeleteSelected'); // th:if로 없을 수도 있음
+    const btnCreate = document.getElementById('btnNew');                    // th:if로 없을 수도 있음
     const btnSearch = document.getElementById('btnSearch');
 
     const elCountPill = document.getElementById('countPill');
@@ -26,51 +26,20 @@
         return;
     }
 
-    // ===== role (JWT -> html.class) =====
-    function parseJwtPayload(token) {
-        try {
-            const t = token.replace(/^Bearer\s+/i, '');
-            const base64 = t.split('.')[1];
-            if (!base64) return null;
-            const json = decodeURIComponent(
-                atob(base64.replace(/-/g, '+').replace(/_/g, '/'))
-                    .split('')
-                    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                    .join('')
-            );
-            return JSON.parse(json);
-        } catch (_) {
-            return null;
-        }
-    }
-
-    function getUserRoleFromToken() {
-        const token = (localStorage.getItem('accessToken') || '').trim();
-        const p = parseJwtPayload(token) || {};
-        const role =
-            p.role ||
-            p.auth ||
-            (Array.isArray(p.authorities) ? p.authorities[0] : null) ||
-            (Array.isArray(p.roles) ? p.roles[0] : null) ||
-            '';
-        return String(role).replace(/^ROLE_/, '');
-    }
-
-    // 서버에서 th:classappend로 role-employee를 이미 넣었다면 이건 중복돼도 OK
-    (function ensureRoleClass() {
-        const r = getUserRoleFromToken();
-        if (r === 'EMPLOYEE') document.documentElement.classList.add('role-employee');
-    })();
+    // ===== 서버에서 내려준 플래그 읽기 (html dataset) =====
+    // html 태그에 th:attr로 data-* 내려줬음
+    const root = document.documentElement;
+    const PERM = {
+        isEmployee: (root.dataset.isEmployee === 'true'),
+        canCreate: (root.dataset.canCreate === 'true'),
+        canBulkDelete: (root.dataset.canBulkDelete === 'true'),
+        canApprove: (root.dataset.canApprove === 'true'),
+        canUseTemp: (root.dataset.canUseTemp === 'true'),
+    };
 
     function isEmployee() {
-        return document.documentElement.classList.contains('role-employee');
+        return PERM.isEmployee;
     }
-
-    // ===== state =====
-    const selected = new Set();
-    let page = 0;
-    let totalPages = 1;
-    let totalElements = 0;
 
     // ===== util =====
     function esc(s) {
@@ -86,12 +55,18 @@
         try { localStorage.setItem('list:dirty', 'true'); } catch (_) {}
     }
 
-    function getAccessToken() {
-        return (localStorage.getItem('accessToken') || '').trim();
+    // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
+    async function refreshAccessTokenIfPossible() {
+        // AuthController에 이미 있음: POST /auth/refresh
+        const res = await fetch('/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        });
+        return res.ok;
     }
 
-    async function apiFetch(url, options = {}) {
-        const token = getAccessToken();
+    async function apiFetch(url, options = {}, _retried = false) {
         const headers = new Headers(options.headers || {});
         if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
@@ -100,9 +75,21 @@
             headers.set('Content-Type', 'application/json');
         }
 
-        if (token) headers.set('Authorization', /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`);
+        const res = await fetch(url, {
+            ...options,
+            headers,
+            credentials: 'same-origin', // ✅ 같은 origin이면 쿠키(JWT) 자동 포함
+        });
 
-        return fetch(url, { ...options, headers, credentials: 'same-origin' });
+        // 만료 등으로 401이면 refresh 시도 후 1회 재시도
+        if (res.status === 401 && !_retried) {
+            const ok = await refreshAccessTokenIfPossible().catch(() => false);
+            if (ok) {
+                return apiFetch(url, options, true);
+            }
+        }
+
+        return res;
     }
 
     function normalizePage(data) {
@@ -130,6 +117,12 @@
         return { items: [], page: 0, size: Number(elSize.value || 15), totalPages: 1, totalElements: 0 };
     }
 
+    // ===== state =====
+    const selected = new Set();
+    let page = 0;
+    let totalPages = 1;
+    let totalElements = 0;
+
     function buildUrl(statsCsvOrNull) {
         const params = new URLSearchParams();
         params.set('page', String(page));
@@ -137,17 +130,12 @@
 
         const q = (elQ.value || '').trim();
         if (q) {
-            // 서버가 어떤 파라미터를 보든 잡히게 “다 넣기”
             params.set('q', q);
             params.set('docfoName', q);
             params.set('keyword', q);
         }
 
         if (statsCsvOrNull) {
-            // Spring에서 List 파라미터 받는 방식에 따라
-            // 1) stat=A&stat=X 형태가 제일 안전하지만
-            // 너 코드에선 params.set('stat', ...)로 이미 쓰고 있어서 유지.
-            // (만약 서버에서 List로 못 받으면 아래를 stat 반복으로 바꿔줘야 함)
             params.set('stat', statsCsvOrNull);
             params.set('docfoStat', statsCsvOrNull);
         }
@@ -178,9 +166,11 @@
     }
 
     function updateBulkDeleteUI() {
+        // th:if로 버튼이 없을 수도 있음
         if (!btnDeleteSelected) return;
 
-        if (isEmployee()) {
+        // 서버 플래그 기준
+        if (!PERM.canBulkDelete || isEmployee()) {
             btnDeleteSelected.style.display = 'none';
             btnDeleteSelected.disabled = true;
             return;
@@ -201,19 +191,18 @@
 
         const size = Number(elSize.value || 15);
         const employee = isEmployee();
+        const showCheckbox = PERM.canBulkDelete && !employee;
 
         elTbody.innerHTML = rows.map((r, idx) => {
             const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
             const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
             const idStr = String(docfoNo ?? '');
 
-            // ✅ “오름차순 번호” (페이지 기준)
+            // “오름차순 번호”(페이지 기준)
             const rowNo = (page * size) + idx + 1;
 
-            // ✅ Employee면 체크박스 DOM 자체 생성 안 함
-            const firstCol = employee
-                ? `<span>${rowNo}</span>`
-                : `
+            const firstCol = showCheckbox
+                ? `
           <label class="selWrap">
             <input type="checkbox"
                    data-role="rowCheck"
@@ -221,7 +210,8 @@
                    ${selected.has(idStr) ? 'checked' : ''}/>
             <span>${rowNo}</span>
           </label>
-        `;
+        `
+                : `<span>${rowNo}</span>`;
 
             return `
         <tr>
@@ -241,7 +231,7 @@
     function renderPager() {
         elPager.innerHTML = "";
 
-        const tp = Math.max(1, Number(totalPages) || 1); // ✅ 최소 1
+        const tp = Math.max(1, Number(totalPages) || 1);
         const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
         const blockSize = 5;
@@ -265,12 +255,9 @@
         };
 
         elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
-
-        // ✅ tp=1이어도 1 버튼 생성됨
         for (let i = startPage; i <= endPage; i++) {
             elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
         }
-
         elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
@@ -282,6 +269,18 @@
             const statsCsv = ONLY_APPROVED ? APPROVED_STATS.join(',') : null;
 
             const res = await apiFetch(buildUrl(statsCsv), { method: 'GET' });
+
+            // 401/403 처리
+            if (res.status === 401) {
+                // refresh까지 실패한 상태
+                elTbody.innerHTML = `<tr><td colspan="2" class="muted">로그인이 만료되었습니다. 다시 로그인 해주세요.</td></tr>`;
+                return;
+            }
+            if (res.status === 403) {
+                elTbody.innerHTML = `<tr><td colspan="2" class="muted">권한이 없습니다.</td></tr>`;
+                return;
+            }
+
             if (!res.ok) {
                 const t = await res.text().catch(() => '');
                 throw new Error(`HTTP ${res.status} ${t}`);
@@ -307,17 +306,14 @@
     }
 
     // ===== events =====
-    // row click: link open
     elTbody.addEventListener('click', (e) => {
         const a = e.target.closest('a[data-open]');
         if (a) {
-            const id = a.getAttribute('data-open');
-            openDetail(id);
+            openDetail(a.getAttribute('data-open'));
             return;
         }
     });
 
-    // checkbox select
     elTbody.addEventListener('change', (e) => {
         const cb = e.target;
         if (!(cb instanceof HTMLInputElement)) return;
@@ -333,7 +329,7 @@
     });
 
     async function softDelete(docfoNo) {
-        // 1) status patch(D) 시도
+        // 서버가 이 API를 막으면 403이 떨어질 것(정상)
         const patchRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
             method: 'PATCH',
             body: JSON.stringify({ docfoStat: 'D' }),
@@ -341,7 +337,7 @@
 
         if (patchRes.ok) return true;
 
-        // 2) fallback DELETE
+        // status API가 역할상 막혀있을 수 있으니 fallback DELETE(삭제요청)
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
             const t = await delRes.text().catch(() => '');
@@ -351,7 +347,8 @@
     }
 
     btnDeleteSelected?.addEventListener('click', async () => {
-        if (isEmployee()) { alert('권한이 없습니다.'); return; }
+        // 서버 플래그 기준으로 1차 차단(보안은 서버가 최종)
+        if (!PERM.canBulkDelete || isEmployee()) { alert('권한이 없습니다.'); return; }
         if (selected.size === 0) return;
 
         const ids = Array.from(selected);
@@ -375,7 +372,7 @@
     });
 
     btnCreate?.addEventListener('click', () => {
-        if (isEmployee()) { alert('권한이 없습니다.'); return; }
+        if (!PERM.canCreate || isEmployee()) { alert('권한이 없습니다.'); return; }
 
         window.open(
             `${VIEW_BASE}/new`,
@@ -412,9 +409,10 @@
         }
     });
 
-    // init: Employee면 버튼 숨김 + 헤더 텍스트 변경
-    if (isEmployee() && btnCreate) btnCreate.style.display = 'none';
-    updateBulkDeleteUI();
-    updateHeaderLabel();
-    load();
+    // init
+    (function init() {
+        updateBulkDeleteUI();
+        updateHeaderLabel();
+        load();
+    })();
 })();

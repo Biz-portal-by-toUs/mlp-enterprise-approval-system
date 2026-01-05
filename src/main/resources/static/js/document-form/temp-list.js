@@ -14,6 +14,29 @@
     let totalPages = 1;
     let totalElements = 0;
 
+    // ===============================
+    // role (layout에서 class가 내려온다는 가정)
+    // ===============================
+    function hasRoleClass(name) {
+        const html = document.documentElement?.classList;
+        const body = document.body?.classList;
+        return (html && html.contains(name)) || (body && body.contains(name));
+    }
+
+    function isEmployee() {
+        return hasRoleClass('role-employee') || hasRoleClass('role-EMPLOYEE');
+    }
+
+    // ✅ 정책: 임시저장은 직원 접근 불가라면 유지 (원하면 이 블록 지워도 됨)
+    if (isEmployee()) {
+        alert('권한이 없습니다. (임시저장 문서양식은 관리자만 접근 가능합니다.)');
+        location.replace('/form/forms');
+        return;
+    }
+
+    // ===============================
+    // utils
+    // ===============================
     function esc(s) {
         return String(s ?? '')
             .replaceAll('&', '&amp;')
@@ -21,25 +44,6 @@
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#39;');
-    }
-
-    function getAccessToken() {
-        return (localStorage.getItem('accessToken') || '').trim();
-    }
-
-    async function apiFetch(url, options = {}) {
-        const token = getAccessToken();
-        const headers = new Headers(options.headers || {});
-        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
-
-        const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-        if (options.body && !isFormData && !headers.has('Content-Type')) {
-            headers.set('Content-Type', 'application/json');
-        }
-
-        if (token) headers.set('Authorization', /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`);
-
-        return fetch(url, { ...options, headers, credentials: 'same-origin' });
     }
 
     function openDetail(docfoNo) {
@@ -52,6 +56,39 @@
         );
     }
 
+    // ===============================
+    // ✅ cookie 기반 fetch + refresh retry (detail-form.js와 동일 패턴)
+    // ===============================
+    async function refreshAccessTokenIfPossible() {
+        const res = await fetch('/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+        return res.ok;
+    }
+
+    async function apiFetch(url, options = {}, _retried = false) {
+        const headers = new Headers(options.headers || {});
+        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
+        const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+        if (options.body && !isFormData && !headers.has('Content-Type')) {
+            headers.set('Content-Type', 'application/json');
+        }
+
+        const res = await fetch(url, { ...options, headers, credentials: 'same-origin' });
+
+        if (res.status === 401 && !_retried) {
+            const ok = await refreshAccessTokenIfPossible().catch(() => false);
+            if (ok) return apiFetch(url, options, true);
+        }
+        return res;
+    }
+
+    // ===============================
+    // response normalize
+    // ===============================
     function normalizePage(data) {
         if (data && Array.isArray(data.content)) {
             return {
@@ -92,6 +129,9 @@
         return `${API_BASE}?${params.toString()}`;
     }
 
+    // ===============================
+    // render
+    // ===============================
     function render(rows) {
         if (!elTbody) return;
 
@@ -102,30 +142,32 @@
 
         const size = Number(elSize?.value || 15);
 
-        elTbody.innerHTML = rows.map((r, idx) => {
-            const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
-            const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
+        elTbody.innerHTML = rows
+            .map((r, idx) => {
+                const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
+                const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
 
-            const idStr = String(docfoNo ?? '');
-            const rowNo = (page * size) + idx + 1;
+                const idStr = String(docfoNo ?? '');
+                const rowNo = page * size + idx + 1;
 
-            return `
-        <tr>
-          <td class="col-no">${rowNo}</td>
-          <td class="col-title">
-            <a class="titleLink" href="javascript:void(0)" onclick="window.openDetail('${esc(idStr)}')">
-              ${esc(docfoName)}
-            </a>
-          </td>
-        </tr>
-      `;
-        }).join('');
+                return `
+          <tr>
+            <td class="col-no">${rowNo}</td>
+            <td class="col-title">
+              <a class="titleLink" href="javascript:void(0)" onclick="window.openDetail('${esc(idStr)}')">
+                ${esc(docfoName)}
+              </a>
+            </td>
+          </tr>
+        `;
+            })
+            .join('');
     }
 
     function renderPager() {
         if (!elPager) return;
 
-        elPager.innerHTML = "";
+        elPager.innerHTML = '';
 
         const tp = Math.max(1, Number(totalPages) || 1);
         const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
@@ -137,8 +179,8 @@
         if (endPage > tp - 1) endPage = tp - 1;
 
         const createBtn = (txt, target, active = false, disabled = false) => {
-            const b = document.createElement("button");
-            b.className = `pageBtn ${active ? "active" : ""}`;
+            const b = document.createElement('button');
+            b.className = `pageBtn ${active ? 'active' : ''}`;
             b.textContent = txt;
             b.disabled = disabled;
             b.onclick = () => {
@@ -148,15 +190,18 @@
             return b;
         };
 
-        elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
+        elPager.appendChild(createBtn('<', cur - 1, false, cur <= 0));
 
         for (let i = startPage; i <= endPage; i++) {
             elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
         }
 
-        elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
+        elPager.appendChild(createBtn('>', cur + 1, false, cur >= tp - 1));
     }
 
+    // ===============================
+    // load
+    // ===============================
     async function load() {
         if (!elTbody) return;
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
@@ -186,6 +231,9 @@
         }
     }
 
+    // ===============================
+    // events
+    // ===============================
     btnSearch?.addEventListener('click', () => {
         page = 0;
         load();
@@ -203,6 +251,7 @@
         load();
     });
 
+    // expose
     window.openDetail = openDetail;
 
     load();

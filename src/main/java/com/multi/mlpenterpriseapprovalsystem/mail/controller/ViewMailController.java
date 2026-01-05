@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.mail.controller;
 
 import lombok.*;
 import org.springframework.stereotype.*;
+import org.springframework.ui.*;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -27,7 +28,7 @@ public class ViewMailController {
     @GetMapping("/received")
     public String received() {
         // templates/mail/received.html
-        return "received";
+        return "mail/received";
     }
 
     // 보낸 메일함
@@ -53,7 +54,8 @@ public class ViewMailController {
 
     // 상세
     @GetMapping("/{mailId}")
-    public String detail(@PathVariable String mailId) {
+    public String detail(@PathVariable String mailId, Model model) {
+        model.addAttribute("mailId", mailId);
         return "mail/detail";
     }
 }

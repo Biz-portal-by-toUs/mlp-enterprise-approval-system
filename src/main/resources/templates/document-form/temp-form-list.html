@@ -2,7 +2,14 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}">
+      layout:decorate="~{layout}"
+      th:classappend="
+        ${#authorization.expression('hasRole(''EMPLOYEE'')')} ? ' role-employee' : ''
+        + (${#authorization.expression('hasRole(''THR_ADMIN'')')} ? ' role-thr-admin' : '')
+        + (${#authorization.expression('hasRole(''SEC_ADMIN'')')} ? ' role-sec-admin' : '')
+        + (${#authorization.expression('hasRole(''COM_ADMIN'')')} ? ' role-com-admin' : '')
+        + (${#authorization.expression('hasRole(''SYS_ADMIN'')')} ? ' role-sys-admin' : '')
+      ">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -217,11 +224,9 @@
 <body>
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <!-- 서브 사이드바: temp 메뉴가 있다면 'temp'로 바꿔서 active 처리 -->
         <div th:replace="~{sidebar/form-sidebar :: formSidebar('temp')}"></div>
 
         <main class="page-main">
-
             <div class="toolbar">
                 <div class="toolbar-left">
                     <select id="size" class="select">
@@ -236,8 +241,6 @@
 
                     <button class="btn ghost" id="btnSearch">조회</button>
                 </div>
-
-                <!-- ✅ 오른쪽 액션 버튼 영역 제거 -->
             </div>
 
             <section class="tableWrap">
@@ -256,14 +259,8 @@
                 <div id="pagerControls" class="pager"></div>
 
                 <div class="pager-status">
-                    <span id="countPill"
-                          style="font-size:14px; font-weight:600; color:var(--primary)">
-                        0건
-                    </span>
-                    <span id="pageInfo"
-                          style="font-size:13px; color:var(--mut)">
-                        page 1 / 1
-                    </span>
+                    <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
                 </div>
             </div>
 
