@@ -1113,3 +1113,9 @@ ALTER TABLE folder
     ADD INDEX idx_folder_deleted (scope, dep_no, owner_id, deleted_at),
     ADD INDEX idx_folder_batch (delete_batch_id);
 -- 여기까지 해주기
+
+# 사원 추가 변경
+ALTER TABLE employee
+    MODIFY COLUMN msg_stat CHAR(1) NOT NULL DEFAULT 'H',
+    MODIFY COLUMN gen VARCHAR(1) NULL,
+    MODIFY COLUMN birth DATE NULL;

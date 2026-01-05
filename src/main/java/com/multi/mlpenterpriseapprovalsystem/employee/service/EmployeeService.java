@@ -117,7 +117,13 @@ public class EmployeeService {
         LocalDate now = LocalDate.now();
 
         int updated = employeeRepository.retireEmployee(comId, empNo, now);
-        if (updated == 1) return; // 정상적으로 퇴사 처리됨
+        Company company = companyRepository.findByComIdForUpdate(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        if (updated == 1) {
+            company.decreaseEmpCnt();
+            return; // 정상적으로 퇴사 처리됨
+        }
 
         // updated==0 이면: (1) 사원이 없음 or (2) 이미 퇴사 상태
         Employee e = employeeRepository.findByEmpNoAndCompany_ComId(empNo, comId)
@@ -130,6 +136,8 @@ public class EmployeeService {
 
         // 이론상 여기까지 잘 안 옴(동시성 등). 그래도 안전빵:
         throw new CustomException(ErrorCode.EMPLOYEE_ALREADY_RETIRED);
+
+
     }
 
     public ResAdminEmployeeCreateDto createEmployee(String comId, ReqAdminEmployeeCreateDto req) {
@@ -168,6 +176,8 @@ public class EmployeeService {
                         req.getBirth()
                 )
         );
+
+        company.increaseEmpCnt();
 
         return new ResAdminEmployeeCreateDto(saved.getEmpNo(), saved.getEmpId(), "1234");
     }

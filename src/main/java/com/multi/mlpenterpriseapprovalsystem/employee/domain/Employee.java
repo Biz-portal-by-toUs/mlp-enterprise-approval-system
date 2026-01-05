@@ -64,7 +64,7 @@ public class Employee extends BaseEntity {
     @Column(name = "work_phone", nullable = false, length = 10)
     private String workPhone;
 
-    @Column(nullable = false, length = 1)
+    @Column(length = 1)
     private String gen;
 
     @Column(name = "hire_date", nullable = false)
@@ -98,7 +98,7 @@ public class Employee extends BaseEntity {
     private String objectKey;
 
 
-    @Column(name = "birth", nullable = false)
+    @Column(name = "birth")
     private LocalDate birth;
 
     /**
