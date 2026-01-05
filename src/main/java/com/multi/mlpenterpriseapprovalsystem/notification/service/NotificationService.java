@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.sse.SseManager;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
@@ -36,7 +37,7 @@ public class NotificationService {
     private final EmployeeRepository employeeRepository;
 
     @Transactional
-    public void sendNotification(Employee receiver, NotificationType type, String content, String title, String url) {
+    public void sendNotification(Employee receiver, NotificationType type, String title, String content, String url) {
         Notifications noti = Notifications.builder()
                 .receiver(receiver)
                 .company(receiver.getCompany())
@@ -47,8 +48,12 @@ public class NotificationService {
                 .build();
         notificationsRepository.save(noti);
 
-
         long unreadCount = notificationsRepository.countByReceiver_EmpIdAndIsReadFalse(receiver.getEmpId());
+
+        if (receiver.getMsgStat()== MsgStat.FOCUS){
+            return;
+        }
+
 
         Map<String, Object> data = new HashMap<>();
         data.put("notification", NotificationResponseDto.fromEntity(noti));
