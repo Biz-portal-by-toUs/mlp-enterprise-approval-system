@@ -63,56 +63,48 @@ const InputField = Node.create({
 const API_BASE = '/api/v1/forms'
 const VIEW_BASE = '/form'
 
+// ===== perms from server (html data-*) =====
+function readPerms() {
+    const root = document.documentElement
+    const b = (v) => String(v).toLowerCase() === 'true'
+    return {
+        isEmployee: b(root.dataset.isEmployee),
+        canEdit: b(root.dataset.canEdit),
+        canDelete: b(root.dataset.canDelete),
+        canApprove: b(root.dataset.canApprove),
+    }
+}
+const PERM = readPerms()
+
 function markFormListDirty() {
     try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
 }
 
-function parseJwtPayload(token) {
-    try {
-        const t = token.replace(/^Bearer\s+/i, '')
-        const base64 = t.split('.')[1]
-        if (!base64) return null
-        const json = decodeURIComponent(
-            atob(base64.replace(/-/g, '+').replace(/_/g, '/'))
-                .split('')
-                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-        )
-        return JSON.parse(json)
-    } catch (_) {
-        return null
-    }
+// ✅ 쿠키 기반 fetch (Authorization/localStorage 사용 X)
+async function refreshAccessTokenIfPossible() {
+    // 너희 AuthController에 이미 /auth/refresh 있음
+    const res = await fetch('/auth/refresh', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+    })
+    return res.ok
 }
 
-function getUserRole() {
-    const token = (localStorage.getItem('accessToken') || '').trim()
-    const p = parseJwtPayload(token) || {}
-    const role =
-        p.role ||
-        p.auth ||
-        (Array.isArray(p.authorities) ? p.authorities[0] : null) ||
-        (Array.isArray(p.roles) ? p.roles[0] : null) ||
-        ''
-    return String(role).replace(/^ROLE_/, '')
-}
-
-const ROLE = getUserRole()
-
-function getAccessToken() {
-    return (localStorage.getItem('accessToken') || '').trim()
-}
-
-async function apiFetch(url, options = {}) {
-    const token = getAccessToken()
+async function apiFetch(url, options = {}, _retried = false) {
     const headers = new Headers(options.headers || {})
     if (!headers.has('Accept')) headers.set('Accept', 'application/json')
 
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
     if (options.body && !isFormData && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
 
-    if (token) headers.set('Authorization', /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`)
+    const res = await fetch(url, { ...options, headers, credentials: 'same-origin' })
 
-    return fetch(url, { ...options, headers, credentials: 'same-origin' })
+    if (res.status === 401 && !_retried) {
+        const ok = await refreshAccessTokenIfPossible().catch(() => false)
+        if (ok) return apiFetch(url, options, true)
+    }
+    return res
 }
 
 function mustEl(id) {
@@ -154,11 +146,11 @@ function getDocfoNo() {
     const last = pathParts[pathParts.length - 1]
     if (/^\d+$/.test(last)) return last
 
-    // 2) (예외) meta 주입값
+    // 2) meta 주입값
     const meta = document.querySelector('meta[name="template-id"]')
     if (meta?.content) return String(meta.content).trim()
 
-    // 3) (레거시) querystring
+    // 3) querystring
     const sp = new URLSearchParams(location.search)
     const q = sp.get('docfoNo')
     return q ? String(q).trim() : ''
@@ -166,25 +158,17 @@ function getDocfoNo() {
 
 function closeOrBack() {
     window.close()
-    setTimeout(() => {
-        if (!document.hidden) history.back()
-    }, 80)
+    setTimeout(() => { if (!document.hidden) history.back() }, 80)
 }
 
 const elTplTitle = mustEl('tplTitle')
 const elTplCats = mustEl('tplCats')
 const elTemplateMount = mustEl('templateMount')
 
-const elPresetLeftMount = mustEl('presetLeftMount')
-const elPresetRightMount = mustEl('presetRightMount')
-
 const btnApprove = mustEl('tplApproveBtn')
 const btnEdit = mustEl('tplEditBtn')
 const btnDelete = mustEl('tplDeleteBtn')
 const btnClose = mustEl('tplCloseBtn')
-
-const presetLeftTemplate = document.getElementById('presetLeftTemplate')
-const presetRightTemplate = document.getElementById('presetRightTemplate')
 
 const RichTextStyle = TextStyle.extend({
     addAttributes() {
@@ -211,24 +195,6 @@ const RichTextStyle = TextStyle.extend({
         }
     },
 })
-
-function mountPresetTables(detail) {
-    if (presetLeftTemplate?.content) {
-        elPresetLeftMount.innerHTML = ''
-        elPresetLeftMount.appendChild(presetLeftTemplate.content.cloneNode(true))
-
-        const tds = elPresetLeftMount.querySelectorAll('table td:last-child')
-        if (tds[0]) tds[0].textContent = safeText(detail.deptName ?? detail.writerDeptName ?? detail.departmentName, '-')
-        if (tds[1]) tds[1].textContent = safeText(detail.writerName ?? detail.writerId ?? detail.empName, '-')
-        if (tds[2]) tds[2].textContent = safeText(detail.docfoName, '-')
-        if (tds[3]) tds[3].textContent = safeText(detail.createdAt ?? detail.updatedAt ?? detail.createdDate, '-')
-    }
-
-    if (presetRightTemplate?.content) {
-        elPresetRightMount.innerHTML = ''
-        elPresetRightMount.appendChild(presetRightTemplate.content.cloneNode(true))
-    }
-}
 
 function renderCategories(detail) {
     const raw = Array.isArray(detail.categories)
@@ -311,6 +277,37 @@ async function deleteForm(docfoNo) {
     return true
 }
 
+// ===== UI perms apply =====
+function applyPermsUI({ stat }) {
+    // 1) 수정/삭제: 서버 perm 기준
+    if (!PERM.canEdit) {
+        btnEdit.style.display = 'none'
+        btnEdit.disabled = true
+    } else {
+        btnEdit.style.display = ''
+        btnEdit.disabled = false
+    }
+
+    if (!PERM.canDelete) {
+        btnDelete.style.display = 'none'
+        btnDelete.disabled = true
+    } else {
+        btnDelete.style.display = ''
+        btnDelete.disabled = false
+    }
+
+    // 2) 결재 버튼: (a) 서버 perm_canApprove AND (b) 상태 조건(너 기존 로직 유지)
+    // 기존 로직: stat === 'A' or 'X' 일 때만 결재 버튼 활성
+    const canApproveByStat = (stat === 'A' || stat === 'X')
+    const canApprove = PERM.canApprove && canApproveByStat
+
+    btnApprove.style.display = canApprove ? '' : 'none'
+    btnApprove.disabled = !canApprove
+    btnApprove.title = canApprove
+        ? ''
+        : (!PERM.canApprove ? '결재 권한이 없습니다.' : '승인된(A) 또는 (X) 상태에서만 결재할 수 있습니다.')
+}
+
 ;(async function main() {
     const docfoNo = getDocfoNo()
     if (!docfoNo) {
@@ -324,20 +321,14 @@ async function deleteForm(docfoNo) {
         const detail = await fetchDetail(docfoNo)
 
         const stat = String(detail.docfoStat ?? detail.stat ?? '').trim().toUpperCase()
-        const canApprove = (stat === 'A' || stat === 'X')
+        applyPermsUI({ stat })
 
-        // 기본은 숨김 → 조건 맞으면 표시
-        btnApprove.style.display = canApprove ? '' : 'none'
-        btnApprove.disabled = !canApprove
-        btnApprove.title = canApprove ? '' : '승인된(A) 또는 (X) 상태에서만 결재할 수 있습니다.'
-
+        // ===== 결재 버튼 동작(기존 그대로) =====
         btnApprove.addEventListener('click', () => {
-            if (!canApprove) return
+            if (btnApprove.disabled) return
 
             const targetUrl = `/documents/create?docfoNo=${encodeURIComponent(docfoNo)}`
-
             try {
-                // 팝업을 form-list에서 열었으면 opener가 존재함
                 if (window.opener && !window.opener.closed) {
                     window.opener.location.href = targetUrl
                     window.opener.focus?.()
@@ -347,13 +338,10 @@ async function deleteForm(docfoNo) {
             } catch (e) {
                 console.error('opener navigation failed:', e)
             }
-
-            // opener가 없거나 접근 불가한 경우(예외) fallback
             location.href = targetUrl
         })
 
         elTplTitle.textContent = safeText(detail.docfoName, '-')
-        mountPresetTables(detail)
         renderCategories(detail)
 
         const json = safeParseJsonMaybe(detail.cnttJson)
@@ -363,26 +351,16 @@ async function deleteForm(docfoNo) {
         bodyBox.className = 'tpl-bodyBox'
         elTemplateMount.appendChild(bodyBox)
 
-        console.log(document.getElementById('tplApproveBtn'))
-        console.log(document.getElementById('tplFooterRoot'))
         bootViewer(bodyBox, json)
 
-        // Employee면 수정/삭제 비활성화 (UI만 막지 말고 서버 권한도 꼭 막아야 안전)
-        const isEmployee = (ROLE === 'EMPLOYEE')
-        if (isEmployee) {
-            btnEdit.disabled = true
-            btnDelete.disabled = true
-            btnEdit.title = '권한이 없습니다.'
-            btnDelete.title = '권한이 없습니다.'
-        }
-
+        // ===== 수정/삭제 =====
         btnEdit.addEventListener('click', () => {
-            if (isEmployee) { alert('권한이 없습니다.'); return; }
+            if (!PERM.canEdit) { alert('권한이 없습니다.'); return }
             location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}/edit`
         })
 
         btnDelete.addEventListener('click', async () => {
-            if (isEmployee) { alert('권한이 없습니다.'); return; }
+            if (!PERM.canDelete) { alert('권한이 없습니다.'); return }
 
             const ok = confirm('정말 삭제할까요?')
             if (!ok) return
@@ -397,7 +375,7 @@ async function deleteForm(docfoNo) {
                 console.error(e)
                 alert(e?.message || String(e))
             } finally {
-                btnDelete.disabled = isEmployee ? true : false
+                btnDelete.disabled = false
             }
         })
 
