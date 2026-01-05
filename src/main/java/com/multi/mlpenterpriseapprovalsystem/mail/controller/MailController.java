@@ -8,6 +8,7 @@ import lombok.*;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.*;
 import org.springframework.http.*;
+import org.springframework.security.core.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -40,11 +41,13 @@ public class MailController {
     // 받은 메일함(역할 1개)
     @GetMapping("/inbox")
     public ResponseEntity<Page<ResMailListDto>> inbox(
-            @RequestParam("userEmpId") String userEmpId,
             @RequestParam("role") MailRole role,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(mailService.getInbox(userEmpId, role, pageable));
+        // 예시: authentication에서 사번 꺼내기
+        String empId = authentication.getName(); // 또는 커스텀 principal에서 getEmpId()
+        return ResponseEntity.ok(mailService.getInbox(empId, role, pageable));
     }
 
     // 받은 메일함(역할 여러개) - 추후 확장용
