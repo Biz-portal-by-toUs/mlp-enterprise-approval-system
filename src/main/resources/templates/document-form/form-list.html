@@ -2,243 +2,68 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}">
+      layout:decorate="~{layout}"
+      th:classappend="${perm_isEmployee} ? 'role-employee' : ''"
+      th:attr="
+        data-is-employee=${perm_isEmployee},
+        data-can-create=${perm_canCreateForm},
+        data-can-bulk-delete=${perm_canBulkDelete},
+        data-can-approve=${perm_canApprove},
+        data-can-use-temp=${perm_canUseTemp}
+      ">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>문서양식 목록</title>
 
     <style layout:fragment="pageStyles">
+        /* 너가 올린 스타일 그대로 사용 가능 */
         :root{
-            --fg:#0f172a;
-            --mut:#64748b;
-            --line:#e2e8f0;
-            --bg:#f1f5f9;
-            --card:#ffffff;
-            --danger:#ef4444;
-            --primary:#2c5cff; /* ✅ 누락 보완 */
+            --fg:#0f172a; --mut:#64748b; --line:#e2e8f0; --bg:#f1f5f9;
+            --card:#ffffff; --danger:#ef4444; --primary:#2c5cff;
         }
-
         html,body{height:100%}
-        body{
-            margin:0;
-            font-family:ui-sans-serif,system-ui,"Pretendard","Apple SD Gothic Neo","Noto Sans KR";
-            color:var(--fg);
-            background:var(--bg);
-        }
+        body{margin:0;font-family:ui-sans-serif,system-ui,"Pretendard","Apple SD Gothic Neo","Noto Sans KR";color:var(--fg);background:var(--bg);}
+        .page-with-subbar{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;padding:0;align-items:stretch;}
+        .page-main{padding:24px;min-width:0;}
+        .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .select{height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:14px;font-weight:600;outline:none;}
+        .searchWrap{flex:1;max-width:420px;display:flex;align-items:center;height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;}
+        .searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
+        .btn{height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;}
+        .btn:hover{filter:brightness(0.9);}
+        .btn.danger{background:var(--danger);}
+        .btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .btn.ghost:hover{background:#f8fafc;filter:none;}
 
-        .page-with-subbar{
-            display:grid;
-            grid-template-columns:260px minmax(0,1fr);
-            gap:0;
-            padding:0;
-            align-items:stretch;
-        }
-
-        .page-main{
-            padding:24px;
-            min-width:0;
-        }
-
-        .toolbar{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:12px;
-            margin-bottom:16px;
-        }
-
-        .toolbar-left{
-            display:flex;
-            align-items:center;
-            gap:12px;
-            min-width:0;
-            flex:1;
-        }
-
-        .toolbar-right{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            flex-shrink:0;
-        }
-
-        .select{
-            height:40px;
-            border-radius:8px;
-            border:1px solid var(--line);
-            background:#fff;
-            padding:0 12px;
-            font-size:14px;
-            font-weight:600;
-            outline:none;
-        }
-
-        .searchWrap{
-            flex: 1;
-            max-width: 420px;
-            display:flex;
-            align-items:center;
-            height:40px;
-            border-radius:8px;
-            border:1px solid var(--line);
-            background:#fff;
-            padding:0 14px;
-            min-width:0;
-        }
-        .searchInput{
-            border:0;
-            outline:none;
-            width:100%;
-            font-size:14px;
-            background:transparent;
-        }
-
-        .btn{
-            height:40px;
-            padding:0 20px;
-            border-radius:8px;
-            font-size:14px;
-            font-weight:700;
-            cursor:pointer;
-            border:none;
-            background:var(--primary);
-            color:#fff;
-            white-space:nowrap;
-            transition:0.15s;
-        }
-        .btn:hover{ filter:brightness(0.9); }
-
-        .btn.danger{ background:var(--danger); }
-
-        .btn.ghost{
-            background:#fff;
-            color:var(--fg);
-            border:1px solid var(--line);
-        }
-        .btn.ghost:hover{
-            background:#f8fafc;
-            filter:none;
-        }
-
-        /* ✅ Employee는 버튼 자체 숨김 */
+        /* Employee는 버튼 숨김 (서버에서 th:if로도 제거하지만, 이중 안전) */
         html.role-employee #btnNew,
-        html.role-employee #btnDeleteSelected{
-            display:none !important;
-        }
+        html.role-employee #btnDeleteSelected{display:none !important;}
 
-        .tableWrap{
-            width:100%;
-            background:#fff;
-            border:1px solid var(--line);
-            border-radius:12px;
-            overflow:hidden;
-            box-shadow:0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        table.formTable{
-            width:100%;
-            border-collapse:collapse;
-            table-layout:fixed;
-        }
-        table.formTable thead th{
-            background:#f9fafb;
-            border-bottom:1px solid var(--line);
-            text-align:center;
-            padding:14px 10px;
-            font-size:14px;
-            color:var(--mut);
-            font-weight:600;
-        }
-        table.formTable tbody td{
-            border-bottom:1px solid var(--line);
-            text-align:center;
-            padding:12px 10px;
-            font-size:15px;
-            font-weight:500;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-        }
-        table.formTable tbody tr:hover td{
-            background:#fcfdfe;
-            cursor:pointer;
-        }
-
-        td.col-title{
-            text-align:left !important;
-            padding-left:20px !important;
-            font-weight:700 !important;
-        }
-        .titleLink{
-            color:var(--primary);
-            text-decoration:none;
-            display:block;
-            width:100%;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-            font-weight:800;
-        }
-
-        th.col-no, td.col-no{ width:120px; }
-
-        .pager-wrapper{
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            position:relative;
-            margin-top:16px;
-        }
-        .pager{
-            display:flex;
-            align-items:center;
-            gap:4px;
-        }
-        .pageBtn{
-            min-width:36px;
-            height:36px;
-            border-radius:6px;
-            border:1px solid var(--line);
-            background:#fff;
-            font-size:14px;
-            font-weight:600;
-            cursor:pointer;
-            transition:0.15s;
-        }
-        .pageBtn:hover:not(.active):not(:disabled){ background:#f1f5f9; }
-        .pageBtn.active{
-            background:var(--primary);
-            color:#fff;
-            border-color:var(--primary);
-        }
-        .pageBtn.active:hover{ filter:brightness(0.9); }
-
-        .pager-status{
-            position:absolute;
-            right:0;
-            display:flex;
-            gap:12px;
-            align-items:center;
-        }
-
-        .muted{ color:var(--mut); }
-
-        /* (선택) 체크 + 번호 라벨 스타일 */
-        .selWrap{
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-        }
-        .selWrap input[type="checkbox"]{
-            width:16px;
-            height:16px;
-        }
-
+        .tableWrap{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+        table.formTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.formTable thead th{background:#f9fafb;border-bottom:1px solid var(--line);text-align:center;padding:14px 10px;font-size:14px;color:var(--mut);font-weight:600;}
+        table.formTable tbody td{border-bottom:1px solid var(--line);text-align:center;padding:12px 10px;font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        table.formTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
+        td.col-title{text-align:left !important;padding-left:20px !important;font-weight:700 !important;}
+        .titleLink{color:var(--primary);text-decoration:none;display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;}
+        th.col-no, td.col-no{width:120px;}
+        .pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .pager{display:flex;align-items:center;gap:4px;}
+        .pageBtn{min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:0.15s;}
+        .pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .pageBtn.active:hover{filter:brightness(0.9);}
+        .pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        .muted{color:var(--mut);}
+        .selWrap{display:inline-flex;align-items:center;gap:8px;}
+        .selWrap input[type="checkbox"]{width:16px;height:16px;}
         @media (max-width:760px){
-            .page-with-subbar{ grid-template-columns:1fr; }
-            .page-main{ padding:14px; }
-            .pager-status{ position:static; margin-left:10px; }
+            .page-with-subbar{grid-template-columns:1fr;}
+            .page-main{padding:14px;}
+            .pager-status{position:static;margin-left:10px;}
         }
     </style>
 </head>
@@ -249,7 +74,6 @@
         <div th:replace="~{sidebar/form-sidebar :: formSidebar('list')}"></div>
 
         <main class="page-main">
-
             <div class="toolbar">
                 <div class="toolbar-left">
                     <select id="size" class="select">
@@ -266,8 +90,16 @@
                 </div>
 
                 <div class="toolbar-right">
-                    <button class="btn danger" id="btnDeleteSelected" type="button" disabled>선택 삭제</button>
-                    <button class="btn" id="btnNew" type="button">+ 새 양식</button>
+                    <!-- ✅ 서버 플래그로 버튼 자체를 렌더/미렌더 -->
+                    <button class="btn danger" id="btnDeleteSelected" type="button" disabled
+                            th:if="${perm_canBulkDelete}">
+                        선택 삭제
+                    </button>
+
+                    <button class="btn" id="btnNew" type="button"
+                            th:if="${perm_canCreateForm}">
+                        + 새 양식
+                    </button>
                 </div>
             </div>
 
@@ -288,7 +120,7 @@
 
                 <div class="pager-status">
                     <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
-                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
                 </div>
             </div>
 

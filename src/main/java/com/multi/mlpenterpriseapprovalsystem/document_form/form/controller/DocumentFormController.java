@@ -24,9 +24,9 @@ import java.util.List;
 
 /**
  * 문서양식 REST API 컨트롤러
- *
- * - 생성/수정/삭제요청/상태변경/삭제승인/삭제반려
- * - 목록/상세조회
+ * @author : 정종원
+ * @filename : DocumentFormController
+ * @since : 2025-12-22 월요일
  */
 @RestController
 @RequestMapping("/api/v1/forms")
@@ -35,7 +35,7 @@ public class DocumentFormController {
 
     private final DocumentFormService documentFormService;
 
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PostMapping
     public ResponseEntity<Long> createDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
@@ -49,11 +49,11 @@ public class DocumentFormController {
         return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
     }
 
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PutMapping("/{docfoNo}")
     public ResponseEntity<Long> updateDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo,
+            @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormCreateDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
@@ -65,14 +65,12 @@ public class DocumentFormController {
         return ResponseEntity.ok(newDocfoNo);
     }
 
-    /**
-     * 삭제 "요청" (상태를 W로 전환하는 비즈니스라면 Service에서 처리)
-     */
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    // 삭제 요청
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @DeleteMapping("/{docfoNo}")
     public ResponseEntity<Void> requestDelete(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo
+            @PathVariable(name = "docfoNo") Long docfoNo
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
@@ -81,15 +79,11 @@ public class DocumentFormController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 목록 조회
-     * - /api/v1/forms?stat=A&stat=X&q=...
-     * - stat 파라미터가 없으면 defaultValue="A"
-     */
+    // 목록 조회
     @GetMapping
     public ResponseEntity<Page<ResDocumentFormListDto>> getForms(
             @AuthenticationPrincipal CustomUser customUser,
-            @RequestParam(name = "stat", defaultValue = "A") List<DocumentFormStats> stat,
+            @RequestParam(name = "stat", defaultValue = "A") String stat,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "docfoName", required = false) String docfoName,
             @PageableDefault(size = 15) Pageable pageable
@@ -98,20 +92,25 @@ public class DocumentFormController {
 
         String keyword = (q != null && !q.isBlank()) ? q : docfoName;
 
-        // 혹시라도 빈 리스트로 들어오는 케이스 방어 (프론트 버그/요청 오류)
-        if (CollectionUtils.isEmpty(stat)) {
+        List<DocumentFormStats> stats = List.of(stat.split(",")).stream()
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(DocumentFormStats::valueOf)
+                .toList();
+
+        if (CollectionUtils.isEmpty(stats)) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         return ResponseEntity.ok(
-                documentFormService.findListByStatuses(stat, customUser.getComId(), keyword, pageable)
+                documentFormService.findListByStatuses(stats, customUser.getComId(), keyword, pageable)
         );
     }
 
     @GetMapping("/{docfoNo}")
     public ResponseEntity<ResDocumentFormDetailDto> getDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo
+            @PathVariable(name = "docfoNo") Long docfoNo
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
@@ -121,15 +120,12 @@ public class DocumentFormController {
         );
     }
 
-    /**
-     * 상태 변경 (승인/반려 등)
-     * - req.docfoStat 필수 → @Valid로 처리
-     */
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN')")
+    // 상태 변경 (승인/반려 등)
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/status")
     public ResponseEntity<Void> changeStatus(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo,
+            @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormStatusDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
@@ -147,14 +143,12 @@ public class DocumentFormController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 삭제 승인
-     */
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN')")
+    // 삭제 승인
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/delete-approve")
     public ResponseEntity<Void> approveDelete(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo
+            @PathVariable(name = "docfoNo") Long docfoNo
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
@@ -163,15 +157,12 @@ public class DocumentFormController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 삭제 반려
-     * - 사유 필수: 프론트에서 팝업으로 받을 거면 ErrorCode.REJECT_REASON_REQUIRED 쓰면 깔끔
-     */
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN')")
+    // 삭제 반려
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/delete-reject")
     public ResponseEntity<Void> rejectDelete(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo,
+            @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormStatusDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
@@ -185,7 +176,7 @@ public class DocumentFormController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PostMapping("/temp")
     public ResponseEntity<Long> createTemp(
             @AuthenticationPrincipal CustomUser customUser,
@@ -197,11 +188,11 @@ public class DocumentFormController {
         return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
     }
 
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PutMapping("/{docfoNo}/temp")
     public ResponseEntity<Void> saveTemp(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo,
+            @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormTempDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
@@ -210,7 +201,7 @@ public class DocumentFormController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @GetMapping("/temp")
     public ResponseEntity<Page<ResDocumentFormListDto>> getMyTempForms(
             @AuthenticationPrincipal CustomUser customUser,
