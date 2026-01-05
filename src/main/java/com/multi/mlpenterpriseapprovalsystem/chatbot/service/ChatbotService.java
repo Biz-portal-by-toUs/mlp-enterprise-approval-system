@@ -1,24 +1,22 @@
 package com.multi.mlpenterpriseapprovalsystem.chatbot.service;
 
 import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.ChatbotMessage;
-import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.MessageRole;
-import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.MessageStatus;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotCallbackDto;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ResChatbotMessageCreatedDto;
-import com.multi.mlpenterpriseapprovalsystem.chatbot.repository.ChatbotMessageRepository;
+import com.multi.mlpenterpriseapprovalsystem.common.client.ChatbotAiClient;
 import com.multi.mlpenterpriseapprovalsystem.common.sse.SseManager;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 챗봇 서비스
@@ -29,110 +27,142 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatbotService {
 
-    private final ChatbotMessageRepository messageRepository;
+    private final RedisTemplate<String, Object> redisTemplate; // Redis 문맥 관리용
+    private final ChatbotAiClient chatbotAiClient;
     private final SseManager sseManager;
 
+    public ChatbotService(@Qualifier("chatbotRedisTemplate") RedisTemplate<String, Object> redisTemplate, ChatbotAiClient chatbotAiClient, SseManager sseManager) {
+        this.redisTemplate = redisTemplate;
+        this.chatbotAiClient = chatbotAiClient;
+        this.sseManager = sseManager;
+    }
+
+    private static final String CHAT_KEY_PREFIX = "chat:session:";
+    private static final int CONTEXT_LIMIT = 10; // AI에게 전달할 최근 대화 최대 개수 (RAG 성능 최적화)
+
     /**
-     * 질문 저장 및 답변용 placeholder 생성
+     * 질문 처리 메인 로직: Redis 저장 -> 문맥 추출 -> AI 호출
      */
-    public ResChatbotMessageCreatedDto createQuestionAndPrepareAnswer(ReqChatbotMessageDto req, String empId) {
+    /**
+     * 질문 처리 메인 로직: Redis 저장 -> 문맥 추출(정제) -> AI 호출
+     */
+    public ResChatbotMessageCreatedDto processQuestion(ReqChatbotMessageDto req, String empId, String comId, String sessionId) {
+        String key = CHAT_KEY_PREFIX + sessionId;
+
         ChatbotMessage userMsg = ChatbotMessage.user(empId, req.getQuestion());
-        messageRepository.save(userMsg);
+        redisTemplate.opsForList().rightPush(key, userMsg);
+
+        String assistantMsgId = String.format("%s_%s_%d", empId, sessionId, System.currentTimeMillis());
 
         ChatbotMessage assistant = ChatbotMessage.assistantStreaming(empId);
-        assistant = messageRepository.save(assistant);
+        assistant.setId(assistantMsgId);
+        redisTemplate.opsForList().rightPush(key, assistant);
 
-        return new ResChatbotMessageCreatedDto(assistant.getId());
+        List<Map<String, String>> history = getRefinedContext(sessionId);
+
+        chatbotAiClient.requestChatbotAnswer(
+                assistantMsgId,
+                empId,
+                comId,
+                req.getQuestion(),
+                history
+        );
+
+        redisTemplate.expire(key, 30, TimeUnit.MINUTES);
+
+        return new ResChatbotMessageCreatedDto(assistantMsgId);
     }
 
     /**
-     * 유저 SSE 연결 및 스트리밍 버퍼 복구
+     * AI에게 전달할 경량화된 대화 내역 조회
+     * @return List<Map<String, String>> (role과 content만 포함)
      */
-    public SseEmitter connectUserStream(String empId) {
-        // 공통 매니저를 통해 에미터 생성
-        SseEmitter emitter = sseManager.createEmitter(empId);
+    public List<Map<String, String>> getRefinedContext(String sessionId) {
+        String key = CHAT_KEY_PREFIX + sessionId;
+        List<Object> history = redisTemplate.opsForList().range(key, 0, -1);
 
-        // 1. 초기 연결 메시지 발송
-        sseManager.sendToUser(empId, "connected", Map.of(
+        if (history == null || history.isEmpty()) return List.of();
+
+        return history.stream()
+                .map(obj -> (ChatbotMessage) obj)
+                // AI가 이해할 수 있는 최소한의 정보(role, content)만 추출
+                .map(m -> Map.of(
+                        "role", m.getRole().name().toLowerCase(),
+                        "content", m.getContent()
+                ))
+                .limit(CONTEXT_LIMIT)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * FastAPI 콜백 처리 (청크 스트리밍 전송)
+     */
+    public void handleCallback(ReqChatbotCallbackDto cb) {
+        String msgId = cb.getMessageId();
+        if (msgId == null || msgId.isBlank()) return;
+
+        String empId = extractEmpIdFromMessageId(msgId);
+        String sessionId = extractSessionIdFromMessageId(msgId);
+
+        String connectionKey = empId + ":" + sessionId;
+
+        if (Boolean.FALSE.equals(cb.getSuccess())) {
+            String errorMsg = (cb.getErrorMessage() == null) ? "AI 답변 생성 중 오류가 발생했습니다." : cb.getErrorMessage();
+            sseManager.sendToUser(connectionKey, "error", Map.of("messageId", msgId, "message", errorMsg));
+            return;
+        }
+
+        if (cb.getChunk() != null && !cb.getChunk().isBlank()) {
+            sseManager.sendToUser(connectionKey, "chunk", Map.of("messageId", msgId, "delta", cb.getChunk()));
+        }
+
+        if (Boolean.TRUE.equals(cb.getDone())) {
+            sseManager.sendToUser(connectionKey, "done", Map.of("messageId", msgId));
+        }
+    }
+
+    /**
+     * 유저 SSE 연결 관리 (탭별로 독립적인 통로 생성)
+     */
+    public SseEmitter connectUserStream(String empId, String sessionId) {
+        String connectionKey = empId + ":" + sessionId;
+
+        SseEmitter emitter = sseManager.createEmitter(connectionKey);
+
+        sseManager.sendToUser(connectionKey, "connected", Map.of(
                 "empId", empId,
+                "sessionId", sessionId,
                 "at", LocalDateTime.now().toString()
         ));
-
-        // 2. 재연결 시 진행 중이던 스트리밍 데이터 밀어주기
-        flushStreamingBuffer(empId, emitter);
 
         return emitter;
     }
 
-    /**
-     * FastAPI 콜백 처리 (청크 전송)
-     */
-    public void handleCallback(ReqChatbotCallbackDto cb) {
-        if (cb.getMessageId() == null || cb.getMessageId().isBlank()) return;
-
-        ChatbotMessage assistant = messageRepository.findById(cb.getMessageId()).orElse(null);
-        if (assistant == null) return;
-
-        String empId = assistant.getEmpId();
-
-        // 처리 실패 시
-        if (Boolean.FALSE.equals(cb.getSuccess())) {
-            String msg = (cb.getErrorMessage() == null || cb.getErrorMessage().isBlank()) ? "AI 처리 실패" : cb.getErrorMessage();
-            assistant.markError(msg);
-            messageRepository.save(assistant);
-            sseManager.sendToUser(empId, "error", Map.of("messageId", assistant.getId(), "message", msg));
-            return;
-        }
-
-        // 청크(데이터 조각) 발송
-        if (cb.getChunk() != null && !cb.getChunk().isBlank()) {
-            assistant.appendChunk(cb.getChunk());
-            messageRepository.save(assistant);
-            sseManager.sendToUser(empId, "chunk", Map.of("messageId", assistant.getId(), "delta", cb.getChunk()));
-        }
-
-        // 스트리밍 종료
-        if (Boolean.TRUE.equals(cb.getDone())) {
-            assistant.markDone();
-            messageRepository.save(assistant);
-            sseManager.sendToUser(empId, "done", Map.of("messageId", assistant.getId()));
-        }
-    }
+    // --- Helper Methods ---
 
     /**
-     * 새로 고침 시 진행 중이던 텍스트 복구
+     * Assistant ID (empId_sessionId_timestamp)에서 empId 추출
      */
-    private void flushStreamingBuffer(String empId, SseEmitter emitter) {
+    private String extractEmpIdFromMessageId(String messageId) {
         try {
-            List<ChatbotMessage> streaming = messageRepository.findByEmpIdAndRoleAndStatusOrderByUpdatedAtDesc(
-                    empId, MessageRole.ASSISTANT, MessageStatus.STREAMING, PageRequest.of(0, 3));
-
-            for (ChatbotMessage m : streaming) {
-                if (m.getContent() == null || m.getContent().isBlank()) continue;
-                // 해당 탭(emitter)에만 직접 발송
-                emitter.send(SseEmitter.event().name("buffer").data(Map.of(
-                        "messageId", m.getId(),
-                        "text", m.getContent()
-                )));
-            }
+            return messageId.split("_")[0];
         } catch (Exception e) {
-            log.warn("[ChatbotService] Buffer flush failed for empId={}", empId);
+            log.error("[ChatbotService] empId 파싱 실패: {}", messageId);
+            return "unknown";
         }
     }
 
     /**
-     * 과거 메시지 조회 (커서 기반 페이징)
+     * Assistant ID (empId_sessionId_timestamp)에서 sessionId 추출
      */
-    public List<ChatbotMessage> getMessages(String empId, int limit, LocalDateTime beforeAt, String beforeId) {
-        int safe = Math.max(1, Math.min(limit, 100));
-        Pageable pageable = PageRequest.of(0, safe, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("_id")));
-
-        if (beforeAt == null || beforeId == null || beforeId.isBlank()) {
-            return messageRepository.findByEmpId(empId, pageable);
+    private String extractSessionIdFromMessageId(String messageId) {
+        try {
+            return messageId.split("_")[1];
+        } catch (Exception e) {
+            log.error("[ChatbotService] sessionId 파싱 실패: {}", messageId);
+            return "unknown";
         }
-        return messageRepository.findBeforeCursor(empId, beforeAt, beforeId, pageable);
     }
 }
