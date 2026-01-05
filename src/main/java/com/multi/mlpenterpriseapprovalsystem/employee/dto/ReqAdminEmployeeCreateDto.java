@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
@@ -19,6 +20,7 @@ import java.time.LocalDate;
  * @since : 2025. 12. 28. 일요일
  */
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReqAdminEmployeeCreateDto {
@@ -50,7 +52,6 @@ public class ReqAdminEmployeeCreateDto {
     @Size(max = 100)
     private String addr;
 
-    @NotBlank
     @Size(max = 1)
     private String gen;
 
@@ -62,6 +63,5 @@ public class ReqAdminEmployeeCreateDto {
 
     private String objectKey;
 
-    @NotNull
     private LocalDate birth;
 }
