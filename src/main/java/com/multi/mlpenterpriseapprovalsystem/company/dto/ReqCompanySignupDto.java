@@ -46,6 +46,4 @@ public class ReqCompanySignupDto {
     @Size(max = 100, message = "주소는 100자 이내여야 합니다.")
     private String addr;
 
-    @NotNull(message = "요금제 번호는 필수입니다.")
-    private Integer subNo;
 }
