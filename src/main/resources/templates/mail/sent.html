@@ -14,222 +14,84 @@
             --mut:#64748b;
             --line:#e2e8f0;
             --danger:#ef4444;
-            --primary:#2c5cff;
         }
 
-        .page-with-subbar{
-            display:grid;
-            grid-template-columns:260px minmax(0,1fr);
-            gap:0;
-            padding:0;
-            align-items:stretch;
-        }
+        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
 
-        .page-main{
-            padding:24px;
-            min-width:0;
-        }
+        /* ===== page-only namespace: ms-* (mail sent) ===== */
+        .ms-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .ms-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .ms-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 
-        .toolbar{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:12px;
-            margin-bottom:16px;
+        .ms-searchWrap{
+            flex:1;max-width:420px;display:flex;align-items:center;height:40px;
+            border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;
         }
+        .ms-searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
 
-        .toolbar-left{
-            display:flex;
-            align-items:center;
-            gap:12px;
-            min-width:0;
-            flex:1;
+        .ms-btn{
+            height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:800;
+            cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;
         }
+        .ms-btn:hover{filter:brightness(0.9);}
+        .ms-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .ms-btn.ghost:hover{background:#f8fafc;filter:none;}
 
-        .toolbar-right{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            flex-shrink:0;
+        .ms-tableWrap{
+            width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
+            overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);
         }
+        table.ms-mailTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.ms-mailTable thead th{
+            background:#f9fafb;border-bottom:1px solid var(--line);text-align:center;
+            padding:14px 10px;font-size:14px;color:var(--mut);font-weight:700;
+        }
+        table.ms-mailTable tbody td{
+            border-bottom:1px solid var(--line);text-align:center;padding:12px 10px;
+            font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        }
+        table.ms-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
 
-        .searchWrap{
-            flex: 1;
-            max-width: 420px;
-            display:flex;
-            align-items:center;
-            height:40px;
-            border-radius:8px;
-            border:1px solid var(--line);
-            background:#fff;
-            padding:0 14px;
-            min-width:0;
-        }
-        .searchInput{
-            border:0;
-            outline:none;
-            width:100%;
-            font-size:14px;
-            background:transparent;
-        }
+        /* ===== columns (sent) ===== */
+        th.ms-col-no, td.ms-col-no{ width:90px; }
+        th.ms-col-star, td.ms-col-star{ width:60px; }
+        th.ms-col-date, td.ms-col-date{ width:180px; }
+        th.ms-col-recv, td.ms-col-recv{ width:180px; }
 
-        .btn{
-            height:40px;
-            padding:0 20px;
-            border-radius:8px;
-            font-size:14px;
-            font-weight:800;
-            cursor:pointer;
-            border:none;
-            background:var(--primary);
-            color:#fff;
-            white-space:nowrap;
-            transition:0.15s;
-        }
-        .btn:hover{ filter:brightness(0.9); }
+        th.ms-col-title-h{text-align:left;padding-left:20px;}
+        td.ms-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
 
-        .btn.ghost{
-            background:#fff;
-            color:var(--fg);
-            border:1px solid var(--line);
-        }
-        .btn.ghost:hover{
-            background:#f8fafc;
-            filter:none;
-        }
-
-        .tableWrap{
-            width:100%;
-            background:#fff;
-            border:1px solid var(--line);
-            border-radius:12px;
-            overflow:hidden;
-            box-shadow:0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        table.mailTable{
-            width:100%;
-            border-collapse:collapse;
-            table-layout:fixed;
-        }
-        table.mailTable thead th{
-            background:#f9fafb;
-            border-bottom:1px solid var(--line);
-            text-align:center;
-            padding:14px 10px;
-            font-size:14px;
-            color:var(--mut);
-            font-weight:700;
-        }
-        table.mailTable tbody td{
-            border-bottom:1px solid var(--line);
-            text-align:center;
-            padding:12px 10px;
-            font-size:15px;
-            font-weight:600;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-        }
-        table.mailTable tbody tr:hover td{
-            background:#fcfdfe;
-            cursor:pointer;
-        }
-
-        /* ===== 칼럼 폭: 제목 최대로 ===== */
-        th.col-no, td.col-no{ width:90px; }
-        th.col-star, td.col-star{ width:60px; }
-        th.col-date, td.col-date{ width:180px; }
-        th.col-recv, td.col-recv{ width:180px; }
-
-        th.col-title-h{
-            text-align:left;
-            padding-left:20px;
-        }
-        td.col-title{
-            text-align:left !important;
-            padding-left:20px !important;
-            font-weight:900 !important;
-        }
-        .titleLink{
-            color:var(--primary);
-            text-decoration:none;
-            display:block;
-            width:100%;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-            font-weight:900;
+        .ms-titleLink{
+            color:var(--primary);text-decoration:none;display:block;width:100%;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;
         }
 
         /* ===== 중요(별) ===== */
-        .starBtn{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            width:34px;
-            height:34px;
-            border-radius:8px;
-            border:1px solid transparent;
-            background:transparent;
-            cursor:pointer;
-            font-size:18px;
-            line-height:1;
-            transition:0.15s;
+        .ms-starBtn{
+            display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+            border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;
+            font-size:18px;line-height:1;transition:0.15s;
         }
-        .starBtn:hover{
-            background:#f8fafc;
-            border-color:var(--line);
-        }
-        .starBtn:disabled{
-            opacity:.6;
-            cursor:not-allowed;
-        }
+        .ms-starBtn:hover{background:#f8fafc;border-color:var(--line);}
+        .ms-starBtn:disabled{opacity:.6;cursor:not-allowed;}
 
-        .pager-wrapper{
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            position:relative;
-            margin-top:16px;
+        /* ===== pager ===== */
+        .ms-pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .ms-pager{display:flex;align-items:center;gap:4px;}
+        .ms-pageBtn{
+            min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
+            background:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:0.15s;
         }
-        .pager{
-            display:flex;
-            align-items:center;
-            gap:4px;
-        }
-        .pageBtn{
-            min-width:36px;
-            height:36px;
-            border-radius:6px;
-            border:1px solid var(--line);
-            background:#fff;
-            font-size:14px;
-            font-weight:700;
-            cursor:pointer;
-            transition:0.15s;
-        }
-        .pageBtn:hover:not(.active):not(:disabled){ background:#f1f5f9; }
-        .pageBtn.active{
-            background:var(--primary);
-            color:#fff;
-            border-color:var(--primary);
-        }
+        .ms-pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .ms-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .ms-pageBtn.active:hover{filter:brightness(0.9);}
 
-        .pager-status{
-            position:absolute;
-            right:0;
-            display:flex;
-            gap:12px;
-            align-items:center;
-        }
+        .ms-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
 
         @media (max-width:760px){
-            .page-with-subbar{ grid-template-columns:1fr; }
-            .page-main{ padding:14px; }
-            .pager-status{ position:static; margin-left:10px; }
-            th.col-date, td.col-date{ width:140px; }
-            th.col-recv, td.col-recv{ width:140px; }
+            .ms-pager-status{position:static;margin-left:10px;}
+            th.ms-col-date, td.ms-col-date{ width:140px; }
+            th.ms-col-recv, td.ms-col-recv{ width:140px; }
         }
     </style>
 </head>
@@ -240,38 +102,38 @@
         <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('sent')}"></div>
 
         <main class="page-main">
-            <div class="toolbar">
-                <div class="toolbar-left">
-                    <div class="searchWrap">
-                        <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
+            <div class="ms-toolbar">
+                <div class="ms-toolbar-left">
+                    <div class="ms-searchWrap">
+                        <input id="q" class="ms-searchInput" type="text" placeholder="제목 검색"/>
                     </div>
-                    <button class="btn ghost" id="btnSearch" type="button">조회</button>
+                    <button class="ms-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
-                <div class="toolbar-right">
-                    <button class="btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
+                <div class="ms-toolbar-right">
+                    <button class="ms-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
                 </div>
             </div>
 
-            <section class="tableWrap">
-                <table class="mailTable">
+            <section class="ms-tableWrap">
+                <table class="ms-mailTable">
                     <thead>
                     <tr>
-                        <th class="col-no">번호</th>
-                        <th class="col-star">중요</th>
-                        <th class="col-recv">수신인</th>
-                        <th class="col-title-h">제목</th>
-                        <th class="col-date">발신일</th>
+                        <th class="ms-col-no">번호</th>
+                        <th class="ms-col-star">중요</th>
+                        <th class="ms-col-recv">수신인</th>
+                        <th class="ms-col-title-h">제목</th>
+                        <th class="ms-col-date">발신일</th>
                     </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
                 </table>
             </section>
 
-            <div class="pager-wrapper">
-                <div id="pagerControls" class="pager"></div>
+            <div class="ms-pager-wrapper">
+                <div id="pagerControls" class="ms-pager"></div>
 
-                <div class="pager-status">
+                <div class="ms-pager-status">
                     <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
                     <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
                 </div>
@@ -335,7 +197,7 @@
                     const mkBtn = (label, target, disabled, active) => {
                         const b = document.createElement('button');
                         b.type='button';
-                        b.className = 'pageBtn' + (active ? ' active' : '');
+                        b.className = 'ms-pageBtn' + (active ? ' active' : '');
                         b.disabled = !!disabled;
                         b.textContent = label;
                         b.onclick = () => onGo(target);
@@ -372,16 +234,15 @@
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: PAGE_SIZE, // 고정
+                        size: PAGE_SIZE,
                         q: (params.get('q') || '').trim()
                     };
                 }
 
-                // ✅ 브라우저 주소창 상태만 변경 (API URL 만들지 말기)
                 function setUrlState(next){
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
-                    params.set('size', String(PAGE_SIZE)); // 고정
+                    params.set('size', String(PAGE_SIZE));
                     if (next.q) params.set('q', next.q);
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
@@ -405,32 +266,30 @@
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="col-no">${num}</td>
+                            <td class="ms-col-no">${num}</td>
 
-                            <td class="col-star">
+                            <td class="ms-col-star">
                                 <button type="button"
-                                        class="starBtn"
+                                        class="ms-starBtn"
                                         data-mail-id="${escapeHtml(it.mailId)}"
                                         aria-label="중요메일 토글">
                                     ${starEmoji(isPrior)}
                                 </button>
                             </td>
 
-                            <td class="col-recv">${receivers || '-'}</td>
-                            <td class="col-title">
-                                <a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                            <td class="ms-col-recv">${receivers || '-'}</td>
+                            <td class="ms-col-title">
+                                <a class="ms-titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
                             </td>
-                            <td class="col-date">${createdAt}</td>
+                            <td class="ms-col-date">${createdAt}</td>
                         `;
 
-                        // 행 클릭 = 상세 이동 (별/링크 클릭은 제외)
                         tr.addEventListener('click', (e) => {
-                            if (e.target && (e.target.closest('.starBtn') || e.target.tagName === 'A')) return;
+                            if (e.target && (e.target.closest('.ms-starBtn') || e.target.tagName === 'A')) return;
                             location.href = `/mail/${encodeURIComponent(it.mailId)}`;
                         });
 
-                        // 별 클릭 = 중요 토글
-                        const starBtn = tr.querySelector('.starBtn');
+                        const starBtn = tr.querySelector('.ms-starBtn');
                         starBtn.addEventListener('click', async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -438,13 +297,11 @@
                             const mailId = starBtn.dataset.mailId;
                             const prev = starBtn.textContent.trim() === '⭐';
 
-                            // optimistic UI
                             starBtn.textContent = starEmoji(!prev);
                             starBtn.disabled = true;
 
                             try{
                                 await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
-                                // prior-first 정렬이라 위치가 바뀔 수 있으니 재조회
                                 await load();
                             }catch(err){
                                 console.error(err);
@@ -472,8 +329,6 @@
                     document.getElementById('q').value = st.q;
 
                     const url = buildSentApiUrl(st);
-                    // console.log('[sent request url]', url);
-
                     const data = await fetchJson(url);
 
                     const items = data.content || [];

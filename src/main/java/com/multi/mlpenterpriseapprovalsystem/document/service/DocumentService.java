@@ -19,8 +19,8 @@ import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRep
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormRepository;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import lombok.extern.slf4j.Slf4j;

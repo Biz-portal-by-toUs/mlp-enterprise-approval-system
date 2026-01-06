@@ -1,8 +1,8 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.domain;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.DocumentFormStatsConverter;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.DocumentFormStatsConverter;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import jakarta.persistence.*;
 import lombok.*;

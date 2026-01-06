@@ -11,6 +11,8 @@ import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailSendDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
 import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailRepository;
 import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailUserStateRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,7 @@ public class MailServiceImpl implements MailService {
     private final MailRepository mailRepository;
     private final MailUserStateRepository mailUserStateRepository;
     private final EmployeeRepository employeeRepository;
+    private final NotificationService noti;
 
     // 메일 전송
     @Override
@@ -52,6 +55,7 @@ public class MailServiceImpl implements MailService {
                 Employee recv = employeeRepository.findByEmpId(recvEmpId)
                         .orElseThrow(() -> new NoSuchElementException("수신자(empId) 없음: " + recvEmpId));
                 mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT));
+                noti.sendNotification(recv.getEmpId(), NotificationType.MAIL, "[메일]", saved.getTitle(), "/mail/"+mail.getMailNo());
             }
         }
 

@@ -1,8 +1,7 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.repository;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
@@ -103,5 +102,20 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
             @Param("stat") DocumentFormStats stat,
             @Param("keyword") String keyword,
             Pageable pageable
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+    delete from DocumentForm f
+    where f.docfoNo = :docfoNo
+      and f.company.comId = :comId
+      and f.writer.empId = :writerId
+      and f.docfoStat = :stat
+    """)
+    int deleteMyTempById(
+            @Param("docfoNo") Long docfoNo,
+            @Param("comId") String comId,
+            @Param("writerId") String writerId,
+            @Param("stat") DocumentFormStats stat
     );
 }

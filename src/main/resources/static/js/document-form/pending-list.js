@@ -4,7 +4,6 @@
     const VIEW_BASE = "/form";
 
     const PAGE_SIZE = 10;
-    const BIG = 1000;
 
     const elTbody = document.getElementById("tbody");
     const elPager = document.getElementById("pager");
@@ -13,16 +12,19 @@
     const elMode = document.getElementById("statMode");
     const elToast = document.getElementById("toast"); // layout에 있으면 사용
 
+    if (!elTbody || !elPager) {
+        console.warn("[pending-list] required DOM missing, script aborted");
+        return;
+    }
+
     let page = 0;
     let totalPages = 1;
     let totalElements = 0;
 
-    // ===============================
     // perms from server (html data-*)
-    // ===============================
     function readPerms() {
         const d = document.documentElement?.dataset || {};
-        const b = (v) => String(v).toLowerCase() === "true";
+        const b = (v) => String(v ?? "").trim().toLowerCase() === "true";
         return {
             canApproveForm: b(d.canApproveForm),
             canRejectForm: b(d.canRejectForm),
@@ -31,7 +33,7 @@
     }
     const PERM = readPerms();
 
-    // (선택) 혹시 EMPLOYEE가 잘못 들어오면 프론트에서도 방어
+    // EMPLOYEE가 잘못 들어오면 프론트에서도 방어
     function isEmployeeByClass() {
         const cls = document.documentElement.classList;
         return cls.contains("role-employee") || cls.contains("role-EMPLOYEE");
@@ -42,9 +44,7 @@
         return;
     }
 
-    // ===============================
     // ui helpers
-    // ===============================
     function toast(msg) {
         if (!elToast) return;
         elToast.textContent = msg;
@@ -103,15 +103,20 @@
     }
 
     function markFormListDirty() {
-        try {
-            localStorage.setItem("list:dirty", "true");
-        } catch (_) {}
+        try { localStorage.setItem("list:dirty", "true"); } catch (_) {}
     }
 
-    // ===============================
-    // api
-    // ===============================
-    async function apiFetch(url, options = {}) {
+    // fetch (401 refresh 재시도)
+    async function refreshAccessTokenIfPossible() {
+        const res = await fetch("/auth/refresh", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+        });
+        return res.ok;
+    }
+
+    async function apiFetch(url, options = {}, _retried = false) {
         const headers = new Headers(options.headers || {});
         if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
@@ -120,9 +125,16 @@
             headers.set("Content-Type", "application/json");
         }
 
-        return fetch(url, { ...options, headers, credentials: "same-origin" });
+        const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
+
+        if (res.status === 401 && !_retried) {
+            const ok = await refreshAccessTokenIfPossible().catch(() => false);
+            if (ok) return apiFetch(url, options, true);
+        }
+        return res;
     }
 
+    // api
     async function updateStatus(docfoNo, docfoStat, rejectReason) {
         const payload = { docfoStat };
         if (rejectReason != null && String(rejectReason).trim() !== "") {
@@ -181,7 +193,11 @@
 
     function openDetail(docfoNo) {
         if (!docfoNo) return;
-        window.open(`${VIEW_BASE}/${encodeURIComponent(docfoNo)}`, "_blank", "width=1100,height=820,resizable=yes,scrollbars=yes");
+        window.open(
+            `${VIEW_BASE}/${encodeURIComponent(docfoNo)}`,
+            "_blank",
+            "width=1100,height=820,resizable=yes,scrollbars=yes"
+        );
     }
 
     function askReason(title) {
@@ -192,17 +208,27 @@
         return trimmed;
     }
 
-    // filter: mode -> stats (✅ W/X 유지)
-    function getStatsByMode(mode) {
-        if (mode === "P") return ["P", "W"];
-        if (mode === "R") return ["R", "X"];
-        return ["P", "W", "R", "X"];
+    // mode -> stats csv (서버 csv 지원 전제)
+    function getStatsCsvByMode(mode) {
+        if (mode === "P") return "P,W";
+        if (mode === "R") return "R,X";
+        return "P,W,R,X";
     }
 
-    //  render
-    function render(rows) {
-        if (!elTbody) return;
+    function buildUrl() {
+        const mode = elMode?.value || "ALL";
+        const statCsv = getStatsCsvByMode(mode);
 
+        const params = new URLSearchParams();
+        params.set("stat", statCsv);
+        params.set("page", String(page));
+        params.set("size", String(PAGE_SIZE));
+
+        return `${API_BASE}?${params.toString()}`;
+    }
+
+    // render
+    function render(rows) {
         if (!rows || rows.length === 0) {
             elTbody.innerHTML = `<tr><td colspan="5" class="muted">조회 결과가 없어요.</td></tr>`;
             return;
@@ -228,11 +254,7 @@
 
                 let actionHtml = "";
 
-                // PERM 기반 렌더링
-                // - 승인/반려: canApproveForm / canRejectForm
-                // - 사유보기: canViewReason
                 if (isPendingGroup) {
-                    // 대기 그룹에서는 승인/반려 권한이 있어야 버튼 노출
                     if (stat === "P" && PERM.canApproveForm && PERM.canRejectForm) {
                         actionHtml = `
               <button class="btn sm ok" data-action="approve" data-id="${esc(idStr)}">승인</button>
@@ -247,7 +269,6 @@
                         actionHtml = `<span class="muted">-</span>`;
                     }
                 } else if (isRejectedGroup) {
-                    // 반려 그룹에서는 사유 보기 권한이 있고 + 사유가 있으면 버튼
                     actionHtml =
                         (PERM.canViewReason && reasonInline)
                             ? `<button class="btn sm warn btn-reason" data-action="reason" data-id="${esc(idStr)}">사유</button>`
@@ -278,7 +299,6 @@
     }
 
     function renderPager() {
-        if (!elPager) return;
         elPager.innerHTML = "";
 
         const tp = Math.max(1, Number(totalPages) || 1);
@@ -295,6 +315,7 @@
             b.className = `pageBtn ${active ? "active" : ""}`;
             b.textContent = label;
             b.disabled = disabled;
+            b.type = "button";
             b.onclick = () => {
                 page = target;
                 load();
@@ -305,69 +326,70 @@
         elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
 
         for (let i = startPage; i <= endPage; i++) {
-            elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
+            // disabled는 false
+            elPager.appendChild(createBtn(String(i + 1), i, i === cur, false));
         }
 
         elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
-    // load
+    // load (서버 페이징)
     async function load() {
-        if (!elTbody) return;
         elTbody.innerHTML = `<tr><td colspan="5" class="muted">로딩 중...</td></tr>`;
 
         try {
-            const mode = elMode?.value || "ALL";
-            const stats = getStatsByMode(mode);
+            const res = await apiFetch(buildUrl(), { method: "GET" });
 
-            const results = await Promise.all(
-                stats.map((s) =>
-                    apiFetch(`${API_BASE}?stat=${encodeURIComponent(s)}&page=0&size=${BIG}`, { method: "GET" }).then(async (res) => {
-                        if (!res.ok) {
-                            const t = await res.text().catch(() => "");
-                            throw new Error(`${s} 조회 실패 HTTP ${res.status} ${t}`);
-                        }
-                        const json = await res.json();
-                        const items =
-                            json?.content && Array.isArray(json.content)
-                                ? json.content
-                                : json?.data?.content && Array.isArray(json.data.content)
-                                    ? json.data.content
-                                    : [];
-                        return items;
-                    })
-                )
-            );
+            if (res.status === 401) {
+                elTbody.innerHTML = `<tr><td colspan="5" class="muted">로그인이 만료되었습니다. 다시 로그인 해주세요.</td></tr>`;
+                return;
+            }
+            if (res.status === 403) {
+                elTbody.innerHTML = `<tr><td colspan="5" class="muted">권한이 없습니다.</td></tr>`;
+                return;
+            }
 
-            const map = new Map();
-            results.flat().forEach((it) => {
-                const key = String(it.docfoNo ?? it.id ?? it.docfo_no ?? "");
-                if (!key) return;
-                map.set(key, it);
-            });
+            if (!res.ok) {
+                const t = await res.text().catch(() => "");
+                throw new Error(`HTTP ${res.status} ${t}`);
+            }
 
-            const merged = Array.from(map.values()).sort((a, b) => {
-                const ax = Number(a.docfoNo ?? a.id ?? a.docfo_no ?? 0);
-                const bx = Number(b.docfoNo ?? b.id ?? b.docfo_no ?? 0);
-                return ax - bx;
-            });
+            const json = await res.json();
+            const items = Array.isArray(json?.content)
+                ? json.content
+                : Array.isArray(json?.data?.content)
+                    ? json.data.content
+                    : [];
 
-            totalElements = merged.length;
-            totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
-            page = Math.min(Math.max(0, page), totalPages - 1);
+            const pg = json?.content
+                ? {
+                    page: json.number ?? 0,
+                    totalPages: json.totalPages ?? 1,
+                    totalElements: json.totalElements ?? items.length,
+                }
+                : json?.data?.content
+                    ? {
+                        page: json.data.number ?? 0,
+                        totalPages: json.data.totalPages ?? 1,
+                        totalElements: json.data.totalElements ?? items.length,
+                    }
+                    : { page: 0, totalPages: 1, totalElements: items.length };
 
-            const start = page * PAGE_SIZE;
-            const rows = merged.slice(start, start + PAGE_SIZE);
+            page = pg.page ?? page;
+            totalPages = pg.totalPages ?? 1;
+            totalElements = pg.totalElements ?? 0;
 
             if (elInfo) elInfo.textContent = `page ${page + 1} / ${Math.max(totalPages, 1)}`;
             if (elCountPill) elCountPill.textContent = `${totalElements}건`;
 
             renderPager();
-            render(rows);
+            render(items);
         } catch (err) {
             console.error(err);
             elTbody.innerHTML = `<tr><td colspan="5" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
             totalPages = 1;
+            totalElements = 0;
+            page = 0;
             if (elInfo) elInfo.textContent = "page 1 / 1";
             if (elCountPill) elCountPill.textContent = "0건";
             renderPager();
@@ -380,7 +402,7 @@
         load();
     });
 
-    elTbody?.addEventListener("click", async (e) => {
+    elTbody.addEventListener("click", async (e) => {
         const t = e.target;
         if (!(t instanceof HTMLElement)) return;
 
@@ -399,7 +421,6 @@
                 return;
             }
 
-            // 승인/반려/삭제승인/삭제반려는 PERM 없으면 무시
             if (action === "approve") {
                 if (!PERM.canApproveForm) return;
                 await updateStatus(id, "A");
@@ -454,6 +475,19 @@
         }
     });
 
-    window.openDetail = openDetail;
+    function consumeDirtyAndReload() {
+        try {
+            if (localStorage.getItem('list:dirty') === 'true') {
+                localStorage.removeItem('list:dirty');
+                load();
+            }
+        } catch (_) {}
+    }
+
+    window.addEventListener('focus', consumeDirtyAndReload);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) consumeDirtyAndReload();
+    });
+
     load();
 })();

@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 
 /**
  * Please explain the class!!!

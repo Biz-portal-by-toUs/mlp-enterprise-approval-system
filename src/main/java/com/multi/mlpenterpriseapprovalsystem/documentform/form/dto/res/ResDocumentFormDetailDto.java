@@ -1,7 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 
 import java.util.List;
 

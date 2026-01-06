@@ -1,7 +1,8 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.repository;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.*;
 import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.*;
 
 import java.util.*;
 
@@ -15,4 +16,7 @@ import java.util.*;
 public interface DocumentFormCategoryRepository extends JpaRepository<DocumentFormCategory, Long> {
     void deleteByDocumentForm(DocumentForm documentForm);
     List<DocumentFormCategory> findByDocumentForm_DocfoNoOrderByDocfoCatNoAsc(Long docfoNo);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from DocumentFormCategory c where c.documentForm.docfoNo = :docfoNo")
+    int deleteByDocfoNo(@Param("docfoNo") Long docfoNo);
 }

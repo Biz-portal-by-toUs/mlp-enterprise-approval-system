@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.domain;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import jakarta.persistence.*;

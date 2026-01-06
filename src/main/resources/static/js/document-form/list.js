@@ -3,7 +3,9 @@
     const API_BASE = '/api/v1/forms';
     const VIEW_BASE = '/form';
 
-    // ✅ 승인된 것만 보이게(원하면 false로)
+    const PAGE_SIZE = 10;
+
+    // 승인된 것만 보이게(원하면 false로)
     const ONLY_APPROVED = true;
     const APPROVED_STATS = ['A', 'X'];
 
@@ -12,7 +14,6 @@
     const elInfo = document.getElementById('pageInfo');
     const elPager = document.getElementById('pagerControls');
     const elQ = document.getElementById('q');
-    const elSize = document.getElementById('size');
     const elThSelect = document.getElementById('thSelect');
 
     const btnDeleteSelected = document.getElementById('btnDeleteSelected'); // th:if로 없을 수도 있음
@@ -21,8 +22,8 @@
 
     const elCountPill = document.getElementById('countPill');
 
-    if (!elTbody || !elPager || !elQ || !elSize || !btnSearch) {
-        console.error('list page DOM missing');
+    if (!elTbody || !elPager || !elQ || !btnSearch) {
+        console.warn('[form-list] required DOM missing, script aborted');
         return;
     }
 
@@ -34,8 +35,7 @@
             isEmployee: root.dataset.isEmployee,
             canCreate: root.dataset.canCreate,
             canBulkDelete: root.dataset.canBulkDelete,
-            canApprove: root.dataset.canApprove,
-            canUseTemp: root.dataset.canUseTemp,
+
         };
 
         const b = (v) => String(v ?? '').trim().toLowerCase() === 'true';
@@ -44,8 +44,6 @@
             isEmployee: b(raw.isEmployee),
             canCreate: b(raw.canCreate),
             canBulkDelete: b(raw.canBulkDelete),
-            canApprove: b(raw.canApprove),
-            canUseTemp: b(raw.canUseTemp),
         };
 
         // 필요하면 디버깅
@@ -68,10 +66,6 @@
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#39;');
-    }
-
-    function markFormListDirty() {
-        try { localStorage.setItem('list:dirty', 'true'); } catch (_) {}
     }
 
     // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
@@ -108,31 +102,28 @@
     }
 
     function normalizePage(data) {
-        // Spring Page 그대로
         if (data && Array.isArray(data.content)) {
             return {
                 items: data.content,
                 page: data.number ?? 0,
-                size: data.size ?? Number(elSize.value || 15),
+                size: PAGE_SIZE,
                 totalPages: data.totalPages ?? 1,
                 totalElements: data.totalElements ?? data.content.length,
             };
         }
-        // 배열만 올 수도 있음
         if (Array.isArray(data)) {
-            return { items: data, page: 0, size: data.length, totalPages: 1, totalElements: data.length };
+            return { items: data, page: 0, size: PAGE_SIZE, totalPages: 1, totalElements: data.length };
         }
-        // data.data.page 같은 래핑
         if (data && data.data && Array.isArray(data.data.content)) {
             return {
                 items: data.data.content,
                 page: data.data.number ?? 0,
-                size: data.data.size ?? Number(elSize.value || 15),
+                size: PAGE_SIZE,
                 totalPages: data.data.totalPages ?? 1,
                 totalElements: data.data.totalElements ?? data.data.content.length,
             };
         }
-        return { items: [], page: 0, size: Number(elSize.value || 15), totalPages: 1, totalElements: 0 };
+        return { items: [], page: 0, size: PAGE_SIZE, totalPages: 1, totalElements: 0 };
     }
 
     // ===== state =====
@@ -144,12 +135,11 @@
     function buildUrl(statsCsvOrNull) {
         const params = new URLSearchParams();
         params.set('page', String(page));
-        params.set('size', String(Number(elSize.value || 15)));
+        params.set('size', String(PAGE_SIZE));
 
         const q = (elQ.value || '').trim();
         if (q) params.set('q', q);
 
-        // ✅ 서버 컨트롤러가 받는 건 stat 하나면 충분
         if (statsCsvOrNull) params.set('stat', statsCsvOrNull);
 
         return `${API_BASE}?${params.toString()}`;
@@ -167,7 +157,6 @@
             'width=1100,height=820,resizable=yes,scrollbars=yes'
         );
     }
-    window.openDetail = openDetail;
 
     function clearSelection() {
         selected.clear();
@@ -202,7 +191,7 @@
             return;
         }
 
-        const size = Number(elSize.value || 15);
+        const size = PAGE_SIZE;
         const employee = isEmployee();
         const showCheckbox = PERM.canBulkDelete && !employee;
 
@@ -246,7 +235,7 @@
         const tp = Math.max(1, Number(totalPages) || 1);
         const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        const blockSize = 5; // ✅ 사이트 컨셉이 10 고정이면 여기를 10으로 바꾸면 됨
+        const blockSize = 5; // 페이지네이션에서 한 번에 보여줄 버튼 개수
         const currentBlock = Math.floor(cur / blockSize);
         const startPage = currentBlock * blockSize;
         let endPage = startPage + blockSize - 1;
@@ -268,7 +257,7 @@
 
         elPager.appendChild(createBtn("<", cur - 1, false, cur <= 0));
         for (let i = startPage; i <= endPage; i++) {
-            elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
+            elPager.appendChild(createBtn(String(i + 1), i, i === cur, false));
         }
         elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
@@ -364,7 +353,6 @@
                 await softDelete(docfoNo);
             }
             selected.clear();
-            markFormListDirty();
             await load();
             alert('선택 삭제 완료');
         } catch (err) {
@@ -399,18 +387,28 @@
         }
     });
 
-    elSize.addEventListener('change', () => {
-        page = 0;
-        clearSelection();
-        load();
-    });
-
     // list dirty refresh (팝업에서 수정/삭제 후)
     window.addEventListener('storage', (e) => {
         if (e.key === 'list:dirty' && e.newValue === 'true') {
             try { localStorage.removeItem('list:dirty'); } catch (_) {}
             load();
         }
+    });
+
+    function consumeDirtyAndReload() {
+        try {
+            if (localStorage.getItem('list:dirty') === 'true') {
+                localStorage.removeItem('list:dirty');
+                load();
+                return true;
+            }
+        } catch (_) {}
+        return false;
+    }
+
+    window.addEventListener('focus', consumeDirtyAndReload);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) consumeDirtyAndReload();
     });
 
     // init

@@ -1,13 +1,13 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.service.DocumentFormService;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormListDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.service.DocumentFormService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -213,5 +213,18 @@ public class DocumentFormController {
         return ResponseEntity.ok(
                 documentFormService.findMyTempList(customUser.getComId(), customUser.getUsername(), q, pageable)
         );
+    }
+
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @DeleteMapping("/temp/{docfoNo}")
+    public ResponseEntity<Void> deleteTemp(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable Long docfoNo
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+        if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        documentFormService.deleteTemp(docfoNo, customUser.getComId(), customUser.getUsername());
+        return ResponseEntity.noContent().build();
     }
 }

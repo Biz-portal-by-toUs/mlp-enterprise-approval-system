@@ -1,6 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentFormCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
