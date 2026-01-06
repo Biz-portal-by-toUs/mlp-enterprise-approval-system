@@ -1,12 +1,16 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.mail.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.*;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.mail.domain.MailUserState;
+import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Please explain the class!!!
@@ -132,4 +136,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
 
     @Query(value = "select database()", nativeQuery = true)
     String currentDatabase();
+
+    // 특정 직원의 안 읽은(isRead = false) 메일 개수를 카운트
+    int countByUserAndIsReadFalse(Employee User);
 }

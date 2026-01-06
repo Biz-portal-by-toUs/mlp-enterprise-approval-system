@@ -127,7 +127,16 @@ public class BoardController {
     }
 
 
+    // 각 회사 별 조회수 top 10 게시판 목록 조회
+    @GetMapping("/boards/top-view")
+    public ResponseEntity<ResponseDto<List<BoardListItemResDto>>> top10ByViewsAll(
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        List<BoardListItemResDto> list = boardService.getTop10ByViews(user);
 
+        return ResponseEntity
+                .ok(new ResponseDto<>(HttpStatus.OK, "게시판 조회수 top10 조회 성공", list));
+    }
 
 }
 
