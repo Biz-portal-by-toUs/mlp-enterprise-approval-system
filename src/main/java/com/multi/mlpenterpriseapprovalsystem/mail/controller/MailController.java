@@ -36,7 +36,7 @@ public class MailController {
             Authentication authentication
     ) {
         String empId = authentication.getName();
-        return ResponseEntity.ok(mailService.getInbox(empId, role, pageable));
+        return ResponseEntity.ok(mailService.getInbox(empId, role, q, pageable));
     }
 
     // 보낸 메일함(서버 인증 기반)
@@ -46,7 +46,7 @@ public class MailController {
             Authentication authentication
     ) {
         String empId = authentication.getName();
-        return ResponseEntity.ok(mailService.getSent(empId, pageable));
+        return ResponseEntity.ok(mailService.getSent(empId, q, pageable));
     }
 
     // 휴지통 조회(서버 인증 기반)
@@ -110,6 +110,24 @@ public class MailController {
     ) {
         String empId = authentication.getName();
         mailService.purge(mailId, empId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{mailId}/prior")
+    public ResponseEntity<Void> setPrior(
+            @PathVariable String mailId,
+            @RequestParam("prior") boolean prior,
+            Authentication authentication
+    ) {
+        String empId = authentication.getName();
+        mailService.setPrior(mailId, empId, prior);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{mailId}/prior/toggle")
+    public ResponseEntity<Void> togglePrior(@PathVariable String mailId, Authentication authentication) {
+        String empId = authentication.getName();
+        mailService.togglePrior(mailId, empId);
         return ResponseEntity.noContent().build();
     }
 }

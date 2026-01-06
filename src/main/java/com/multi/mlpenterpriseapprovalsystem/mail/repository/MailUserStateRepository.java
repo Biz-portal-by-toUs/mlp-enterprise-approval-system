@@ -50,7 +50,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
                 where mus.user.empId = :userEmpId
                   and mus.role = :role
                   and mus.deletedAt is null
-                order by m.createdAt desc
+                order by coalesce(mus.isPrior, false) desc, m.createdAt desc
             """,
             countQuery = """
                 select count(mus)
@@ -76,7 +76,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
                 where mus.user.empId = :userEmpId
                   and mus.role = :role
                   and mus.deletedAt is null
-                order by m.createdAt desc
+                order by coalesce(mus.isPrior, false) desc, m.createdAt desc
             """,
             countQuery = """
                 select count(mus)

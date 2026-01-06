@@ -149,6 +149,7 @@
 
         /* ===== 칼럼 폭: 제목 최대로 ===== */
         th.col-no, td.col-no{ width:90px; }
+        th.col-star, td.col-star{ width:60px; }
         th.col-date, td.col-date{ width:180px; }
         th.col-recv, td.col-recv{ width:180px; } /* 수신인 고정폭 */
 
@@ -170,6 +171,30 @@
             text-overflow:ellipsis;
             white-space:nowrap;
             font-weight:900;
+        }
+
+        /* ===== 중요(별) ===== */
+        .starBtn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:34px;
+            height:34px;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:transparent;
+            cursor:pointer;
+            font-size:18px;
+            line-height:1;
+            transition:0.15s;
+        }
+        .starBtn:hover{
+            background:#f8fafc;
+            border-color:var(--line);
+        }
+        .starBtn:disabled{
+            opacity:.6;
+            cursor:not-allowed;
         }
 
         .pager-wrapper{
@@ -251,6 +276,7 @@
                     <thead>
                     <tr>
                         <th class="col-no">번호</th>
+                        <th class="col-star">중요</th>
                         <th class="col-recv">수신인</th>
                         <th class="col-title-h">제목</th>
                         <th class="col-date">발신일</th>
@@ -270,6 +296,29 @@
             </div>
 
             <script>
+                function getCsrfHeaders(){
+                    const csrfParamEl = document.getElementById('csrfParam');
+                    const csrfHeaderEl = document.getElementById('csrfHeader');
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
+
+                function starEmoji(isPrior){
+                    return isPrior ? '⭐' : '☆';
+                }
+
+                async function patchNoBody(url){
+                    const res = await fetch(url, {
+                        method: 'PATCH',
+                        credentials: 'include',
+                        headers: { ...getCsrfHeaders() }
+                    });
+                    if(!res.ok){
+                        const t = await res.text().catch(()=> '');
+                        throw new Error(`HTTP ${res.status} ${t}`);
+                    }
+                }
+
                 function fmtDate(iso){
                     if (!iso) return '-';
                     try{
@@ -356,31 +405,71 @@
                     tb.innerHTML = '';
 
                     if (!items || items.length === 0){
-                        tb.innerHTML = `<tr><td colspan="4" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
+                        tb.innerHTML = `<tr><td colspan="5" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
                         return;
                     }
 
                     items.forEach((it, idx) => {
                         const num = totalElements - (page * size) - idx;
                         const title = escapeHtml(it.title);
-
                         const receivers = escapeHtml(it.receivers);
-
                         const createdAt = fmtDate(it.createdAt);
+
+                        const isPrior = !!it.isPrior;
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td class="col-no">${num}</td>
+
+                            <td class="col-star">
+                                <button type="button"
+                                        class="starBtn"
+                                        data-mail-id="${escapeHtml(it.mailId)}"
+                                        aria-label="중요메일 토글">
+                                    ${starEmoji(isPrior)}
+                                </button>
+                            </td>
+
                             <td class="col-recv">${receivers || '-'}</td>
                             <td class="col-title">
                                 <a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
                             </td>
                             <td class="col-date">${createdAt}</td>
                         `;
+
+                        // 행 클릭 = 상세 이동 (별/링크 클릭은 제외)
                         tr.addEventListener('click', (e) => {
-                            if (e.target && e.target.tagName === 'A') return;
+                            if (e.target && (e.target.closest('.starBtn') || e.target.tagName === 'A')) return;
                             location.href = `/mail/${encodeURIComponent(it.mailId)}`;
                         });
+
+                        // 별 클릭 = 중요 토글
+                        const starBtn = tr.querySelector('.starBtn');
+                        starBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const mailId = starBtn.dataset.mailId;
+                            const prev = starBtn.textContent.trim() === '⭐';
+
+                            // optimistic UI
+                            starBtn.textContent = starEmoji(!prev);
+                            starBtn.disabled = true;
+
+                            try{
+                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
+                                // 정렬이 prior-first라면, 토글 후 위치가 바뀌어야 함 -> 새로고침 로드
+                                // UX 선호에 따라 아래 한 줄 주석 해제 가능
+                                await load();
+                            }catch(err){
+                                console.error(err);
+                                starBtn.textContent = starEmoji(prev);
+                                alert('중요메일 설정에 실패했습니다.');
+                            }finally{
+                                starBtn.disabled = false;
+                            }
+                        });
+
                         tb.appendChild(tr);
                     });
                 }
@@ -390,7 +479,9 @@
                     document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    const url = `/api/v1/mails/sent?page=${st.page}&size=${st.size}&sort=createdAt,desc`;
+                    // ✅ 정렬은 서버 쿼리(order by isPrior desc, createdAt desc)에서 고정한다는 전제
+                    // 그래서 sort 파라미터 제거
+                    const url = `/api/v1/mails/sent?page=${st.page}&size=${st.size}`;
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
@@ -429,7 +520,7 @@
                 window.addEventListener('DOMContentLoaded', () => {
                     load().catch(err => {
                         console.error(err);
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="4" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('tbody').innerHTML = `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
                     });
                 });
             </script>

@@ -190,4 +190,20 @@ public class MailServiceImpl implements MailService {
         long epochSec = Instant.now().getEpochSecond();
         return "MAIL_" + epochSec + "_" + senderEmpId;
     }
+
+    @Override
+    @Transactional
+    public void setPrior(String mailId, String userEmpId, boolean prior) {
+        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
+                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
+        mus.setPrior(prior);
+    }
+
+    @Override
+    @Transactional
+    public void togglePrior(String mailId, String userEmpId) {
+        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
+                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
+        mus.togglePrior();
+    }
 }

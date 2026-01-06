@@ -239,6 +239,31 @@
             align-items:center;
         }
 
+        th.col-star, td.col-star{ width:60px; }
+
+        .starBtn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:34px;
+            height:34px;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:transparent;
+            cursor:pointer;
+            font-size:18px;   /* 유니코드 별 크기 */
+            line-height:1;
+            transition:0.15s;
+        }
+        .starBtn:hover{
+            background:#f8fafc;
+            border-color:var(--line);
+        }
+        .starBtn:disabled{
+            opacity:.6;
+            cursor:not-allowed;
+        }
+
         @media (max-width:760px){
             .page-with-subbar{ grid-template-columns:1fr; }
             .page-main{ padding:14px; }
@@ -280,6 +305,7 @@
                     <thead>
                     <tr>
                         <th class="col-no">번호</th>
+                        <th class="col-star">중요</th>
                         <th class="col-read">읽음</th>
                         <th class="col-sender">발신인</th>
                         <th class="col-title-h">제목</th>
@@ -331,6 +357,22 @@
                         .replaceAll('>','&gt;')
                         .replaceAll('"','&quot;')
                         .replaceAll("'","&#039;");
+                }
+
+                async function patchNoBody(url){
+                    const res = await fetch(url, {
+                        method: 'PATCH',
+                        credentials: 'include',
+                        headers: { ...getCsrfHeaders() }
+                    });
+                    if(!res.ok){
+                        const t = await res.text().catch(()=> '');
+                        throw new Error(`HTTP ${res.status} ${t}`);
+                    }
+                }
+
+                function starEmoji(isPrior){
+                    return isPrior ? '⭐' : '☆';  // 꽉찬별 / 빈별
                 }
 
                 function buildPager(page, totalPages, onGo){
@@ -395,16 +437,14 @@
                     tb.innerHTML = '';
 
                     if (!items || items.length === 0){
-                        tb.innerHTML = `<tr><td colspan="5" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
+                        tb.innerHTML = `<tr><td colspan="6" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
                         return;
                     }
 
                     items.forEach((it, idx) => {
                         const num = totalElements - (page * size) - idx;
                         const title = escapeHtml(it.title);
-
                         const senderName = escapeHtml(it.senderName);
-
                         const createdAt = fmtDate(it.createdAt);
 
                         const isRead = !!it.isRead;
@@ -412,9 +452,21 @@
                             ? `<span class="badgePill pill-read">읽음</span>`
                             : `<span class="badgePill pill-unread">안읽음</span>`;
 
+                        const isPrior = !!it.isPrior;
+
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td class="col-no">${num}</td>
+
+                            <td class="col-star">
+                                <button type="button"
+                                        class="starBtn"
+                                        data-mail-id="${escapeHtml(it.mailId)}"
+                                        aria-label="중요메일 토글">
+                                    ${starEmoji(isPrior)}
+                                </button>
+                            </td>
+
                             <td class="col-read">${pill}</td>
                             <td class="col-sender">${senderName}</td>
                             <td class="col-title">
@@ -422,12 +474,44 @@
                             </td>
                             <td class="col-date">${createdAt}</td>
                         `;
+
+                        // 행 클릭(상세 이동)
                         tr.addEventListener('click', (e) => {
-                            if (e.target && e.target.tagName === 'A') return;
+                            // 별/링크 클릭은 상세이동 막기
+                            if (e.target && (e.target.closest('.starBtn') || e.target.tagName === 'A')) return;
                             location.href = `/mail/${encodeURIComponent(it.mailId)}`;
                         });
+
+                        // 별 클릭(토글)
+                        const starBtn = tr.querySelector('.starBtn');
+                        starBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const mailId = starBtn.dataset.mailId;
+                            const prev = starBtn.textContent.trim() === '⭐';
+
+                            // UX: 즉시 반영(optimistic)
+                            starBtn.textContent = starEmoji(!prev);
+                            starBtn.disabled = true;
+
+                            try{
+                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
+                                // 성공하면 그대로 유지
+                                await load();
+                            }catch(err){
+                                console.error(err);
+                                // 실패 시 롤백
+                                starBtn.textContent = starEmoji(prev);
+                                alert('중요메일 설정에 실패했습니다.');
+                            }finally{
+                                starBtn.disabled = false;
+                            }
+                        });
+
                         tb.appendChild(tr);
                     });
+
                 }
 
                 async function load(){
@@ -441,7 +525,7 @@
                     document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    const url = `/api/v1/mails/inbox?role=RECIPIENT&page=${st.page}&size=${st.size}&sort=createdAt,desc`;
+                    const url = `/api/v1/mails/inbox?role=RECIPIENT&page=${st.page}&size=${st.size}`;
                     const data = await fetchJson(url);
 
                     const items = data.content || [];

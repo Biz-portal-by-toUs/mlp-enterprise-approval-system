@@ -35,4 +35,8 @@ public interface MailService {
     void restoreFromTrash(String mailId, String userEmpId);
 
     void purge(String mailId, String userEmpId); // 휴지통 거친 후만 (row 삭제)
+
+    void setPrior(String mailId, String userEmpId, boolean prior);
+
+    void togglePrior(String mailId, String userEmpId);
 }

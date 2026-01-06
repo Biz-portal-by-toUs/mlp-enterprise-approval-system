@@ -71,4 +71,12 @@ public class MailUserState extends BaseEntity {
         mus.deletedAt = null;
         return mus;
     }
+
+    public void setPrior(boolean prior) {
+        this.isPrior = prior;
+    }
+
+    public void togglePrior() {
+        this.isPrior = (this.isPrior == null) ? Boolean.TRUE : !this.isPrior;
+    }
 }
