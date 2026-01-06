@@ -475,5 +475,19 @@
         }
     });
 
+    function consumeDirtyAndReload() {
+        try {
+            if (localStorage.getItem('list:dirty') === 'true') {
+                localStorage.removeItem('list:dirty');
+                load();
+            }
+        } catch (_) {}
+    }
+
+    window.addEventListener('focus', consumeDirtyAndReload);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) consumeDirtyAndReload();
+    });
+
     load();
 })();

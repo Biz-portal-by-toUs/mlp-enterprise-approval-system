@@ -395,6 +395,22 @@
         }
     });
 
+    function consumeDirtyAndReload() {
+        try {
+            if (localStorage.getItem('list:dirty') === 'true') {
+                localStorage.removeItem('list:dirty');
+                load();
+                return true;
+            }
+        } catch (_) {}
+        return false;
+    }
+
+    window.addEventListener('focus', consumeDirtyAndReload);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) consumeDirtyAndReload();
+    });
+
     // init
     (function init() {
         updateBulkDeleteUI();

@@ -90,7 +90,20 @@ function readPerms() {
 const PERM = readPerms()
 
 function markFormListDirty() {
-    try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
+    // localStorage flag (다른 탭/창도 공유)
+    try {
+        localStorage.setItem('documentForm:dirty', String(Date.now())); // timestamp로 매번 변경 보장
+    } catch (_) {}
+
+    // opener로 즉시 신호(같은 출처일 때만)
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(
+                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
+                window.location.origin
+            );
+        }
+    } catch (_) {}
 }
 
 // ✅ 쿠키 기반 fetch (Authorization/localStorage 사용 X)
