@@ -7,7 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeReposit
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
 import com.multi.mlpenterpriseapprovalsystem.notification.dto.NotificationResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.notification.repository.NotificationsRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
@@ -25,13 +25,24 @@ import java.util.Map;
  * @since : 2026. 1. 6. 화요일
  */
 @Component
-@RequiredArgsConstructor
 public class RedisNotificationSubscriber implements MessageListener {
-
     private final ObjectMapper objectMapper;
     private final NotificationsRepository notificationsRepository;
     private final EmployeeRepository employeeRepository;
     private final SseManager sseManager;
+
+    // 수동 생성자 추가
+    public RedisNotificationSubscriber(
+            @Qualifier("redisObjectMapper") ObjectMapper objectMapper, // 사용할 빈 이름 지정
+            NotificationsRepository notificationsRepository,
+            EmployeeRepository employeeRepository,
+            SseManager sseManager
+    ) {
+        this.objectMapper = objectMapper;
+        this.notificationsRepository = notificationsRepository;
+        this.employeeRepository = employeeRepository;
+        this.sseManager = sseManager;
+    }
 
     /**
      * Redis Pub/Sub 메시지 수신 엔트리 포인트
