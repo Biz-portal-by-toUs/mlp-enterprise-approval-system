@@ -19,12 +19,9 @@ public interface MailService {
     //메일 전송
     ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req);
 
+    Page<ResMailListDto> getInbox(String userEmpId, MailRole role, String q, Pageable pageable);
 
-    Page<ResMailListDto> getInbox(String userEmpId, MailRole role, Pageable pageable);
-
-    Page<ResMailListDto> getInboxByRoles(String userEmpId, List<MailRole> roles, Pageable pageable); // 추후 확장 시 사용
-
-    Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable);
+    Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable);
 
     ResMailDetailDto getDetail(String mailId, String viewerEmpId);
 
@@ -37,4 +34,8 @@ public interface MailService {
     void restoreFromTrash(String mailId, String userEmpId);
 
     void purge(String mailId, String userEmpId); // 휴지통 거친 후만 (row 삭제)
+
+    void setPrior(String mailId, String userEmpId, boolean prior);
+
+    void togglePrior(String mailId, String userEmpId);
 }

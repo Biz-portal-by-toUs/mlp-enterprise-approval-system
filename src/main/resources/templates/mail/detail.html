@@ -16,99 +16,24 @@
             --danger:#ef4444;
             --primary:#2c5cff;
         }
-
-        .page-with-subbar{
-            display:grid;
-            grid-template-columns:260px minmax(0,1fr);
-            gap:0;
-            padding:0;
-            align-items:stretch;
-        }
-
-        .page-main{
-            padding:24px;
-            min-width:0;
-        }
-
-        .page-title{
-            margin:0 0 14px 0;
-            font-size:18px;
-            font-weight:900;
-        }
-
-        .card{
-            background:#fff;
-            border:1px solid var(--line);
-            border-radius:14px;
-            box-shadow:0 1px 3px rgba(0,0,0,0.05);
-            padding:18px;
-        }
-
-        .meta{
-            display:grid;
-            grid-template-columns: 120px 1fr;
-            gap:10px 12px;
-            padding-bottom:14px;
-            border-bottom:1px solid var(--line);
-            margin-bottom:14px;
-        }
-        .k{
-            color:var(--mut);
-            font-size:13px;
-            font-weight:900;
-        }
-        .v{
-            color:var(--fg);
-            font-size:14px;
-            font-weight:800;
-            min-width:0;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-        }
-
-        .content{
-            font-size:14px;
-            line-height:1.6;
-            font-weight:600;
-            color:var(--fg);
-            white-space:pre-wrap; /* JSON 문자열도 일단 보이게 */
-        }
-
-        .actions{
-            display:flex;
-            justify-content:flex-end;
-            gap:10px;
-            margin-top:14px;
-        }
-
-        .btn{
-            height:40px;
-            padding:0 18px;
-            border-radius:10px;
-            font-size:14px;
-            font-weight:900;
-            cursor:pointer;
-            border:none;
-            background:var(--primary);
-            color:#fff;
-            transition:0.15s;
-        }
-        .btn:hover{ filter:brightness(0.92); }
-
-        .btn.ghost{
-            background:#fff;
-            color:var(--fg);
-            border:1px solid var(--line);
-        }
-        .btn.ghost:hover{ background:#f8fafc; filter:none; }
-
-        .btn.danger{ background:var(--danger); }
-
+        .page-with-subbar{display:grid;grid-template-columns:260px minmax(0, 1fr);gap:0;padding:0;align-items:stretch;}
+        .page-main{padding:24px;min-width:0;}
+        .page-title{margin:0 0 14px 0;font-size:18px;font-weight:900;}
+        .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:18px;}
+        .meta{display:grid;grid-template-columns:120px 1fr;gap:10px 12px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px;}
+        .k{color:var(--mut);font-size:13px;font-weight:900;}
+        .v{color:var(--fg);font-size:14px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .content{font-size:14px;line-height:1.6;font-weight:600;color:var(--fg);}
+        .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;}
+        .btn{height:40px;padding:0 18px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;border:none;background:var(--primary);color:#fff;transition:0.15s;}
+        .btn:hover{filter:brightness(0.92);}
+        .btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .btn.ghost:hover{background:#f8fafc;filter:none;}
+        .btn.danger{background:var(--danger);}
         @media (max-width:760px){
-            .page-with-subbar{ grid-template-columns:1fr; }
-            .page-main{ padding:14px; }
-            .meta{ grid-template-columns: 90px 1fr; }
+            .page-with-subbar{grid-template-columns:1fr;}
+            .page-main{padding:14px;}
+            .meta{grid-template-columns:90px 1fr;}
         }
     </style>
 </head>
@@ -123,20 +48,13 @@
 
             <section class="card">
                 <div class="meta">
-                    <div class="k">메일 ID</div>
-                    <div class="v" id="mailIdTxt">-</div>
+                    <div class="k">메일 ID</div><div class="v" id="mailIdTxt">-</div>
+                    <div class="k">제목</div><div class="v" id="titleTxt">-</div>
 
-                    <div class="k">제목</div>
-                    <div class="v" id="titleTxt">-</div>
+                    <!-- 라벨/값을 동적으로 바꿀 영역 -->
+                    <div class="k" id="partyLabel">-</div><div class="v" id="partyTxt">-</div>
 
-                    <div class="k">보낸 사람</div>
-                    <div class="v" id="senderTxt">-</div>
-
-                    <div class="k">수신/발신일</div>
-                    <div class="v" id="createdAtTxt">-</div>
-
-                    <div class="k">내 역할</div>
-                    <div class="v" id="roleTxt">-</div>
+                    <div class="k">수신/발신일</div><div class="v" id="createdAtTxt">-</div>
                 </div>
 
                 <div class="content" id="contentBox">로딩 중...</div>
@@ -149,31 +67,34 @@
                 </div>
             </section>
 
-            <script>
-                function getMeEmpId() {
-                    return document.getElementById('me')?.dataset?.empNo?.trim() || '';
-                }
-
+            <script type="module">
                 function getMailIdFromPath() {
-                    // /mail/{mailId}
                     const parts = window.location.pathname.split('/').filter(Boolean);
                     return parts.length >= 2 ? parts[1] : '';
                 }
 
                 function fmtDate(iso) {
                     if (!iso) return '-';
-                    try {
-                        const d = new Date(iso);
-                        if (isNaN(d.getTime())) return String(iso);
-                        const y = d.getFullYear();
-                        const m = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const hh = String(d.getHours()).padStart(2, '0');
-                        const mm = String(d.getMinutes()).padStart(2, '0');
-                        return `${y}-${m}-${day} ${hh}:${mm}`;
-                    } catch (e) {
-                        return String(iso);
-                    }
+                    const d = new Date(iso);
+                    if (isNaN(d.getTime())) return String(iso);
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    return `${y}-${m}-${day} ${hh}:${mm}`;
+                }
+
+                function setSidebarActive(key){
+                    const nav = document.getElementById('mailNav');
+                    if (!nav) return;
+
+                    nav.dataset.active = key;
+
+                    nav.querySelectorAll('.subbar-item').forEach(a => {
+                        const k = a.dataset.key;
+                        a.classList.toggle('active', k === key);
+                    });
                 }
 
                 function setText(id, value) {
@@ -190,85 +111,135 @@
                 async function api(method, url) {
                     const headers = { 'Accept': 'application/json' };
 
-                    // layout.html에 CSRF hidden input들이 있을 수 있어서 안전하게 처리(있으면 적용)
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
-                    if (csrfParamEl && csrfHeaderEl) {
-                        headers[csrfHeaderEl.value] = csrfParamEl.value;
-                    }
+                    if (csrfParamEl && csrfHeaderEl) headers[csrfHeaderEl.value] = csrfParamEl.value;
 
                     const res = await fetch(url, { method, headers, credentials: 'include' });
+
+                    if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
+                    if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
+
                     if (!res.ok) {
                         const t = await res.text().catch(() => '');
                         throw new Error(`HTTP ${res.status} ${t}`);
                     }
-                    // 204는 body 없음
+
                     if (res.status === 204) return null;
                     return res.json();
                 }
 
-                async function loadDetail() {
-                    const viewerEmpId = getMeEmpId();
-                    const mailId = getMailIdFromPath();
+                // Tiptap JSON -> HTML 렌더러
+                async function renderTiptap(jsonOrString) {
+                    const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.2');
+                    const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.2')).default;
 
-                    if (!viewerEmpId) {
-                        document.getElementById('contentBox').textContent = '로그인 사용자 정보를 찾을 수 없습니다.';
-                        return;
+                    const doc = (typeof jsonOrString === 'string')
+                        ? JSON.parse(jsonOrString)
+                        : jsonOrString;
+
+                    return generateHTML(doc, [StarterKit]);
+                }
+
+                // 수신인 표시 문자열 만들기
+                function buildReceiversText(data){
+                    // 1) 서버가 이미 사원번호 문자열을 내려주는 경우
+                    if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
+
+                    // 2) 배열로 내려주는 경우
+                    const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
+                    const names = Array.isArray(data.receiverEmpNames) ? data.receiverEmpNames : null;
+
+                    if (ids && ids.length){
+                        if (names && names.length === ids.length){
+                            return ids.map((id, i) => `${names[i] ?? ''} (${id ?? ''})`.trim()).join(', ');
+                        }
+                        return ids.join(', ');
                     }
+
+                    // 3) 단건 필드로 내려주는 경우(가정)
+                    if (data.receiverEmpId || data.receiverEmpName){
+                        return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
+                    }
+
+                    return '-';
+                }
+
+                async function loadDetail() {
+                    const mailId = getMailIdFromPath();
                     if (!mailId) {
                         document.getElementById('contentBox').textContent = 'mailId가 없습니다.';
                         return;
                     }
 
-                    // 상세 조회
-                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}?viewerEmpId=${encodeURIComponent(viewerEmpId)}`);
+                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}`);
 
-                    // DTO 필드명 기준 (너의 ResMailDetailDto 생성자 순서)
                     setText('mailIdTxt', data.mailId ?? mailId);
                     setText('titleTxt', data.title ?? '-');
-                    setText('senderTxt', `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim());
                     setText('createdAtTxt', fmtDate(data.createdAt));
-                    setText('roleTxt', data.role ?? '-');
 
-                    // cntt는 JSON 문자열일 수 있음 → 일단 텍스트로 보여주기
-                    document.getElementById('contentBox').textContent = data.cntt ?? '';
+                    // 역할 텍스트 삭제 대신 라벨/값을 역할에 따라 변경
+                    const role = String(data.role || '').toUpperCase();
 
-                    // ✅ 읽음 처리(상세 진입 시)
-                    try {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read?userEmpId=${encodeURIComponent(viewerEmpId)}`);
-                    } catch (e) {
-                        // 읽음 실패는 UX에 치명적이지 않아서 무시 가능
+                    const partyLabelEl = document.getElementById('partyLabel');
+                    const partyTxtEl = document.getElementById('partyTxt');
+
+                    if (role === 'SENDER') {
+                        // 내가 보낸 메일 → "수신인"
+                        partyLabelEl.textContent = '수신인';
+                        partyTxtEl.textContent = buildReceiversText(data);
+                    } else {
+                        // 내가 받은 메일(기본) → "발신인"
+                        partyLabelEl.textContent = '발신인';
+                        partyTxtEl.textContent = `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
                     }
 
-                    // deletedAt이 있으면 휴지통 상태 → 복원/완전삭제 버튼 보이기
+                    // 내용 렌더
+                    const box = document.getElementById('contentBox');
+                    try {
+                        if (data.cnttHtml && String(data.cnttHtml).trim()) {
+                            box.innerHTML = data.cnttHtml;
+                        } else if (data.cnttJson && String(data.cnttJson).trim()) {
+                            const html = await renderTiptap(data.cnttJson);
+                            box.innerHTML = html;
+                        } else {
+                            box.textContent = '';
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        box.textContent = data.cnttJson ?? '';
+                    }
+
+                    // 읽음 처리
+                    try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read`); } catch (e) {}
+
                     const isTrashed = !!data.deletedAt;
+
+                    if (isTrashed) setSidebarActive('trash');
+                    else if (role === 'SENDER') setSidebarActive('sent');
+                    else setSidebarActive('received');
+
                     show('btnRestore', isTrashed);
                     show('btnPurge', isTrashed);
                     show('btnTrash', !isTrashed);
 
-                    // role에 따라 목록 돌아갈 곳 결정(간단히)
-                    const role = (data.role || '').toUpperCase();
                     const backUrl = isTrashed ? '/mail/trash' : (role === 'SENDER' ? '/mail/sent' : '/mail/received');
                     document.getElementById('btnBack').onclick = () => location.href = backUrl;
 
-                    // 휴지통 이동
                     document.getElementById('btnTrash').onclick = async () => {
                         if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/trash?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/trash`);
                         location.href = '/mail/trash';
                     };
 
-                    // 복원
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/restore?userEmpId=${encodeURIComponent(viewerEmpId)}`);
-                        // 복원하면 받은/보낸으로 돌아가야 하는데, role로 분기
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/restore`);
                         location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
                     };
 
-                    // 완전 삭제
                     document.getElementById('btnPurge').onclick = async () => {
                         if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailId)}/purge?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailId)}/purge`);
                         location.href = '/mail/trash';
                     };
                 }
@@ -276,6 +247,11 @@
                 window.addEventListener('DOMContentLoaded', () => {
                     loadDetail().catch(e => {
                         console.error(e);
+                        const msg = String(e?.message || '');
+                        if (msg.startsWith('401::') || msg.startsWith('403::')) {
+                            document.getElementById('contentBox').textContent = msg.split('::')[1];
+                            return;
+                        }
                         document.getElementById('contentBox').textContent = '메일 상세 조회에 실패했습니다.';
                     });
                 });

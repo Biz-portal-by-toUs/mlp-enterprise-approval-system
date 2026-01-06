@@ -56,17 +56,6 @@
             flex-shrink:0;
         }
 
-        .select{
-            height:40px;
-            border-radius:8px;
-            border:1px solid var(--line);
-            background:#fff;
-            padding:0 12px;
-            font-size:14px;
-            font-weight:600;
-            outline:none;
-        }
-
         .searchWrap{
             flex: 1;
             max-width: 420px;
@@ -150,10 +139,16 @@
             cursor:pointer;
         }
 
-        th.col-no, td.col-no{ width:120px; }
-        th.col-read, td.col-read{ width:120px; }
+        th.col-no, td.col-no{ width:90px; }
+        th.col-star, td.col-star{ width:60px; }
+        th.col-read, td.col-read{ width:90px; }
         th.col-date, td.col-date{ width:180px; }
+        th.col-sender, td.col-sender{ width:140px; }
 
+        th.col-title-h{
+            text-align:left;
+            padding-left:20px;
+        }
         td.col-title{
             text-align:left !important;
             padding-left:20px !important;
@@ -189,6 +184,29 @@
         .pill-read{
             background:#f1f5f9;
             color:#334155;
+        }
+
+        .starBtn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:34px;
+            height:34px;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:transparent;
+            cursor:pointer;
+            font-size:18px;
+            line-height:1;
+            transition:0.15s;
+        }
+        .starBtn:hover{
+            background:#f8fafc;
+            border-color:var(--line);
+        }
+        .starBtn:disabled{
+            opacity:.6;
+            cursor:not-allowed;
         }
 
         .pager-wrapper{
@@ -235,6 +253,7 @@
             .page-main{ padding:14px; }
             .pager-status{ position:static; margin-left:10px; }
             th.col-date, td.col-date{ width:140px; }
+            th.col-sender, td.col-sender{ width:120px; }
         }
     </style>
 </head>
@@ -247,16 +266,9 @@
         <main class="page-main">
             <div class="toolbar">
                 <div class="toolbar-left">
-                    <select id="size" class="select">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                    </select>
-
                     <div class="searchWrap">
                         <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
                     </div>
-
                     <button class="btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
@@ -270,9 +282,10 @@
                     <thead>
                     <tr>
                         <th class="col-no">번호</th>
-                        <th>제목</th>
-                        <th>보낸사람</th>
+                        <th class="col-star">중요</th>
                         <th class="col-read">읽음</th>
+                        <th class="col-sender">발신인</th>
+                        <th class="col-title-h">제목</th>
                         <th class="col-date">수신일</th>
                     </tr>
                     </thead>
@@ -290,7 +303,14 @@
             </div>
 
             <script>
-                function getMeEmpId(){ return document.getElementById('me')?.dataset?.empNo?.trim() || ''; }
+                // ===== constants (paging 10 fixed) =====
+                const PAGE_SIZE = 10;
+                const INBOX_ROLE = 'RECIPIENT';
+
+                // (이 값은 서버 인증 기반 API라 실제로 필수는 아님)
+                function getMeEmpId(){
+                    return document.getElementById('me')?.dataset?.empNo?.trim() || '';
+                }
 
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
@@ -323,6 +343,22 @@
                         .replaceAll("'","&#039;");
                 }
 
+                function starEmoji(isPrior){
+                    return isPrior ? '⭐' : '☆';
+                }
+
+                async function patchNoBody(url){
+                    const res = await fetch(url, {
+                        method: 'PATCH',
+                        credentials: 'include',
+                        headers: { ...getCsrfHeaders() }
+                    });
+                    if(!res.ok){
+                        const t = await res.text().catch(()=> '');
+                        throw new Error(`HTTP ${res.status} ${t}`);
+                    }
+                }
+
                 function buildPager(page, totalPages, onGo){
                     const pager = document.getElementById('pagerControls');
                     pager.innerHTML = '';
@@ -343,7 +379,6 @@
                     pager.appendChild(mkBtn('«', 0, current === 0, false));
                     pager.appendChild(mkBtn('‹', Math.max(current - 1, 0), current === 0, false));
 
-                    // form-list 느낌: 현재 기준 +-2
                     const start = Math.max(current - 2, 0);
                     const end = Math.min(current + 2, last);
 
@@ -368,15 +403,16 @@
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: parseInt(params.get('size') || document.getElementById('size').value || '20', 10),
+                        size: PAGE_SIZE, // 고정
                         q: (params.get('q') || '').trim()
                     };
                 }
 
+                // ✅ 브라우저 주소창 상태만 변경 (API URL 만들지 말기)
                 function setUrlState(next){
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
-                    params.set('size', String(next.size ?? 20));
+                    params.set('size', String(PAGE_SIZE)); // 고정
                     if (next.q) params.set('q', next.q);
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
@@ -386,15 +422,14 @@
                     tb.innerHTML = '';
 
                     if (!items || items.length === 0){
-                        tb.innerHTML = `<tr><td colspan="5" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
+                        tb.innerHTML = `<tr><td colspan="6" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
                         return;
                     }
 
                     items.forEach((it, idx) => {
                         const num = totalElements - (page * size) - idx;
                         const title = escapeHtml(it.title);
-                        const senderName = escapeHtml(it.senderEmpName);
-                        const senderId = escapeHtml(it.senderEmpId);
+                        const senderName = escapeHtml(it.senderName);
                         const createdAt = fmtDate(it.createdAt);
 
                         const isRead = !!it.isRead;
@@ -402,61 +437,105 @@
                             ? `<span class="badgePill pill-read">읽음</span>`
                             : `<span class="badgePill pill-unread">안읽음</span>`;
 
+                        const isPrior = !!it.isPrior;
+
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td class="col-no">${num}</td>
-                            <td class="col-title"><a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a></td>
-                            <td>${senderName} (${senderId})</td>
+
+                            <td class="col-star">
+                                <button type="button"
+                                        class="starBtn"
+                                        data-mail-id="${escapeHtml(it.mailId)}"
+                                        aria-label="중요메일 토글">
+                                    ${starEmoji(isPrior)}
+                                </button>
+                            </td>
+
                             <td class="col-read">${pill}</td>
+                            <td class="col-sender">${senderName}</td>
+                            <td class="col-title">
+                                <a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                            </td>
                             <td class="col-date">${createdAt}</td>
                         `;
+
+                        // 행 클릭(상세 이동) - 별/링크 클릭은 제외
                         tr.addEventListener('click', (e) => {
-                            // 링크 클릭 중복 방지
-                            if (e.target && e.target.tagName === 'A') return;
+                            if (e.target && (e.target.closest('.starBtn') || e.target.tagName === 'A')) return;
                             location.href = `/mail/${encodeURIComponent(it.mailId)}`;
                         });
+
+                        // 별 클릭(토글)
+                        const starBtn = tr.querySelector('.starBtn');
+                        starBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const mailId = starBtn.dataset.mailId;
+                            const prev = starBtn.textContent.trim() === '⭐';
+
+                            // optimistic UI
+                            starBtn.textContent = starEmoji(!prev);
+                            starBtn.disabled = true;
+
+                            try{
+                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
+                                // prior-first 정렬이면 위치가 바뀔 수 있으니 재조회
+                                await load();
+                            }catch(err){
+                                console.error(err);
+                                starBtn.textContent = starEmoji(prev);
+                                alert('중요메일 설정에 실패했습니다.');
+                            }finally{
+                                starBtn.disabled = false;
+                            }
+                        });
+
                         tb.appendChild(tr);
                     });
                 }
 
+                function buildInboxApiUrl(st){
+                    const params = new URLSearchParams();
+                    params.set('role', INBOX_ROLE);
+                    params.set('page', String(st.page));
+                    params.set('size', String(PAGE_SIZE));
+                    if (st.q) params.set('q', st.q);
+                    return `/api/v1/mails/inbox?${params.toString()}`;
+                }
+
                 async function load(){
+                    // ※ 서버 인증으로 동작한다면 me가 없어도 목록조회는 가능해야 정상.
+                    // 하지만 기존 로직 유지하면서, 없으면 경고만 띄우고 계속 진행.
                     const me = getMeEmpId();
                     if(!me){
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">로그인 정보(empId)를 찾을 수 없습니다.</td></tr>`;
-                        return;
+                        console.warn('[mail inbox] #me dataset(empNo) not found (layout에 me 태그가 없는 상태일 수 있음).');
                     }
 
                     const st = getState();
-                    document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    // inbox는 role 필요: RECIPIENT
-                    const url = `/api/v1/mails/inbox?userEmpId=${encodeURIComponent(me)}&role=RECIPIENT&page=${st.page}&size=${st.size}&sort=createdAt,desc`;
+                    const url = buildInboxApiUrl(st);
+                    // console.log('[inbox request url]', url);
+
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
-                    renderRows(items, data.number ?? st.page, data.size ?? st.size, data.totalElements ?? items.length);
+                    renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
                     document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
                     buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, size:st.size, q:st.q });
+                        setUrlState({ page:p, q:st.q });
                         load().catch(console.error);
                     });
                 }
 
                 document.getElementById('btnSearch').addEventListener('click', () => {
-                    const size = parseInt(document.getElementById('size').value, 10);
                     const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, size, q });
-                    load().catch(console.error);
-                });
-
-                document.getElementById('size').addEventListener('change', () => {
-                    const size = parseInt(document.getElementById('size').value, 10);
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, size, q });
+                    setUrlState({ page:0, q });
                     load().catch(console.error);
                 });
 
@@ -468,10 +547,10 @@
                 });
 
                 window.addEventListener('DOMContentLoaded', () => {
-                    // q 필터는 아직 API에 없어서 UI만 유지(원하면 API에 title contains 추가해줄게)
                     load().catch(err => {
                         console.error(err);
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('tbody').innerHTML =
+                            `<tr><td colspan="6" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
                     });
                 });
             </script>

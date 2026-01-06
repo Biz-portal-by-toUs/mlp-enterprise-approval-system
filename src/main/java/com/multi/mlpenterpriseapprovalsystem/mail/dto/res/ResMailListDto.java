@@ -20,6 +20,9 @@ public record ResMailListDto (
     String senderEmpId,
     String senderName,
 
+    //수신자 리스트
+    String receivers,
+
     // 내 메일함 상태
     MailRole role,
     boolean isRead,
