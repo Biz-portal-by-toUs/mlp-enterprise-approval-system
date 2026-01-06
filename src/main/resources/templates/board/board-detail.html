@@ -346,13 +346,13 @@
 
         /* ✅ 댓글 내용: 바로 아래 + 살짝 들여쓰기 */
         .comment-body{
-            margin-top: 0;        /* ⬇ 위쪽 여백 줄임 */
-            padding-left: 18px;     /* ⬅ 들여쓰기는 유지 */
+            margin-top: 2px;        /* ⬇ 위쪽 여백 줄임 */
+            padding-left: 14px;     /* ⬅ 들여쓰기는 유지 */
             padding-top: 0;       /* ⬇ 내부 세로 여백 최소화 */
             padding-bottom: 0;
             white-space: pre-wrap;
             word-break: break-word;
-            line-height: 1.2;      /* ⬇ 줄간격 살짝 압축 */
+            line-height: 1.1;      /* ⬇ 줄간격 살짝 압축 */
             font-weight: 700;
             color: var(--text, #1f2937);
         }
@@ -361,7 +361,8 @@
         .comment-who-line{
             margin-bottom: 0;   /* 🔥 기본 여백 제거 */
             padding-bottom: 0;
-            line-height: 1.1;
+            line-height: 1.05;
+            font-size: 13px;     /* 살짝 작게 */
         }
 
         .comment-top{
@@ -370,8 +371,20 @@
             align-items: flex-start; /* baseline 간격 제거 */
         }
 
+        .comment-item{
+            padding: 4px 8px;   /* ⬅ 12px → 6px */
+        }
 
+        /* ✅ 삭제 버튼 영역도 세로 압축 */
+        .comment-actions{
+            align-items: flex-start;
+        }
 
+        .comment-count{
+            color: #dc2626;      /* 빨간색 */
+            font-weight: 1000;
+            margin-left: 4px;
+        }
 
     </style>
 </th:block>
@@ -449,7 +462,10 @@
                         <table id="attachList"></table>
                     </div>
 
-                    <h2 style="margin-top:18px;">관련 댓글</h2>
+                    <h4 style="margin-top:18px;">
+                        의견 <span class="comment-count" id="commentCount">(0)</span>
+                    </h4>
+
                     <div id="comment">
                         <!-- ✅ table 대신 div 컨테이너로 변경 (id 유지) -->
                         <div id="commentList"></div>
@@ -852,6 +868,11 @@
                 }
 
                 if (result.status === 200 && Array.isArray(result.data)) {
+
+                    const countEl = document.getElementById("commentCount");
+                    const count = Array.isArray(result?.data) ? result.data.length : 0;
+                    if (countEl) countEl.textContent = `(${count})`;
+
                     result.data.forEach((r) => {
                         const createdAt = r.createdAt ? String(r.createdAt).substring(0, 10) : "-";
 
@@ -866,25 +887,25 @@
                             : ``;
 
                         commentList.append(`
-                  <div class="comment-item">
-    <div class="comment-top">
-      <div class="comment-who-line">
-        <span class="comment-name">${escapeHtml(r.empName ?? "-")}</span>
-        <span class="dot">·</span>
-        <span class="comment-dept">${escapeHtml(r.depName ?? "-")}</span>
-        <span class="dot">·</span>
-        <span class="comment-date">${createdAt}</span>
-      </div>
+                                  <div class="comment-item">
+                    <div class="comment-top">
+                      <div class="comment-who-line">
+                        <span class="comment-name">${escapeHtml(r.empName ?? "-")}</span>
+                        <span class="dot">·</span>
+                        <span class="comment-dept">${escapeHtml(r.depName ?? "-")}</span>
+                        <span class="dot">·</span>
+                        <span class="comment-date">${createdAt}</span>
+                      </div>
 
-      <div class="comment-actions">
-        ${deleteBtnHtml}
-      </div>
-    </div>
+                      <div class="comment-actions">
+                        ${deleteBtnHtml}
+                      </div>
+                    </div>
 
-    <div class="comment-body">
-      ${escapeHtml(r.contents ?? "")}
-    </div>
-  </div>
+                    <div class="comment-body">
+                      ${escapeHtml(r.contents ?? "")}
+                    </div>
+                  </div>
                 `);
 
                     });
