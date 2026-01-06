@@ -18,10 +18,34 @@
         .prov-page .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
 
         .prov-page .card { background: #f1f3f6; border-radius: 18px; padding: 24px; margin-bottom: 24px; }
-        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .info-item { background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+        /* ✅ 5개 아이템을 한 줄에 고정 배치 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5컬럼으로 고정 */
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        /* ✅ 화면이 너무 좁아질 경우 글자가 깨지지 않도록 최소 패딩 조절 */
+        .info-item {
+            background: #fff;
+            padding: 12px 10px; /* 좌우 패딩을 살짝 줄여 공간 확보 */
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0; /* 텍스트 넘침 방지 */
+        }
         .info-label { font-size: 12px; font-weight: 800; color: var(--muted); }
-        .info-value { font-size: 15px; font-weight: 700; color: #1e293b; }
+        .info-value {
+            font-size: 14px; /* 5개를 한 줄에 넣기 위해 폰트 크기 살짝 조정 */
+            font-weight: 700;
+            color: #1e293b;
+            white-space: nowrap; /* 줄바꿈 방지 */
+            overflow: hidden;
+            text-overflow: ellipsis; /* 내용이 너무 길면 ... 처리 */
+        }
 
         .content-card { background: #fff; border-radius: 16px; padding: 30px; border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .section-title { font-size: 17px; font-weight: 800; color: #111; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #f1f3f6; padding-bottom: 12px; }
@@ -70,7 +94,7 @@
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
         const $ = (id) => document.getElementById(id);
-        const API_BASE = "http://localhost:8090";
+        const API_BASE = "";
         const provNo = /*[[${provNo}]]*/ null;
         const provNoFromPath = provNo || location.pathname.split("/").pop();
 
