@@ -44,7 +44,7 @@ public class MailController {
     @GetMapping("/sent")
     public ResponseEntity<Page<ResMailListDto>> sent(
             @RequestParam(value = "q", required = false) String q,
-            @PageableDefault(size = 20) Pageable pageable,
+            @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication
     ) {
         String empId = authentication.getName();
@@ -54,7 +54,7 @@ public class MailController {
     // 휴지통 조회(서버 인증 기반)
     @GetMapping("/trash")
     public ResponseEntity<Page<ResMailListDto>> trash(
-            @PageableDefault(size = 20, sort = "deletedAt") Pageable pageable,
+            @PageableDefault(size = 10, sort = "deletedAt") Pageable pageable,
             Authentication authentication
     ) {
         String empId = authentication.getName();

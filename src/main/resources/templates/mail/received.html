@@ -277,11 +277,6 @@
         <main class="page-main">
             <div class="toolbar">
                 <div class="toolbar-left">
-                    <select id="size" class="select">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                    </select>
 
                     <div class="searchWrap">
                         <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
@@ -414,7 +409,7 @@
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: parseInt(params.get('size') || document.getElementById('size').value || '20', 10),
+                        size: 10,
                         q: (params.get('q') || '').trim()
                     };
                 }
@@ -422,9 +417,8 @@
                 function setUrlState(next){
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
-                    params.set('size', String(next.size ?? 20));
+                    params.set('size', String(10)); // 고정
                     if (next.q) params.set('q', next.q);
-
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
@@ -523,7 +517,7 @@
                     const params = new URLSearchParams();
                     params.set('role', 'RECIPIENT');
                     params.set('page', String(st.page));
-                    params.set('size', String(st.size));
+                    params.set('size', String(10));
                     if (st.q) params.set('q', st.q);
 
                     const url = `/api/v1/mails/inbox?${params.toString()}`;
