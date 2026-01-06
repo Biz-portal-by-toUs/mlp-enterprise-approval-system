@@ -16,244 +16,88 @@
             --bg:#f1f5f9;
             --card:#ffffff;
             --danger:#ef4444;
-            --primary:#2c5cff;
         }
 
-        .page-with-subbar{
-            display:grid;
-            grid-template-columns:260px minmax(0,1fr);
-            gap:0;
-            padding:0;
-            align-items:stretch;
-            min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px);
+        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
+
+        /* ===== page-only namespace: mi-* ===== */
+        .mi-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .mi-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .mi-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+
+        .mi-searchWrap{
+            flex:1;max-width:420px;display:flex;align-items:center;height:40px;
+            border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;
+        }
+        .mi-searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
+
+        .mi-btn{
+            height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:800;
+            cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;
+        }
+        .mi-btn:hover{filter:brightness(0.9);}
+        .mi-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .mi-btn.ghost:hover{background:#f8fafc;filter:none;}
+
+        .mi-tableWrap{
+            width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
+            overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        }
+        table.mi-mailTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.mi-mailTable thead th{
+            background:#f9fafb;border-bottom:1px solid var(--line);text-align:center;
+            padding:14px 10px;font-size:14px;color:var(--mut);font-weight:700;
+        }
+        table.mi-mailTable tbody td{
+            border-bottom:1px solid var(--line);text-align:center;padding:12px 10px;
+            font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        }
+        table.mi-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
+
+        th.mi-col-no, td.mi-col-no{width:90px;}
+        th.mi-col-star, td.mi-col-star{width:60px;}
+        th.mi-col-read, td.mi-col-read{width:90px;}
+        th.mi-col-date, td.mi-col-date{width:180px;}
+        th.mi-col-sender, td.mi-col-sender{width:140px;}
+
+        th.mi-col-title-h{text-align:left;padding-left:20px;}
+        td.mi-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
+        .mi-titleLink{
+            color:var(--primary);text-decoration:none;display:block;width:100%;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;
         }
 
-        .page-main{
-            padding:24px;
-            min-width:0;
+        .mi-badgePill{
+            display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;
+            border-radius:999px;font-size:12px;font-weight:900;border:1px solid rgba(17,24,39,.10);
         }
+        .mi-pill-unread{background:#eff6ff;color:#1d4ed8;border-color:#dbeafe;}
+        .mi-pill-read{background:#f1f5f9;color:#334155;}
 
-        .toolbar{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:12px;
-            margin-bottom:16px;
+        .mi-starBtn{
+            display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+            border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;
+            font-size:18px;line-height:1;transition:0.15s;
         }
+        .mi-starBtn:hover{background:#f8fafc;border-color:var(--line);}
+        .mi-starBtn:disabled{opacity:.6;cursor:not-allowed;}
 
-        .toolbar-left{
-            display:flex;
-            align-items:center;
-            gap:12px;
-            min-width:0;
-            flex:1;
+        .mi-pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .mi-pager{display:flex;align-items:center;gap:4px;}
+        .mi-pageBtn{
+            min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
+            background:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:0.15s;
         }
+        .mi-pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .mi-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .mi-pageBtn.active:hover{filter:brightness(0.9);}
 
-        .toolbar-right{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            flex-shrink:0;
-        }
-
-        .searchWrap{
-            flex: 1;
-            max-width: 420px;
-            display:flex;
-            align-items:center;
-            height:40px;
-            border-radius:8px;
-            border:1px solid var(--line);
-            background:#fff;
-            padding:0 14px;
-            min-width:0;
-        }
-        .searchInput{
-            border:0;
-            outline:none;
-            width:100%;
-            font-size:14px;
-            background:transparent;
-        }
-
-        .btn{
-            height:40px;
-            padding:0 20px;
-            border-radius:8px;
-            font-size:14px;
-            font-weight:800;
-            cursor:pointer;
-            border:none;
-            background:var(--primary);
-            color:#fff;
-            white-space:nowrap;
-            transition:0.15s;
-        }
-        .btn:hover{ filter:brightness(0.9); }
-
-        .btn.ghost{
-            background:#fff;
-            color:var(--fg);
-            border:1px solid var(--line);
-        }
-        .btn.ghost:hover{
-            background:#f8fafc;
-            filter:none;
-        }
-
-        .tableWrap{
-            width:100%;
-            background:#fff;
-            border:1px solid var(--line);
-            border-radius:12px;
-            overflow:hidden;
-            box-shadow:0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        table.mailTable{
-            width:100%;
-            border-collapse:collapse;
-            table-layout:fixed;
-        }
-        table.mailTable thead th{
-            background:#f9fafb;
-            border-bottom:1px solid var(--line);
-            text-align:center;
-            padding:14px 10px;
-            font-size:14px;
-            color:var(--mut);
-            font-weight:700;
-        }
-        table.mailTable tbody td{
-            border-bottom:1px solid var(--line);
-            text-align:center;
-            padding:12px 10px;
-            font-size:15px;
-            font-weight:600;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-        }
-        table.mailTable tbody tr:hover td{
-            background:#fcfdfe;
-            cursor:pointer;
-        }
-
-        th.col-no, td.col-no{ width:90px; }
-        th.col-star, td.col-star{ width:60px; }
-        th.col-read, td.col-read{ width:90px; }
-        th.col-date, td.col-date{ width:180px; }
-        th.col-sender, td.col-sender{ width:140px; }
-
-        th.col-title-h{
-            text-align:left;
-            padding-left:20px;
-        }
-        td.col-title{
-            text-align:left !important;
-            padding-left:20px !important;
-            font-weight:900 !important;
-        }
-        .titleLink{
-            color:var(--primary);
-            text-decoration:none;
-            display:block;
-            width:100%;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-            font-weight:900;
-        }
-
-        .badgePill{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            height:22px;
-            padding:0 10px;
-            border-radius:999px;
-            font-size:12px;
-            font-weight:900;
-            border:1px solid rgba(17,24,39,.10);
-        }
-        .pill-unread{
-            background:#eff6ff;
-            color:#1d4ed8;
-            border-color:#dbeafe;
-        }
-        .pill-read{
-            background:#f1f5f9;
-            color:#334155;
-        }
-
-        .starBtn{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            width:34px;
-            height:34px;
-            border-radius:8px;
-            border:1px solid transparent;
-            background:transparent;
-            cursor:pointer;
-            font-size:18px;
-            line-height:1;
-            transition:0.15s;
-        }
-        .starBtn:hover{
-            background:#f8fafc;
-            border-color:var(--line);
-        }
-        .starBtn:disabled{
-            opacity:.6;
-            cursor:not-allowed;
-        }
-
-        .pager-wrapper{
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            position:relative;
-            margin-top:16px;
-        }
-        .pager{
-            display:flex;
-            align-items:center;
-            gap:4px;
-        }
-        .pageBtn{
-            min-width:36px;
-            height:36px;
-            border-radius:6px;
-            border:1px solid var(--line);
-            background:#fff;
-            font-size:14px;
-            font-weight:700;
-            cursor:pointer;
-            transition:0.15s;
-        }
-        .pageBtn:hover:not(.active):not(:disabled){ background:#f1f5f9; }
-        .pageBtn.active{
-            background:var(--primary);
-            color:#fff;
-            border-color:var(--primary);
-        }
-        .pageBtn.active:hover{ filter:brightness(0.9); }
-
-        .pager-status{
-            position:absolute;
-            right:0;
-            display:flex;
-            gap:12px;
-            align-items:center;
-        }
+        .mi-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
 
         @media (max-width:760px){
-            .page-with-subbar{ grid-template-columns:1fr; }
-            .page-main{ padding:14px; }
-            .pager-status{ position:static; margin-left:10px; }
-            th.col-date, td.col-date{ width:140px; }
-            th.col-sender, td.col-sender{ width:120px; }
+            .mi-pager-status{position:static;margin-left:10px;}
+            th.mi-col-date, td.mi-col-date{width:140px;}
+            th.mi-col-sender, td.mi-col-sender{width:120px;}
         }
     </style>
 </head>
@@ -264,39 +108,39 @@
         <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('received')}"></div>
 
         <main class="page-main">
-            <div class="toolbar">
-                <div class="toolbar-left">
-                    <div class="searchWrap">
-                        <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
+            <div class="mi-toolbar">
+                <div class="mi-toolbar-left">
+                    <div class="mi-searchWrap">
+                        <input id="q" class="mi-searchInput" type="text" placeholder="제목 검색"/>
                     </div>
-                    <button class="btn ghost" id="btnSearch" type="button">조회</button>
+                    <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
-                <div class="toolbar-right">
-                    <button class="btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
+                <div class="mi-toolbar-right">
+                    <button class="mi-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
                 </div>
             </div>
 
-            <section class="tableWrap">
-                <table class="mailTable">
+            <section class="mi-tableWrap">
+                <table class="mi-mailTable">
                     <thead>
                     <tr>
-                        <th class="col-no">번호</th>
-                        <th class="col-star">중요</th>
-                        <th class="col-read">읽음</th>
-                        <th class="col-sender">발신인</th>
-                        <th class="col-title-h">제목</th>
-                        <th class="col-date">수신일</th>
+                        <th class="mi-col-no">번호</th>
+                        <th class="mi-col-star">중요</th>
+                        <th class="mi-col-read">읽음</th>
+                        <th class="mi-col-sender">발신인</th>
+                        <th class="mi-col-title-h">제목</th>
+                        <th class="mi-col-date">수신일</th>
                     </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
                 </table>
             </section>
 
-            <div class="pager-wrapper">
-                <div id="pagerControls" class="pager"></div>
+            <div class="mi-pager-wrapper">
+                <div id="pagerControls" class="mi-pager"></div>
 
-                <div class="pager-status">
+                <div class="mi-pager-status">
                     <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
                     <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
                 </div>
@@ -307,7 +151,6 @@
                 const PAGE_SIZE = 10;
                 const INBOX_ROLE = 'RECIPIENT';
 
-                // (이 값은 서버 인증 기반 API라 실제로 필수는 아님)
                 function getMeEmpId(){
                     return document.getElementById('me')?.dataset?.empNo?.trim() || '';
                 }
@@ -366,14 +209,14 @@
                     const mkBtn = (label, target, disabled, active) => {
                         const b = document.createElement('button');
                         b.type='button';
-                        b.className = 'pageBtn' + (active ? ' active' : '');
+                        b.className = 'mi-pageBtn' + (active ? ' active' : '');
                         b.disabled = !!disabled;
                         b.textContent = label;
                         b.onclick = () => onGo(target);
                         return b;
                     };
 
-                    const current = page; // 0-base
+                    const current = page;
                     const last = Math.max(totalPages - 1, 0);
 
                     pager.appendChild(mkBtn('«', 0, current === 0, false));
@@ -403,16 +246,15 @@
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: PAGE_SIZE, // 고정
+                        size: PAGE_SIZE,
                         q: (params.get('q') || '').trim()
                     };
                 }
 
-                // ✅ 브라우저 주소창 상태만 변경 (API URL 만들지 말기)
                 function setUrlState(next){
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
-                    params.set('size', String(PAGE_SIZE)); // 고정
+                    params.set('size', String(PAGE_SIZE));
                     if (next.q) params.set('q', next.q);
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
@@ -434,40 +276,38 @@
 
                         const isRead = !!it.isRead;
                         const pill = isRead
-                            ? `<span class="badgePill pill-read">읽음</span>`
-                            : `<span class="badgePill pill-unread">안읽음</span>`;
+                            ? `<span class="mi-badgePill mi-pill-read">읽음</span>`
+                            : `<span class="mi-badgePill mi-pill-unread">안읽음</span>`;
 
                         const isPrior = !!it.isPrior;
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="col-no">${num}</td>
+                            <td class="mi-col-no">${num}</td>
 
-                            <td class="col-star">
+                            <td class="mi-col-star">
                                 <button type="button"
-                                        class="starBtn"
+                                        class="mi-starBtn"
                                         data-mail-id="${escapeHtml(it.mailId)}"
                                         aria-label="중요메일 토글">
                                     ${starEmoji(isPrior)}
                                 </button>
                             </td>
 
-                            <td class="col-read">${pill}</td>
-                            <td class="col-sender">${senderName}</td>
-                            <td class="col-title">
-                                <a class="titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                            <td class="mi-col-read">${pill}</td>
+                            <td class="mi-col-sender">${senderName}</td>
+                            <td class="mi-col-title">
+                                <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
                             </td>
-                            <td class="col-date">${createdAt}</td>
+                            <td class="mi-col-date">${createdAt}</td>
                         `;
 
-                        // 행 클릭(상세 이동) - 별/링크 클릭은 제외
                         tr.addEventListener('click', (e) => {
-                            if (e.target && (e.target.closest('.starBtn') || e.target.tagName === 'A')) return;
+                            if (e.target && (e.target.closest('.mi-starBtn') || e.target.tagName === 'A')) return;
                             location.href = `/mail/${encodeURIComponent(it.mailId)}`;
                         });
 
-                        // 별 클릭(토글)
-                        const starBtn = tr.querySelector('.starBtn');
+                        const starBtn = tr.querySelector('.mi-starBtn');
                         starBtn.addEventListener('click', async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -475,13 +315,11 @@
                             const mailId = starBtn.dataset.mailId;
                             const prev = starBtn.textContent.trim() === '⭐';
 
-                            // optimistic UI
                             starBtn.textContent = starEmoji(!prev);
                             starBtn.disabled = true;
 
                             try{
                                 await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
-                                // prior-first 정렬이면 위치가 바뀔 수 있으니 재조회
                                 await load();
                             }catch(err){
                                 console.error(err);
@@ -506,8 +344,6 @@
                 }
 
                 async function load(){
-                    // ※ 서버 인증으로 동작한다면 me가 없어도 목록조회는 가능해야 정상.
-                    // 하지만 기존 로직 유지하면서, 없으면 경고만 띄우고 계속 진행.
                     const me = getMeEmpId();
                     if(!me){
                         console.warn('[mail inbox] #me dataset(empNo) not found (layout에 me 태그가 없는 상태일 수 있음).');
@@ -517,8 +353,6 @@
                     document.getElementById('q').value = st.q;
 
                     const url = buildInboxApiUrl(st);
-                    // console.log('[inbox request url]', url);
-
                     const data = await fetchJson(url);
 
                     const items = data.content || [];

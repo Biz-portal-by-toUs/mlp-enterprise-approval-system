@@ -14,26 +14,94 @@
             --mut:#64748b;
             --line:#e2e8f0;
             --danger:#ef4444;
-            --primary:#2c5cff;
+            --card:#fff;
         }
-        .page-with-subbar{display:grid;grid-template-columns:260px minmax(0, 1fr);gap:0;padding:0;align-items:stretch;}
-        .page-main{padding:24px;min-width:0;}
-        .page-title{margin:0 0 14px 0;font-size:18px;font-weight:900;}
-        .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:18px;}
-        .meta{display:grid;grid-template-columns:120px 1fr;gap:10px 12px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px;}
-        .k{color:var(--mut);font-size:13px;font-weight:900;}
-        .v{color:var(--fg);font-size:14px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-        .content{font-size:14px;line-height:1.6;font-weight:600;color:var(--fg);}
-        .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;}
-        .btn{height:40px;padding:0 18px;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer;border:none;background:var(--primary);color:#fff;transition:0.15s;}
-        .btn:hover{filter:brightness(0.92);}
-        .btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
-        .btn.ghost:hover{background:#f8fafc;filter:none;}
-        .btn.danger{background:var(--danger);}
+
+        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
+
+        /* ===== page-only namespace: md-* ===== */
+        .md-title{
+            margin:0 0 14px 0;
+            font-size:18px;
+            font-weight:900;
+        }
+
+        .md-card{
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:14px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            padding:18px;
+        }
+
+        .md-meta{
+            display:grid;
+            grid-template-columns:120px 1fr;
+            gap:10px 12px;
+            padding-bottom:14px;
+            border-bottom:1px solid var(--line);
+            margin-bottom:14px;
+        }
+
+        .md-k{
+            color:var(--mut);
+            font-size:13px;
+            font-weight:900;
+        }
+
+        .md-v{
+            color:var(--fg);
+            font-size:14px;
+            font-weight:800;
+            min-width:0;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        .md-content{
+            font-size:14px;
+            line-height:1.6;
+            font-weight:600;
+            color:var(--fg);
+            word-break:break-word;
+        }
+
+        .md-actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top:14px;
+        }
+
+        .md-btn{
+            height:40px;
+            padding:0 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:900;
+            cursor:pointer;
+            border:none;
+            background:var(--primary);
+            color:#fff;
+            transition:0.15s;
+        }
+        .md-btn:hover{ filter:brightness(0.92); }
+
+        .md-btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+        .md-btn.ghost:hover{
+            background:#f8fafc;
+            filter:none;
+        }
+
+        .md-btn.danger{ background:var(--danger); }
+
         @media (max-width:760px){
-            .page-with-subbar{grid-template-columns:1fr;}
-            .page-main{padding:14px;}
-            .meta{grid-template-columns:90px 1fr;}
+            .md-meta{ grid-template-columns:90px 1fr; }
         }
     </style>
 </head>
@@ -44,32 +112,33 @@
         <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('received')}"></div>
 
         <main class="page-main">
-            <h2 class="page-title">메일 상세</h2>
+            <h2 class="md-title">메일 상세</h2>
 
-            <section class="card">
-                <div class="meta">
-                    <div class="k">메일 ID</div><div class="v" id="mailIdTxt">-</div>
-                    <div class="k">제목</div><div class="v" id="titleTxt">-</div>
+            <section class="md-card">
+                <div class="md-meta">
+                    <div class="md-k">메일 ID</div><div class="md-v" id="mailIdTxt">-</div>
+                    <div class="md-k">제목</div><div class="md-v" id="titleTxt">-</div>
 
-                    <!-- 라벨/값을 동적으로 바꿀 영역 -->
-                    <div class="k" id="partyLabel">-</div><div class="v" id="partyTxt">-</div>
+                    <div class="md-k" id="partyLabel">-</div><div class="md-v" id="partyTxt">-</div>
 
-                    <div class="k">수신/발신일</div><div class="v" id="createdAtTxt">-</div>
+                    <div class="md-k">수신/발신일</div><div class="md-v" id="createdAtTxt">-</div>
                 </div>
 
-                <div class="content" id="contentBox">로딩 중...</div>
+                <div class="md-content" id="contentBox">로딩 중...</div>
 
-                <div class="actions">
-                    <button class="btn ghost" type="button" id="btnBack">목록</button>
-                    <button class="btn ghost" type="button" id="btnRestore" style="display:none;">복원</button>
-                    <button class="btn danger" type="button" id="btnPurge" style="display:none;">완전삭제</button>
-                    <button class="btn danger" type="button" id="btnTrash">휴지통</button>
+                <div class="md-actions">
+                    <button class="md-btn ghost" type="button" id="btnBack">목록</button>
+                    <button class="md-btn ghost" type="button" id="btnRestore" style="display:none;">복원</button>
+                    <button class="md-btn danger" type="button" id="btnPurge" style="display:none;">완전삭제</button>
+                    <button class="md-btn danger" type="button" id="btnTrash">휴지통</button>
                 </div>
             </section>
 
             <script type="module">
+                // ===== utils =====
                 function getMailIdFromPath() {
                     const parts = window.location.pathname.split('/').filter(Boolean);
+                    // /mail/{mailId}
                     return parts.length >= 2 ? parts[1] : '';
                 }
 
@@ -85,37 +154,30 @@
                     return `${y}-${m}-${day} ${hh}:${mm}`;
                 }
 
-                function setSidebarActive(key){
-                    const nav = document.getElementById('mailNav');
-                    if (!nav) return;
-
-                    nav.dataset.active = key;
-
-                    nav.querySelectorAll('.subbar-item').forEach(a => {
-                        const k = a.dataset.key;
-                        a.classList.toggle('active', k === key);
-                    });
-                }
-
                 function setText(id, value) {
                     const el = document.getElementById(id);
-                    if (el) el.textContent = value ?? '-';
+                    if (el) el.textContent = (value ?? '-') || '-';
                 }
 
-                function show(elId, on) {
-                    const el = document.getElementById(elId);
+                function show(id, on) {
+                    const el = document.getElementById(id);
                     if (!el) return;
                     el.style.display = on ? '' : 'none';
                 }
 
-                async function api(method, url) {
-                    const headers = { 'Accept': 'application/json' };
-
+                function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
-                    if (csrfParamEl && csrfHeaderEl) headers[csrfHeaderEl.value] = csrfParamEl.value;
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
 
-                    const res = await fetch(url, { method, headers, credentials: 'include' });
+                async function api(method, url) {
+                    const res = await fetch(url, {
+                        method,
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
+                    });
 
                     if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
                     if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
@@ -129,8 +191,20 @@
                     return res.json();
                 }
 
+                // (선택) 상세에서 active를 바꾸고 싶을 때만 사용. sidebar 구조가 다르면 조용히 무시됨.
+                function setSidebarActive(key){
+                    const nav = document.getElementById('mailNav');
+                    if (!nav) return;
+                    nav.dataset.active = key;
+                    nav.querySelectorAll('.subbar-item').forEach(a => {
+                        const k = a.dataset.key;
+                        a.classList.toggle('active', k === key);
+                    });
+                }
+
                 // Tiptap JSON -> HTML 렌더러
                 async function renderTiptap(jsonOrString) {
+                    // ✅ 다른 페이지와 버전 통일하고 싶으면 2.11.5로 바꿔도 됨
                     const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.2');
                     const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.2')).default;
 
@@ -141,12 +215,9 @@
                     return generateHTML(doc, [StarterKit]);
                 }
 
-                // 수신인 표시 문자열 만들기
                 function buildReceiversText(data){
-                    // 1) 서버가 이미 사원번호 문자열을 내려주는 경우
                     if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
 
-                    // 2) 배열로 내려주는 경우
                     const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
                     const names = Array.isArray(data.receiverEmpNames) ? data.receiverEmpNames : null;
 
@@ -157,7 +228,6 @@
                         return ids.join(', ');
                     }
 
-                    // 3) 단건 필드로 내려주는 경우(가정)
                     if (data.receiverEmpId || data.receiverEmpName){
                         return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
                     }
@@ -167,8 +237,10 @@
 
                 async function loadDetail() {
                     const mailId = getMailIdFromPath();
+                    const box = document.getElementById('contentBox');
+
                     if (!mailId) {
-                        document.getElementById('contentBox').textContent = 'mailId가 없습니다.';
+                        box.textContent = 'mailId가 없습니다.';
                         return;
                     }
 
@@ -178,30 +250,27 @@
                     setText('titleTxt', data.title ?? '-');
                     setText('createdAtTxt', fmtDate(data.createdAt));
 
-                    // 역할 텍스트 삭제 대신 라벨/값을 역할에 따라 변경
                     const role = String(data.role || '').toUpperCase();
 
+                    // 라벨/값 동적 변경
                     const partyLabelEl = document.getElementById('partyLabel');
                     const partyTxtEl = document.getElementById('partyTxt');
 
                     if (role === 'SENDER') {
-                        // 내가 보낸 메일 → "수신인"
                         partyLabelEl.textContent = '수신인';
                         partyTxtEl.textContent = buildReceiversText(data);
                     } else {
-                        // 내가 받은 메일(기본) → "발신인"
                         partyLabelEl.textContent = '발신인';
-                        partyTxtEl.textContent = `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
+                        partyTxtEl.textContent =
+                            `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
                     }
 
                     // 내용 렌더
-                    const box = document.getElementById('contentBox');
                     try {
                         if (data.cnttHtml && String(data.cnttHtml).trim()) {
                             box.innerHTML = data.cnttHtml;
                         } else if (data.cnttJson && String(data.cnttJson).trim()) {
-                            const html = await renderTiptap(data.cnttJson);
-                            box.innerHTML = html;
+                            box.innerHTML = await renderTiptap(data.cnttJson);
                         } else {
                             box.textContent = '';
                         }
@@ -210,7 +279,7 @@
                         box.textContent = data.cnttJson ?? '';
                     }
 
-                    // 읽음 처리
+                    // 읽음 처리(실패해도 무시)
                     try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read`); } catch (e) {}
 
                     const isTrashed = !!data.deletedAt;
@@ -248,11 +317,13 @@
                     loadDetail().catch(e => {
                         console.error(e);
                         const msg = String(e?.message || '');
+                        const box = document.getElementById('contentBox');
+
                         if (msg.startsWith('401::') || msg.startsWith('403::')) {
-                            document.getElementById('contentBox').textContent = msg.split('::')[1];
+                            box.textContent = msg.split('::')[1];
                             return;
                         }
-                        document.getElementById('contentBox').textContent = '메일 상세 조회에 실패했습니다.';
+                        box.textContent = '메일 상세 조회에 실패했습니다.';
                     });
                 });
             </script>
