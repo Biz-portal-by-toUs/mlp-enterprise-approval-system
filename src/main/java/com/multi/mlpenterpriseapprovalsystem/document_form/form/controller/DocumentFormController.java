@@ -214,4 +214,17 @@ public class DocumentFormController {
                 documentFormService.findMyTempList(customUser.getComId(), customUser.getUsername(), q, pageable)
         );
     }
+
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @DeleteMapping("/temp/{docfoNo}")
+    public ResponseEntity<Void> deleteTemp(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable Long docfoNo
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+        if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        documentFormService.deleteTemp(docfoNo, customUser.getComId(), customUser.getUsername());
+        return ResponseEntity.noContent().build();
+    }
 }

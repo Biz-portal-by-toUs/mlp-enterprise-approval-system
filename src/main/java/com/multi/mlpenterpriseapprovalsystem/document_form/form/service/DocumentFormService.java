@@ -54,4 +54,6 @@ public interface DocumentFormService {
             String keyword,
             Pageable pageable
     );
+
+    void deleteTemp(Long docfoNo, String comId, String writerId);
 }

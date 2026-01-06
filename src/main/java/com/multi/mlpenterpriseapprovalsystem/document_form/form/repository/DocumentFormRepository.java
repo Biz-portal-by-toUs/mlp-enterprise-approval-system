@@ -104,4 +104,19 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+    delete from DocumentForm f
+    where f.docfoNo = :docfoNo
+      and f.company.comId = :comId
+      and f.writer.empId = :writerId
+      and f.docfoStat = :stat
+    """)
+    int deleteMyTempById(
+            @Param("docfoNo") Long docfoNo,
+            @Param("comId") String comId,
+            @Param("writerId") String writerId,
+            @Param("stat") DocumentFormStats stat
+    );
 }

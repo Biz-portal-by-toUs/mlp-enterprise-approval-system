@@ -20,6 +20,7 @@ import org.springframework.security.access.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.swing.text.html.*;
 import java.util.*;
 
 /**
@@ -366,6 +367,41 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         ));
     }
 
+    @Override
+    @Transactional
+    public void deleteTemp(Long docfoNo, String comId, String writerId) {
+        if (docfoNo == null || docfoNo <= 0) throw new IllegalArgumentException("docfoNo invalid");
+
+        // 존재/회사 체크를 먼저 확실히 하고 싶으면 findById로 읽어서 검사
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new EntityNotFoundException("문서 양식 없음"));
+
+        validateCompany(form, comId);
+
+        // 작성자 본인만 삭제 가능
+        if (!form.getWriter().getEmpId().equals(writerId)) {
+            throw new AccessDeniedException("본인이 작성한 임시양식만 삭제할 수 있습니다.");
+        }
+
+        // 임시저장(T)만 물리삭제 허용
+        if (form.getDocfoStat() != DocumentFormStats.T) {
+            throw new IllegalStateException("임시저장(T)만 삭제할 수 있습니다.");
+        }
+
+        // 카테고리 물리 삭제
+        documentFormCategoryRepository.deleteByDocfoNo(docfoNo);
+
+        // 본문 물리 삭제
+        int deleted = documentFormRepository.deleteMyTempById(
+                docfoNo, comId, writerId, DocumentFormStats.T
+        );
+
+        if (deleted == 0) {
+            // 동시성/이미 삭제 등
+            throw new EntityNotFoundException("삭제 대상이 없습니다.");
+        }
+    }
+
     // 공통
     private String ensureJsonString(String raw) {
         if (raw == null || raw.trim().isEmpty()) throw new IllegalArgumentException("cnttJson is empty");
@@ -424,11 +460,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         throw new IllegalStateException("임시저장은 T(임시) 또는 R(반려) 상태에서만 가능합니다.");
     }
 
-    /**
-     * 임시저장 제목 정책
-     * - incoming이 비면 origin 유지
-     * - origin도 없으면 "임시 문서"
-     */
+    // 임시저장 제목 정책 : incoming이 비면 origin 유지, origin도 없으면 "임시 문서"
     private String normalizeTempDocfoName(String incoming, String origin) {
         if (incoming == null || incoming.trim().isEmpty()) {
             if (origin == null || origin.isBlank()) return "임시 문서";
@@ -437,11 +469,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         return incoming.trim();
     }
 
-    /**
-     * 임시저장 JSON 정책
-     * - null/blank면 기본 JSON("{}") 주입
-     * - 값이 있으면 최소 검증(HTML 방지 + JSON 형태 체크)
-     */
+    // 임시저장 JSON 정책: null/blank면 기본 JSON("{}") 주입, 값이 있으면 최소 검증(HTML 방지 + JSON 형태 체크)
     private String normalizeTempJson(String raw) {
         if (raw == null || raw.trim().isEmpty()) return "{}";
 
