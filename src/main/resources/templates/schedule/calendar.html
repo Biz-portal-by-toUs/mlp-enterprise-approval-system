@@ -216,7 +216,6 @@
         .bp-evt-time{ display:none; }
 
         /* +n more 링크 */
-        /* FullCalendar 내부 스크롤 영역 */
         #calendar .fc-scroller-harness,
         #calendar .fc-scroller{
             overflow: auto !important;
@@ -285,6 +284,7 @@
             background:transparent;
             display:none;
             z-index:9998;
+            pointer-events:none; /* ✅ 중요: 네이티브 select 옵션 클릭을 막지 않게 */
         }
         .pop{
             position:fixed;
@@ -513,7 +513,7 @@
             display:grid;
             gap:8px;
             margin-bottom:10px;
-            max-height: 380px; /* ✅ 더 길게 */
+            max-height: 380px;
             overflow:auto;
             padding-right:4px;
         }
@@ -558,7 +558,6 @@
             transform:rotate(45deg);
         }
 
-        /* ✅ bold 줄임 */
         .todo-text{
             font-weight:700;
             font-size:14px;
@@ -598,7 +597,6 @@
             border-radius:12px;
         }
 
-        /* ✅ 입력/추가 버튼 작게 + 넘침 방지 */
         .todo-add{
             display:flex;
             gap:8px;
@@ -607,7 +605,7 @@
         }
         .todo-input{
             flex:1;
-            min-width:0;              /* ✅ flex overflow 방지 핵심 */
+            min-width:0;
             height:36px;
             border:1px solid rgba(17,24,39,.12);
             border-radius:12px;
@@ -629,7 +627,6 @@
         }
         .todo-create:hover{ background:rgba(255,255,255,.75); }
 
-        /* ✅ 인라인 편집 input */
         .todo-edit{
             width:100%;
             border:1px solid rgba(17,24,39,.12);
@@ -640,6 +637,9 @@
             outline:none;
             background:#fff;
         }
+
+        .dt-line{ display:flex; gap:8px; align-items:center; }
+        .dt-line select, .dt-line input[type="date"]{ width:100%; }
     </style>
 </th:block>
 
@@ -682,7 +682,7 @@
                 </div>
             </div>
 
-            <!-- ✅ ToDo List (날짜 제거, +버튼 제거) -->
+            <!-- ✅ ToDo List -->
             <div class="todo-card" id="todoCard">
                 <div class="todo-top">
                     <div>
@@ -738,7 +738,7 @@
 
     <div class="pop-mask" id="popMask"></div>
 
-    <!-- ✅ Month Picker Mask + Modal (공용, 모드로 main/mini 분기) -->
+    <!-- Month Picker -->
     <div class="mp-mask" id="mpMask"></div>
     <div class="mp center" id="monthPickerPop" role="dialog" aria-modal="true" aria-label="월 선택">
         <div class="mp-head">
@@ -817,14 +817,23 @@
                 </div>
             </div>
 
+            <!-- ✅ datetime-local 제거 / 분은 00,30만 -->
             <div class="row" id="timeRow">
                 <div class="field">
-                    <label>startAt</label>
-                    <input type="datetime-local" id="startAtInput"/>
+                    <label>start</label>
+                    <div class="dt-line">
+                        <input type="date" id="startDayInput"/>
+                        <select id="startHourSelect"></select>
+                        <select id="startMinSelect"></select>
+                    </div>
                 </div>
                 <div class="field">
-                    <label>endedAt</label>
-                    <input type="datetime-local" id="endedAtInput"/>
+                    <label>end</label>
+                    <div class="dt-line">
+                        <input type="date" id="endDayInput"/>
+                        <select id="endHourSelect"></select>
+                        <select id="endMinSelect"></select>
+                    </div>
                 </div>
             </div>
 
@@ -884,7 +893,7 @@
         </div>
     </div>
 
-    <!-- More list (+n) -->
+    <!-- More list -->
     <div class="pop" id="morePop" role="dialog" aria-modal="true" aria-label="더보기 목록">
         <div class="pop-head">
             <div class="pop-title">
@@ -927,7 +936,7 @@
         const TODO_API_UPDATE = (todoNo) => `${TODO_API_BASE}/${todoNo}`;
 
         /* =========================
-           ✅ 현재 로그인 사용자(me) - 백엔드 API로만 결정
+           ✅ 현재 로그인 사용자(me)
         ========================= */
         let CURRENT_ME = null;
 
@@ -1045,7 +1054,32 @@
         }
 
         /* =========================
-           ✅ ToDo List state (날짜 없음)
+           ✅ 주간 캘린더 선택 허용 시간(08~22)
+        ========================= */
+        const WORK_START_HOUR = 8;
+        const WORK_END_HOUR = 22;
+
+        function overlapsWorkHours(start, end, allDay){
+            if (allDay) return true;
+            if (!start || !end) return false;
+
+            const s = new Date(start);
+            const e = new Date(end);
+            if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return false;
+            if (e.getTime() <= s.getTime()) return false;
+
+            const sMin = s.getHours()*60 + s.getMinutes();
+            const eMin = e.getHours()*60 + e.getMinutes();
+
+            const workStart = WORK_START_HOUR * 60;
+            const workEnd   = WORK_END_HOUR   * 60;
+
+            if (toDateKey(s) !== toDateKey(e)) return true;
+            return (eMin > workStart) && (sMin < workEnd);
+        }
+
+        /* =========================
+           ✅ ToDo List state
         ========================= */
         const todoEls = {
             list: document.getElementById('todoList'),
@@ -1054,7 +1088,7 @@
             createBtn: document.getElementById('todoCreateBtn'),
         };
 
-        let TODO_ITEMS = []; // [{todoNo, title, isDone}]
+        let TODO_ITEMS = [];
 
         function safeData(json){
             return (json && typeof json === 'object' && 'data' in json) ? json.data : json;
@@ -1115,16 +1149,14 @@
                 ck.addEventListener('change', async () => {
                     try{
                         await todoSetDone(todoNo, ck.checked);
-                        // 상태만 로컬 반영
                         it.isDone = ck.checked;
                         text.classList.toggle('done', ck.checked);
                     }catch(e){
-                        ck.checked = !ck.checked; // 롤백
+                        ck.checked = !ck.checked;
                         alert(e.message);
                     }
                 });
 
-                // ✅ 더블클릭 인라인 수정
                 text.addEventListener('dblclick', () => {
                     if (!todoNo) return;
 
@@ -1134,7 +1166,6 @@
                     input.className = 'todo-edit';
                     input.value = original;
 
-                    // 교체
                     text.replaceWith(input);
                     input.focus();
                     input.select();
@@ -1142,20 +1173,15 @@
                     const finish = async (mode) => {
                         const next = (input.value || '').trim();
 
-                        // 취소
                         if (mode === 'cancel'){
                             input.replaceWith(text);
                             return;
                         }
-
-                        // 빈값이면 저장 안 하고 복구
                         if (!next){
                             input.value = original;
                             input.replaceWith(text);
                             return;
                         }
-
-                        // 변경 없으면 복구
                         if (next === original){
                             input.replaceWith(text);
                             return;
@@ -1260,20 +1286,17 @@
         async function todoReload(){
             try{
                 const items = await todoFetchAll();
-                // 정렬(원하면): 최신이 위로 오게 todoNo desc
                 items.sort((a,b) => (b.todoNo||0) - (a.todoNo||0));
                 TODO_ITEMS = items;
                 renderTodo();
             }catch(e){
                 console.warn('todoReload failed:', e);
-                // 실패해도 캘린더는 살아있게
                 TODO_ITEMS = [];
                 renderTodo();
             }
         }
 
         function bindTodoUI(){
-            // ✅ 중복 바인딩 방지(혹시 init이 여러 번 도는 환경이면 필수)
             if (todoEls.input.dataset.bound === '1') return;
             todoEls.input.dataset.bound = '1';
 
@@ -1283,11 +1306,9 @@
                 const title = (todoEls.input.value || '').trim();
                 if (!title) return;
 
-                // ✅ 연타/중복 호출 방지
                 if (creating) return;
                 creating = true;
 
-                // ✅ UX: 처리 중 잠깐 잠금
                 todoEls.createBtn.disabled = true;
                 todoEls.input.disabled = true;
 
@@ -1312,11 +1333,7 @@
 
             todoEls.input.addEventListener('keydown', (e) => {
                 if (e.key !== 'Enter') return;
-
-                // ✅ 한글 입력(IME) 조합 중 Enter면 무시
                 if (e.isComposing) return;
-
-                // ✅ Enter 누르고 있는 동안 keydown 반복 발생 방지
                 if (e.repeat) return;
 
                 e.preventDefault();
@@ -1336,18 +1353,22 @@
         }
 
         /* =========================
-           Popover (기존)
+           Popover
         ========================= */
         const popMask = document.getElementById('popMask');
         const createPop = document.getElementById('createPop');
         const detailPop = document.getElementById('detailPop');
         const morePop = document.getElementById('morePop');
 
+        function isAnyPopOpen(){
+            return [createPop, detailPop, morePop].some(p => p.style.display === 'block');
+        }
+
         function showMask(){ popMask.style.display = 'block'; }
         function hideMaskIfNone(){
-            const anyOpen = [createPop, detailPop, morePop].some(p => p.style.display === 'block');
-            if (!anyOpen) popMask.style.display = 'none';
+            if (!isAnyPopOpen()) popMask.style.display = 'none';
         }
+
         function openPop(popEl, { anchorRect=null, center=false } = {}){
             showMask();
             popEl.classList.toggle('center', !!center);
@@ -1379,6 +1400,7 @@
             popEl.style.top = top + 'px';
             popEl.style.transform = 'none';
         }
+
         function closePop(popEl){
             popEl.style.display = 'none';
             popEl.classList.remove('center');
@@ -1389,11 +1411,32 @@
             closePop(detailPop);
             closePop(morePop);
         }
-        popMask.addEventListener('click', (e) => { e.stopPropagation(); closeAllPops(); });
-        [createPop, detailPop, morePop].forEach(p => p.addEventListener('click', (e)=> e.stopPropagation()));
+
         function safeClick(handler){
             return (e) => { e.preventDefault(); e.stopPropagation(); handler(e); };
         }
+
+        // ✅ 바깥 클릭 닫기: 마스크 클릭 대신 document에서 처리 (네이티브 select 보호)
+        document.addEventListener('pointerdown', (e) => {
+            const anyPop = isAnyPopOpen();
+            const mpOpen = (monthPickerPop && monthPickerPop.style.display === 'block');
+            if (!anyPop && !mpOpen) return;
+
+            const inAny =
+                (createPop.style.display === 'block' && createPop.contains(e.target)) ||
+                (detailPop.style.display === 'block' && detailPop.contains(e.target)) ||
+                (morePop.style.display === 'block' && morePop.contains(e.target)) ||
+                (monthPickerPop.style.display === 'block' && monthPickerPop.contains(e.target));
+
+            if (inAny) return;
+
+            // ✅ select 옵션 클릭 같은 경우도 안전하게 반영되도록 "0ms 지연 후" 닫기
+            setTimeout(() => {
+                closeAllPops();
+                closeMonthPicker();
+            }, 0);
+        }, true);
+
         window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAllPops(); closeMonthPicker(); } });
 
         function rectFromMouseEvent(e){
@@ -1403,7 +1446,7 @@
         }
 
         /* =========================
-           ✅ Month Picker Modal (MAIN/MINI 분리)
+           Month Picker
         ========================= */
         const mpMask = document.getElementById('mpMask');
         const monthPickerPop = document.getElementById('monthPickerPop');
@@ -1416,9 +1459,9 @@
         const mpCancel = document.getElementById('mpCancel');
         const mpToday = document.getElementById('mpToday');
 
-        let mpMode = 'MAIN'; // 'MAIN' | 'MINI'
+        let mpMode = 'MAIN';
         let mpYear = new Date().getFullYear();
-        let mpMonthIdx = new Date().getMonth(); // 0~11
+        let mpMonthIdx = new Date().getMonth();
 
         const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1503,7 +1546,7 @@
         let mainCalendar = null;
         let miniCalendar = null;
 
-        let editing = null; // { schNo, scope }
+        let editing = null;
         const createBadge = document.getElementById('createBadge');
         const createPopTitle = document.getElementById('createPopTitle');
 
@@ -1513,8 +1556,14 @@
         const allDaySelect = document.getElementById('allDaySelect');
         const timeRow = document.getElementById('timeRow');
         const dateRow = document.getElementById('dateRow');
-        const startAtInput = document.getElementById('startAtInput');
-        const endedAtInput = document.getElementById('endedAtInput');
+
+        const startDayInput = document.getElementById('startDayInput');
+        const startHourSelect = document.getElementById('startHourSelect');
+        const startMinSelect = document.getElementById('startMinSelect');
+        const endDayInput = document.getElementById('endDayInput');
+        const endHourSelect = document.getElementById('endHourSelect');
+        const endMinSelect = document.getElementById('endMinSelect');
+
         const startDateInput = document.getElementById('startDateInput');
         const endDateInput = document.getElementById('endDateInput');
         const fixedColorDot = document.getElementById('fixedColorDot');
@@ -1550,6 +1599,265 @@
             applyFixedColorByScope(scopeSelect.value);
         }
 
+        /* =========================
+           ✅ 시/분 셀렉트 초기화 + 00/30 고정
+        ========================= */
+        function fillSelect(selectEl, values, placeholder){
+            selectEl.innerHTML = '';
+
+            const ph = document.createElement('option');
+            ph.value = '';
+            ph.textContent = placeholder;
+            ph.disabled = true;   // ✅ placeholder는 선택 불가
+            ph.hidden = true;     // ✅ 드롭다운에서는 숨김
+            ph.selected = true;   // ✅ 기본 선택
+            selectEl.appendChild(ph);
+
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function initTimeSelects(){
+            const hours = Array.from({length:24}, (_,i)=> String(i).padStart(2,'0'));
+            const mins = ['00','30'];
+
+            fillSelect(startHourSelect, hours, '시');
+            fillSelect(endHourSelect, hours, '시');
+            fillSelect(startMinSelect, mins, '분');
+            fillSelect(endMinSelect, mins, '분');
+        }
+
+        function toLocalDateFromParts(day, hh, mm){
+            if (!day || !hh || !mm) return null;
+            const s = `${day}T${hh}:${mm}`;
+            const d = new Date(s);
+            if (Number.isNaN(d.getTime())) return null;
+            return d;
+        }
+
+        function getDTValue(dayEl, hourEl, minEl){
+            const d = dayEl.value;
+            const h = hourEl.value;
+            const m = minEl.value;
+            if (!d || !h || !m) return null;
+            return `${d}T${h}:${m}`;
+        }
+
+        function setControlsFromDate(dt, dayEl, hourEl, minEl){
+            const d = new Date(dt);
+            const day = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+            dayEl.value = day;
+            hourEl.value = pad(d.getHours());
+            minEl.value = (d.getMinutes() >= 30) ? '30' : '00';
+        }
+
+        function setDTValue(str, dayEl, hourEl, minEl){
+            if (!str) return;
+            const d = new Date(String(str));
+            if (Number.isNaN(d.getTime())) return;
+
+            const m = d.getMinutes();
+            if (m >= 45){
+                d.setHours(d.getHours()+1);
+                d.setMinutes(0,0,0);
+            }else if (m >= 15){
+                d.setMinutes(30,0,0);
+            }else{
+                d.setMinutes(0,0,0);
+            }
+
+            setControlsFromDate(d, dayEl, hourEl, minEl);
+        }
+
+        /* =========================
+           ✅ start/end "서로 제한" (min/max + 옵션 제한)
+        ========================= */
+        function syncDayMinMax(){
+            const sDay = startDayInput.value;
+            const eDay = endDayInput.value;
+
+            // 날짜 입력 상호 제한
+            endDayInput.min = sDay || '';
+            startDayInput.max = eDay || '';
+        }
+
+        function syncAllDayMinMax(){
+            const sd = startDateInput.value;
+            const ed = endDateInput.value;
+
+            // endDate는 startDate 이후만 선택 가능
+            endDateInput.min = sd || '';
+
+            // startDate는 endDate 이전만 선택 가능
+            startDateInput.max = ed || '';
+        }
+
+        let lastAllDayChanged = null; // 'startDate' | 'endDate'
+
+        function enforceAllDayRange(){
+            syncAllDayMinMax();
+
+            const sd = startDateInput.value;
+            const ed = endDateInput.value;
+
+            // 둘 중 하나라도 없으면 여기까지만
+            if (!sd || !ed) return;
+
+            // 문자열(YYYY-MM-DD)은 사전식 비교가 날짜 비교와 동일
+            if (ed < sd){
+                if (lastAllDayChanged === 'endDate'){
+                    // endDate를 바꿨는데 startDate보다 앞이면 startDate를 endDate로 끌어내림
+                    startDateInput.value = ed;
+                }else{
+                    // startDate를 바꿨는데 endDate가 앞이면 endDate를 startDate로 밀어줌
+                    endDateInput.value = sd;
+                }
+                syncAllDayMinMax();
+            }
+        }
+
+        function resetOptionDisabled(selectEl){
+            Array.from(selectEl.options).forEach((opt) => {
+                if (opt.value === '') return; // placeholder는 그대로
+                opt.disabled = false;
+            });
+        }
+
+        function disableHoursBefore(selectEl, hh){ // hh 미만 비활성
+            Array.from(selectEl.options).forEach(opt => {
+                if (!opt.value) return;
+                if (Number(opt.value) < hh) opt.disabled = true;
+            });
+        }
+        function disableHoursAfter(selectEl, hh){ // hh 초과 비활성
+            Array.from(selectEl.options).forEach(opt => {
+                if (!opt.value) return;
+                if (Number(opt.value) > hh) opt.disabled = true;
+            });
+        }
+        function disableMinsBefore(selectEl, mm){ // mm 미만 비활성
+            Array.from(selectEl.options).forEach(opt => {
+                if (!opt.value) return;
+                if (Number(opt.value) < mm) opt.disabled = true;
+            });
+        }
+        function disableMinsAfter(selectEl, mm){ // mm 초과 비활성
+            Array.from(selectEl.options).forEach(opt => {
+                if (!opt.value) return;
+                if (Number(opt.value) > mm) opt.disabled = true;
+            });
+        }
+
+        function updateTimeOptionConstraints(){
+            // 기본: 모두 풀기
+            resetOptionDisabled(startHourSelect);
+            resetOptionDisabled(startMinSelect);
+            resetOptionDisabled(endHourSelect);
+            resetOptionDisabled(endMinSelect);
+
+            const s = toLocalDateFromParts(startDayInput.value, startHourSelect.value, startMinSelect.value);
+            const e = toLocalDateFromParts(endDayInput.value, endHourSelect.value, endMinSelect.value);
+
+            // start가 완성된 경우: end는 start+30분 이후만(같은 날짜일 때 시간 옵션 제한)
+            if (s && endDayInput.value){
+                const earliest = new Date(s.getTime() + 30*60*1000);
+
+                if (endDayInput.value === startDayInput.value){
+                    const eh = earliest.getHours();
+                    const em = earliest.getMinutes();
+
+                    // endHour는 eh 미만 불가
+                    disableHoursBefore(endHourSelect, eh);
+
+                    // endHour가 eh면 endMin은 em 미만 불가
+                    if (endHourSelect.value === pad(eh)){
+                        disableMinsBefore(endMinSelect, em);
+                    }
+
+                    // start가 23:30이면 earliest는 다음날 00:00 → 같은날이면 전부 막힐 수 있으니,
+                    // 그런 경우는 day 선택이 잘못된거라 enforceRange가 날짜를 밀어줘야 함.
+                }
+            }
+
+            // end가 완성된 경우: start는 end-30분 이전만(같은 날짜일 때 시간 옵션 제한)
+            if (e && startDayInput.value){
+                const latest = new Date(e.getTime() - 30*60*1000);
+
+                if (endDayInput.value === startDayInput.value){
+                    const lh = latest.getHours();
+                    const lm = latest.getMinutes();
+
+                    // startHour는 lh 초과 불가
+                    disableHoursAfter(startHourSelect, lh);
+
+                    // startHour가 lh면 startMin은 lm 초과 불가
+                    if (startHourSelect.value === pad(lh)){
+                        disableMinsAfter(startMinSelect, lm);
+                    }
+                }
+            }
+        }
+
+        // ✅ start/end 서로 앞뒤 못 뒤집게 자동 보정 (30분 최소)
+        let lastChanged = null; // 'start' | 'end'
+        function enforceRange(){
+            const s = toLocalDateFromParts(startDayInput.value, startHourSelect.value, startMinSelect.value);
+            const e = toLocalDateFromParts(endDayInput.value, endHourSelect.value, endMinSelect.value);
+
+            syncDayMinMax();
+
+            // 둘 다 완성 전이면 옵션 제한만 갱신
+            updateTimeOptionConstraints();
+
+            if (!s || !e) return;
+
+            if (e.getTime() <= s.getTime()){
+                if (lastChanged === 'end'){
+                    const prev = new Date(e.getTime() - 30*60*1000);
+                    setControlsFromDate(prev, startDayInput, startHourSelect, startMinSelect);
+                }else{
+                    const next = new Date(s.getTime() + 30*60*1000);
+                    setControlsFromDate(next, endDayInput, endHourSelect, endMinSelect);
+                }
+                syncDayMinMax();
+                updateTimeOptionConstraints();
+            }
+        }
+
+        function bindRangeControls(){
+            const onStartChanged = () => { lastChanged = 'start'; enforceRange(); };
+            const onEndChanged   = () => { lastChanged = 'end'; enforceRange(); };
+
+            // ✅ change + input 둘 다 (브라우저마다 이벤트 타이밍 차이 보정)
+            [startDayInput, startHourSelect, startMinSelect].forEach(el => {
+                el.addEventListener('change', onStartChanged);
+                el.addEventListener('input', onStartChanged);
+            });
+            [endDayInput, endHourSelect, endMinSelect].forEach(el => {
+                el.addEventListener('change', onEndChanged);
+                el.addEventListener('input', onEndChanged);
+            });
+        }
+
+        function bindAllDayRangeControls(){
+            const onStart = () => { lastAllDayChanged = 'startDate'; enforceAllDayRange(); };
+            const onEnd   = () => { lastAllDayChanged = 'endDate';  enforceAllDayRange(); };
+
+            [startDateInput].forEach(el => {
+                el.addEventListener('change', onStart);
+                el.addEventListener('input', onStart);
+            });
+
+            [endDateInput].forEach(el => {
+                el.addEventListener('change', onEnd);
+                el.addEventListener('input', onEnd);
+            });
+        }
+
         function resetCreateForm(){
             editing = null;
             createPopTitle.textContent = '일정 추가';
@@ -1564,12 +1872,27 @@
             allDaySelect.value = 'false';
             toggleAllDayUI(false);
 
-            startAtInput.value = '';
-            endedAtInput.value = '';
+            startDayInput.value = '';
+            endDayInput.value = '';
+            startHourSelect.value = '';
+            startMinSelect.value = '';
+            endHourSelect.value = '';
+            endMinSelect.value = '';
+
+            // ✅ 날짜 min/max 리셋
+            startDayInput.min = '';
+            startDayInput.max = '';
+            endDayInput.min = '';
+            endDayInput.max = '';
+
             startDateInput.value = '';
             endDateInput.value = '';
 
             applyScopeSelectByRole();
+
+            // ✅ 옵션 제한 초기화
+            updateTimeOptionConstraints();
+            syncAllDayMinMax();
         }
 
         function openCreate({ anchorRect=null, center=false, prefill=null, mode='create' } = {}){
@@ -1587,11 +1910,15 @@
                 toggleAllDayUI(true);
                 startDateInput.value = prefill.startDate || '';
                 endDateInput.value = prefill.endDate || prefill.startDate || '';
+                enforceAllDayRange(); // ✅ allDay 날짜 제약 반영
             }else{
                 allDaySelect.value = 'false';
                 toggleAllDayUI(false);
-                startAtInput.value = prefill?.startAt || '';
-                endedAtInput.value = prefill?.endedAt || '';
+
+                if (prefill?.startAt) setDTValue(prefill.startAt, startDayInput, startHourSelect, startMinSelect);
+                if (prefill?.endedAt) setDTValue(prefill.endedAt, endDayInput, endHourSelect, endMinSelect);
+
+                enforceRange();
             }
 
             if (mode === 'edit'){
@@ -1772,12 +2099,9 @@
                 throw new Error("날짜/시간 형식이 올바르지 않아요.");
             }
 
-            // ✅ 날짜 넘어가도 OK (단, 종료는 시작보다 뒤여야 함)
             if (end.getTime() <= start.getTime()) {
                 throw new Error("종료 시간이 시작 시간보다 빠르거나 같아요.");
             }
-
-
         }
 
         async function apiGetItems({ scope, view, baseDate, weekStart }){
@@ -1921,23 +2245,22 @@
         }
 
         function buildMainCalendar(){
-
-
             mainCalendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                 initialView: 'timeGridWeek',
                 nowIndicator: true,
+
                 selectable: true,
                 selectMirror: true,
                 firstDay: (weekStart === 'SUNDAY') ? 0 : 1,
 
+                // ✅ 시간 제한 안 둠 (slotMinTime/slotMaxTime 없음)
+                // ✅ 30분 스냅을 원하면 아래 두 줄만 유지(선택사항)
+                // slotDuration: "00:30:00",
+                // snapDuration: "00:30:00",
 
-
-                // ✅ 높이 고정 + 내부 스크롤
-                height: 1240,          // 여기 숫자를 "08~22가 딱 좋았던 높이"로 맞춰
-                expandRows: true,     // 행 높이를 꽉 채우지 않게 도움
+                height: 1240,
+                expandRows: true,
                 handleWindowResize: true,
-
-                // ✅ 처음 열릴 때 스크롤 위치만 08:00으로
                 scrollTime: "08:00:00",
 
                 events: fetchEvents,
@@ -1949,13 +2272,8 @@
 
                 datesSet: function(){ updateTitles(); },
 
+                // ✅ 드래그로 시간대 선택하면 바로 모달
                 select: function(selInfo){
-                    // 혹시라도 방어 (selectAllow로 이미 걸러짐)
-                    if (!overlapsWorkHours(selInfo.start, selInfo.end, selInfo.allDay)) {
-                        mainCalendar.unselect();
-                        return;
-                    }
-
                     const anchorRect = rectFromMouseEvent(selInfo.jsEvent);
 
                     if (selInfo.allDay){
@@ -1981,6 +2299,7 @@
                     mainCalendar.unselect();
                 },
 
+                // ✅ 클릭도 30분짜리로 바로 모달
                 dateClick: function(info){
                     const anchorRect = rectFromMouseEvent(info.jsEvent);
 
@@ -1990,12 +2309,9 @@
                         return;
                     }
 
-                    // 30분 기본 생성도 "겹치기만 하면 OK"
                     const start = new Date(info.date);
                     const end = new Date(start);
                     end.setMinutes(end.getMinutes() + 30);
-
-                    if (!overlapsWorkHours(start, end, false)) return;
 
                     openCreate({
                         anchorRect,
@@ -2085,13 +2401,21 @@
             if (allDay){
                 const sd = startDateInput.value;
                 const ed = endDateInput.value || sd;
-                if (!sd) return alert('startDate는 필수야');
+                if (!sd) return alert('startDate는 필수입니다');
+                if (ed < sd) return alert('endDate는 startDate 이후여야 합니다');
                 payload.startDate = sd;
                 payload.endDate = ed;
             }else{
-                const sa = startAtInput.value;
-                const ea = endedAtInput.value;
-                if (!sa || !ea) return alert('startAt/endedAt은 필수야');
+                const sa = getDTValue(startDayInput, startHourSelect, startMinSelect);
+                const ea = getDTValue(endDayInput, endHourSelect, endMinSelect);
+
+                if (!sa || !ea) return alert('start/end 시간은 필수입니다');
+
+                // 최종 안전장치
+                const s = new Date(sa);
+                const e = new Date(ea);
+                if (e.getTime() <= s.getTime()) return alert('end는 start 이후만 가능합니다');
+
                 payload.startAt = sa;
                 payload.endedAt = ea;
             }
@@ -2133,19 +2457,12 @@
 
         document.getElementById('searchInput').addEventListener('input', () => mainCalendar.refetchEvents());
 
+        // ✅ "+ 일정 추가하기"는 시간 자동 채움 X
         document.getElementById('openCreateBtn').addEventListener('click', () => {
-            const now = mainCalendar ? mainCalendar.getDate() : new Date();
-            const start = new Date(now);
-            start.setHours(10,0,0,0);
-            const end = new Date(start);
-            end.setMinutes(end.getMinutes() + 60);
-
             openCreate({
                 center:true,
                 prefill:{
                     allDay:false,
-                    startAt: toDatetimeLocalValue(start),
-                    endedAt: toDatetimeLocalValue(end),
                     scope:'PERSONAL'
                 }
             });
@@ -2170,7 +2487,7 @@
             const calls = scopes.map(s => apiGetItems({ scope:s, view:'MONTH', baseDate, weekStart }));
             const results = await Promise.allSettled(calls);
 
-            const map = new Map(); // dateKey -> Set(scopes)
+            const map = new Map();
             function mark(dateKey, scope){
                 if (!map.has(dateKey)) map.set(dateKey, new Set());
                 map.get(dateKey).add(scope);
@@ -2278,7 +2595,7 @@
         bindToggle(tgPersonal, 'PERSONAL');
 
         /* =========================
-           ✅ Title click -> open pretty picker
+           Title click -> month picker
         ========================= */
         document.getElementById('mainTitle').addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -2290,10 +2607,15 @@
         });
 
         /* =========================
-           Init (✅ me 먼저 로드)
+           Init
         ========================= */
         (async function init(){
             await loadMe();
+
+            initTimeSelects();
+            bindRangeControls();   // ✅ 중요: 시간/날짜 제한 이벤트 바인딩
+            bindAllDayRangeControls();
+
             resetCreateForm();
 
             buildMainCalendar();
@@ -2307,7 +2629,6 @@
 
             refreshMiniDots();
 
-            // ✅ ToDo init (캘린더 안 죽게 안전하게)
             try{
                 bindTodoUI();
                 await todoReload();

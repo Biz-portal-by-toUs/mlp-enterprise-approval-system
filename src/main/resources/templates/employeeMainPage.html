@@ -1,14 +1,11 @@
-<!DOCTYPE html>
-<html lang="en"
+<!doctype html>
+<html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="layout">
+      layout:decorate="~{layout}">
 
-<div layout:fragment="content">
-
-    <h1> 메인 페이지 </h1>
-
-    <!-- ✅ 팝업만 스코프 걸기 (전역 CSS 오염 방지) -->
+<!-- ✅ 이 페이지 전용 스타일: layout의 :root / .badge / .card 등 절대 건드리지 않음 -->
+<th:block layout:fragment="pageStyles">
     <div class="notice-popup-scope">
 
         <!-- ✅ 여기부터 팝업 코드 "그대로" (JS/HTML 구조 유지) -->
@@ -630,5 +627,444 @@
 
 
     </div>
-</div>
+    <style>
+        /* ====== 메인 페이지 전용 스코프 (팝업/레이아웃 영향 0) ====== */
+        .main-dashboard{
+            /* 로컬 변수(전역 :root 안 씀) */
+            --md-primary:#2f6fda;
+            --md-bg:#f3f5f9;
+            --md-surface:#ffffff;
+            --md-text:#111827;
+            --md-muted:#6b7280;
+            --md-line: rgba(17,24,39,0.08);
+            --md-shadow: 0 6px 20px rgba(17, 24, 39, 0.10);
+            --md-shadow2: 0 6px 14px rgba(17,24,39,0.08);
+            --md-radius:16px;
+
+            /*max-width: 1520px;          !* 1440~1600 사이로 취향껏 *!*/
+            /*margin: 0 auto;*/
+            /*padding: 16px 18px;         !* 기존 24px → 조금 줄여서 더 꽉 차게 *!*/
+
+            /*max-width: 1720px;*/
+            /*width: 100%;*/
+            /*margin: 0;*/
+            /*padding: 16px 18px;*/
+
+            /* ✅ 중앙정렬 유지 + 더 넓게 */
+            max-width: 1760px;          /* 1680~1920 사이 추천 */
+            width: min(1760px, calc(100vw - 36px));  /* 양옆 18px만 남기고 꽉 */
+            margin: 0 auto;
+            padding: 14px 18px;         /* 바깥 여백 줄여서 더 꽉 차게 */
+        }
+
+        .main-dashboard .md-shell{
+            background: var(--md-primary);
+            border-radius:20px;
+            padding:18px;
+            box-shadow: var(--md-shadow);
+            border:1px solid rgba(255,255,255,0.15);
+        }
+
+        .main-dashboard .md-grid{
+            display:grid;
+            /*grid-template-columns: 320px 1fr 420px;*/
+            /*gap:16px;*/
+            align-items:stretch;
+
+            /*grid-template-columns: 360px 1fr 480px; !* 기존 320 / 420 → 확장 *!*/
+
+            grid-template-columns: 380px 1fr 520px; /* 왼/오른쪽 카드 폭 확장 */
+            gap: 18px;                              /* 살짝 넓혀서 시원하게 */
+
+        }
+
+        .main-dashboard .md-mini-col{
+            display:grid;
+            gap:16px;
+        }
+
+        /* ✅ layout 공용 .card/.badge/.list 와 충돌 방지: md-card, md-pill, md-list 사용 */
+        .main-dashboard .md-card{
+            background: var(--md-surface);
+            border-radius: var(--md-radius);
+            border:1px solid rgba(17,24,39,0.08);
+            box-shadow: var(--md-shadow2);
+            padding:16px;
+            color: var(--md-text);
+            text-decoration:none;
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            min-height:120px;
+            transition: transform 120ms ease;
+        }
+        .main-dashboard .md-card:hover{ transform: translateY(-1px); }
+
+        .main-dashboard .md-title{ font-weight:800; font-size:14px; color:#374151; }
+        .main-dashboard .md-value{ font-weight:900; font-size:34px; line-height:1; }
+        .main-dashboard .md-sub{ color: var(--md-muted); font-size:12px; }
+
+        .main-dashboard .md-list{
+            list-style:none;
+            padding:0;
+            margin:0;
+            display:grid;
+            gap:10px;
+        }
+        .main-dashboard .md-list li{
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+        .main-dashboard .md-list a{
+            color: var(--md-text);
+            text-decoration:none;
+        }
+        .main-dashboard .md-list a:hover{ text-decoration:underline; }
+
+        .main-dashboard .md-todo-card{ min-height:256px; }
+        .main-dashboard .md-todo-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+        }
+
+        .main-dashboard .md-pill{
+            font-size:12px;
+            font-weight:900;
+            background:#eef2ff;
+            color:#3730a3;
+            padding:6px 10px;
+            border-radius:999px;
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+        }
+
+        .main-dashboard .md-right-col{
+            display:grid;
+            gap:16px;
+        }
+
+        .main-dashboard .md-clock{
+            background: rgba(255,255,255,0.14);
+            border:1px solid rgba(255,255,255,0.22);
+            color:#fff;
+            border-radius: var(--md-radius);
+            padding:16px;
+            display:grid;
+            grid-template-columns: 140px 1fr;
+            gap:16px;
+            align-items:center;
+            min-height:180px;
+        }
+        .main-dashboard .md-date{ font-weight:900; font-size:48px; letter-spacing:1px; }
+        .main-dashboard .md-time{ font-weight:900; font-size:52px; margin-top:4px; }
+        .main-dashboard .md-meta{ opacity:.9; font-weight:800; font-size:14px; }
+
+        .main-dashboard .md-donut{
+            width:120px; height:120px; border-radius:50%;
+            display:flex; align-items:center; justify-content:center;
+            background: conic-gradient(#ffffff 0%, rgba(255,255,255,0.25) 0);
+            position:relative;
+        }
+        .main-dashboard .md-donut::after{
+            content:"";
+            width:84px; height:84px; border-radius:50%;
+            background: var(--md-primary);
+            opacity: .95;
+            position:absolute;
+        }
+        .main-dashboard .md-donut span{
+            position:relative;
+            z-index:1;
+            font-weight:900;
+            font-size:22px;
+            color:#fff;
+        }
+
+        .main-dashboard .md-status-card{ min-height:76px; }
+        .main-dashboard .md-status-row{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+        }
+        .main-dashboard .md-status-left{
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+        }
+        .main-dashboard .md-status-right{
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        .main-dashboard .md-dot{
+            width:10px; height:10px; border-radius:50%;
+            background:#ef4444;
+        }
+
+        .main-dashboard .md-bottom{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:18px;
+            margin-top:18px;
+        }
+        .main-dashboard .md-panel{ min-height:240px; }
+        .main-dashboard .md-panel-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:10px;
+        }
+        .main-dashboard .md-panel-head .md-panel-title{ font-weight:900; }
+        .main-dashboard .md-panel-head a{
+            font-size:12px;
+            color:#2563eb;
+            text-decoration:none;
+        }
+        .main-dashboard .md-panel-head a:hover{ text-decoration:underline; }
+
+        @media (max-width: 1300px){
+            .main-dashboard .md-grid{ grid-template-columns: 1fr; }
+            .main-dashboard .md-bottom{ grid-template-columns: 1fr; }
+        }
+    </style>
+</th:block>
+
+<!-- ✅ 이 페이지 내용(레이아웃의 content 영역에만 삽입) -->
+<th:block layout:fragment="content">
+    <div class="main-dashboard">
+
+        <div class="md-shell">
+            <div class="md-grid">
+
+                <!-- 왼쪽: 2개 카드 -->
+                <div class="md-mini-col">
+                    <a class="md-card" href="/approvals/inbox">
+                        <div class="md-title">결재할 문서</div>
+                        <div class="md-value" id="needApprove">-</div>
+                        <div class="md-sub">클릭하면 결재함으로 이동</div>
+                    </a>
+
+                    <a class="md-card" href="/approvals/rejected">
+                        <div class="md-title">반려된 결재</div>
+                        <div class="md-value" id="rejectedApprove">-</div>
+                        <div class="md-sub">클릭하면 반려 목록으로 이동</div>
+                    </a>
+                </div>
+
+                <!-- 가운데: Todo -->
+                <a class="md-card md-todo-card" href="/schedule/calendar">
+                    <div class="md-todo-head">
+                        <div class="md-title">Todo List</div>
+                        <div class="md-pill"><span id="todoCount">0</span>개</div>
+                    </div>
+                    <ul class="md-list" id="todoList">
+                        <li class="md-sub">로딩 중...</li>
+                    </ul>
+                </a>
+
+                <!-- 오른쪽: 도넛 + 날짜/시간 + 결재현황 + 오늘 일정 -->
+                <div class="md-right-col">
+                    <div class="md-clock">
+                        <div class="md-donut" id="todoDonut">
+                            <span id="todoPercent">0%</span>
+                        </div>
+                        <div>
+                            <div class="md-date" id="todayDate">--</div>
+                            <div class="md-time" id="todayTime">--:--</div>
+                            <div class="md-meta">오늘</div>
+                        </div>
+                    </div>
+
+                    <a class="md-card md-status-card" href="/approvals/sent">
+                        <div class="md-status-row">
+                            <div class="md-status-left">
+                                <div class="md-title">결재 현황</div>
+                                <div class="md-sub">상신한 결재</div>
+                            </div>
+                            <div class="md-status-right">
+                                <span class="md-pill"><span id="sentApprove">-</span>건</span>
+                                <span class="md-dot"></span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a class="md-card" href="/schedule/calendar">
+                        <div class="md-title">나의 오늘 일정</div>
+                        <ul class="md-list" id="todaySchedules">
+                            <li class="md-sub">로딩 중...</li>
+                        </ul>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 하단 패널 2개 -->
+        <div class="md-bottom">
+            <div class="md-card md-panel">
+                <div class="md-panel-head">
+                    <div class="md-panel-title">사내 공지사항</div>
+                    <a href="/notice/list">더보기</a>
+                </div>
+                <ul class="md-list" id="noticeList">
+                    <li class="md-sub">로딩 중...</li>
+                </ul>
+            </div>
+
+            <div class="md-card md-panel">
+                <div class="md-panel-head">
+                    <div class="md-panel-title">자유게시판</div>
+                    <a href="/board/list">더보기</a>
+                </div>
+                <ul class="md-list" id="boardList">
+                    <li class="md-sub">로딩 중...</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</th:block>
+
+<!-- ✅ 이 페이지 전용 스크립트: layout의 공통 팝업/알림/프로필 JS와 충돌 없음 -->
+<th:block layout:fragment="pageScripts">
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            startClientClock();
+            loadDashboard();
+        });
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch("/api/dashboard", { credentials: "include" });
+                if (!res.ok) throw new Error("dashboard api failed: " + res.status);
+                const d = await res.json();
+                renderDashboard(d);
+            } catch (e) {
+                console.error(e);
+                setText("needApprove", "-");
+                setText("rejectedApprove", "-");
+                setText("sentApprove", "-");
+                setListFallback("todoList", "데이터를 불러오지 못했습니다.");
+                setListFallback("todaySchedules", "데이터를 불러오지 못했습니다.");
+                setListFallback("noticeList", "데이터를 불러오지 못했습니다.");
+                setListFallback("boardList", "데이터를 불러오지 못했습니다.");
+            }
+        }
+
+        function renderDashboard(d) {
+            setText("needApprove", d?.approvals?.needCount ?? 0);
+            setText("rejectedApprove", d?.approvals?.rejectedCount ?? 0);
+            setText("sentApprove", d?.approvals?.sentCount ?? 0);
+
+            const totalTodo = d?.todo?.total ?? 0;
+            setText("todoCount", totalTodo);
+
+            const percent = d?.todo?.progressPercent ?? 0;
+            setDonutPercent("todoDonut", percent);
+            setText("todoPercent", percent + "%");
+
+            renderSimpleList("todoList", d?.todo?.items ?? [], (it) => ({
+                text: (it.done ? "✅ " : "☐ ") + it.title,
+                href: "/todo"
+            }));
+
+            // 백엔드 키에 맞춰 사용 (todaySchedules or todayItems)
+            const today = d?.todaySchedules ?? d?.todayItems ?? [];
+            renderSimpleList("todaySchedules", today, (it) => ({
+                text: formatTime(it.startAt) + " " + (it.title ?? ""),
+                href: "/calendar"
+            }));
+
+            renderSimpleList("noticeList", d?.notices ?? [], (it) => ({
+                text: it.title,
+                href: "/notice/" + it.id
+            }));
+            renderSimpleList("boardList", d?.boards ?? [], (it) => ({
+                text: it.title,
+                href: "/board/" + it.id
+            }));
+        }
+
+        function renderSimpleList(ulId, items, mapper) {
+            const ul = document.getElementById(ulId);
+            if (!ul) return;
+            ul.innerHTML = "";
+
+            if (!items || items.length === 0) {
+                const li = document.createElement("li");
+                li.className = "md-sub";
+                li.textContent = "표시할 항목이 없습니다.";
+                ul.appendChild(li);
+                return;
+            }
+
+            items.forEach(it => {
+                const m = mapper(it);
+                const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.href = m.href;
+                a.textContent = m.text;
+                li.appendChild(a);
+                ul.appendChild(li);
+            });
+        }
+
+        function setText(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        function setListFallback(id, msg) {
+            const ul = document.getElementById(id);
+            if (!ul) return;
+            ul.innerHTML = "";
+            const li = document.createElement("li");
+            li.className = "md-sub";
+            li.textContent = msg;
+            ul.appendChild(li);
+        }
+
+        function setDonutPercent(elId, percent) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const p = Math.max(0, Math.min(100, percent || 0));
+            el.style.background = `conic-gradient(#ffffff ${p}%, rgba(255,255,255,0.25) 0)`;
+        }
+
+        function startClientClock() {
+            const tick = () => {
+                const now = new Date();
+                const dateEl = document.getElementById("todayDate");
+                const timeEl = document.getElementById("todayTime");
+                if (dateEl) dateEl.textContent = formatDate(now);
+                if (timeEl) timeEl.textContent = formatHHmm(now);
+            };
+            tick();
+            setInterval(tick, 1000);
+        }
+
+        function formatDate(d) {
+            const yy = String(d.getFullYear()).slice(2);
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            const day = ["일","월","화","수","목","금","토"][d.getDay()];
+            return `${yy}${mm}${dd} ${day}`;
+        }
+        function formatHHmm(d) {
+            const hh = String(d.getHours()).padStart(2, "0");
+            const mi = String(d.getMinutes()).padStart(2, "0");
+            return `${hh}:${mi}`;
+        }
+        function formatTime(iso) {
+            if (!iso) return "";
+            const d = new Date(iso);
+            return formatHHmm(d);
+        }
+    </script>
+</th:block>
+
 </html>
