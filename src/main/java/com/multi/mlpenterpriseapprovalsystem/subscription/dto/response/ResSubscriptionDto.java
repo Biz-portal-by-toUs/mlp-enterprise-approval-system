@@ -24,4 +24,5 @@ public class ResSubscriptionDto {
     private String subName;
     private String subDesc;
     private BigDecimal subPrice;
+    private Integer subLimit;
 }
