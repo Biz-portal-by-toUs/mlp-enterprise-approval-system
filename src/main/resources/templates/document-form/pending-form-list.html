@@ -3,7 +3,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}"
-      th:classappend="${perm_isEmployee == true} ? ' role-employee' : ''"
+      th:classappend="${perm_isEmployee == true} ? 'role-employee' : ''"
       th:attr="
         data-can-approve-form=${perm_canApproveForm},
         data-can-reject-form=${perm_canRejectForm},
@@ -15,246 +15,89 @@
     <title>승인 대기 문서 양식</title>
 
     <style layout:fragment="pageStyles">
-        :root {
-            --fg: #0f172a;
-            --mut: #64748b;
-            --line: #e2e8f0;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --danger: #ef4444;
-            --ok: #10b981;
-            --warn: #f59e0b;
+        /* ✅ form-list.html 톤 */
+        :root{
+            --fg:#0f172a; --mut:#64748b; --line:#e2e8f0; --bg:#f1f5f9;
+            --card:#ffffff; --danger:#ef4444;
+            --ok:#10b981; --warn:#f59e0b;
         }
 
-        html, body { height: 100% }
-        body {
-            margin: 0;
-            font-family: ui-sans-serif, system-ui, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR";
-            color: var(--fg);
-            background: var(--bg);
+        .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+
+        .select{
+            height:40px;border-radius:8px;border:1px solid var(--line);
+            background:#fff;padding:0 12px;font-size:14px;font-weight:600;outline:none;
         }
 
-        .page-with-subbar {
-            display: grid;
-            grid-template-columns:260px minmax(0, 1fr);
-            gap: 0;
-            padding: 0;
-            align-items:stretch;
+        /* helperText 톤도 form-list에 맞춰 살짝 정돈 */
+        .helperText{
+            margin:0;font-size:13px;color:var(--mut);
+            display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;
+        }
+        code.k{
+            background:#0f172a;color:#fff;padding:2px 6px;border-radius:6px;
+            font-size:12px;font-weight:700;
         }
 
-        .page-main { padding: 24px; min-width: 0; }
+        /* ✅ tableWrap + table.formTable 통일 */
+        .tableWrap{
+            width:100%;background:#fff;border:1px solid var(--line);
+            border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        }
+        table.formTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.formTable thead th{
+            background:#f9fafb;border-bottom:1px solid var(--line);
+            text-align:center;padding:14px 10px;font-size:14px;color:var(--mut);font-weight:600;
+        }
+        table.formTable tbody td{
+            border-bottom:1px solid var(--line);
+            text-align:center;padding:12px 10px;font-size:15px;font-weight:500;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        }
+        table.formTable tbody tr:hover td{background:#fcfdfe;}
 
-        .toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 16px;
+        td.col-title{text-align:left !important;padding-left:20px !important;font-weight:700 !important;}
+        .titleLink{
+            color:var(--primary);text-decoration:none;display:block;width:100%;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800;
         }
 
-        .toolbar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-            flex: 1;
+        /* ✅ pager 통일 */
+        .pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .pager{display:flex;align-items:center;gap:4px;}
+        .pageBtn{
+            min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
+            background:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:0.15s;
         }
+        .pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .pageBtn.active:hover{filter:brightness(0.9);}
+        .pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        .muted{color:var(--mut);}
 
-        .toolbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-        .select {
-            height: 40px;
-            border-radius: 8px;
-            border: 1px solid var(--line);
-            background: #fff;
-            padding: 0 12px;
-            font-size: 14px;
-            font-weight: 600;
-            outline: none;
+        /* ✅ pending 전용: 상태 pill */
+        .statPill{
+            display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;
+            font-size:12px;font-weight:800;border:1px solid var(--line);
+            background:#f8fafc;color:var(--mut);
         }
+        .statPill.P,.statPill.W{background:#eff6ff;border-color:#bfdbfe;color:#2563eb;}
+        .statPill.R,.statPill.X{background:#fef2f2;border-color:#fecaca;color:#ef4444;}
+        .statPill.A{background:#ecfdf5;border-color:#bbf7d0;color:#10b981;}
 
-        .helperText {
-            margin: 0;
-            font-size: 13px;
-            color: var(--mut);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            min-width: 0;
+        /* ✅ pending 전용: row action 버튼(크기/톤 통일) */
+        .row-actions{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;}
+        .btn{
+            height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:700;
+            cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;
         }
-
-        code.k {
-            background: #0f172a;
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .tableWrap {
-            width: 100%;
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-
-        thead th {
-            background: #f9fafb;
-            border-bottom: 1px solid var(--line);
-            text-align: center;
-            padding: 14px 10px;
-            font-size: 14px;
-            color: var(--mut);
-            font-weight: 600;
-        }
-
-        tbody td {
-            border-bottom: 1px solid var(--line);
-            text-align: center;
-            padding: 12px 10px;
-            font-size: 15px;
-            font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        tbody tr:hover td { background: #fcfdfe; }
-
-        td.col-title {
-            text-align: left !important;
-            padding-left: 20px !important;
-            font-weight: 700 !important;
-        }
-
-        .titleLink {
-            color: var(--primary);
-            text-decoration: none;
-            display: block;
-            width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 800;
-        }
-
-        .statPill {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 800;
-            border: 1px solid var(--line);
-            background: #f8fafc;
-            color: var(--mut);
-        }
-
-        .statPill.P, .statPill.W {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-            color: #2563eb;
-        }
-
-        .statPill.R, .statPill.X {
-            background: #fef2f2;
-            border-color: #fecaca;
-            color: #ef4444;
-        }
-
-        .statPill.A {
-            background: #ecfdf5;
-            border-color: #bbf7d0;
-            color: #10b981;
-        }
-
-        .row-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            height: 40px;
-            padding: 0 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            background: var(--primary);
-            color: #fff;
-            white-space: nowrap;
-            transition: 0.15s;
-        }
-
-        .btn:hover { filter: brightness(0.9); }
-
-        .btn.sm {
-            height: 32px;
-            padding: 0 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .btn.ok { background: var(--ok); }
-        .btn.danger { background: var(--danger); }
-        .btn.warn { background: var(--warn); color: #111827; }
-
-        .pager-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            margin-top: 16px;
-        }
-
-        .pager { display: flex; align-items: center; gap: 4px; }
-
-        .pageBtn {
-            min-width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            border: 1px solid var(--line);
-            background: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.15s;
-        }
-
-        .pageBtn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
-
-        .pageBtn.active {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-        }
-
-        .pageBtn.active:hover { filter: brightness(0.9); }
-
-        .pager-status {
-            position: absolute;
-            right: 0;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        @media (max-width: 760px) {
-            .page-with-subbar { grid-template-columns:1fr; }
-            .page-main { padding: 14px; }
-            .pager-status { position: static; margin-left: 10px; }
-        }
+        .btn:hover{filter:brightness(0.9);}
+        .btn.sm{height:32px;padding:0 12px;border-radius:8px;font-size:13px;font-weight:700;}
+        .btn.ok{background:var(--ok);}
+        .btn.danger{background:var(--danger);}
+        .btn.warn{background:var(--warn);color:#111827;}
     </style>
 </head>
 
@@ -271,19 +114,13 @@
                         <option value="P">대기</option>
                         <option value="R">반려</option>
                     </select>
-
-                    <p class="helperText">
-                        <span>표시 상태:</span>
-                        <code class="k">P/W(대기)</code>
-                        <span>·</span>
-                        <code class="k">R/X(반려)</code>
-                    </p>
                 </div>
+
                 <div class="toolbar-right"></div>
             </div>
 
             <section class="tableWrap">
-                <table>
+                <table class="formTable">
                     <thead>
                     <tr>
                         <th style="width:120px;">번호</th>
@@ -299,6 +136,7 @@
 
             <div class="pager-wrapper">
                 <div id="pager" class="pager"></div>
+
                 <div class="pager-status">
                     <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
                     <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
