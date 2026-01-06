@@ -56,17 +56,6 @@
             flex-shrink:0;
         }
 
-        .select{
-            height:40px;
-            border-radius:8px;
-            border:1px solid var(--line);
-            background:#fff;
-            padding:0 12px;
-            font-size:14px;
-            font-weight:600;
-            outline:none;
-        }
-
         .searchWrap{
             flex: 1;
             max-width: 420px;
@@ -277,11 +266,9 @@
         <main class="page-main">
             <div class="toolbar">
                 <div class="toolbar-left">
-
                     <div class="searchWrap">
                         <input id="q" class="searchInput" type="text" placeholder="제목 검색"/>
                     </div>
-
                     <button class="btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
@@ -316,7 +303,14 @@
             </div>
 
             <script>
-                function getMeEmpId(){ return document.getElementById('me')?.dataset?.empNo?.trim() || ''; }
+                // ===== constants (paging 10 fixed) =====
+                const PAGE_SIZE = 10;
+                const INBOX_ROLE = 'RECIPIENT';
+
+                // (이 값은 서버 인증 기반 API라 실제로 필수는 아님)
+                function getMeEmpId(){
+                    return document.getElementById('me')?.dataset?.empNo?.trim() || '';
+                }
 
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
@@ -409,15 +403,16 @@
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: 10,
+                        size: PAGE_SIZE, // 고정
                         q: (params.get('q') || '').trim()
                     };
                 }
 
+                // ✅ 브라우저 주소창 상태만 변경 (API URL 만들지 말기)
                 function setUrlState(next){
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
-                    params.set('size', String(10)); // 고정
+                    params.set('size', String(PAGE_SIZE)); // 고정
                     if (next.q) params.set('q', next.q);
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
@@ -486,7 +481,7 @@
 
                             try{
                                 await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
-                                // prior-first 정렬이라 위치가 바뀔 수 있어서 재조회
+                                // prior-first 정렬이면 위치가 바뀔 수 있으니 재조회
                                 await load();
                             }catch(err){
                                 console.error(err);
@@ -501,53 +496,46 @@
                     });
                 }
 
+                function buildInboxApiUrl(st){
+                    const params = new URLSearchParams();
+                    params.set('role', INBOX_ROLE);
+                    params.set('page', String(st.page));
+                    params.set('size', String(PAGE_SIZE));
+                    if (st.q) params.set('q', st.q);
+                    return `/api/v1/mails/inbox?${params.toString()}`;
+                }
+
                 async function load(){
+                    // ※ 서버 인증으로 동작한다면 me가 없어도 목록조회는 가능해야 정상.
+                    // 하지만 기존 로직 유지하면서, 없으면 경고만 띄우고 계속 진행.
                     const me = getMeEmpId();
                     if(!me){
-                        document.getElementById('tbody').innerHTML =
-                            `<tr><td colspan="6" style="padding:18px; color:#ef4444; font-weight:900;">로그인 정보(empId)를 찾을 수 없습니다.</td></tr>`;
-                        return;
+                        console.warn('[mail inbox] #me dataset(empNo) not found (layout에 me 태그가 없는 상태일 수 있음).');
                     }
 
                     const st = getState();
-                    document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    // ✅ role=RECIPIENT 고정 + q 포함해서 URL 생성 후 그대로 사용
-                    const params = new URLSearchParams();
-                    params.set('role', 'RECIPIENT');
-                    params.set('page', String(st.page));
-                    params.set('size', String(10));
-                    if (st.q) params.set('q', st.q);
-
-                    const url = `/api/v1/mails/inbox?${params.toString()}`;
-                    // console.log('[inbox request url]', url); // 필요하면 주석 해제
+                    const url = buildInboxApiUrl(st);
+                    // console.log('[inbox request url]', url);
 
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
-                    renderRows(items, data.number ?? st.page, data.size ?? st.size, data.totalElements ?? items.length);
+                    renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
                     document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
                     buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, size:st.size, q:st.q });
+                        setUrlState({ page:p, q:st.q });
                         load().catch(console.error);
                     });
                 }
 
                 document.getElementById('btnSearch').addEventListener('click', () => {
-                    const size = parseInt(document.getElementById('size').value, 10);
                     const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, size, q });
-                    load().catch(console.error);
-                });
-
-                document.getElementById('size').addEventListener('change', () => {
-                    const size = parseInt(document.getElementById('size').value, 10);
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, size, q });
+                    setUrlState({ page:0, q });
                     load().catch(console.error);
                 });
 

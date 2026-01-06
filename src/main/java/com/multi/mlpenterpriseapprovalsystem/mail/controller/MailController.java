@@ -33,7 +33,7 @@ public class MailController {
     public ResponseEntity<Page<ResMailListDto>> inbox(
             @RequestParam("role") MailRole role,
             @RequestParam(value = "q", required = false) String q,
-            @PageableDefault(size = 20) Pageable pageable,
+            @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication
     ) {
         String empId = authentication.getName();
