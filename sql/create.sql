@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS subscription (
                                             CONSTRAINT uk_subscription_name UNIQUE (sub_name),
                                             CONSTRAINT ck_subscription_name CHECK (sub_name IN ('basic','pro','ultimate'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE subscription DROP CONSTRAINT ck_subscription_name;
 
 -- 2) 회사 (✅ role 컬럼 반영)
 CREATE TABLE IF NOT EXISTS company (
