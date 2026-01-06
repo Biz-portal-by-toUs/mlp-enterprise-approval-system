@@ -42,7 +42,7 @@ public class SseManager {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name(eventName).data(data));
-            } catch (IOException e) {
+            } catch (IOException | IllegalStateException e) {
                 removeEmitter(empId, emitter);
             }
         }
@@ -56,4 +56,22 @@ public class SseManager {
         }
         try { emitter.complete(); } catch (Exception ignore) {}
     }
+
+    public SseEmitter connect(String empId) {
+        SseEmitter emitter = createEmitter(empId);
+
+        // (선택) 연결 확인용 이벤트 한 번 보내기
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("connected")
+                    .data(Map.of("ok", true)));
+        } catch (IOException | IllegalStateException e) {
+            // 연결 직후에도 브라우저가 바로 끊는 경우가 있어서 안전하게 제거
+            removeEmitter(empId, emitter);
+        }
+
+        return emitter;
+    }
+
+
 }

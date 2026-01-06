@@ -1098,3 +1098,24 @@ ALTER TABLE employee
     ADD CONSTRAINT chk_employee_atte
         CHECK (atte IN ('B','V','C'));
 -- 여기까지 해주기
+
+ALTER TABLE attachment
+    ADD COLUMN deleted_at DATETIME NULL,
+    ADD COLUMN deleted_by VARCHAR(20) NULL,
+    ADD COLUMN delete_batch_id CHAR(36) NULL,
+    ADD INDEX idx_attach_deleted (domain, status, deleted_at),
+    ADD INDEX idx_attach_batch (delete_batch_id);
+
+ALTER TABLE folder
+    ADD COLUMN deleted_at DATETIME NULL,
+    ADD COLUMN deleted_by VARCHAR(20) NULL,
+    ADD COLUMN delete_batch_id CHAR(36) NULL,
+    ADD INDEX idx_folder_deleted (scope, dep_no, owner_id, deleted_at),
+    ADD INDEX idx_folder_batch (delete_batch_id);
+-- 여기까지 해주기
+
+# 사원 추가 변경
+ALTER TABLE employee
+    MODIFY COLUMN msg_stat CHAR(1) NOT NULL DEFAULT 'H',
+    MODIFY COLUMN gen VARCHAR(1) NULL,
+    MODIFY COLUMN birth DATE NULL;

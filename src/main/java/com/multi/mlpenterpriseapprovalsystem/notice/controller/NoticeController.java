@@ -95,7 +95,7 @@ public class NoticeController {
     }
 
     //공지사항 삭제
-    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PreAuthorize("hasRole('COM_ADMIN') or hasRole('SEC_ADMIN') or hasRole('THR_ADMIN')")
     @DeleteMapping("/notice/{noticeNo}")
     public ResponseEntity<ResponseDto> delete(@PathVariable(name="noticeNo") Long noticeNo) {
         noticeService.deleteNotice(noticeNo);

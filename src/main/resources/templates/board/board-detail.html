@@ -81,38 +81,6 @@
         .comment-editor__counter #commentByte { color: #111827; font-weight: 1000; }
         .comment-editor__actions { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
         .comment-editor__actions .btn.btn-sm { padding: 8px 12px; min-height: 34px; }
-        .comment-editor__actions #commentSubmitBtn { border-color: rgba(59, 130, 246, .25); }
-        .comment-editor__actions #commentSubmitBtn:hover { border-color: rgba(59, 130, 246, .40); background: rgba(59, 130, 246, .07); }
-        .comment-editor__actions #commentCancelBtn { color: var(--muted, #6b7280); }
-
-        @media (max-width: 720px) {
-            .comment-editor__footer { flex-direction: column; align-items: stretch; }
-            .comment-editor__actions { width: 100%; justify-content: flex-end; }
-        }
-
-        #comment { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); overflow: hidden; margin: 12px 0 14px; }
-        #commentList { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-        #commentList thead th { text-align: left; font-size: .9rem; color: var(--muted, #6b7280); background: rgba(17, 24, 39, .03); padding: 12px; border-bottom: 1px solid rgba(17, 24, 39, .08); font-weight: 900; letter-spacing: -0.1px; white-space: nowrap; }
-        #commentList tbody td { padding: 12px; border-bottom: 1px solid rgba(17, 24, 39, .06); font-size: .95rem; color: var(--text, #1f2937); font-weight: 700; vertical-align: top; }
-        #commentList tbody tr:hover td { background: rgba(59, 130, 246, .05); }
-        #commentList td[colspan] { padding: 18px 12px; color: var(--muted, #6b7280); font-weight: 900; text-align: center; }
-
-        #commentList .comment-no { width: 64px; padding: 0; }
-        #commentList .comment-no > span, #commentList .comment-no { display: flex; align-items: center; justify-content: center; }
-        #commentList .comment-date { width: 130px; white-space: nowrap; color: var(--muted, #6b7280); font-weight: 900; }
-        #commentList .comment-content { white-space: pre-wrap; word-break: break-word; line-height: 1.6; font-weight: 700; }
-        #commentList .comment-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-        #commentList .comment-meta .name { font-weight: 1000; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        #commentList .comment-meta .dept { font-size: 12px; font-weight: 900; color: var(--muted, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        @media (max-width: 900px) {
-            #commentList thead th:nth-child(4),
-            #commentList tbody td:nth-child(4) { display: none; }
-        }
-        @media (max-width: 720px) {
-            #commentList thead th:nth-child(5),
-            #commentList tbody td:nth-child(5) { display: none; }
-        }
 
         .comment-editor textarea#commentContents {
             width: 100%;
@@ -133,12 +101,78 @@
         .comment-editor textarea#commentContents:focus { height: 96px; }
 
         .card.card--overflow-visible{ overflow: visible; }
-
         #delete-btn{ display:none; }
+
+        /* ==========================
+           ✅ 댓글 카드형 UI 추가 (테이블 헤더 제거 + 작성자/부서 상단, 내용 아래)
+           ========================== */
+        #comment { background: var(--card, #ffffff); border: 1px solid rgba(17, 24, 39, .10); border-radius: 10px; box-shadow: 0 10px 24px rgba(17, 24, 39, .06); overflow: hidden; margin: 12px 0 14px; }
+
+        #commentList { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+        .comment-item {
+            border: 1px solid rgba(17, 24, 39, .10);
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 8px 18px rgba(17, 24, 39, .04);
+            padding: 12px 12px;
+        }
+        .comment-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .comment-who {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .comment-who .name {
+            font-weight: 1000;
+            color: #111827;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .comment-who .dept {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--muted, #6b7280);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .comment-date {
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--muted, #6b7280);
+            white-space: nowrap;
+        }
+        .comment-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .comment-body {
+            margin-top: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
+            font-weight: 700;
+            color: var(--text, #1f2937);
+        }
+        .comment-empty {
+            padding: 18px 12px;
+            color: var(--muted, #6b7280);
+            font-weight: 900;
+            text-align: center;
+        }
 
         /* ============================================================
            ✅ PRINT: 인쇄 시 "게시글 상세 + 첨부 + 댓글"만, 용지 폭 꽉 채워 출력
-           - 레이아웃(컨테이너/max-width/grid/flex) 영향 제거: visibility + fixed
            ============================================================ */
         @page{
             size: auto;
@@ -156,18 +190,15 @@
                 width:100% !important;
             }
 
-            /* 1) 일단 전체 숨김(레이아웃 폭 제한 영향 제거) */
             body *{
                 visibility: hidden !important;
             }
 
-            /* 2) print-area만 보이게 */
             #print-area,
             #print-area *{
                 visibility: visible !important;
             }
 
-            /* 3) print-area를 페이지 기준으로 고정 배치(부모 max-width 무력화) */
             #print-area{
                 position: fixed !important;
                 left: 0 !important;
@@ -180,7 +211,6 @@
                 background: #fff !important;
             }
 
-            /* 4) 혹시 남아있을 수 있는 layout/sidebar 계열 제거(이중 안전장치) */
             header, nav, footer, aside{ display:none !important; }
             [class*="sidebar" i],
             [class*="side-bar" i],
@@ -192,7 +222,6 @@
                 display:none !important;
             }
 
-            /* 5) 내부 폭 100% 강제 */
             .subbar-main,
             .container{
                 width:100% !important;
@@ -202,12 +231,10 @@
                 display:block !important;
             }
 
-            /* 인쇄 시: "자유게시판 상세" 문구는 제외(요청사항) */
             #print-area .page-title{
                 display:none !important;
             }
 
-            /* 카드/섹션: 인쇄용 깔끔하게 + 꽉 차게 */
             .card, .contents-card, .attach-card, #comment{
                 width:100% !important;
                 max-width:none !important;
@@ -223,14 +250,12 @@
 
             .summary-table,
             #attachList,
-            #boardDescription table,
-            #commentList{
+            #boardDescription table{
                 width:100% !important;
                 max-width:none !important;
                 table-layout:fixed !important;
             }
 
-            /* 작성자 이름 세로 방지(가로 고정) */
             #boardWriter,
             #boardWriterBtn,
             .writer-btn{
@@ -240,10 +265,8 @@
                 display: inline-block !important;
             }
 
-            /* 툴팁/버튼류 인쇄 제외 */
             .tooltip-bubble{ display:none !important; }
 
-            /* 첨부파일 표: 미리보기/다운로드 컬럼 숨김(폭 확보) */
             #attachList th:nth-child(4),
             #attachList td:nth-child(4),
             #attachList th:nth-child(5),
@@ -251,28 +274,118 @@
                 display:none !important;
             }
 
-            /* 댓글: 삭제 컬럼 숨김(폭 확보) + 삭제 버튼 숨김 */
-            #commentList thead th:nth-child(6),
-            #commentList tbody td:nth-child(6){
-                display:none !important;
+            /* 댓글 카드도 인쇄에 잘 나오게 */
+            #commentList { padding: 0 !important; }
+            .comment-item{
+                border:1px solid #d1d5db !important;
+                border-radius:0 !important;
+                box-shadow:none !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
-            .comment-delete-btn{
-                display:none !important;
-            }
+            /* 인쇄 시 삭제 버튼 숨김 */
+            .comment-delete-btn{ display:none !important; }
 
-            /* 댓글 입력 영역/하단 액션(목록/삭제/프린트 등) 인쇄 제외 */
             #commentEditor{ display:none !important; }
             .actions{ display:none !important; }
 
-            /* ProseMirror 선택 강조 제거 */
             #boardDescription .selectedCell:after{ background:transparent !important; }
-
-            /* 링크는 흑백 대비 */
             #boardDescription a{
                 color:#111827 !important;
                 text-decoration: underline !important;
             }
         }
+
+        /* ✅ 부서 + 등록일을 같은 줄로 */
+        .comment-sub{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--muted, #6b7280);
+            white-space: nowrap;
+        }
+
+        .comment-sub .dot{
+            opacity: .7;
+        }
+
+        /* ✅ 댓글 내용: 사원명 아래에서 살짝 오른쪽으로 들여쓰기 */
+        .comment-body{
+            margin-top: 8px;
+            padding-left: 14px;   /* 여기 수치만 조절하면 됨(예: 10~18px) */
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
+            font-weight: 700;
+            color: var(--text, #1f2937);
+        }
+
+        /* ✅ 사원명 · 부서 · 등록일 한 줄 */
+        .comment-who-line{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 900;
+            color: #111827;
+            white-space: nowrap;
+        }
+
+        .comment-who-line .comment-dept,
+        .comment-who-line .comment-date{
+            font-size: 12px;
+            font-weight: 900;
+            color: var(--muted, #6b7280);
+        }
+
+        .comment-who-line .dot{
+            opacity: .6;
+        }
+
+        /* ✅ 댓글 내용: 바로 아래 + 살짝 들여쓰기 */
+        .comment-body{
+            margin-top: 2px;        /* ⬇ 위쪽 여백 줄임 */
+            padding-left: 14px;     /* ⬅ 들여쓰기는 유지 */
+            padding-top: 0;       /* ⬇ 내부 세로 여백 최소화 */
+            padding-bottom: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.1;      /* ⬇ 줄간격 살짝 압축 */
+            font-weight: 700;
+            color: var(--text, #1f2937);
+        }
+
+        /* ✅ 사원명 · 부서 · 등록일 라인 여백 최소화 */
+        .comment-who-line{
+            margin-bottom: 0;   /* 🔥 기본 여백 제거 */
+            padding-bottom: 0;
+            line-height: 1.05;
+            font-size: 13px;     /* 살짝 작게 */
+        }
+
+        .comment-top{
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+            align-items: flex-start; /* baseline 간격 제거 */
+        }
+
+        .comment-item{
+            padding: 4px 8px;   /* ⬅ 12px → 6px */
+        }
+
+        /* ✅ 삭제 버튼 영역도 세로 압축 */
+        .comment-actions{
+            align-items: flex-start;
+        }
+
+        .comment-count{
+            color: #dc2626;      /* 빨간색 */
+            font-weight: 1000;
+            margin-left: 4px;
+        }
+
     </style>
 </th:block>
 
@@ -281,10 +394,8 @@
         <div th:replace="~{sidebar/board-sidebar :: boardSidebar('board')}"></div>
         <main class="subbar-main">
             <div class="container">
-                <!-- 화면에서는 보이지만, 인쇄에서는 숨김 처리됨(.page-title) -->
                 <h2 class="page-title">자유게시판 상세</h2>
 
-                <!-- ✅ 인쇄 시 이 영역만 출력되도록 래퍼 추가 -->
                 <div id="print-area">
                     <div class="card">
                         <table class="summary-table">
@@ -351,13 +462,16 @@
                         <table id="attachList"></table>
                     </div>
 
-                    <h2 style="margin-top:18px;">관련 댓글</h2>
+                    <h4 style="margin-top:18px;">
+                        의견 <span class="comment-count" id="commentCount">(0)</span>
+                    </h4>
+
                     <div id="comment">
-                        <table id="commentList"></table>
+                        <!-- ✅ table 대신 div 컨테이너로 변경 (id 유지) -->
+                        <div id="commentList"></div>
                     </div>
                 </div>
 
-                <!-- 댓글 입력(화면 기능 유지 / 인쇄에서는 숨김) -->
                 <div id="commentEditor" class="comment-editor">
                     <textarea id="commentContents" placeholder="의견입력" rows="5"></textarea>
                     <div class="comment-editor__footer">
@@ -372,7 +486,6 @@
                 </div>
 
                 <div class="actions">
-                    <!-- ✅ 프린트 버튼: 기능 추가(화면에만 보이고 인쇄에는 출력 안 됨) -->
                     <button id="print-btn" class="btn" type="button" title="현재 게시글을 인쇄합니다">
                         <i class="fa-solid fa-print"></i> 프린트
                     </button>
@@ -488,7 +601,6 @@
         };
     </script>
 
-    <!-- ✅ 기존 JS 그대로 + 프린트 버튼만 추가 -->
     <script th:inline="javascript">
         const boardNo = [[${boardNo}]];
         const API_BASE = "http://localhost:8090";
@@ -738,6 +850,7 @@
             return (currentEmpId != null && String(c.empId) === String(currentEmpId)) || isAdmin === true;
         }
 
+        /* ✅ 댓글 렌더링: 테이블 헤더 제거 + 작성자/부서 1줄 + 내용 아래 */
         async function initComment() {
             try {
                 const res = await fetch(`${API_BASE}/api/v1/boards/${boardNo}/comments`, {
@@ -749,32 +862,21 @@
                 const result = await res.json().catch(() => null);
                 const commentList = $("#commentList").empty();
 
-                commentList.append(`
-                  <thead>
-                    <tr>
-                      <th>번호</th>
-                      <th>내용</th>
-                      <th>작성자</th>
-                      <th>부서</th>
-                      <th>등록일자</th>
-                      <th>삭제</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                `);
-
-                const tbody = commentList.find("tbody");
-
                 if (!result?.data || result.data.length === 0) {
-                    tbody.append(`<tr><td colspan="6">등록된 댓글이 없습니다.</td></tr>`);
+                    commentList.append(`<div class="comment-empty">등록된 댓글이 없습니다.</div>`);
                     return;
                 }
 
                 if (result.status === 200 && Array.isArray(result.data)) {
-                    result.data.forEach((r, index) => {
+
+                    const countEl = document.getElementById("commentCount");
+                    const count = Array.isArray(result?.data) ? result.data.length : 0;
+                    if (countEl) countEl.textContent = `(${count})`;
+
+                    result.data.forEach((r) => {
                         const createdAt = r.createdAt ? String(r.createdAt).substring(0, 10) : "-";
 
-                        const deleteCell = canDeleteComment(r)
+                        const deleteBtnHtml = canDeleteComment(r)
                             ? `
                               <button type="button"
                                       class="btn btn-danger btn-sm comment-delete-btn"
@@ -782,48 +884,38 @@
                                    삭제
                               </button>
                             `
-                            : `<span style="color: var(--muted,#6b7280); font-weight:900;">-</span>`;
+                            : ``;
 
-                        tbody.append(`
-                          <tr>
-                            <td class="comment-no"><span>${index + 1}</span></td>
-                            <td><div class="comment-content">${escapeHtml(r.contents ?? "")}</div></td>
-                            <td>
-                              <div class="comment-meta">
-                                <div class="name">${escapeHtml(r.empName ?? "-")}</div>
-                              </div>
-                            </td>
-                            <td>
-                              <div class="comment-meta">
-                                <div class="dept">${escapeHtml(r.depName ?? "-")}</div>
-                              </div>
-                            </td>
-                            <td class="comment-date">${createdAt}</td>
-                            <td>${deleteCell}</td>
-                          </tr>
-                        `);
+                        commentList.append(`
+                                  <div class="comment-item">
+                    <div class="comment-top">
+                      <div class="comment-who-line">
+                        <span class="comment-name">${escapeHtml(r.empName ?? "-")}</span>
+                        <span class="dot">·</span>
+                        <span class="comment-dept">${escapeHtml(r.depName ?? "-")}</span>
+                        <span class="dot">·</span>
+                        <span class="comment-date">${createdAt}</span>
+                      </div>
+
+                      <div class="comment-actions">
+                        ${deleteBtnHtml}
+                      </div>
+                    </div>
+
+                    <div class="comment-body">
+                      ${escapeHtml(r.contents ?? "")}
+                    </div>
+                  </div>
+                `);
+
                     });
                 } else {
-                    tbody.append(`<tr><td colspan="6">댓글 로딩에 실패했습니다.</td></tr>`);
+                    commentList.append(`<div class="comment-empty">댓글 로딩에 실패했습니다.</div>`);
                 }
             } catch (e) {
                 console.error("Failed to load board comments:", e);
                 const commentList = $("#commentList").empty();
-                commentList.append(`
-                  <thead>
-                    <tr>
-                      <th>번호</th>
-                      <th>내용</th>
-                      <th>작성자</th>
-                      <th>부서</th>
-                      <th>등록일자</th>
-                      <th>삭제</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td colspan="6">댓글 로딩 중 오류가 발생했습니다.</td></tr>
-                  </tbody>
-                `);
+                commentList.append(`<div class="comment-empty">댓글 로딩 중 오류가 발생했습니다.</div>`);
             }
         }
 
@@ -952,7 +1044,7 @@
             if (cancelBtn) cancelBtn.addEventListener("click", cancelComment);
 
             bindCommentEvents();
-            setupPrintButton(); // ✅ 프린트 버튼만 추가
+            setupPrintButton();
         });
 
         (function autoGrowCommentTextarea() {

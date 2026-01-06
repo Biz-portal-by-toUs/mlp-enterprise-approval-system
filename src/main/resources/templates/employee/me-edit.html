@@ -320,6 +320,30 @@
                 line-height:1.45;
                 word-break:break-word;
             }
+
+            /* ✅ 주소 검색 UI (마이페이지용) */
+            .addr-top{
+                display:flex;
+                gap:10px;
+                align-items:stretch;
+                flex-wrap:wrap;
+            }
+            .addr-top .input{ flex:1; min-width:140px; }
+            .addr-btn{
+                height:42px;
+                padding:0 14px;
+                border-radius:12px;
+                border:1px solid #bfdbfe;
+                background:#eff6ff;
+                color:#1d4ed8;
+                font-weight:800;
+                cursor:pointer;
+            }
+            .addr-btn:hover{ filter:brightness(.98); }
+            .readonly{
+                background:#f8fafc;
+                color:#475569;
+            }
         </style>
     </th:block>
 </head>
@@ -420,13 +444,23 @@
                             <div class="help">숫자만 입력 (최대 10자리)</div>
                         </div>
 
+                        <!-- ✅ 주소: 도로명 주소 API + 상세주소 -->
                         <div class="field">
                             <div class="label">주소</div>
-                            <input class="input" id="addr" type="text"
-                                   th:value="${me != null ? me.addr : ''}"
-                                   placeholder="주소"
-                                   maxlength="100"/>
-                            <div class="help">최대 100자</div>
+
+                            <div class="addr-top">
+                                <input class="input readonly" id="zipNo" type="text" placeholder="우편번호" readonly/>
+                                <button class="addr-btn" id="addrSearchBtn" type="button">주소 검색</button>
+                            </div>
+
+                            <input class="input readonly" id="roadAddr" type="text" placeholder="도로명 주소" readonly/>
+                            <input class="input" id="addrDetail" type="text" placeholder="상세 주소를 입력하세요" maxlength="100"/>
+
+                            <!-- ✅ 백엔드 전송용(합쳐서 저장/전송) -->
+                            <input class="input" id="addr" type="hidden"
+                                   th:value="${me != null ? me.addr : ''}"/>
+
+                            <div class="help">주소 검색 후 상세주소를 입력하세요. (저장 시 도로명+상세가 합쳐져 저장됩니다)</div>
                         </div>
 
                         <div class="err" id="errBox"></div>
@@ -645,6 +679,57 @@
             return true;
         }
 
+        // ✅ 주소 합치기(백엔드 addr 하나 전송)
+        const $zipNo = document.getElementById('zipNo');
+        const $roadAddr = document.getElementById('roadAddr');
+        const $addrDetail = document.getElementById('addrDetail');
+        const $addrHidden = document.getElementById('addr');
+        const $addrSearchBtn = document.getElementById('addrSearchBtn');
+
+        function buildCombinedAddr(){
+            const road = String($roadAddr?.value || '').trim();
+            const detail = String($addrDetail?.value || '').trim();
+            const combined = detail ? `${road} ${detail}` : road;
+            if ($addrHidden) $addrHidden.value = combined;
+            return combined;
+        }
+
+        // ✅ 주소 팝업 호출 (update/create에서 쓰던 것과 동일)
+        $addrSearchBtn?.addEventListener('click', () => {
+            window.open('/auth/juso/popup', 'jusoPopup', 'width=570,height=420,scrollbars=yes,resizable=yes');
+        });
+
+        // ✅ 팝업이 호출하는 콜백(필수)
+        window.jusoCallBack = function(roadAddrPart1, addrDetail, zipNo){
+            if ($zipNo) $zipNo.value = zipNo || '';
+            if ($roadAddr) $roadAddr.value = (roadAddrPart1 || '').trim();
+            if ($addrDetail && addrDetail) $addrDetail.value = addrDetail;
+            buildCombinedAddr();
+            $addrDetail?.focus();
+            openAlert({ ok:true, title:'주소 입력 완료', msg:'선택한 도로명 주소가 입력되었습니다.' });
+        };
+
+        // ✅ 기존 addr 문자열을 도로명/상세로 대충 분리해서 UI에 채우기(UX용)
+        function splitAddrForUi(full){
+            const s = String(full || '').trim();
+            if (!s) return { road:'', detail:'' };
+
+            const idxParen = s.indexOf('(');
+            if (idxParen > 0){
+                return { road: s.slice(0, idxParen).trim(), detail: s.slice(idxParen).trim() };
+            }
+
+            const lastSpace = s.lastIndexOf(' ');
+            if (lastSpace > 0){
+                const left = s.slice(0, lastSpace).trim();
+                const right = s.slice(lastSpace + 1).trim();
+                if (/^\d+/.test(right) || /[동호층]$/.test(right) || /동|호|층|관|빌딩|아파트|오피스텔/.test(right)){
+                    return { road:left, detail:right };
+                }
+            }
+            return { road:s, detail:'' };
+        }
+
         // ====== 저장 ======
         async function saveProfile(){
             clearErr();
@@ -654,22 +739,22 @@
             const emailEl = document.getElementById('email');
             const phoneEl = document.getElementById('phone');
             const workEl = document.getElementById('workPhone');
-            const addrEl = document.getElementById('addr');
 
             hardLimit(emailEl, LIMITS.email);
             hardLimit(phoneEl, LIMITS.phone);
             hardLimit(workEl, LIMITS.workPhone);
-            hardLimit(addrEl, LIMITS.addr);
 
             if (phoneEl) phoneEl.value = formatKoreanMobile(phoneEl.value);
             if (workEl) workEl.value = digitsOnly(workEl.value).slice(0, LIMITS.workPhone);
             if (emailEl) emailEl.value = (emailEl.value || '').trim();
-            if (addrEl) addrEl.value = (addrEl.value || '').trim();
+
+            // ✅ 주소는 hidden addr에 합쳐서 저장
+            const combinedAddr = buildCombinedAddr();
 
             const email = emailEl?.value ?? '';
             const phone = phoneEl?.value ?? '';
             const workPhone = workEl?.value ?? '';
-            const addr = addrEl?.value ?? '';
+            const addr = combinedAddr ?? '';
 
             if (!isValidEmail(email)){
                 btn && (btn.disabled = false);
@@ -684,6 +769,13 @@
             if (workPhone && workPhone.length > LIMITS.workPhone){
                 btn && (btn.disabled = false);
                 showErr('사내번호가 너무 깁니다.');
+                return;
+            }
+
+            // ✅ 주소 최소 체크
+            if (!String($roadAddr?.value || '').trim()){
+                btn && (btn.disabled = false);
+                showErr('주소 검색을 통해 도로명 주소를 입력해 주세요.');
                 return;
             }
             if (!addr || addr.length > LIMITS.addr){
@@ -980,8 +1072,11 @@
         }
 
         function bindInputGuards(){
-            const addrEl = document.getElementById('addr');
-            addrEl?.addEventListener('input', () => hardLimit(addrEl, LIMITS.addr));
+            // ✅ addrDetail 길이 제한 + hidden addr 최신화
+            $addrDetail?.addEventListener('input', () => {
+                hardLimit($addrDetail, LIMITS.addr);
+                buildCombinedAddr();
+            });
         }
 
         // 모달: 바깥 클릭 닫기 + ESC
@@ -1005,6 +1100,13 @@
             bindPhoneFormatter();
             bindWorkPhoneDigitsOnly();
             evalPwRules('');
+
+            // ✅ 기존 me.addr를 road/detail로 분리해서 UI에 세팅
+            const initFullAddr = String(document.getElementById('addr')?.value || '').trim();
+            const { road, detail } = splitAddrForUi(initFullAddr);
+            if ($roadAddr) $roadAddr.value = road;
+            if ($addrDetail) $addrDetail.value = detail;
+            buildCombinedAddr();
         });
     </script>
 </th:block>

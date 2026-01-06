@@ -88,6 +88,23 @@ public enum ErrorCode {
     // 공유함 관련
     FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER_NOT_FOUND", "폴더를 찾을 수 없습니다"),
 
+    // 클라우드/폴더 관련
+    FOLDER_ACCESS_DENIED(HttpStatus.FORBIDDEN, "FOLDER_ACCESS_DENIED", "폴더 접근 권한이 없습니다"),
+    FOLDER_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "FOLDER_DELETE_FORBIDDEN", "폴더 삭제 권한이 없습니다"),
+    FOLDER_RENAME_FORBIDDEN(HttpStatus.FORBIDDEN, "FOLDER_RENAME_FORBIDDEN", "폴더명 변경 권한이 없습니다"),
+    FOLDER_DEPT_REQUIRED(HttpStatus.BAD_REQUEST, "FOLDER_DEPT_REQUIRED", "부서 폴더는 부서 정보가 필요합니다"),
+    FOLDER_SCOPE_MISMATCH(HttpStatus.BAD_REQUEST, "FOLDER_SCOPE_MISMATCH", "폴더 범위(scope)가 올바르지 않습니다"),
+
+    // 클라우드/파일(attachment) 관련
+    ATTACHMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ATTACHMENT_NOT_FOUND", "파일을 찾을 수 없습니다"),
+    ATTACHMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ATTACHMENT_ACCESS_DENIED", "파일 접근 권한이 없습니다"),
+    ATTACHMENT_DOMAIN_INVALID(HttpStatus.BAD_REQUEST, "ATTACHMENT_DOMAIN_INVALID", "CLOUD 파일만 처리할 수 있습니다"),
+    CLOUD_MOVE_SCOPE_MISMATCH(HttpStatus.BAD_REQUEST, "CLOUD_MOVE_SCOPE_MISMATCH", "공유함과 개인함 간 이동은 불가합니다"),
+
+    TRASH_RESTORE_FORBIDDEN(HttpStatus.FORBIDDEN, "TRASH_RESTORE_FORBIDDEN", "복구 권한이 없습니다"),
+    TRASH_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "TRASH_ITEM_NOT_FOUND", "휴지통 항목을 찾을 수 없습니다"),
+    TRASH_EMPTY_FORBIDDEN(HttpStatus.FORBIDDEN, "TRASH_EMPTY_FORBIDDEN", "휴지통 비우기 권한이 없습니다"),
+
     // 파일 업로드 실패
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다"),
 
@@ -156,6 +173,10 @@ public enum ErrorCode {
     NOT_REGISTER(HttpStatus.BAD_REQUEST,"NOT_REGISTER","등록자만 삭제가 가능합니다"),
     SCHEDULE_NOT_AUTH(HttpStatus.BAD_REQUEST,"SCHEDULE_NOT_AUTH","일정에 접근할 권한이 없습니다"),
     TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO_NOT_FOUND", "투두리스트를 찾을 수 없습니다"),
+
+    // 알림 관련
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", "알림을 찾을 수 없습니다."),
+    NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "NOTIFICATION_ACCESS_DENIED", "해당 알림에 대한 접근 권한이 없습니다."),
 
 
 

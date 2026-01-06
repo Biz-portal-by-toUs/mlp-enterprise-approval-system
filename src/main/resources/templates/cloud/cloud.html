@@ -73,10 +73,10 @@
             }
 
             .cloud-page .label {
-                white-space: nowrap; /* 줄바꿈 금지 */
-                overflow: hidden; /* 넘치면 숨김 */
-                text-overflow: ellipsis; /* ... */
-                min-width: 0; /* grid에서 ellipsis 필수 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                min-width: 0;
             }
 
             .cloud-page .node,
@@ -84,13 +84,47 @@
                 min-width: 0;
             }
 
-            /* ====== sidebar: 트리 ====== */
-            .cloud-tree-panel {
-                flex: 1;
-                padding: 10px 10px 12px;
-                overflow: auto;
+            /* ====== ✅ sidebar footer(휴지통) 고정 ====== */
+            .cloud-subbar {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                min-height: 0;
             }
 
+            .cloud-tree-panel {
+                flex: 1;
+                overflow: auto;
+                min-height: 0;
+                padding: 10px 10px 12px;
+            }
+
+            .cloud-sidebar-footer {
+                flex: 0 0 auto;
+                padding: 10px 12px 12px;
+                border-top: 1px solid rgba(59, 130, 246, .14);
+                background: rgba(255, 255, 255, .30);
+            }
+
+            .cloud-footer-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 36px;
+                border-radius: 10px;
+                text-decoration: none;
+                font-weight: 900;
+                font-size: 13px;
+                color: #1d4ed8;
+                background: rgba(59, 130, 246, .12);
+                border: 1px solid rgba(59, 130, 246, .10);
+            }
+
+            .cloud-footer-link:hover {
+                background: rgba(59, 130, 246, .18);
+            }
+
+            /* ====== sidebar: 트리 ====== */
             .cloud-tree {
                 list-style: none;
                 margin: 0;
@@ -103,7 +137,7 @@
             }
 
             .cloud-tree .children {
-                padding-left: 14px; /* 기본 ul 들여쓰기 줄이기 (원하면 10px/12px도 가능) */
+                padding-left: 14px;
                 margin: 0;
             }
 
@@ -121,7 +155,7 @@
             }
 
             .cloud-page .node > :nth-child(3) {
-                margin-left: 3px; /* ✅ 폴더 아이콘과 글자 사이만 넓히기 */
+                margin-left: 3px;
             }
 
             .cloud-page .node:hover {
@@ -144,8 +178,7 @@
                 background: url("/images/icons/folder-small.png") center/contain no-repeat;
             }
 
-
-            /* ====== 오른쪽(스크린샷처럼 상단 흰 바 + 큰 빈 영역) ====== */
+            /* ====== 오른쪽(상단 바 + 본문) ====== */
             .cloud-main {
                 display: flex;
                 flex-direction: column;
@@ -421,7 +454,7 @@
 
     </div>
 
-    <!-- ✅ 우클릭 메뉴 DOM (페이지 안에 하나만) -->
+    <!-- ✅ 우클릭 메뉴 DOM -->
     <div class="cloud-ctx" id="cloudCtx" role="menu" aria-label="폴더 메뉴">
         <button type="button" id="ctxCreate" role="menuitem">
             <span id="ctxCreateLabel">폴더 생성</span>
@@ -434,24 +467,22 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
-    <!-- ✅ Thymeleaf 변수 주입하려면 th:inline 필수 -->
     <script th:inline="javascript">
         /** ====== 상태 ====== */
         const state = {
-            scope: /*[[${scope}]]*/ "dept",   // "dept" | "prvt" (서버에서 주입)
+            scope: /*[[${scope}]]*/ "dept",
             selectedFolderNo: null,
             selectedFolderName: null,
             selectedAttachmentId: null,
 
-            // 우클릭 메뉴용
             ctxFolderNo: null,
             ctxFolderName: null,
 
             treeIndex: {
-                nodeById: new Map(),     // folderNo -> node(div.node)
-                caretById: new Map(),    // folderNo -> caret(div)
-                childrenById: new Map(), // folderNo -> ul.children
-                parentById: new Map(),   // folderNo -> parentId
+                nodeById: new Map(),
+                caretById: new Map(),
+                childrenById: new Map(),
+                parentById: new Map(),
             },
         };
 
@@ -466,7 +497,6 @@
             fileInput: document.getElementById("fileInput"),
             fileGrid: document.getElementById("fileGrid"),
 
-            // context menu
             ctx: document.getElementById("cloudCtx"),
             ctxCreate: document.getElementById("ctxCreate"),
             ctxCreateLabel: document.getElementById("ctxCreateLabel"),
@@ -474,7 +504,7 @@
             ctxDelete: document.getElementById("ctxDelete"),
         };
 
-        /** ====== 공통 fetch helper ====== */
+        /** ====== fetch helper ====== */
         async function apiJson(url, opt = {}) {
             const res = await fetch(url, {
                 credentials: "include",
@@ -496,12 +526,10 @@
         function folderBase() {
             return state.scope === "dept" ? "/api/v1/folders/dept" : "/api/v1/folders/prvt";
         }
-
         function folderListUrl(parentId) {
             const qs = parentId == null ? "" : `?parentId=${encodeURIComponent(parentId)}`;
             return folderBase() + qs;
         }
-
         function attachmentListUrl(folderNo) {
             return `/api/v1/attachments?domain=CLOUD&entityId=${encodeURIComponent(folderNo)}`;
         }
@@ -516,19 +544,14 @@
             const s = String(name ?? "");
             return s.length > 20 ? s.slice(0, 20) + "…" : s;
         }
-
         function humanBytes(n) {
             if (n == null) return "";
             let v = Number(n);
             const units = ["B", "KB", "MB", "GB", "TB"];
             let i = 0;
-            while (v >= 1024 && i < units.length - 1) {
-                v /= 1024;
-                i++;
-            }
+            while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
             return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
         }
-
         function clearFileSelection() {
             state.selectedAttachmentId = null;
             document.querySelectorAll(".file-card.selected").forEach(x => x.classList.remove("selected"));
@@ -595,38 +618,29 @@
                 card.appendChild(name);
 
                 card.addEventListener("click", async () => {
-                    // ✅ 트리에서 부모-자식 관계를 알 수 있게 등록(중요)
                     state.treeIndex.parentById.set(f.folderNo, state.selectedFolderNo);
 
                     state.selectedFolderNo = f.folderNo;
                     state.selectedFolderName = f.folderName;
 
                     await loadFolderContent(f.folderNo);
-
-                    // ✅ 왼쪽 트리를 사진2까지 자동으로 펼치고 선택
                     await syncTreeToFolder(f.folderNo);
                 });
 
-
-                card.addEventListener("dragover", (e) => {
-                    e.preventDefault();
-                    card.classList.add("drop");
-                });
+                card.addEventListener("dragover", (e) => { e.preventDefault(); card.classList.add("drop"); });
                 card.addEventListener("dragleave", () => card.classList.remove("drop"));
 
-                // ✅ 파일 → 폴더카드로 드롭 이동
                 card.addEventListener("drop", async (e) => {
                     e.preventDefault();
                     card.classList.remove("drop");
 
                     const attachmentId = Number(e.dataTransfer.getData("text/plain"));
-                    const dragScope = e.dataTransfer.getData("cloud-scope"); // 공유/개인 구분
+                    const dragScope = e.dataTransfer.getData("cloud-scope");
                     const fromFolderNoRaw = e.dataTransfer.getData("fromFolderNo");
                     const fromFolderNo = fromFolderNoRaw ? Number(fromFolderNoRaw) : null;
 
                     if (!attachmentId) return;
 
-                    // ✅ 공유함↔개인함 교차 이동 금지
                     if (dragScope && dragScope !== state.scope) {
                         alert("공유함 파일은 공유함에서만, 개인함 파일은 개인함에서만 이동 가능합니다.");
                         return;
@@ -636,51 +650,15 @@
 
                     try {
                         await apiJson(`/api/v1/attachments/${attachmentId}/move?toFolderNo=${toFolderNo}`, {method: "POST"});
-
-                        // ✅ 오른쪽 갱신
                         if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
-
-                        // ✅ 트리 전체 리셋 X → 부분 갱신
                         if (fromFolderNo != null) await refreshTreeChildren(fromFolderNo);
                         await refreshTreeChildren(toFolderNo);
-
                     } catch (err) {
                         alert(err.message);
                     }
                 });
 
                 el.fileGrid.appendChild(card);
-            });
-        }
-
-        function enableInlineFullName(nmEl, fullName) {
-            nmEl.style.cursor = "text";
-            nmEl.addEventListener("click", (e) => {
-                e.stopPropagation();
-                if (nmEl.dataset.editing === "1") return;
-                nmEl.dataset.editing = "1";
-
-                const input = document.createElement("input");
-                input.type = "text";
-                input.className = "file-name-edit";
-                input.value = fullName;
-
-                nmEl.style.display = "none";
-                nmEl.parentElement.insertBefore(input, nmEl.nextSibling);
-
-                input.focus();
-                input.select();
-
-                function close() {
-                    input.remove();
-                    nmEl.style.display = "";
-                    nmEl.dataset.editing = "0";
-                }
-
-                input.addEventListener("keydown", (ev) => {
-                    if (ev.key === "Enter" || ev.key === "Escape") close();
-                });
-                input.addEventListener("blur", close);
             });
         }
 
@@ -706,7 +684,7 @@
                 nm.textContent = short20(fullName);
                 nm.addEventListener("click", (e) => {
                     e.stopPropagation();
-                    alert(fullName); // ✅ 클릭하면 전체 파일명 표시
+                    alert(fullName);
                 });
 
                 const size = document.createElement("div");
@@ -739,7 +717,7 @@
         async function loadChildren(parentId, containerUl) {
             const [folders, files] = await Promise.all([
                 apiJson(folderListUrl(parentId)),
-                (parentId == null ? Promise.resolve([]) : apiJson(attachmentListUrl(parentId))) // 루트에는 파일 안띄우려면 이렇게
+                (parentId == null ? Promise.resolve([]) : apiJson(attachmentListUrl(parentId)))
             ]);
 
             containerUl.innerHTML = "";
@@ -754,7 +732,7 @@
                 containerUl.appendChild(li);
                 return;
             }
-// ===== 폴더 먼저 =====
+
             if (hasFolders) {
                 for (const f of folders) {
                     const li = document.createElement("li");
@@ -783,7 +761,6 @@
                     children.className = "children";
                     children.style.display = "none";
 
-                    // node, caret, children 만든 다음
                     state.treeIndex.nodeById.set(f.folderNo, node);
                     state.treeIndex.caretById.set(f.folderNo, caret);
                     state.treeIndex.childrenById.set(f.folderNo, children);
@@ -833,12 +810,7 @@
                         });
                     });
 
-                    // ✅ 드롭 이동(파일 → 폴더)
-                    node.addEventListener("dragover", (e) => {
-                        e.preventDefault();
-                        node.classList.add("drop");
-                    });
-
+                    node.addEventListener("dragover", (e) => { e.preventDefault(); node.classList.add("drop"); });
                     node.addEventListener("dragleave", () => node.classList.remove("drop"));
                     node.addEventListener("drop", async (e) => {
                         e.preventDefault();
@@ -851,7 +823,6 @@
 
                         if (!attachmentId) return;
 
-                        // ✅ 공유함↔개인함 교차 이동 금지
                         if (dragScope && dragScope !== state.scope) {
                             alert("공유함 파일은 공유함에서만, 개인함 파일은 개인함에서만 이동 가능합니다.");
                             return;
@@ -861,14 +832,9 @@
 
                         try {
                             await apiJson(`/api/v1/attachments/${attachmentId}/move?toFolderNo=${toFolderNo}`, {method: "POST"});
-
-                            // ✅ 오른쪽 미리보기 갱신(현재 보고있는 폴더)
                             if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
-
-                            // ✅ 트리 전체 리셋 X → 트리에 파일을 보여주는 경우에만 출발/도착 폴더 부분 갱신
                             if (fromFolderNo != null) await refreshTreeChildren(fromFolderNo);
                             await refreshTreeChildren(toFolderNo);
-
                         } catch (err) {
                             alert(err.message);
                         }
@@ -880,17 +846,15 @@
                 }
             }
 
-            // ===== 파일도 트리에 표시 =====
             if (hasFiles) {
                 for (const a of files) {
                     const li = document.createElement("li");
-
                     const fileNode = document.createElement("div");
                     fileNode.className = "file-node";
                     fileNode.draggable = true;
                     fileNode.dataset.attachmentId = a.attachmentId;
 
-                    const blank = document.createElement("div"); // caret 자리
+                    const blank = document.createElement("div");
                     blank.className = "caret";
                     blank.textContent = "";
 
@@ -906,7 +870,6 @@
                     label.className = "label";
                     label.textContent = short20(fullName);
 
-                    // ✅ 파일 선택 + 전체명 보기
                     fileNode.addEventListener("click", (e) => {
                         e.stopPropagation();
                         document.querySelectorAll(".node.selected, .file-node.selected").forEach(x => x.classList.remove("selected"));
@@ -916,17 +879,14 @@
                         el.btnDownload.disabled = false;
                         el.btnDeleteFile.disabled = false;
 
-                        // 파일이 속한 폴더(=parentId)를 현재 선택 폴더로 유지
                         if (parentId != null) state.selectedFolderNo = parentId;
-
-                        alert(fullName); // ✅ 누르면 전체 파일명
+                        alert(fullName);
                     });
 
-                    // ✅ 드래그 시작(출처 scope 저장)
                     fileNode.addEventListener("dragstart", (e) => {
                         e.dataTransfer.setData("text/plain", String(a.attachmentId));
                         e.dataTransfer.setData("cloud-scope", state.scope);
-                        e.dataTransfer.setData("fromFolderNo", String(parentId ?? "")); // ✅ 추가
+                        e.dataTransfer.setData("fromFolderNo", String(parentId ?? ""));
                     });
 
                     fileNode.appendChild(blank);
@@ -937,7 +897,6 @@
                     containerUl.appendChild(li);
                 }
             }
-
         }
 
         async function initTree() {
@@ -948,25 +907,19 @@
             state.treeIndex.childrenById.clear();
             state.treeIndex.parentById.clear();
 
-            // 제목/브레드크럼 기본
             el.breadcrumb.textContent = state.scope === "dept" ? "공유함" : "개인함";
-
             clearFileSelection();
             el.fileGrid.innerHTML = "";
             await loadChildren(null, el.treeRoot);
         }
 
         async function refreshTreeChildren(folderNo) {
-            // folderNo == null => 루트
             if (folderNo == null) {
                 await refreshRootPreserveOpen();
                 return;
             }
-
-            // childrenUl이 없으면 먼저 펼칠 준비(ensureExpanded는 childrenUl 있어야 해서)
             const childrenUl = state.treeIndex.childrenById.get(folderNo);
-            if (!childrenUl) return; // (지금처럼 단순 유지해도 OK)
-
+            if (!childrenUl) return;
             const caret = state.treeIndex.caretById.get(folderNo);
             await loadChildren(folderNo, childrenUl);
             if (childrenUl.style.display === "block" && caret) caret.textContent = "▾";
@@ -977,20 +930,14 @@
             const name = prompt("폴더 이름");
             if (!name) return;
 
-            const parent = state.selectedFolderNo; // null이면 루트
+            const parent = state.selectedFolderNo;
 
             await apiJson(folderBase(), {
                 method: "POST",
-                body: JSON.stringify({
-                    parentId: parent,
-                    folderName: name.trim(),
-                }),
+                body: JSON.stringify({ parentId: parent, folderName: name.trim() }),
             });
 
-            // ✅ 트리 전체 리셋 X → 부모 폴더의 children만 갱신
             await refreshTreeChildren(parent);
-
-            // ✅ 오른쪽도 현재 폴더 내용 다시 로드
             if (parent != null) await loadFolderContent(parent);
         }
 
@@ -1009,21 +956,14 @@
 
             state.selectedFolderName = newName.trim();
 
-            // ✅ 트리 라벨 즉시 반영(부모 refresh 없어도 보이게)
             const node = state.treeIndex.nodeById.get(folderNo);
             if (node) {
                 node.dataset.folderName = state.selectedFolderName;
                 const label = node.querySelector(".label");
                 if (label) label.textContent = state.selectedFolderName;
-                setBreadcrumbFromNode(node); // ✅ 브레드크럼도 즉시 갱신
-
-                // ✅ 부모 children만 갱신 (트리 안 접힘)
+                setBreadcrumbFromNode(node);
                 await refreshTreeChildren(parent);
-
-                // ✅ 오른쪽: 현재 보고 있는 폴더가 "자기 자신"이면 다시 로드
-                if (state.selectedFolderNo === folderNo) {
-                    await loadFolderContent(folderNo);
-                }
+                if (state.selectedFolderNo === folderNo) await loadFolderContent(folderNo);
             }
         }
 
@@ -1123,22 +1063,16 @@
 
             let type = "unknown";
             for (const [k, arr] of Object.entries(EXT_GROUPS)) {
-                if (arr.includes(ext)) {
-                    type = k;
-                    break;
-                }
+                if (arr.includes(ext)) { type = k; break; }
             }
             return ICONS[type] || ICONS.unknown;
         }
 
-        /** =========================
-         * ✅ 우클릭(컨텍스트 메뉴)
-         * ========================= */
+        /** ====== 컨텍스트 메뉴 ====== */
         function openCtxMenu(x, y, opt) {
             state.ctxFolderNo = opt?.folderNo ?? null;
             state.ctxFolderName = opt?.folderName ?? null;
 
-            // 메뉴 구성
             if (opt?.kind === "folder") {
                 el.ctxCreateLabel.textContent = "하위 폴더 생성";
                 el.ctxRename.disabled = false;
@@ -1149,10 +1083,8 @@
                 el.ctxDelete.disabled = true;
             }
 
-            // 표시
             el.ctx.classList.add("open");
 
-            // 화면 밖으로 나가지 않게 위치 보정
             const menuW = 190;
             const menuH = 150;
             const pad = 8;
@@ -1172,25 +1104,16 @@
             el.ctx.classList.remove("open");
         }
 
-        // ✅ 트리 “빈 공간” 우클릭: (선택 폴더가 있으면 그 아래, 없으면 루트)
-        // sidebar 템플릿에서 treeRoot는 ul이므로, ul 자체에 걸면 빈 공간 우클릭 잡힘
         el.treeRoot?.addEventListener("contextmenu", (e) => {
-            // 폴더 노드 위 우클릭은 node 리스너가 처리하니까 여기선 “빈공간”만 처리
             const onNode = e.target.closest?.(".node");
             if (onNode) return;
-
             e.preventDefault();
             e.stopPropagation();
-
-            // 빈 공간: create만 가능
             openCtxMenu(e.clientX, e.clientY, {kind: "blank"});
         });
 
-        // 메뉴 클릭
         el.ctxCreate?.addEventListener("click", () => {
             closeCtxMenu();
-            // folder 우클릭이면 이미 selectedFolderNo가 그 폴더로 세팅되어 있음
-            // blank 우클릭이면 selectedFolderNo 유지(선택 없으면 null이라 루트 생성)
             createFolder().catch(e => alert(e.message));
         });
 
@@ -1204,7 +1127,6 @@
             deleteFolder().catch(e => alert(e.message));
         });
 
-        // 바깥 클릭/스크롤/ESC로 닫기
         document.addEventListener("click", (e) => {
             if (el.ctx.classList.contains("open")) {
                 if (!e.target.closest("#cloudCtx")) closeCtxMenu();
@@ -1215,7 +1137,7 @@
             if (e.key === "Escape") closeCtxMenu();
         });
 
-        /** ====== 이벤트(파일 영역) ====== */
+        /** ====== 이벤트 ====== */
         el.btnUpload?.addEventListener("click", openUploadPicker);
         el.btnDeleteFile?.addEventListener("click", () => deleteSelectedFile().catch(e => alert(e.message)));
         el.btnDownload?.addEventListener("click", () => downloadSelectedFile().catch(e => alert(e.message)));
@@ -1245,11 +1167,7 @@
             const childrenUl = state.treeIndex.childrenById.get(folderNo);
             const caret = state.treeIndex.caretById.get(folderNo);
             if (!childrenUl || !caret) return;
-
-            // 이미 열려있으면 패스
             if (childrenUl.style.display === "block") return;
-
-            // 자식 로딩 + 펼치기
             await loadChildren(folderNo, childrenUl);
             childrenUl.style.display = "block";
             caret.textContent = "▾";
@@ -1258,7 +1176,6 @@
         async function syncTreeToFolder(targetFolderNo) {
             if (!targetFolderNo) return;
 
-            // 1) 부모 체인으로 path 만들기
             const path = [];
             let cur = targetFolderNo;
             const seen = new Set();
@@ -1268,27 +1185,20 @@
                 path.push(cur);
                 cur = state.treeIndex.parentById.get(cur);
             }
-            path.reverse(); // 루트→타겟 순
+            path.reverse();
 
-            // 2) path 따라가며 부모들을 확장
             for (let i = 0; i < path.length - 1; i++) {
                 await ensureExpanded(path[i]);
             }
 
-            // 3) 타겟 선택 표시 + 스크롤
             document.querySelectorAll(".node.selected, .file-node.selected")
                 .forEach(x => x.classList.remove("selected"));
 
             const node = state.treeIndex.nodeById.get(targetFolderNo);
             if (node) {
-                // ✅ 타겟 폴더도 실제로 "열기"
                 await ensureExpanded(targetFolderNo);
-
-                // ✅ 선택 표시
                 node.classList.add("selected");
                 node.scrollIntoView({block: "nearest"});
-
-                // ✅ breadcrumb 동기화
                 setBreadcrumbFromNode(node);
             }
         }

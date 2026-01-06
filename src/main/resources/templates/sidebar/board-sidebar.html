@@ -1,5 +1,7 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 <aside class="subbar" th:fragment="boardSidebar(active)">
     <div class="subbar-title">게시판</div>
@@ -12,11 +14,14 @@
         </a>
 
         <!-- ✅ 공지사항 등록 -->
-        <a class="subbar-item"
-           th:href="@{/notice/form}" href="/notice/form"
-           th:classappend="${active}=='noticeForm' ? ' active' : ''">
-            공지사항등록
-        </a>
+        <!-- ✅ 임시저장/승인대기: EMPLOYEE는 숨김 (관리자만 노출) -->
+        <th:block sec:authorize="hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')">
+            <a class="subbar-item"
+               th:href="@{/notice/form}" href="/notice/form"
+               th:classappend="${active}=='noticeForm' ? ' active' : ''">
+                공지사항등록
+            </a>
+        </th:block>
 
         <a class="subbar-item"
            th:href="@{/board/list}" href="/board/list"

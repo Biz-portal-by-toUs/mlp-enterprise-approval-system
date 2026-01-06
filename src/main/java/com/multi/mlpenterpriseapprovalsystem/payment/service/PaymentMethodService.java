@@ -88,24 +88,41 @@ public class PaymentMethodService {
         }
 
         String cardNumber = portoneServerPaymentInfo.getCardNumber();
+
         // 카드 중복 등록 방지 처리
-        if(paymentMethodRepository.findByCompanyAndMaskAndActiveTrue(company, cardNumber).isPresent()) {
-            // 중복체크 코드 추가
-            throw new CustomException(ErrorCode.DUPLICATE_CARD);
+        PaymentMethod oldPaymentMethod = paymentMethodRepository.findByCompanyAndMask(company, cardNumber).orElse(null);
+        if(oldPaymentMethod != null) {
+            // 활성화된 카드면 중복등록 예외발생
+            if(oldPaymentMethod.getActive() == true){
+                throw new CustomException(ErrorCode.DUPLICATE_CARD);
+            }
+
+            // 비활성화된 카드이면 active = true로 변경
+            oldPaymentMethod.activate();
+
+            // 대표 결제 수단 자동 설정 로직
+            // 만약 현재 구독 정보에 연결된 카드가 없다면(최초 등록), 방금 등록한 카드를 대표로 설정
+            if (companySub.getPaymentMethod() == null) {
+                companySub.changePaymentMethod(oldPaymentMethod);
+                log.info("[대표 카드 자동 설정] 회사: {}, 카드번호: {}", comId, oldPaymentMethod.getMask());
+            }
+
+            log.info("카드 등록 완료: comId={}, mask={}", comId, oldPaymentMethod.getMask());
         }
+        else{
+            // 엔티티 변환 및 저장
+            PaymentMethod newCard = portoneServerPaymentInfo.toEntity(company);
+            paymentMethodRepository.save(newCard);
 
-        // 엔티티 변환 및 저장
-        PaymentMethod newCard = portoneServerPaymentInfo.toEntity(company);
-        paymentMethodRepository.save(newCard);
+            // 대표 결제 수단 자동 설정 로직
+            // 만약 현재 구독 정보에 연결된 카드가 없다면(최초 등록), 방금 등록한 카드를 대표로 설정
+            if (companySub.getPaymentMethod() == null) {
+                companySub.changePaymentMethod(newCard);
+                log.info("[대표 카드 자동 설정] 회사: {}, 카드번호: {}", comId, newCard.getMask());
+            }
 
-        // 대표 결제 수단 자동 설정 로직
-        // 만약 현재 구독 정보에 연결된 카드가 없다면(최초 등록), 방금 등록한 카드를 대표로 설정
-        if (companySub.getPaymentMethod() == null) {
-            companySub.changePaymentMethod(newCard); // CompanySubscription에 추가한 메서드
-            log.info("[대표 카드 자동 설정] 회사: {}, 카드번호: {}", comId, newCard.getMask());
+            log.info("카드 등록 완료: comId={}, mask={}", comId, newCard.getMask());
         }
-
-        log.info("카드 등록 완료: comId={}, mask={}", comId, newCard.getMask());
     }
 
 

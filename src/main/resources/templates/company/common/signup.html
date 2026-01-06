@@ -276,6 +276,106 @@
             #brn2wrap{ width:90px; }
             #brn3wrap{ width:120px; }
         }
+
+        /* =====================
+         * ✅ Admin Credential Modal
+         * ===================== */
+        .modal-overlay{
+            position:fixed; inset:0;
+            background:rgba(0,0,0,.45);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+            z-index:9999;
+        }
+        .modal-overlay.show{ display:flex; }
+
+        .modal{
+            width:min(520px, 92vw);
+            background:#fff;
+            border-radius:16px;
+            border:1px solid #e5e7eb;
+            box-shadow:0 20px 60px rgba(0,0,0,.20);
+            padding:18px;
+            text-align:left;
+        }
+        .modal-head{
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            align-items:flex-start;
+            margin-bottom:12px;
+        }
+        .modal-title{ font-size:20px; font-weight:900; letter-spacing:-0.2px; }
+        .modal-sub{ font-size:13px; color:#666; margin-top:4px; line-height:1.4; }
+        .modal-x{
+            border:0;
+            background:transparent;
+            cursor:pointer;
+            font-size:18px;
+            padding:6px 10px;
+            border-radius:10px;
+        }
+        .modal-x:hover{ background:#f2f2f2; }
+
+        .modal-body{ display:flex; flex-direction:column; gap:14px; }
+        .cred-row{ display:flex; flex-direction:column; gap:6px; }
+        .cred-label{ font-size:13px; font-weight:900; color:#777; }
+        .cred-box{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:12px 12px;
+            border:1px solid var(--border);
+            border-radius:12px;
+            background:#fafafa;
+        }
+        .cred-box code{
+            font-size:16px;
+            font-weight:900;
+            color:#111;
+        }
+
+        /* ✅ Copy icon button */
+        .copy-btn{
+            border:0;
+            background:var(--primary);
+            color:#fff;
+            font-weight:900;
+            padding:8px 12px;
+            border-radius:10px;
+            cursor:pointer;
+            white-space:nowrap;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            transition: transform .08s ease, opacity .12s ease;
+        }
+        .copy-btn:active{ transform: translateY(1px); }
+        .copy-btn.icon-only{
+            width:40px;
+            height:36px;
+            padding:0;
+        }
+        .copy-btn.icon-only svg{
+            width:18px;
+            height:18px;
+            color:#fff;
+        }
+        .copy-btn.copied{
+            opacity:.95;
+        }
+
+        .copy-msg{ font-size:12px; min-height:14px; color:var(--success); font-weight:800; }
+
+        .modal-actions{
+            display:flex;
+            justify-content:flex-end;
+            margin-top:6px;
+        }
     </style>
 </head>
 
@@ -433,6 +533,67 @@
             </form>
         </section>
     </main>
+</div>
+
+<!-- ✅ 관리자 계정 팝업(모달) -->
+<div id="adminModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+        <div class="modal-head">
+            <div>
+                <div id="adminModalTitle" class="modal-title">관리자 계정 발급 완료</div>
+                <div class="modal-sub">아래 정보를 복사해 보관하세요. (최초 로그인 후 비밀번호 변경 권장)</div>
+            </div>
+            <button type="button" class="modal-x" id="adminModalClose" aria-label="닫기">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="cred-row">
+                <div class="cred-label">관리자 사번</div>
+                <div class="cred-box">
+                    <code id="adminEmpIdText">-</code>
+                    <button type="button" class="copy-btn icon-only" id="copyEmpIdBtn" aria-label="사번 복사" data-mode="copy">
+                        <!-- clipboard icon -->
+                        <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <!-- check icon (hidden by default) -->
+                        <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                            <path d="M20 6 9 17l-5-5"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="copy-msg" id="copyEmpIdMsg"></div>
+            </div>
+
+            <div class="cred-row">
+                <div class="cred-label">임시 비밀번호</div>
+                <div class="cred-box">
+                    <code id="adminPwdText">-</code>
+                    <button type="button" class="copy-btn icon-only" id="copyPwdBtn" aria-label="비밀번호 복사" data-mode="copy">
+                        <!-- clipboard icon -->
+                        <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <!-- check icon -->
+                        <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                            <path d="M20 6 9 17l-5-5"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="copy-msg" id="copyPwdMsg"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="primary-btn" id="goLoginBtn" style="margin:0;">로그인하러 가기</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -673,7 +834,7 @@
     });
 
     /* =====================
-     * 회사코드 warn (영문만 / 3글자) - ✅ 확실히 뜨도록
+     * 회사코드 warn (영문만 / 3글자)
      * ===================== */
     let comIdWarnTimer = null;
 
@@ -1052,6 +1213,105 @@
     });
 
     /* =====================
+     * ✅ 관리자 계정 모달 + 복사(아이콘 -> ✓로 잠깐 변경)
+     * ResponseDto<>(HttpStatus.CREATED, "회사 회원가입 성공", createEmployee)
+     * -> result.data.empId / result.data.pwd
+     * ===================== */
+    const adminModal = document.getElementById('adminModal');
+    const adminModalClose = document.getElementById('adminModalClose');
+    const goLoginBtn = document.getElementById('goLoginBtn');
+
+    const adminEmpIdText = document.getElementById('adminEmpIdText');
+    const adminPwdText = document.getElementById('adminPwdText');
+
+    const copyEmpIdBtn = document.getElementById('copyEmpIdBtn');
+    const copyPwdBtn = document.getElementById('copyPwdBtn');
+    const copyEmpIdMsg = document.getElementById('copyEmpIdMsg');
+    const copyPwdMsg = document.getElementById('copyPwdMsg');
+
+    function openAdminModal(empId, pwd){
+        adminEmpIdText.textContent = empId || '-';
+        adminPwdText.textContent = pwd || '-';
+        copyEmpIdMsg.textContent = '';
+        copyPwdMsg.textContent = '';
+        resetCopyButton(copyEmpIdBtn);
+        resetCopyButton(copyPwdBtn);
+        adminModal.classList.add('show');
+        adminModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeAdminModal(){
+        adminModal.classList.remove('show');
+        adminModal.setAttribute('aria-hidden', 'true');
+    }
+
+    adminModalClose.addEventListener('click', closeAdminModal);
+    adminModal.addEventListener('click', (e) => {
+        if (e.target === adminModal) closeAdminModal();
+    });
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && adminModal.classList.contains('show')) closeAdminModal();
+    });
+
+    function setCopiedUI(btn, msgEl){
+        const copyIcon = btn.querySelector('.icon-copy');
+        const checkIcon = btn.querySelector('.icon-check');
+        if (copyIcon) copyIcon.style.display = 'none';
+        if (checkIcon) checkIcon.style.display = 'block';
+        btn.classList.add('copied');
+        msgEl.textContent = '✓ 복사되었습니다.';
+
+        clearTimeout(btn._copiedTimer);
+        btn._copiedTimer = setTimeout(() => {
+            resetCopyButton(btn);
+            msgEl.textContent = '';
+        }, 1200);
+    }
+
+    function resetCopyButton(btn){
+        const copyIcon = btn.querySelector('.icon-copy');
+        const checkIcon = btn.querySelector('.icon-check');
+        if (copyIcon) copyIcon.style.display = 'block';
+        if (checkIcon) checkIcon.style.display = 'none';
+        btn.classList.remove('copied');
+    }
+
+    async function copyTextWithFeedback(text, btn, msgEl){
+        try{
+            await navigator.clipboard.writeText(text);
+            setCopiedUI(btn, msgEl);
+        }catch(err){
+            // fallback
+            try{
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                setCopiedUI(btn, msgEl);
+            }catch(e){
+                msgEl.textContent = '복사에 실패했습니다.';
+                setTimeout(() => msgEl.textContent = '', 1200);
+            }
+        }
+    }
+
+    copyEmpIdBtn.addEventListener('click', () => {
+        const v = adminEmpIdText.textContent || '';
+        if (v && v !== '-') copyTextWithFeedback(v, copyEmpIdBtn, copyEmpIdMsg);
+    });
+
+    copyPwdBtn.addEventListener('click', () => {
+        const v = adminPwdText.textContent || '';
+        if (v && v !== '-') copyTextWithFeedback(v, copyPwdBtn, copyPwdMsg);
+    });
+
+    goLoginBtn.addEventListener('click', () => {
+        window.location.href = '/auth/companies/login';
+    });
+
+    /* =====================
      * submit
      * ===================== */
     form.addEventListener('submit', async (e) => {
@@ -1073,7 +1333,6 @@
         fd.set('comId', normalizeComId());
         fd.set('brn', normalizeBrn());
 
-        // addr = 도로명 + 상세 합쳐서 전송(백엔드가 addr 하나만 받을 경우 대비)
         const road = (addrInput.value || '').trim();
         const detail = (addrDetailInput.value || '').trim();
         fd.set('addr', detail ? `${road} ${detail}` : road);
@@ -1085,8 +1344,19 @@
             const result = await readJsonSafely(res);
 
             if (res.ok) {
-                alert(result?.message || '회원가입 성공!');
-                window.location.href = '/auth/companies/login';
+                // ✅ 응답: new ResponseDto<>(HttpStatus.CREATED, "회사 회원가입 성공", createEmployee)
+                const admin = result?.data ?? null;
+                const empId = admin?.empId;
+                const pwd = admin?.pwd;
+
+                if (!empId || !pwd) {
+                    alert((result?.message || '회사 회원가입 성공') + '\n(관리자 계정 정보가 응답에 없습니다. ResponseDto의 data 필드를 확인해주세요.)');
+                    window.location.href = '/auth/companies/login';
+                    return;
+                }
+
+                openAdminModal(empId, pwd);
+                // 모달에서 복사 후 로그인 이동
             } else {
                 showError(result?.message || '회원가입에 실패했습니다.');
                 signupBtn.disabled = false;

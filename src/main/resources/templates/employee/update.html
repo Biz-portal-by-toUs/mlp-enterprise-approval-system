@@ -171,13 +171,13 @@
                 padding:0 14px;
             }
 
-            /* ✅ 수정 버튼: 연한 하늘 배경 느낌 유지하려면 var(--primary2) 그대로 */
+            /* ✅ 수정 버튼 */
             .emp-update-page .btn.primary{
                 background:var(--primary);
                 color:#fff;
             }
 
-            /* ✅ 취소 버튼: 하얀 배경 + 검은 글자 */
+            /* ✅ 취소 버튼 */
             .emp-update-page .btn.ghost{
                 background:#fff;
                 color:#111;
@@ -267,6 +267,29 @@
             .emp-update-page .btn2.primary{ background:var(--primary2); color:#fff; }
             .emp-update-page .btn2.ghost{ background:#eef2ff; color:#1f3b7a; }
 
+            /* ✅ 주소 UI */
+            .emp-update-page .addr-top{
+                display:flex;
+                gap:10px;
+                align-items:stretch;
+                flex-wrap:wrap;
+            }
+            .emp-update-page .addr-top .inline-btn{
+                height:42px;
+                border-radius:12px;
+                border:0;
+                cursor:pointer;
+                font-weight:900;
+                padding:0 14px;
+                background:var(--primary2);
+                color:#fff;
+                min-width:110px;
+            }
+            .emp-update-page .addr-top input{
+                flex:1;
+                min-width:140px;
+            }
+
             @media (max-width: 980px){
                 .emp-update-page .grid{ grid-template-columns:1fr; }
                 .emp-update-page .update-wrap{ padding:6px 16px 24px; }
@@ -282,8 +305,6 @@
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('emp')}"></aside>
 
         <div class="update-wrap">
-            <!-- ✅ 상단 "사원 관리 / 사원 수정" 텍스트 제거 -->
-
             <section class="card" style="margin-top: 30px;">
                 <div class="grid">
                     <!-- Upload -->
@@ -332,9 +353,21 @@
                                     <input id="hireDate" type="date" class="readonly" readonly />
                                 </div>
 
-                                <div class="field">
+                                <!-- ✅ 주소: 도로명 API + 상세주소 -->
+                                <div class="field full">
                                     <div class="label">주소<span class="req">*</span></div>
-                                    <input id="addr" type="text" required />
+
+                                    <div class="addr-top">
+                                        <input id="zipNo" type="text" placeholder="우편번호" class="readonly" readonly />
+                                        <button class="inline-btn" id="addrSearchBtn" type="button">주소 검색</button>
+                                    </div>
+
+                                    <input id="roadAddr" type="text" placeholder="도로명 주소" class="readonly" readonly required />
+                                    <input id="addrDetail" type="text" placeholder="상세 주소를 입력하세요" />
+
+                                    <!-- 백엔드 전송용(합쳐서 저장/전송) -->
+                                    <input id="addr" type="hidden" required />
+                                    <div class="help">주소 검색 후 상세주소를 입력하세요.</div>
                                 </div>
 
                                 <div class="field">
@@ -459,6 +492,13 @@
         const $goListBtn = document.getElementById("goListBtn");
         const $stayBtn = document.getElementById("stayBtn");
 
+        // ✅ 주소 요소
+        const $addrSearchBtn = document.getElementById("addrSearchBtn");
+        const $zipNo = document.getElementById("zipNo");
+        const $roadAddr = document.getElementById("roadAddr");
+        const $addrDetail = document.getElementById("addrDetail");
+        const $addrHidden = document.getElementById("addr");
+
         let existingAttachmentId = null;
         let removePhotoRequested = false;
         let currentObjectKey = null;
@@ -489,6 +529,30 @@
         }
         document.getElementById("phone").addEventListener("input", (e)=>{ e.target.value = formatKoreanMobile(e.target.value); });
         document.getElementById("email").addEventListener("input", (e)=>{ e.target.value = e.target.value.replace(/\s/g, ""); });
+
+        // ✅ 주소 합치기(백엔드 addr 하나 전송)
+        function buildCombinedAddr(){
+            const road = String($roadAddr.value || "").trim();
+            const detail = String($addrDetail.value || "").trim();
+            const combined = detail ? `${road} ${detail}` : road;
+            $addrHidden.value = combined;
+            return combined;
+        }
+        $addrDetail.addEventListener("input", buildCombinedAddr);
+
+        // ✅ 주소 팝업 (/auth/juso/popup) + 콜백
+        $addrSearchBtn.addEventListener("click", () => {
+            window.open('/auth/juso/popup', 'jusoPopup', 'width=570,height=420,scrollbars=yes,resizable=yes');
+        });
+
+        window.jusoCallBack = function(roadAddrPart1, addrDetail, zipNo){
+            $zipNo.value = zipNo || "";
+            $roadAddr.value = (roadAddrPart1 || "").trim();
+            if (addrDetail) $addrDetail.value = addrDetail;
+            buildCombinedAddr();
+            $addrDetail.focus();
+            toast("ok", "주소가 입력되었습니다.");
+        };
 
         async function requestJson(method, url, body){
             const res = await fetch(`${API_BASE}${url}`, {
@@ -637,6 +701,43 @@
             existingAttachmentId = null;
         }
 
+        // ✅ 기존 addr 문자열을 "도로명/상세"로 적당히 쪼개서 표시(완벽 파싱은 어렵지만 UX는 좋아짐)
+        function splitAddrForUi(full){
+            const s = String(full || "").trim();
+            if (!s) return { road:"", detail:"" };
+
+            // "도로명 상세" 형태면 마지막 토큰부터 상세로 보는 단순 전략은 위험하니,
+            // 1) 괄호/동호수/층/호/동 등의 키워드가 포함된 뒤쪽을 detail로 최대한 분리해봄.
+            const keywords = ["동", "호", "층", "관", "빌딩", "아파트", "오피스텔", "번지", "로", "길"];
+            // 기본은 전체를 road에 넣고 detail은 비움
+            let road = s;
+            let detail = "";
+
+            // 괄호가 있으면 뒤를 detail로
+            const idxParen = s.indexOf("(");
+            if (idxParen > 0){
+                road = s.slice(0, idxParen).trim();
+                detail = s.slice(idxParen).trim();
+                return { road, detail };
+            }
+
+            // 마지막 공백 기준으로만 분리(너무 단순하지만, 대부분 "도로명 상세"라면 먹힘)
+            const lastSpace = s.lastIndexOf(" ");
+            if (lastSpace > 0){
+                const left = s.slice(0, lastSpace).trim();
+                const right = s.slice(lastSpace + 1).trim();
+
+                // 오른쪽이 숫자/동호수 느낌이면 detail로 보내기
+                if (/^\d+/.test(right) || /[동호층]$/.test(right) || keywords.some(k => right.includes(k))){
+                    road = left;
+                    detail = right;
+                    return { road, detail };
+                }
+            }
+
+            return { road, detail };
+        }
+
         async function loadPrefill(){
             const raw = await getJson(API_DETAIL);
             const d = unwrap(raw) || {};
@@ -646,7 +747,6 @@
             document.getElementById("birth").value = (d.birth ?? "").toString().slice(0,10);
             document.getElementById("hireDate").value = (d.hireDate ?? "").toString().slice(0,10);
 
-            document.getElementById("addr").value = d.addr ?? "";
             document.getElementById("email").value = d.email ?? "";
             document.getElementById("phone").value = d.phone ?? "";
             document.getElementById("workPhone").value = d.workPhone ?? "";
@@ -654,6 +754,15 @@
             document.getElementById("depNo").value = d.depNo ?? "";
             document.getElementById("posNo").value = d.posNo ?? "";
             document.getElementById("role").value = d.role ?? "";
+
+            // ✅ 주소 세팅 (기존 addr -> road/detail)
+            const fullAddr = d.addr ?? "";
+            const { road, detail } = splitAddrForUi(fullAddr);
+            $roadAddr.value = road;
+            $addrDetail.value = detail;
+            // zipNo는 DB에 없을 수 있으니 비움
+            $zipNo.value = d.zipNo ?? "";
+            buildCombinedAddr();
 
             currentObjectKey = d.objectKey ?? null;
 
@@ -688,13 +797,16 @@
         });
 
         async function updateEmployee(){
+            const combinedAddr = buildCombinedAddr();
+            if (!combinedAddr) throw new Error("주소를 입력해주세요. (주소 검색 후 상세주소 입력)");
+
             const body = {
                 depNo: Number(document.getElementById("depNo").value),
                 posNo: Number(document.getElementById("posNo").value),
                 email: document.getElementById("email").value.trim(),
                 phone: document.getElementById("phone").value.trim(),
                 workPhone: document.getElementById("workPhone").value.trim(),
-                addr: document.getElementById("addr").value.trim(),
+                addr: combinedAddr, // ✅ 여기!
                 gen: document.getElementById("gen").value,
                 role: document.getElementById("role").value
             };
@@ -754,6 +866,13 @@
 
             if (!$form.checkValidity()) {
                 $form.reportValidity();
+                return;
+            }
+
+            // ✅ 주소 검색 여부 최소 체크
+            if (!String($roadAddr.value || "").trim()){
+                toast("bad", "주소 검색을 통해 도로명 주소를 입력해주세요.");
+                $addrSearchBtn.focus();
                 return;
             }
 

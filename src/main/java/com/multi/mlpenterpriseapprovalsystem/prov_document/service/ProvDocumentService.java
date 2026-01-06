@@ -211,4 +211,11 @@ public class ProvDocumentService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public Page<ResProvDocumentListItemDto> getPublicDoneList(String comId, Pageable pageable) {
+        // isPublic = true, procStat = "DONE" 조건을 고정해서 전달
+        Page<ProvDocument> page = provDocumentRepository.findChatbotAvailableDocuments(comId, pageable);
+
+        return page.map(this::toListItemDto);
+    }
 }

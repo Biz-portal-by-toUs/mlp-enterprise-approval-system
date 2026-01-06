@@ -59,6 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/prov-documents/*/embedding").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/chatbot/callback").permitAll()
 
+                        .requestMatchers("/api/v1/notifications/stream", "/api/v1/chatbot/stream").authenticated()
+
                         .requestMatchers("/api/v1/prov-documents/**").hasRole("COM_ADMIN")
 
                         .requestMatchers("/auth/**",
@@ -85,7 +87,7 @@ public class SecurityConfig {
                                 "THR_ADMIN")
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("COM_ADMIN")
+                        .requestMatchers("/api/v1/admin/departments/**", "/api/v1/admin/positions/**").hasAnyRole("COM_ADMIN")
                         .anyRequest().authenticated()
                 )
 

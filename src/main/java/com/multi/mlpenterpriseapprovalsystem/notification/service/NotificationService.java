@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -86,10 +87,10 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long notiNo, String empId) {
         Notifications notification = notificationsRepository.findById(notiNo)
-                .orElseThrow(() -> new IllegalArgumentException("해당 알림이 존재하지 않습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!notification.getReceiver().getEmpId().equals(empId)) {
-            throw new IllegalStateException("알림 읽음 권한이 없습니다.");
+            throw new CustomException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
         }
 
         notification.markAsRead();
@@ -109,5 +110,23 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long getUnreadCount(String empId) {
         return notificationsRepository.countByReceiver_EmpIdAndIsReadFalse(empId);
+    }
+
+    public SseEmitter connectUserStream(String empId) {
+        // connect는 SseManager에 구현되어 있어야 함
+        return sseManager.connect(empId);
+    }
+
+
+    @Transactional
+    public void deleteNotification(String username, Long notiNo) {
+        Notifications notification = notificationsRepository.findById(notiNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+
+        if (!notification.getReceiver().getEmpId().equals(username)) {
+            throw new CustomException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
+        }
+
+        notificationsRepository.delete(notification);
     }
 }

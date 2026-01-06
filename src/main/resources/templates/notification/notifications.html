@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <style>
         body { margin: 0; font-family: system-ui; background: #fff; overflow-x: hidden; }
-        body::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+        body::-webkit-scrollbar { display: none; }
 
-        /* ✅ 탭 메뉴: 가로 스크롤 및 텍스트 겹침 방지 */
+        /* ✅ 탭 메뉴 */
         .noti-tabs {
             display: flex;
             background: #f8fafc;
@@ -17,10 +17,9 @@
             padding: 0 5px;
             overflow-x: auto;
             white-space: nowrap;
-            -ms-overflow-style: none; /* IE, Edge */
-            scrollbar-width: none;    /* Firefox */
+            scrollbar-width: none;
         }
-        .noti-tabs::-webkit-scrollbar { display: none; } /* Chrome, Safari */
+        .noti-tabs::-webkit-scrollbar { display: none; }
 
         .tab-item {
             padding: 12px 14px;
@@ -30,26 +29,34 @@
             cursor: pointer;
             border-bottom: 3px solid transparent;
             transition: 0.2s;
-            flex-shrink: 0; /* 폭이 좁아져도 찌그러지지 않음 */
+            flex-shrink: 0;
         }
         .tab-item.active { color: #3b82f6; border-bottom-color: #3b82f6; }
 
-        /* ✅ 알림 목록 및 카드 디자인 (제공된 이미지 반영) */
+        /* ✅ 알림 리스트 */
         .noti-list { height: calc(100vh - 45px); overflow-y: auto; }
-        .noti-list::-webkit-scrollbar {
-            display: none; /* 목록 스크롤바도 숨김 */
-        }
+        .noti-list::-webkit-scrollbar { display: none; }
+
+        /* ✅ 알림 카드 기본 스타일 (읽은 상태) */
         .noti-card {
             display: flex;
             align-items: flex-start;
             padding: 16px;
             border-bottom: 1px solid rgba(17,24,39,0.05);
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.3s ease;
             position: relative;
+            background: #ffffff;
+            border-left: 4px solid transparent;
         }
         .noti-card:hover { background: #f9fafb; }
-        .noti-card.unread { background: #f0f7ff; }
+
+        /* ✅ 읽지 않은 알림 스타일 (강조) */
+        .noti-card.unread {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+        }
+        .noti-card.unread:hover { background: #e0f2fe; }
 
         .noti-icon {
             width: 32px; height: 32px; border-radius: 50%; background: #fff;
@@ -59,24 +66,42 @@
 
         .noti-info { flex: 1; min-width: 0; }
 
-        /* ✅ 백엔드 title 기반 제목 (가장 강조) */
+        /* ✅ 제목 스타일 차별화 */
         .noti-title {
-            font-size: 15px;
-            font-weight: 800;
-            color: #1e293b;
+            font-size: 14.5px;
             margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            transition: color 0.2s;
+        }
+        /* 안읽음: 굵고 검게 */
+        .noti-card.unread .noti-title {
+            font-weight: 800;
+            color: #0f172a;
+        }
+        /* 읽음: 중간 굵기 및 가독성 좋은 진한 회색 (기존보다 진하게 수정) */
+        .noti-card:not(.unread) .noti-title {
+            font-weight: 600;
+            color: #334155;
         }
 
-        /* 상세 내용 */
-        .noti-content { font-size: 13.5px; color: #475569; line-height: 1.5; font-weight: 500; }
+        /* ✅ 상세 내용 */
+        .noti-content {
+            font-size: 13.5px;
+            line-height: 1.5;
+            font-weight: 500;
+            color: #475569;
+        }
+        /* 읽음: 본문 가독성 확보 (기존보다 진하게 수정) */
+        .noti-card:not(.unread) .noti-content {
+            color: #64748b;
+        }
 
-        /* 날짜 */
+        /* 날짜 (조금 더 선명하게) */
         .noti-date { font-size: 11px; color: #94a3b8; margin-top: 8px; }
 
-        /* 삭제 버튼 (X) */
+        /* 삭제 버튼 */
         .noti-close {
             background: none; border: none; font-size: 20px; color: #cbd5e1;
             cursor: pointer; padding: 4px; position: absolute; right: 12px; top: 14px;
@@ -103,9 +128,7 @@
 
 <script>
     let lastAt = null, lastId = null, isLast = false, isLoading = false, type = 'ALL';
-
-    // 아이콘은 타입별로 유지
-    const iconMap = { 'APPROVAL': 'ℹ️', 'MAIL': '📧', 'MEETING': '💬', 'OTHER': '📜' };
+    const iconMap = { 'APPROVAL': '📑', 'MAIL': '📧', 'MEETING': '💬', 'CALENDER': '📅', 'OTHER': '🔔' };
 
     async function load() {
         if (isLoading || isLast) return;
@@ -128,7 +151,9 @@
 
             items.forEach(it => {
                 const card = document.createElement('div');
-                card.className = `noti-card ${it.isRead ? '' : 'unread'}`;
+                card.id = `noti-${it.notiNo}`;
+                // Jackson 필드명 규칙 반영 (it.read)
+                card.className = `noti-card ${it.read ? '' : 'unread'}`;
                 card.innerHTML = `
                         <div class="noti-icon">${iconMap[it.type] || '🔔'}</div>
                         <div class="noti-info" onclick="handleRead(${it.notiNo}, '${it.url}')">
@@ -152,24 +177,26 @@
     }
 
     async function handleRead(id, url) {
-        await fetch(`/api/v1/notifications/${id}/read`, { method: 'PATCH' });
+        const targetCard = document.getElementById(`noti-${id}`);
+        if(targetCard) targetCard.classList.remove('unread');
 
-        if(window.parent && window.parent.initNotificationSystem) {
-            window.parent.initNotificationSystem();
+        try {
+            await fetch(`/api/v1/notifications/${id}/read`, { method: 'PATCH' });
+            if(window.parent && window.parent.initNotificationSystem) {
+                window.parent.initNotificationSystem();
+            }
+            if(url && url !== 'null') window.parent.location.href = url;
+        } catch(e) {
+            console.error("읽음 처리 실패", e);
         }
-
-        window.parent.location.href = url;
     }
 
-    // ✅ [중요] 부모 창(layout.html)에서 호출하는 함수
     window.readAllNotifications = async function() {
         if(!confirm("모든 알림을 읽음 처리하시겠습니까?")) return;
         try {
             const res = await fetch(`/api/v1/notifications/read-all`, { method: 'PATCH' });
             if (res.ok) {
-                // 화면의 읽지 않음 처리 배경 스타일 즉시 제거
                 document.querySelectorAll('.noti-card.unread').forEach(el => el.classList.remove('unread'));
-                // 부모창의 종 모양 배지 숫자 갱신 호출
                 if(window.parent && window.parent.initNotificationSystem) {
                     window.parent.initNotificationSystem();
                 }
@@ -177,20 +204,46 @@
         } catch (e) { console.error("전체 읽음 처리 실패", e); }
     };
 
-    function deleteNoti(id, btn) {
+    // ✅ 백엔드 컨트롤러 ResponseDto에 맞춘 삭제 함수
+    async function deleteNoti(id, btn) {
         if(!confirm("알림을 삭제하시겠습니까?")) return;
-        fetch(`/api/v1/notifications/${id}`, { method: 'DELETE' })
-            .then(res => {
-                if(res.ok) btn.closest('.noti-card').remove();
-            });
+
+        try {
+            const res = await fetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+            const result = await res.json(); // ResponseDto 수신
+
+            if (res.ok) {
+                // 삭제 성공 시 애니메이션 후 제거
+                const card = btn.closest('.noti-card');
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(20px)';
+
+                setTimeout(() => {
+                    card.remove();
+                    // 목록이 비었는지 확인
+                    if (document.getElementById('notiList').children.length === 0) {
+                        document.getElementById('notiList').innerHTML = '<div class="empty-msg">알림이 없습니다.</div>';
+                    }
+                }, 300);
+
+                // 부모창 배지 갱신
+                if(window.parent && window.parent.initNotificationSystem) {
+                    window.parent.initNotificationSystem();
+                }
+            } else {
+                // 에러 발생 시 (403, 404 등) 서버가 보낸 메시지 출력
+                alert(result.message || "삭제 권한이 없거나 오류가 발생했습니다.");
+            }
+        } catch (e) {
+            console.error("삭제 통신 오류:", e);
+            alert("서버와 통신 중 오류가 발생했습니다.");
+        }
     }
 
-    // 무한 스크롤
     new IntersectionObserver(e => {
         if(e[0].isIntersecting && !isLoading && !isLast) load();
     }, { threshold: 0.1 }).observe(document.getElementById('sentinel'));
 
-    // 탭 전환
     document.querySelectorAll('.tab-item').forEach(tab => {
         tab.onclick = () => {
             if (tab.classList.contains('active')) return;

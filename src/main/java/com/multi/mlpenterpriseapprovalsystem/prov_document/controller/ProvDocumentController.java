@@ -97,6 +97,18 @@ public class ProvDocumentController {
                 .body(new ResponseDto<>(HttpStatus.OK, "규정 목록 조회 성공", page));
     }
 
+    @GetMapping("/chatbot")
+    public ResponseEntity<ResponseDto<Page<ResProvDocumentListItemDto>>> getDoneProvList(
+            @PageableDefault(size = 5) Pageable pageable,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        Page<ResProvDocumentListItemDto> page = provDocumentService.getPublicDoneList(user.getComId(), pageable);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "임베딩 완료된 공개 규정 목록 조회 성공", page));
+    }
+
     @PreAuthorize("hasRole('COM_ADMIN')")
     @GetMapping("/{provNo}")
     public ResponseEntity<ResponseDto<ResProvDocumentDetailDto>> getDetail(

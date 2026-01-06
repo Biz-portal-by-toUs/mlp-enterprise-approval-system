@@ -26,11 +26,22 @@
             background: #f9fafb;
         }
 
+        /* 수정하기 버튼 스타일 */
         .btn.primary {
-            display: none;
+            display: none; /* 권한 확인 후 노출 */
             background: var(--blueSoft);
             color: var(--primary);
             border: 2px solid var(--primary);
+        }
+
+        /* 삭제하기 버튼 스타일 */
+        .btn.danger-outline {
+            display: none; /* 권한 확인 후 노출 */
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        .btn.danger-outline:hover {
+            background: rgba(239, 68, 68, 0.05);
         }
 
         .btn.download {
@@ -148,7 +159,10 @@
             <div id="error" class="error-msg"></div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
                 <button class="btn" id="backBtn">← 목록으로</button>
-                <button class="btn primary" id="editBtn">수정하기</button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn primary" id="editBtn">수정하기</button>
+                    <button class="btn danger-outline" id="deleteBtn">삭제하기</button>
+                </div>
             </div>
 
             <div class="card">
@@ -194,7 +208,6 @@
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
-        // [기존 meeting-detail.html의 JS 로직 전체 복사]
         const $ = (id) => document.getElementById(id);
         const API_BASE = "http://localhost:8090";
         let currentRecordUrl = "";
@@ -203,6 +216,18 @@
         function unwrapMaybeResponseDto(resJson) {
             return (resJson && resJson.data) ? resJson.data : resJson;
         }
+
+        function getCookie(name) {
+            let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+            return matches ? decodeURIComponent(matches[1]) : undefined;
+        }
+
+        const authHeaders = () => {
+            const token = getCookie("accessToken");
+            const headers = { "Content-Type": "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+            return headers;
+        };
 
         async function getCurrentUser() {
             try {
@@ -266,9 +291,18 @@
             const meetNo = getMeetNoFromPath();
             if (!meetNo) return;
             try {
-                const [meetingRes, me] = await Promise.all([fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {credentials: "include"}), getCurrentUser()]);
+                const [meetingRes, me] = await Promise.all([
+                    fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {credentials: "include"}),
+                    getCurrentUser()
+                ]);
                 const d = unwrapMaybeResponseDto(await meetingRes.json());
-                if (me && d.writerEmpId && String(me.empId) === String(d.writerEmpId)) $("editBtn").style.display = "inline-flex";
+
+                // 주최자일 경우 수정/삭제 버튼 노출
+                if (me && d.writerEmpId && String(me.empId) === String(d.writerEmpId)) {
+                    $("editBtn").style.display = "inline-flex";
+                    $("deleteBtn").style.display = "inline-flex";
+                }
+
                 $("title").textContent = d.title ?? "-";
                 $("writer").textContent = `주최자: ${d.writerName ?? "-"}`;
                 $("dept").textContent = `부서: ${formatDepartments(d)}`;
@@ -284,6 +318,28 @@
 
         $("backBtn").onclick = () => location.href = "/meeting";
         $("editBtn").onclick = () => location.href = `/meeting/${getMeetNoFromPath()}/update`;
+
+        // 삭제하기 로직 추가
+        $("deleteBtn").onclick = async () => {
+            const meetNo = getMeetNoFromPath();
+            if (!confirm("회의를 삭제하시겠습니까? (삭제된 회의는 휴지통으로 이동합니다.)")) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                    method: "DELETE",
+                    headers: authHeaders(),
+                    credentials: 'include'
+                });
+                if (res.ok) {
+                    alert("삭제되었습니다.");
+                    location.href = "/meeting";
+                } else {
+                    alert("삭제 실패");
+                }
+            } catch (e) {
+                alert("삭제 중 오류가 발생했습니다.");
+            }
+        };
+
         $("downloadBtn").onclick = () => {
             if (currentRecordUrl) triggerDownload(currentRecordUrl, `${currentTitle}.webm`);
         };
