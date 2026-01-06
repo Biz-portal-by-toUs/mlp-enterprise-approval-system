@@ -66,13 +66,27 @@ const VIEW_BASE = '/form'
 // ===== perms from server (html data-*) =====
 function readPerms() {
     const root = document.documentElement
-    const b = (v) => String(v).toLowerCase() === 'true'
-    return {
-        isEmployee: b(root.dataset.isEmployee),
-        canEdit: b(root.dataset.canEdit),
-        canDelete: b(root.dataset.canDelete),
+
+    const raw = {
+        isEmployee: root.dataset.isEmployee,
+        canEdit: root.dataset.canEdit,
+        canDelete: root.dataset.canDelete,
+        canApprove: root.dataset.canApprove,
     }
+
+    const b = (v) => String(v ?? '').trim().toLowerCase() === 'true'
+
+    const out = {
+        isEmployee: b(raw.isEmployee),
+        canEdit: b(raw.canEdit),
+        canDelete: b(raw.canDelete),
+        canApprove: b(raw.canApprove),
+    }
+
+    console.info('[detail-form perms]', { raw, out })
+    return out
 }
+
 const PERM = readPerms()
 
 function markFormListDirty() {
