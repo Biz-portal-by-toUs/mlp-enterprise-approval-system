@@ -276,7 +276,7 @@
                 font-weight:950;
                 padding:0 14px;
             }
-            .emp-create-page .btn2.primary{ background:var(--primary2); color:#fff; }
+            .emp-create-page .btn2.primary{ background:var(--primary); color:#fff; }
             .emp-create-page .btn2.ghost{ background:#eef2ff; color:#1f3b7a; }
 
             .emp-create-page .copy-btn{
@@ -304,7 +304,7 @@
                 cursor:pointer;
                 font-weight:900;
                 padding:0 14px;
-                background:var(--primary2);
+                background:var(--primary);
                 color:#fff;
                 min-width:110px;
             }
@@ -460,7 +460,6 @@
                                         <option value="" selected disabled>권한 선택</option>
                                         <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
                                     </select>
-                                    <div class="help">서버 enum(RoleType) 값 그대로</div>
                                 </div>
                             </div>
 
@@ -530,6 +529,12 @@
         const $email = document.getElementById("email");
         const $phone = document.getElementById("phone");
 
+        // ✅ 입사일
+        const $hireDate = document.getElementById("hireDate");
+
+        // ✅ 생년월일
+        const $birth = document.getElementById("birth");
+
         // ✅ 주소 요소
         const $addrSearchBtn = document.getElementById("addrSearchBtn");
         const $zipNo = document.getElementById("zipNo");
@@ -587,6 +592,9 @@
             $roadAddr.value = "";
             $addrDetail.value = "";
             $addrHidden.value = "";
+
+            // ✅ 입사일 제약 다시 적용
+            applyHireDateMin();
 
             $photo.value = "";
             $preview.src = "";
@@ -649,6 +657,94 @@
 
         $email.addEventListener("input", () => { $email.value = $email.value.replace(/\s/g, ""); });
         $phone.addEventListener("input", () => { $phone.value = formatKoreanMobile($phone.value); });
+
+        // ✅ YYYY-MM-DD 만들기(로컬 기준)
+        function pad2(n){ return String(n).padStart(2, "0"); }
+        function toDateStrLocal(d){
+            return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+        }
+
+        // ✅ 생년월일은 "오늘 이후" 선택 불가 (최대: 오늘)
+        function applyBirthMax(){
+            const today = new Date();
+            const maxStr = toDateStrLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+            $birth.max = maxStr;
+
+            // 이미 값이 있는데 max보다 크면 비움
+            if ($birth.value && $birth.value > maxStr){
+                $birth.value = "";
+            }
+        }
+
+        function validateBirth(){
+            const v = String($birth.value || "").trim();
+            if (!v){
+                toast("bad", "생년월일을 선택해주세요.");
+                $birth.focus();
+                return false;
+            }
+            const maxStr = String($birth.max || "").trim();
+            if (maxStr && v > maxStr){
+                toast("bad", `생년월일은 ${maxStr} 이후로 선택할 수 없어요.`);
+                $birth.focus();
+                return false;
+            }
+            return true;
+        }
+
+        // 입력 중에도 즉시 검증/정리
+        $birth.addEventListener("change", () => {
+            clearToast();
+            applyBirthMax();
+            const maxStr = String($birth.max || "").trim();
+            if ($birth.value && maxStr && $birth.value > maxStr){
+                toast("bad", `생년월일은 ${maxStr} 이후로 선택할 수 없어요.`);
+                $birth.value = "";
+            }
+        });
+
+        // ✅ 입사일은 "오늘 이후(=내일~)"만 허용
+        function applyHireDateMin(){
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const minStr = toDateStrLocal(tomorrow);
+
+            $hireDate.min = minStr;
+
+            // 이미 값이 있는데 min보다 작으면 비움
+            if ($hireDate.value && $hireDate.value < minStr){
+                $hireDate.value = "";
+            }
+        }
+
+        function validateHireDate(){
+            const v = String($hireDate.value || "").trim();
+            if (!v){
+                toast("bad", "입사일을 선택해주세요.");
+                $hireDate.focus();
+                return false;
+            }
+
+            const minStr = String($hireDate.min || "").trim();
+            if (minStr && v < minStr){
+                toast("bad", `입사일은 ${minStr} 이후만 가능해요.`);
+                $hireDate.focus();
+                return false;
+            }
+            return true;
+        }
+
+        // 입력 중에도 즉시 검증/정리
+        $hireDate.addEventListener("change", () => {
+            clearToast();
+            // min 갱신 후, 규칙 위반이면 비움
+            applyHireDateMin();
+            const minStr = String($hireDate.min || "").trim();
+            if ($hireDate.value && minStr && $hireDate.value < minStr){
+                toast("bad", `입사일은 ${minStr} 이후만 가능해요.`);
+                $hireDate.value = "";
+            }
+        });
 
         // ✅ 주소 합치기(백엔드가 addr 하나만 받을 때)
         function buildCombinedAddr(){
@@ -759,13 +855,13 @@
                 email: document.getElementById("email").value.trim(),
                 phone: document.getElementById("phone").value.trim(),
                 workPhone: document.getElementById("workPhone").value.trim(),
-                addr: combinedAddr, // ✅ 여기!
+                addr: combinedAddr,
                 gen: document.getElementById("gen").value,
                 role: document.getElementById("role").value,
                 hireDate: document.getElementById("hireDate").value
             };
             const raw = await postJson("/api/v1/admin/employees", body);
-            return unwrapResponseDto(raw); // {empNo, empId, pwd}
+            return unwrapResponseDto(raw);
         }
 
         $form.addEventListener("submit", async (e) => {
@@ -782,6 +878,12 @@
 
             if (!isValidEmail(emailVal)) { toast("bad", "이메일 형식이 올바르지 않아."); $email.focus(); return; }
             if (!isValidPhone(phoneVal)) { toast("bad", "전화번호 형식이 올바르지 않아."); $phone.focus(); return; }
+
+            // ✅ 입사일 검증(오늘 이후만)
+            if (!validateHireDate()) return;
+
+            // ✅ 생년월일 검증(오늘 이후 선택 불가)
+            if (!validateBirth()) return;
 
             // ✅ 주소 최소 체크(도로명 필수)
             if (!String($roadAddr.value || "").trim()) {
@@ -828,6 +930,11 @@
         });
 
         $cancelBtn.addEventListener("click", () => { window.location.href = LIST_URL; });
+
+        // ✅ 페이지 진입 시 바로 min 적용
+        applyHireDateMin();
+        // ✅ 페이지 진입 시 바로 max 적용
+        applyBirthMax();
     </script>
 </th:block>
 </body>
