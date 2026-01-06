@@ -1,7 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req;
-
-import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req;
 
 import java.util.*;
 

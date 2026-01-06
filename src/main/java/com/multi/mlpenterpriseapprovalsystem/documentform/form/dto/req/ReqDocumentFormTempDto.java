@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req;
 
 import java.util.*;
 

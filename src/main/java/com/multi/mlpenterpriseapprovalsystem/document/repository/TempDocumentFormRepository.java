@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.document.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

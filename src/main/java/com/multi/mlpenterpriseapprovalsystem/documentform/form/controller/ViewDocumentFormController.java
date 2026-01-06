@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import lombok.RequiredArgsConstructor;

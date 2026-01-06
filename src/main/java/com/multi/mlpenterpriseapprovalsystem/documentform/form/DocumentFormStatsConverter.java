@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 import jakarta.persistence.*;
 
 /**

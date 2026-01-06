@@ -1,8 +1,7 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.repository;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;

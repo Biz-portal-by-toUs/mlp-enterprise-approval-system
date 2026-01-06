@@ -1,8 +1,8 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res;
 
 import com.fasterxml.jackson.annotation.*;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
 
 /**

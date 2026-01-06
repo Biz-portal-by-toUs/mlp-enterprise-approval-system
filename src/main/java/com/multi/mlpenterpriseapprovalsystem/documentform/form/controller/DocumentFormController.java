@@ -1,13 +1,13 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res.ResDocumentFormListDto;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.enums.DocumentFormStats;
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.service.DocumentFormService;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormListDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.service.DocumentFormService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

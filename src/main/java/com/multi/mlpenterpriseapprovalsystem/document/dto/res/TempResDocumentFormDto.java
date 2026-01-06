@@ -1,6 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.dto.res;
 
-import com.multi.mlpenterpriseapprovalsystem.document_form.form.domain.DocumentForm;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
 import lombok.Builder;
 import lombok.Data;
 

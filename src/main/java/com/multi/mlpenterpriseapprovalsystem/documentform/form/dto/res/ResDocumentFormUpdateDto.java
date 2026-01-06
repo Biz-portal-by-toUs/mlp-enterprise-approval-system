@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.dto.res;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 

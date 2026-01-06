@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.document_form.form.enums;
+package com.multi.mlpenterpriseapprovalsystem.documentform.form.enums;
 
 /**
  * Please explain the class!!!
