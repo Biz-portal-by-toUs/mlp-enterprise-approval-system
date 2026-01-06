@@ -43,52 +43,60 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
     // 받은 메일함 (Inbox)
     @Query(
             value = """
-                select mus
-                from MailUserState mus
-                join fetch mus.mail m
-                join fetch m.sender s
-                where mus.user.empId = :userEmpId
-                  and mus.role = :role
-                  and mus.deletedAt is null
-                order by coalesce(mus.isPrior, false) desc, m.createdAt desc
-            """,
+            select mus
+            from MailUserState mus
+            join fetch mus.mail m
+            join fetch m.sender s
+            where mus.user.empId = :userEmpId
+              and mus.role = :role
+              and mus.deletedAt is null
+              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+            order by coalesce(mus.isPrior, false) desc, m.createdAt desc
+        """,
             countQuery = """
-                select count(mus)
-                from MailUserState mus
-                where mus.user.empId = :userEmpId
-                  and mus.role = :role
-                  and mus.deletedAt is null
-            """
+            select count(mus)
+            from MailUserState mus
+            join mus.mail m
+            where mus.user.empId = :userEmpId
+              and mus.role = :role
+              and mus.deletedAt is null
+              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+        """
     )
     Page<MailUserState> findInbox(
             @Param("userEmpId") String userEmpId,
             @Param("role") MailRole role,
+            @Param("q") String q,
             Pageable pageable
     );
 
     // 보낸 메일함 (Sent)
     @Query(
             value = """
-                select mus
-                from MailUserState mus
-                join fetch mus.mail m
-                join fetch m.sender s
-                where mus.user.empId = :userEmpId
-                  and mus.role = :role
-                  and mus.deletedAt is null
-                order by coalesce(mus.isPrior, false) desc, m.createdAt desc
-            """,
+            select mus
+            from MailUserState mus
+            join fetch mus.mail m
+            join fetch m.sender s
+            where mus.user.empId = :userEmpId
+              and mus.role = :role
+              and mus.deletedAt is null
+              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+            order by coalesce(mus.isPrior, false) desc, m.createdAt desc
+        """,
             countQuery = """
-                select count(mus)
-                from MailUserState mus
-                where mus.user.empId = :userEmpId
-                  and mus.role = :role
-                  and mus.deletedAt is null
-            """
+            select count(mus)
+            from MailUserState mus
+            join mus.mail m
+            where mus.user.empId = :userEmpId
+              and mus.role = :role
+              and mus.deletedAt is null
+              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+        """
     )
     Page<MailUserState> findSent(
             @Param("userEmpId") String userEmpId,
             @Param("role") MailRole role,
+            @Param("q") String q,
             Pageable pageable
     );
 

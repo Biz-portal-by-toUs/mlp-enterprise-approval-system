@@ -124,7 +124,7 @@
         table.mailTable{
             width:100%;
             border-collapse:collapse;
-            table-layout:fixed; /* 남는 폭을 제목에 몰아주려면 fixed 유지가 좋아 */
+            table-layout:fixed;
         }
         table.mailTable thead th{
             background:#f9fafb;
@@ -150,15 +150,12 @@
             cursor:pointer;
         }
 
-        /* ===== 칼럼 폭 (제목을 최대한 크게) ===== */
         th.col-no, td.col-no{ width:90px; }
+        th.col-star, td.col-star{ width:60px; }
         th.col-read, td.col-read{ width:90px; }
         th.col-date, td.col-date{ width:180px; }
-
-        /* 발신인 폭을 고정/작게 -> 제목이 남는 폭 거의 다 먹음 */
         th.col-sender, td.col-sender{ width:140px; }
 
-        /* 제목 컬럼은 고정폭 지정 안 함(=나머지 전체) */
         th.col-title-h{
             text-align:left;
             padding-left:20px;
@@ -200,6 +197,29 @@
             color:#334155;
         }
 
+        .starBtn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:34px;
+            height:34px;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:transparent;
+            cursor:pointer;
+            font-size:18px;
+            line-height:1;
+            transition:0.15s;
+        }
+        .starBtn:hover{
+            background:#f8fafc;
+            border-color:var(--line);
+        }
+        .starBtn:disabled{
+            opacity:.6;
+            cursor:not-allowed;
+        }
+
         .pager-wrapper{
             display:flex;
             align-items:center;
@@ -237,31 +257,6 @@
             display:flex;
             gap:12px;
             align-items:center;
-        }
-
-        th.col-star, td.col-star{ width:60px; }
-
-        .starBtn{
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            width:34px;
-            height:34px;
-            border-radius:8px;
-            border:1px solid transparent;
-            background:transparent;
-            cursor:pointer;
-            font-size:18px;   /* 유니코드 별 크기 */
-            line-height:1;
-            transition:0.15s;
-        }
-        .starBtn:hover{
-            background:#f8fafc;
-            border-color:var(--line);
-        }
-        .starBtn:disabled{
-            opacity:.6;
-            cursor:not-allowed;
         }
 
         @media (max-width:760px){
@@ -359,6 +354,10 @@
                         .replaceAll("'","&#039;");
                 }
 
+                function starEmoji(isPrior){
+                    return isPrior ? '⭐' : '☆';
+                }
+
                 async function patchNoBody(url){
                     const res = await fetch(url, {
                         method: 'PATCH',
@@ -369,10 +368,6 @@
                         const t = await res.text().catch(()=> '');
                         throw new Error(`HTTP ${res.status} ${t}`);
                     }
-                }
-
-                function starEmoji(isPrior){
-                    return isPrior ? '⭐' : '☆';  // 꽉찬별 / 빈별
                 }
 
                 function buildPager(page, totalPages, onGo){
@@ -429,6 +424,7 @@
                     params.set('page', String(next.page ?? 0));
                     params.set('size', String(next.size ?? 20));
                     if (next.q) params.set('q', next.q);
+
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
@@ -475,9 +471,8 @@
                             <td class="col-date">${createdAt}</td>
                         `;
 
-                        // 행 클릭(상세 이동)
+                        // 행 클릭(상세 이동) - 별/링크 클릭은 제외
                         tr.addEventListener('click', (e) => {
-                            // 별/링크 클릭은 상세이동 막기
                             if (e.target && (e.target.closest('.starBtn') || e.target.tagName === 'A')) return;
                             location.href = `/mail/${encodeURIComponent(it.mailId)}`;
                         });
@@ -491,17 +486,16 @@
                             const mailId = starBtn.dataset.mailId;
                             const prev = starBtn.textContent.trim() === '⭐';
 
-                            // UX: 즉시 반영(optimistic)
+                            // optimistic UI
                             starBtn.textContent = starEmoji(!prev);
                             starBtn.disabled = true;
 
                             try{
                                 await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
-                                // 성공하면 그대로 유지
+                                // prior-first 정렬이라 위치가 바뀔 수 있어서 재조회
                                 await load();
                             }catch(err){
                                 console.error(err);
-                                // 실패 시 롤백
                                 starBtn.textContent = starEmoji(prev);
                                 alert('중요메일 설정에 실패했습니다.');
                             }finally{
@@ -511,13 +505,13 @@
 
                         tb.appendChild(tr);
                     });
-
                 }
 
                 async function load(){
                     const me = getMeEmpId();
                     if(!me){
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">로그인 정보(empId)를 찾을 수 없습니다.</td></tr>`;
+                        document.getElementById('tbody').innerHTML =
+                            `<tr><td colspan="6" style="padding:18px; color:#ef4444; font-weight:900;">로그인 정보(empId)를 찾을 수 없습니다.</td></tr>`;
                         return;
                     }
 
@@ -525,7 +519,16 @@
                     document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    const url = `/api/v1/mails/inbox?role=RECIPIENT&page=${st.page}&size=${st.size}`;
+                    // ✅ role=RECIPIENT 고정 + q 포함해서 URL 생성 후 그대로 사용
+                    const params = new URLSearchParams();
+                    params.set('role', 'RECIPIENT');
+                    params.set('page', String(st.page));
+                    params.set('size', String(st.size));
+                    if (st.q) params.set('q', st.q);
+
+                    const url = `/api/v1/mails/inbox?${params.toString()}`;
+                    // console.log('[inbox request url]', url); // 필요하면 주석 해제
+
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
@@ -564,7 +567,8 @@
                 window.addEventListener('DOMContentLoaded', () => {
                     load().catch(err => {
                         console.error(err);
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('tbody').innerHTML =
+                            `<tr><td colspan="6" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
                     });
                 });
             </script>

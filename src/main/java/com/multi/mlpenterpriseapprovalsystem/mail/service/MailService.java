@@ -19,10 +19,9 @@ public interface MailService {
     //메일 전송
     ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req);
 
+    Page<ResMailListDto> getInbox(String userEmpId, MailRole role, String q, Pageable pageable);
 
-    Page<ResMailListDto> getInbox(String userEmpId, MailRole role, Pageable pageable);
-
-    Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable);
+    Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable);
 
     ResMailDetailDto getDetail(String mailId, String viewerEmpId);
 

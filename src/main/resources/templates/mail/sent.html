@@ -151,7 +151,7 @@
         th.col-no, td.col-no{ width:90px; }
         th.col-star, td.col-star{ width:60px; }
         th.col-date, td.col-date{ width:180px; }
-        th.col-recv, td.col-recv{ width:180px; } /* 수신인 고정폭 */
+        th.col-recv, td.col-recv{ width:180px; }
 
         th.col-title-h{
             text-align:left;
@@ -397,6 +397,7 @@
                     params.set('page', String(next.page ?? 0));
                     params.set('size', String(next.size ?? 20));
                     if (next.q) params.set('q', next.q);
+
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
@@ -458,8 +459,7 @@
 
                             try{
                                 await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
-                                // 정렬이 prior-first라면, 토글 후 위치가 바뀌어야 함 -> 새로고침 로드
-                                // UX 선호에 따라 아래 한 줄 주석 해제 가능
+                                // prior-first 정렬이라 위치가 바뀔 수 있으니 재조회
                                 await load();
                             }catch(err){
                                 console.error(err);
@@ -479,9 +479,15 @@
                     document.getElementById('size').value = String(st.size);
                     document.getElementById('q').value = st.q;
 
-                    // ✅ 정렬은 서버 쿼리(order by isPrior desc, createdAt desc)에서 고정한다는 전제
-                    // 그래서 sort 파라미터 제거
-                    const url = `/api/v1/mails/sent?page=${st.page}&size=${st.size}`;
+                    // ✅ q 포함해서 URL 생성하고, 그 URL을 그대로 사용
+                    const params = new URLSearchParams();
+                    params.set('page', String(st.page));
+                    params.set('size', String(st.size));
+                    if (st.q) params.set('q', st.q);
+
+                    const url = `/api/v1/mails/sent?${params.toString()}`;
+                    // console.log('[sent request url]', url); // 디버그 필요하면 주석 해제
+
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
@@ -520,7 +526,8 @@
                 window.addEventListener('DOMContentLoaded', () => {
                     load().catch(err => {
                         console.error(err);
-                        document.getElementById('tbody').innerHTML = `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('tbody').innerHTML =
+                            `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
                     });
                 });
             </script>

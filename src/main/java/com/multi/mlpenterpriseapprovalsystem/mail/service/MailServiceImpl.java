@@ -61,16 +61,18 @@ public class MailServiceImpl implements MailService {
     // 받은 메일함
     @Override
     @Transactional(readOnly = true)
-    public Page<ResMailListDto> getInbox(String userEmpId, MailRole role, Pageable pageable) {
-        return mailUserStateRepository.findInbox(userEmpId, role, pageable)
+    public Page<ResMailListDto> getInbox(String userEmpId, MailRole role, String q, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+        return mailUserStateRepository.findInbox(userEmpId, role, keyword, pageable)
                 .map(this::toListDto);
     }
 
     // 보낸 메일함
     @Override
     @Transactional(readOnly = true)
-    public Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable) {
-        return mailUserStateRepository.findSent(senderEmpId, MailRole.SENDER, pageable)
+    public Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+        return mailUserStateRepository.findSent(senderEmpId, MailRole.SENDER, keyword, pageable)
                 .map(this::toListDto);
     }
 

@@ -32,7 +32,8 @@ public class MailController {
     @GetMapping("/inbox")
     public ResponseEntity<Page<ResMailListDto>> inbox(
             @RequestParam("role") MailRole role,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
+            @RequestParam(value = "q", required = false) String q,
+            @PageableDefault(size = 20) Pageable pageable,
             Authentication authentication
     ) {
         String empId = authentication.getName();
@@ -42,7 +43,8 @@ public class MailController {
     // 보낸 메일함(서버 인증 기반)
     @GetMapping("/sent")
     public ResponseEntity<Page<ResMailListDto>> sent(
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
+            @RequestParam(value = "q", required = false) String q,
+            @PageableDefault(size = 20) Pageable pageable,
             Authentication authentication
     ) {
         String empId = authentication.getName();
