@@ -3,25 +3,35 @@ package com.multi.mlpenterpriseapprovalsystem.document_form.form.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 문서양식 화면(View) 라우팅 컨트롤러
  *
+ * - @ModelAttribute에서 로그인 유저 기반으로 perm_* Boolean을 "항상" 주입
+ * - 관리자/직원 판정 우선순위(관리자면 employee=false)
+ *
  * @author : 정종원
  * @filename : ViewDocumentFormController
- * @since : 2025-12-22 월요일
+ * @since : 2025-12-22
  */
 @Controller
 @RequestMapping("/form")
 @RequiredArgsConstructor
 public class ViewDocumentFormController {
+
+    private static final String ROLE_EMPLOYEE  = "ROLE_EMPLOYEE";
+    private static final String ROLE_SYS_ADMIN = "ROLE_SYS_ADMIN";
+    private static final String ROLE_COM_ADMIN = "ROLE_COM_ADMIN";
+    private static final String ROLE_SEC_ADMIN = "ROLE_SEC_ADMIN";
+    private static final String ROLE_THR_ADMIN = "ROLE_THR_ADMIN";
 
     // 화면에서 쓸 "기능 플래그"를 백에서 계산해서 주입
     @ModelAttribute
@@ -29,20 +39,18 @@ public class ViewDocumentFormController {
             @AuthenticationPrincipal CustomUser customUser,
             Model model
     ) {
-        Set<String> auths = new HashSet<>();
-        if (customUser != null && customUser.getAuthorities() != null) {
-            customUser.getAuthorities().forEach(a -> {
-                if (a != null && a.getAuthority() != null) auths.add(a.getAuthority());
-            });
-        }
+        Set<String> auths = extractAuthorities(customUser);
 
         boolean isLogin = (customUser != null);
 
-        boolean isEmployee = auths.contains("ROLE_EMPLOYEE");
-        boolean isSysAdmin = auths.contains("ROLE_SYS_ADMIN");
-        boolean isComAdmin = auths.contains("ROLE_COM_ADMIN");
-        boolean isSecAdmin = auths.contains("ROLE_SEC_ADMIN");
-        boolean isThrAdmin = auths.contains("ROLE_THR_ADMIN");
+        boolean isSysAdmin = auths.contains(ROLE_SYS_ADMIN);
+        boolean isComAdmin = auths.contains(ROLE_COM_ADMIN);
+        boolean isSecAdmin = auths.contains(ROLE_SEC_ADMIN);
+        boolean isThrAdmin = auths.contains(ROLE_THR_ADMIN);
+
+        boolean isAnyAdmin = isSysAdmin || isComAdmin || isSecAdmin || isThrAdmin;
+
+        boolean isEmployee = !isAnyAdmin && auths.contains(ROLE_EMPLOYEE);
 
         // ===== 규칙 =====
         // EMPLOYEE: 조회만
@@ -51,10 +59,10 @@ public class ViewDocumentFormController {
 
         boolean canView = isLogin;
 
-        boolean canCreateForm     = isSysAdmin || isComAdmin || isSecAdmin || isThrAdmin;
-        boolean canEditForm       = isSysAdmin || isComAdmin || isSecAdmin || isThrAdmin;
-        boolean canDeleteRequest  = isSysAdmin || isComAdmin || isSecAdmin || isThrAdmin; // 삭제 요청(soft)
-        boolean canUseTemp        = isSysAdmin || isComAdmin || isSecAdmin || isThrAdmin;
+        boolean canCreateForm    = isAnyAdmin;
+        boolean canEditForm      = isAnyAdmin;
+        boolean canDeleteRequest = isAnyAdmin; // 삭제 요청(soft)
+        boolean canUseTemp       = isAnyAdmin;
 
         // 승인/반려/삭제승인/삭제반려
         boolean canApprove = isSysAdmin || isComAdmin || isSecAdmin;
@@ -62,11 +70,12 @@ public class ViewDocumentFormController {
         // list 화면에서 "선택 삭제" 표시 여부
         boolean canBulkDelete = canDeleteRequest;
 
-        // ===== pending 전용 perms (프론트 data-*) =====
-        boolean perm_canApproveForm = canApprove;         // 승인 버튼 렌더 여부
-        boolean perm_canRejectForm  = canApprove;         // 반려 버튼 렌더 여부
-        boolean perm_canViewReason  = (canApprove || isThrAdmin); // 사유 보기 가능(THR_ADMIN 포함)
+        // pending 전용 perms
+        boolean perm_canApproveForm = canApprove;
+        boolean perm_canRejectForm  = canApprove;
+        boolean perm_canViewReason  = (canApprove || isThrAdmin);
 
+        // Boolean 세팅
         model.addAttribute("perm_isLogin", isLogin);
         model.addAttribute("perm_isEmployee", isEmployee);
 
@@ -83,12 +92,29 @@ public class ViewDocumentFormController {
         model.addAttribute("perm_canRejectForm", perm_canRejectForm);
         model.addAttribute("perm_canViewReason", perm_canViewReason);
 
-        // role flag도 필요하면 같이
+        // role flag
         model.addAttribute("perm_isThrAdmin", isThrAdmin);
         model.addAttribute("perm_isSysAdmin", isSysAdmin);
         model.addAttribute("perm_isComAdmin", isComAdmin);
         model.addAttribute("perm_isSecAdmin", isSecAdmin);
+
+        // 기존 화면들이 perm_canEdit / perm_canDelete 로 읽는 케이스를 대비해서 "항상" 내려준다.
+        model.addAttribute("perm_canEdit", canEditForm);
+        model.addAttribute("perm_canDelete", canDeleteRequest);
+
+        // 이미 쓰고 있지만, 템플릿이 perm_canApprove 로 읽으니 확실하게 보장
+        model.addAttribute("perm_canApprove", canApprove);
     }
+
+    private Set<String> extractAuthorities(CustomUser customUser) {
+        if (customUser == null || customUser.getAuthorities() == null) return Set.of();
+        return customUser.getAuthorities().stream()
+                .filter(a -> a != null && a.getAuthority() != null && !a.getAuthority().isBlank())
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+    }
+
+    // ===== routes =====
 
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN','EMPLOYEE')")
     @GetMapping("/forms")
