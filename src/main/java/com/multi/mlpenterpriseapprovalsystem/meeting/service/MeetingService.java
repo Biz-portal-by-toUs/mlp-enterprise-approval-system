@@ -444,14 +444,24 @@ public class MeetingService {
         meeting.markAiDone(request.getSttText(), request.getAiText());
         meeting.setAudioObjectKey(request.getObjectKey());
 
-        // ✅ 알림 전송 로직 추가 (작성자에게 알림)
-        notificationService.sendNotification(
-                meeting.getWriter(),
-                NotificationType.MEETING,
-                "회의록 요약 완료", // UI에 제목으로 표시됨
-                "\"" + meeting.getTitle() + "\" 회의의 AI 요약이 완료되었습니다.",
-                "/meeting/" + meeting.getMeetNo()
-        );
+        List<MeetingEmp> meetingEmps = meetingEmpRepository.findAllByMeeting_MeetNo(meetNo);
+
+        String title = "회의록 요약 완료";
+        String content = "\"" + meeting.getTitle() + "\" 회의의 AI 요약이 완료되었습니다.";
+        String url = "/meeting/" + meeting.getMeetNo();
+
+        for (MeetingEmp me : meetingEmps) {
+            Employee receiver = me.getEmployee();
+
+
+            notificationService.sendNotification(
+                    receiver,
+                    NotificationType.MEETING,
+                    title,
+                    content,
+                    url
+            );
+        }
 
         return meeting.getMeetNo();
     }
