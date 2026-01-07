@@ -246,7 +246,7 @@ public class MailController {
     @PostMapping("/drafts/{mailId}/send")
     public ResponseEntity<ResponseDto<ResMailSendDto>> sendDraft(
             @PathVariable(name = "mailId") String mailId,
-            @RequestBody ReqMailDraftSendDto req,
+            @RequestBody(required = false) ReqMailDraftSendDto req,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();

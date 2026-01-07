@@ -805,11 +805,16 @@
                     if (!title && !text) return showErr('제목 또는 내용을 입력한 후 임시저장하세요.');
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
+                    const plan = buildSendPlan();
+
                     const body = {
                         mailId: getDraftMailId() || null,
                         title,
-                        cnttJson
+                        cnttJson,
+                        receiverEmpIds: plan.uiReceivers
                     };
+
+                    const bodyObj = plan.uiReceivers.length > 0 ? { receiverEmpIds: plan.uiReceivers } : null;
 
                     const data = await fetchJsonWithDto(`/api/v1/mails/drafts`, {
                         method: 'POST',
@@ -819,7 +824,7 @@
                             'Accept': 'application/json',
                             ...getCsrfHeaders()
                         },
-                        body: JSON.stringify(body)
+                        body: bodyObj ? JSON.stringify(bodyObj) : null
                     });
 
                     if (data?.mailId) setDraftMailId(data.mailId);
@@ -962,8 +967,28 @@
                             window.__mailEditorSetJsonString(cnttJson);
                         }
 
-                        // ✅ (선택) draft 상세에 receiver 목록이 있다면 여기서 토큰 복원 가능
-                        // 지금 ResMailDetailDto에 receivers(문자열)만 있어 보이니, empId 리스트로 내려주면 복원 쉬움.
+                        /// draft 상세 receiverEmpIds로 토큰 복원
+                        if (Array.isArray(data.receiverEmpIds)) {
+                            selectedReceivers.clear();
+
+                            // 내게쓰기 체크 여부 복원(서버가 self를 receiverEmpIds에 넣어놨다면 체크 ON으로)
+                            const me = (window.__ME_EMP_ID || '').trim();
+                            const hasMe = me && data.receiverEmpIds.some(id => (id || '').trim() === me);
+                            const selfCb = document.getElementById('selfWrite');
+                            if (selfCb) selfCb.checked = !!hasMe;
+
+                            // receiverEmpIds는 empId만 있으니, 우선 empId 기반 토큰 표시(이름은 empId로 대체)
+                            data.receiverEmpIds.forEach(id => {
+                                const empId = (id || '').trim();
+                                if (!empId) return;
+                                selectedReceivers.set(empId, { empId, empName: empId, depName: '', posName: '' });
+                            });
+
+                            renderReceiverTokens();
+
+                            // 내게쓰기 토글 로직 적용(체크박스 기준으로 me 토큰 유지/제거 정리)
+                            applySelfWriteToggle();
+                        }
 
                     }catch(e){
                         console.error(e);

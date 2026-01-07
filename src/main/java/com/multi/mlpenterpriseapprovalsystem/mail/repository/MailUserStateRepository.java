@@ -18,7 +18,6 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
         from MailUserState mus
         where mus.mail.mailNo = :mailNo
           and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
-          and mus.deletedAt is null
         order by mus.user.empName asc
     """)
     List<String> findRecipientNamesByMailNo(@Param("mailNo") Long mailNo);
@@ -28,7 +27,6 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
         from MailUserState mus
         where mus.mail.mailNo = :mailNo
           and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
-          and mus.deletedAt is null
         order by mus.user.empName asc
     """)
     List<String> findRecipientDisplayByMailNo(@Param("mailNo") Long mailNo);

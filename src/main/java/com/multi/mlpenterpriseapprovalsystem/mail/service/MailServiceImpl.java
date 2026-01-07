@@ -174,7 +174,6 @@ public class MailServiceImpl implements MailService {
 
         String receivers = null;
         if (mus.getRole() == MailRole.SENDER) {
-            // mailNo 기준으로 통일
             List<String> names = mailUserStateRepository.findRecipientNamesByMailNo(m.getMailNo());
             receivers = (names == null || names.isEmpty()) ? "-" : String.join(", ", names);
         }
@@ -199,8 +198,8 @@ public class MailServiceImpl implements MailService {
 
         String receivers = null;
         if (mus.getRole() == MailRole.SENDER) {
-            // mailNo 기준
-            List<String> receiverDisplays = mailUserStateRepository.findRecipientDisplayByMailNo(mail.getMailNo());
+            List<String> receiverDisplays =
+                    mailUserStateRepository.findRecipientDisplayByMailNo(mail.getMailNo());
             receivers = receiverDisplays.stream()
                     .distinct()
                     .reduce((a, b) -> a + ", " + b)
