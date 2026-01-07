@@ -58,4 +58,10 @@ public class ViewMailController {
         model.addAttribute("mailId", mailId);
         return "mail/detail";
     }
+
+    // 임시보관함
+    @GetMapping("/drafts")
+    public String drafts() {
+        return "mail/drafts";
+    }
 }
