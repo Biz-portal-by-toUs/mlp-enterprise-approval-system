@@ -43,8 +43,13 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             where mus.user.empId = :userEmpId
               and mus.role = :role
               and mus.deletedAt is null
-              and m.sender.empId <> mus.user.empId
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+              and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+              and exists (
+                  select 1
+                  from MailUserState x
+                  where x.mail.mailNo = m.mailNo
+                    and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+              )
             order by m.mailNo desc
         """,
             countQuery = """
@@ -54,14 +59,19 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             where mus.user.empId = :userEmpId
               and mus.role = :role
               and mus.deletedAt is null
-              and m.sender.empId <> mus.user.empId
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+              and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+              and exists (
+                  select 1
+                  from MailUserState x
+                  where x.mail.mailNo = m.mailNo
+                    and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+              )
         """
     )
     Page<MailUserState> findMailbox(
             @Param("userEmpId") String userEmpId,
             @Param("role") MailRole role,
-            @Param("q") String q,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 
@@ -75,8 +85,13 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             where mus.user.empId = :userEmpId
               and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
               and mus.deletedAt is null
-              and m.sender.empId = mus.user.empId
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+              and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+              and not exists (
+                  select 1
+                  from MailUserState x
+                  where x.mail.mailNo = m.mailNo
+                    and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+              )
             order by m.mailNo desc
         """,
             countQuery = """
@@ -86,13 +101,18 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             where mus.user.empId = :userEmpId
               and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
               and mus.deletedAt is null
-              and m.sender.empId = mus.user.empId
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+              and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+              and not exists (
+                  select 1
+                  from MailUserState x
+                  where x.mail.mailNo = m.mailNo
+                    and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+              )
         """
     )
     Page<MailUserState> findSelfMailbox(
             @Param("userEmpId") String userEmpId,
-            @Param("q") String q,
+            @Param("keyword") String keyword,
             Pageable pageable
     );
 
