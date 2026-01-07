@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.documentform.form.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.*;
@@ -35,9 +36,10 @@ public class DocumentFormController {
 
     private final DocumentFormService documentFormService;
 
+    // 문서양식 생성
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PostMapping
-    public ResponseEntity<Long> createDocumentForm(
+    public ResponseEntity<ResponseDto<Long>> createDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
             @Valid @RequestBody ReqDocumentFormCreateDto req
     ) {
@@ -46,12 +48,16 @@ public class DocumentFormController {
         Long docfoNo = documentFormService.createDocumentForm(
                 req, customUser.getComId(), customUser.getUsername()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 생성 성공", docfoNo));
     }
 
+    // 문서양식 수정
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PutMapping("/{docfoNo}")
-    public ResponseEntity<Long> updateDocumentForm(
+    public ResponseEntity<ResponseDto<Long>> updateDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormCreateDto req
@@ -62,13 +68,16 @@ public class DocumentFormController {
         Long newDocfoNo = documentFormService.updateDocumentForm(
                 docfoNo, req, customUser.getComId(), customUser.getUsername()
         );
-        return ResponseEntity.ok(newDocfoNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 수정 성공", newDocfoNo));
     }
 
     // 삭제 요청
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @DeleteMapping("/{docfoNo}")
-    public ResponseEntity<Void> requestDelete(
+    public ResponseEntity<ResponseDto<Void>> requestDelete(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo
     ) {
@@ -76,17 +85,20 @@ public class DocumentFormController {
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
         documentFormService.requestDelete(docfoNo, customUser.getComId(), customUser);
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 삭제 요청 성공", null));
     }
 
     // 목록 조회
     @GetMapping
-    public ResponseEntity<Page<ResDocumentFormListDto>> getForms(
+    public ResponseEntity<ResponseDto<Page<ResDocumentFormListDto>>> getForms(
             @AuthenticationPrincipal CustomUser customUser,
             @RequestParam(name = "stat", defaultValue = "A") String stat,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "docfoName", required = false) String docfoName,
-            @PageableDefault(size = 15) Pageable pageable
+            @PageableDefault(size = 10) Pageable pageable
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
 
@@ -102,28 +114,35 @@ public class DocumentFormController {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        return ResponseEntity.ok(
-                documentFormService.findListByStatuses(stats, customUser.getComId(), keyword, pageable)
-        );
+        Page<ResDocumentFormListDto> res =
+                documentFormService.findListByStatuses(stats, customUser.getComId(), keyword, pageable);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 목록 조회 성공", res));
     }
 
+    // 상세 조회
     @GetMapping("/{docfoNo}")
-    public ResponseEntity<ResDocumentFormDetailDto> getDocumentForm(
+    public ResponseEntity<ResponseDto<ResDocumentFormDetailDto>> getDocumentForm(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
-        return ResponseEntity.ok(
-                documentFormService.findDetailById(docfoNo, customUser.getComId())
-        );
+        ResDocumentFormDetailDto res =
+                documentFormService.findDetailById(docfoNo, customUser.getComId());
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 상세 조회 성공", res));
     }
 
     // 상태 변경 (승인/반려 등)
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/status")
-    public ResponseEntity<Void> changeStatus(
+    public ResponseEntity<ResponseDto<Void>> changeStatus(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormStatusDto req
@@ -131,8 +150,6 @@ public class DocumentFormController {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
-        // 반려/삭제반려 사유가 필요한 경우는 서비스에서 도메인 규칙으로 검사하고
-        // 필요 시 ErrorCode.REJECT_REASON_REQUIRED 또는 별도 코드로 던지는 걸 권장
         documentFormService.changeApproveOrReject(
                 docfoNo,
                 customUser.getComId(),
@@ -140,13 +157,15 @@ public class DocumentFormController {
                 req.rejectReason()
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 상태 변경 성공", null));
     }
 
     // 삭제 승인
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/delete-approve")
-    public ResponseEntity<Void> approveDelete(
+    public ResponseEntity<ResponseDto<Void>> approveDelete(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo
     ) {
@@ -154,13 +173,16 @@ public class DocumentFormController {
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
         documentFormService.approveDelete(docfoNo, customUser.getComId());
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 삭제 승인 성공", null));
     }
 
     // 삭제 반려
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN')")
     @PatchMapping("/{docfoNo}/delete-reject")
-    public ResponseEntity<Void> rejectDelete(
+    public ResponseEntity<ResponseDto<Void>> rejectDelete(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormStatusDto req
@@ -173,58 +195,84 @@ public class DocumentFormController {
         }
 
         documentFormService.rejectDelete(docfoNo, customUser.getComId(), req.rejectReason());
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 삭제 반려 성공", null));
     }
 
+    // 임시저장 생성
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PostMapping("/temp")
-    public ResponseEntity<Long> createTemp(
+    public ResponseEntity<ResponseDto<Long>> createTemp(
             @AuthenticationPrincipal CustomUser customUser,
             @Valid @RequestBody ReqDocumentFormTempDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
 
-        Long docfoNo = documentFormService.createTemp(req, customUser.getComId(), customUser.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(docfoNo);
+        Long docfoNo = documentFormService.createTemp(
+                req, customUser.getComId(), customUser.getUsername()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 임시저장 생성 성공", docfoNo));
     }
 
+    // 임시저장 저장/수정
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @PutMapping("/{docfoNo}/temp")
-    public ResponseEntity<Void> saveTemp(
+    public ResponseEntity<ResponseDto<Void>> saveTemp(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "docfoNo") Long docfoNo,
             @Valid @RequestBody ReqDocumentFormTempDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+        if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
-        documentFormService.saveTemp(docfoNo, req, customUser.getComId(), customUser.getUsername());
-        return ResponseEntity.noContent().build();
+        documentFormService.saveTemp(
+                docfoNo, req, customUser.getComId(), customUser.getUsername()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 임시저장 저장 성공", null));
     }
 
+    // 내 임시저장 목록
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @GetMapping("/temp")
-    public ResponseEntity<Page<ResDocumentFormListDto>> getMyTempForms(
+    public ResponseEntity<ResponseDto<Page<ResDocumentFormListDto>>> getMyTempForms(
             @AuthenticationPrincipal CustomUser customUser,
             @RequestParam(name = "q", required = false) String q,
             @PageableDefault(size = 10) Pageable pageable
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
 
-        return ResponseEntity.ok(
-                documentFormService.findMyTempList(customUser.getComId(), customUser.getUsername(), q, pageable)
-        );
+        Page<ResDocumentFormListDto> res =
+                documentFormService.findMyTempList(
+                        customUser.getComId(), customUser.getUsername(), q, pageable
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 임시저장 목록 조회 성공", res));
     }
 
+    // 임시저장 삭제(완전삭제)
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @DeleteMapping("/temp/{docfoNo}")
-    public ResponseEntity<Void> deleteTemp(
+    public ResponseEntity<ResponseDto<Void>> deleteTemp(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long docfoNo
+            @PathVariable(name = "docfoNo") Long docfoNo
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
         documentFormService.deleteTemp(docfoNo, customUser.getComId(), customUser.getUsername());
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 임시저장 삭제 성공", null));
     }
 }
