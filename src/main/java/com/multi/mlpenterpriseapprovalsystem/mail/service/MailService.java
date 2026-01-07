@@ -1,8 +1,11 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailDraftSaveDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailDraftSendDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailSendDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailDraftSavedDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailListDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailSendDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
@@ -26,7 +29,7 @@ public interface MailService {
 
     Page<ResMailListDto> getInboxByRoles(String userEmpId, List<MailRole> roles, Pageable pageable); // 추후 확장 시 사용
 
-    Page<ResMailListDto> getSent(String senderEmpId, Pageable pageable);
+    Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable);
 
     ResMailDetailDto getDetail(String mailId, String viewerEmpId);
 

@@ -129,7 +129,7 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
 
     // 특정 직원의 안 읽은(isRead = false) 메일 개수를 카운트
     int countByUserAndIsReadFalse(Employee User);
-}
+
     // 보낸 메일 상세에서 "수신인(이름+사번)" 뽑기 (RECIPIENT만)
     @Query("""
         select concat(mus.user.empName, '(', mus.user.empId, ')')
