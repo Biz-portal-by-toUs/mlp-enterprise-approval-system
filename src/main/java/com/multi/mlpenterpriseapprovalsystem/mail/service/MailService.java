@@ -1,12 +1,15 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.service;
 
-import com.multi.mlpenterpriseapprovalsystem.mail.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
-import org.springframework.data.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailListDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Please explain the class!!!
@@ -20,7 +23,7 @@ public interface MailService {
     ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req);
 
 
-    Page<ResMailListDto> getInbox(String userEmpId, MailRole role, Pageable pageable);
+    Page<ResMailListDto> getInbox(CustomUser user, Pageable pageable);
 
     Page<ResMailListDto> getInboxByRoles(String userEmpId, List<MailRole> roles, Pageable pageable); // 추후 확장 시 사용
 

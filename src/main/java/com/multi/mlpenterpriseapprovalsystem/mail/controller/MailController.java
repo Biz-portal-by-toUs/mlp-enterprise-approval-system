@@ -1,16 +1,23 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.controller;
 
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.service.*;
-import lombok.*;
-import org.springframework.data.domain.*;
-import org.springframework.data.web.*;
-import org.springframework.http.*;
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailListDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
+import com.multi.mlpenterpriseapprovalsystem.mail.service.MailService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Please explain the class!!!
@@ -39,12 +46,11 @@ public class MailController {
 
     // 받은 메일함(역할 1개)
     @GetMapping("/inbox")
-    public ResponseEntity<Page<ResMailListDto>> inbox(
-            @RequestParam("userEmpId") String userEmpId,
-            @RequestParam("role") MailRole role,
+    public ResponseEntity<ResponseDto<Page<ResMailListDto>>> inbox(
+            @AuthenticationPrincipal CustomUser user,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
     ) {
-        return ResponseEntity.ok(mailService.getInbox(userEmpId, role, pageable));
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "받은 메일함 목록 조회 성공", mailService.getInbox(user, pageable)));
     }
 
     // 받은 메일함(역할 여러개) - 추후 확장용
