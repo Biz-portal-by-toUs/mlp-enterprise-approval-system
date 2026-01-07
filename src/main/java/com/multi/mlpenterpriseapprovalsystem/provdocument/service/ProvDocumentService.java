@@ -10,6 +10,10 @@ import com.multi.mlpenterpriseapprovalsystem.common.storage.service.AttachmentSe
 import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.repository.ProvDocumentRepository;
@@ -19,6 +23,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 사내규정 서비스
@@ -38,6 +44,8 @@ public class ProvDocumentService {
     private final S3UrlService s3UrlService;
     private final AttachmentServiceImpl attachmentService;
     private final AttachmentRepository attachmentRepository;
+    private final EmployeeRepository employeeRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Long create(String comId, ReqProvDocumentCreateDto req) {
@@ -188,6 +196,12 @@ public class ProvDocumentService {
         }
 
         doc.markDone(request.getChunkCnt() == null ? 0 : request.getChunkCnt());
+        String comId=doc.getCompany().getComId();
+
+        List<Employee> emps = employeeRepository.findAllByCompany_ComId(comId);
+        for(Employee emp : emps) {
+            notificationService.sendNotification(emp, NotificationType.OTHER, "챗봇 사용 가능 알림", "이제부터\""+doc.getDocTitle()+"\" 에 대한 질의를 챗봇에서 사용할 수 있습니다.","/employees");
+        }
         return doc.getProvNo();
     }
 
