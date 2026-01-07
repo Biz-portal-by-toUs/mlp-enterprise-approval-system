@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.service;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.client.EmbeddingClient;
@@ -10,9 +10,9 @@ import com.multi.mlpenterpriseapprovalsystem.common.storage.service.AttachmentSe
 import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.domain.ProvDocument;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.dto.*;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.repository.ProvDocumentRepository;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.repository.ProvDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -44,7 +44,6 @@ public class ProvDocumentService {
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
-        // 파일 정보는 나중에 ai-request 단계에서 업데이트하므로 초기엔 null/0으로 설정
         ProvDocument doc = ProvDocument.create(
                 company,
                 req.getDocTitle(),
@@ -70,11 +69,9 @@ public class ProvDocumentService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        // 파일 정보 업데이트 및 상태 변경
         doc.markUploaded(req.getOriginalName(), req.getObjectKey(), req.getSize());
         doc.markProcessing();
 
-        // AI 임베딩 요청 (이벤트 방식이 권장되나 기존 코드 유지)
         ReqFastApiProvEmbeddingDto embeddingReq = ReqFastApiProvEmbeddingDto.builder()
                 .provNo(doc.getProvNo())
                 .comId(comId)
@@ -171,8 +168,6 @@ public class ProvDocumentService {
         }
         attachmentRepository.findAllByRefForUpdate(comId, AttachmentDomain.PROV_DOCUMENT, provNo)
                 .forEach(attachment -> {
-                    // attachmentService.softDelete()를 호출하여 S3와 DB 데이터를 삭제합니다.
-                    // 위에서 수정한 로직 덕분에 PROV_DOCUMENT 도메인은 하드 삭제가 진행됩니다.
                     attachmentService.softDelete(attachment.getAttachmentId(), user);
                 });
         provDocumentRepository.delete(doc);

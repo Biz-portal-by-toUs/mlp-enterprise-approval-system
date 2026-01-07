@@ -2,8 +2,8 @@ package com.multi.mlpenterpriseapprovalsystem.common.client;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.dto.ReqFastApiProvDeleteDto;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.dto.ReqFastApiProvEmbeddingDto;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.ReqFastApiProvDeleteDto;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.ReqFastApiProvEmbeddingDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;

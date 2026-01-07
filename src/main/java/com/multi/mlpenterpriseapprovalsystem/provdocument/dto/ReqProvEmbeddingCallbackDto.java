@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.dto;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

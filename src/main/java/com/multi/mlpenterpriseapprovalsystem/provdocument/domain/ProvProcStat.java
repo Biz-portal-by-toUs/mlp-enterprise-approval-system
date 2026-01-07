@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.domain;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.domain;
 
 /**
  * 임베딩 상태 ENUM
