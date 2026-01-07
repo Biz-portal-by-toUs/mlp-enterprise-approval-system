@@ -285,13 +285,28 @@ function bootViewer(mountEl, json) {
     return viewer
 }
 
+function isResponseDto(obj) {
+    return obj && typeof obj === 'object' && ('data' in obj) && ('message' in obj || 'status' in obj)
+}
+
+async function unwrapResponseDto(res) {
+    // res.json() 결과를 받아서 ResponseDto면 data만 반환
+    const body = await res.json().catch(() => null)
+    if (!body) return null
+    return isResponseDto(body) ? body.data : body
+}
+
 async function fetchDetail(docfoNo) {
     const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
     if (!res.ok) {
         const t = await res.text().catch(() => '')
         throw new Error(`상세 조회 실패: HTTP ${res.status} ${t}`)
     }
-    return res.json()
+
+    // ResponseDto 언랩
+    const detail = await unwrapResponseDto(res)
+    if (!detail) throw new Error('상세 조회 응답이 비어있습니다.')
+    return detail
 }
 
 async function deleteForm(docfoNo) {
@@ -300,6 +315,7 @@ async function deleteForm(docfoNo) {
         const t = await res.text().catch(() => '')
         throw new Error(`삭제 실패: HTTP ${res.status} ${t}`)
     }
+
     return true
 }
 

@@ -11,6 +11,7 @@ import java.util.List;
  * @filename : ResDocumentFormCategoryNameDto
  * @since : 2025-12-24 수요일
  */
+
 public record ResDocumentFormDetailDto(
         Long docfoNo,
         String docfoName,

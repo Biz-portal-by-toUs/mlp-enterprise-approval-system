@@ -90,6 +90,16 @@
         return res.ok;
     }
 
+    function isResponseDto(obj) {
+        return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+    }
+
+    async function unwrapJson(res) {
+        const body = await res.json().catch(() => null);
+        if (!body) return null;
+        return isResponseDto(body) ? body.data : body;
+    }
+
     async function apiFetch(url, options = {}, _retried = false) {
         const headers = new Headers(options.headers || {});
         if (!headers.has('Accept')) headers.set('Accept', 'application/json');

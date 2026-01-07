@@ -7,5 +7,6 @@ package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res;
  * @filename : ResDocumentFormCategoryNameDto
  * @since : 2025-12-24 수요일
  */
+
 public record ResDocumentFormCategoryNameDto(String name) {
 }
