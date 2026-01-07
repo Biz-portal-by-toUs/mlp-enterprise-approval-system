@@ -47,6 +47,7 @@ public class EmployeeService {
     private final PositionsRepository positionsRepository;
     private final PasswordEncoder passwordEncoder;
     private final ChatRedisPublisher chatRedisPublisher;
+    private final AttendanceRepository attendanceRepository;
 
     /**
      * ✅ 이름순 정렬 + 검색 + 커서 기반 무한스크롤
