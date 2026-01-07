@@ -4,11 +4,10 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.service.*;
-import lombok.*;
+import com.multi.mlpenterpriseapprovalsystem.mail.service.MailService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.data.web.*;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  * 메일 Rest API 컨트롤러
  *
  * @author : 정종원
- * @filename : DocFormService
+ * @filename : MailController
  * @since : 2026-01-05 월요일
  */
 
@@ -42,7 +41,7 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "메일 전송 성공", res));
     }
 
-    // 받은 메일함(역할 1개)
+    // 받은 메일함
     @GetMapping("/inbox")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> inbox(
             @RequestParam(name = "keyword", required = false) String keyword,
@@ -57,7 +56,7 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "받은 메일함 조회 성공", res));
     }
 
-    // 보낸 메일함(서버 인증 기반)
+    // 보낸 메일함
     @GetMapping("/sent")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> sent(
             @RequestParam(value = "q", required = false) String q,
@@ -72,7 +71,7 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "보낸 메일함 조회 성공", res));
     }
 
-    // 휴지통 조회(서버 인증 기반)
+    // 휴지통 조회
     @GetMapping("/trash")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> trash(
             @PageableDefault(size = 10, sort = "deletedAt") Pageable pageable,
@@ -86,104 +85,143 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 조회 성공", res));
     }
 
-    // 메일 상세 조회(서버 인증 기반)
-    @GetMapping("/{mailId}")
+    // =========================
+    // ✅ mailNo 기준 상세/상태 API
+    // =========================
+
+    // 메일 상세 조회 (mailNo 기준)
+    @GetMapping("/{mailNo}")
     public ResponseEntity<ResponseDto<ResMailDetailDto>> detail(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        ResMailDetailDto res = mailService.getDetail(mailId, empId);
+        ResMailDetailDto res = mailService.getDetail(mailNo, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "메일 상세 조회 성공", res));
     }
 
-    // 읽음 처리(서버 인증 기반)
-    @PatchMapping("/{mailId}/read")
+    // 읽음 처리 (mailNo 기준)
+    @PatchMapping("/{mailNo}/read")
     public ResponseEntity<ResponseDto<Void>> markRead(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        mailService.markAsRead(mailId, empId);
+        mailService.markAsRead(mailNo, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "읽음 처리 성공", null));
     }
 
-    // 휴지통 이동(서버 인증 기반)
-    @PatchMapping("/{mailId}/trash")
+    // 휴지통 이동 (mailNo 기준)
+    @PatchMapping("/{mailNo}/trash")
     public ResponseEntity<ResponseDto<Void>> moveToTrash(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        mailService.moveToTrash(mailId, empId);
+        mailService.moveToTrash(mailNo, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 이동 성공", null));
     }
 
-    // 휴지통 복원(서버 인증 기반)
-    @PatchMapping("/{mailId}/restore")
+    // 휴지통 복원 (mailNo 기준)
+    @PatchMapping("/{mailNo}/restore")
     public ResponseEntity<ResponseDto<Void>> restore(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        mailService.restoreFromTrash(mailId, empId);
+        mailService.restoreFromTrash(mailNo, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 복원 성공", null));
     }
 
-    // 완전 삭제(서버 인증 기반)
-    @DeleteMapping("/{mailId}/purge")
+    // 완전 삭제 (mailNo 기준)
+    @DeleteMapping("/{mailNo}/purge")
     public ResponseEntity<ResponseDto<Void>> purge(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        mailService.purge(mailId, empId);
+        mailService.purge(mailNo, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "완전 삭제 성공", null));
     }
 
-    @PatchMapping("/{mailId}/prior")
+    // 중요 메일 설정 (mailNo 기준)
+    @PatchMapping("/{mailNo}/prior")
     public ResponseEntity<ResponseDto<Void>> setPrior(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @RequestParam("prior") boolean prior,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        mailService.setPrior(mailId, empId, prior);
+        mailService.setPrior(mailNo, empId, prior);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "중요 메일 설정 성공", null));
     }
 
-    @PatchMapping("/{mailId}/prior/toggle")
+    // 중요 메일 토글 (mailNo 기준)
+    @PatchMapping("/{mailNo}/prior/toggle")
     public ResponseEntity<ResponseDto<Void>> togglePrior(
-            @PathVariable String mailId,
+            @PathVariable Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        mailService.togglePrior(mailId, empId);
+        mailService.togglePrior(mailNo, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "중요 메일 토글 성공", null));
     }
 
-    // 임시저장 목록
+    // =========================
+    // (선택) 🔻mailId 기반 호환 API (나중에 제거)
+    // =========================
+
+    @Deprecated
+    @GetMapping("/by-id/{mailId}")
+    public ResponseEntity<ResponseDto<ResMailDetailDto>> detailByMailId(
+            @PathVariable String mailId,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        ResMailDetailDto res = mailService.getDetailByMailId(mailId, empId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "메일 상세 조회 성공(by mailId)", res));
+    }
+
+    @Deprecated
+    @PatchMapping("/by-id/{mailId}/read")
+    public ResponseEntity<ResponseDto<Void>> markReadByMailId(
+            @PathVariable String mailId,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        mailService.markAsReadByMailId(mailId, empId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "읽음 처리 성공(by mailId)", null));
+    }
+
+    // ===== drafts =====
+
     @GetMapping("/drafts")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> drafts(
             @RequestParam(value = "q", required = false) String q,
@@ -198,7 +236,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "임시저장 목록 조회 성공", res));
     }
 
-    // 임시저장 상세
     @GetMapping("/drafts/{mailId}")
     public ResponseEntity<ResponseDto<ResMailDetailDto>> draftDetail(
             @PathVariable String mailId,
@@ -212,7 +249,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "임시저장 상세 조회 성공", res));
     }
 
-    // 임시저장 저장/수정
     @PostMapping("/drafts")
     public ResponseEntity<ResponseDto<ResMailDraftSavedDto>> saveDraft(
             @RequestBody ReqMailDraftSaveDto req,
@@ -226,7 +262,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "임시저장 성공", res));
     }
 
-    // 임시저장 삭제(완전삭제)
     @DeleteMapping("/drafts/{mailId}")
     public ResponseEntity<ResponseDto<Void>> deleteDraft(
             @PathVariable String mailId,
@@ -240,7 +275,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "임시저장 삭제 성공", null));
     }
 
-    // 임시저장 발송
     @PostMapping("/drafts/{mailId}/send")
     public ResponseEntity<ResponseDto<ResMailSendDto>> sendDraft(
             @PathVariable String mailId,

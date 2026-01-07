@@ -115,4 +115,16 @@ public interface MailRepository extends JpaRepository<Mail, Long> {
 
     // 내 임시저장 개수
     long countBySender_EmpIdAndSavedAtIsNotNull(String senderEmpId);
+
+    // (선택) mailNo 기준 단건 조회
+    Optional<Mail> findByMailNo(Long mailNo);
+
+    // (선택) mailNo 기준 상세 + sender fetch
+    @Query("""
+        select m
+        from Mail m
+        join fetch m.sender
+        where m.mailNo = :mailNo
+    """)
+    Optional<Mail> findDetailByMailNo(@Param("mailNo") Long mailNo);
 }

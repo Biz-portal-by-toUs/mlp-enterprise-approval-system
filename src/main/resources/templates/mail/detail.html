@@ -116,7 +116,6 @@
 
             <section class="md-card">
                 <div class="md-meta">
-                    <div class="md-k">메일 ID</div><div class="md-v" id="mailIdTxt">-</div>
                     <div class="md-k">제목</div><div class="md-v" id="titleTxt">-</div>
 
                     <div class="md-k" id="partyLabel">-</div><div class="md-v" id="partyTxt">-</div>
@@ -136,10 +135,11 @@
 
             <script type="module">
                 // ===== utils =====
-                function getMailIdFromPath() {
+                function getMailNoFromPath() {
                     const parts = window.location.pathname.split('/').filter(Boolean);
-                    // /mail/{mailId}
-                    return parts.length >= 2 ? parts[1] : '';
+                    const v = parts.length >= 2 ? parts[1] : '';
+                    const n = Number(v);
+                    return Number.isFinite(n) ? n : null;
                 }
 
                 function fmtDate(iso) {
@@ -239,17 +239,16 @@
                 }
 
                 async function loadDetail() {
-                    const mailId = getMailIdFromPath();
+                    const mailNo = getMailNoFromPath();
                     const box = document.getElementById('contentBox');
 
-                    if (!mailId) {
-                        box.textContent = 'mailId가 없습니다.';
+                    if (!mailNo) {
+                        box.textContent = 'mailNo가 없습니다.';
                         return;
                     }
 
-                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}`);
+                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}`);
 
-                    setText('mailIdTxt', data.mailId ?? mailId);
                     setText('titleTxt', data.title ?? '-');
                     setText('createdAtTxt', fmtDate(data.createdAt));
 
@@ -283,7 +282,7 @@
                     }
 
                     // 읽음 처리(실패해도 무시)
-                    try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read`); } catch (e) {}
+                    try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/read`); } catch (e) {}
 
                     const isTrashed = !!data.deletedAt;
 
@@ -300,18 +299,18 @@
 
                     document.getElementById('btnTrash').onclick = async () => {
                         if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/trash`);
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`);
                         location.href = '/mail/trash';
                     };
 
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/restore`);
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`);
                         location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
                     };
 
                     document.getElementById('btnPurge').onclick = async () => {
                         if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailId)}/purge`);
+                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`);
                         location.href = '/mail/trash';
                     };
                 }
