@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.service;
 
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.mail.domain.Mail;
@@ -9,18 +11,19 @@ import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
 import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailRepository;
 import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailUserStateRepository;
-import com.multi.mlpenterpriseapprovalsystem.notification.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.notification.service.*;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +39,7 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req) {
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
-                .orElseThrow(() -> new NoSuchElementException("발신자(empId) 없음: " + senderEmpId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
         String mailId = generateMailId(senderEmpId);
 
@@ -51,9 +54,17 @@ public class MailServiceImpl implements MailService {
             Set<String> unique = new LinkedHashSet<>(req.receiverEmpIds());
             for (String recvEmpId : unique) {
                 Employee recv = employeeRepository.findByEmpId(recvEmpId)
-                        .orElseThrow(() -> new NoSuchElementException("수신자(empId) 없음: " + recvEmpId));
+                        .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
+
                 mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT));
-                noti.sendNotification(recv.getEmpId(), NotificationType.MAIL, "[메일]", saved.getTitle(), "/mail/"+mail.getMailNo());
+
+                noti.sendNotification(
+                        recv.getEmpId(),
+                        NotificationType.MAIL,
+                        "[메일]",
+                        saved.getTitle(),
+                        "/mail/" + mail.getMailNo()
+                );
             }
         }
 
@@ -91,7 +102,7 @@ public class MailServiceImpl implements MailService {
     @Transactional(readOnly = true)
     public ResMailDetailDto getDetail(String mailId, String viewerEmpId) {
         MailUserState mus = mailUserStateRepository.findState(mailId, viewerEmpId)
-                .orElseThrow(() -> new AccessDeniedException("해당 메일에 대한 접근 권한이 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_ACCESS_DENIED));
 
         Mail mail = mus.getMail();
 
@@ -102,7 +113,6 @@ public class MailServiceImpl implements MailService {
         if (mus.getRole() == MailRole.SENDER) {
             List<String> receiverDisplays = mailUserStateRepository.findRecipientDisplayByMailId(mailId);
 
-            // 혹시 데이터에 중복이 있으면 방어적으로 중복 제거
             receivers = receiverDisplays.stream()
                     .distinct()
                     .reduce((a, b) -> a + ", " + b)
@@ -129,8 +139,7 @@ public class MailServiceImpl implements MailService {
     @Override
     @Transactional
     public void markAsRead(String mailId, String userEmpId) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
+        MailUserState mus = mustFindState(mailId, userEmpId);
         mus.markRead();
     }
 
@@ -138,8 +147,7 @@ public class MailServiceImpl implements MailService {
     @Override
     @Transactional
     public void moveToTrash(String mailId, String userEmpId) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
+        MailUserState mus = mustFindState(mailId, userEmpId);
         mus.moveToTrash(LocalDateTime.now());
     }
 
@@ -147,8 +155,7 @@ public class MailServiceImpl implements MailService {
     @Override
     @Transactional
     public void restoreFromTrash(String mailId, String userEmpId) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
+        MailUserState mus = mustFindState(mailId, userEmpId);
         mus.restore();
     }
 
@@ -156,11 +163,10 @@ public class MailServiceImpl implements MailService {
     @Override
     @Transactional
     public void purge(String mailId, String userEmpId) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
+        MailUserState mus = mustFindState(mailId, userEmpId);
 
         if (mus.getDeletedAt() == null) {
-            throw new IllegalStateException("완전 삭제는 휴지통을 거친 메일만 가능합니다. mailId=" + mailId);
+            throw new CustomException(ErrorCode.MAIL_PURGE_ONLY_AFTER_TRASH);
         }
         mailUserStateRepository.delete(mus);
     }
@@ -194,7 +200,7 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public ResMailDraftSavedDto saveDraft(String senderEmpId, ReqMailDraftSaveDto req) {
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
-                .orElseThrow(() -> new NoSuchElementException("발신자(empId) 없음: " + senderEmpId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
         String title = (req.title() == null) ? "" : req.title().trim();
         String cnttJson = (req.cnttJson() == null) ? "{}" : req.cnttJson();
@@ -202,18 +208,14 @@ public class MailServiceImpl implements MailService {
         Mail mail;
         if (req.mailId() == null || req.mailId().isBlank()) {
             String mailId = generateMailId(senderEmpId);
-
-            // 신규 임시저장 생성
             mail = Mail.createDraft(mailId, title, cnttJson, sender);
 
         } else {
-            // 기존 초안 업데이트
             mail = mailRepository.findDraftDetail(req.mailId(), senderEmpId)
-                    .orElseThrow(() -> new AccessDeniedException("초안이 없거나 권한이 없습니다. mailId=" + req.mailId()));
+                    .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
 
-            // 방어: 혹시 이미 발송된 메일이면 막기
             if (!mail.isDraft()) {
-                throw new IllegalStateException("이미 발송된 메일은 임시저장 수정할 수 없습니다. mailId=" + req.mailId());
+                throw new CustomException(ErrorCode.MAIL_ALREADY_SENT);
             }
 
             mail.updateDraft(title, cnttJson);
@@ -249,9 +251,8 @@ public class MailServiceImpl implements MailService {
     @Transactional(readOnly = true)
     public ResMailDetailDto getDraftDetail(String mailId, String senderEmpId) {
         Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
-                .orElseThrow(() -> new AccessDeniedException("초안이 없거나 권한이 없습니다. mailId=" + mailId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
 
-        // draft는 mus가 없으니 role은 SENDER로 고정, receivers도 비움
         return new ResMailDetailDto(
                 mail.getMailId(),
                 mail.getTitle(),
@@ -274,7 +275,7 @@ public class MailServiceImpl implements MailService {
     public void deleteDraft(String mailId, String senderEmpId) {
         int deleted = mailRepository.deleteDraft(mailId, senderEmpId);
         if (deleted == 0) {
-            throw new AccessDeniedException("삭제할 초안이 없거나 권한이 없습니다. mailId=" + mailId);
+            throw new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND);
         }
     }
 
@@ -283,14 +284,14 @@ public class MailServiceImpl implements MailService {
     @Transactional
     public ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req) {
         Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
-                .orElseThrow(() -> new AccessDeniedException("초안이 없거나 권한이 없습니다. mailId=" + mailId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
 
         if (!mail.isDraft()) {
-            throw new IllegalStateException("이미 발송된 메일입니다. mailId=" + mailId);
+            throw new CustomException(ErrorCode.MAIL_ALREADY_SENT);
         }
 
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
-                .orElseThrow(() -> new NoSuchElementException("발신자(empId) 없음: " + senderEmpId));
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
         List<String> receiverEmpIds = req.receiverEmpIds();
 
@@ -311,9 +312,8 @@ public class MailServiceImpl implements MailService {
 
             for (String recvEmpId : unique) {
                 Employee recv = employeeRepository.findByEmpId(recvEmpId)
-                        .orElseThrow(() -> new NoSuchElementException("수신자(empId) 없음: " + recvEmpId));
+                        .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
 
-                // 중복 방지
                 mailUserStateRepository.findByMail_MailIdAndUser_EmpId(saved.getMailId(), recvEmpId)
                         .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT)));
 
@@ -326,7 +326,22 @@ public class MailServiceImpl implements MailService {
                 );
             }
         }
+
         return new ResMailSendDto(saved.getMailId(), saved.getMailNo(), saved.getSavedAt()); // sent면 savedAt=null
+    }
+
+    @Override
+    @Transactional
+    public void setPrior(String mailId, String userEmpId, boolean prior) {
+        MailUserState mus = mustFindState(mailId, userEmpId);
+        mus.setPrior(prior);
+    }
+
+    @Override
+    @Transactional
+    public void togglePrior(String mailId, String userEmpId) {
+        MailUserState mus = mustFindState(mailId, userEmpId);
+        mus.togglePrior();
     }
 
     // mailId 생성 규칙
@@ -335,19 +350,9 @@ public class MailServiceImpl implements MailService {
         return "MAIL_" + epochSec + "_" + senderEmpId;
     }
 
-    @Override
-    @Transactional
-    public void setPrior(String mailId, String userEmpId, boolean prior) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
-        mus.setPrior(prior);
-    }
-
-    @Override
-    @Transactional
-    public void togglePrior(String mailId, String userEmpId) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new AccessDeniedException("메일 상태 없음 또는 권한 없음."));
-        mus.togglePrior();
+    // 상태 row 조회 공통 (없으면 예외)
+    private MailUserState mustFindState(String mailId, String userEmpId) {
+        return mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_STATE_NOT_FOUND));
     }
 }
