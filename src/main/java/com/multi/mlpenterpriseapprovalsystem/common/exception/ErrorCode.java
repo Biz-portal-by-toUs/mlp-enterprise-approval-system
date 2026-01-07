@@ -132,6 +132,7 @@ public enum ErrorCode {
     SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND", "해당 회사의 구독 정보를 찾을 수 없습니다"),
     ALREADY_FREE_PLAN(HttpStatus.CONFLICT, "ALREADY_FREE_PLAN", "이미 무료 요금제입니다"),
     ALREADY_CANCELED_SUBSCRIPTION(HttpStatus.CONFLICT, "ALREADY_CANCELED_SUBSCRIPTION", "이미 해지 예약된 상태입니다"),
+    ALREADY_PENDING_PLAN(HttpStatus.CONFLICT, "ALREADY_PENDING_PLAN", "이미 해당 요금제로 변경 예약된 상태입니다"),
 
     // 결제 실패
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_FAILED", "결제에 실패했습니다"),

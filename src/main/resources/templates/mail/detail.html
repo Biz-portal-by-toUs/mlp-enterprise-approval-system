@@ -14,50 +14,42 @@
             --mut:#64748b;
             --line:#e2e8f0;
             --danger:#ef4444;
-            --primary:#2c5cff;
+            --card:#fff;
         }
 
-        .page-with-subbar{
-            display:grid;
-            grid-template-columns:260px minmax(0,1fr);
-            gap:0;
-            padding:0;
-            align-items:stretch;
-        }
+        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
 
-        .page-main{
-            padding:24px;
-            min-width:0;
-        }
-
-        .page-title{
+        /* ===== page-only namespace: md-* ===== */
+        .md-title{
             margin:0 0 14px 0;
             font-size:18px;
             font-weight:900;
         }
 
-        .card{
-            background:#fff;
+        .md-card{
+            background:var(--card);
             border:1px solid var(--line);
             border-radius:14px;
             box-shadow:0 1px 3px rgba(0,0,0,0.05);
             padding:18px;
         }
 
-        .meta{
+        .md-meta{
             display:grid;
-            grid-template-columns: 120px 1fr;
+            grid-template-columns:120px 1fr;
             gap:10px 12px;
             padding-bottom:14px;
             border-bottom:1px solid var(--line);
             margin-bottom:14px;
         }
-        .k{
+
+        .md-k{
             color:var(--mut);
             font-size:13px;
             font-weight:900;
         }
-        .v{
+
+        .md-v{
             color:var(--fg);
             font-size:14px;
             font-weight:800;
@@ -67,22 +59,22 @@
             white-space:nowrap;
         }
 
-        .content{
+        .md-content{
             font-size:14px;
             line-height:1.6;
             font-weight:600;
             color:var(--fg);
-            white-space:pre-wrap; /* JSON 문자열도 일단 보이게 */
+            word-break:break-word;
         }
 
-        .actions{
+        .md-actions{
             display:flex;
             justify-content:flex-end;
             gap:10px;
             margin-top:14px;
         }
 
-        .btn{
+        .md-btn{
             height:40px;
             padding:0 18px;
             border-radius:10px;
@@ -94,21 +86,22 @@
             color:#fff;
             transition:0.15s;
         }
-        .btn:hover{ filter:brightness(0.92); }
+        .md-btn:hover{ filter:brightness(0.92); }
 
-        .btn.ghost{
+        .md-btn.ghost{
             background:#fff;
             color:var(--fg);
             border:1px solid var(--line);
         }
-        .btn.ghost:hover{ background:#f8fafc; filter:none; }
+        .md-btn.ghost:hover{
+            background:#f8fafc;
+            filter:none;
+        }
 
-        .btn.danger{ background:var(--danger); }
+        .md-btn.danger{ background:var(--danger); }
 
         @media (max-width:760px){
-            .page-with-subbar{ grid-template-columns:1fr; }
-            .page-main{ padding:14px; }
-            .meta{ grid-template-columns: 90px 1fr; }
+            .md-meta{ grid-template-columns:90px 1fr; }
         }
     </style>
 </head>
@@ -119,156 +112,206 @@
         <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('received')}"></div>
 
         <main class="page-main">
-            <h2 class="page-title">메일 상세</h2>
+            <h2 class="md-title">메일 상세</h2>
 
-            <section class="card">
-                <div class="meta">
-                    <div class="k">메일 ID</div>
-                    <div class="v" id="mailIdTxt">-</div>
+            <section class="md-card">
+                <div class="md-meta">
+                    <div class="md-k">메일 ID</div><div class="md-v" id="mailIdTxt">-</div>
+                    <div class="md-k">제목</div><div class="md-v" id="titleTxt">-</div>
 
-                    <div class="k">제목</div>
-                    <div class="v" id="titleTxt">-</div>
+                    <div class="md-k" id="partyLabel">-</div><div class="md-v" id="partyTxt">-</div>
 
-                    <div class="k">보낸 사람</div>
-                    <div class="v" id="senderTxt">-</div>
-
-                    <div class="k">수신/발신일</div>
-                    <div class="v" id="createdAtTxt">-</div>
-
-                    <div class="k">내 역할</div>
-                    <div class="v" id="roleTxt">-</div>
+                    <div class="md-k">수신/발신일</div><div class="md-v" id="createdAtTxt">-</div>
                 </div>
 
-                <div class="content" id="contentBox">로딩 중...</div>
+                <div class="md-content" id="contentBox">로딩 중...</div>
 
-                <div class="actions">
-                    <button class="btn ghost" type="button" id="btnBack">목록</button>
-                    <button class="btn ghost" type="button" id="btnRestore" style="display:none;">복원</button>
-                    <button class="btn danger" type="button" id="btnPurge" style="display:none;">완전삭제</button>
-                    <button class="btn danger" type="button" id="btnTrash">휴지통</button>
+                <div class="md-actions">
+                    <button class="md-btn ghost" type="button" id="btnBack">목록</button>
+                    <button class="md-btn ghost" type="button" id="btnRestore" style="display:none;">복원</button>
+                    <button class="md-btn danger" type="button" id="btnPurge" style="display:none;">완전삭제</button>
+                    <button class="md-btn danger" type="button" id="btnTrash">휴지통</button>
                 </div>
             </section>
 
-            <script>
-                function getMeEmpId() {
-                    return document.getElementById('me')?.dataset?.empNo?.trim() || '';
-                }
-
+            <script type="module">
+                // ===== utils =====
                 function getMailIdFromPath() {
-                    // /mail/{mailId}
                     const parts = window.location.pathname.split('/').filter(Boolean);
+                    // /mail/{mailId}
                     return parts.length >= 2 ? parts[1] : '';
                 }
 
                 function fmtDate(iso) {
                     if (!iso) return '-';
-                    try {
-                        const d = new Date(iso);
-                        if (isNaN(d.getTime())) return String(iso);
-                        const y = d.getFullYear();
-                        const m = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const hh = String(d.getHours()).padStart(2, '0');
-                        const mm = String(d.getMinutes()).padStart(2, '0');
-                        return `${y}-${m}-${day} ${hh}:${mm}`;
-                    } catch (e) {
-                        return String(iso);
-                    }
+                    const d = new Date(iso);
+                    if (isNaN(d.getTime())) return String(iso);
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    return `${y}-${m}-${day} ${hh}:${mm}`;
                 }
 
                 function setText(id, value) {
                     const el = document.getElementById(id);
-                    if (el) el.textContent = value ?? '-';
+                    if (el) el.textContent = (value ?? '-') || '-';
                 }
 
-                function show(elId, on) {
-                    const el = document.getElementById(elId);
+                function show(id, on) {
+                    const el = document.getElementById(id);
                     if (!el) return;
                     el.style.display = on ? '' : 'none';
                 }
 
-                async function api(method, url) {
-                    const headers = { 'Accept': 'application/json' };
-
-                    // layout.html에 CSRF hidden input들이 있을 수 있어서 안전하게 처리(있으면 적용)
+                function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
-                    if (csrfParamEl && csrfHeaderEl) {
-                        headers[csrfHeaderEl.value] = csrfParamEl.value;
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
+
+                async function api(method, url) {
+                    const res = await fetch(url, {
+                        method,
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
+                    });
+
+                    if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
+                    if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
+
+                    if (res.status === 204) return null;
+
+                    const json = await res.json().catch(() => null);
+
+                    if (!res.ok) {
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
                     }
 
-                    const res = await fetch(url, { method, headers, credentials: 'include' });
-                    if (!res.ok) {
-                        const t = await res.text().catch(() => '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
+                    return json?.data;
+                }
+
+                // (선택) 상세에서 active를 바꾸고 싶을 때만 사용. sidebar 구조가 다르면 조용히 무시됨.
+                function setSidebarActive(key){
+                    const nav = document.getElementById('mailNav');
+                    if (!nav) return;
+                    nav.dataset.active = key;
+                    nav.querySelectorAll('.subbar-item').forEach(a => {
+                        const k = a.dataset.key;
+                        a.classList.toggle('active', k === key);
+                    });
+                }
+
+                // Tiptap JSON -> HTML 렌더러
+                async function renderTiptap(jsonOrString) {
+                    // ✅ 다른 페이지와 버전 통일하고 싶으면 2.11.5로 바꿔도 됨
+                    const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.2');
+                    const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.2')).default;
+
+                    const doc = (typeof jsonOrString === 'string')
+                        ? JSON.parse(jsonOrString)
+                        : jsonOrString;
+
+                    return generateHTML(doc, [StarterKit]);
+                }
+
+                function buildReceiversText(data){
+                    if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
+
+                    const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
+                    const names = Array.isArray(data.receiverEmpNames) ? data.receiverEmpNames : null;
+
+                    if (ids && ids.length){
+                        if (names && names.length === ids.length){
+                            return ids.map((id, i) => `${names[i] ?? ''} (${id ?? ''})`.trim()).join(', ');
+                        }
+                        return ids.join(', ');
                     }
-                    // 204는 body 없음
-                    if (res.status === 204) return null;
-                    return res.json();
+
+                    if (data.receiverEmpId || data.receiverEmpName){
+                        return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
+                    }
+
+                    return '-';
                 }
 
                 async function loadDetail() {
-                    const viewerEmpId = getMeEmpId();
                     const mailId = getMailIdFromPath();
+                    const box = document.getElementById('contentBox');
 
-                    if (!viewerEmpId) {
-                        document.getElementById('contentBox').textContent = '로그인 사용자 정보를 찾을 수 없습니다.';
-                        return;
-                    }
                     if (!mailId) {
-                        document.getElementById('contentBox').textContent = 'mailId가 없습니다.';
+                        box.textContent = 'mailId가 없습니다.';
                         return;
                     }
 
-                    // 상세 조회
-                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}?viewerEmpId=${encodeURIComponent(viewerEmpId)}`);
+                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailId)}`);
 
-                    // DTO 필드명 기준 (너의 ResMailDetailDto 생성자 순서)
                     setText('mailIdTxt', data.mailId ?? mailId);
                     setText('titleTxt', data.title ?? '-');
-                    setText('senderTxt', `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim());
                     setText('createdAtTxt', fmtDate(data.createdAt));
-                    setText('roleTxt', data.role ?? '-');
 
-                    // cntt는 JSON 문자열일 수 있음 → 일단 텍스트로 보여주기
-                    document.getElementById('contentBox').textContent = data.cntt ?? '';
+                    const role = String(data.role || '').toUpperCase();
 
-                    // ✅ 읽음 처리(상세 진입 시)
-                    try {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read?userEmpId=${encodeURIComponent(viewerEmpId)}`);
-                    } catch (e) {
-                        // 읽음 실패는 UX에 치명적이지 않아서 무시 가능
+                    // 라벨/값 동적 변경
+                    const partyLabelEl = document.getElementById('partyLabel');
+                    const partyTxtEl = document.getElementById('partyTxt');
+
+                    if (role === 'SENDER') {
+                        partyLabelEl.textContent = '수신인';
+                        partyTxtEl.textContent = buildReceiversText(data);
+                    } else {
+                        partyLabelEl.textContent = '발신인';
+                        partyTxtEl.textContent =
+                            `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
                     }
 
-                    // deletedAt이 있으면 휴지통 상태 → 복원/완전삭제 버튼 보이기
+                    // 내용 렌더
+                    try {
+                        if (data.cnttHtml && String(data.cnttHtml).trim()) {
+                            box.innerHTML = data.cnttHtml;
+                        } else if (data.cnttJson && String(data.cnttJson).trim()) {
+                            box.innerHTML = await renderTiptap(data.cnttJson);
+                        } else {
+                            box.textContent = '';
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        box.textContent = data.cnttJson ?? '';
+                    }
+
+                    // 읽음 처리(실패해도 무시)
+                    try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/read`); } catch (e) {}
+
                     const isTrashed = !!data.deletedAt;
+
+                    if (isTrashed) setSidebarActive('trash');
+                    else if (role === 'SENDER') setSidebarActive('sent');
+                    else setSidebarActive('received');
+
                     show('btnRestore', isTrashed);
                     show('btnPurge', isTrashed);
                     show('btnTrash', !isTrashed);
 
-                    // role에 따라 목록 돌아갈 곳 결정(간단히)
-                    const role = (data.role || '').toUpperCase();
                     const backUrl = isTrashed ? '/mail/trash' : (role === 'SENDER' ? '/mail/sent' : '/mail/received');
                     document.getElementById('btnBack').onclick = () => location.href = backUrl;
 
-                    // 휴지통 이동
                     document.getElementById('btnTrash').onclick = async () => {
                         if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/trash?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/trash`);
                         location.href = '/mail/trash';
                     };
 
-                    // 복원
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/restore?userEmpId=${encodeURIComponent(viewerEmpId)}`);
-                        // 복원하면 받은/보낸으로 돌아가야 하는데, role로 분기
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailId)}/restore`);
                         location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
                     };
 
-                    // 완전 삭제
                     document.getElementById('btnPurge').onclick = async () => {
                         if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailId)}/purge?userEmpId=${encodeURIComponent(viewerEmpId)}`);
+                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailId)}/purge`);
                         location.href = '/mail/trash';
                     };
                 }
@@ -276,7 +319,14 @@
                 window.addEventListener('DOMContentLoaded', () => {
                     loadDetail().catch(e => {
                         console.error(e);
-                        document.getElementById('contentBox').textContent = '메일 상세 조회에 실패했습니다.';
+                        const msg = String(e?.message || '');
+                        const box = document.getElementById('contentBox');
+
+                        if (msg.startsWith('401::') || msg.startsWith('403::')) {
+                            box.textContent = msg.split('::')[1];
+                            return;
+                        }
+                        box.textContent = '메일 상세 조회에 실패했습니다.';
                     });
                 });
             </script>

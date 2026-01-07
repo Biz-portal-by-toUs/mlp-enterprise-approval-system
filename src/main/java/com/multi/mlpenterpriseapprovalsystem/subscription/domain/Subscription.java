@@ -29,4 +29,7 @@ public class Subscription {
 
     @Column(nullable = false, precision = 8)
     private BigDecimal subPrice;
+
+    @Column(nullable = false)
+    private Integer subLimit;
 }
