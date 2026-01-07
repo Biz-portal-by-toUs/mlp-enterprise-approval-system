@@ -61,7 +61,6 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/notifications/stream", "/api/v1/chatbot/stream").authenticated()
 
-                        .requestMatchers("/api/v1/prov-documents/**").hasRole("COM_ADMIN")
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
