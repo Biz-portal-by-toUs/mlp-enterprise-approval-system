@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <title>반려 문서 재작성 - 기업용 전자결재시스템</title>
 
-    <!-- TipTap 번들 -->
     <script th:src="@{/js/tiptap.min.js}"></script>
 
-    <!-- ✅ SweetAlert2 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -283,6 +281,7 @@
             font-weight: 600;
         }
 
+        /* 수정 불가 셀 스타일 */
         .ProseMirror table td[data-editable="false"],
         .ProseMirror table th[data-editable="false"] {
             background-color: #f1f3f5 !important;
@@ -292,6 +291,7 @@
             position: relative;
         }
 
+        /* 수정 가능 셀 - 포커스 시 강조 */
         .ProseMirror table td[data-editable="true"]:focus-within {
             background-color: #e7f5ff;
             outline: 2px solid var(--primary-color);
@@ -350,6 +350,7 @@
             text-decoration: underline;
         }
 
+        /* Gapcursor 스타일 */
         .ProseMirror .ProseMirror-gapcursor {
             display: none;
             pointer-events: none;
@@ -560,7 +561,13 @@
             box-sizing: border-box;
         }
 
-        #delegate-search:focus {
+        #delegate-search:disabled {
+            background-color: #f1f3f5;
+            cursor: not-allowed;
+            color: #adb5bd;
+        }
+
+        #delegate-search:focus:not(:disabled) {
             outline: none;
             border-color: #40c057;
             box-shadow: 0 0 0 2px rgba(64, 192, 87, 0.1);
@@ -739,7 +746,6 @@
         </tr>
     </table>
 
-    <!-- 근태 정보 섹션 -->
     <div id="attendance-section" class="attendance-section" style="display: none;">
         <div class="attendance-section-title">
             📅 <span id="attendance-title">근태 정보</span>
@@ -759,7 +765,7 @@
             <div id="delegate-section" class="attendance-grid-item delegate-grid-item" style="display: none;">
                 <label>대직자 <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(선택)</span></label>
                 <div class="delegate-search-wrapper">
-                    <input type="text" id="delegate-search" placeholder="이름 또는 사번 검색" autocomplete="off">
+                    <input type="text" id="delegate-search" placeholder="날짜를 먼저 선택해주세요" autocomplete="off" disabled>
                     <div class="delegate-search-results" id="delegate-search-results"></div>
                 </div>
             </div>
@@ -868,6 +874,38 @@
         document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
 
+    // ✅ 내 근태 중복 체크 API 호출 (상세 리스트 반환)
+    async function checkMyAttendanceOverlap(start, end) {
+        if (!start || !end) return [];
+        try {
+            const excludeParam = window.targetAtteNo ? `&excludeAtteNo=${window.targetAtteNo}` : '';
+            const res = await fetch(`/api/v1/attendances/me/overlap-check?startAt=${start}T00:00:00&endAt=${end}T23:59:59${excludeParam}`, { credentials: 'include' });
+            const result = await res.json();
+            return result.data || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // ✅ 대직자 검색창 활성화/비활성화 제어 함수
+    function toggleDelegateSearchState() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const delegateInput = document.getElementById('delegate-search');
+
+        if (startDate && endDate) {
+            delegateInput.disabled = false;
+            delegateInput.placeholder = "이름 또는 사번 검색";
+        } else {
+            delegateInput.disabled = true;
+            delegateInput.value = "";
+            delegateInput.placeholder = "날짜를 먼저 선택해주세요";
+            selectedDelegate = null;
+            renderSelectedDelegate();
+            updateTableDelegate();
+        }
+    }
+
     // ✅ 임시저장 확인
     function confirmTempSave() {
         Swal.fire({
@@ -891,7 +929,7 @@
     function confirmSubmit() {
         Swal.fire({
             title: '문서 재상신 확인',
-            text: '문서를 재상신하시겠습니까?\n재상신 후에는 수정이 불가능합니다.',
+            text: '문서를 상신하시겠습니까?\n재상신 후에는 수정이 불가능합니다.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#339af0',
@@ -1031,6 +1069,9 @@
         selectedDelegate = null;
         renderSelectedDelegate();
 
+        // ✅ 카테고리 변경 시 검색창 상태 동기화
+        toggleDelegateSearchState();
+
         updateTableDates();
         updateTableDelegate();
 
@@ -1054,10 +1095,36 @@
         console.log('✅ 카테고리 설정 완료 - 대직자 표시:', delegateSection.style.display);
     }
 
-    function onStartDateChange(e) {
+    async function onStartDateChange(e) {
         const startDate = e.target.value;
         const endDateInput = document.getElementById('endDate');
         const endDate = endDateInput.value;
+
+        // ✅ 날짜 변경 시 선택된 대직자 초기화
+        removeDelegate();
+
+        if (startDate && endDate) {
+            // ✅ 공통: 내 근태 중복 체크
+            const personalOverlaps = await checkMyAttendanceOverlap(startDate, endDate);
+            if (personalOverlaps.length > 0) {
+                let overlapMsg = "해당 기간에 이미 등록된 본인의 근태 일정이 존재합니다:<br><br>";
+                personalOverlaps.forEach(o => {
+                    const typeLabel = o.atteType === 'V' ? '휴가' : '출장';
+                    overlapMsg += `<b>${typeLabel}</b>: ${o.startAt.split('T')[0]} ~ ${o.endAt.split('T')[0]}<br>`;
+                });
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '기간 중복',
+                    html: overlapMsg,
+                    confirmButtonColor: '#339af0'
+                });
+                e.target.value = '';
+                toggleDelegateSearchState();
+                updateTableDates();
+                return;
+            }
+        }
 
         if (startDate) {
             const rule = getCategoryRule(currentCategoryName);
@@ -1076,12 +1143,40 @@
             endDateInput.value = '';
         }
 
+        // ✅ 날짜 변경 시 대직자 검색창 상태 업데이트
+        toggleDelegateSearchState();
         updateTableDates();
     }
 
-    function onEndDateChange(e) {
+    async function onEndDateChange(e) {
         const startDate = document.getElementById('startDate').value;
         const endDate = e.target.value;
+
+        // ✅ 날짜 변경 시 선택된 대직자 초기화
+        removeDelegate();
+
+        if (startDate && endDate) {
+            // ✅ 공통: 내 근태 중복 체크
+            const personalOverlaps = await checkMyAttendanceOverlap(startDate, endDate);
+            if (personalOverlaps.length > 0) {
+                let overlapMsg = "해당 기간에 이미 등록된 본인의 근태 일정이 존재합니다:<br><br>";
+                personalOverlaps.forEach(o => {
+                    const typeLabel = o.atteType === 'V' ? '휴가' : '출장';
+                    overlapMsg += `<b>${typeLabel}</b>: ${o.startAt.split('T')[0]} ~ ${o.endAt.split('T')[0]}<br>`;
+                });
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '기간 중복',
+                    html: overlapMsg,
+                    confirmButtonColor: '#339af0'
+                });
+                e.target.value = '';
+                toggleDelegateSearchState();
+                updateTableDates();
+                return;
+            }
+        }
 
         if (startDate && endDate && endDate < startDate) {
             Swal.fire({
@@ -1091,9 +1186,12 @@
                 confirmButtonColor: '#339af0'
             });
             e.target.value = '';
+            toggleDelegateSearchState();
             return;
         }
 
+        // ✅ 날짜 변경 시 대직자 검색창 상태 업데이트
+        toggleDelegateSearchState();
         updateTableDates();
     }
 
@@ -1217,6 +1315,16 @@
                     summaryText.innerText = doc.aiSumm;
                 }
 
+                // ✅ 카테고리 정보를 먼저 로드하여 초기화 여부를 결정
+                await fetchFormDetailsForDocument(currentDocfoNo);
+
+                const currentDocfoCatNo = doc.docFormCatNo;
+                const categoryName = getCategoryNameByNo(currentDocfoCatNo);
+                const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
+
+                const isLeaveReset = (normalized === '휴가신청' || normalized === '휴가수정신청');
+                const isTripReset = (normalized === '출장신청' || normalized === '출장수정신청');
+
                 if (doc.content) {
                     try {
                         let parsedJson = JSON.parse(doc.content);
@@ -1224,14 +1332,18 @@
                         if (parsedJson.attendanceInfo) {
                             const attendanceInfo = parsedJson.attendanceInfo;
 
-                            if (attendanceInfo.startDate) {
-                                document.getElementById('startDate').value = attendanceInfo.startDate;
-                            }
-                            if (attendanceInfo.endDate) {
-                                document.getElementById('endDate').value = attendanceInfo.endDate;
+                            // ✅ 요구사항: 휴가/출장 신청 및 수정 시 날짜 초기화
+                            if (!isLeaveReset && !isTripReset) {
+                                if (attendanceInfo.startDate) {
+                                    document.getElementById('startDate').value = attendanceInfo.startDate;
+                                }
+                                if (attendanceInfo.endDate) {
+                                    document.getElementById('endDate').value = attendanceInfo.endDate;
+                                }
                             }
 
-                            if (attendanceInfo.delegate) {
+                            // ✅ 요구사항: 휴가 신청 및 수정 시 대직자 초기화
+                            if (!isLeaveReset && attendanceInfo.delegate) {
                                 selectedDelegate = {
                                     empId: attendanceInfo.delegate.empId,
                                     empName: attendanceInfo.delegate.empName,
@@ -1239,6 +1351,10 @@
                                     depName: attendanceInfo.delegate.depName || '',
                                     posOrder: attendanceInfo.delegate.posOrder || 999
                                 };
+                            }
+
+                            if (attendanceInfo.targetAtteNo) {
+                                window.targetAtteNo = attendanceInfo.targetAtteNo;
                             }
                         }
 
@@ -1271,47 +1387,43 @@
 
                 initTipTapEditor();
 
-                if (currentDocfoNo) {
-                    await fetchFormDetailsForDocument(currentDocfoNo);
-                }
+                // ✅ 에디터 로드 후 초기화된 UI 값과 표 동기화
+                updateTableDates();
+                updateTableDelegate();
 
-                if (doc.docFormCatNo) {
-                    const radio = document.querySelector(`input[name="docfoCatNo"][value="${doc.docFormCatNo}"]`);
+                if (currentDocfoCatNo) {
+                    const radio = document.querySelector(`input[name="docfoCatNo"][value="${currentDocfoCatNo}"]`);
                     if (radio) {
                         radio.checked = true;
+                        currentCategoryName = categoryName;
 
-                        const categoryName = getCategoryNameByNo(doc.docFormCatNo);
-                        if (categoryName) {
-                            currentCategoryName = categoryName;
+                        const rule = getCategoryRule(categoryName);
+                        if (rule) {
+                            const attendanceSection = document.getElementById('attendance-section');
+                            attendanceSection.style.display = 'block';
 
-                            const rule = getCategoryRule(categoryName);
-                            if (rule) {
-                                const attendanceSection = document.getElementById('attendance-section');
-                                attendanceSection.style.display = 'block';
+                            applyDateConstraints(rule);
 
-                                applyDateConstraints(rule);
+                            const delegateSection = document.getElementById('delegate-section');
+                            const selectedDelegateSection = document.getElementById('selected-delegate-section');
+                            const attendanceTitle = document.getElementById('attendance-title');
 
-                                const normalized = categoryName.replace(/\s+/g, '').toLowerCase();
-                                const delegateSection = document.getElementById('delegate-section');
-                                const selectedDelegateSection = document.getElementById('selected-delegate-section');
-                                const attendanceTitle = document.getElementById('attendance-title');
-
+                            if (normalized.includes('휴가')) {
+                                attendanceTitle.textContent = '휴가 정보';
                                 if (normalized === '휴가신청' || normalized === '휴가수정신청') {
-                                    attendanceTitle.textContent = '휴가 정보';
                                     delegateSection.style.display = 'block';
-
+                                    toggleDelegateSearchState();
                                     if (selectedDelegate) {
                                         renderSelectedDelegate();
                                     }
-                                } else if (normalized.includes('휴가')) {
-                                    attendanceTitle.textContent = '휴가 정보';
-                                    delegateSection.style.display = 'none';
-                                    selectedDelegateSection.style.display = 'none';
-                                } else if (normalized.includes('출장')) {
-                                    attendanceTitle.textContent = '출장 정보';
+                                } else {
                                     delegateSection.style.display = 'none';
                                     selectedDelegateSection.style.display = 'none';
                                 }
+                            } else if (normalized.includes('출장')) {
+                                attendanceTitle.textContent = '출장 정보';
+                                delegateSection.style.display = 'none';
+                                selectedDelegateSection.style.display = 'none';
                             }
                         }
                     }
@@ -1319,18 +1431,9 @@
 
                 await loadExistingAttachments(originalDocNo);
 
-                if (doc.resApprovalLineDtos && doc.resApprovalLineDtos.length > 0) {
-                    const filteredLines = doc.resApprovalLineDtos.filter(line => {
-                        const isDelegateValue = line.isDelegate ?? line.delegate ?? false;
-                        return !isDelegateValue;
-                    });
-                    const sortedLines = filteredLines.sort((a, b) => a.seq - b.seq);
-
-                    const detailPromises = sortedLines.map(line => fetchEmployeeDetailByKeyword(line.approverId));
-                    const employeeDetails = await Promise.all(detailPromises);
-                    selectedApprovers = employeeDetails.filter(emp => emp !== null);
-                    renderSelectedTags();
-                }
+                // ✅ 요구사항: 결재라인은 항상 초기화 (기존 로직 삭제)
+                selectedApprovers = [];
+                renderSelectedTags();
             }
         } catch (e) {
             console.error('데이터 로드 오류:', e);
@@ -1849,6 +1952,10 @@
                 endDate: endDate
             };
 
+            if (window.targetAtteNo) {
+                contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
+            }
+
             if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
                 contentJson.attendanceInfo.delegate = {
                     empId: selectedDelegate.empId,
@@ -2202,21 +2309,32 @@
     }
 
     async function searchDelegates(keyword = '') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (!startDate || !endDate) return;
+
         try {
-            let url = `/api/v1/employees?size=20&excludeMe=true`;
-            if (keyword && keyword.trim().length > 0) {
-                url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            }
+            const startAt = startDate + 'T00:00:00';
+            const endAt = endDate + 'T23:59:59';
+
+            const url = `/api/v1/delegates/available?startAt=${startAt}&endAt=${endAt}`;
             const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
 
-            const myDept = document.getElementById('writer-dept').value;
-            const sameDeptEmployees = (result.data?.items || []).filter(emp =>
-                emp.depName === myDept
-            );
+            let employees = result.data || [];
 
-            renderDelegateResults(sameDeptEmployees);
+            if (keyword && keyword.trim().length > 0) {
+                const k = keyword.toLowerCase();
+                employees = employees.filter(emp =>
+                    emp.empName.toLowerCase().includes(k) ||
+                    emp.empId.toLowerCase().includes(k)
+                );
+            }
+
+            renderDelegateResults(employees);
         } catch (e) {
+            console.error('대직자 조회 실패:', e);
             renderDelegateResults([]);
         }
     }
@@ -2225,21 +2343,21 @@
         const container = document.getElementById('delegate-search-results');
 
         if (employees.length === 0) {
-            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">같은 부서의 대직자가 없습니다.</div>';
+            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">조회된 대직자가 없습니다.</div>';
             return;
         }
 
         container.innerHTML = employees.map(emp => {
             const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isOnLeave = emp.atte !== 'C';
-            const isDisabled = isSelected || isOnLeave;
+            const isAvailable = emp.available !== false;
+            const statusMessage = emp.statusMessage || "휴가";
+            const isDisabled = isSelected || !isAvailable;
 
             let statusHtml = '';
             if (isSelected) {
                 statusHtml = '<span style="float: right; color: #40c057;">✓ 선택됨</span>';
-            } else if (isOnLeave) {
-                const statusText = emp.atte === 'V' ? '휴가중' : emp.atte === 'B' ? '출장중' : '부재중';
-                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusText}</span>`;
+            } else if (!isAvailable) {
+                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusMessage}</span>`;
             }
 
             return `
@@ -2317,30 +2435,54 @@
             const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
             const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
 
-            let statusText = '';
-            let statusColor = '';
-            if (isAdded) {
-                statusText = '추가됨'; statusColor = '#adb5bd';
-            } else if (isSameOrLowerRank) {
-                statusText = '직급낮음'; statusColor = '#fa5252';
-            } else if (hasSameRank) {
-                statusText = '중복직급'; statusColor = '#fa5252';
-            } else if (isLowerThanSelected) {
-                statusText = '순서오류'; statusColor = '#fa5252';
-            } else {
-                statusText = '+'; statusColor = 'var(--primary-color)';
+            // ✅ 대직자 정보 표시 (이름 오른쪽에 가로 배치)
+            let delegateHtml = '';
+            if (emp.delegateName) {
+                const isMe = emp.delegateId === myInfo.empId;
+                const color = isMe ? '#339af0' : '#868e96';
+                delegateHtml = `<span style="color: ${color}; font-weight: ${isMe ? 'bold' : 'normal'}; font-size: 11px; margin-left: 8px;">
+                    (대직자: ${isMe ? '본인' : emp.delegateName})
+                </span>`;
             }
 
+            let statusText = isAdded ? '추가됨' : (isSameOrLowerRank ? '직급낮음' : (hasSameRank ? '중복직급' : (isLowerThanSelected ? '순서오류' : '+')));
+            let statusColor = isAdded ? '#adb5bd' : (isDisabled ? '#fa5252' : 'var(--primary-color)');
+
             return `
-                <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
+                <div class="result-item"
+                     onclick="${isDisabled ? '' : `checkAndAddApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder}, '${emp.delegateId || ''}')`}"
                      style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
                     <div>
                         <strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span>
+                        ${delegateHtml}
                         <br><small>${emp.depName || '-'} | ${emp.empId}</small>
                     </div>
                     <div style="color:${statusColor}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
                 </div>`;
         }).join('');
+    }
+
+    // ✅ 대직자 본인 확인 후 추가 함수 (SweetAlert2 컨펌 추가)
+    function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) {
+        if (delegateId === myInfo.empId) {
+            Swal.fire({
+                title: '대직자 확인',
+                html: `선택하신 <b>${name} ${pos}</b>님의 현재 대직자는 <b style="color:#339af0;">본인</b>입니다.<br>정말 결재자로 지정하시겠습니까?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '네, 지정합니다',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    addApprover(id, name, pos, dept, posOrder);
+                }
+            });
+        } else {
+            addApprover(id, name, pos, dept, posOrder);
+        }
     }
 
     function addApprover(id, name, pos, dept, posOrder) {

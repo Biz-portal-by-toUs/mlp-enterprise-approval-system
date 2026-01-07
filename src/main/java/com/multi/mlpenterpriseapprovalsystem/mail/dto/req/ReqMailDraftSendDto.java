@@ -3,7 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.mail.dto.req;
 import java.util.*;
 
 /**
- * Please explain the class!!!
+ * 임시저장된 메일 발송 요청 Dto
  *
  * @author : 정종원
  * @filename : ReqMailDraftSendDto

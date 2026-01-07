@@ -246,6 +246,16 @@ function getPresetTablesState() {
     }
 }
 
+function isResponseDto(obj) {
+    return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+}
+
+async function unwrapJson(res) {
+    const body = await res.json().catch(() => null);
+    if (!body) return null;
+    return isResponseDto(body) ? body.data : body;
+}
+
 function extractHeaderHtmlFromTemplates() {
     const presetTables = getPresetTablesState()
     return `
@@ -558,7 +568,7 @@ async function fetchDetail() {
         const t = await res.text().catch(() => '')
         throw new Error(`상세 조회 실패 HTTP ${res.status} ${t}`)
     }
-    return await res.json()
+    return await unwrapJson(res)
 }
 
 function buildPayload({ editor, baseDetail }) {
@@ -604,7 +614,8 @@ async function saveUpdate({ editor, baseDetail }) {
         throw new Error(`저장 실패 HTTP ${res.status} ${t}`)
     }
 
-    return await res.json().catch(() => ({}))
+    const out = await unwrapJson(res);
+    return out ?? {};
 }
 
 async function saveTempUpdate({ editor, baseDetail }) {

@@ -6,12 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 메일 첨부파일 엔티티
  *
  * @author : 김승기
  * @filename : MailAttach
  * @since : 2025. 12. 16. 화요일
  */
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

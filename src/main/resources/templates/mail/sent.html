@@ -274,7 +274,7 @@
                             <td class="ms-col-star">
                                 <button type="button"
                                         class="ms-starBtn"
-                                        data-mail-id="${escapeHtml(it.mailId)}"
+                                        data-mail-no="${escapeHtml(it.mailNo)}"
                                         aria-label="중요메일 토글">
                                     ${starEmoji(isPrior)}
                                 </button>
@@ -282,14 +282,14 @@
 
                             <td class="ms-col-recv">${receivers || '-'}</td>
                             <td class="ms-col-title">
-                                <a class="ms-titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                                <a class="ms-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}">${title}</a>
                             </td>
                             <td class="ms-col-date">${createdAt}</td>
                         `;
 
                         tr.addEventListener('click', (e) => {
                             if (e.target && (e.target.closest('.ms-starBtn') || e.target.tagName === 'A')) return;
-                            location.href = `/mail/${encodeURIComponent(it.mailId)}`;
+                            location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
                         });
 
                         const starBtn = tr.querySelector('.ms-starBtn');
@@ -297,14 +297,14 @@
                             e.preventDefault();
                             e.stopPropagation();
 
-                            const mailId = starBtn.dataset.mailId;
+                            const mailNo = starBtn.dataset.mailNo;
                             const prev = starBtn.textContent.trim() === '⭐';
 
                             starBtn.textContent = starEmoji(!prev);
                             starBtn.disabled = true;
 
                             try{
-                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
+                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailNo)}/prior/toggle`);
                                 await load();
                             }catch(err){
                                 console.error(err);

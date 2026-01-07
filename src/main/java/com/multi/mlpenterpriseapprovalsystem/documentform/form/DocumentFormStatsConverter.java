@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 import jakarta.persistence.*;
 
 /**
- * 스탯 코드를 문자로 치환
+ * 문서 양식 스탯 코드를 문자로 치환
  *
  * @author : 정종원
  * @filename : DocumentFormStatsConverter

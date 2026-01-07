@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 관리 repository
  *
  * @author : 정종원
  * @filename : DocumentFormRepository

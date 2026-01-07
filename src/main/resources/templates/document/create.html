@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <title>문서 작성 - 기업용 전자결재시스템</title>
 
-    <!-- TipTap 번들 -->
     <script th:src="@{/js/tiptap.min.js}"></script>
 
-    <!-- ✅ SweetAlert2 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -565,7 +563,14 @@
             box-sizing: border-box;
         }
 
-        #delegate-search:focus {
+        /* ✅ 날짜 미선택 시 비활성화 스타일 */
+        #delegate-search:disabled {
+            background-color: #f1f3f5;
+            cursor: not-allowed;
+            color: #adb5bd;
+        }
+
+        #delegate-search:focus:not(:disabled) {
             outline: none;
             border-color: #40c057;
             box-shadow: 0 0 0 2px rgba(64, 192, 87, 0.1);
@@ -746,35 +751,30 @@
         </tr>
     </table>
 
-    <!-- 근태 정보 섹션 -->
     <div id="attendance-section" class="attendance-section" style="display: none;">
         <div class="attendance-section-title">
             📅 <span id="attendance-title">근태 정보</span>
         </div>
 
         <div class="attendance-grid">
-            <!-- 시작일 -->
             <div class="attendance-grid-item">
                 <label>시작일 <span class="required-mark">*</span></label>
                 <input type="date" id="startDate">
             </div>
 
-            <!-- 종료일 -->
             <div class="attendance-grid-item">
                 <label>종료일 <span class="required-mark">*</span></label>
                 <input type="date" id="endDate">
             </div>
 
-            <!-- 대직자 검색 -->
             <div id="delegate-section" class="attendance-grid-item delegate-grid-item" style="display: none;">
                 <label>대직자 <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(선택)</span></label>
                 <div class="delegate-search-wrapper">
-                    <input type="text" id="delegate-search" placeholder="이름 또는 사번 검색" autocomplete="off">
+                    <input type="text" id="delegate-search" placeholder="날짜를 먼저 선택해주세요" autocomplete="off" disabled>
                     <div class="delegate-search-results" id="delegate-search-results"></div>
                 </div>
             </div>
 
-            <!-- 선택된 대직자 -->
             <div id="selected-delegate-section" class="attendance-grid-item" style="display: none;">
                 <label>선택된 대직자</label>
                 <div id="selected-delegate-display"></div>
@@ -784,7 +784,6 @@
 
     <div class="content-section">
         <div style="position: relative;">
-            <!-- TipTap 에디터 -->
             <div class="tiptap-editor-wrapper">
                 <div class="tiptap-toolbar">
                     <select onchange="setHeading(this.value)">
@@ -818,7 +817,6 @@
             <div id="char-counter" class="char-counter">0 / 1000</div>
         </div>
 
-        <!-- 파일 첨부 영역 -->
         <div class="file-attach-section">
             <div class="file-attach-header">
                 📎 첨부파일 (최대 5개, 개당 10MB)
@@ -862,6 +860,7 @@
     let attachedFiles = [];
     let formCategories = [];
     let currentCategoryName = '';
+    let myDelegatePeriods = []; // 내가 대직자인 기간 정보
 
     document.addEventListener('DOMContentLoaded', async () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -886,6 +885,9 @@
         initApproverSearch();
         initDelegateSearch();
 
+        // ✅ 내가 대직자로 지정된 기간 목록 미리 로드
+        await fetchMyDelegatePeriods();
+
         await fetchFormDetails();
 
         if (atteNo && category) {
@@ -901,6 +903,52 @@
         document.getElementById('startDate').addEventListener('change', onStartDateChange);
         document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
+
+    // ✅ 내 근태 중복 체크 API 호출 (상세 리스트 반환)
+    async function checkMyAttendanceOverlap(start, end) {
+        if (!start || !end) return [];
+        try {
+            const excludeParam = window.targetAtteNo ? `&excludeAtteNo=${window.targetAtteNo}` : '';
+            const res = await fetch(`/api/v1/attendances/me/overlap-check?startAt=${start}T00:00:00&endAt=${end}T23:59:59${excludeParam}`, { credentials: 'include' });
+            const result = await res.json();
+            return result.data || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // ✅ 대직 예정 기간 정보 API 호출
+    async function fetchMyDelegatePeriods() {
+        try {
+            const res = await fetch('/api/v1/attendances/me/delegate-periods', { credentials: 'include' });
+            const result = await res.json();
+            myDelegatePeriods = result.data || [];
+            console.log('✅ 내 대직 예정 기간 로드 완료:', myDelegatePeriods);
+        } catch (e) {
+            console.error('❌ 대직 기간 로드 실패:', e);
+        }
+    }
+
+    // ✅ 대직 기간 중복 체크 로직 (본인이 이미 대직자인 경우 휴가 신청 차단)
+    function checkOverlapWithMyDelegateJob(newStart, newEnd) {
+        if (!newStart || !newEnd) return true;
+        const overlap = myDelegatePeriods.find(p => {
+            const pStart = p.startAt.split('T')[0];
+            const pEnd = p.endAt.split('T')[0];
+            return newStart <= pEnd && newEnd >= pStart;
+        });
+
+        if (overlap) {
+            Swal.fire({
+                icon: 'error',
+                title: '휴가 신청 불가',
+                html: `당신은 해당 기간에 이미 타인의 대직자로 지정되어 있습니다:<br><br><b>기간: ${overlap.startAt.split('T')[0]} ~ ${overlap.endAt.split('T')[0]}</b>`,
+                confirmButtonColor: '#339af0'
+            });
+            return false;
+        }
+        return true;
+    }
 
     // ✅ 임시저장 확인
     function confirmTempSave() {
@@ -1117,6 +1165,25 @@
         console.log('✅ 날짜 제약 적용:', rule);
     }
 
+    // ✅ 대직자 검색창 활성화/비활성화 제어 함수
+    function toggleDelegateSearchState() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const delegateInput = document.getElementById('delegate-search');
+
+        if (startDate && endDate) {
+            delegateInput.disabled = false;
+            delegateInput.placeholder = "이름 또는 사번 검색";
+        } else {
+            delegateInput.disabled = true;
+            delegateInput.value = "";
+            delegateInput.placeholder = "날짜를 먼저 선택해주세요";
+            selectedDelegate = null;
+            renderSelectedDelegate();
+            updateTableDelegate();
+        }
+    }
+
     function onCategoryChange(categoryName) {
         console.log('📌 카테고리 변경:', categoryName);
 
@@ -1147,6 +1214,9 @@
 
         selectedDelegate = null;
         renderSelectedDelegate();
+
+        // ✅ 카테고리 변경 시 대직자 검색창 상태 초기화
+        toggleDelegateSearchState();
 
         updateTableDates();
         updateTableDelegate();
@@ -1181,10 +1251,37 @@
         console.log('✅ 카테고리 설정 완료 - 대직자 표시:', delegateSection.style.display);
     }
 
-    function onStartDateChange(e) {
+    // ✅ 시작일 변경 이벤트 핸들러
+    async function onStartDateChange(e) {
         const startDate = e.target.value;
         const endDateInput = document.getElementById('endDate');
         const endDate = endDateInput.value;
+
+        // ✅ 날짜 변경 시 대직자 초기화 및 테이블 갱신
+        removeDelegate();
+
+        if (startDate && endDate) {
+            // ✅ 공통: 내 근태 중복 체크
+            const personalOverlaps = await checkMyAttendanceOverlap(startDate, endDate);
+            if (personalOverlaps.length > 0) {
+                let overlapMsg = "해당 기간에 이미 등록된 본인의 근태 일정이 존재합니다:<br><br>";
+                personalOverlaps.forEach(o => {
+                    const typeLabel = o.atteType === 'V' ? '휴가' : '출장';
+                    overlapMsg += `- <b>${typeLabel}</b>: ${o.startAt.split('T')[0]} ~ ${o.endAt.split('T')[0]}<br>`;
+                });
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '기간 중복',
+                    html: overlapMsg,
+                    confirmButtonColor: '#339af0'
+                });
+                e.target.value = '';
+                toggleDelegateSearchState();
+                updateTableDates();
+                return;
+            }
+        }
 
         if (startDate) {
             const rule = getCategoryRule(currentCategoryName);
@@ -1203,12 +1300,41 @@
             endDateInput.value = '';
         }
 
+        // ✅ 날짜 변경 상태 업데이트
+        toggleDelegateSearchState();
         updateTableDates();
     }
 
-    function onEndDateChange(e) {
+    // ✅ 종료일 변경 이벤트 핸들러
+    async function onEndDateChange(e) {
         const startDate = document.getElementById('startDate').value;
         const endDate = e.target.value;
+
+        // ✅ 날짜 변경 시 대직자 초기화 및 테이블 갱신
+        removeDelegate();
+
+        if (startDate && endDate) {
+            // ✅ 공통: 내 근태 중복 체크
+            const personalOverlaps = await checkMyAttendanceOverlap(startDate, endDate);
+            if (personalOverlaps.length > 0) {
+                let overlapMsg = "해당 기간에 이미 등록된 본인의 근태 일정이 존재합니다:<br><br>";
+                personalOverlaps.forEach(o => {
+                    const typeLabel = o.atteType === 'V' ? '휴가' : '출장';
+                    overlapMsg += `- <b>${typeLabel}</b>: ${o.startAt.split('T')[0]} ~ ${o.endAt.split('T')[0]}<br>`;
+                });
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '기간 중복',
+                    html: overlapMsg,
+                    confirmButtonColor: '#339af0'
+                });
+                e.target.value = '';
+                toggleDelegateSearchState();
+                updateTableDates();
+                return;
+            }
+        }
 
         if (startDate && endDate && endDate < startDate) {
             Swal.fire({
@@ -1218,9 +1344,12 @@
                 confirmButtonColor: '#339af0'
             });
             e.target.value = '';
+            toggleDelegateSearchState();
             return;
         }
 
+        // ✅ 날짜 변경 상태 업데이트
+        toggleDelegateSearchState();
         updateTableDates();
     }
 
@@ -1472,22 +1601,34 @@
         });
     }
 
+    // ✅ 대직자 가용성 API 호출 (available 필드 대응)
     async function searchDelegates(keyword = '') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (!startDate || !endDate) return;
+
         try {
-            let url = `/api/v1/employees?size=20&excludeMe=true`;
-            if (keyword && keyword.trim().length > 0) {
-                url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            }
+            const startAt = startDate + 'T00:00:00';
+            const endAt = endDate + 'T23:59:59';
+
+            const url = `/api/v1/delegates/available?startAt=${startAt}&endAt=${endAt}`;
             const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
 
-            const myDept = document.getElementById('writer-dept').value;
-            const sameDeptEmployees = (result.data?.items || []).filter(emp =>
-                emp.depName === myDept
-            );
+            let employees = result.data || [];
 
-            renderDelegateResults(sameDeptEmployees);
+            if (keyword && keyword.trim().length > 0) {
+                const k = keyword.toLowerCase();
+                employees = employees.filter(emp =>
+                    emp.empName.toLowerCase().includes(k) ||
+                    emp.empId.toLowerCase().includes(k)
+                );
+            }
+
+            renderDelegateResults(employees);
         } catch (e) {
+            console.error('대직자 조회 실패:', e);
             renderDelegateResults([]);
         }
     }
@@ -1496,21 +1637,22 @@
         const container = document.getElementById('delegate-search-results');
 
         if (employees.length === 0) {
-            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">같은 부서의 대직자가 없습니다.</div>';
+            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">조회된 대직자가 없습니다.</div>';
             return;
         }
 
         container.innerHTML = employees.map(emp => {
             const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isOnLeave = emp.atte !== 'C';
-            const isDisabled = isSelected || isOnLeave;
+            // Jackson 직렬화 규칙에 따른 available 필드 체크
+            const isAvailable = emp.available !== false;
+            const statusMessage = emp.statusMessage || "휴가";
+            const isDisabled = isSelected || !isAvailable;
 
             let statusHtml = '';
             if (isSelected) {
                 statusHtml = '<span style="float: right; color: #40c057;">✓ 선택됨</span>';
-            } else if (isOnLeave) {
-                const statusText = emp.atte === 'V' ? '휴가중' : emp.atte === 'B' ? '출장중' : '부재중';
-                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusText}</span>`;
+            } else if (!isAvailable) {
+                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusMessage}</span>`;
             }
 
             return `
@@ -1833,30 +1975,54 @@
             const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
             const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
 
-            let statusText = '';
-            let statusColor = '';
-            if (isAdded) {
-                statusText = '추가됨'; statusColor = '#adb5bd';
-            } else if (isSameOrLowerRank) {
-                statusText = '직급낮음'; statusColor = '#fa5252';
-            } else if (hasSameRank) {
-                statusText = '중복직급'; statusColor = '#fa5252';
-            } else if (isLowerThanSelected) {
-                statusText = '순서오류'; statusColor = '#fa5252';
-            } else {
-                statusText = '+'; statusColor = 'var(--primary-color)';
+            // ✅ 대직자 정보 가로 배치 로직 (디자인 수정)
+            let delegateHtml = '';
+            if (emp.delegateName) {
+                const isMe = emp.delegateId === myInfo.empId;
+                const color = isMe ? '#339af0' : '#868e96';
+                delegateHtml = `<span style="color: ${color}; font-weight: ${isMe ? 'bold' : 'normal'}; font-size: 11px; margin-left: 8px;">
+                    (대직자: ${isMe ? '본인' : emp.delegateName})
+                </span>`;
             }
 
+            let statusText = isAdded ? '추가됨' : (isSameOrLowerRank ? '직급낮음' : (hasSameRank ? '중복직급' : (isLowerThanSelected ? '순서오류' : '+')));
+            let statusColor = isAdded ? '#adb5bd' : (isDisabled ? '#fa5252' : 'var(--primary-color)');
+
             return `
-                <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
+                <div class="result-item"
+                     onclick="${isDisabled ? '' : `checkAndAddApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder}, '${emp.delegateId || ''}')`}"
                      style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
                     <div>
                         <strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span>
+                        ${delegateHtml}
                         <br><small>${emp.depName || '-'} | ${emp.empId}</small>
                     </div>
                     <div style="color:${statusColor}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
                 </div>`;
         }).join('');
+    }
+
+    // ✅ 대직자 본인 확인 후 추가 함수 (SweetAlert2 컨펌)
+    function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) {
+        if (delegateId === myInfo.empId) {
+            Swal.fire({
+                title: '대직자 확인',
+                html: `선택하신 <b>${name} ${pos}</b>님의 현재 대직자는 <b style="color:#339af0;">본인</b>입니다.<br>정말 결재자로 지정하시겠습니까?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '네, 지정합니다',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    addApprover(id, name, pos, dept, posOrder);
+                }
+            });
+        } else {
+            addApprover(id, name, pos, dept, posOrder);
+        }
     }
 
     function addApprover(id, name, pos, dept, posOrder) {
@@ -2146,7 +2312,6 @@
                 const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.";
                 const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
 
-                // ✅ 성공 메시지 표시 후 페이지 이동
                 Swal.fire({
                     icon: 'success',
                     title: '완료',

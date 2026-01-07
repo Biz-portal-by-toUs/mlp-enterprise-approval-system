@@ -12,12 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 메일 기본 정보 & 임시저장 상태 관리용 엔티티
  *
  * @author : 김승기
  * @filename : Maiil
  * @since : 2025. 12. 16. 화요일
  */
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

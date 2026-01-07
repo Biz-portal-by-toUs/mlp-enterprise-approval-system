@@ -289,7 +289,7 @@
                             <td class="mi-col-star">
                                 <button type="button"
                                         class="mi-starBtn"
-                                        data-mail-id="${escapeHtml(it.mailId)}"
+                                        data-mail-no="${escapeHtml(it.mailNo)}"
                                         aria-label="중요메일 토글">
                                     ${starEmoji(isPrior)}
                                 </button>
@@ -298,14 +298,14 @@
                             <td class="mi-col-read">${pill}</td>
                             <td class="mi-col-sender">${senderName}</td>
                             <td class="mi-col-title">
-                                <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                                <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}">${title}</a>
                             </td>
                             <td class="mi-col-date">${createdAt}</td>
                         `;
 
                         tr.addEventListener('click', (e) => {
                             if (e.target && (e.target.closest('.mi-starBtn') || e.target.tagName === 'A')) return;
-                            location.href = `/mail/${encodeURIComponent(it.mailId)}`;
+                            location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
                         });
 
                         const starBtn = tr.querySelector('.mi-starBtn');
@@ -313,14 +313,14 @@
                             e.preventDefault();
                             e.stopPropagation();
 
-                            const mailId = starBtn.dataset.mailId;
+                            const mailNo = starBtn.dataset.mailNo;
                             const prev = starBtn.textContent.trim() === '⭐';
 
                             starBtn.textContent = starEmoji(!prev);
                             starBtn.disabled = true;
 
                             try{
-                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
+                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailNo)}/prior/toggle`);
                                 await load();
                             }catch(err){
                                 console.error(err);
@@ -337,7 +337,6 @@
 
                 function buildInboxApiUrl(st){
                     const params = new URLSearchParams();
-                    params.set('role', INBOX_ROLE);
                     params.set('page', String(st.page));
                     params.set('size', String(PAGE_SIZE));
                     if (st.q) params.set('q', st.q);

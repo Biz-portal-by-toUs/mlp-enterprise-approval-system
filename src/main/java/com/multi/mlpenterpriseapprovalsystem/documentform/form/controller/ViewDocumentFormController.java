@@ -15,13 +15,11 @@ import java.util.stream.Collectors;
 /**
  * 문서양식 화면(View) 라우팅 컨트롤러
  *
- * - @ModelAttribute에서 로그인 유저 기반으로 perm_* Boolean을 "항상" 주입
- * - 관리자/직원 판정 우선순위(관리자면 employee=false)
- *
  * @author : 정종원
  * @filename : ViewDocumentFormController
  * @since : 2025-12-22
  */
+
 @Controller
 @RequestMapping("/form")
 @RequiredArgsConstructor
