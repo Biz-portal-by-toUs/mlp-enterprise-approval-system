@@ -13,6 +13,14 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 메일 Rest API 컨트롤러
+ *
+ * @author : 정종원
+ * @filename : DocFormService
+ * @since : 2026-01-05 월요일
+ */
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/mails")

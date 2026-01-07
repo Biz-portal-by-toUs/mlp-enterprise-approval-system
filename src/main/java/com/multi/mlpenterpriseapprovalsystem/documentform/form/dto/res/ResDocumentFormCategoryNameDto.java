@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 내 카테고리명 반환 Dto
  *
  * @author : 정종원
  * @filename : ResDocumentFormCategoryNameDto

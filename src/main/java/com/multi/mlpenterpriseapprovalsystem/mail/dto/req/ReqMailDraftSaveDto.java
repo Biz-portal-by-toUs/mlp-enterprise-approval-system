@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.dto.req;
 
 /**
- * Please explain the class!!!
+ * 메일 임시 저장 요청 Dto
  *
  * @author : 정종원
  * @filename : ReqMailDraftSaveDto

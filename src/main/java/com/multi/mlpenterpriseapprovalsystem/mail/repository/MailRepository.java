@@ -9,12 +9,13 @@ import java.time.*;
 import java.util.*;
 
 /**
- * Please explain the class!!!
+ * 메일 상태 관리 repository
  *
  * @author : 정종원
  * @filename : MailRepository
  * @since : 2025-12-30 화요일
  */
+
 public interface MailRepository extends JpaRepository<Mail, Long> {
     // 메일 단건 조회 (mailId 기준)
     Optional<Mail> findByMailId(String mailId);

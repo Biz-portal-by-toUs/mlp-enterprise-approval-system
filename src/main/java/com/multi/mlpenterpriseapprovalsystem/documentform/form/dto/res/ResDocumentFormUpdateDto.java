@@ -3,7 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.*;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 수정 내용 반환 Dto
  *
  * @author : 정종원
  * @filename : DocumentFormUpdateResDto

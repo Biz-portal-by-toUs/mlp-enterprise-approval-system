@@ -6,7 +6,7 @@ import org.springframework.ui.*;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Please explain the class!!!
+ * 메일 화면(View) 라우팅 컨트롤러
  *
  * @author : 정종원
  * @filename : ViewMailController

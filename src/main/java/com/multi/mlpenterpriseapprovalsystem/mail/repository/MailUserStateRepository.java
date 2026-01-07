@@ -11,6 +11,14 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 메일 유저 상태 관리 repository
+ *
+ * @author : 정종원
+ * @filename : MailUserStateRepository
+ * @since : 2025-12-30 화요일
+ */
+
 public interface MailUserStateRepository extends JpaRepository<MailUserState, Long> {
 
     // 특정 메일에서 특정 유저의 상태 row 단건 조회

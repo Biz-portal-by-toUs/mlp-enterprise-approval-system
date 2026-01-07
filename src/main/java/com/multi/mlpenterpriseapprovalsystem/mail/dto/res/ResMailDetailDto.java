@@ -5,12 +5,13 @@ import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
 import java.time.*;
 
 /**
- * Please explain the class!!!
+ * 메일 상세정보 반환 Dto
  *
  * @author : 정종원
  * @filename : ResMailDetailDto
  * @since : 2025-12-30 화요일
  */
+
 public record ResMailDetailDto(
         String mailId,
         String title,

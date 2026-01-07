@@ -5,7 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
 import java.time.*;
 
 /**
- * Please explain the class!!!
+ * 메일 목록 조회 반환 Dto
  *
  * @author : 정종원
  * @filename : ResMailListDto

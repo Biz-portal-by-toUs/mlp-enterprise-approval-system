@@ -5,7 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 import java.util.List;
 
 /**
- * 문서양식 상세 응답 DTO
+ * 문서양식 상세내용 반환 DTO
  *
  * @author : 정종원
  * @filename : ResDocumentFormCategoryNameDto

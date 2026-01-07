@@ -25,6 +25,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 메일 서비스(실행부)
+ *
+ * @author : 정종원
+ * @filename : MailServiceImpl
+ * @since : 2025-12-30 화요일
+ */
+
 @Service
 @RequiredArgsConstructor
 public class MailServiceImpl implements MailService {

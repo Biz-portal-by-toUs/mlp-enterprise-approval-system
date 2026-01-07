@@ -9,12 +9,13 @@ import org.springframework.data.domain.*;
 import java.util.*;
 
 /**
- * Please explain the class!!!
+ * 메일 서비스(선언부)
  *
  * @author : 정종원
  * @filename : MailService
  * @since : 2025-12-30 화요일
  */
+
 public interface MailService {
     //메일 전송
     ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req);

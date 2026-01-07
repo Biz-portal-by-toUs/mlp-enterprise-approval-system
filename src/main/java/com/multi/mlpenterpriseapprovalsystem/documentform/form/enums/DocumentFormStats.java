@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.documentform.form.enums;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 상태 코드
  *
  * @author : 정종원
  * @filename : DocFormStats

@@ -6,7 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 목록 반환 Dto
  *
  * @author : 정종원
  * @filename : DocumentFormListResDto

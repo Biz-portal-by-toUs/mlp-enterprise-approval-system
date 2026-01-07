@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.*;
 import java.util.*;
 
 /**
- * Please explain the class!!!
+ * 문서양식 카테고리 관리 repository
  *
  * @author : 정종원
  * @filename : DocumentFormCategoryRepository
