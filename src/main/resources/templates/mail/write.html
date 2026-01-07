@@ -824,7 +824,7 @@
                     if (el) el.value = mailId || '';
                 }
 
-                // 임시저장 저장
+                // 임시저장
                 async function saveDraft(){
                     showErr('');
 
@@ -872,7 +872,7 @@
                     }
                 });
 
-                // ✅ 일반 전송: selfWrite ON이면 POST 2번, OFF이면 1번
+                // 일반 전송: selfWrite ON이면 POST 2번, OFF이면 1번
                 async function sendNormalMailWithOptionalSelfSplit({title, cnttJson}){
                     const { selfChecked, me, uiReceivers, wantSelf, others } = buildSendPlan();
 
@@ -931,7 +931,7 @@
                     const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
                     const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
 
-                    // ✅ receiver 검증은 “발송 계획 기준”으로
+                    // receiver 검증은 “발송 계획 기준”으로
                     const plan = buildSendPlan();
                     const hasAnyReceiverUi = plan.uiReceivers.length > 0;
                     const selfChecked = plan.selfChecked;
@@ -944,7 +944,7 @@
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
                     try {
-                        // ✅ draft 발송은 “1번만” (서버에서 self+others 분리/복제 처리 가능)
+                        // draft 발송은 “1번만” (서버에서 self+others 분리/복제 처리 가능)
                         if (draftMailId){
                             await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(draftMailId)}/send`, {
                                 method: 'POST',
@@ -961,7 +961,7 @@
                             return;
                         }
 
-                        // ✅ 일반 전송: selfWrite ON이면 2번 요청
+                        // 일반 전송: selfWrite ON이면 2번 요청
                         await sendNormalMailWithOptionalSelfSplit({ title, cnttJson });
 
                         location.href = '/mail/sent';
@@ -973,7 +973,7 @@
             </script>
 
             <script>
-                // ✅ draft 편집 진입: /mail/write?mailId=... 로 들어오면 초안 상세 불러오기
+                // draft 편집 진입: /mail/write?mailId=... 로 들어오면 초안 상세 불러오기
                 async function loadDraftIfAny(){
                     const params = new URLSearchParams(location.search);
                     const mailId = (params.get('mailId') || '').trim();
