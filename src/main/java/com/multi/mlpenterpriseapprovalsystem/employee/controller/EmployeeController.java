@@ -7,12 +7,14 @@ import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -174,4 +176,26 @@ public class EmployeeController {
                 null
         ));
     }
+
+    // 선택 가능한 대직자 조회
+    @GetMapping("/delegates/available")
+    public ResponseEntity<ResponseDto<List<ResEmployeeDetailDto>>> getAvailableDelegates(
+            @AuthenticationPrincipal CustomUser customUser,
+            @RequestParam(name = "startAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
+            @RequestParam(name = "endAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt)
+    {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        LocalDateTime normalizedStart = startAt.toLocalDate().atStartOfDay();
+        LocalDateTime normalizedEnd = endAt.toLocalDate().atTime(23, 59, 59);
+
+        List<ResEmployeeDetailDto> resEmployeeDetailDtos = employeeService.getAvailableDelegates(comId, myEmpId, normalizedStart, normalizedEnd);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "선택 가능한 대직자 조회 완료", resEmployeeDetailDtos)
+        );
+    }
+
 }

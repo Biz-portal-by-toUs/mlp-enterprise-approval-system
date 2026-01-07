@@ -824,13 +824,24 @@
             docs.forEach((doc, index) => {
                 const no = (currentPage * pageSize) + index + 1;
 
+                // ✅ 수정: 내 결재일 찾기 로직 개선 (대직자로 결재한 경우도 포함)
                 let myApprovalDate = '-';
                 if (doc.resApprovalLineDtos && Array.isArray(doc.resApprovalLineDtos) && currentUserId) {
-                    const myApproval = doc.resApprovalLineDtos.find(line =>
-                        line.approverId === currentUserId &&
-                        (line.apprStat === 'A' || line.apprStat === 'R') &&
-                        line.endedAt
-                    );
+                    const myApproval = doc.resApprovalLineDtos.find(line => {
+                        // 조건 1: 내가 결재자이고 승인/반려 상태이며 결재일이 있는 경우
+                        const isMyDirectApproval = line.approverId === currentUserId &&
+                            (line.apprStat === 'A' || line.apprStat === 'R') &&
+                            line.endedAt;
+
+                        // 조건 2: 내가 대직자로서 실제 결재한 경우 (isDelegate=true, isActualAppr=true)
+                        const isMyDelegateApproval = line.approverId === currentUserId &&
+                            line.isDelegate === true &&
+                            line.isActualAppr === true &&
+                            (line.apprStat === 'A' || line.apprStat === 'R') &&
+                            line.endedAt;
+
+                        return isMyDirectApproval || isMyDelegateApproval;
+                    });
 
                     if (myApproval && myApproval.endedAt) {
                         myApprovalDate = formatDate(myApproval.endedAt);

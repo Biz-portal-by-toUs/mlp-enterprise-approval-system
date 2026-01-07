@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.employee.service;
 
+import com.multi.mlpenterpriseapprovalsystem.attendance.enums.AtteType;
+import com.multi.mlpenterpriseapprovalsystem.attendance.repository.AttendanceRepository;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
 
@@ -42,6 +45,7 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final PositionsRepository positionsRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AttendanceRepository attendanceRepository;
 
     /**
      * ✅ 이름순 정렬 + 검색 + 커서 기반 무한스크롤
@@ -327,5 +331,31 @@ public class EmployeeService {
 
     private String normalize(String v) {
         return v == null ? "" : v.trim();
+    }
+
+
+    // 선택 가능한 대직자 조회
+    @Transactional(readOnly = true)
+    public List<ResEmployeeDetailDto> getAvailableDelegates(String comId, String myEmpId, LocalDateTime start, LocalDateTime end) {
+        // 1. 같은 부서원들 조회 (본인 제외)
+        Employee me = employeeRepository.findByEmpId(myEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        Department myDepartment = me.getDepartment();
+
+        List<Employee> colleagues = employeeRepository.findByDepartmentAndNotMe(comId, myDepartment, myEmpId);
+
+        return colleagues.stream().map(emp -> {
+            ResEmployeeDetailDto dto = ResEmployeeDetailDto.from(emp);
+
+            // 해당 기간에 근태 기록이 있는지 확인
+            boolean hasOverlap = attendanceRepository.existsByEmployeeAndDateOverlapAndTypeIsVAndIsDeletedFalse(emp, start, end, AtteType.V);
+
+            if (hasOverlap) {
+                dto.setAvailable(false);      // 선택 불가 처리
+                dto.setStatusMessage("휴가");  // 화면 표시 메시지
+            }
+            return dto;
+        }).toList();
     }
 }
