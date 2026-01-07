@@ -3,6 +3,8 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoom;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoomAttendee;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.domain.MeetingRoomReservation;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -40,6 +43,7 @@ public class MeetingRoomReservationService {
     private final MeetingRoomRepository meetingRoomRepository;
     private final EmployeeRepository employeeRepository;
     private final MeetingRoomAttendeeRepository meetingRoomAttendeeRepository;
+    private final NotificationService notificationService;
 
     public List<ResReservationListDto> getReservations(String comId, String date) {
 
@@ -125,6 +129,41 @@ public class MeetingRoomReservationService {
                 meetingRoomAttendeeRepository.save(attendee);
             }
         }
+
+        List<MeetingRoomAttendee> attendees = meetingRoomAttendeeRepository.findAllByMeetingRoomReservation_MeetingResvNo(reservation.getMeetingResvNo());
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String startTime = reservation.getStartedAt().format(formatter);
+        String endTime = reservation.getEndedAt().format(formatter);
+
+        String title = "회의실 예약 알림";
+        String roomName = reservation.getMeetingRoom().getRoomName();
+        String content = String.format("[%s]에 예약되었습니다. (시간: %s ~ %s)",
+                roomName, startTime, endTime);
+        String url = "/my-reservations";
+
+        for (MeetingRoomAttendee attendee : attendees) {
+            Employee receiver = attendee.getEmployee();
+
+            notificationService.sendNotification(
+                    receiver,
+                    NotificationType.MEETING,
+                    title,
+                    content,
+                    url
+            );
+        }
+
+        Employee host = reservation.getResvEmp();
+        notificationService.sendNotification(
+                host,
+                NotificationType.MEETING,
+                title,
+                content,
+                url
+        );
+
+
 
     }
 
