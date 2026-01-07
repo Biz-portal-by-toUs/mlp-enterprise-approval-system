@@ -25,9 +25,13 @@ public class ChatEmployeeItemDto {
 
     private final String email;
 
+    private final String delegateId;
+    private final String delegateName;
+
     public ChatEmployeeItemDto(Long empNo, String empId, String empName,
                                String depName, String posName, Integer posOrder,
-                               MsgStat msgStat, String atte, String email) {
+                               MsgStat msgStat, String atte, String email,
+                               String delegateId, String delegateName) {
         this.empNo = empNo;
         this.empId = empId;
         this.empName = empName;
@@ -37,5 +41,7 @@ public class ChatEmployeeItemDto {
         this.msgStat = (msgStat == null ? null : String.valueOf(msgStat.getCode())); // 또는 msgStat.name()
         this.atte = atte;
         this.email = email;
+        this.delegateId = delegateId; //
+        this.delegateName = delegateName;
     }
 }

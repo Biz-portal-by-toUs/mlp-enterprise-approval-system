@@ -14,6 +14,7 @@ import java.time.LocalDate;
  * @since : 2025. 12. 21. 일요일
  */
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @AllArgsConstructor
@@ -48,6 +49,9 @@ public class ResEmployeeDetailDto {
     private String delegateEmpId;
     private String delegateName;
 
+    private boolean isAvailable;    // 프론트에서 버튼 활성화/비활성화 결정 플래그
+    private String statusMessage;   // "휴가", "출장" 등 화면에 표시할 텍스트
+
     /**
      * Entity -> DTO 변환 정적 메서드
      */
@@ -72,6 +76,7 @@ public class ResEmployeeDetailDto {
                 .msgStat(employee.getMsgStat() == null ? null : String.valueOf(employee.getMsgStat().getCode()))
                 .delegateEmpId(employee.getDelegate() != null ? employee.getDelegate().getEmpId() : null)
                 .delegateName(employee.getDelegate() != null ? employee.getDelegate().getEmpName() : null)
+                .isAvailable(true)
                 .build();
     }
 
