@@ -39,11 +39,4 @@ public interface MailService {
     void deleteDraft(String mailId, String senderEmpId);
 
     ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req);
-
-    // (선택) 🔻mailId 호환용
-    @Deprecated
-    ResMailDetailDto getDetailByMailId(String mailId, String viewerEmpId);
-
-    @Deprecated
-    void markAsReadByMailId(String mailId, String userEmpId);
 }

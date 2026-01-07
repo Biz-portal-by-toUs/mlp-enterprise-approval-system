@@ -106,7 +106,7 @@ public class MailServiceImpl implements MailService {
     @Override
     @Transactional(readOnly = true)
     public ResMailDetailDto getDetail(Long mailNo, String viewerEmpId) {
-        MailUserState mus = mailUserStateRepository.findStateByMailNo(mailNo, viewerEmpId)
+        MailUserState mus = mailUserStateRepository.findByMail_MailNoAndUser_EmpId(mailNo, viewerEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_ACCESS_DENIED));
 
         return buildDetailDtoFromState(mus);
@@ -156,29 +156,6 @@ public class MailServiceImpl implements MailService {
     public void togglePrior(Long mailNo, String userEmpId) {
         MailUserState mus = mustFindState(mailNo, userEmpId);
         mus.togglePrior();
-    }
-
-    // =========================
-    // (선택) 🔻mailId 호환용
-    // =========================
-
-    @Override
-    @Deprecated
-    @Transactional(readOnly = true)
-    public ResMailDetailDto getDetailByMailId(String mailId, String viewerEmpId) {
-        MailUserState mus = mailUserStateRepository.findState(mailId, viewerEmpId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_ACCESS_DENIED));
-
-        return buildDetailDtoFromState(mus);
-    }
-
-    @Override
-    @Deprecated
-    @Transactional
-    public void markAsReadByMailId(String mailId, String userEmpId) {
-        MailUserState mus = mailUserStateRepository.findByMail_MailIdAndUser_EmpId(mailId, userEmpId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_STATE_NOT_FOUND));
-        mus.markRead();
     }
 
     // =========================
@@ -344,7 +321,7 @@ public class MailServiceImpl implements MailService {
         Mail saved = mailRepository.save(mail);
 
         // sender state row 생성(중복 방지) - 여기만 mailId 기반 유지해도 OK
-        mailUserStateRepository.findByMail_MailIdAndUser_EmpId(saved.getMailId(), senderEmpId)
+        mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), senderEmpId)
                 .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.SENDER)));
 
         if (receiverEmpIds != null && !receiverEmpIds.isEmpty()) {
@@ -357,7 +334,7 @@ public class MailServiceImpl implements MailService {
                 Employee recv = employeeRepository.findByEmpId(recvEmpId)
                         .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
 
-                mailUserStateRepository.findByMail_MailIdAndUser_EmpId(saved.getMailId(), recvEmpId)
+                mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), recvEmpId)
                         .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT)));
 
                 noti.sendNotification(

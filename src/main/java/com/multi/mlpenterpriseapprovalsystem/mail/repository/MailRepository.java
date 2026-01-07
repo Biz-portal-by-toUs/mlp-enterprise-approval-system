@@ -17,18 +17,6 @@ import java.util.*;
  */
 
 public interface MailRepository extends JpaRepository<Mail, Long> {
-    // 메일 단건 조회 (mailId 기준)
-    Optional<Mail> findByMailId(String mailId);
-
-    // 메일 단건 조회 + 발신자까지 fetch (상세조회 화면에서 자주 씀)
-    @Query("""
-            select m
-            from Mail m
-            join fetch m.sender
-            where m.mailId = :mailId
-        """)
-    Optional<Mail> findDetailByMailId(@Param("mailId") String mailId);
-
     // 임시저장(Draft) 전용
     // 규칙: savedAt != null 이면 임시저장
 
