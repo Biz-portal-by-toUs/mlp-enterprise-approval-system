@@ -37,8 +37,8 @@ public class MailController {
         ResMailSendDto res = mailService.sendMail(empId, req);
 
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "메일 전송 성공", res));
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, "메일 전송 성공", res));
     }
 
     // 받은 메일함
@@ -59,12 +59,12 @@ public class MailController {
     // 보낸 메일함
     @GetMapping("/sent")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> sent(
-            @RequestParam(value = "q", required = false) String q,
+            @RequestParam(name = "keyword", required = false) String keyword,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getSent(empId, q, pageable);
+        Page<ResMailListDto> res = mailService.getSent(empId, keyword, pageable);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -74,7 +74,7 @@ public class MailController {
     // 휴지통 조회
     @GetMapping("/trash")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> trash(
-            @PageableDefault(size = 10, sort = "deletedAt") Pageable pageable,
+            @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -84,10 +84,6 @@ public class MailController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 조회 성공", res));
     }
-
-    // =========================
-    // ✅ mailNo 기준 상세/상태 API
-    // =========================
 
     // 메일 상세 조회 (mailNo 기준)
     @GetMapping("/{mailNo}")
@@ -188,48 +184,15 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "중요 메일 토글 성공", null));
     }
 
-    // =========================
-    // (선택) 🔻mailId 기반 호환 API (나중에 제거)
-    // =========================
-
-    @Deprecated
-    @GetMapping("/by-id/{mailId}")
-    public ResponseEntity<ResponseDto<ResMailDetailDto>> detailByMailId(
-            @PathVariable String mailId,
-            @AuthenticationPrincipal CustomUser user
-    ) {
-        String empId = user.getUsername();
-        ResMailDetailDto res = mailService.getDetailByMailId(mailId, empId);
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "메일 상세 조회 성공(by mailId)", res));
-    }
-
-    @Deprecated
-    @PatchMapping("/by-id/{mailId}/read")
-    public ResponseEntity<ResponseDto<Void>> markReadByMailId(
-            @PathVariable String mailId,
-            @AuthenticationPrincipal CustomUser user
-    ) {
-        String empId = user.getUsername();
-        mailService.markAsReadByMailId(mailId, empId);
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "읽음 처리 성공(by mailId)", null));
-    }
-
     // ===== drafts =====
-
     @GetMapping("/drafts")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> drafts(
-            @RequestParam(value = "q", required = false) String q,
+            @RequestParam(name = "keyword", required = false) String keyword,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getDrafts(empId, q, pageable);
+        Page<ResMailListDto> res = mailService.getDrafts(empId, keyword, pageable);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -258,8 +221,8 @@ public class MailController {
         ResMailDraftSavedDto res = mailService.saveDraft(empId, req);
 
         return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "임시저장 성공", res));
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, "임시저장 성공", res));
     }
 
     @DeleteMapping("/drafts/{mailId}")
@@ -285,7 +248,21 @@ public class MailController {
         ResMailSendDto res = mailService.sendDraft(mailId, empId, req);
 
         return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(HttpStatus.CREATED, "임시저장 발송 성공", res));
+    }
+
+    @GetMapping("/self")
+    public ResponseEntity<ResponseDto<Page<ResMailListDto>>> selfMailbox(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        Page<ResMailListDto> res = mailService.getSelfMailbox(empId, keyword, pageable);
+
+        return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "임시저장 발송 성공", res));
+                .body(new ResponseDto<>(HttpStatus.OK, "내게쓴메일함 조회 성공", res));
     }
 }
