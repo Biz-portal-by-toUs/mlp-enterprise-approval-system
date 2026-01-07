@@ -40,66 +40,37 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
     """)
     List<String> findRecipientDisplayByMailNo(@Param("mailNo") Long mailNo);
 
-    //  inbox/sent/trash
-
+    //  inbox/sent
     @Query(
             value = """
-            select mus
-            from MailUserState mus
-            join fetch mus.mail m
-            join fetch m.sender s
-            where mus.user.empId = :userEmpId
-              and mus.role = :role
-              and mus.deletedAt is null
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
-            order by m.mailNo desc
-        """,
+        select mus
+        from MailUserState mus
+        join fetch mus.mail m
+        join fetch m.sender s
+        where mus.user.empId = :userEmpId
+          and mus.role = :role
+          and mus.deletedAt is null
+          and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+        order by m.mailNo desc
+    """,
             countQuery = """
-            select count(mus)
-            from MailUserState mus
-            join mus.mail m
-            where mus.user.empId = :userEmpId
-              and mus.role = :role
-              and mus.deletedAt is null
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
-        """
+        select count(mus)
+        from MailUserState mus
+        join mus.mail m
+        where mus.user.empId = :userEmpId
+          and mus.role = :role
+          and mus.deletedAt is null
+          and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
+    """
     )
-    Page<MailUserState> findInbox(
+    Page<MailUserState> findMailbox(
             @Param("userEmpId") String userEmpId,
             @Param("role") MailRole role,
             @Param("q") String q,
             Pageable pageable
     );
 
-    @Query(
-            value = """
-            select mus
-            from MailUserState mus
-            join fetch mus.mail m
-            join fetch m.sender s
-            where mus.user.empId = :userEmpId
-              and mus.role = :role
-              and mus.deletedAt is null
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
-            order by m.mailNo desc
-        """,
-            countQuery = """
-            select count(mus)
-            from MailUserState mus
-            join mus.mail m
-            where mus.user.empId = :userEmpId
-              and mus.role = :role
-              and mus.deletedAt is null
-              and (:q is null or :q = '' or m.title like concat('%', :q, '%'))
-        """
-    )
-    Page<MailUserState> findSent(
-            @Param("userEmpId") String userEmpId,
-            @Param("role") MailRole role,
-            @Param("q") String q,
-            Pageable pageable
-    );
-
+    // trash
     @Query(
             value = """
                 select mus

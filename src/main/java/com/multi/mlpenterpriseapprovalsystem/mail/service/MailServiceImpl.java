@@ -80,7 +80,7 @@ public class MailServiceImpl implements MailService {
     @Transactional(readOnly = true)
     public Page<ResMailListDto> getInbox(String userEmpId, String q, Pageable pageable) {
         String keyword = (q == null) ? null : q.trim();
-        return mailUserStateRepository.findInbox(userEmpId, MailRole.RECIPIENT, keyword, pageable)
+        return mailUserStateRepository.findMailbox(userEmpId, MailRole.RECIPIENT, keyword, pageable)
                 .map(this::toListDto);
     }
 
@@ -88,7 +88,7 @@ public class MailServiceImpl implements MailService {
     @Transactional(readOnly = true)
     public Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable) {
         String keyword = (q == null) ? null : q.trim();
-        return mailUserStateRepository.findSent(senderEmpId, MailRole.SENDER, keyword, pageable)
+        return mailUserStateRepository.findMailbox(senderEmpId, MailRole.SENDER, keyword, pageable)
                 .map(this::toListDto);
     }
 
@@ -99,10 +99,7 @@ public class MailServiceImpl implements MailService {
                 .map(this::toListDto);
     }
 
-    // =========================
-    // ✅ detail / state : mailNo 기준
-    // =========================
-
+    // detail / state : mailNo 기준
     @Override
     @Transactional(readOnly = true)
     public ResMailDetailDto getDetail(Long mailNo, String viewerEmpId) {
@@ -112,6 +109,7 @@ public class MailServiceImpl implements MailService {
         return buildDetailDtoFromState(mus);
     }
 
+    // 읽음 표시
     @Override
     @Transactional
     public void markAsRead(Long mailNo, String userEmpId) {
@@ -119,6 +117,7 @@ public class MailServiceImpl implements MailService {
         mus.markRead();
     }
 
+    // 삭제(휴지통)
     @Override
     @Transactional
     public void moveToTrash(Long mailNo, String userEmpId) {
@@ -126,6 +125,7 @@ public class MailServiceImpl implements MailService {
         mus.moveToTrash(LocalDateTime.now());
     }
 
+    // 메일 복구
     @Override
     @Transactional
     public void restoreFromTrash(Long mailNo, String userEmpId) {
@@ -133,6 +133,7 @@ public class MailServiceImpl implements MailService {
         mus.restore();
     }
 
+    // 메일 완전 삭제
     @Override
     @Transactional
     public void purge(Long mailNo, String userEmpId) {
@@ -144,6 +145,7 @@ public class MailServiceImpl implements MailService {
         mailUserStateRepository.delete(mus);
     }
 
+    // 즐겨찾기 설정
     @Override
     @Transactional
     public void setPrior(Long mailNo, String userEmpId, boolean prior) {
@@ -151,6 +153,7 @@ public class MailServiceImpl implements MailService {
         mus.setPrior(prior);
     }
 
+    // 즐겨찾기 변경
     @Override
     @Transactional
     public void togglePrior(Long mailNo, String userEmpId) {
@@ -158,16 +161,13 @@ public class MailServiceImpl implements MailService {
         mus.togglePrior();
     }
 
-    // =========================
-    // ===== DTO builders =====
-    // =========================
-
+    // DTO builders
     private ResMailListDto toListDto(MailUserState mus) {
         Mail m = mus.getMail();
 
         String receivers = null;
         if (mus.getRole() == MailRole.SENDER) {
-            // ✅ mailNo 기준으로 통일
+            // mailNo 기준으로 통일
             List<String> names = mailUserStateRepository.findRecipientNamesByMailNo(m.getMailNo());
             receivers = (names == null || names.isEmpty()) ? "-" : String.join(", ", names);
         }
@@ -192,7 +192,7 @@ public class MailServiceImpl implements MailService {
 
         String receivers = null;
         if (mus.getRole() == MailRole.SENDER) {
-            // ✅ mailNo 기준
+            // mailNo 기준
             List<String> receiverDisplays = mailUserStateRepository.findRecipientDisplayByMailNo(mail.getMailNo());
             receivers = receiverDisplays.stream()
                     .distinct()
@@ -217,10 +217,7 @@ public class MailServiceImpl implements MailService {
         );
     }
 
-    // =========================
-    // ===== drafts (mailId 기반 유지) =====
-    // =========================
-
+    // 임시 저장 (mailId 기반 유지)
     @Override
     @Transactional
     public ResMailDraftSavedDto saveDraft(String senderEmpId, ReqMailDraftSaveDto req) {
@@ -246,7 +243,7 @@ public class MailServiceImpl implements MailService {
 
         Mail saved = mailRepository.save(mail);
 
-        // ✅ DTO: (mailNo, mailId, savedAt)
+        // DTO: (mailNo, mailId, savedAt)
         return new ResMailDraftSavedDto(saved.getMailNo(), saved.getMailId(), saved.getSavedAt());
     }
 
@@ -347,14 +344,11 @@ public class MailServiceImpl implements MailService {
             }
         }
 
-        // ✅ DTO: (mailNo, mailId, createdAt) / savedAt은 sent면 null일 수도
+        // DTO: (mailNo, mailId, createdAt) / savedAt은 sent면 null일 수도
         return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getSavedAt());
     }
 
-    // =========================
-    // ===== helpers =====
-    // =========================
-
+    // helpers
     private String generateMailId(String senderEmpId) {
         long epochSec = Instant.now().getEpochSecond();
         return "MAIL_" + epochSec + "_" + senderEmpId;
