@@ -102,4 +102,7 @@ public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Long
             Boolean isDelegate,
             Employee targetApprover
     );
+
+    // 내가 결재자이면서 결재 상태가 AWAITING인 문서 개수 카운트
+    int countByApproverAndApprStat(Employee approver, ApprStat apprStat);
 }

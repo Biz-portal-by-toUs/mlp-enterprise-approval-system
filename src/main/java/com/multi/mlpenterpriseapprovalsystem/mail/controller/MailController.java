@@ -13,6 +13,13 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Please explain the class!!!
+ *
+ * @author : 정종원
+ * @filename : MailController
+ * @since : 2025-12-30 화요일
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/mails")
@@ -37,17 +44,10 @@ public class MailController {
     // 받은 메일함(역할 1개)
     @GetMapping("/inbox")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> inbox(
-            @RequestParam("role") MailRole role,
-            @RequestParam(value = "q", required = false) String q,
-            @PageableDefault(size = 10) Pageable pageable,
-            @AuthenticationPrincipal CustomUser user
+            @AuthenticationPrincipal CustomUser user,
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
     ) {
-        String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getInbox(empId, role, q, pageable);
-
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "받은 메일함 조회 성공", res));
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "받은 메일함 목록 조회 성공", mailService.getInbox(user, pageable)));
     }
 
     // 보낸 메일함(서버 인증 기반)

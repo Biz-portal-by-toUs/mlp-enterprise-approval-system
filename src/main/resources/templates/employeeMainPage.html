@@ -4,15 +4,14 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}">
 
-<!-- ✅ 이 페이지 전용 스타일: layout의 :root / .badge / .card 등 절대 건드리지 않음 -->
 <th:block layout:fragment="pageStyles">
     <div class="notice-popup-scope">
 
-        <!-- ✅ 여기부터 팝업 코드 "그대로" (JS/HTML 구조 유지) -->
-        <style>
-            /* ⚠️ :root 삭제 (전역 변수 덮어쓰기 방지) */
+        <!-- =========================
+        ✅ 공지 팝업 (기존 유지)
+        ========================== -->
 
-            /* ===== Modal Overlay ===== */
+        <style>
             .popup-overlay{
                 position: fixed;
                 inset: 0;
@@ -20,54 +19,38 @@
                 align-items: center;
                 justify-content: center;
                 z-index: 9999;
-
                 background:
                         radial-gradient(900px 600px at 20% 10%, rgba(59,130,246,.18), transparent 60%),
                         radial-gradient(800px 500px at 85% 0%, rgba(16,185,129,.14), transparent 60%),
                         rgba(255, 255, 255, 0.72);
-
                 backdrop-filter: blur(6px);
                 -webkit-backdrop-filter: blur(6px);
-
                 padding: 18px;
             }
-
-            /* ===== Modal Card ===== */
             .popup-modal{
                 width: min(640px, 92vw);
-                background: #ffffff; /* ✅ 더 확실한 화이트 */
+                background: #ffffff;
                 border-radius: 18px;
-
-                /* ✅ 그림자도 조금 덜 무겁게 */
                 box-shadow: 0 24px 60px rgba(17,24,39,.18);
-
-                /* ✅ 밝은 테두리 */
                 border: 1px solid rgba(17,24,39,.10);
-
                 overflow: hidden;
                 transform: translateY(6px);
                 animation: popupIn .18s ease-out forwards;
                 font-family: 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
             }
-
-
             @keyframes popupIn{
                 from { opacity: 0; transform: translateY(14px) scale(.98); }
-                to   { opacity: 1; transform: translateY(0) scale(1); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
             }
-
-            /* ===== Header ===== */
             .popup-header{
                 padding: 14px 16px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
-
                 background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(255,255,255,0));
                 border-bottom: 1px solid var(--line);
             }
-
             .popup-title{
                 margin: 0;
                 font-size: 1.05rem;
@@ -78,7 +61,6 @@
                 align-items: center;
                 gap: 10px;
             }
-
             .popup-title::before{
                 content:"";
                 width: 10px;
@@ -87,22 +69,16 @@
                 background: rgba(59,130,246,.65);
                 box-shadow: 0 0 0 4px rgba(59,130,246,.15);
             }
-
-            /* ===== Body ===== */
             .popup-body{
                 padding: 16px;
                 max-height: 56vh;
                 overflow: auto;
-
                 color: var(--text);
                 line-height: 1.7;
-                white-space: normal; /* TipTap/HTML 렌더 대응 */
-                /* ✅ 더 밝게 */
+                white-space: normal;
                 background: rgba(255,255,255,.92);
                 border-top: 1px solid rgba(17,24,39,.06);
-
             }
-
             .popup-body::-webkit-scrollbar{ width: 10px; }
             .popup-body::-webkit-scrollbar-thumb{
                 background: rgba(31,41,55,.18);
@@ -111,7 +87,6 @@
             }
             .popup-body::-webkit-scrollbar-track{ background: transparent; }
 
-            /* ===== Footer ===== */
             .popup-footer{
                 padding: 12px 16px;
                 border-top: 1px solid var(--line);
@@ -121,7 +96,6 @@
                 gap: 10px;
                 background: var(--card);
             }
-
             .popup-meta{
                 font-size: 12px;
                 font-weight: 900;
@@ -130,7 +104,6 @@
                 align-items: center;
                 gap: 8px;
             }
-
             #popupCounter{
                 display: inline-flex;
                 align-items: center;
@@ -141,15 +114,12 @@
                 border: 1px solid rgba(59,130,246,.18);
                 color: rgba(31,41,55,.85);
             }
-
-            /* ===== Buttons ===== */
             .popup-actions{
                 display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
                 justify-content: flex-end;
             }
-
             .btn{
                 appearance: none;
                 border: 1px solid rgba(17,24,39,.10);
@@ -163,19 +133,16 @@
                 box-shadow: 0 10px 20px rgba(17,24,39,.06);
                 transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
             }
-
             .btn:hover{
                 transform: translateY(-1px);
                 box-shadow: var(--shadow2);
                 border-color: rgba(59,130,246,.25);
                 background: rgba(59,130,246,.05);
             }
-
             .btn.primary{
                 border-color: rgba(59,130,246,.35);
                 background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(255,255,255,0));
             }
-
             .btn.close-x{
                 border: 1px solid rgba(17,24,39,.10);
                 background: rgba(255,255,255,.85);
@@ -189,32 +156,10 @@
                 place-items: center;
                 color: rgba(31,41,55,.85);
             }
-
             .btn.close-x:hover{
                 border-color: rgba(239,68,68,.30);
                 background: rgba(239,68,68,.06);
             }
-
-            @media (max-width: 520px){
-                .popup-modal{ width: min(560px, 94vw); }
-                .popup-footer{
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-                .popup-actions{
-                    width: 100%;
-                    justify-content: stretch;
-                }
-                .popup-actions .btn{
-                    flex: 1 1 auto;
-                    justify-content: center;
-                }
-                #popupCounter{
-                    width: 100%;
-                    justify-content: center;
-                }
-            }
-
             .btn.danger{
                 border-color: rgba(239,68,68,.25);
                 background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(255,255,255,0));
@@ -224,64 +169,45 @@
                 background: rgba(239,68,68,.06);
             }
 
-            /* =========================
-               ✅ TipTap/HTML 렌더 스타일 (팝업용)
-            ========================== */
-            #popupBody .ProseMirror{
-                outline: none;
-                white-space: pre-wrap;
-                line-height: 1.75;
-            }
-            #popupBody h2{ margin: 12px 0 8px; font-size: 1.15rem; font-weight: 900; }
-            #popupBody p{ margin: 8px 0; }
-            #popupBody ul, #popupBody ol{ padding-left: 22px; margin: 8px 0; }
+            /* TipTap popup viewer */
+            #popupBody .ProseMirror{ outline:none; white-space:pre-wrap; line-height:1.75; }
+            #popupBody h2{ margin:12px 0 8px; font-size:1.15rem; font-weight:900; }
+            #popupBody p{ margin:8px 0; }
+            #popupBody ul, #popupBody ol{ padding-left:22px; margin:8px 0; }
             #popupBody blockquote{
-                margin: 10px 0;
-                padding: 10px 12px;
-                border-left: 4px solid rgba(59,130,246,.35);
+                margin:10px 0; padding:10px 12px;
+                border-left:4px solid rgba(59,130,246,.35);
                 background: rgba(59,130,246,.06);
                 border-radius: 12px;
             }
-            #popupBody pre{
-                background: rgba(17,24,39,.06);
-                padding: 12px;
-                border-radius: 14px;
-                overflow: auto;
-            }
-            #popupBody code{
-                background: rgba(17,24,39,.06);
-                padding: 2px 6px;
-                border-radius: 8px;
-                font-weight: 800;
-            }
+            #popupBody pre{ background: rgba(17,24,39,.06); padding:12px; border-radius:14px; overflow:auto; }
+            #popupBody code{ background: rgba(17,24,39,.06); padding:2px 6px; border-radius:8px; font-weight:800; }
             #popupBody table{
-                border-collapse: collapse;
-                width: 100%;
-                table-layout: fixed;
-                margin: 10px 0;
-                border: 1px solid rgba(17,24,39,.10);
-                border-radius: 12px;
-                overflow: hidden;
+                border-collapse: collapse; width:100%; table-layout:fixed; margin:10px 0;
+                border:1px solid rgba(17,24,39,.10);
+                border-radius:12px; overflow:hidden;
             }
             #popupBody th, #popupBody td{
-                border: 1px solid rgba(17,24,39,.10);
-                padding: 10px 12px;
+                border:1px solid rgba(17,24,39,.10);
+                padding:10px 12px;
                 vertical-align: top;
                 word-break: break-word;
                 position: relative;
             }
-            #popupBody th{
-                background: rgba(17,24,39,.03);
-                font-weight: 900;
-                color: var(--muted);
-            }
+            #popupBody th{ background: rgba(17,24,39,.03); font-weight:900; color: var(--muted); }
             #popupBody .selectedCell:after{
-                content:"";
-                position:absolute;
-                inset:0;
-                background: rgba(59,130,246,.08);
-                pointer-events:none;
+                content:""; position:absolute; inset:0;
+                background: rgba(59,130,246,.08); pointer-events:none;
             }
+
+            @media (max-width: 520px){
+                .popup-modal{ width: min(560px, 94vw); }
+                .popup-footer{ flex-direction: column; align-items: stretch; }
+                .popup-actions{ width:100%; justify-content: stretch; }
+                .popup-actions .btn{ flex:1 1 auto; justify-content:center; }
+                #popupCounter{ width:100%; justify-content:center; }
+            }
+
         </style>
 
         <div id="popupOverlay" class="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
@@ -291,39 +217,30 @@
                     <button class="btn close-x" type="button" aria-label="Close" onclick="closePopup()">×</button>
                 </div>
 
-                <div id="popupBody" class="popup-body">
-                    <!-- contents -->
-                </div>
+                <div id="popupBody" class="popup-body"></div>
 
                 <div class="popup-footer">
                     <div class="popup-meta">
                         <span id="popupCounter"></span>
                     </div>
-
                     <div class="popup-actions">
                         <button class="btn danger" type="button" onclick="hideToday()">오늘 하루 보지 않기</button>
-
-                        <!-- ✅ 추가 -->
                         <button class="btn" id="btnPrev" type="button" onclick="prevPopup()">이전</button>
                         <button class="btn" id="btnNext" type="button" onclick="nextPopup()">다음</button>
                         <button class="btn primary" type="button" onclick="closePopup()">닫기</button>
                     </div>
-
                 </div>
             </div>
         </div>
 
-
-        <!-- ✅ TipTap viewer (JSON 렌더용) -->
+        <!-- TipTap viewer -->
         <script type="module">
             import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
             import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
             import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
-
             import TextStyle from "https://esm.sh/@tiptap/extension-text-style@2.11.5";
             import Color from "https://esm.sh/@tiptap/extension-color@2.11.5";
             import Highlight from "https://esm.sh/@tiptap/extension-highlight@2.11.5";
-
             import Table from "https://esm.sh/@tiptap/extension-table@2.11.5";
             import TableRow from "https://esm.sh/@tiptap/extension-table-row@2.11.5";
             import TableHeader from "https://esm.sh/@tiptap/extension-table-header@2.11.5";
@@ -333,7 +250,6 @@
 
             function ensurePopupViewer() {
                 if (popupViewer) return popupViewer;
-
                 const host = document.querySelector("#popupBody");
                 popupViewer = new Editor({
                     element: host,
@@ -341,12 +257,9 @@
                     extensions: [
                         StarterKit,
                         Underline,
-
-                        // JSON에 color/highlight/table이 들어있다면 렌더를 위해 확장은 있어야 함
                         TextStyle,
                         Color,
                         Highlight.configure({ multicolor: true }),
-
                         Table.configure({ resizable: true }),
                         TableRow,
                         TableHeader,
@@ -354,24 +267,12 @@
                     ],
                     content: "<p></p>",
                 });
-
                 return popupViewer;
             }
 
-
-            function parseJsonSafely(str) {
-                try { return JSON.parse(str); } catch { return null; }
-            }
-
-            function isTipTapDoc(obj) {
-                return !!obj && typeof obj === "object" && (obj.type === "doc" || Array.isArray(obj.content));
-            }
-
-            function isTextEnvelope(obj) {
-                // {"text":"..."} 또는 {"text": "...", ...}
-                return !!obj && typeof obj === "object" && typeof obj.text === "string";
-            }
-
+            function parseJsonSafely(str) { try { return JSON.parse(str); } catch { return null; } }
+            function isTipTapDoc(obj) { return !!obj && typeof obj === "object" && (obj.type === "doc" || Array.isArray(obj.content)); }
+            function isTextEnvelope(obj) { return !!obj && typeof obj === "object" && typeof obj.text === "string"; }
             function isProbablyJson(str) {
                 if (typeof str !== "string") return false;
                 const s = str.trim();
@@ -379,7 +280,12 @@
                 if (!(s.startsWith("{") || s.startsWith("["))) return false;
                 return parseJsonSafely(s) !== null;
             }
-
+            function isProbablyHtml(str){
+                if (typeof str !== "string") return false;
+                const s = str.trim();
+                if (!s) return false;
+                return /<\/?[a-z][\s\S]*>/i.test(s);
+            }
             function escapeHtml(str) {
                 return String(str ?? "")
                     .replaceAll("&", "&amp;")
@@ -389,13 +295,8 @@
                     .replaceAll("'", "&#039;");
             }
 
-
             window.renderPopupContentsAuto = (contents) => {
                 const host = document.querySelector("#popupBody");
-
-                const _escape = (typeof escapeHtml === "function")
-                    ? escapeHtml
-                    : (s) => String(s ?? "");
 
                 if (contents == null) {
                     if (popupViewer) { popupViewer.destroy(); popupViewer = null; }
@@ -403,72 +304,54 @@
                     return;
                 }
 
-                // 1) object로 이미 들어온 경우
                 if (typeof contents === "object") {
-                    // TipTap doc
                     if (isTipTapDoc(contents)) {
                         const ed = ensurePopupViewer();
                         ed.commands.setContent(contents);
                         return;
                     }
-                    // {"text": "..."} 형태
                     if (isTextEnvelope(contents)) {
                         if (popupViewer) { popupViewer.destroy(); popupViewer = null; host.innerHTML = ""; }
                         host.innerHTML = `<p>${escapeHtml(contents.text).replaceAll("\n","<br>")}</p>`;
                         return;
                     }
-                    // 기타 object -> 텍스트로
                     if (popupViewer) { popupViewer.destroy(); popupViewer = null; host.innerHTML = ""; }
                     host.innerHTML = `<p>${escapeHtml(JSON.stringify(contents)).replaceAll("\n","<br>")}</p>`;
                     return;
                 }
 
-                // 2) string 처리
                 const raw = String(contents).trim();
 
-                // JSON 문자열
                 if (isProbablyJson(raw)) {
                     const obj = parseJsonSafely(raw);
-
-                    // TipTap doc JSON
                     if (isTipTapDoc(obj)) {
                         const ed = ensurePopupViewer();
                         ed.commands.setContent(obj);
                         return;
                     }
-
-                    // {"text":"..."} JSON
                     if (isTextEnvelope(obj)) {
                         if (popupViewer) { popupViewer.destroy(); popupViewer = null; host.innerHTML = ""; }
                         host.innerHTML = `<p>${escapeHtml(obj.text).replaceAll("\n","<br>")}</p>`;
                         return;
                     }
-
-                    // 기타 JSON -> 보기 좋게 텍스트로
                     if (popupViewer) { popupViewer.destroy(); popupViewer = null; host.innerHTML = ""; }
                     host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`;
                     return;
                 }
 
-                // HTML 문자열
                 if (isProbablyHtml(raw)) {
                     if (popupViewer) { popupViewer.destroy(); popupViewer = null; host.innerHTML = ""; }
-                    host.innerHTML = raw; // ❗ 서버 sanitize 권장
+                    host.innerHTML = raw;
                     return;
                 }
 
-                // plain text
                 if (popupViewer) { popupViewer.destroy(); popupViewer = null; host.innerHTML = ""; }
                 host.innerHTML = `<p>${escapeHtml(raw).replaceAll("\n","<br>")}</p>`;
             };
-
         </script>
 
         <script>
-            // ====== config ======
             const API_URL = "http://localhost:8090/api/v1/notices-popup";
-
-            // ====== state ======
             let popupList = [];
             let currentIndex = 0;
 
@@ -477,44 +360,29 @@
                 const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
                 return end.getTime();
             }
-
             function isHiddenToday(noticeNo) {
                 const key = `popup_notice_${noticeNo}_hide_until`;
                 const until = Number(localStorage.getItem(key) || "0");
                 return Date.now() < until;
             }
-
             function safeTime(v){
                 if (!v) return NaN;
-                // "YYYY-MM-DD HH:mm:ss" → "YYYY-MM-DDTHH:mm:ss"
                 const s = String(v).replace(" ", "T");
                 const t = Date.parse(s);
                 return Number.isFinite(t) ? t : NaN;
             }
-
             function isWithinPeriod(item){
                 if (!item.startedAt || !item.endedAt) return true;
                 const start = safeTime(item.startedAt);
-                const end   = safeTime(item.endedAt);
-
-                // 날짜 파싱 실패하면(=NaN) 필터로 죽이지 말고 "표시" 쪽으로
+                const end = safeTime(item.endedAt);
                 if (!Number.isFinite(start) || !Number.isFinite(end)) return true;
-
                 const now = Date.now();
                 return now >= start && now <= end;
             }
-
-
-            function openPopup() {
-                document.getElementById("popupOverlay").style.display = "flex";
-            }
-
-            function closePopup() {
-                document.getElementById("popupOverlay").style.display = "none";
-            }
+            function openPopup() { document.getElementById("popupOverlay").style.display = "flex"; }
+            function closePopup() { document.getElementById("popupOverlay").style.display = "none"; }
 
             function renderPopup(index) {
-
                 const btnPrev = document.getElementById("btnPrev");
                 const btnNext = document.getElementById("btnNext");
                 if (btnPrev) btnPrev.disabled = (currentIndex <= 0);
@@ -524,16 +392,10 @@
                 if (index < 0 || index >= popupList.length) { closePopup(); return; }
 
                 const item = popupList[index];
-
                 document.getElementById("popupTitle").textContent = item.title ?? `공지 #${item.noticeNo}`;
 
-                // ✅ 핵심 변경: JSON이 보이지 않게 상세 화면처럼 렌더
-                if (window.renderPopupContentsAuto) {
-                    window.renderPopupContentsAuto(item.contents);
-                } else {
-                    // fallback
-                    document.getElementById("popupBody").textContent = String(item.contents ?? "");
-                }
+                if (window.renderPopupContentsAuto) window.renderPopupContentsAuto(item.contents);
+                else document.getElementById("popupBody").textContent = String(item.contents ?? "");
 
                 document.getElementById("popupCounter").textContent =
                     `${index + 1} / ${popupList.length} (noticeNo: ${item.noticeNo})`;
@@ -542,25 +404,16 @@
             }
 
             function prevPopup() {
-                if (!popupList.length) {
-                    closePopup();
-                    return;
-                }
-
-                // 이전 보여줄 항목 찾기
+                if (!popupList.length) { closePopup(); return; }
                 for (let i = currentIndex - 1; i >= 0; i--) {
                     currentIndex = i;
                     renderPopup(currentIndex);
                     return;
                 }
-
-                // 맨 처음이면 그대로 유지(원하면 닫기/알림 등으로 변경 가능)
-                // alert("첫 번째 공지입니다.");
                 renderPopup(currentIndex);
             }
-
-
             function nextPopup() {
+                for (let i = currentIndex + 1; i < popupList.length; i--) {}
                 for (let i = currentIndex + 1; i < popupList.length; i++) {
                     currentIndex = i;
                     renderPopup(currentIndex);
@@ -572,16 +425,12 @@
             function hideToday() {
                 const item = popupList[currentIndex];
                 if (!item) return;
-
                 const key = `popup_notice_${item.noticeNo}_hide_until`;
                 localStorage.setItem(key, String(endOfTodayMs()));
                 nextPopup();
             }
 
-            function isPopupTrue(v){
-                return v === true || v === "true" || v === 1 || v === "1";
-            }
-
+            function isPopupTrue(v){ return v === true || v === "true" || v === 1 || v === "1"; }
 
             async function loadPopups() {
                 try {
@@ -590,11 +439,7 @@
                         credentials: "include",
                         headers: { "Accept": "application/json" }
                     });
-
-                    if (!res.ok) {
-                        console.error("API error:", res.status);
-                        return;
-                    }
+                    if (!res.ok) return;
 
                     const json = await res.json();
                     const data = Array.isArray(json.data) ? json.data : [];
@@ -605,10 +450,8 @@
                         .filter(item => !isHiddenToday(item.noticeNo));
 
                     if (!popupList.length) return;
-
                     currentIndex = 0;
                     renderPopup(currentIndex);
-
                 } catch (err) {
                     console.error("Failed to load popups:", err);
                 }
@@ -624,447 +467,712 @@
                 if (e.key === "Escape") closePopup();
             });
         </script>
-
-
     </div>
+
     <style>
-        /* ====== 메인 페이지 전용 스코프 (팝업/레이아웃 영향 0) ====== */
-        .main-dashboard{
-            /* 로컬 변수(전역 :root 안 씀) */
-            --md-primary:#2f6fda;
-            --md-bg:#f3f5f9;
-            --md-surface:#ffffff;
-            --md-text:#111827;
-            --md-muted:#6b7280;
-            --md-line: rgba(17,24,39,0.08);
-            --md-shadow: 0 6px 20px rgba(17, 24, 39, 0.10);
-            --md-shadow2: 0 6px 14px rgba(17,24,39,0.08);
-            --md-radius:16px;
+        /* =========================
+        Portal Dashboard Base (기존 유지)
+        ========================== */
+        .portal {
+            --gap: 16px;
+            --bd: 1px solid rgba(0, 0, 0, 0.12);
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --radius: 8px;
+            --card: #ffffff;
+            --text: #333333;
+            --accent-red: #d9534f;
+            --accent-purple: #6f42c1;
+            --line: #eeeeee;
 
-            /*max-width: 1520px;          !* 1440~1600 사이로 취향껏 *!*/
-            /*margin: 0 auto;*/
-            /*padding: 16px 18px;         !* 기존 24px → 조금 줄여서 더 꽉 차게 *!*/
-
-            /*max-width: 1720px;*/
-            /*width: 100%;*/
-            /*margin: 0;*/
-            /*padding: 16px 18px;*/
-
-            /* ✅ 중앙정렬 유지 + 더 넓게 */
-            max-width: 1760px;          /* 1680~1920 사이 추천 */
-            width: min(1760px, calc(100vw - 36px));  /* 양옆 18px만 남기고 꽉 */
+            max-width: 1760px;
+            width: min(1760px, calc(100vw - 36px));
             margin: 0 auto;
-            padding: 14px 18px;         /* 바깥 여백 줄여서 더 꽉 차게 */
+            padding: 16px;
+            color: var(--text);
+            font-family: 'Malgun Gothic', 'dotum', sans-serif;
         }
 
-        .main-dashboard .md-shell{
-            background: var(--md-primary);
-            border-radius:20px;
-            padding:18px;
-            box-shadow: var(--md-shadow);
-            border:1px solid rgba(255,255,255,0.15);
+        .portal-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr 380px;
+            gap: var(--gap);
+            align-items: start;
+        }
+        .col { display: grid; gap: var(--gap); }
+
+        .portlet {
+            background: var(--card);
+            border: var(--bd);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .portlet-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line);
+            background: #fafafa;
+            font-weight: bold;
+        }
+        .portlet-title { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .portlet-body { padding: 12px; height: calc(100% - 45px); overflow-y: auto; }
+
+        /* 1. 요약 카드 / 2. 결재함 스타일 (기존 유지) */
+        .h-summary { height: 160px; }
+        .summary-card { display: flex; flex-direction: column; height: 100%; }
+        .summary-row { display: flex; flex: 1; padding: 0 30px; border-bottom: 1px solid #f0f0f0; align-items: center; }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; border: 1px solid #eee; font-size: 18px; }
+        .summary-row.mail .summary-icon { color: var(--accent-red); background: #fff5f5; }
+        .summary-row.appr .summary-icon { color: var(--accent-purple); background: #f8f5ff; }
+        .summary-label { width: 70px; font-weight: bold; font-size: 15px; color: #555; }
+        .summary-content { flex: 1; display: flex; justify-content: flex-end; }
+        .summary-item { text-decoration: none; color: #444; font-size: 14px; }
+        .summary-item .count { color: var(--accent-red); font-weight: bold; font-size: 20px; margin-left: 15px;}
+
+        .h-appr { height: 400px; }
+        .appr-tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 10px; }
+        .appr-tab { padding: 8px 15px; cursor: pointer; font-size: 13px; font-weight: bold; color: #666; background: #f4f4f4; border: 1px solid #ddd; border-bottom: none; margin-right: 2px; }
+        .appr-tab.active { background: #fff; color: #333; border-bottom: 2px solid #fff; margin-bottom: -2px; }
+        .appr-row { display: flex; padding: 12px 8px; border-bottom: 1px solid #eee; align-items: flex-start; gap: 10px; text-decoration: none; color: inherit; }
+        .appr-info .title { font-size: 14px; font-weight: bold; margin-bottom: 4px; color: #444; }
+        .appr-info .meta { font-size: 12px; color: #888; }
+
+        /* ============================================================
+[주간 일정] 진짜 달력형 그리드 (세로선 투과형)
+============================================================ */
+        .h-combined { height: 560px; display: flex; flex-direction: column; }
+
+        /* 월/일 버튼 스타일 유지 */
+        .calendar-controls { margin-bottom: 12px; display: flex; justify-content: flex-start; }
+        .segmented-control { display: flex; border: 1px solid #ccc; border-radius: 3px; overflow: hidden; }
+        .segmented-control button {
+            padding: 4px 12px; border: none; background: #f8f8f8; color: #444; cursor: pointer; font-size: 12px;
+        }
+        .segmented-control button.active { background: #fff; font-weight: bold; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+        .segmented-control button:not(:last-child) { border-right: 1px solid #ccc; }
+
+        /* ❗ 핵심: 달력 전체 틀 설정 */
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            /* 가로선을 없애도 달력의 전체 테두리는 유지되도록 함 */
+            border: 1px solid #eee;
+            border-bottom: 2px solid #eee; /* 하단 밑선 강조 */
         }
 
-        .main-dashboard .md-grid{
-            display:grid;
-            /*grid-template-columns: 320px 1fr 420px;*/
-            /*gap:16px;*/
-            align-items:stretch;
-
-            /*grid-template-columns: 360px 1fr 480px; !* 기존 320 / 420 → 확장 *!*/
-
-            grid-template-columns: 380px 1fr 520px; /* 왼/오른쪽 카드 폭 확장 */
-            gap: 18px;                              /* 살짝 넓혀서 시원하게 */
-
+        /* 헤더 부분 */
+        .calendar-table thead th {
+            border: 1px solid #eee; background: #fafafa; padding: 10px 0; font-weight: normal;
         }
+        .calendar-table thead th.today { background: #fffcf0; border-bottom: 2px solid #007bff; }
 
-        .main-dashboard .md-mini-col{
-            display:grid;
-            gap:16px;
-        }
+        /* [주간 일정] 배경 격자 설정 */
+        .calendar-table tbody {
+            /* 1. 배경에 세로선을 그립니다 (1px 선, 나머지는 투명) */
+            background-image: linear-gradient(to right, #f0f0f0 1px, transparent 1px);
 
-        /* ✅ layout 공용 .card/.badge/.list 와 충돌 방지: md-card, md-pill, md-list 사용 */
-        .main-dashboard .md-card{
-            background: var(--md-surface);
-            border-radius: var(--md-radius);
-            border:1px solid rgba(17,24,39,0.08);
-            box-shadow: var(--md-shadow2);
-            padding:16px;
-            color: var(--md-text);
-            text-decoration:none;
-            display:flex;
-            flex-direction:column;
-            gap:10px;
-            min-height:120px;
-            transition: transform 120ms ease;
-        }
-        .main-dashboard .md-card:hover{ transform: translateY(-1px); }
+            /* 2. 가로 길이를 7등분(100% / 7)하여 배경이 반복되게 합니다 */
+            background-size: calc(100% / 7) 100%;
 
-        .main-dashboard .md-title{ font-weight:800; font-size:14px; color:#374151; }
-        .main-dashboard .md-value{ font-weight:900; font-size:34px; line-height:1; }
-        .main-dashboard .md-sub{ color: var(--md-muted); font-size:12px; }
+            /* 3. 첫 번째 선이 왼쪽 끝에 딱 붙도록 위치 조정 */
+            background-position: -1px 0;
 
-        .main-dashboard .md-list{
-            list-style:none;
-            padding:0;
-            margin:0;
-            display:grid;
-            gap:10px;
-        }
-        .main-dashboard .md-list li{
-            display:flex;
-            align-items:center;
-            gap:8px;
-        }
-        .main-dashboard .md-list a{
-            color: var(--md-text);
-            text-decoration:none;
-        }
-        .main-dashboard .md-list a:hover{ text-decoration:underline; }
-
-        .main-dashboard .md-todo-card{ min-height:256px; }
-        .main-dashboard .md-todo-head{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
+            background-color: #ffffff; /* 달력 바탕색 */
         }
 
-        .main-dashboard .md-pill{
-            font-size:12px;
-            font-weight:900;
-            background:#eef2ff;
-            color:#3730a3;
-            padding:6px 10px;
-            border-radius:999px;
-            display:inline-flex;
-            align-items:center;
-            gap:6px;
+        /* 2. td에 position: relative를 주어 호버 시 절대 위치의 기준이 되게 함 */
+        .calendar-table td {
+            position: relative;
+            border: none !important;
+            padding: 2px 0;
+            height: 42px; /* 일정 바 높이에 맞게 살짝 조절 */
+            vertical-align: top;
         }
 
-        .main-dashboard .md-right-col{
-            display:grid;
-            gap:16px;
+        /*!* 4. 일정 바 스타일: 투명도 핵심 *!*/
+        /*.cal-event.bar-style {*/
+        /*    position: relative;*/
+        /*    z-index: 10; !* 선보다 위에 떠 있게 함 *!*/
+        /*    margin: 2px 0;*/
+        /*    padding: 4px 8px;*/
+        /*    font-size: 12px;*/
+        /*    border-radius: 4px;*/
+
+        /*    !* 텍스트가 넘치면 말줄임표 *!*/
+        /*    white-space: nowrap;*/
+        /*    overflow: hidden;*/
+        /*    text-overflow: ellipsis;*/
+
+        /*    !* 왼쪽 포인트 선만 진하게 *!*/
+        /*    border-left: 4px solid currentColor;*/
+        /*}*/
+
+        /* 2. 일정 바 스타일 (이어져 보이게) */
+        .cal-event.bar-style {
+            display: flex;             /* 시간 양쪽 배치를 위해 Flex 사용 */
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            margin: 2px 0;             /* 좌우 마진을 없애야 옆 칸과 딱 붙습니다 */
+            padding: 5px 10px;
+            border-radius: 0px;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 1;
+            cursor: pointer;
+            transition: background 0.2s;
         }
 
-        .main-dashboard .md-clock{
-            background: rgba(255,255,255,0.14);
-            border:1px solid rgba(255,255,255,0.22);
-            color:#fff;
-            border-radius: var(--md-radius);
-            padding:16px;
-            display:grid;
-            grid-template-columns: 140px 1fr;
-            gap:16px;
-            align-items:center;
-            min-height:180px;
-        }
-        .main-dashboard .md-date{ font-weight:900; font-size:48px; letter-spacing:1px; }
-        .main-dashboard .md-time{ font-weight:900; font-size:52px; margin-top:4px; }
-        .main-dashboard .md-meta{ opacity:.9; font-weight:800; font-size:14px; }
-
-        .main-dashboard .md-donut{
-            width:120px; height:120px; border-radius:50%;
-            display:flex; align-items:center; justify-content:center;
-            background: conic-gradient(#ffffff 0%, rgba(255,255,255,0.25) 0);
-            position:relative;
-        }
-        .main-dashboard .md-donut::after{
-            content:"";
-            width:84px; height:84px; border-radius:50%;
-            background: var(--md-primary);
-            opacity: .95;
-            position:absolute;
-        }
-        .main-dashboard .md-donut span{
-            position:relative;
-            z-index:1;
-            font-weight:900;
-            font-size:22px;
-            color:#fff;
+        /* 🔥 4. 호버 시: 내용이 주변을 무시하고 최상단으로 떠오르며 전체 출력 */
+        .cal-event.bar-style:hover {
+            position: absolute;      /* 주변 칸에 구애받지 않고 떠오름 */
+            top: 0;
+            left: 0;
+            width: auto;             /* 내용에 맞춰 너비 확장 */
+            min-width: 100%;         /* 최소 현재 칸 너비 유지 */
+            max-width: 350px;        /* 너무 길어지는 것 방지 */
+            height: auto;            /* 내용에 맞춰 높이 확장 */
+            white-space: normal;     /* 줄바꿈 허용 */
+            overflow: visible;       /* 잘린 내용 보이기 */
+            z-index: 999;            /* 최상단 레이어로 이동 */
+            background: #fff !important; /* 배경을 불투명하게 하여 가독성 확보 */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25); /* 입체감 부여 */
+            border: 1px solid currentColor;
+            padding: 10px;           /* 여유로운 패딩 */
         }
 
-        .main-dashboard .md-status-card{ min-height:76px; }
-        .main-dashboard .md-status-row{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:12px;
-        }
-        .main-dashboard .md-status-left{
-            display:flex;
-            flex-direction:column;
-            gap:4px;
-        }
-        .main-dashboard .md-status-right{
-            display:flex;
-            align-items:center;
-            gap:10px;
-        }
-        .main-dashboard .md-dot{
-            width:10px; height:10px; border-radius:50%;
-            background:#ef4444;
-        }
+        /* 할 일 목록 (기존 스타일 유지) */
+        .todo-section { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
+        .todo-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #d9534f; display: flex; align-items: center; gap: 5px; }
+        .todo-list { display: flex; flex-direction: column; gap: 8px; }
+        .todo-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #444; }
+        .todo-item.done span { text-decoration: line-through; color: #bbb; }
 
-        .main-dashboard .md-bottom{
-            display:grid;
-            grid-template-columns: 1fr 1fr;
-            gap:18px;
-            margin-top:18px;
-        }
-        .main-dashboard .md-panel{ min-height:240px; }
-        .main-dashboard .md-panel-head{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            margin-bottom:10px;
-        }
-        .main-dashboard .md-panel-head .md-panel-title{ font-weight:900; }
-        .main-dashboard .md-panel-head a{
-            font-size:12px;
-            color:#2563eb;
-            text-decoration:none;
-        }
-        .main-dashboard .md-panel-head a:hover{ text-decoration:underline; }
 
-        @media (max-width: 1300px){
-            .main-dashboard .md-grid{ grid-template-columns: 1fr; }
-            .main-dashboard .md-bottom{ grid-template-columns: 1fr; }
-        }
+        /* ============================================================
+           기타 스타일 (기존 유지)
+        ============================================================ */
+        .h-mail-list { height: 800px; }
+        .h-clock { height: 80px; }
+        .h-notice, .h-board { height: 432px; }
+
+        .simple-list-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f9f9f9; font-size: 13px; text-decoration: none; color: #444; }
+        .simple-list-item .date { color: #bbb; font-size: 12px; }
+
+        .clock-mini { background: #333; color: #fff; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .clock-mini .time { font-size: 28px; font-weight: bold; }
+        .clock-mini .date { font-size: 13px; opacity: 0.8; }
+
+        @media (max-width: 1300px) { .portal-grid { grid-template-columns: 1fr; } }
     </style>
 </th:block>
 
-<!-- ✅ 이 페이지 내용(레이아웃의 content 영역에만 삽입) -->
 <th:block layout:fragment="content">
-    <div class="main-dashboard">
+    <div class="portal">
+        <div class="portal-grid">
 
-        <div class="md-shell">
-            <div class="md-grid">
-
-                <!-- 왼쪽: 2개 카드 -->
-                <div class="md-mini-col">
-                    <a class="md-card" href="/approvals/inbox">
-                        <div class="md-title">결재할 문서</div>
-                        <div class="md-value" id="needApprove">-</div>
-                        <div class="md-sub">클릭하면 결재함으로 이동</div>
-                    </a>
-
-                    <a class="md-card" href="/approvals/rejected">
-                        <div class="md-title">반려된 결재</div>
-                        <div class="md-value" id="rejectedApprove">-</div>
-                        <div class="md-sub">클릭하면 반려 목록으로 이동</div>
-                    </a>
-                </div>
-
-                <!-- 가운데: Todo -->
-                <a class="md-card md-todo-card" href="/schedule/calendar">
-                    <div class="md-todo-head">
-                        <div class="md-title">Todo List</div>
-                        <div class="md-pill"><span id="todoCount">0</span>개</div>
-                    </div>
-                    <ul class="md-list" id="todoList">
-                        <li class="md-sub">로딩 중...</li>
-                    </ul>
-                </a>
-
-                <!-- 오른쪽: 도넛 + 날짜/시간 + 결재현황 + 오늘 일정 -->
-                <div class="md-right-col">
-                    <div class="md-clock">
-                        <div class="md-donut" id="todoDonut">
-                            <span id="todoPercent">0%</span>
-                        </div>
-                        <div>
-                            <div class="md-date" id="todayDate">--</div>
-                            <div class="md-time" id="todayTime">--:--</div>
-                            <div class="md-meta">오늘</div>
-                        </div>
-                    </div>
-
-                    <a class="md-card md-status-card" href="/approvals/sent">
-                        <div class="md-status-row">
-                            <div class="md-status-left">
-                                <div class="md-title">결재 현황</div>
-                                <div class="md-sub">상신한 결재</div>
+            <div class="col">
+                <section class="portlet h-summary">
+                    <div class="portlet-body" style="padding:0; height:100%;">
+                        <div class="summary-card">
+                            <div class="summary-row mail">
+                                <div class="summary-icon">📧</div>
+                                <div class="summary-label">메일</div>
+                                <div class="summary-content">
+                                    <a href="/mail" class="summary-item">안읽은 메일 <span class="count" id="mailNew">-</span></a>
+                                </div>
                             </div>
-                            <div class="md-status-right">
-                                <span class="md-pill"><span id="sentApprove">-</span>건</span>
-                                <span class="md-dot"></span>
+                            <div class="summary-row appr">
+                                <div class="summary-icon">📄</div>
+                                <div class="summary-label">결재</div>
+                                <div class="summary-content">
+                                    <a href="/approvals/inbox" class="summary-item">결재할 문서<span class="count" id="needApprove" style="color:#bbb;">-</span></a>
+                                </div>
                             </div>
                         </div>
-                    </a>
+                    </div>
+                </section>
 
-                    <a class="md-card" href="/schedule/calendar">
-                        <div class="md-title">나의 오늘 일정</div>
-                        <ul class="md-list" id="todaySchedules">
-                            <li class="md-sub">로딩 중...</li>
-                        </ul>
-                    </a>
-                </div>
-
+                <section class="portlet h-mail-list">
+                    <div class="portlet-head">
+                        <div class="portlet-title">메일 목록</div>
+                        <a href="/mail" style="font-size:11px; color:#888;">더보기</a>
+                    </div>
+                    <div class="portlet-body">
+                        <div id="mailList">
+                            <div style="color:#bbb; text-align:center; padding:20px;">메일을 불러오는 중...</div>
+                        </div>
+                    </div>
+                </section>
             </div>
+
+            <div class="col">
+                <section class="portlet h-appr">
+                    <div class="portlet-head">
+                        <div class="portlet-title">결재함</div>
+                    </div>
+                    <div class="portlet-body">
+                        <div class="appr-tabs">
+                            <div class="appr-tab active">결재할 문서</div>
+                            <div class="appr-tab">상신한 문서</div>
+                            <div class="appr-tab">반려된 문서</div>
+                        </div>
+                        <div class="appr-list" id="approvalList">
+                            <div style="color:#bbb; text-align:center; padding:20px;">문서를 불러오는 중...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="portlet h-combined">
+                    <div class="portlet-head">
+                        <div class="portlet-title">주간 일정 및 할 일</div>
+                    </div>
+
+                    <div class="calendar-controls" style="padding: 10px 14px 5px;">
+                        <div class="segmented-control">
+                            <button onclick="changeStartDay(1)" id="btnMon" class="active">월요일</button>
+                            <button onclick="changeStartDay(0)" id="btnSun">일요일</button>
+                        </div>
+                    </div>
+
+                    <div class="portlet-body">
+                        <div id="weekGrid" class="calendar-week-grid">
+                            <div style="color:#bbb; padding:20px; grid-column: span 7; text-align:center;">일정을 불러오는 중...</div>
+                        </div>
+
+                        <div class="todo-section">
+                            <div class="todo-title">📌 오늘의 할 일</div>
+                            <div id="todoList" class="todo-list">
+                                <div style="color:#bbb; padding:10px;">할 일을 불러오는 중...</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col">
+                <section class="portlet h-clock">
+                    <div class="clock-mini">
+                        <span class="date" id="clockDate">-</span>
+                        <span class="time" id="clockTime">--:--</span>
+                    </div>
+                </section>
+
+                <section class="portlet h-notice">
+                    <div class="portlet-head">
+                        <div class="portlet-title">공지사항</div>
+                        <a href="/notice/list" style="font-size:11px; color:#888;">더보기</a>
+                    </div>
+                    <div class="portlet-body">
+                        <div id="noticeList">
+                            <div style="color:#bbb; text-align:center; padding:20px;">공지사항을 불러오는 중...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="portlet h-board">
+                    <div class="portlet-head">
+                        <div class="portlet-title">자유게시판</div>
+                        <a href="/board/list" style="font-size:11px; color:#888;">더보기</a>
+                    </div>
+                    <div class="portlet-body">
+                        <div id="boardList">
+                            <div style="color:#bbb; text-align:center; padding:20px;">게시글을 불러오는 중...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
         </div>
-
-        <!-- 하단 패널 2개 -->
-        <div class="md-bottom">
-            <div class="md-card md-panel">
-                <div class="md-panel-head">
-                    <div class="md-panel-title">사내 공지사항</div>
-                    <a href="/notice/list">더보기</a>
-                </div>
-                <ul class="md-list" id="noticeList">
-                    <li class="md-sub">로딩 중...</li>
-                </ul>
-            </div>
-
-            <div class="md-card md-panel">
-                <div class="md-panel-head">
-                    <div class="md-panel-title">자유게시판</div>
-                    <a href="/board/list">더보기</a>
-                </div>
-                <ul class="md-list" id="boardList">
-                    <li class="md-sub">로딩 중...</li>
-                </ul>
-            </div>
-        </div>
-
     </div>
 </th:block>
 
-<!-- ✅ 이 페이지 전용 스크립트: layout의 공통 팝업/알림/프로필 JS와 충돌 없음 -->
 <th:block layout:fragment="pageScripts">
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            startClientClock();
-            loadDashboard();
+            // 1. 실시간 시계 시작
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // 2. 결재함 탭 이벤트 바인딩
+            bindApprovalTabs();
+
+            // 3. 모든 API 데이터 로드 실행
+            loadAllDashboardData();
         });
 
-        async function loadDashboard() {
+        // 공통 API 호출 함수
+        async function apiGet(url) {
             try {
-                const res = await fetch("/api/dashboard", { credentials: "include" });
-                if (!res.ok) throw new Error("dashboard api failed: " + res.status);
-                const d = await res.json();
-                renderDashboard(d);
-            } catch (e) {
-                console.error(e);
-                setText("needApprove", "-");
-                setText("rejectedApprove", "-");
-                setText("sentApprove", "-");
-                setListFallback("todoList", "데이터를 불러오지 못했습니다.");
-                setListFallback("todaySchedules", "데이터를 불러오지 못했습니다.");
-                setListFallback("noticeList", "데이터를 불러오지 못했습니다.");
-                setListFallback("boardList", "데이터를 불러오지 못했습니다.");
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`API 호출 실패: ${url}`);
+                const result = await response.json();
+                return result.data; // ResponseDto의 data 필드 반환
+            } catch (error) {
+                console.error("데이터 로드 중 오류 발생:", error);
+                return null;
             }
         }
 
-        function renderDashboard(d) {
-            setText("needApprove", d?.approvals?.needCount ?? 0);
-            setText("rejectedApprove", d?.approvals?.rejectedCount ?? 0);
-            setText("sentApprove", d?.approvals?.sentCount ?? 0);
+        /**
+         * 전역 데이터 로드 함수
+         */
+        async function loadAllDashboardData() {
+            // 1. 대시보드 요약 (메일/결재 카운트)
+            const summary = await apiGet('/api/v1/dashboard/summary');
+            if (summary) {
+                document.getElementById('mailNew').textContent = summary.newMail || 0;
+                document.getElementById('needApprove').textContent = summary.newApproval || 0;
+            }
 
-            const totalTodo = d?.todo?.total ?? 0;
-            setText("todoCount", totalTodo);
+            // 2. 메일 목록 (Inbox - Page 객체라면 .content 사용 필요 확인)
+            const mailResult = await apiGet('/api/v1/mails/inbox');
+            const mails = mailResult.content ? mailResult.content : mailResult; // Page 대응
+            renderList('mailList', mails, (item) => `
+        <a href="/mail/${item.mailNo}" class="simple-list-item">
+            <span>${item.title}</span> <span class="date">${formatDate(item.createdAt)}</span>
+        </a>
+    `, 10);
 
-            const percent = d?.todo?.progressPercent ?? 0;
-            setDonutPercent("todoDonut", percent);
-            setText("todoPercent", percent + "%");
+            // 3. 결재함 초기 로드 (AWAITING)
+            loadApprovalList('AWAITING');
 
-            renderSimpleList("todoList", d?.todo?.items ?? [], (it) => ({
-                text: (it.done ? "✅ " : "☐ ") + it.title,
-                href: "/todo"
-            }));
+            // 4. 공지사항 (Page 객체라면 .content 사용)
+            const noticeResult = await apiGet('/api/v1/notices-all');
+            const notices = noticeResult.content ? noticeResult.content : noticeResult;
+            renderList('noticeList', notices, (item) => `
+        <a href="/notice/${item.noticeNo}" class="simple-list-item">
+            <span>${item.title}</span> <span class="date">${formatDate(item.createdAt)}</span>
+        </a>
+    `, 10);
 
-            // 백엔드 키에 맞춰 사용 (todaySchedules or todayItems)
-            const today = d?.todaySchedules ?? d?.todayItems ?? [];
-            renderSimpleList("todaySchedules", today, (it) => ({
-                text: formatTime(it.startAt) + " " + (it.title ?? ""),
-                href: "/calendar"
-            }));
+            // 5. 주간 일정 (통합 API 호출)
+            const baseDate = new Date().toISOString().split('T')[0];
+            const events = await apiGet(`/api/v1/dashboard/summary/calendar?baseDate=${baseDate}`);
+            renderCalendar(events || []);
 
-            renderSimpleList("noticeList", d?.notices ?? [], (it) => ({
-                text: it.title,
-                href: "/notice/" + it.id
-            }));
-            renderSimpleList("boardList", d?.boards ?? [], (it) => ({
-                text: it.title,
-                href: "/board/" + it.id
-            }));
+            // 6. 할 일 (Todo) - ✅ 필드명을 title로 수정
+            const todos = await apiGet('/api/v1/todos');
+            renderList('todoList', todos, (item) => `
+        <div class="todo-item ${item.isDone ? 'done' : ''}" id="todo-row-${item.todoNo}">
+            <input type="checkbox" ${item.isDone ? 'checked' : ''} onchange="toggleTodoStatus(${item.todoNo}, this.checked)">
+            <span class="todo-text">${item.title}</span> </div>
+    `);
+
+            // 7. 자유게시판
+            const boards = await apiGet('/api/v1/boards/top-view');
+            renderList('boardList', boards, (item) => `
+        <a href="/board/${item.boardNo}" class="simple-list-item">
+            <span>${item.title}</span> <span class="date">${item.rating}회</span>
+        </a>
+    `);
         }
 
-        function renderSimpleList(ulId, items, mapper) {
-            const ul = document.getElementById(ulId);
-            if (!ul) return;
-            ul.innerHTML = "";
+        /**
+         * 결재함 리스트 로드 (Page 객체 대응)
+         */
+        async function loadApprovalList(type) {
+            const target = document.getElementById('approvalList');
+            if (!target) return;
 
-            if (!items || items.length === 0) {
-                const li = document.createElement("li");
-                li.className = "md-sub";
-                li.textContent = "표시할 항목이 없습니다.";
-                ul.appendChild(li);
+            target.innerHTML = '<div style="text-align:center; padding:20px; color:#bbb;">불러오는 중...</div>';
+
+            const apiStatus = (type === 'REJECTED') ? 'SUBMITTED' : type;
+            const result = await apiGet(`/api/v1/documents/me?status=${apiStatus}`);
+
+            // ✅ Page 객체의 content 배열을 가져옴
+            let data = (result && result.content) ? result.content : (Array.isArray(result) ? result : []);
+
+            if (type === 'REJECTED') {
+                data = data.filter(doc => doc.docStat === 'RJ');
+            }
+
+            if (data.length === 0) {
+                target.innerHTML = '<div style="text-align:center; padding:20px; color:#bbb;">문서가 없습니다.</div>';
                 return;
             }
 
-            items.forEach(it => {
-                const m = mapper(it);
-                const li = document.createElement("li");
-                const a = document.createElement("a");
-                a.href = m.href;
-                a.textContent = m.text;
-                li.appendChild(a);
-                ul.appendChild(li);
+            target.innerHTML = data.map(doc => `
+        <a href="/documents/${doc.docNo}" class="appr-row">
+            <span class="arrow">▶</span>
+            <div class="appr-info">
+                <div class="title">${doc.title}</div>
+                <div class="meta">${doc.statusName || type} | ${doc.writerDept || ''} ${formatDate(doc.createdAt)}</div>
+            </div>
+        </a>
+    `).join('');
+        }
+
+        /**
+         * ✅ Todo 상태 변경 API 호출 함수
+         * @param {number} todoNo - 할 일 번호
+         * @param {boolean} isChecked - 체크 여부 (isDone)
+         */
+        async function toggleTodoStatus(todoNo, isChecked) {
+            try {
+                const response = await fetch(`/api/v1/todos/${todoNo}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ isDone: isChecked })
+                });
+
+                if (!response.ok) throw new Error('상태 변경 업데이트 실패');
+
+                // ✅ 서버 업데이트 성공 시 UI 즉시 반영
+                const row = document.getElementById(`todo-row-${todoNo}`);
+                if (row) {
+                    if (isChecked) row.classList.add('done');
+                    else row.classList.remove('done');
+                }
+
+                console.log(`${todoNo}번 할 일 상태가 ${isChecked}로 변경되었습니다.`);
+            } catch (error) {
+                alert('상태 변경 중 오류가 발생했습니다.');
+                console.error(error);
+
+                // 에러 발생 시 체크박스 원복 (선택 사항)
+                event.target.checked = !isChecked;
+            }
+        }
+
+        function bindApprovalTabs() {
+            const tabs = document.querySelectorAll('.appr-tab');
+            const types = ['AWAITING', 'REJECTED', 'SUBMITTED'];
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    loadApprovalList(types[index]);
+                });
             });
         }
 
-        function setText(id, value) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
+        /**
+         * 리스트 렌더링 보조 함수
+         */
+        function renderList(targetId, data, templateFn, limit = null) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            if (!data || data.length === 0) {
+                target.innerHTML = '<div style="color:#bbb; text-align:center; padding:20px;">데이터가 없습니다.</div>';
+                return;
+            }
+            if (!Array.isArray(data) || data.length === 0) {
+                target.innerHTML = '<div style="color:#bbb; text-align:center; padding:20px;">데이터가 없습니다.</div>';
+                return;
+            }
+
+            const displayData = limit ? data.slice(0, limit) : data;
+            target.innerHTML = displayData.map(templateFn).join('');
         }
 
-        function setListFallback(id, msg) {
-            const ul = document.getElementById(id);
-            if (!ul) return;
-            ul.innerHTML = "";
-            const li = document.createElement("li");
-            li.className = "md-sub";
-            li.textContent = msg;
-            ul.appendChild(li);
+
+        /*<![CDATA[*/
+        let currentStartDay = 1;
+
+        function changeStartDay(day) {
+            currentStartDay = day;
+            document.getElementById('btnMon').classList.toggle('active', day === 1);
+            document.getElementById('btnSun').classList.toggle('active', day === 0);
+            loadAllDashboardData();
         }
 
-        function setDonutPercent(elId, percent) {
-            const el = document.getElementById(elId);
-            if (!el) return;
-            const p = Math.max(0, Math.min(100, percent || 0));
-            el.style.background = `conic-gradient(#ffffff ${p}%, rgba(255,255,255,0.25) 0)`;
+        /**
+         * 날짜 포맷 (MM.DD)
+         */
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
         }
 
-        function startClientClock() {
-            const tick = () => {
-                const now = new Date();
-                const dateEl = document.getElementById("todayDate");
-                const timeEl = document.getElementById("todayTime");
-                if (dateEl) dateEl.textContent = formatDate(now);
-                if (timeEl) timeEl.textContent = formatHHmm(now);
-            };
-            tick();
-            setInterval(tick, 1000);
+        /* 🔥 핵심: 일정 유형에 따른 표시 텍스트 생성 로직 */
+        function getEventDisplayText(e, startOfWeek, endOfWeek) {
+            if (e.allDay) return e.title;
+
+            const s = new Date(e.startAt);
+            const en = new Date(e.endedAt);
+            const sTime = formatTimeOnly(e.startAt);
+            const eTime = formatTimeOnly(e.endedAt);
+
+            // 1. 당일 종료 일정
+            if (s.toDateString() === en.toDateString()) {
+                return `<b>${sTime} ~ ${eTime}</b> ${e.title}`;
+            }
+
+            // 2. 여러 날에 걸친 일정
+            const isStartInThisWeek = s >= startOfWeek && s < endOfWeek;
+            const isEndInThisWeek = en > startOfWeek && en <= endOfWeek;
+
+            if (isStartInThisWeek && isEndInThisWeek) {
+                // 이번 주 안에 시작과 끝이 다 있는 경우 (하지만 날짜는 다름)
+                return `<b>${sTime}</b> ${e.title} <b>~ ${eTime}</b>`;
+            } else if (isStartInThisWeek) {
+                // 이번 주에 시작만 하는 경우
+                return `<b>${sTime}</b> ${e.title} `;
+            } else if (isEndInThisWeek) {
+                // 이번 주에 종료만 하는 경우
+                return `<b>~ ${eTime}</b> ${e.title}`;
+            } else {
+                // 이번 주는 그냥 지나가는 기간인 경우
+                return ` ${e.title} `;
+            }
         }
 
-        function formatDate(d) {
-            const yy = String(d.getFullYear()).slice(2);
-            const mm = String(d.getMonth() + 1).padStart(2, "0");
-            const dd = String(d.getDate()).padStart(2, "0");
-            const day = ["일","월","화","수","목","금","토"][d.getDay()];
-            return `${yy}${mm}${dd} ${day}`;
+        /* 보조 함수: 시간 포맷 (00:00이면 빈 값 반환) */
+        function formatTimeOnly(dateTimeStr) {
+            if (!dateTimeStr) return "";
+            const date = new Date(dateTimeStr);
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            const timeStr = `${hh}:${mm}`;
+
+            // 00:00 이면 보이지 않게 처리
+            return timeStr === "00:00" ? "" : timeStr;
         }
-        function formatHHmm(d) {
-            const hh = String(d.getHours()).padStart(2, "0");
-            const mi = String(d.getMinutes()).padStart(2, "0");
-            return `${hh}:${mi}`;
+
+        function renderCalendar(items) {
+            const grid = document.getElementById('weekGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const safeItems = Array.isArray(items) ? items : [];
+            const now = new Date();
+            const startOfWeek = new Date(now);
+
+            const dayNum = now.getDay();
+            let diff = (currentStartDay === 1) ? (dayNum === 0 ? -6 : 1 - dayNum) : -dayNum;
+            startOfWeek.setDate(now.getDate() + diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+            const table = document.createElement('table');
+            table.className = 'calendar-table';
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            // 1. 헤더 생성
+            const hRow = document.createElement('tr');
+            const baseDayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(startOfWeek);
+                d.setDate(startOfWeek.getDate() + i);
+                const th = document.createElement('th');
+                if (d.toDateString() === now.toDateString()) th.className = 'today';
+                th.innerHTML = `<div style="font-size:11px; color:#888;">${baseDayNames[d.getDay()]}</div>
+                        <div style="font-size:14px; font-weight:bold;">${d.getDate()}</div>`;
+                hRow.appendChild(th);
+            }
+            thead.appendChild(hRow);
+
+            // 2. 데이터 가공
+            const processed = safeItems.filter(e => new Date(e.startAt) < endOfWeek && new Date(e.endedAt) > startOfWeek)
+                .map(e => {
+                    const s = new Date(e.startAt);
+                    const en = new Date(e.endedAt);
+                    const sIdx = Math.max(0, Math.floor((s - startOfWeek) / 86400000));
+                    const eIdx = Math.min(6, Math.floor((en - 1 - startOfWeek) / 86400000));
+                    return {
+                        data: e,
+                        sIdx,
+                        colspan: Math.max(1, eIdx - sIdx + 1),
+                        eIdx: sIdx + Math.max(1, eIdx - sIdx + 1)
+                    };
+                }).sort((a, b) => a.sIdx - b.sIdx || b.colspan - a.colspan);
+
+            const rows = [];
+            processed.forEach(ev => {
+                let row = rows.find(r => !r.some(re => ev.sIdx < re.eIdx && ev.eIdx > re.sIdx));
+                if (!row) { row = []; rows.push(row); }
+                row.push(ev);
+            });
+
+            // 3. 메인 렌더링 로직 (시간 및 물결표 처리)
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                let curIdx = 0;
+                row.sort((a, b) => a.sIdx - b.sIdx).forEach(ev => {
+                    while(curIdx < ev.sIdx) { tr.appendChild(document.createElement('td')); curIdx++; }
+
+                    const td = document.createElement('td');
+                    td.colSpan = ev.colspan;
+                    const e = ev.data;
+                    const color = e.color || '#007bff';
+
+                    const sTime = formatTimeOnly(e.startAt);
+                    const eTime = formatTimeOnly(e.endedAt);
+
+                    let timeContent = "";
+                    if (ev.colspan > 1) {
+                        // 다일 일정: 시작/끝이 00:00이면 해당 쪽의 시간과 ~를 세트로 관리
+                        const startLabel = sTime ? `<b>${sTime}</b> ${e.title}` : `${e.title}`;
+                        const endLabel = eTime ? `~ <b>${eTime}</b>` : ``;
+
+                        timeContent = `
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <span style="white-space: nowrap; flex-shrink: 0;">${startLabel}</span>
+                        <span style="white-space: nowrap; flex-shrink: 0;">${endLabel}</span>
+                    </div>`;
+                    } else {
+                        // 단일 일정: 🔥 시간이 둘 다 없으면 물결표 없이 제목만
+                        if (!sTime && !eTime) {
+                            timeContent = `<span style="white-space: nowrap;">${e.title}</span>`;
+                        } else if (sTime && eTime) {
+                            timeContent = `<span style="white-space: nowrap;"><b>${sTime} ~ ${eTime}</b> ${e.title}</span>`;
+                        } else {
+                            // 한쪽만 시간이 있는 경우 (거의 없겠지만 예외 처리)
+                            const singleTime = sTime || eTime;
+                            timeContent = `<span style="white-space: nowrap;"><b>${singleTime}</b> ${e.title}</span>`;
+                        }
+                    }
+
+                    const transparentBg = color + "15";
+
+                    td.innerHTML = `<div class="cal-event bar-style" title="${e.title}"
+                                 style="border-left:4px solid ${color}; background:${transparentBg}; color:${color};">
+                                 ${timeContent}
+                            </div>`;
+                    tr.appendChild(td);
+                    curIdx += ev.colspan;
+                });
+                while(curIdx < 7) { tr.appendChild(document.createElement('td')); curIdx++; }
+                tbody.appendChild(tr);
+            });
+
+            for(let i = rows.length; i < 5; i++) {
+                const tr = document.createElement('tr');
+                for(let j=0; j<7; j++) tr.appendChild(document.createElement('td'));
+                tbody.appendChild(tr);
+            }
+
+            table.appendChild(thead); table.appendChild(tbody);
+            grid.innerHTML = ''; grid.appendChild(table);
         }
-        function formatTime(iso) {
-            if (!iso) return "";
-            const d = new Date(iso);
-            return formatHHmm(d);
+        /*]]>*/
+
+        function updateClock() {
+            const now = new Date();
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} (${days[now.getDay()]})`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const dateEl = document.getElementById('clockDate');
+            const timeEl = document.getElementById('clockTime');
+            if (dateEl) dateEl.textContent = dateStr;
+            if (timeEl) timeEl.textContent = timeStr;
         }
     </script>
 </th:block>
-
 </html>

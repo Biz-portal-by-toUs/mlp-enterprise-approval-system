@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.repository;
 
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.mail.domain.MailUserState;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
 import org.springframework.data.domain.Page;
@@ -123,6 +124,12 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
             Pageable pageable
     );
 
+    @Query(value = "select database()", nativeQuery = true)
+    String currentDatabase();
+
+    // 특정 직원의 안 읽은(isRead = false) 메일 개수를 카운트
+    int countByUserAndIsReadFalse(Employee User);
+}
     // 보낸 메일 상세에서 "수신인(이름+사번)" 뽑기 (RECIPIENT만)
     @Query("""
         select concat(mus.user.empName, '(', mus.user.empId, ')')

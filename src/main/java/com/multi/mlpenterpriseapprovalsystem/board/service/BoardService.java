@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.board.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.board.domain.Board;
 import com.multi.mlpenterpriseapprovalsystem.board.domain.BoardCat;
 import com.multi.mlpenterpriseapprovalsystem.board.dto.*;
@@ -19,6 +20,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BoardService {
 
     private final BoardRepository boardRepository;
@@ -353,6 +356,15 @@ public class BoardService {
     }
 
 
+    @Transactional(readOnly = true)
+    public List<BoardListItemResDto> getTop10ByViews(CustomUser user) {
 
+        Employee emp = employeeRepository.findByEmpId(user.getUsername())
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
+        Company com = companyRepository.findByComId(user.getComId())
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+        return boardRepository.findTopByRatingInCompany(com.getComId(), PageRequest.of(0, 10));
+    }
 }
