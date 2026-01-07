@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.chatbot.service;
 
+import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.AgentActionId;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.ChatbotMessage;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotCallbackDto;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotMessageDto;
@@ -40,11 +41,8 @@ public class ChatbotService {
     }
 
     private static final String CHAT_KEY_PREFIX = "chat:session:";
-    private static final int CONTEXT_LIMIT = 10; // AI에게 전달할 최근 대화 최대 개수 (RAG 성능 최적화)
+    private static final int CONTEXT_LIMIT = 10;
 
-    /**
-     * 질문 처리 메인 로직: Redis 저장 -> 문맥 추출 -> AI 호출
-     */
     /**
      * 질문 처리 메인 로직: Redis 저장 -> 문맥 추출(정제) -> AI 호출
      */
@@ -107,19 +105,48 @@ public class ChatbotService {
         String sessionId = extractSessionIdFromMessageId(msgId);
 
         String connectionKey = empId + ":" + sessionId;
+        String bufferKey = "chat:buffer:" + msgId;
 
         if (Boolean.FALSE.equals(cb.getSuccess())) {
             String errorMsg = (cb.getErrorMessage() == null) ? "AI 답변 생성 중 오류가 발생했습니다." : cb.getErrorMessage();
             sseManager.sendToUser(connectionKey, "error", Map.of("messageId", msgId, "message", errorMsg));
+            redisTemplate.delete(bufferKey);
             return;
         }
 
         if (cb.getChunk() != null && !cb.getChunk().isBlank()) {
+            String currentText = (String) redisTemplate.opsForValue().get(bufferKey);
+            String updatedText = (currentText == null ? "" : currentText) + cb.getChunk();
+            redisTemplate.opsForValue().set(bufferKey, updatedText, 5, TimeUnit.MINUTES);
+
             sseManager.sendToUser(connectionKey, "chunk", Map.of("messageId", msgId, "delta", cb.getChunk()));
         }
 
         if (Boolean.TRUE.equals(cb.getDone())) {
+            String finalContent = (String) redisTemplate.opsForValue().get(bufferKey);
+            updateMessageInRedis(sessionId, msgId, finalContent);
+
             sseManager.sendToUser(connectionKey, "done", Map.of("messageId", msgId));
+            redisTemplate.delete(bufferKey); // 사용 완료된 버퍼 삭제
+        }
+
+
+        if (cb.getActionId() != null) {
+            AgentActionId action = AgentActionId.valueOf(cb.getActionId());
+            String url = action.getUrlTemplate();
+
+            if (cb.getParams() != null) {
+                for (Map.Entry<String, Object> entry : cb.getParams().entrySet()) {
+                    url = url.replace("{" + entry.getKey() + "}", entry.getValue().toString());
+                }
+            }
+
+            sseManager.sendToUser(connectionKey, "action", Map.of(
+                    "messageId", cb.getMessageId(),
+                    "actionId", action.name(),
+                    "url", url,
+                    "label", action.getDefaultLabel()
+            ));
         }
     }
 
@@ -163,6 +190,22 @@ public class ChatbotService {
         } catch (Exception e) {
             log.error("[ChatbotService] sessionId 파싱 실패: {}", messageId);
             return "unknown";
+        }
+    }
+
+    private void updateMessageInRedis(String sessionId, String msgId, String content) {
+        String key = CHAT_KEY_PREFIX + sessionId;
+        List<Object> history = redisTemplate.opsForList().range(key, 0, -1);
+
+        if (history == null) return;
+
+        for (int i = 0; i < history.size(); i++) {
+            ChatbotMessage m = (ChatbotMessage) history.get(i);
+            if (msgId.equals(m.getId())) {
+                m.setContent(content);
+                redisTemplate.opsForList().set(key, i, m);
+                break;
+            }
         }
     }
 }
