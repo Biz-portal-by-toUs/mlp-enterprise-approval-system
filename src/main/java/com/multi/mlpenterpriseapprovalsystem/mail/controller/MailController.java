@@ -13,13 +13,6 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Please explain the class!!!
- *
- * @author : 정종원
- * @filename : MailController
- * @since : 2025-12-30 화요일
- */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/mails")
@@ -44,10 +37,16 @@ public class MailController {
     // 받은 메일함(역할 1개)
     @GetMapping("/inbox")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> inbox(
-            @AuthenticationPrincipal CustomUser user,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable,
+            @AuthenticationPrincipal CustomUser user
     ) {
-        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "받은 메일함 목록 조회 성공", mailService.getInbox(user, pageable)));
+        String empId = user.getUsername();
+        Page<ResMailListDto> res = mailService.getInbox(empId, keyword, pageable);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "받은 메일함 조회 성공", res));
     }
 
     // 보낸 메일함(서버 인증 기반)
@@ -82,7 +81,7 @@ public class MailController {
     // 메일 상세 조회(서버 인증 기반)
     @GetMapping("/{mailId}")
     public ResponseEntity<ResponseDto<ResMailDetailDto>> detail(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -96,7 +95,7 @@ public class MailController {
     // 읽음 처리(서버 인증 기반)
     @PatchMapping("/{mailId}/read")
     public ResponseEntity<ResponseDto<Void>> markRead(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -110,7 +109,7 @@ public class MailController {
     // 휴지통 이동(서버 인증 기반)
     @PatchMapping("/{mailId}/trash")
     public ResponseEntity<ResponseDto<Void>> moveToTrash(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -124,7 +123,7 @@ public class MailController {
     // 휴지통 복원(서버 인증 기반)
     @PatchMapping("/{mailId}/restore")
     public ResponseEntity<ResponseDto<Void>> restore(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -138,7 +137,7 @@ public class MailController {
     // 완전 삭제(서버 인증 기반)
     @DeleteMapping("/{mailId}/purge")
     public ResponseEntity<ResponseDto<Void>> purge(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -151,7 +150,7 @@ public class MailController {
 
     @PatchMapping("/{mailId}/prior")
     public ResponseEntity<ResponseDto<Void>> setPrior(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @RequestParam("prior") boolean prior,
             @AuthenticationPrincipal CustomUser user
     ) {
@@ -165,7 +164,7 @@ public class MailController {
 
     @PatchMapping("/{mailId}/prior/toggle")
     public ResponseEntity<ResponseDto<Void>> togglePrior(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -194,7 +193,7 @@ public class MailController {
     // 임시저장 상세
     @GetMapping("/drafts/{mailId}")
     public ResponseEntity<ResponseDto<ResMailDetailDto>> draftDetail(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -222,7 +221,7 @@ public class MailController {
     // 임시저장 삭제(완전삭제)
     @DeleteMapping("/drafts/{mailId}")
     public ResponseEntity<ResponseDto<Void>> deleteDraft(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -236,7 +235,7 @@ public class MailController {
     // 임시저장 발송
     @PostMapping("/drafts/{mailId}/send")
     public ResponseEntity<ResponseDto<ResMailSendDto>> sendDraft(
-            @PathVariable(name = "mailId") String mailId,
+            @PathVariable String mailId,
             @RequestBody ReqMailDraftSendDto req,
             @AuthenticationPrincipal CustomUser user
     ) {

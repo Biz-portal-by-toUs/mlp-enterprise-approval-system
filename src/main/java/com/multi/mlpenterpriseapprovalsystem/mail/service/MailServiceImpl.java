@@ -1,11 +1,9 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.service;
 
-import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
-import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
-import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
-import com.multi.mlpenterpriseapprovalsystem.employee.domain.*;
-import com.multi.mlpenterpriseapprovalsystem.employee.repository.*;
-import com.multi.mlpenterpriseapprovalsystem.mail.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.mail.domain.Mail;
+import com.multi.mlpenterpriseapprovalsystem.mail.domain.MailUserState;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
@@ -65,19 +63,9 @@ public class MailServiceImpl implements MailService {
     // 받은 메일함
     @Override
     @Transactional(readOnly = true)
-    public Page<ResMailListDto> getInbox(CustomUser user, Pageable pageable) {
-
-        Employee emp = employeeRepository.findByEmpId(user.getUsername())
-                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-
-        return mailUserStateRepository.findInbox(emp.getEmpId(), MailRole.RECIPIENT, pageable)
-                .map(this::toListDto);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ResMailListDto> getInboxByRoles(String userEmpId, List<MailRole> roles, Pageable pageable) {
-        return mailUserStateRepository.findInboxByRoles(userEmpId, roles, pageable)
+    public Page<ResMailListDto> getInbox(String userEmpId, String q, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+        return mailUserStateRepository.findInbox(userEmpId, MailRole.RECIPIENT, keyword, pageable)
                 .map(this::toListDto);
     }
 
