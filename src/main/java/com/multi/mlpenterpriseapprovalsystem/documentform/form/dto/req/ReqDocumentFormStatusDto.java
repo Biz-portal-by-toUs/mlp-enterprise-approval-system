@@ -3,7 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.*;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 상태 변환 요청 Dto
  *
  * @filename    : DocumentFormStatusReqDto
  * @author      : 정종원

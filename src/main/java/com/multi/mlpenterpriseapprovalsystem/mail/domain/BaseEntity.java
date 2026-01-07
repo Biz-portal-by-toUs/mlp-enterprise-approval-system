@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.*;
 
 /**
- * Please explain the class!!!
+ * JPA 엔티티 자동 관리용 공통 추상 엔티티
  *
  * @author : 정종원
  * @filename : BaseEntity

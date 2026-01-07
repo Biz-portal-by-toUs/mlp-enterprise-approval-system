@@ -3,7 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req;
 import java.util.*;
 
 /**
- * Please explain the class!!!
+ * 문서 양식 생성/수정 요청 Dto
  *
  * @author : 정종원
  * @filename : DocumentFormSaveReqDto
