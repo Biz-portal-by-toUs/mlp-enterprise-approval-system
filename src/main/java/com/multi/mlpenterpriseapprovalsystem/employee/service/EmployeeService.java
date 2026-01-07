@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.employee.service;
 import com.multi.mlpenterpriseapprovalsystem.attendance.enums.AtteType;
 import com.multi.mlpenterpriseapprovalsystem.attendance.repository.AttendanceRepository;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisPublisher;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
@@ -45,7 +46,7 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final PositionsRepository positionsRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AttendanceRepository attendanceRepository;
+    private final ChatRedisPublisher chatRedisPublisher;
 
     /**
      * ✅ 이름순 정렬 + 검색 + 커서 기반 무한스크롤
@@ -248,6 +249,11 @@ public class EmployeeService {
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
         emp.setMsgStat(next);
+
+        chatRedisPublisher.publishUserStatus(
+                String.valueOf(emp.getEmpId()), // 엔티티의 ID 필드명에 맞춰 수정
+                String.valueOf(next.getCode())
+        );
     }
 
     private record CursorKey(String name, Long no) {}

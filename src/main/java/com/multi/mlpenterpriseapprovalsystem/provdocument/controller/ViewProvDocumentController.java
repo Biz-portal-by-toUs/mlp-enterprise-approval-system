@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.controller;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.repository;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.repository;
 
-import com.multi.mlpenterpriseapprovalsystem.prov_document.domain.ProvDocument;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

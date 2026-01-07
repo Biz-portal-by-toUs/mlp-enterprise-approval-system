@@ -1,6 +1,6 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.dto;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.dto;
 
-import com.multi.mlpenterpriseapprovalsystem.prov_document.domain.ProvProcStat;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvProcStat;
 import lombok.Builder;
 import lombok.Getter;
 
