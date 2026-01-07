@@ -65,6 +65,8 @@ public enum ErrorCode {
     START_DATE_MUST_BE_TODAY_OR_LATER(HttpStatus.BAD_REQUEST, "START_DATE_MUST_BE_TODAY_OR_LATER", "시작일은 오늘 이후여야 합니다."),
     END_DATE_BEFORE_START_DATE(HttpStatus.BAD_REQUEST, "END_DATE_BEFORE_START_DATE", "종료일이 시작일보다 빠를 수 없습니다."),
     DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD(HttpStatus.CONFLICT, "DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD", "대직자가 해당 기간에 이미 근태 일정이 있습니다"),
+    BAD_ATTENDANCE_REQUEST(HttpStatus.BAD_REQUEST, "BAD_ATTENDANCE_REQUEST", "잘못된 근태 파라미터 요청입니다"),
+    CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE(HttpStatus.CONFLICT, "CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE", "나를 대직자로 선택한 기간엔 휴가를 갈 수 없습니다"),
 
     // 문서 양식 관련
     DOCUMENT_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_NOT_FOUND", "문서 양식을 찾을 수 없습니다"),
