@@ -6,7 +6,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>받은 메일함</title>
+    <title>임시저장함</title>
 
     <style layout:fragment="pageStyles">
         :root{
@@ -20,7 +20,7 @@
 
         /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
 
-        /* ===== page-only namespace: mi-* ===== */
+        /* ===== page-only namespace: mi-* (received.html과 동일) ===== */
         .mi-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
         .mi-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
         .mi-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
@@ -54,33 +54,15 @@
         }
         table.mi-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
 
+        /* ===== columns (drafts: 3 columns only) ===== */
         th.mi-col-no, td.mi-col-no{width:90px;}
-        th.mi-col-star, td.mi-col-star{width:60px;}
-        th.mi-col-read, td.mi-col-read{width:90px;}
         th.mi-col-date, td.mi-col-date{width:180px;}
-        th.mi-col-sender, td.mi-col-sender{width:140px;}
-
         th.mi-col-title-h{text-align:left;padding-left:20px;}
         td.mi-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
         .mi-titleLink{
             color:var(--primary);text-decoration:none;display:block;width:100%;
             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;
         }
-
-        .mi-badgePill{
-            display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;
-            border-radius:999px;font-size:12px;font-weight:900;border:1px solid rgba(17,24,39,.10);
-        }
-        .mi-pill-unread{background:#eff6ff;color:#1d4ed8;border-color:#dbeafe;}
-        .mi-pill-read{background:#f1f5f9;color:#334155;}
-
-        .mi-starBtn{
-            display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
-            border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;
-            font-size:18px;line-height:1;transition:0.15s;
-        }
-        .mi-starBtn:hover{background:#f8fafc;border-color:var(--line);}
-        .mi-starBtn:disabled{opacity:.6;cursor:not-allowed;}
 
         .mi-pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
         .mi-pager{display:flex;align-items:center;gap:4px;}
@@ -97,7 +79,6 @@
         @media (max-width:760px){
             .mi-pager-status{position:static;margin-left:10px;}
             th.mi-col-date, td.mi-col-date{width:140px;}
-            th.mi-col-sender, td.mi-col-sender{width:120px;}
         }
     </style>
 </head>
@@ -105,7 +86,7 @@
 <body>
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('received')}"></div>
+        <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('drafts')}"></div>
 
         <main class="page-main">
             <div class="mi-toolbar">
@@ -126,11 +107,8 @@
                     <thead>
                     <tr>
                         <th class="mi-col-no">번호</th>
-                        <th class="mi-col-star">중요</th>
-                        <th class="mi-col-read">읽음</th>
-                        <th class="mi-col-sender">발신인</th>
                         <th class="mi-col-title-h">제목</th>
-                        <th class="mi-col-date">수신일</th>
+                        <th class="mi-col-date">저장일</th>
                     </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
@@ -149,11 +127,6 @@
             <script>
                 // ===== constants (paging 10 fixed) =====
                 const PAGE_SIZE = 10;
-                const INBOX_ROLE = 'RECIPIENT';
-
-                function getMeEmpId(){
-                    return document.getElementById('me')?.dataset?.empNo?.trim() || '';
-                }
 
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
@@ -186,20 +159,15 @@
                         .replaceAll("'","&#039;");
                 }
 
-                function starEmoji(isPrior){
-                    return isPrior ? '⭐' : '☆';
-                }
-
-                async function patchNoBody(url){
-                    const res = await fetch(url, {
-                        method: 'PATCH',
-                        credentials: 'include',
-                        headers: { ...getCsrfHeaders() }
-                    });
+                async function fetchJson(url){
+                    const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
+                    const json = await res.json().catch(()=> null);
                     if(!res.ok){
-                        const t = await res.text().catch(()=> '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(msg);
                     }
+                    // ResponseDto<T> -> data
+                    return json?.data;
                 }
 
                 function buildPager(page, totalPages, onGo){
@@ -233,16 +201,6 @@
                     pager.appendChild(mkBtn('»', last, current === last, false));
                 }
 
-                async function fetchJson(url){
-                    const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
-                    const json = await res.json().catch(()=> null);
-                    if(!res.ok){
-                        const msg = json?.message || `HTTP ${res.status}`;
-                        throw new Error(`HTTP ${res.status} ${msg}`);
-                    }
-                    return json?.data; // ✅ ResponseDto<T> -> data
-                }
-
                 function getState(){
                     const params = new URLSearchParams(location.search);
                     return {
@@ -260,109 +218,63 @@
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
+                function buildDraftsApiUrl(st){
+                    const params = new URLSearchParams();
+                    params.set('page', String(st.page));
+                    params.set('size', String(PAGE_SIZE));
+                    if (st.q) params.set('q', st.q);
+                    return `/api/v1/mails/drafts?${params.toString()}`;
+                }
+
                 function renderRows(items, page, size, totalElements){
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
                     if (!items || items.length === 0){
-                        tb.innerHTML = `<tr><td colspan="6" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
+                        tb.innerHTML = `<tr><td colspan="3" style="padding:18px; color:#64748b; font-weight:800;">임시저장 메일이 없습니다.</td></tr>`;
                         return;
                     }
 
                     items.forEach((it, idx) => {
                         const num = totalElements - (page * size) - idx;
                         const title = escapeHtml(it.title);
-                        const senderName = escapeHtml(it.senderName);
-                        const createdAt = fmtDate(it.createdAt);
 
-                        const isRead = !!it.isRead;
-                        const pill = isRead
-                            ? `<span class="mi-badgePill mi-pill-read">읽음</span>`
-                            : `<span class="mi-badgePill mi-pill-unread">안읽음</span>`;
-
-                        const isPrior = !!it.isPrior;
+                        // draft list DTO가 createdAt만 내려주면 createdAt 사용
+                        // savedAt 내려주면 savedAt 우선
+                        const savedAt = fmtDate(it.savedAt || it.createdAt);
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td class="mi-col-no">${num}</td>
-
-                            <td class="mi-col-star">
-                                <button type="button"
-                                        class="mi-starBtn"
-                                        data-mail-id="${escapeHtml(it.mailId)}"
-                                        aria-label="중요메일 토글">
-                                    ${starEmoji(isPrior)}
-                                </button>
-                            </td>
-
-                            <td class="mi-col-read">${pill}</td>
-                            <td class="mi-col-sender">${senderName}</td>
                             <td class="mi-col-title">
-                                <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a>
+                                <a class="mi-titleLink" href="/mail/write?mailId=${encodeURIComponent(it.mailId)}">${title}</a>
                             </td>
-                            <td class="mi-col-date">${createdAt}</td>
+                            <td class="mi-col-date">${savedAt}</td>
                         `;
 
                         tr.addEventListener('click', (e) => {
-                            if (e.target && (e.target.closest('.mi-starBtn') || e.target.tagName === 'A')) return;
-                            location.href = `/mail/${encodeURIComponent(it.mailId)}`;
-                        });
-
-                        const starBtn = tr.querySelector('.mi-starBtn');
-                        starBtn.addEventListener('click', async (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-
-                            const mailId = starBtn.dataset.mailId;
-                            const prev = starBtn.textContent.trim() === '⭐';
-
-                            starBtn.textContent = starEmoji(!prev);
-                            starBtn.disabled = true;
-
-                            try{
-                                await patchNoBody(`/api/v1/mails/${encodeURIComponent(mailId)}/prior/toggle`);
-                                await load();
-                            }catch(err){
-                                console.error(err);
-                                starBtn.textContent = starEmoji(prev);
-                                alert('중요메일 설정에 실패했습니다.');
-                            }finally{
-                                starBtn.disabled = false;
-                            }
+                            if (e.target && e.target.tagName === 'A') return;
+                            location.href = `/mail/write?mailId=${encodeURIComponent(it.mailId)}`;
                         });
 
                         tb.appendChild(tr);
                     });
                 }
 
-                function buildInboxApiUrl(st){
-                    const params = new URLSearchParams();
-                    params.set('role', INBOX_ROLE);
-                    params.set('page', String(st.page));
-                    params.set('size', String(PAGE_SIZE));
-                    if (st.q) params.set('q', st.q);
-                    return `/api/v1/mails/inbox?${params.toString()}`;
-                }
-
                 async function load(){
-                    const me = getMeEmpId();
-                    if(!me){
-                        console.warn('[mail inbox] #me dataset(empNo) not found (layout에 me 태그가 없는 상태일 수 있음).');
-                    }
-
                     const st = getState();
                     document.getElementById('q').value = st.q;
 
-                    const url = buildInboxApiUrl(st);
-                    const data = await fetchJson(url);
+                    const url = buildDraftsApiUrl(st);
+                    const pageData = await fetchJson(url); // ResponseDto<Page<ResMailListDto>> -> data
 
-                    const items = data.content || [];
-                    renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
+                    const items = pageData?.content || [];
+                    renderRows(items, pageData?.number ?? st.page, pageData?.size ?? PAGE_SIZE, pageData?.totalElements ?? items.length);
 
-                    document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
-                    document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
+                    document.getElementById('countPill').textContent = `${pageData?.totalElements ?? 0}건`;
+                    document.getElementById('pageInfo').textContent = `page ${(pageData?.number ?? 0) + 1} / ${Math.max(pageData?.totalPages ?? 1, 1)}`;
 
-                    buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
+                    buildPager(pageData?.number ?? 0, pageData?.totalPages ?? 1, (p) => {
                         setUrlState({ page:p, q:st.q });
                         load().catch(console.error);
                     });
@@ -385,7 +297,7 @@
                     load().catch(err => {
                         console.error(err);
                         document.getElementById('tbody').innerHTML =
-                            `<tr><td colspan="6" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                            `<tr><td colspan="3" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
                     });
                 });
             </script>

@@ -206,7 +206,7 @@ public class DocumentFormController {
     public ResponseEntity<Page<ResDocumentFormListDto>> getMyTempForms(
             @AuthenticationPrincipal CustomUser customUser,
             @RequestParam(name = "q", required = false) String q,
-            @PageableDefault(size = 15) Pageable pageable
+            @PageableDefault(size = 10) Pageable pageable
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
 

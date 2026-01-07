@@ -182,13 +182,16 @@
                     if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
                     if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
 
+                    if (res.status === 204) return null;
+
+                    const json = await res.json().catch(() => null);
+
                     if (!res.ok) {
-                        const t = await res.text().catch(() => '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
                     }
 
-                    if (res.status === 204) return null;
-                    return res.json();
+                    return json?.data;
                 }
 
                 // (선택) 상세에서 active를 바꾸고 싶을 때만 사용. sidebar 구조가 다르면 조용히 무시됨.

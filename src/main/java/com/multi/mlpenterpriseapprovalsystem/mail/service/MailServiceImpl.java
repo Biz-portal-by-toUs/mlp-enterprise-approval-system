@@ -4,10 +4,8 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.mail.domain.Mail;
 import com.multi.mlpenterpriseapprovalsystem.mail.domain.MailUserState;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.ReqMailSendDto;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailDetailDto;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailListDto;
-import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.ResMailSendDto;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
+import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
 import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailRepository;
 import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailUserStateRepository;
@@ -189,6 +187,146 @@ public class MailServiceImpl implements MailService {
                 mus.getDeletedAt(),
                 m.getCreatedAt()
         );
+    }
+
+    // 임시저장 생성/수정
+    @Override
+    @Transactional
+    public ResMailDraftSavedDto saveDraft(String senderEmpId, ReqMailDraftSaveDto req) {
+        Employee sender = employeeRepository.findByEmpId(senderEmpId)
+                .orElseThrow(() -> new NoSuchElementException("발신자(empId) 없음: " + senderEmpId));
+
+        String title = (req.title() == null) ? "" : req.title().trim();
+        String cnttJson = (req.cnttJson() == null) ? "{}" : req.cnttJson();
+
+        Mail mail;
+        if (req.mailId() == null || req.mailId().isBlank()) {
+            String mailId = generateMailId(senderEmpId);
+
+            // 신규 임시저장 생성
+            mail = Mail.createDraft(mailId, title, cnttJson, sender);
+
+        } else {
+            // 기존 초안 업데이트
+            mail = mailRepository.findDraftDetail(req.mailId(), senderEmpId)
+                    .orElseThrow(() -> new AccessDeniedException("초안이 없거나 권한이 없습니다. mailId=" + req.mailId()));
+
+            // 방어: 혹시 이미 발송된 메일이면 막기
+            if (!mail.isDraft()) {
+                throw new IllegalStateException("이미 발송된 메일은 임시저장 수정할 수 없습니다. mailId=" + req.mailId());
+            }
+
+            mail.updateDraft(title, cnttJson);
+        }
+
+        Mail saved = mailRepository.save(mail);
+        return new ResMailDraftSavedDto(saved.getMailId(), saved.getMailNo(), saved.getSavedAt());
+    }
+
+    // 임시저장 목록
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResMailListDto> getDrafts(String senderEmpId, String q, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+
+        return mailRepository.findDrafts(senderEmpId, keyword, pageable)
+                .map(m -> new ResMailListDto(
+                        m.getMailId(),
+                        m.getTitle(),
+                        m.getSender().getEmpId(),
+                        m.getSender().getEmpName(),
+                        "-",
+                        MailRole.SENDER,     // 화면 재사용용
+                        false,
+                        false,
+                        null,
+                        m.getCreatedAt()
+                ));
+    }
+
+    // 임시저장 상세
+    @Override
+    @Transactional(readOnly = true)
+    public ResMailDetailDto getDraftDetail(String mailId, String senderEmpId) {
+        Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
+                .orElseThrow(() -> new AccessDeniedException("초안이 없거나 권한이 없습니다. mailId=" + mailId));
+
+        // draft는 mus가 없으니 role은 SENDER로 고정, receivers도 비움
+        return new ResMailDetailDto(
+                mail.getMailId(),
+                mail.getTitle(),
+                mail.getCntt(),
+                null, // cnttHtml 아직 없으면 null 유지
+                mail.getSender().getEmpId(),
+                mail.getSender().getEmpName(),
+                "",              // receivers 없음
+                MailRole.SENDER,
+                false,
+                false,
+                null,
+                mail.getCreatedAt()
+        );
+    }
+
+    // 임시저장 삭제 (완전 삭제)
+    @Override
+    @Transactional
+    public void deleteDraft(String mailId, String senderEmpId) {
+        int deleted = mailRepository.deleteDraft(mailId, senderEmpId);
+        if (deleted == 0) {
+            throw new AccessDeniedException("삭제할 초안이 없거나 권한이 없습니다. mailId=" + mailId);
+        }
+    }
+
+    // 임시저장 -> 발송
+    @Override
+    @Transactional
+    public ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req) {
+        Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
+                .orElseThrow(() -> new AccessDeniedException("초안이 없거나 권한이 없습니다. mailId=" + mailId));
+
+        if (!mail.isDraft()) {
+            throw new IllegalStateException("이미 발송된 메일입니다. mailId=" + mailId);
+        }
+
+        Employee sender = employeeRepository.findByEmpId(senderEmpId)
+                .orElseThrow(() -> new NoSuchElementException("발신자(empId) 없음: " + senderEmpId));
+
+        List<String> receiverEmpIds = req.receiverEmpIds();
+
+        // 초안 해제
+        mail.clearDraft();
+        Mail saved = mailRepository.save(mail);
+
+        // sender state row 생성 (중복 방지)
+        mailUserStateRepository.findByMail_MailIdAndUser_EmpId(saved.getMailId(), senderEmpId)
+                .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.SENDER)));
+
+        // recipients state rows 생성
+        if (receiverEmpIds != null && !receiverEmpIds.isEmpty()) {
+            Set<String> unique = new LinkedHashSet<>();
+            for (String id : receiverEmpIds) {
+                if (id != null && !id.isBlank()) unique.add(id.trim());
+            }
+
+            for (String recvEmpId : unique) {
+                Employee recv = employeeRepository.findByEmpId(recvEmpId)
+                        .orElseThrow(() -> new NoSuchElementException("수신자(empId) 없음: " + recvEmpId));
+
+                // 중복 방지
+                mailUserStateRepository.findByMail_MailIdAndUser_EmpId(saved.getMailId(), recvEmpId)
+                        .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT)));
+
+                noti.sendNotification(
+                        recv.getEmpId(),
+                        NotificationType.MAIL,
+                        "[메일]",
+                        saved.getTitle(),
+                        "/mail/" + saved.getMailNo()
+                );
+            }
+        }
+        return new ResMailSendDto(saved.getMailId(), saved.getMailNo(), saved.getSavedAt()); // sent면 savedAt=null
     }
 
     // mailId 생성 규칙

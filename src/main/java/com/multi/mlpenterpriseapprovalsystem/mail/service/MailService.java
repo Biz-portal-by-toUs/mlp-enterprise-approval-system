@@ -38,4 +38,19 @@ public interface MailService {
     void setPrior(String mailId, String userEmpId, boolean prior);
 
     void togglePrior(String mailId, String userEmpId);
+
+    // 임시저장 생성/수정
+    ResMailDraftSavedDto saveDraft(String senderEmpId, ReqMailDraftSaveDto req);
+
+    // 임시저장 목록
+    Page<ResMailListDto> getDrafts(String senderEmpId, String q, Pageable pageable);
+
+    // 임시저장 상세 (발송 화면에서 불러오기)
+    ResMailDetailDto getDraftDetail(String mailId, String senderEmpId);
+
+    // 임시저장 삭제 (완전 삭제)
+    void deleteDraft(String mailId, String senderEmpId);
+
+    // 임시저장 -> 발송 (초안 불러와서 보내기)
+    ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req);
 }
