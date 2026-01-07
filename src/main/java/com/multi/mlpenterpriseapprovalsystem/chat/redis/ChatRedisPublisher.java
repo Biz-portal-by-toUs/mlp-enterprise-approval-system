@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.MessageType;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomUpdateDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResUserStatusUpdateDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
@@ -82,6 +83,19 @@ public class ChatRedisPublisher {
             publish(roomNo, dto); // 기존 room:{roomNo} 채널로 발행
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public void publishUserStatus(String empId, String msgStat) {
+        try {
+            String channel = "user:status-update";
+            ResUserStatusUpdateDto dto = new ResUserStatusUpdateDto(empId, msgStat);
+            String payload = objectMapper.writeValueAsString(dto);
+
+            redisTemplate.convertAndSend(channel, payload);
+            log.info("[STATUS-UPDATE PUB] empId={}, status={}", empId, msgStat);
+        } catch (Exception e) {
+            log.error("[STATUS-UPDATE PUB] failed empId={}", empId, e);
         }
     }
 
