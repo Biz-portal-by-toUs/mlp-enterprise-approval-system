@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.dto.req;
 
+import java.util.*;
+
 /**
  * 메일 임시 저장 요청 Dto
  *
@@ -11,5 +13,6 @@ package com.multi.mlpenterpriseapprovalsystem.mail.dto.req;
 public record ReqMailDraftSaveDto(
         String mailId,     // null이면 신규 임시저장 생성, 있으면 해당 초안 업데이트
         String title,
-        String cnttJson
+        String cnttJson,
+        List<String> receiverEmpIds
 ) {}

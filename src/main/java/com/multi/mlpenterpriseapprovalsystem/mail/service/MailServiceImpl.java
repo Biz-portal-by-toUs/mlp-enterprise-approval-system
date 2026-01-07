@@ -21,9 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -236,10 +234,17 @@ public class MailServiceImpl implements MailService {
         String title = (req.title() == null) ? "" : req.title().trim();
         String cnttJson = (req.cnttJson() == null) ? "{}" : req.cnttJson();
 
+        // ✅ 수신자 정규화 + TEXT로 저장(콤마)
+        List<String> receiverEmpIds = normalizeEmpIds(req.receiverEmpIds());
+        String draftReceivers = joinEmpIds(receiverEmpIds);
+
         Mail mail;
         if (req.mailId() == null || req.mailId().isBlank()) {
             String mailId = generateMailId(senderEmpId);
             mail = Mail.createDraft(mailId, title, cnttJson, sender);
+
+            // ✅ 신규 draft에도 수신자 저장
+            mail.updateDraft(title, cnttJson, draftReceivers);
         } else {
             mail = mailRepository.findDraftDetail(req.mailId(), senderEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
@@ -247,13 +252,19 @@ public class MailServiceImpl implements MailService {
             if (!mail.isDraft()) {
                 throw new CustomException(ErrorCode.MAIL_ALREADY_SENT);
             }
-            mail.updateDraft(title, cnttJson);
+
+            // ✅ draft 업데이트 시 수신자까지 저장
+            mail.updateDraft(title, cnttJson, draftReceivers);
         }
 
         Mail saved = mailRepository.save(mail);
 
-        // DTO: (mailNo, mailId, savedAt)
-        return new ResMailDraftSavedDto(saved.getMailNo(), saved.getMailId(), saved.getSavedAt());
+        return new ResMailDraftSavedDto(
+                saved.getMailNo(),
+                saved.getMailId(),
+                saved.getSavedAt(),
+                receiverEmpIds
+        );
     }
 
     @Override
@@ -279,24 +290,20 @@ public class MailServiceImpl implements MailService {
 
     @Override
     @Transactional(readOnly = true)
-    public ResMailDetailDto getDraftDetail(String mailId, String senderEmpId) {
+    public ResMailDraftDetailDto getDraftDetail(String mailId, String senderEmpId) {
         Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
 
-        return new ResMailDetailDto(
+        // ✅ TEXT -> List<String>
+        List<String> receiverEmpIds = splitEmpIds(mail.getDraftReceivers());
+
+        return new ResMailDraftDetailDto(
                 mail.getMailNo(),
                 mail.getMailId(),
                 mail.getTitle(),
                 mail.getCntt(),
-                null,
-                mail.getSender().getEmpId(),
-                mail.getSender().getEmpName(),
-                "",
-                MailRole.SENDER,
-                false,
-                false,
-                null,
-                mail.getCreatedAt()
+                mail.getSavedAt(),
+                receiverEmpIds
         );
     }
 
@@ -318,17 +325,18 @@ public class MailServiceImpl implements MailService {
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
-        // 수신자 정규화
-        Set<String> unique = new LinkedHashSet<>();
-        if (req.receiverEmpIds() != null) {
-            for (String id : req.receiverEmpIds()) {
-                if (id != null && !id.isBlank()) unique.add(id.trim());
-            }
+        // ✅ 1) req 수신자 우선, 없으면 draft_receivers fallback
+        List<String> receiverList = normalizeEmpIds(req == null ? null : req.receiverEmpIds());
+        if (receiverList.isEmpty()) {
+            receiverList = splitEmpIds(draft.getDraftReceivers());
+        }
+        if (receiverList.isEmpty()) {
+            throw new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND); // 너희 에러코드에 맞게 교체
         }
 
-        boolean wantSelf = unique.contains(senderEmpId);
+        Set<String> unique = new LinkedHashSet<>(receiverList);
 
-        // others = 나를 제외한 수신자
+        boolean wantSelf = unique.contains(senderEmpId);
         Set<String> others = new LinkedHashSet<>(unique);
         others.remove(senderEmpId);
 
@@ -337,7 +345,6 @@ public class MailServiceImpl implements MailService {
             draft.clearDraft();
             Mail savedSelf = mailRepository.save(draft);
 
-            // sender-row 없이 recipient-row만
             mailUserStateRepository.findByMail_MailNoAndUser_EmpId(savedSelf.getMailNo(), senderEmpId)
                     .orElseGet(() -> mailUserStateRepository.save(
                             MailUserState.create(savedSelf, sender, MailRole.RECIPIENT)
@@ -351,17 +358,19 @@ public class MailServiceImpl implements MailService {
             draft.clearDraft();
             Mail saved = mailRepository.save(draft);
 
-            // sender-row
             mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), senderEmpId)
-                    .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.SENDER)));
+                    .orElseGet(() -> mailUserStateRepository.save(
+                            MailUserState.create(saved, sender, MailRole.SENDER)
+                    ));
 
-            // recipients
             for (String recvEmpId : unique) {
                 Employee recv = employeeRepository.findByEmpId(recvEmpId)
                         .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
 
                 mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), recvEmpId)
-                        .orElseGet(() -> mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT)));
+                        .orElseGet(() -> mailUserStateRepository.save(
+                                MailUserState.create(saved, recv, MailRole.RECIPIENT)
+                        ));
 
                 noti.sendNotification(
                         recv.getEmpId(),
@@ -375,8 +384,7 @@ public class MailServiceImpl implements MailService {
             return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getSavedAt());
         }
 
-        // ========== case 3) 내게쓰기 + 다른사람(복제 발송) ==========
-        // 3-1) 원본 draft를 self-mail로 확정
+        // case 3) 내게쓰기 + 다른사람(복제 발송)
         draft.clearDraft();
         Mail savedSelf = mailRepository.save(draft);
 
@@ -385,16 +393,12 @@ public class MailServiceImpl implements MailService {
                         MailUserState.create(savedSelf, sender, MailRole.RECIPIENT)
                 ));
 
-        // 3-2) 내용 복제해서 "일반메일"을 새로 생성
         String newMailId = generateMailId(senderEmpId);
-
         Mail clone = Mail.create(newMailId, savedSelf.getTitle(), savedSelf.getCntt(), sender);
         Mail savedNormal = mailRepository.save(clone);
 
-        // sender-row
         mailUserStateRepository.save(MailUserState.create(savedNormal, sender, MailRole.SENDER));
 
-        // recipients(others만)
         for (String recvEmpId : others) {
             Employee recv = employeeRepository.findByEmpId(recvEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
@@ -410,7 +414,6 @@ public class MailServiceImpl implements MailService {
             );
         }
 
-        // 응답은 일반메일을 기준
         return new ResMailSendDto(savedNormal.getMailNo(), savedNormal.getMailId(), savedNormal.getCreatedAt());
     }
 
@@ -430,5 +433,29 @@ public class MailServiceImpl implements MailService {
     private MailUserState mustFindState(Long mailNo, String userEmpId) {
         return mailUserStateRepository.findByMail_MailNoAndUser_EmpId(mailNo, userEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_STATE_NOT_FOUND));
+    }
+
+    private List<String> normalizeEmpIds(List<String> raw) {
+        if (raw == null) return List.of();
+        return raw.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private String joinEmpIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return null;
+        return String.join(",", ids);
+    }
+
+    private List<String> splitEmpIds(String text) {
+        if (text == null || text.isBlank()) return List.of();
+        return Arrays.stream(text.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .toList();
     }
 }

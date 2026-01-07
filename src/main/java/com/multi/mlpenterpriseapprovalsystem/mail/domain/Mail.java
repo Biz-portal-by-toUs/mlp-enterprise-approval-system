@@ -52,6 +52,9 @@ public class Mail extends BaseEntity {
     @OneToMany(mappedBy = "mail", cascade = CascadeType.ALL)
     private List<MailAttach> attachments = new ArrayList<>();
 
+    @Column(name = "draft_receivers", columnDefinition = "TEXT")
+    private String draftReceivers;
+
     public static Mail create(String mailId, String title, String cntt, Employee sender) {
         Mail m = new Mail();
         m.mailId = mailId;
@@ -77,14 +80,16 @@ public class Mail extends BaseEntity {
     }
 
     // 임시저장 업데이트(자동저장/수동저장 공용)
-    public void updateDraft(String title, String cntt) {
+    public void updateDraft(String title, String cnttJson, String draftReceivers) {
         this.title = title;
-        this.cntt = cntt;
+        this.cntt = cnttJson;         // 네 프로젝트에서 cntt가 json을 담는 구조라 가정
         this.savedAt = LocalDateTime.now();
+        this.draftReceivers = draftReceivers;
     }
 
     // 발송 처리(초안 해제)
     public void clearDraft() {
         this.savedAt = null;
+        this.draftReceivers = null;
     }
 }

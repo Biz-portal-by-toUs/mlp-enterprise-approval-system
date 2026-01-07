@@ -34,7 +34,7 @@ public interface MailService {
 
     Page<ResMailListDto> getDrafts(String senderEmpId, String q, Pageable pageable);
 
-    ResMailDetailDto getDraftDetail(String mailId, String senderEmpId);
+    ResMailDraftDetailDto getDraftDetail(String mailId, String senderEmpId);
 
     void deleteDraft(String mailId, String senderEmpId);
 

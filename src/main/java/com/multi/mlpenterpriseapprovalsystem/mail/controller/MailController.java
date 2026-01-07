@@ -200,12 +200,12 @@ public class MailController {
     }
 
     @GetMapping("/drafts/{mailId}")
-    public ResponseEntity<ResponseDto<ResMailDetailDto>> draftDetail(
-            @PathVariable String mailId,
+    public ResponseEntity<ResponseDto<ResMailDraftDetailDto>> draftDetail(
+            @PathVariable(name = "mailId") String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        ResMailDetailDto res = mailService.getDraftDetail(mailId, empId);
+        ResMailDraftDetailDto res = mailService.getDraftDetail(mailId, empId);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -218,16 +218,21 @@ public class MailController {
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
+        boolean isCreate = (req.mailId() == null || req.mailId().isBlank());
+
         ResMailDraftSavedDto res = mailService.saveDraft(empId, req);
 
+        HttpStatus status = isCreate ? HttpStatus.CREATED : HttpStatus.OK;
+        String msg = isCreate ? "임시저장 생성 성공" : "임시저장 수정 성공";
+
         return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(HttpStatus.CREATED, "임시저장 성공", res));
+                .status(status)
+                .body(new ResponseDto<>(status, msg, res));
     }
 
     @DeleteMapping("/drafts/{mailId}")
     public ResponseEntity<ResponseDto<Void>> deleteDraft(
-            @PathVariable String mailId,
+            @PathVariable(name = "mailId") String mailId,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -240,7 +245,7 @@ public class MailController {
 
     @PostMapping("/drafts/{mailId}/send")
     public ResponseEntity<ResponseDto<ResMailSendDto>> sendDraft(
-            @PathVariable String mailId,
+            @PathVariable(name = "mailId") String mailId,
             @RequestBody ReqMailDraftSendDto req,
             @AuthenticationPrincipal CustomUser user
     ) {
