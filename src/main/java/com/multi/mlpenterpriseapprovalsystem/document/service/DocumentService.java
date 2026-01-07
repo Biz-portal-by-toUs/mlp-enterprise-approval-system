@@ -570,18 +570,18 @@ public class DocumentService {
                 Employee delegate = currentTarget.getDelegate();
 
                 // ✅ [핵심 추가]: 대직자가 문서 작성자 본인인지 체크
-                if (delegate.getEmpId().equals(writer.getEmpId())) {
-                    log.info("문서 생성 시 대직자가 작성자 본인이므로 제외: 문서={}, 사번={}",
-                            document.getDocNo(), delegate.getEmpId());
-
-                    // 본인이라면 스킵하고, 이 대직자(나)도 휴가 중이라면 그다음 대직자를 찾음
-                    if ("V".equals(delegate.getAtte()) && delegate.getDelegate() != null) {
-                        currentTarget = delegate;
-                        continue;
-                    } else {
-                        break; // 더 이상 대행할 사람이 없으면 종료
-                    }
-                }
+//                if (delegate.getEmpId().equals(writer.getEmpId())) {
+//                    log.info("문서 생성 시 대직자가 작성자 본인이므로 제외: 문서={}, 사번={}",
+//                            document.getDocNo(), delegate.getEmpId());
+//
+//                    // 본인이라면 스킵하고, 이 대직자(나)도 휴가 중이라면 그다음 대직자를 찾음
+//                    if ("V".equals(delegate.getAtte()) && delegate.getDelegate() != null) {
+//                        currentTarget = delegate;
+//                        continue;
+//                    } else {
+//                        break; // 더 이상 대행할 사람이 없으면 종료
+//                    }
+//                }
 
                 // 대직자 라인 생성
                 ApprovalLine delegateLine = ApprovalLine.toEntity(
