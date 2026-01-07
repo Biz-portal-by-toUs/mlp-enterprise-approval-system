@@ -39,4 +39,6 @@ public interface MailService {
     void deleteDraft(String mailId, String senderEmpId);
 
     ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req);
+
+    Page<ResMailListDto> getSelfMailbox(String userEmpId, String q, Pageable pageable);
 }
