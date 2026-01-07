@@ -235,11 +235,12 @@
 
                 async function fetchJson(url){
                     const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
+                    const json = await res.json().catch(()=> null);
                     if(!res.ok){
-                        const t = await res.text().catch(()=> '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
                     }
-                    return res.json();
+                    return json?.data; // ✅ ResponseDto<T> -> data
                 }
 
                 function getState(){

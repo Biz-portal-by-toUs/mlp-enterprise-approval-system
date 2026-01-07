@@ -357,7 +357,7 @@
                         </div>
 
                         <input type="hidden" id="cnttJson"/>
-                        <div class="mw-help">TipTap 내용은 JSON으로 저장되어 서버에 cnttJson으로 전송됩니다.</div>
+                        <input type="hidden" id="draftMailId" value="">
                     </div>
                 </div>
 
@@ -365,6 +365,7 @@
 
                 <div class="mw-actions">
                     <button class="mw-btn ghost" type="button" onclick="history.back()">취소</button>
+                    <button class="mw-btn ghost" type="button" id="btnDraft">임시저장</button>
                     <button class="mw-btn" type="button" id="btnSend">전송</button>
                 </div>
             </section>
@@ -531,6 +532,17 @@
                 window.__mailEditorGetJsonString = () => hidden.value || JSON.stringify(editor.getJSON());
                 window.__mailEditorGetText = () => editor.getText();
                 window.__mailEditorGetCount = () => editor.storage.characterCount.characters();
+                window.__mailEditorSetJsonString = (jsonStr) => {
+                    try {
+                        const obj = JSON.parse(jsonStr);
+                        editor.commands.setContent(obj);
+                        syncHidden();
+                        refreshToolbar();
+                        refreshCount();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                };
             </script>
 
             <script>
@@ -559,17 +571,17 @@
                     wrap.innerHTML = Array.from(selectedReceivers.values()).map(r => {
                         const label = `${r.empName ?? ''}`.trim();
                         return `
-        <span class="mw-rx-chip" data-id="${r.empId}">
-          <span>${escapeHtml(label)}</span>
-          <span class="x" title="삭제" onclick="removeReceiver('${r.empId}')">×</span>
-        </span>
-      `;
+                            <span class="mw-rx-chip" data-id="${r.empId}">
+                              <span>${escapeHtml(label)}</span>
+                              <span class="x" title="삭제" onclick="removeReceiver('${r.empId}')">×</span>
+                            </span>
+                          `;
                     }).join('');
 
                     syncHiddenReceivers();
                 }
 
-                // ✅ inline onclick이 있으니 전역으로 명확히 노출
+                // inline onclick이 있으니 전역으로 명확히 노출
                 window.removeReceiver = function(empId){
                     selectedReceivers.delete(empId);
                     renderReceiverTokens();
@@ -610,13 +622,13 @@
                         const right = [depName, posName].filter(Boolean).join(' · ');
 
                         return `
-        <div class="mw-rx-item"
-             style="${disabled ? 'opacity:.55; cursor:not-allowed;' : ''}"
-             onclick="${disabled ? '' : `pickReceiver('${empId}', '${escapeJs(empName)}', '${escapeJs(depName)}', '${escapeJs(posName)}')`}">
-          <div>${escapeHtml(left)}</div>
-          <div class="mw-rx-sub">${escapeHtml(right)}</div>
-        </div>
-      `;
+                            <div class="mw-rx-item"
+                                 style="${disabled ? 'opacity:.55; cursor:not-allowed;' : ''}"
+                                 onclick="${disabled ? '' : `pickReceiver('${empId}', '${escapeJs(empName)}', '${escapeJs(depName)}', '${escapeJs(posName)}')`}">
+                              <div>${escapeHtml(left)}</div>
+                              <div class="mw-rx-sub">${escapeHtml(right)}</div>
+                            </div>
+                          `;
                     }).join('');
 
                     openReceiverDropdown();
@@ -693,8 +705,78 @@
 
             <!-- 전송 로직 -->
             <script>
+                async function fetchJsonWithDto(url, options){
+                    const res = await fetch(url, options);
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) {
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(msg);
+                    }
+                    // ResponseDto<T> 에서 data만 꺼내기
+                    return json?.data;
+                }
+
+                function getDraftMailId(){
+                    return (document.getElementById('draftMailId')?.value || '').trim();
+                }
+                function setDraftMailId(mailId){
+                    const el = document.getElementById('draftMailId');
+                    if (el) el.value = mailId || '';
+                }
+
+                // 임시저장 저장
+                async function saveDraft(){
+                    showErr('');
+
+                    const title = (document.getElementById('title').value || '').trim();
+                    const cnttJson = (window.__mailEditorGetJsonString ? window.__mailEditorGetJsonString() : '').trim();
+                    const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
+                    const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
+
+                    if (!title && !text) return showErr('제목 또는 내용을 입력한 후 임시저장하세요.');
+                    if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
+
+                    const body = {
+                        mailId: getDraftMailId() || null,
+                        title,
+                        cnttJson
+                    };
+
+                    const data = await fetchJsonWithDto(`/api/v1/mails/drafts`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
+                        },
+                        body: JSON.stringify(body)
+                    });
+
+                    // data: ResMailDraftSavedDto { mailId, mailNo, savedAt }
+                    if (data?.mailId) setDraftMailId(data.mailId);
+
+                    return data;
+                }
+
+                // 임시저장 버튼
+                document.getElementById('btnDraft').addEventListener('click', async () => {
+                    try{
+                        const saved = await saveDraft();
+                        alert('임시저장 완료');
+                        // 필요하면 drafts 페이지로 이동
+                        // location.href = '/mail/drafts';
+                    }catch(e){
+                        console.error(e);
+                        showErr(e.message || '임시저장에 실패했습니다.');
+                    }
+                });
+
+                // 전송 버튼
                 document.getElementById('btnSend').addEventListener('click', async () => {
                     showErr('');
+
+                    const draftMailId = getDraftMailId();
 
                     const receivers = parseReceivers(document.getElementById('receivers').value);
                     const title = (document.getElementById('title').value || '').trim();
@@ -708,10 +790,30 @@
                     if (!text) return showErr('내용을 입력하세요.');
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
-                    const body = { title, cnttJson, receiverEmpIds: receivers };
-
                     try {
-                        const res = await fetch(`/api/v1/mails`, {
+                        // 초안이면: draft 발송 API 사용
+                        if (draftMailId){
+                            const body = { receiverEmpIds: receivers };
+
+                            await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(draftMailId)}/send`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    ...getCsrfHeaders()
+                                },
+                                body: JSON.stringify(body)
+                            });
+
+                            location.href = '/mail/sent';
+                            return;
+                        }
+
+                        // 일반 전송
+                        const body = { title, cnttJson, receiverEmpIds: receivers };
+
+                        await fetchJsonWithDto(`/api/v1/mails`, {
                             method: 'POST',
                             credentials: 'include',
                             headers: {
@@ -722,16 +824,61 @@
                             body: JSON.stringify(body)
                         });
 
-                        if (!res.ok) {
-                            const t = await res.text().catch(() => '');
-                            throw new Error(`전송 실패: HTTP ${res.status} ${t}`);
-                        }
-
                         location.href = '/mail/sent';
                     } catch (e) {
                         console.error(e);
-                        showErr('메일 전송에 실패했습니다. 콘솔 로그를 확인하세요.');
+                        showErr(e.message || '메일 전송에 실패했습니다.');
                     }
+                });
+            </script>
+            <script>
+                // ✅ draft 편집 진입: /mail/write?mailId=... 로 들어오면 초안 상세 불러오기
+                async function loadDraftIfAny(){
+                    const params = new URLSearchParams(location.search);
+                    const mailId = (params.get('mailId') || '').trim();
+                    if (!mailId) return;
+
+                    try{
+                        const res = await fetch(`/api/v1/mails/drafts/${encodeURIComponent(mailId)}`, {
+                            credentials:'include',
+                            headers:{ 'Accept':'application/json', ...getCsrfHeaders() }
+                        });
+                        const json = await res.json().catch(()=>null);
+                        if(!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
+
+                        const data = json?.data;
+                        if (!data) return;
+
+                        // draftMailId 세팅(이후 임시저장/발송에 사용)
+                        document.getElementById('draftMailId').value = data.mailId || mailId;
+
+                        // 제목 채우기
+                        document.getElementById('title').value = data.title || '';
+
+                        // 내용(JSON) 채우기: TipTap editor는 module scope라 직접 접근이 어려움
+                        // -> 가장 쉬운 방식: hidden에 먼저 넣고, TipTap init 시 content로 주입하는 방식
+                        // 현재 구조를 크게 안 바꾸기 위해, 새로고침 방식으로 간단히 처리:
+                        // 1) cnttJson hidden에 저장
+                        // 2) TipTap 모듈에서 window.__mailEditorSetJson 가 있으면 호출 (아래에서 추가해주면 완벽)
+                        const cnttJson = data.cnttJson || data.cntt || '';
+                        if (cnttJson){
+                            // TipTap 모듈에 setter를 추가했다면:
+                            if (window.__mailEditorSetJsonString){
+                                window.__mailEditorSetJsonString(cnttJson);
+                            } else {
+                                // setter가 없다면: 안내만(최소 변경)
+                                console.warn('[draft] editor setter not found. TipTap 모듈에 window.__mailEditorSetJsonString 추가 권장.');
+                            }
+                        }
+
+                    }catch(e){
+                        console.error(e);
+                        showErr(e.message || '임시저장 불러오기에 실패했습니다.');
+                    }
+                }
+
+                window.addEventListener('DOMContentLoaded', () => {
+                    loadDraftIfAny().catch(console.error);
                 });
             </script>
         </main>

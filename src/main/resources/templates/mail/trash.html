@@ -236,22 +236,31 @@
 
                 async function fetchJson(url){
                     const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
+                    const json = await res.json().catch(()=> null);
+
                     if(!res.ok){
-                        const t = await res.text().catch(()=> '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
                     }
-                    return res.json();
+
+                    return json?.data;
                 }
 
                 async function api(method, url){
                     const headers = { 'Accept':'application/json', ...getCsrfHeaders() };
                     const res = await fetch(url, { method, credentials:'include', headers });
-                    if(!res.ok){
-                        const t = await res.text().catch(()=> '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
-                    }
+
+                    // 204(No Content)는 그대로 null
                     if (res.status === 204) return null;
-                    return res.json().catch(()=> null);
+
+                    const json = await res.json().catch(()=> null);
+
+                    if(!res.ok){
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
+                    }
+
+                    return json?.data; // ✅ ResponseDto<T> -> data
                 }
 
                 function getState(){
