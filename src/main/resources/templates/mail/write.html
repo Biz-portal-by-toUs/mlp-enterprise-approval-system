@@ -347,7 +347,7 @@
                 <div class="mw-row">
                     <div class="mw-k">제목</div>
                     <div>
-                        <input id="title" class="mw-input" type="text" placeholder="제목 입력" maxlength="100">
+                        <input id="title" class="mw-input" type="text" placeholder="제목 입력" maxlength="50">
                     </div>
                 </div>
 
@@ -779,6 +779,29 @@
                         if (!dd && !inBox) closeReceiverDropdown();
                     });
                 });
+            </script>
+
+            <script>
+                const TITLE_LIMIT = 50;
+
+                function enforceTitleLimit() {
+                    const el = document.getElementById('title');
+                    if (!el) return;
+
+                    // 입력/붙여넣기/자동완성 등 모든 변경에 대해 컷
+                    const cut = () => {
+                        const v = el.value || '';
+                        if (v.length > TITLE_LIMIT) el.value = v.slice(0, TITLE_LIMIT);
+                    };
+
+                    el.addEventListener('input', cut);
+                    el.addEventListener('paste', () => setTimeout(cut, 0));
+
+                    // 초기값(초안 로딩 등)도 컷
+                    cut();
+                }
+
+                window.addEventListener('DOMContentLoaded', enforceTitleLimit);
             </script>
 
             <!-- 전송 로직 -->
