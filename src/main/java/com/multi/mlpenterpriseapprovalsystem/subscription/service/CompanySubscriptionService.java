@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 /**
  * Please explain the class!!!
  *
@@ -44,5 +46,11 @@ public class CompanySubscriptionService {
                 .pendingLimit(pending != null ? pending.getSubLimit() : 30)
                 .creditBalance(sub.getCreditBalance())
                 .build();
+    }
+
+    public BigDecimal getCreditBalance(String comId) {
+        CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+        return sub.getCreditBalance();
     }
 }
