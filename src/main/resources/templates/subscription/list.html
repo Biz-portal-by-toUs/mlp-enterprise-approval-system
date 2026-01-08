@@ -44,6 +44,7 @@
             align-items: center;
             gap: 8px;
             margin-bottom: 20px;
+            transition: all 0.3s ease;
         }
 
         .plan-container{
@@ -68,7 +69,6 @@
             transition: all 0.3s ease;
         }
 
-        /* 현재 요금제 강조 스타일 */
         .plan-card.featured{
             background: var(--primary);
             border-color: var(--primary);
@@ -131,7 +131,53 @@
         .feature-item::before { content: '✓'; font-weight: 900; color: var(--primary); }
         .plan-card.featured .feature-item::before { color: var(--white); }
 
-        /* SweetAlert 커스텀 스타일링 */
+        /* 주의사항 섹션 스타일 */
+        .info-section {
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 80px;
+            padding: 40px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            text-align: left;
+        }
+        .info-header {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-header::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+        }
+        .info-list { list-style: none; padding: 0; margin: 0; }
+        .info-item {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #555;
+            margin-bottom: 18px;
+            padding-left: 20px;
+            position: relative;
+        }
+        /* 점(불렛) 위치 수정: top: 0 적용 */
+        .info-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--primary);
+            font-weight: 900;
+        }
+        .info-item b { color: #111; font-weight: 800; }
+
         .swal2-popup { border-radius: 20px !important; font-family: inherit !important; }
         .swal2-styled.swal2-confirm { background-color: var(--primary) !important; border-radius: 12px !important; font-weight: 800 !important; }
         .swal2-styled.swal2-cancel { border-radius: 12px !important; font-weight: 800 !important; }
@@ -153,6 +199,16 @@
         </section>
 
         <div class="plan-container" id="planList"></div>
+
+        <section class="info-section">
+            <div class="info-header">이용 및 결제 안내</div>
+            <ul class="info-list">
+                <li class="info-item"><b>환불 규정:</b> 서비스 결제는 디지털 상품 특성상 결제 완료 이후 <b>중도 해지 및 환불이 불가능</b>합니다. 결제 전 요금제 구성을 충분히 확인해 주시기 바랍니다.</li>
+                <li class="info-item"><b>예치금 시스템:</b> 요금제 변경 시 현재 요금제의 남은 이용 기간만큼의 가치는 일할 계산되어 <b>예치금으로 즉시 전환</b>됩니다. 전환된 예치금은 다음 유료 결제 시 실제 결제 금액에서 최우선으로 자동 공제됩니다.</li>
+                <li class="info-item"><b>요금제 업그레이드:</b> 현재보다 상위 등급의 요금제나 사원 수 한도가 큰 요금제로 변경하는 경우 <b>즉시 적용</b>됩니다. 이때 발생하는 차액은 보유하신 예치금을 먼저 사용한 후 부족한 금액만 추가 결제됩니다.</li>
+                <li class="info-item"><b>요금제 다운그레이드:</b> 현재보다 하위 등급의 요금제로 변경하는 경우 즉시 적용되지 않고 <b>변경 예약 상태</b>가 됩니다. 현재 요금제의 만료일까지는 기존 기능을 모두 이용하실 수 있으며, 다음 결제일부터 예약된 요금제로 전환됩니다.</li>
+            </ul>
+        </section>
     </main>
 </div>
 
@@ -166,7 +222,7 @@
             const meJson = await resMe.json();
             const currentSub = meJson.data;
 
-            // 예치금 정보 렌더링
+            // [기존 방식 유지] /me 응답에서 creditBalance를 추출하여 상시 렌더링
             renderCreditInfo(currentSub.creditBalance);
 
             const resPlans = await fetch('/api/v1/subscriptions');
@@ -178,19 +234,25 @@
         }
     }
 
-    // 예치금 배지 렌더링 함수
+    // 예치금 배지 렌더링 함수 (0원이라도 항상 표시되도록 조건문 제거)
     function renderCreditInfo(balance) {
         const el = document.getElementById('creditInfo');
-        if (balance > 0) {
-            el.innerHTML = `
-                <div class="credit-badge">
-                    <span>💰 보유 예치금: ₩${Math.round(balance).toLocaleString()}</span>
-                    <small style="font-size: 11px; opacity: 0.8; margin-left:5px;">(다음 결제 시 자동 공제됩니다)</small>
-                </div>
-            `;
-        } else {
-            el.innerHTML = '';
-        }
+        const displayBalance = balance || 0;
+        const isZero = displayBalance === 0;
+
+        // 0원일 경우 회색조 스타일 적용, 잔액이 있을 경우 브랜드 컬러 적용
+        const badgeStyle = isZero
+            ? 'background: #f0f0f0; border: 1px solid #ccc; color: #888;'
+            : 'background: #eef3ff; border: 1px solid var(--primary); color: var(--primary);';
+
+        el.innerHTML = `
+            <div class="credit-badge" style="${badgeStyle}">
+                <span>💰 보유 예치금: ₩${Math.round(displayBalance).toLocaleString()}</span>
+                <small style="font-size: 11px; opacity: 0.8; margin-left:5px;">
+                    ${isZero ? '(사용 가능한 예치금이 없습니다)' : '(다음 결제 시 자동 공제됩니다)'}
+                </small>
+            </div>
+        `;
     }
 
     // 2. 카드 렌더링 함수
@@ -205,10 +267,12 @@
 
         planListEl.innerHTML = plans.map(plan => {
             const isCurrent = plan.subNo === currentSubNo;
-            const isPending = plan.subNo === pendingSubNo;
+
+            const isPending = (plan.subNo === pendingSubNo) ||
+                (plan.subNo === 1 && status === 'CANCELED' && !pendingSubNo);
+
             const name = plan.subName.toLowerCase();
 
-            // 요금제별 특화 기능 로직 추가 (9개 요금제 대응)
             let specificFeatures = '';
             if (name.includes('pro')) {
                 specificFeatures = `<li class="feature-item">챗봇기능 사용가능</li>`;
@@ -249,10 +313,17 @@
                             ${status === 'CANCELED' && !pendingSubName && empCnt > 30 ? `
                                 <div class="warning-text">⚠️ 주의: 현재 인원(${empCnt}명)이 무료 한도(30명)를 초과합니다. 조정하지 않으면 해지가 취소됩니다.</div>
                             ` : ''}
+
+                            ${(pendingSubName || status === 'CANCELED') ? `
+                                <button type="button" style="margin-top:10px; width:100%; padding:8px; background:rgba(255,255,255,0.2); border:1px solid #fff; color:#fff; border-radius:4px; font-weight:800; cursor:pointer;"
+                                        onclick="handleCancelReservation()">
+                                    변경/해지 예약 취소
+                                </button>
+                            ` : ''}
                         </div>
                     ` : ''}
 
-                    <div class="feature-title">주요 기능 :</div>
+                    <div class="feature-title">주요 기능</div>
                     <ul class="feature-list">
                         <li class="feature-item">${plan.subDesc}</li>
                         ${specificFeatures}
@@ -270,7 +341,7 @@
         let title = '요금제 변경 확인';
         let text = '보유하신 예치금이 있다면 결제 금액에서 최우선으로 차감됩니다.\n현재보다 낮은 요금제는 만료 후 전환되며, 높은 요금제(인원 확장 포함)는 즉시 차액 결제됩니다.';
 
-        if (subNo === 1) { // 무료 요금제 선택 시 (해지 예약)
+        if (subNo === 1) {
             url = '/api/v1/company/subscription/cancel';
             method = 'PATCH';
             title = '구독 해지 예약';
@@ -297,15 +368,84 @@
                 Swal.close();
 
                 if (res.ok) {
+                    const resultData = json.data;
+                    let successMsg = '요금제 변경 요청이 정상적으로 처리되었습니다.';
+
+                    if (resultData && resultData.status) {
+                        const paid = Math.round(resultData.paidAmount || 0).toLocaleString();
+                        const used = Math.round(resultData.usedCredit || 0).toLocaleString();
+
+                        switch (resultData.status) {
+                            case 'PAYMENT_COMPLETED':
+                                successMsg = `
+                                    <div style="text-align: left; padding: 10px; background: #f9f9f9; border-radius: 8px;">
+                                        <p style="margin: 5px 0;">💳 카드 결제액: ₩${paid}</p>
+                                        <p style="margin: 5px 0;">💰 예치금 사용액: ₩${used}</p>
+                                        <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
+                                        <p style="margin: 5px 0; font-weight: 800; color: var(--primary);">실제 결제 금액: ₩${paid}</p>
+                                    </div>`;
+                                break;
+                            case 'DEPOSIT_ONLY':
+                                successMsg = `
+                                    <div style="text-align: left; padding: 10px; background: #f9f9f9; border-radius: 8px;">
+                                        <p style="margin: 5px 0;">💰 예치금 사용액: ₩${used}</p>
+                                        <p style="margin: 5px 0; color: #888;">💳 카드 결제액: ₩0</p>
+                                        <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
+                                        <p style="margin: 5px 0; font-weight: 800; color: var(--primary);">전액 예치금으로 결제되었습니다.</p>
+                                    </div>`;
+                                break;
+                            case 'RESERVATION_COMPLETED':
+                                successMsg = `요금제 변경 예약이 완료되었습니다.<br>다음 결제일부터 새로운 요금제가 적용됩니다.`;
+                                break;
+                        }
+                    } else if (subNo === 1) {
+                        successMsg = json.message || '구독 해지 예약이 완료되었습니다.';
+                    }
+
                     await Swal.fire({
                         title: '처리 완료',
-                        text: '요금제 변경 요청이 정상적으로 처리되었습니다.',
+                        html: successMsg,
                         icon: 'success',
                         confirmButtonText: '확인'
                     });
                     location.reload();
                 } else {
                     Swal.fire('변경 실패', json.message || "오류가 발생했습니다.", 'error');
+                }
+            } catch (e) {
+                Swal.fire('통신 오류', '서버와 연결할 수 없습니다.', 'error');
+            }
+        }
+    }
+
+    // 4. 예약 취소 로직
+    async function handleCancelReservation() {
+        const result = await Swal.fire({
+            title: '예약 취소 확인',
+            text: '요금제 변경 또는 해지 예약을 취소하고 기존 요금제를 유지하시겠습니까?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '기존 구독 유지',
+            cancelButtonText: '닫기'
+        });
+
+        if (result.isConfirmed) {
+            Swal.showLoading();
+            try {
+                const res = await fetch('/api/v1/company/subscription/resume', { method: 'PATCH' });
+                const json = await res.json();
+                Swal.close();
+
+                if (res.ok) {
+                    await Swal.fire({
+                        title: '취소 완료',
+                        text: '예약이 취소되었습니다. 현재 요금제가 계속 유지됩니다.',
+                        icon: 'success',
+                        confirmButtonText: '확인'
+                    });
+                    location.reload();
+                } else {
+                    Swal.fire('취소 실패', json.message || "오류가 발생했습니다.", 'error');
                 }
             } catch (e) {
                 Swal.fire('통신 오류', '서버와 연결할 수 없습니다.', 'error');
