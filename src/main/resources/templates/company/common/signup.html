@@ -1126,7 +1126,12 @@
             updateSignupButtonState();
         }
     });
-
+    /* =====================
+       * [LOCAL ONLY] BRN 인증 스킵 토글
+       * - 로컬 테스트용: true
+       * - 운영/실서버: false (원래 API 인증 로직 사용)
+       * ===================== */
+    const SKIP_BRN_VERIFY_FOR_LOCAL = true;
     /* =====================
      * 사업자 인증
      * ===================== */
@@ -1143,6 +1148,16 @@
             if (brn1Input.value.length < 3) brn1Input.focus();
             else if (brn2Input.value.length < 2) brn2Input.focus();
             else brn3Input.focus();
+            return;
+        }
+
+        // :흰색_확인_표시: 로컬 테스트용: 버튼 누르면 바로 인증완료 처리
+        if (SKIP_BRN_VERIFY_FOR_LOCAL) {
+            brnVerified = true;
+            brnVerifyBtn.textContent = '인증완료';
+            brnVerifyBtn.disabled = true;
+            setBrnMsg('✓ (로컬 테스트) 사업자등록번호 인증이 완료되었습니다.', true);
+            updateSignupButtonState();
             return;
         }
 
