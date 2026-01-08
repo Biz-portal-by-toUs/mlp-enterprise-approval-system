@@ -388,6 +388,11 @@
             white-space: normal;    /* 기본 줄바꿈 허용 */
             word-break: break-all;  /* 단어가 길어도 강제 줄바꿈 */
             line-height: 1.4;       /* 줄 간격 살짝 넓혀서 가독성 확보 */
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toast:hover {
+            background: #f8fafc; /* 마우스 호버 시 살짝 어둡게 */
         }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
@@ -1043,7 +1048,7 @@
         }
     }
 
-    function showNotiToast(message) {
+    function showNotiToast(message, url) {
         let container = document.querySelector('.toast-container');
         if (!container) {
             container = document.createElement('div');
@@ -1053,6 +1058,11 @@
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.innerHTML = `<span>🔔</span> <span>${message}</span>`;
+        if (url) {
+            toast.onclick = () => {
+                location.href = url;
+            };
+        }
         container.appendChild(toast);
         setTimeout(() => {
             toast.style.opacity = '0';
@@ -1107,7 +1117,8 @@
         eventSource.addEventListener('notification', (e) => {
             const data = JSON.parse(e.data);
             updateNotiBadge(data.unreadCount);
-            showNotiToast(data.notification.content);
+
+            showNotiToast(data.notification.content, data.notification.url);
 
             const iframe = document.getElementById('notiIframe');
             if (iframe && iframe.contentWindow && typeof iframe.contentWindow.appendRealtimeNoti === 'function') {
