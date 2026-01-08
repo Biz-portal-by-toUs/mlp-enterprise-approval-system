@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+import static reactor.netty.http.HttpConnectionLiveness.log;
+
 /**
  * 클라우드 폴더(공유함 / 개인함) 비즈니스 로직을 담당하는 서비스
  *
@@ -162,23 +164,33 @@ public class FolderService {
         authCheck(user);
 
         String comId = user.getComId();
-        String actorEmpId = user.getUsername(); // empId
+        String actorEmpId = user.getUsername();
 
         Folder folder = getFolder(comId, folderNo);
 
-        // (현재 정책 유지: 소유자만 삭제 가능)
         if (!actorEmpId.equals(folder.getOwnerId())) {
             throw new CustomException(ErrorCode.FOLDER_DELETE_FORBIDDEN);
         }
 
         String batchId = UUID.randomUUID().toString();
 
-        // ⭐ 중요: folder.path는 "/7/16" 형태(슬래시 포함, 자기 자신 포함)
-        // 하위는 "/7/16/18" 이므로 prefix는 "/7/16/" 형태여야 함
-        String prefix = ensureTrailingSlash(folder.getPath());
+        String basePath = normalizeBasePath(folder.getPath()); // "/8/11/15" 형태
 
-        folderRepository.softDeleteFolderTree(comId, folderNo, prefix, actorEmpId, batchId);
-        attachmentRepository.softDeleteCloudFilesInTree(comId, folderNo, prefix, actorEmpId, batchId);
+        int fCnt = folderRepository.softDeleteFolderTree(comId, folderNo, basePath, actorEmpId, batchId);
+        int aCnt = attachmentRepository.softDeleteCloudFilesInTree(comId, folderNo, basePath, actorEmpId, batchId);
+
+        // 디버깅용(진짜 추천)
+        log.info("[deleteFolderTree] folderNo={}, basePath={}, foldersUpdated={}, filesUpdated={}, batchId={}",
+                folderNo, basePath, fCnt, aCnt, batchId);
+    }
+
+    private String normalizeBasePath(String path) {
+        if (path == null) return "";
+        String p = path.trim();
+        if (!p.startsWith("/")) p = "/" + p;
+        // ✅ 여기서는 trailing slash 제거(저장 규칙이 없음)
+        while (p.endsWith("/") && p.length() > 1) p = p.substring(0, p.length() - 1);
+        return p;
     }
 
     /* =========================
@@ -231,6 +243,12 @@ public class FolderService {
 
     private Folder getFolder(String comId, Long folderNo) {
         return folderRepository.findByFolderNoAndComId(folderNo, comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FOLDER_NOT_FOUND));
+    }
+
+    private Folder getActiveFolder(String comId, Long folderNo) {
+        return folderRepository.findByFolderNoAndComId(folderNo, comId)
+                .filter(f -> f.getDeletedAt() == null)
                 .orElseThrow(() -> new CustomException(ErrorCode.FOLDER_NOT_FOUND));
     }
 
