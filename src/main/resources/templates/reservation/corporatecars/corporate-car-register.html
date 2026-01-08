@@ -163,10 +163,17 @@
                     <!-- 차량번호(번호판) -->
                     <div class="field">
                         <label>차량번호(번호판)</label>
-                        <input type="text" name="plateNo" id="plateNo" maxlength="20" required>
+                        <input
+                                type="text"
+                                name="plateNo"
+                                id="plateNo"
+                                maxlength="8"
+                                required
+                                placeholder="예) 12가3456 / 123가4567"
+                        >
                         <div class="hint-row">
-                            <small class="hint">최대 20자까지 입력 가능</small>
-                            <small class="counter" id="plateCounter">0 / 20</small>
+                            <small class="hint">형식: 숫자 2~3자리 + 한글 1자 + 숫자 4자리 (예: 12가3456)</small>
+                            <small class="counter" id="plateCounter">0 / 8</small>
                         </div>
                         <small class="error" id="plateError" style="display:none;"></small>
                     </div>
@@ -190,7 +197,6 @@
                         <label>연료</label>
                         <input type="text" name="fuel" maxlength="10">
                     </div>
-
 
                     <div class="field">
                         <label>법인 차량 이미지</label>
@@ -301,19 +307,106 @@
             else setError(carNameInput, nameError, "");
         }
 
+        /* ===== 번호판: IME 안전 + 형식 강제 ===== */
+        const PLATE_REGEX = /^\d{2,3}[가-힣]\d{4}$/;
+
+        function formatPlate(raw) {
+            if (!raw) return "";
+
+            // 공백/하이픈 제거 + 숫자/한글만
+            const cleaned = raw.replace(/[\s-]/g, "").replace(/[^0-9가-힣]/g, "");
+
+            let front = "";
+            let mid = "";
+            let back = "";
+
+            for (const ch of cleaned) {
+                const isDigit = ch >= "0" && ch <= "9";
+                const isHangul = /[가-힣]/.test(ch);
+
+                // 앞 숫자(2~3자리)
+                if (!mid) {
+                    if (isDigit) {
+                        if (front.length < 3) front += ch;
+                        continue;
+                    }
+                    if (isHangul) {
+                        // 앞 숫자 2자리 이상일 때만 한글 1자 허용
+                        if (front.length >= 2) mid = ch;
+                        continue;
+                    }
+                    continue;
+                }
+
+                // 뒤 숫자(4자리)
+                if (isDigit && back.length < 4) back += ch;
+            }
+
+            return (front + mid + back).slice(0, 8);
+        }
+
+        function splitPlate(v) {
+            const m = (v || "").match(/^(\d{0,3})([가-힣]?)(\d{0,4})$/);
+            return { front: m?.[1] ?? "", mid: m?.[2] ?? "", back: m?.[3] ?? "" };
+        }
+
+        let plateIsComposing = false;
+
+        plateInput?.addEventListener("compositionstart", () => {
+            plateIsComposing = true;
+        });
+
+        plateInput?.addEventListener("compositionend", () => {
+            plateIsComposing = false;
+
+            const after = formatPlate(plateInput.value);
+            if (plateInput.value !== after) plateInput.value = after;
+
+            updatePlateUI();
+        });
+
+        plateInput?.addEventListener("input", (e) => {
+            // ✅ 조합 중엔 value 수정 금지(맨 뒷자리 숫자 사라지는 현상 방지)
+            if (plateIsComposing || e.isComposing) return;
+
+            const after = formatPlate(plateInput.value);
+            if (plateInput.value !== after) plateInput.value = after;
+
+            updatePlateUI();
+        });
+
         function updatePlateUI() {
             if (!plateInput) return;
 
-            const len = plateInput.value.length;
-            if (plateCounter) plateCounter.textContent = `${len} / 20`;
+            const v = plateInput.value;
+            if (plateCounter) plateCounter.textContent = `${v.length} / 8`;
 
-            if (!plateInput.value.trim()) {
+            if (!v.trim()) {
                 setError(plateInput, plateError, "");
                 return;
             }
 
-            if (len > 20) setError(plateInput, plateError, "차량번호(번호판)는 20자 이내여야 합니다.");
-            else setError(plateInput, plateError, "");
+            if (PLATE_REGEX.test(v)) {
+                setError(plateInput, plateError, "");
+                return;
+            }
+
+            // 입력 중 단계별 안내
+            const p = splitPlate(v);
+            if (p.front.length < 2) {
+                setError(plateInput, plateError, "앞 숫자 2~3자리를 먼저 입력해주세요. 예) 12가3456");
+                return;
+            }
+            if (!p.mid) {
+                setError(plateInput, plateError, "숫자 뒤에 한글 1자를 입력해주세요. 예) 12가3456");
+                return;
+            }
+            if (p.back.length < 4) {
+                setError(plateInput, plateError, "마지막 숫자 4자리를 입력해주세요. 예) 12가3456");
+                return;
+            }
+
+            setError(plateInput, plateError, "번호판 형식이 올바르지 않습니다. 예) 12가3456 / 123가4567");
         }
 
         function updateCapUI() {
@@ -341,7 +434,6 @@
         }
 
         carNameInput?.addEventListener("input", updateNameUI);
-        plateInput?.addEventListener("input", updatePlateUI);
 
         capInput?.addEventListener("input", () => {
             let value = capInput.value;
@@ -398,8 +490,10 @@
                 plateInput.focus();
                 return;
             }
-            if (plate.length > 20) {
-                setError(plateInput, plateError, "차량번호(번호판)는 20자 이내여야 합니다.");
+
+            // ✅ 최종 형식 검증
+            if (!PLATE_REGEX.test(plate)) {
+                setError(plateInput, plateError, "번호판 형식이 올바르지 않습니다. 예) 12가3456 / 123가4567");
                 plateInput.focus();
                 return;
             }

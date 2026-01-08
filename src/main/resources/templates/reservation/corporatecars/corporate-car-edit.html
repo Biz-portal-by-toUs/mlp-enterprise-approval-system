@@ -7,7 +7,6 @@
     <meta charset="UTF-8">
     <title>법인 차량 수정</title>
 
-    <!-- ✅ layout 안 깨지게 pageStyles로만 -->
     <th:block layout:fragment="pageStyles">
         <style>
             .corpcar-edit-page {
@@ -108,7 +107,7 @@
                 background: #e5e7eb;
             }
 
-            /* ✅ 등록폼/회의실 등록과 동일한 hint UI */
+            /* ✅ 등록폼과 동일한 hint UI */
             .hint-row{
                 display:flex;
                 justify-content:space-between;
@@ -147,10 +146,8 @@
 <body>
 <div layout:fragment="content">
     <section class="page-with-subbar">
-        <!-- ✅ 등록폼이랑 동일하게 car 메뉴로 -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('car')"></aside>
 
-        <!-- ✅ 오른쪽 영역 wrapper -->
         <div class="corpcar-edit-page">
             <div class="card">
                 <h2>법인 차량 수정</h2>
@@ -171,10 +168,17 @@
                     <!-- 차량번호(번호판) -->
                     <div class="field">
                         <label>차량번호(번호판)</label>
-                        <input type="text" name="plateNo" id="plateNo" maxlength="20" required>
+                        <input
+                                type="text"
+                                name="plateNo"
+                                id="plateNo"
+                                maxlength="8"
+                                required
+                                placeholder="예) 12가3456 / 123가4567"
+                        >
                         <div class="hint-row">
-                            <small class="hint">최대 20자까지 입력 가능</small>
-                            <small class="counter" id="plateNoCounter">0 / 20</small>
+                            <small class="hint">형식: 숫자 2~3자리 + 한글 1자 + 숫자 4자리 (예: 12가3456)</small>
+                            <small class="counter" id="plateNoCounter">0 / 8</small>
                         </div>
                         <small class="error" id="plateNoError" style="display:none;"></small>
                     </div>
@@ -260,12 +264,6 @@
         const plateNoCounter = document.getElementById("plateNoCounter");
         const plateNoError = document.getElementById("plateNoError");
 
-        const carTypeInput = document.getElementById("carType");
-        const carTypeCounter = document.getElementById("carTypeCounter");
-
-        const fuelInput = document.getElementById("fuel");
-        const fuelCounter = document.getElementById("fuelCounter");
-
         const capInput = document.getElementById("capacity");
         const capError = document.getElementById("capError");
 
@@ -301,23 +299,101 @@
             else setError(carNameInput, carNameError, "");
         }
 
-        function updatePlateNoUI() {
-            updateLenUI(plateNoInput, plateNoCounter, 20);
+        /* ===== 번호판: 등록폼과 동일(8자리 + IME 안전 + 단계 안내) ===== */
+        const PLATE_REGEX = /^\d{2,3}[가-힣]\d{4}$/;
 
-            if (!plateNoInput.value.trim()) {
+        function formatPlate(raw) {
+            if (!raw) return "";
+
+            const cleaned = raw.replace(/[\s-]/g, "").replace(/[^0-9가-힣]/g, "");
+
+            let front = "";
+            let mid = "";
+            let back = "";
+
+            for (const ch of cleaned) {
+                const isDigit = ch >= "0" && ch <= "9";
+                const isHangul = /[가-힣]/.test(ch);
+
+                if (!mid) {
+                    if (isDigit) {
+                        if (front.length < 3) front += ch;
+                        continue;
+                    }
+                    if (isHangul) {
+                        if (front.length >= 2) mid = ch;
+                        continue;
+                    }
+                    continue;
+                }
+
+                if (isDigit && back.length < 4) back += ch;
+            }
+
+            return (front + mid + back).slice(0, 8);
+        }
+
+        function splitPlate(v) {
+            const m = (v || "").match(/^(\d{0,3})([가-힣]?)(\d{0,4})$/);
+            return { front: m?.[1] ?? "", mid: m?.[2] ?? "", back: m?.[3] ?? "" };
+        }
+
+        let plateIsComposing = false;
+
+        plateNoInput?.addEventListener("compositionstart", () => {
+            plateIsComposing = true;
+        });
+
+        plateNoInput?.addEventListener("compositionend", () => {
+            plateIsComposing = false;
+
+            const after = formatPlate(plateNoInput.value);
+            if (plateNoInput.value !== after) plateNoInput.value = after;
+
+            updatePlateNoUI();
+            updateSubmitButton();
+        });
+
+        plateNoInput?.addEventListener("input", (e) => {
+            if (plateIsComposing || e.isComposing) return;
+
+            const after = formatPlate(plateNoInput.value);
+            if (plateNoInput.value !== after) plateNoInput.value = after;
+
+            updatePlateNoUI();
+            updateSubmitButton();
+        });
+
+        function updatePlateNoUI() {
+            updateLenUI(plateNoInput, plateNoCounter, 8);
+
+            const v = plateNoInput.value;
+
+            if (!v.trim()) {
                 setError(plateNoInput, plateNoError, "");
                 return;
             }
-            if (plateNoInput.value.length > 20) setError(plateNoInput, plateNoError, "차량번호(번호판)는 20자 이내여야 합니다.");
-            else setError(plateNoInput, plateNoError, "");
-        }
 
-        function updateCarTypeUI() {
-            updateLenUI(carTypeInput, carTypeCounter, 20);
-        }
+            if (PLATE_REGEX.test(v)) {
+                setError(plateNoInput, plateNoError, "");
+                return;
+            }
 
-        function updateFuelUI() {
-            updateLenUI(fuelInput, fuelCounter, 10);
+            const p = splitPlate(v);
+            if (p.front.length < 2) {
+                setError(plateNoInput, plateNoError, "앞 숫자 2~3자리를 먼저 입력해주세요. 예) 12가3456");
+                return;
+            }
+            if (!p.mid) {
+                setError(plateNoInput, plateNoError, "숫자 뒤에 한글 1자를 입력해주세요. 예) 12가3456");
+                return;
+            }
+            if (p.back.length < 4) {
+                setError(plateNoInput, plateNoError, "마지막 숫자 4자리를 입력해주세요. 예) 12가3456");
+                return;
+            }
+
+            setError(plateNoInput, plateNoError, "번호판 형식이 올바르지 않습니다. 예) 12가3456 / 123가4567");
         }
 
         function updateCapUI() {
@@ -343,9 +419,6 @@
         }
 
         carNameInput?.addEventListener("input", () => { updateCarNameUI(); updateSubmitButton(); });
-        plateNoInput?.addEventListener("input", () => { updatePlateNoUI(); updateSubmitButton(); });
-        carTypeInput?.addEventListener("input", () => { updateCarTypeUI(); updateSubmitButton(); });
-        fuelInput?.addEventListener("input", () => { updateFuelUI(); updateSubmitButton(); });
 
         capInput?.addEventListener("input", () => {
             let value = capInput.value;
@@ -431,8 +504,8 @@
                 return false;
             }
 
-            if (plate.length > 20) {
-                setError(plateNoInput, plateNoError, "차량번호(번호판)는 20자 이내여야 합니다.");
+            if (!PLATE_REGEX.test(plate)) {
+                setError(plateNoInput, plateNoError, "번호판 형식이 올바르지 않습니다. 예) 12가3456 / 123가4567");
                 plateNoInput.focus();
                 return false;
             }
@@ -461,14 +534,16 @@
                 const car = (await res.json()).data;
 
                 carNameInput.value = car.carName ?? "";
-                plateNoInput.value = car.plateNo ?? "";
-                carTypeInput.value = car.carType ?? "";
-                fuelInput.value = car.fuel ?? "";
+                // ✅ 기존 값도 혹시 모를 공백/하이픈/이상문자 정리 + 8자리 포맷으로 맞춤
+                plateNoInput.value = formatPlate(car.plateNo ?? "");
+
+                document.getElementById("carType").value = car.carType ?? "";
+                document.getElementById("fuel").value = car.fuel ?? "";
                 capInput.value = car.capacity ?? "";
 
                 originalData = {
                     carName: (car.carName ?? "").trim(),
-                    plateNo: (car.plateNo ?? "").trim(),
+                    plateNo: (plateNoInput.value ?? "").trim(), // ✅ 포맷된 값을 기준으로 변경감지
                     carType: (car.carType ?? "").trim(),
                     fuel: (car.fuel ?? "").trim(),
                     capacity: Number(car.capacity ?? ""),
@@ -484,8 +559,6 @@
                 // 초기 UI 동기화
                 updateCarNameUI();
                 updatePlateNoUI();
-                updateCarTypeUI();
-                updateFuelUI();
                 updateCapUI();
                 updateSubmitButton();
 
@@ -508,7 +581,6 @@
                     body: formData
                 });
 
-                // 204/빈응답 대비
                 let result = null;
                 const ct = res.headers.get("content-type") || "";
                 if (ct.includes("application/json")) result = await res.json();
@@ -538,8 +610,8 @@
             const current = {
                 carName: carNameInput.value.trim(),
                 plateNo: plateNoInput.value.trim(),
-                carType: carTypeInput.value.trim(),
-                fuel: fuelInput.value.trim(),
+                carType: document.getElementById("carType").value.trim(),
+                fuel: document.getElementById("fuel").value.trim(),
                 capacity: Number(capInput.value),
                 imageChanged: document.querySelector("[name=imageFile]").files.length > 0
             };
