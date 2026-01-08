@@ -857,7 +857,9 @@
     let currentDocfoNo = null;
     let currentFormName = '';
     let tiptapEditor = null;
-    let attachedFiles = [];
+    let existingFiles = []; // ✅ 원본 문서의 첨부파일
+    let newFiles = []; // ✅ 새로 추가할 첨부파일
+    let filesToDelete = []; // ✅ 삭제할 파일 관리용 (여기서는 복사하지 않을 파일)
     let formCategories = [];
     let currentCategoryName = '';
     let myDelegatePeriods = []; // 내가 대직자인 기간 정보
@@ -1007,6 +1009,7 @@
         });
     }
 
+    // ✅ 수정/취소 진입 시 근태 정보를 불러오고 원본 문서의 상세 데이터를 보관하는 함수
     async function loadAttendanceInfo(atteNo, category) {
         try {
             const response = await fetch(`/api/v1/attendances/${atteNo}`, {
@@ -1047,17 +1050,110 @@
 
             window.targetAtteNo = atteNo;
 
+            // ✅ 원본 문서 데이터를 가져와서 보관 및 연동 (AI 요약, 첨부파일 포함)
+            if (attendance.docNo) {
+                const docResponse = await fetch(`/api/v1/documents/${attendance.docNo}?status=SUBMITTED`, {
+                    credentials: 'include'
+                });
+                const docResult = await docResponse.json();
+                if (docResult.data) {
+                    const doc = docResult.data;
+                    window.prevDocContentForPopulate = doc.content;
+
+                    // ✅ AI 요약 로드 추가
+                    if (doc.aiSumm && doc.aiSumm.trim() !== '') {
+                        const summaryBox = document.getElementById('ai-summary-box');
+                        const summaryText = document.getElementById('ai-summary-text');
+                        summaryBox.style.display = 'block';
+                        summaryText.innerText = doc.aiSumm;
+                        document.getElementById('include-ai-summ').checked = true;
+                    }
+
+                    // ✅ 첨부파일 목록 로드 호출
+                    await loadExistingAttachments(attendance.docNo);
+                }
+            }
+
             console.log('✅ 근태 정보 자동 입력 완료');
 
         } catch (error) {
             console.error('❌ 근태 정보 로드 실패:', error);
-            Swal.fire({
-                icon: 'error',
-                title: '오류 발생',
-                text: '근태 정보를 불러오는데 실패했습니다.',
-                confirmButtonColor: '#339af0'
-            });
         }
+    }
+
+    // ✅ 기존 첨부파일 목록 불러오기 함수
+    async function loadExistingAttachments(docNo) {
+        try {
+            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, { credentials: 'include' });
+            if (response.ok) {
+                const result = await response.json();
+                existingFiles = Array.isArray(result.data) ? result.data : (result.data?.items || []);
+                renderFileList();
+            }
+        } catch (e) {
+            console.error('❌ 기존 첨부파일 로드 실패:', e);
+        }
+    }
+
+    // ✅ 라벨 텍스트를 기반으로 원본 문서의 내용을 현재 에디터 표에 채우는 로직
+    function populateTableFromOriginalDoc(originalContent) {
+        if (!tiptapEditor || !originalContent) return;
+
+        let prevJson;
+        try {
+            prevJson = (typeof originalContent === 'string') ? JSON.parse(originalContent) : originalContent;
+        } catch (e) { return; }
+
+        const currentJson = tiptapEditor.getJSON();
+        const oldTable = findTableInContent(prevJson.content);
+        const newTable = findTableInContent(currentJson.content);
+
+        if (!oldTable || !newTable) return;
+
+        // 찾고자 하는 라벨 정의
+        const labels = ["휴가 구분", "출장지", "비상 연락처", "사유", "목적"];
+
+        // 셀 내부의 텍스트를 추출하는 헬퍼
+        function getCellText(cell) {
+            let text = "";
+            function walk(node) {
+                if (node.text) text += node.text;
+                if (node.content) node.content.forEach(walk);
+            }
+            if (cell.content) cell.content.forEach(walk);
+            return text.trim();
+        }
+
+        // 1. 원본 표에서 라벨 -> 내용 맵핑 생성
+        const valueMap = {};
+        oldTable.content.forEach(row => {
+            if (row.content) {
+                for (let i = 0; i < row.content.length; i++) {
+                    const cellText = getCellText(row.content[i]);
+                    const matchedLabel = labels.find(l => cellText === l);
+                    // 라벨을 찾았고, 다음 칸(Value)이 존재하는 경우
+                    if (matchedLabel && row.content[i + 1]) {
+                        valueMap[matchedLabel] = row.content[i + 1].content;
+                    }
+                }
+            }
+        });
+
+        // 2. 현재 새 에디터의 표 구조에 값 주입
+        newTable.content.forEach(row => {
+            if (row.content) {
+                for (let i = 0; i < row.content.length; i++) {
+                    const cellText = getCellText(row.content[i]);
+                    const matchedLabel = labels.find(l => cellText === l);
+                    if (matchedLabel && row.content[i + 1] && valueMap[matchedLabel]) {
+                        row.content[i + 1].content = valueMap[matchedLabel];
+                    }
+                }
+            }
+        });
+
+        tiptapEditor.commands.setContent(currentJson);
+        console.log('✅ 표 상세 내용(구분, 연락처, 사유/목적) 복사 완료');
     }
 
     function updateTableTargetAttendance(attendance) {
@@ -1843,6 +1939,12 @@
             },
             onSelectionUpdate: ({ editor }) => {
                 updateToolbarButtons();
+            },
+            // ✅ 에디터 로드 직후 수정 모드라면 표 내용 채우기 실행
+            onCreate: () => {
+                if (window.prevDocContentForPopulate) {
+                    populateTableFromOriginalDoc(window.prevDocContentForPopulate);
+                }
             }
         });
 
@@ -1856,6 +1958,7 @@
 
         updateCharCounter();
 
+        // 에디터 초기화 완료 후 수정/취소 시 데이터 주입
         if (window.targetAtteNo) {
             fetch(`/api/v1/attendances/${window.targetAtteNo}`, {
                 credentials: 'include'
@@ -2002,7 +2105,6 @@
         }).join('');
     }
 
-    // ✅ 대직자 본인 확인 후 추가 함수 (SweetAlert2 컨펌)
     function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) {
         if (delegateId === myInfo.empId) {
             Swal.fire({
@@ -2112,164 +2214,105 @@
         }
     }
 
+    // ✅ 파일 처리 로직 (상신 시 물리적 복사 포함)
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
-        const maxCount = 5;
+        const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
 
         for (let file of files) {
-            if (attachedFiles.length >= maxCount) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: '첨부 제한',
-                    text: `최대 ${maxCount}개까지만 첨부할 수 있습니다.`,
-                    confirmButtonColor: '#339af0'
-                });
+            if (currentCount + newFiles.length >= 5) {
+                Swal.fire({ icon: 'warning', title: '제한', text: '최대 5개입니다.' });
                 break;
             }
             if (file.size > maxSize) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: '파일 크기 초과',
-                    text: `${file.name}은(는) 10MB를 초과합니다.`,
-                    confirmButtonColor: '#339af0'
-                });
+                Swal.fire({ icon: 'warning', title: '파일 크기 초과', text: `${file.name}은(는) 10MB를 초과합니다.` });
                 continue;
             }
-            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                Swal.fire({
-                    icon: 'info',
-                    title: '중복 파일',
-                    text: `${file.name}은(는) 이미 첨부되었습니다.`,
-                    confirmButtonColor: '#339af0'
-                });
-                continue;
-            }
-            attachedFiles.push(file);
+            newFiles.push(file);
         }
-        event.target.value = '';
         renderFileList();
     }
 
     function renderFileList() {
         const container = document.getElementById('file-list');
-        if (attachedFiles.length === 0) {
+        const activeExisting = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId));
+        if (activeExisting.length + newFiles.length === 0) {
             container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>';
             return;
         }
-        container.innerHTML = attachedFiles.map((file, index) => `
-            <div class="file-item">
+
+        let html = activeExisting.map(file => `
+            <div class="file-item" style="background: #f0f8ff;">
                 <div class="file-item-info">
-                    <span style="font-size: 18px;">📄</span>
+                    <span>📄</span>
                     <div>
-                        <div class="file-item-name">${file.name}</div>
-                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+                        <div class="file-item-name">${file.originalName}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존)</span></div>
                     </div>
                 </div>
-                <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
-            </div>
-        `).join('');
+                <span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span>
+            </div>`).join('');
+
+        html += newFiles.map((file, index) => `
+            <div class="file-item">
+                <div class="file-item-info">
+                    <span>📄</span>
+                    <div>
+                        <div class="file-item-name">${file.name}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div>
+                    </div>
+                </div>
+                <span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span>
+            </div>`).join('');
+
+        container.innerHTML = html;
     }
 
-    function removeFile(index) {
-        attachedFiles.splice(index, 1);
-        renderFileList();
-    }
+    function removeExistingFile(id) { filesToDelete.push(id); renderFileList(); }
+    function removeNewFile(index) { newFiles.splice(index, 1); renderFileList(); }
 
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + ['Bytes', 'KB', 'MB', 'GB'][i];
     }
 
-    function getFileType(mimeType) {
-        if (mimeType.startsWith('image/')) return 'IMAGE';
-        if (mimeType.startsWith('audio/')) return 'AUDIO';
-        return 'DOC';
+    function getFileType(mime) { return mime.startsWith('image/') ? 'IMAGE' : (mime.startsWith('audio/') ? 'AUDIO' : 'DOC'); }
+
+    async function generateAiSummary() {
+        const summaryBox = document.getElementById('ai-summary-box');
+        const summaryText = document.getElementById('ai-summary-text');
+        summaryBox.style.display = 'block';
+        summaryText.innerText = '⏳ 생성 중...';
+        try {
+            const response = await fetch('/api/v1/documents/ai-summary', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: tiptapEditor.getHTML() })
+            });
+            const result = await response.json();
+            if (result.data) summaryText.innerText = result.data;
+        } catch (error) {
+            summaryBox.style.display = 'none';
+        }
     }
 
     async function saveDocument(isTemp) {
         const title = document.getElementById('doc-title').value.trim();
         const contentJson = tiptapEditor.getJSON();
-        const contentHtml = tiptapEditor.getHTML();
-        const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
-
-        let startDate = null;
-        let endDate = null;
-
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
-        const isAttendanceCategory = normalized.includes('휴가') || normalized.includes('출장');
 
-        if (isAttendanceCategory) {
-            startDate = document.getElementById('startDate').value;
-            endDate = document.getElementById('endDate').value;
+        if (!title || !checkedRadio) return;
 
-            if (!isTemp) {
-                if (!startDate || !endDate) {
-                    return Swal.fire({
-                        icon: 'warning',
-                        title: '입력 오류',
-                        text: '시작일과 종료일을 입력해주세요.',
-                        confirmButtonColor: '#339af0'
-                    });
-                }
-                if (startDate > endDate) {
-                    return Swal.fire({
-                        icon: 'warning',
-                        title: '입력 오류',
-                        text: '종료일이 시작일보다 빠를 수 없습니다.',
-                        confirmButtonColor: '#339af0'
-                    });
-                }
-            }
-
-            contentJson.attendanceInfo = {
-                startDate: startDate,
-                endDate: endDate
-            };
-
-            if (window.targetAtteNo) {
-                contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
-            }
-
-            if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
-                contentJson.attendanceInfo.delegate = {
-                    empId: selectedDelegate.empId,
-                    empName: selectedDelegate.empName,
-                    posName: selectedDelegate.posName,
-                    depName: selectedDelegate.depName
-                };
-            }
-        }
-
-        if (!title || !contentText) {
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '제목과 내용을 모두 입력해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        if (!checkedRadio) {
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '카테고리를 선택해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        if (!isTemp && selectedApprovers.length === 0) {
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '문서를 상신하려면 결재선을 최소 1명 이상 지정해야 합니다.',
-                confirmButtonColor: '#339af0'
-            });
+        if (normalized.includes('휴가') || normalized.includes('출장')) {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            contentJson.attendanceInfo = { startDate: start, endDate: end, targetAtteNo: window.targetAtteNo };
+            if (selectedDelegate) contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName };
         }
 
         try {
@@ -2280,9 +2323,9 @@
                 docfoCatNo: parseInt(checkedRadio.value, 10),
                 title: title,
                 content: JSON.stringify(contentJson),
-                cnttHtml: contentHtml,
+                cnttHtml: tiptapEditor.getHTML(),
                 temp: isTemp,
-                aiSumm: document.getElementById('include-ai-summ').checked ? document.getElementById('ai-summary-text').innerText : null,
+                aiSumm: document.getElementById('ai-summary-text').innerText,
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,
@@ -2301,153 +2344,70 @@
                 const result = await response.json();
                 const docNo = result.data?.docNo || result.data;
 
-                if (attachedFiles.length > 0 && docNo) {
-                    await uploadFiles(docNo);
-                }
+                // ✅ 기존 파일 복사 (물리적 업로드)
+                const activeExisting = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId));
+                if (activeExisting.length > 0) await copyExistingFiles(activeExisting, docNo);
 
-                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && docNo) {
-                    await registerDelegate(docNo, selectedDelegate.empId);
-                }
+                // ✅ 신규 파일 업로드
+                if (newFiles.length > 0) await uploadFiles(docNo);
 
-                const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.";
-                const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
-
-                Swal.fire({
-                    icon: 'success',
-                    title: '완료',
-                    text: successMessage,
-                    confirmButtonColor: '#339af0'
-                }).then(() => {
-                    location.href = targetUrl;
-                });
-            } else {
-                const err = await response.json().catch(() => ({}));
-                Swal.fire({
-                    icon: 'error',
-                    title: '오류 발생',
-                    text: err.message || "문서 처리에 실패했습니다.",
-                    confirmButtonColor: '#339af0'
+                Swal.fire({ icon: 'success', title: '완료' }).then(() => {
+                    location.href = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
                 });
             }
-        } catch (e) {
-            Swal.fire({
-                icon: 'error',
-                title: '통신 오류',
-                text: '서버와의 통신에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
+        } catch (e) {}
     }
 
-    async function registerDelegate(docNo, delegateEmpId) {
-        try {
-            const response = await fetch('/api/v1/delegates', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId })
-            });
-            if (response.ok) {
-                console.log('✅ 대직자 등록 성공');
-            }
-        } catch (e) {
-            console.warn('⚠️ 대직자 등록 실패:', e);
-        }
-    }
-
-    async function uploadFiles(docNo) {
-        for (const file of attachedFiles) {
+    async function copyExistingFiles(files, newDocNo) {
+        for (const file of files) {
             try {
-                const presignRes = await fetch('/api/v1/attachments/presign', {
+                const resUrl = await fetch(`/api/v1/attachments/${file.attachmentId}/download-url`, { credentials: 'include' });
+                const dataUrl = await resUrl.json();
+                const blob = await (await fetch(dataUrl.data.url)).blob();
+
+                const presign = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        domain: 'APPROVAL',
-                        entityId: docNo,
-                        fileType: getFileType(file.type),
-                        originalName: file.name,
-                        contentType: file.type,
-                        size: file.size
+                        domain: 'APPROVAL', entityId: newDocNo, fileType: file.fileType,
+                        originalName: file.originalName, contentType: file.contentType, size: file.size
                     })
                 });
-
-                if (!presignRes.ok) continue;
-                const presignData = await presignRes.json();
-                const { objectKey, uploadUrl } = presignData.data;
-
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': file.type },
-                    body: file
-                });
-
-                if (!uploadRes.ok) continue;
-                const etag = uploadRes.headers.get('ETag');
-
+                const presignData = await presign.json();
+                const upload = await fetch(presignData.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.contentType }, body: blob });
                 await fetch('/api/v1/attachments/complete', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        domain: 'APPROVAL',
-                        entityId: docNo,
-                        fileType: getFileType(file.type),
-                        objectKey: objectKey,
-                        originalName: file.name,
-                        contentType: file.type,
-                        size: file.size,
-                        etag: etag ? etag.replace(/"/g, '') : null
+                        domain: 'APPROVAL', entityId: newDocNo, fileType: file.fileType,
+                        objectKey: presignData.data.objectKey, originalName: file.originalName,
+                        contentType: file.contentType, size: file.size, etag: upload.headers.get('ETag')?.replace(/"/g, '')
                     })
                 });
-            } catch (e) {
-                console.error('파일 업로드 오류:', e);
-            }
+            } catch (e) { console.error('기존 파일 복사 오류', e); }
         }
     }
 
-    async function generateAiSummary() {
-        const html = tiptapEditor.getHTML();
-        const text = tiptapEditor.getText().trim();
-
-        if (text.length < 100) {
-            return Swal.fire({
-                icon: 'warning',
-                title: 'AI 요약 오류',
-                text: '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        const summaryBox = document.getElementById('ai-summary-box');
-        const summaryText = document.getElementById('ai-summary-text');
-        summaryBox.style.display = 'block';
-        summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
-
-        try {
-            const response = await fetch('/api/v1/documents/ai-summary', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: html })
-            });
-
-            if (!response.ok) throw new Error('AI 요약 생성 실패');
-            const result = await response.json();
-
-            if (result.data) {
-                summaryText.innerText = result.data;
-            } else {
-                throw new Error('요약 데이터가 없습니다');
-            }
-        } catch (error) {
-            summaryBox.style.display = 'none';
-            Swal.fire({
-                icon: 'error',
-                title: 'AI 요약 실패',
-                text: 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                confirmButtonColor: '#339af0'
-            });
+    async function uploadFiles(docNo) {
+        for (const file of newFiles) {
+            try {
+                const presign = await fetch('/api/v1/attachments/presign', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), originalName: file.name, contentType: file.type, size: file.size })
+                });
+                const presignData = await presign.json();
+                const upload = await fetch(presignData.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+                await fetch('/api/v1/attachments/complete', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), objectKey: presignData.data.objectKey, originalName: file.name, contentType: file.type, size: file.size, etag: upload.headers.get('ETag')?.replace(/"/g, '') })
+                });
+            } catch (e) {}
         }
     }
 </script>
