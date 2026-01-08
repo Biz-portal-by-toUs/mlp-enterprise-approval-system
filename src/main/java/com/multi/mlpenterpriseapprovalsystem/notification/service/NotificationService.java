@@ -126,4 +126,12 @@ public class NotificationService {
 
         notificationsRepository.delete(notification);
     }
+
+    @Transactional
+    public void deleteAllNotification(String empId) {
+        Employee employee = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        notificationsRepository.deleteAllByEmpId(empId);
+    }
 }

@@ -196,13 +196,64 @@
         try {
             const res = await fetch(`/api/v1/notifications/read-all`, { method: 'PATCH' });
             if (res.ok) {
-                document.querySelectorAll('.noti-card.unread').forEach(el => el.classList.remove('unread'));
+                location.reload();
+
                 if(window.parent && window.parent.initNotificationSystem) {
                     window.parent.initNotificationSystem();
                 }
             }
         } catch (e) { console.error("전체 읽음 처리 실패", e); }
     };
+
+    window.deleteAllNotifications = async function() {
+        if(!confirm("모든 알림을 삭제하시겠습니까?")) return;
+
+        try {
+            const res = await fetch(`/api/v1/notifications/delete-all`, { method: 'DELETE' });
+
+            if (res.ok) {
+
+                location.reload();
+
+                if(window.parent && window.parent.initNotificationSystem) {
+                    window.parent.initNotificationSystem();
+                }
+            }
+        } catch (e) {
+            console.error("전체 삭제 처리 실패", e);
+        }
+    };
+
+    /* notifications.html의 <script> 태그 내부에 추가 */
+    window.appendRealtimeNoti = function(it) {
+        const notiList = document.getElementById('notiList');
+        if (!notiList) return;
+
+        if (type !== 'ALL' && type !== it.type) return;
+
+        const emptyMsg = notiList.querySelector('.empty-msg');
+        if (emptyMsg) emptyMsg.remove();
+
+        const card = document.createElement('div');
+        card.id = `noti-${it.notiNo}`;
+        card.className = `noti-card ${it.read ? '' : 'unread'}`;
+        card.style.animation = "slideDown 0.4s ease-out";
+
+        card.innerHTML = `
+        <div class="noti-icon">${iconMap[it.type] || '🔔'}</div>
+        <div class="noti-info" onclick="handleRead(${it.notiNo}, '${it.url}')">
+            <div class="noti-title">${it.title}</div>
+            <div class="noti-content">${it.content}</div>
+            <div class="noti-date">${new Date(it.createdAt).toLocaleString()}</div>
+        </div>
+        <button class="noti-close" onclick="event.stopPropagation(); deleteNoti(${it.notiNo}, this)">×</button>
+    `;
+
+        // 목록의 맨 앞에 추가
+        notiList.prepend(card);
+    };
+
+
 
     // ✅ 백엔드 컨트롤러 ResponseDto에 맞춘 삭제 함수
     async function deleteNoti(id, btn) {
