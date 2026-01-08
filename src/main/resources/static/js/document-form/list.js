@@ -262,6 +262,16 @@
         elPager.appendChild(createBtn(">", cur + 1, false, cur >= tp - 1));
     }
 
+    function isResponseDto(obj) {
+        return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+    }
+
+    async function unwrapJson(res) {
+        const body = await res.json().catch(() => null);
+        if (!body) return null;
+        return isResponseDto(body) ? body.data : body;
+    }
+
     // ===== data load =====
     async function load() {
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
@@ -285,7 +295,8 @@
                 throw new Error(`HTTP ${res.status} ${t}`);
             }
 
-            const pg = normalizePage(await res.json());
+            const json = await unwrapJson(res);
+            const pg = normalizePage(json);
 
             totalPages = pg.totalPages ?? 1;
             totalElements = pg.totalElements ?? 0;

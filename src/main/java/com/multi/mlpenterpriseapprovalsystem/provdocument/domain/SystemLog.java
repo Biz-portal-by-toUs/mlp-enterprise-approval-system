@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.domain;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import jakarta.persistence.*;

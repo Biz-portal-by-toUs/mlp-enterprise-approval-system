@@ -134,10 +134,6 @@
                         <option value="50">50</option>
                     </select>
 
-                    <div class="mt-searchWrap">
-                        <input id="q" class="mt-searchInput" type="text" placeholder="제목 검색"/>
-                    </div>
-
                     <button class="mt-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
@@ -170,8 +166,6 @@
             </div>
 
             <script>
-                function getMeEmpId(){ return document.getElementById('me')?.dataset?.empNo?.trim() || ''; }
-
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
@@ -242,7 +236,6 @@
                         const msg = json?.message || `HTTP ${res.status}`;
                         throw new Error(`HTTP ${res.status} ${msg}`);
                     }
-
                     return json?.data;
                 }
 
@@ -250,17 +243,14 @@
                     const headers = { 'Accept':'application/json', ...getCsrfHeaders() };
                     const res = await fetch(url, { method, credentials:'include', headers });
 
-                    // 204(No Content)는 그대로 null
                     if (res.status === 204) return null;
 
                     const json = await res.json().catch(()=> null);
-
                     if(!res.ok){
                         const msg = json?.message || `HTTP ${res.status}`;
                         throw new Error(`HTTP ${res.status} ${msg}`);
                     }
-
-                    return json?.data; // ✅ ResponseDto<T> -> data
+                    return json?.data;
                 }
 
                 function getState(){
@@ -268,7 +258,6 @@
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
                         size: parseInt(params.get('size') || document.getElementById('size').value || '20', 10),
-                        q: (params.get('q') || '').trim()
                     };
                 }
 
@@ -276,7 +265,6 @@
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
                     params.set('size', String(next.size ?? 20));
-                    if (next.q) params.set('q', next.q);
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
@@ -298,37 +286,35 @@
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="mt-col-no">${num}</td>
-                            <td class="mt-col-title"><a class="mt-titleLink" href="/mail/${encodeURIComponent(it.mailId)}">${title}</a></td>
-                            <td>${senderName} (${senderId})</td>
-                            <td class="mt-col-date">${deletedAt}</td>
-                            <td class="mt-col-act">
-                                <div class="mt-row-actions">
-                                    <button type="button" data-act="restore">복원</button>
-                                    <button type="button" class="danger" data-act="purge">완전삭제</button>
-                                </div>
-                            </td>
-                        `;
+        <td class="mt-col-no">${num}</td>
+        <td class="mt-col-title"><a class="mt-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}">${title}</a></td>
+        <td>${senderName} (${senderId})</td>
+        <td class="mt-col-date">${deletedAt}</td>
+        <td class="mt-col-act">
+          <div class="mt-row-actions">
+            <button type="button" data-act="restore">복원</button>
+            <button type="button" class="danger" data-act="purge">완전삭제</button>
+          </div>
+        </td>
+      `;
 
                         tr.addEventListener('click', (e) => {
                             const act = e.target?.getAttribute?.('data-act');
                             if (act) return;
                             if (e.target && e.target.tagName === 'A') return;
-                            location.href = `/mail/${encodeURIComponent(it.mailId)}`;
+                            location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
                         });
 
                         tr.querySelector('[data-act="restore"]').addEventListener('click', async (e) => {
                             e.stopPropagation();
-                            const me = getMeEmpId();
-                            await api('PATCH', `/api/v1/mails/${encodeURIComponent(it.mailId)}/restore?userEmpId=${encodeURIComponent(me)}`);
+                            await api('PATCH', `/api/v1/mails/${encodeURIComponent(it.mailNo)}/restore`);
                             load().catch(console.error);
                         });
 
                         tr.querySelector('[data-act="purge"]').addEventListener('click', async (e) => {
                             e.stopPropagation();
                             if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                            const me = getMeEmpId();
-                            await api('DELETE', `/api/v1/mails/${encodeURIComponent(it.mailId)}/purge?userEmpId=${encodeURIComponent(me)}`);
+                            await api('DELETE', `/api/v1/mails/${encodeURIComponent(it.mailNo)}/purge`);
                             load().catch(console.error);
                         });
 
@@ -337,54 +323,36 @@
                 }
 
                 async function load(){
-                    const me = getMeEmpId();
-                    if(!me){
-                        document.getElementById('tbody').innerHTML =
-                            `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">로그인 정보(empId)를 찾을 수 없습니다.</td></tr>`;
-                        return;
-                    }
-
                     const st = getState();
                     document.getElementById('size').value = String(st.size);
-                    document.getElementById('q').value = st.q;
 
-                    const url =
-                        `/api/v1/mails/trash?userEmpId=${encodeURIComponent(me)}&page=${st.page}&size=${st.size}&sort=deletedAt,desc` +
-                        (st.q ? `&q=${encodeURIComponent(st.q)}` : '');
-
+                    const url = `/api/v1/mails/trash?page=${st.page}&size=${st.size}&sort=deletedAt,desc`;
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
                     renderRows(items, data.number ?? st.page, data.size ?? st.size, data.totalElements ?? items.length);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
-                    document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
+                    document.getElementById('pageInfo').textContent =
+                        `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
                     buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, size:st.size, q:st.q });
+                        setUrlState({ page:p, size:st.size });
                         load().catch(console.error);
                     });
                 }
 
+                // 조회 버튼: 검색이 없으니 "첫 페이지로 + 새로고침" 역할
                 document.getElementById('btnSearch').addEventListener('click', () => {
                     const size = parseInt(document.getElementById('size').value, 10);
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, size, q });
+                    setUrlState({ page:0, size });
                     load().catch(console.error);
                 });
 
                 document.getElementById('size').addEventListener('change', () => {
                     const size = parseInt(document.getElementById('size').value, 10);
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, size, q });
+                    setUrlState({ page:0, size });
                     load().catch(console.error);
-                });
-
-                document.getElementById('q').addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter'){
-                        e.preventDefault();
-                        document.getElementById('btnSearch').click();
-                    }
                 });
 
                 window.addEventListener('DOMContentLoaded', () => {

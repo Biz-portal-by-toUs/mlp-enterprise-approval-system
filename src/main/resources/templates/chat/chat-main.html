@@ -135,11 +135,18 @@
             stompClient.subscribe('/user/sub/chat/room-updates', function (message) {
                 handleRealtimeUpdate(JSON.parse(message.body));
             });
+
+            stompClient.subscribe('/sub/public/user-status', function (message) {
+                const data = JSON.parse(message.body); // { empId: "...", msgStat: "C" }
+                updateUserStatusUI(data.empId, data.msgStat);
+            });
         }, function (err) {
             wsInitialized = false;
             setTimeout(connectWs, 5000);
         });
     }
+
+
 
     // ---------------- 탭 전환 ----------------
     function switchTab(tab) {
@@ -172,7 +179,7 @@
         payload.items.forEach(e => {
             const div = document.createElement("div");
             div.className = "row";
-            // ✅ 수정한 부분: e.msgStat을 직접 dot-클래스에 반영
+            div.setAttribute("data-emp-id", e.empId);
             const statusClass = getStatusClass(e.msgStat);
             div.innerHTML = `
                 <div class="title"><span class="status-dot ${statusClass}"></span>${escapeHtml(e.empName)}</div>
@@ -183,15 +190,41 @@
         });
         empLoading = false;
     }
+    /**
+     * ✅ 실시간 사원 상태 UI 업데이트
+     * @param {string} empId - 상태가 변경된 사원 ID
+     * @param {string} msgStat - 변경된 상태 코드 ('C', 'M', 'D', 'X' 등)
+     */
+    function updateUserStatusUI(empId, msgStat) {
+        // 1. 사원 목록 탭에서 해당 사원 행(row)을 찾습니다.
+        const empRow = document.querySelector(`#empList .row[data-emp-id="${empId}"]`);
+
+        if (empRow) {
+            // 2. 해당 행 내부에 있는 상태 점(status-dot)을 찾습니다.
+            const dot = empRow.querySelector(".status-dot");
+            if (dot) {
+                // 3. 기존 클래스를 유지하면서 상태 클래스만 교체합니다.
+                // getStatusClass 함수는 이미 승기님 코드에 정의되어 있습니다.
+                dot.className = "status-dot " + getStatusClass(msgStat);
+            }
+        }
+        if (myEmpId === String(empId)) {
+            const myDot = document.querySelector("#myProfile .status-dot");
+            if (myDot) myDot.className = "status-dot " + getStatusClass(msgStat);
+        }
+    }
+
 
     function onEmpSearchInput() { clearTimeout(empKwTimer); empKwTimer = setTimeout(initEmployees, 300); }
 
+
+    let myEmpId = null;
     async function loadMyInfo() {
         try {
             const res = await fetch("/api/v1/employees/me");
             const result = await res.json();
             const me = result.data;
-            // ✅ 수정한 부분: 내 프로필 상태 점 반영
+            myEmpId = String(me.empId)
             const statusClass = getStatusClass(me.msgStat);
             document.getElementById("myName").innerHTML = `<span class="status-dot ${statusClass}"></span>${escapeHtml(me.empName)}`;
             document.getElementById("myDept").innerText = `${me.depName} · ${me.posName}`;

@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ChatEmployeeItemDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResEmployeeListDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -58,11 +59,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             p.posOrder,
             e.msgStat,
             e.atte,
-            e.email
+            e.email,
+            del.empId,  
+            del.empName  
         )
         from Employee e
         join e.department d
         join e.positions p
+        left join e.delegate del 
         where e.company.comId = :comId
           and e.isDeleted = false
           and (:excludeEmpId is null or e.empId <> :excludeEmpId)
@@ -282,4 +286,17 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findAllByCompany_ComId(String comId);
 
     List<Employee> findAllByDepartment_DepNo(Long depNo);
+
+    @Query("""
+    SELECT e FROM Employee e
+    WHERE e.department = :department
+      AND e.empId <> :myEmpId
+      AND e.company.comId = :comId
+      AND e.isDeleted = false
+    """)
+    List<Employee> findByDepartmentAndNotMe(
+            @Param("comId") String comId,
+            @Param("department")Department myDepartment,
+            @Param("myEmpId") String myEmpId
+    );
 }

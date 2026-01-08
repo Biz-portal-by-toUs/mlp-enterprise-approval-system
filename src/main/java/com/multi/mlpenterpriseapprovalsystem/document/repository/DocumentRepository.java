@@ -109,7 +109,6 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "JOIN d.approvalLines al " +
             "WHERE d.company.comId = :comId " +
             "AND d.docStat = :docStat " +
-            "AND d.writer.empId != :myEmpId " +
             // 본인이 결재자이거나 본인이 대직자인 경우
             "AND (al.approver.empId = :myEmpId OR al.approver.delegate.empId = :myEmpId) " +
             "AND al.apprStat IN :apprStats " +
@@ -154,7 +153,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "JOIN d.approvalLines al " +
             "WHERE d.company.comId = :comId " +
             // 결재자 본인이거나, 해당 결재자의 대직자(delegate)인 경우 조회
-            "AND (al.approver.empId = :myEmpId OR al.approver.delegate.empId = :myEmpId) " +
+            "AND al.approver.empId = :myEmpId " +
             // 필터링: 문서 상태 (사용자 선택 또는 기본 AW, RJ, FI)
             "AND d.docStat IN :docStats " +
             // 필터링: 내 결재 상태 (사용자 선택 또는 기본 A, R)
@@ -255,7 +254,6 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     WHERE d.company.comId = :comId 
       AND d.docNo = :docNo 
       AND d.docStat = 'AW' 
-      AND d.writer.empId != :myEmpId 
       AND (a.empId = :myEmpId OR a.delegate.empId = :myEmpId) 
       AND al.apprStat IN ('I', 'W')
 """)
@@ -269,7 +267,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
         JOIN d.approvalLines al 
         WHERE d.company.comId = :comId 
           AND d.docNo = :docNo 
-          AND al.approver.empId = :myEmpId 
+          AND al.approver.empId = :myEmpId
           AND d.docStat IN ('AW', 'RJ', 'FI') 
           AND al.apprStat IN ('A', 'R')
     """)

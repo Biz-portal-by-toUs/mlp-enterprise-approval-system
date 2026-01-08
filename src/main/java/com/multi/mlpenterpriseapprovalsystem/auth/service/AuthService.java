@@ -15,8 +15,12 @@ import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.repository.DocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.repository.DocumentFormRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqAdminEmployeeCreateDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResAdminEmployeeCreateDto;
@@ -27,7 +31,9 @@ import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Depa
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.repository.PositionsRepository;
+import com.multi.mlpenterpriseapprovalsystem.subscription.domain.CompanySubscription;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
+import com.multi.mlpenterpriseapprovalsystem.subscription.enums.SubStatus;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.CompanySubscriptionRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.SubscriptionRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -39,6 +45,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -110,7 +117,7 @@ public class AuthService {
         }
 
         // 5) sub_no=1 연결 (회원가입 시 기본 요금제)
-        Subscription basic = subscriptionRepository.findById((long) 1)
+        Subscription basic30 = subscriptionRepository.findById((long) 1)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
         // 6) Company 생성 + 저장
@@ -123,7 +130,7 @@ public class AuthService {
                 reqCompanySignupDto.getAddr(),
                 imgUrl,
                 path,
-                basic,
+                basic30,
                 RoleType.COM_ADMIN
         );
 
@@ -154,119 +161,123 @@ public class AuthService {
 
         ResAdminEmployeeCreateDto createEmployee = employeeService.createEmployee(company.getComId(), adminReq);
 
+        String docFormWriterEmpId= createEmployee.getEmpId();
+        Employee docFormWriter = employeeRepository.findByEmpId(docFormWriterEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
 
-// todo: COM_ADMIN사원 만들면 문서양식 작성자에 넣고 주석풀기
-//        // 회사 요금제 정보 등록
-//        CompanySubscription newCompanySubscription = CompanySubscription.builder()
-//                .company(company)
-//                .subscription(basic)
-//                .paymentMethod(null)
-//                .nextBillingDate(null)
-//                .autoRenewal(false)
-//                .status(SubStatus.FREE)
-//                .build();
-//
-//        companySubscriptionRepository.save(newCompanySubscription);
-//
-//        // 기본 양식 및 카테고리 등록
-//        DocumentForm newDocForm1 = DocumentForm.builder()
-//                .company(company)
-//                .docfoName("기본 양식")
-//                .writer(null)
-//                .cnttJson("")
-//                .cnttHtml("")
-//                .docfoStat(DocumentFormStats.A)
-//                .build();
-//        DocumentFormCategory newDocFormCat1 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("기본상신")
-//                .documentForm(newDocForm1)
-//                .build();
-//        DocumentFormCategory newDocFormCat2 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("인사요청")
-//                .documentForm(newDocForm1)
-//                .build();
-//        DocumentFormCategory newDocFormCat3 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("구매요청")
-//                .documentForm(newDocForm1)
-//                .build();
-//        DocumentFormCategory newDocFormCat4 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("면담요청")
-//                .documentForm(newDocForm1)
-//                .build();
-//        DocumentFormCategory newDocFormCat5 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("기타")
-//                .documentForm(newDocForm1)
-//                .build();
-//        documentFormRepository.save(newDocForm1);
-//        documentFormCategoryRepository.save(newDocFormCat1);
-//        documentFormCategoryRepository.save(newDocFormCat2);
-//        documentFormCategoryRepository.save(newDocFormCat3);
-//        documentFormCategoryRepository.save(newDocFormCat4);
-//        documentFormCategoryRepository.save(newDocFormCat5);
-//
-//        // 휴가 신청서 및 카테고리 등록
-//        DocumentForm newDocForm2 = DocumentForm.builder()
-//                .company(company)
-//                .docfoName("휴가 신청서")
-//                .writer(null)
-//                .cnttJson("{\"type\": \"doc\", \"content\": [{\"type\": \"heading\", \"attrs\": {\"level\": 2, \"textAlign\": \"center\"}, \"content\": [{\"text\": \"휴가 신청서\", \"type\": \"text\"}]}, {\"type\": \"table\", \"content\": [{\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"수정/취소 대상\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": false, \"data-field\": \"targetAttendance\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"휴가 구분\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"비상 연락처\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"시작일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"startDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"종료일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"endDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"대직자\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": false, \"data-field\": \"delegate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"사유\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}]}, {\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"위와 같이 휴가를 신청합니다.\", \"type\": \"text\"}]}]}")
-//                .cnttHtml("")
-//                .docfoStat(DocumentFormStats.A)
-//                .build();
-//        DocumentFormCategory newDocFormCat6 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("휴가신청")
-//                .documentForm(newDocForm2)
-//                .build();
-//        DocumentFormCategory newDocFormCat7 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("휴가취소신청")
-//                .documentForm(newDocForm2)
-//                .build();
-//        DocumentFormCategory newDocFormCat8 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("휴가수정신청")
-//                .documentForm(newDocForm2)
-//                .build();
-//        documentFormRepository.save(newDocForm2);
-//        documentFormCategoryRepository.save(newDocFormCat6);
-//        documentFormCategoryRepository.save(newDocFormCat7);
-//        documentFormCategoryRepository.save(newDocFormCat8);
-//
-//        // 출장 신청서 및 카테고리 등록
-//        DocumentForm newDocForm3 = DocumentForm.builder()
-//                .company(company)
-//                .docfoName("출장 신청서")
-//                .writer(null)
-//                .cnttJson("{\"type\": \"doc\", \"content\": [{\"type\": \"heading\", \"attrs\": {\"level\": 2, \"textAlign\": \"center\"}, \"content\": [{\"text\": \"출장 신청서\", \"type\": \"text\"}]}, {\"type\": \"table\", \"content\": [{\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"수정/취소 대상\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": false, \"data-field\": \"targetAttendance\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"출장지\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"비상 연락처\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"시작일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"startDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"종료일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"endDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"목적\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}]}, {\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"위와 같이 출장을 신청합니다.\", \"type\": \"text\"}]}]}")
-//                .cnttJson("")
-//                .docfoStat(DocumentFormStats.A)
-//                .build();
-//        DocumentFormCategory newDocFormCat9 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("출장신청")
-//                .documentForm(newDocForm3)
-//                .build();
-//        DocumentFormCategory newDocFormCat10 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("출장취소신청")
-//                .documentForm(newDocForm3)
-//                .build();
-//        DocumentFormCategory newDocFormCat11 = DocumentFormCategory.builder()
-//                .company(company)
-//                .name("출장수정신청")
-//                .documentForm(newDocForm3)
-//                .build();
-//        documentFormRepository.save(newDocForm3);
-//        documentFormCategoryRepository.save(newDocFormCat9);
-//        documentFormCategoryRepository.save(newDocFormCat10);
-//        documentFormCategoryRepository.save(newDocFormCat11);
+        // 회사 요금제 정보 등록
+        CompanySubscription newCompanySubscription = CompanySubscription.builder()
+                .company(company)
+                .subscription(basic30)
+                .paymentMethod(null)
+                .nextBillingDate(null)
+                .autoRenewal(false)
+                .status(SubStatus.FREE)
+                .pendingSubscription(null)
+                .creditBalance(BigDecimal.valueOf(0.00))
+                .build();
+
+        companySubscriptionRepository.save(newCompanySubscription);
+
+        // 기본 양식 및 카테고리 등록
+        DocumentForm newDocForm1 = DocumentForm.builder()
+                .company(company)
+                .docfoName("기본 양식")
+                .writer(docFormWriter)
+                .cnttJson("")
+                .cnttHtml("")
+                .docfoStat(DocumentFormStats.A)
+                .build();
+        DocumentFormCategory newDocFormCat1 = DocumentFormCategory.builder()
+                .company(company)
+                .name("기본상신")
+                .documentForm(newDocForm1)
+                .build();
+        DocumentFormCategory newDocFormCat2 = DocumentFormCategory.builder()
+                .company(company)
+                .name("인사요청")
+                .documentForm(newDocForm1)
+                .build();
+        DocumentFormCategory newDocFormCat3 = DocumentFormCategory.builder()
+                .company(company)
+                .name("구매요청")
+                .documentForm(newDocForm1)
+                .build();
+        DocumentFormCategory newDocFormCat4 = DocumentFormCategory.builder()
+                .company(company)
+                .name("면담요청")
+                .documentForm(newDocForm1)
+                .build();
+        DocumentFormCategory newDocFormCat5 = DocumentFormCategory.builder()
+                .company(company)
+                .name("기타")
+                .documentForm(newDocForm1)
+                .build();
+        documentFormRepository.save(newDocForm1);
+        documentFormCategoryRepository.save(newDocFormCat1);
+        documentFormCategoryRepository.save(newDocFormCat2);
+        documentFormCategoryRepository.save(newDocFormCat3);
+        documentFormCategoryRepository.save(newDocFormCat4);
+        documentFormCategoryRepository.save(newDocFormCat5);
+
+        // 휴가 신청서 및 카테고리 등록
+        DocumentForm newDocForm2 = DocumentForm.builder()
+                .company(company)
+                .docfoName("휴가 신청서")
+                .writer(docFormWriter)
+                .cnttJson("{\"type\": \"doc\", \"content\": [{\"type\": \"heading\", \"attrs\": {\"level\": 2, \"textAlign\": \"center\"}, \"content\": [{\"text\": \"휴가 신청서\", \"type\": \"text\"}]}, {\"type\": \"table\", \"content\": [{\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"수정/취소 대상\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": false, \"data-field\": \"targetAttendance\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"휴가 구분\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"비상 연락처\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"시작일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"startDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"종료일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"endDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"대직자\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": false, \"data-field\": \"delegate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"사유\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}]}, {\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"위와 같이 휴가를 신청합니다.\", \"type\": \"text\"}]}]}")
+                .cnttHtml("")
+                .docfoStat(DocumentFormStats.A)
+                .build();
+        DocumentFormCategory newDocFormCat6 = DocumentFormCategory.builder()
+                .company(company)
+                .name("휴가신청")
+                .documentForm(newDocForm2)
+                .build();
+        DocumentFormCategory newDocFormCat7 = DocumentFormCategory.builder()
+                .company(company)
+                .name("휴가취소신청")
+                .documentForm(newDocForm2)
+                .build();
+        DocumentFormCategory newDocFormCat8 = DocumentFormCategory.builder()
+                .company(company)
+                .name("휴가수정신청")
+                .documentForm(newDocForm2)
+                .build();
+        documentFormRepository.save(newDocForm2);
+        documentFormCategoryRepository.save(newDocFormCat6);
+        documentFormCategoryRepository.save(newDocFormCat7);
+        documentFormCategoryRepository.save(newDocFormCat8);
+
+        // 출장 신청서 및 카테고리 등록
+        DocumentForm newDocForm3 = DocumentForm.builder()
+                .company(company)
+                .docfoName("출장 신청서")
+                .writer(docFormWriter)
+                .cnttJson("{\"type\": \"doc\", \"content\": [{\"type\": \"heading\", \"attrs\": {\"level\": 2, \"textAlign\": \"center\"}, \"content\": [{\"text\": \"출장 신청서\", \"type\": \"text\"}]}, {\"type\": \"table\", \"content\": [{\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"수정/취소 대상\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": false, \"data-field\": \"targetAttendance\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"출장지\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"비상 연락처\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"시작일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"startDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"종료일\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"editable\": false, \"data-field\": \"endDate\"}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"-\", \"type\": \"text\"}]}]}]}, {\"type\": \"tableRow\", \"content\": [{\"type\": \"tableCell\", \"attrs\": {\"editable\": false}, \"content\": [{\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"목적\", \"type\": \"text\", \"marks\": [{\"type\": \"bold\"}]}]}]}, {\"type\": \"tableCell\", \"attrs\": {\"colspan\": 3, \"editable\": true}, \"content\": [{\"type\": \"paragraph\"}]}]}]}, {\"type\": \"paragraph\", \"attrs\": {\"textAlign\": \"center\"}, \"content\": [{\"text\": \"위와 같이 출장을 신청합니다.\", \"type\": \"text\"}]}]}")
+                .cnttJson("")
+                .docfoStat(DocumentFormStats.A)
+                .build();
+        DocumentFormCategory newDocFormCat9 = DocumentFormCategory.builder()
+                .company(company)
+                .name("출장신청")
+                .documentForm(newDocForm3)
+                .build();
+        DocumentFormCategory newDocFormCat10 = DocumentFormCategory.builder()
+                .company(company)
+                .name("출장취소신청")
+                .documentForm(newDocForm3)
+                .build();
+        DocumentFormCategory newDocFormCat11 = DocumentFormCategory.builder()
+                .company(company)
+                .name("출장수정신청")
+                .documentForm(newDocForm3)
+                .build();
+        documentFormRepository.save(newDocForm3);
+        documentFormCategoryRepository.save(newDocFormCat9);
+        documentFormCategoryRepository.save(newDocFormCat10);
+        documentFormCategoryRepository.save(newDocFormCat11);
         
         return new ResponseDto<>(HttpStatus.CREATED, "회사 회원가입 성공", createEmployee);
     }

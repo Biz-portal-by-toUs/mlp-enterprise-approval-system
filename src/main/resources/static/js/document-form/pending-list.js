@@ -102,6 +102,16 @@
         return `<span class="statPill ${esc(it.cls)}">${esc(it.label)}</span>`;
     }
 
+    function isResponseDto(obj) {
+        return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+    }
+
+    async function unwrapJson(res) {
+        const body = await res.json().catch(() => null);
+        if (!body) return null;
+        return isResponseDto(body) ? body.data : body;
+    }
+
     function markFormListDirty() {
         try { localStorage.setItem("list:dirty", "true"); } catch (_) {}
     }
@@ -183,8 +193,8 @@
         try {
             const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            const reason = getRejectReason(data) ?? "사유가 저장되어 있지 않아요.";
+            const detail = await unwrapJson(res);
+            const reason = getRejectReason(detail) ?? "사유가 저장되어 있지 않아요.";
             alert(`사유:\n${reason}`);
         } catch (e) {
             alert("사유 조회 실패: " + (e?.message || e));

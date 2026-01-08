@@ -1,11 +1,11 @@
-package com.multi.mlpenterpriseapprovalsystem.prov_document.controller;
+package com.multi.mlpenterpriseapprovalsystem.provdocument.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.dto.*;
-import com.multi.mlpenterpriseapprovalsystem.prov_document.service.ProvDocumentService;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.service.ProvDocumentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <title>문서 작성 - 기업용 전자결재시스템</title>
 
-    <!-- TipTap 번들 -->
     <script th:src="@{/js/tiptap.min.js}"></script>
 
-    <!-- ✅ SweetAlert2 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -565,7 +563,14 @@
             box-sizing: border-box;
         }
 
-        #delegate-search:focus {
+        /* ✅ 날짜 미선택 시 비활성화 스타일 */
+        #delegate-search:disabled {
+            background-color: #f1f3f5;
+            cursor: not-allowed;
+            color: #adb5bd;
+        }
+
+        #delegate-search:focus:not(:disabled) {
             outline: none;
             border-color: #40c057;
             box-shadow: 0 0 0 2px rgba(64, 192, 87, 0.1);
@@ -746,35 +751,30 @@
         </tr>
     </table>
 
-    <!-- 근태 정보 섹션 -->
     <div id="attendance-section" class="attendance-section" style="display: none;">
         <div class="attendance-section-title">
             📅 <span id="attendance-title">근태 정보</span>
         </div>
 
         <div class="attendance-grid">
-            <!-- 시작일 -->
             <div class="attendance-grid-item">
                 <label>시작일 <span class="required-mark">*</span></label>
                 <input type="date" id="startDate">
             </div>
 
-            <!-- 종료일 -->
             <div class="attendance-grid-item">
                 <label>종료일 <span class="required-mark">*</span></label>
                 <input type="date" id="endDate">
             </div>
 
-            <!-- 대직자 검색 -->
             <div id="delegate-section" class="attendance-grid-item delegate-grid-item" style="display: none;">
                 <label>대직자 <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(선택)</span></label>
                 <div class="delegate-search-wrapper">
-                    <input type="text" id="delegate-search" placeholder="이름 또는 사번 검색" autocomplete="off">
+                    <input type="text" id="delegate-search" placeholder="날짜를 먼저 선택해주세요" autocomplete="off" disabled>
                     <div class="delegate-search-results" id="delegate-search-results"></div>
                 </div>
             </div>
 
-            <!-- 선택된 대직자 -->
             <div id="selected-delegate-section" class="attendance-grid-item" style="display: none;">
                 <label>선택된 대직자</label>
                 <div id="selected-delegate-display"></div>
@@ -784,7 +784,6 @@
 
     <div class="content-section">
         <div style="position: relative;">
-            <!-- TipTap 에디터 -->
             <div class="tiptap-editor-wrapper">
                 <div class="tiptap-toolbar">
                     <select onchange="setHeading(this.value)">
@@ -818,7 +817,6 @@
             <div id="char-counter" class="char-counter">0 / 1000</div>
         </div>
 
-        <!-- 파일 첨부 영역 -->
         <div class="file-attach-section">
             <div class="file-attach-header">
                 📎 첨부파일 (최대 5개, 개당 10MB)
@@ -859,9 +857,12 @@
     let currentDocfoNo = null;
     let currentFormName = '';
     let tiptapEditor = null;
-    let attachedFiles = [];
+    let existingFiles = []; // ✅ 원본 문서의 첨부파일
+    let newFiles = []; // ✅ 새로 추가할 첨부파일
+    let filesToDelete = []; // ✅ 삭제할 파일 관리용 (여기서는 복사하지 않을 파일)
     let formCategories = [];
     let currentCategoryName = '';
+    let myDelegatePeriods = []; // 내가 대직자인 기간 정보
 
     document.addEventListener('DOMContentLoaded', async () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -886,6 +887,9 @@
         initApproverSearch();
         initDelegateSearch();
 
+        // ✅ 내가 대직자로 지정된 기간 목록 미리 로드
+        await fetchMyDelegatePeriods();
+
         await fetchFormDetails();
 
         if (atteNo && category) {
@@ -901,6 +905,52 @@
         document.getElementById('startDate').addEventListener('change', onStartDateChange);
         document.getElementById('endDate').addEventListener('change', onEndDateChange);
     });
+
+    // ✅ 내 근태 중복 체크 API 호출 (상세 리스트 반환)
+    async function checkMyAttendanceOverlap(start, end) {
+        if (!start || !end) return [];
+        try {
+            const excludeParam = window.targetAtteNo ? `&excludeAtteNo=${window.targetAtteNo}` : '';
+            const res = await fetch(`/api/v1/attendances/me/overlap-check?startAt=${start}T00:00:00&endAt=${end}T23:59:59${excludeParam}`, { credentials: 'include' });
+            const result = await res.json();
+            return result.data || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // ✅ 대직 예정 기간 정보 API 호출
+    async function fetchMyDelegatePeriods() {
+        try {
+            const res = await fetch('/api/v1/attendances/me/delegate-periods', { credentials: 'include' });
+            const result = await res.json();
+            myDelegatePeriods = result.data || [];
+            console.log('✅ 내 대직 예정 기간 로드 완료:', myDelegatePeriods);
+        } catch (e) {
+            console.error('❌ 대직 기간 로드 실패:', e);
+        }
+    }
+
+    // ✅ 대직 기간 중복 체크 로직 (본인이 이미 대직자인 경우 휴가 신청 차단)
+    function checkOverlapWithMyDelegateJob(newStart, newEnd) {
+        if (!newStart || !newEnd) return true;
+        const overlap = myDelegatePeriods.find(p => {
+            const pStart = p.startAt.split('T')[0];
+            const pEnd = p.endAt.split('T')[0];
+            return newStart <= pEnd && newEnd >= pStart;
+        });
+
+        if (overlap) {
+            Swal.fire({
+                icon: 'error',
+                title: '휴가 신청 불가',
+                html: `당신은 해당 기간에 이미 타인의 대직자로 지정되어 있습니다:<br><br><b>기간: ${overlap.startAt.split('T')[0]} ~ ${overlap.endAt.split('T')[0]}</b>`,
+                confirmButtonColor: '#339af0'
+            });
+            return false;
+        }
+        return true;
+    }
 
     // ✅ 임시저장 확인
     function confirmTempSave() {
@@ -959,6 +1009,7 @@
         });
     }
 
+    // ✅ 수정/취소 진입 시 근태 정보를 불러오고 원본 문서의 상세 데이터를 보관하는 함수
     async function loadAttendanceInfo(atteNo, category) {
         try {
             const response = await fetch(`/api/v1/attendances/${atteNo}`, {
@@ -999,17 +1050,110 @@
 
             window.targetAtteNo = atteNo;
 
+            // ✅ 원본 문서 데이터를 가져와서 보관 및 연동 (AI 요약, 첨부파일 포함)
+            if (attendance.docNo) {
+                const docResponse = await fetch(`/api/v1/documents/${attendance.docNo}?status=SUBMITTED`, {
+                    credentials: 'include'
+                });
+                const docResult = await docResponse.json();
+                if (docResult.data) {
+                    const doc = docResult.data;
+                    window.prevDocContentForPopulate = doc.content;
+
+                    // ✅ AI 요약 로드 추가
+                    if (doc.aiSumm && doc.aiSumm.trim() !== '') {
+                        const summaryBox = document.getElementById('ai-summary-box');
+                        const summaryText = document.getElementById('ai-summary-text');
+                        summaryBox.style.display = 'block';
+                        summaryText.innerText = doc.aiSumm;
+                        document.getElementById('include-ai-summ').checked = true;
+                    }
+
+                    // ✅ 첨부파일 목록 로드 호출
+                    await loadExistingAttachments(attendance.docNo);
+                }
+            }
+
             console.log('✅ 근태 정보 자동 입력 완료');
 
         } catch (error) {
             console.error('❌ 근태 정보 로드 실패:', error);
-            Swal.fire({
-                icon: 'error',
-                title: '오류 발생',
-                text: '근태 정보를 불러오는데 실패했습니다.',
-                confirmButtonColor: '#339af0'
-            });
         }
+    }
+
+    // ✅ 기존 첨부파일 목록 불러오기 함수
+    async function loadExistingAttachments(docNo) {
+        try {
+            const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, { credentials: 'include' });
+            if (response.ok) {
+                const result = await response.json();
+                existingFiles = Array.isArray(result.data) ? result.data : (result.data?.items || []);
+                renderFileList();
+            }
+        } catch (e) {
+            console.error('❌ 기존 첨부파일 로드 실패:', e);
+        }
+    }
+
+    // ✅ 라벨 텍스트를 기반으로 원본 문서의 내용을 현재 에디터 표에 채우는 로직
+    function populateTableFromOriginalDoc(originalContent) {
+        if (!tiptapEditor || !originalContent) return;
+
+        let prevJson;
+        try {
+            prevJson = (typeof originalContent === 'string') ? JSON.parse(originalContent) : originalContent;
+        } catch (e) { return; }
+
+        const currentJson = tiptapEditor.getJSON();
+        const oldTable = findTableInContent(prevJson.content);
+        const newTable = findTableInContent(currentJson.content);
+
+        if (!oldTable || !newTable) return;
+
+        // 찾고자 하는 라벨 정의
+        const labels = ["휴가 구분", "출장지", "비상 연락처", "사유", "목적"];
+
+        // 셀 내부의 텍스트를 추출하는 헬퍼
+        function getCellText(cell) {
+            let text = "";
+            function walk(node) {
+                if (node.text) text += node.text;
+                if (node.content) node.content.forEach(walk);
+            }
+            if (cell.content) cell.content.forEach(walk);
+            return text.trim();
+        }
+
+        // 1. 원본 표에서 라벨 -> 내용 맵핑 생성
+        const valueMap = {};
+        oldTable.content.forEach(row => {
+            if (row.content) {
+                for (let i = 0; i < row.content.length; i++) {
+                    const cellText = getCellText(row.content[i]);
+                    const matchedLabel = labels.find(l => cellText === l);
+                    // 라벨을 찾았고, 다음 칸(Value)이 존재하는 경우
+                    if (matchedLabel && row.content[i + 1]) {
+                        valueMap[matchedLabel] = row.content[i + 1].content;
+                    }
+                }
+            }
+        });
+
+        // 2. 현재 새 에디터의 표 구조에 값 주입
+        newTable.content.forEach(row => {
+            if (row.content) {
+                for (let i = 0; i < row.content.length; i++) {
+                    const cellText = getCellText(row.content[i]);
+                    const matchedLabel = labels.find(l => cellText === l);
+                    if (matchedLabel && row.content[i + 1] && valueMap[matchedLabel]) {
+                        row.content[i + 1].content = valueMap[matchedLabel];
+                    }
+                }
+            }
+        });
+
+        tiptapEditor.commands.setContent(currentJson);
+        console.log('✅ 표 상세 내용(구분, 연락처, 사유/목적) 복사 완료');
     }
 
     function updateTableTargetAttendance(attendance) {
@@ -1117,6 +1261,25 @@
         console.log('✅ 날짜 제약 적용:', rule);
     }
 
+    // ✅ 대직자 검색창 활성화/비활성화 제어 함수
+    function toggleDelegateSearchState() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const delegateInput = document.getElementById('delegate-search');
+
+        if (startDate && endDate) {
+            delegateInput.disabled = false;
+            delegateInput.placeholder = "이름 또는 사번 검색";
+        } else {
+            delegateInput.disabled = true;
+            delegateInput.value = "";
+            delegateInput.placeholder = "날짜를 먼저 선택해주세요";
+            selectedDelegate = null;
+            renderSelectedDelegate();
+            updateTableDelegate();
+        }
+    }
+
     function onCategoryChange(categoryName) {
         console.log('📌 카테고리 변경:', categoryName);
 
@@ -1147,6 +1310,9 @@
 
         selectedDelegate = null;
         renderSelectedDelegate();
+
+        // ✅ 카테고리 변경 시 대직자 검색창 상태 초기화
+        toggleDelegateSearchState();
 
         updateTableDates();
         updateTableDelegate();
@@ -1181,10 +1347,37 @@
         console.log('✅ 카테고리 설정 완료 - 대직자 표시:', delegateSection.style.display);
     }
 
-    function onStartDateChange(e) {
+    // ✅ 시작일 변경 이벤트 핸들러
+    async function onStartDateChange(e) {
         const startDate = e.target.value;
         const endDateInput = document.getElementById('endDate');
         const endDate = endDateInput.value;
+
+        // ✅ 날짜 변경 시 대직자 초기화 및 테이블 갱신
+        removeDelegate();
+
+        if (startDate && endDate) {
+            // ✅ 공통: 내 근태 중복 체크
+            const personalOverlaps = await checkMyAttendanceOverlap(startDate, endDate);
+            if (personalOverlaps.length > 0) {
+                let overlapMsg = "해당 기간에 이미 등록된 본인의 근태 일정이 존재합니다:<br><br>";
+                personalOverlaps.forEach(o => {
+                    const typeLabel = o.atteType === 'V' ? '휴가' : '출장';
+                    overlapMsg += `- <b>${typeLabel}</b>: ${o.startAt.split('T')[0]} ~ ${o.endAt.split('T')[0]}<br>`;
+                });
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '기간 중복',
+                    html: overlapMsg,
+                    confirmButtonColor: '#339af0'
+                });
+                e.target.value = '';
+                toggleDelegateSearchState();
+                updateTableDates();
+                return;
+            }
+        }
 
         if (startDate) {
             const rule = getCategoryRule(currentCategoryName);
@@ -1203,12 +1396,41 @@
             endDateInput.value = '';
         }
 
+        // ✅ 날짜 변경 상태 업데이트
+        toggleDelegateSearchState();
         updateTableDates();
     }
 
-    function onEndDateChange(e) {
+    // ✅ 종료일 변경 이벤트 핸들러
+    async function onEndDateChange(e) {
         const startDate = document.getElementById('startDate').value;
         const endDate = e.target.value;
+
+        // ✅ 날짜 변경 시 대직자 초기화 및 테이블 갱신
+        removeDelegate();
+
+        if (startDate && endDate) {
+            // ✅ 공통: 내 근태 중복 체크
+            const personalOverlaps = await checkMyAttendanceOverlap(startDate, endDate);
+            if (personalOverlaps.length > 0) {
+                let overlapMsg = "해당 기간에 이미 등록된 본인의 근태 일정이 존재합니다:<br><br>";
+                personalOverlaps.forEach(o => {
+                    const typeLabel = o.atteType === 'V' ? '휴가' : '출장';
+                    overlapMsg += `- <b>${typeLabel}</b>: ${o.startAt.split('T')[0]} ~ ${o.endAt.split('T')[0]}<br>`;
+                });
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '기간 중복',
+                    html: overlapMsg,
+                    confirmButtonColor: '#339af0'
+                });
+                e.target.value = '';
+                toggleDelegateSearchState();
+                updateTableDates();
+                return;
+            }
+        }
 
         if (startDate && endDate && endDate < startDate) {
             Swal.fire({
@@ -1218,9 +1440,12 @@
                 confirmButtonColor: '#339af0'
             });
             e.target.value = '';
+            toggleDelegateSearchState();
             return;
         }
 
+        // ✅ 날짜 변경 상태 업데이트
+        toggleDelegateSearchState();
         updateTableDates();
     }
 
@@ -1472,22 +1697,34 @@
         });
     }
 
+    // ✅ 대직자 가용성 API 호출 (available 필드 대응)
     async function searchDelegates(keyword = '') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (!startDate || !endDate) return;
+
         try {
-            let url = `/api/v1/employees?size=20&excludeMe=true`;
-            if (keyword && keyword.trim().length > 0) {
-                url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            }
+            const startAt = startDate + 'T00:00:00';
+            const endAt = endDate + 'T23:59:59';
+
+            const url = `/api/v1/delegates/available?startAt=${startAt}&endAt=${endAt}`;
             const res = await fetch(url, { credentials: 'include' });
             const result = await res.json();
 
-            const myDept = document.getElementById('writer-dept').value;
-            const sameDeptEmployees = (result.data?.items || []).filter(emp =>
-                emp.depName === myDept
-            );
+            let employees = result.data || [];
 
-            renderDelegateResults(sameDeptEmployees);
+            if (keyword && keyword.trim().length > 0) {
+                const k = keyword.toLowerCase();
+                employees = employees.filter(emp =>
+                    emp.empName.toLowerCase().includes(k) ||
+                    emp.empId.toLowerCase().includes(k)
+                );
+            }
+
+            renderDelegateResults(employees);
         } catch (e) {
+            console.error('대직자 조회 실패:', e);
             renderDelegateResults([]);
         }
     }
@@ -1496,21 +1733,22 @@
         const container = document.getElementById('delegate-search-results');
 
         if (employees.length === 0) {
-            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">같은 부서의 대직자가 없습니다.</div>';
+            container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">조회된 대직자가 없습니다.</div>';
             return;
         }
 
         container.innerHTML = employees.map(emp => {
             const isSelected = selectedDelegate && selectedDelegate.empId === emp.empId;
-            const isOnLeave = emp.atte !== 'C';
-            const isDisabled = isSelected || isOnLeave;
+            // Jackson 직렬화 규칙에 따른 available 필드 체크
+            const isAvailable = emp.available !== false;
+            const statusMessage = emp.statusMessage || "휴가";
+            const isDisabled = isSelected || !isAvailable;
 
             let statusHtml = '';
             if (isSelected) {
                 statusHtml = '<span style="float: right; color: #40c057;">✓ 선택됨</span>';
-            } else if (isOnLeave) {
-                const statusText = emp.atte === 'V' ? '휴가중' : emp.atte === 'B' ? '출장중' : '부재중';
-                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusText}</span>`;
+            } else if (!isAvailable) {
+                statusHtml = `<span style="float: right; color: #fa5252; font-size: 11px;">${statusMessage}</span>`;
             }
 
             return `
@@ -1701,6 +1939,12 @@
             },
             onSelectionUpdate: ({ editor }) => {
                 updateToolbarButtons();
+            },
+            // ✅ 에디터 로드 직후 수정 모드라면 표 내용 채우기 실행
+            onCreate: () => {
+                if (window.prevDocContentForPopulate) {
+                    populateTableFromOriginalDoc(window.prevDocContentForPopulate);
+                }
             }
         });
 
@@ -1714,6 +1958,7 @@
 
         updateCharCounter();
 
+        // 에디터 초기화 완료 후 수정/취소 시 데이터 주입
         if (window.targetAtteNo) {
             fetch(`/api/v1/attendances/${window.targetAtteNo}`, {
                 credentials: 'include'
@@ -1833,30 +2078,53 @@
             const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
             const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
 
-            let statusText = '';
-            let statusColor = '';
-            if (isAdded) {
-                statusText = '추가됨'; statusColor = '#adb5bd';
-            } else if (isSameOrLowerRank) {
-                statusText = '직급낮음'; statusColor = '#fa5252';
-            } else if (hasSameRank) {
-                statusText = '중복직급'; statusColor = '#fa5252';
-            } else if (isLowerThanSelected) {
-                statusText = '순서오류'; statusColor = '#fa5252';
-            } else {
-                statusText = '+'; statusColor = 'var(--primary-color)';
+            // ✅ 대직자 정보 가로 배치 로직 (디자인 수정)
+            let delegateHtml = '';
+            if (emp.delegateName) {
+                const isMe = emp.delegateId === myInfo.empId;
+                const color = isMe ? '#339af0' : '#868e96';
+                delegateHtml = `<span style="color: ${color}; font-weight: ${isMe ? 'bold' : 'normal'}; font-size: 11px; margin-left: 8px;">
+                    (대직자: ${isMe ? '본인' : emp.delegateName})
+                </span>`;
             }
 
+            let statusText = isAdded ? '추가됨' : (isSameOrLowerRank ? '직급낮음' : (hasSameRank ? '중복직급' : (isLowerThanSelected ? '순서오류' : '+')));
+            let statusColor = isAdded ? '#adb5bd' : (isDisabled ? '#fa5252' : 'var(--primary-color)');
+
             return `
-                <div class="result-item" onclick="${isDisabled ? '' : `addApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}"
+                <div class="result-item"
+                     onclick="${isDisabled ? '' : `checkAndAddApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder}, '${emp.delegateId || ''}')`}"
                      style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
                     <div>
                         <strong>${emp.empName}</strong> <span>| ${emp.posName || '사원'}</span>
+                        ${delegateHtml}
                         <br><small>${emp.depName || '-'} | ${emp.empId}</small>
                     </div>
                     <div style="color:${statusColor}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
                 </div>`;
         }).join('');
+    }
+
+    function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) {
+        if (delegateId === myInfo.empId) {
+            Swal.fire({
+                title: '대직자 확인',
+                html: `선택하신 <b>${name} ${pos}</b>님의 현재 대직자는 <b style="color:#339af0;">본인</b>입니다.<br>정말 결재자로 지정하시겠습니까?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '네, 지정합니다',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    addApprover(id, name, pos, dept, posOrder);
+                }
+            });
+        } else {
+            addApprover(id, name, pos, dept, posOrder);
+        }
     }
 
     function addApprover(id, name, pos, dept, posOrder) {
@@ -1946,164 +2214,105 @@
         }
     }
 
+    // ✅ 파일 처리 로직 (상신 시 물리적 복사 포함)
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
-        const maxCount = 5;
+        const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
 
         for (let file of files) {
-            if (attachedFiles.length >= maxCount) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: '첨부 제한',
-                    text: `최대 ${maxCount}개까지만 첨부할 수 있습니다.`,
-                    confirmButtonColor: '#339af0'
-                });
+            if (currentCount + newFiles.length >= 5) {
+                Swal.fire({ icon: 'warning', title: '제한', text: '최대 5개입니다.' });
                 break;
             }
             if (file.size > maxSize) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: '파일 크기 초과',
-                    text: `${file.name}은(는) 10MB를 초과합니다.`,
-                    confirmButtonColor: '#339af0'
-                });
+                Swal.fire({ icon: 'warning', title: '파일 크기 초과', text: `${file.name}은(는) 10MB를 초과합니다.` });
                 continue;
             }
-            if (attachedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                Swal.fire({
-                    icon: 'info',
-                    title: '중복 파일',
-                    text: `${file.name}은(는) 이미 첨부되었습니다.`,
-                    confirmButtonColor: '#339af0'
-                });
-                continue;
-            }
-            attachedFiles.push(file);
+            newFiles.push(file);
         }
-        event.target.value = '';
         renderFileList();
     }
 
     function renderFileList() {
         const container = document.getElementById('file-list');
-        if (attachedFiles.length === 0) {
+        const activeExisting = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId));
+        if (activeExisting.length + newFiles.length === 0) {
             container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>';
             return;
         }
-        container.innerHTML = attachedFiles.map((file, index) => `
-            <div class="file-item">
+
+        let html = activeExisting.map(file => `
+            <div class="file-item" style="background: #f0f8ff;">
                 <div class="file-item-info">
-                    <span style="font-size: 18px;">📄</span>
+                    <span>📄</span>
                     <div>
-                        <div class="file-item-name">${file.name}</div>
-                        <div class="file-item-size">${formatFileSize(file.size)}</div>
+                        <div class="file-item-name">${file.originalName}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존)</span></div>
                     </div>
                 </div>
-                <span class="file-remove-btn" onclick="removeFile(${index})">✕</span>
-            </div>
-        `).join('');
+                <span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span>
+            </div>`).join('');
+
+        html += newFiles.map((file, index) => `
+            <div class="file-item">
+                <div class="file-item-info">
+                    <span>📄</span>
+                    <div>
+                        <div class="file-item-name">${file.name}</div>
+                        <div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div>
+                    </div>
+                </div>
+                <span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span>
+            </div>`).join('');
+
+        container.innerHTML = html;
     }
 
-    function removeFile(index) {
-        attachedFiles.splice(index, 1);
-        renderFileList();
-    }
+    function removeExistingFile(id) { filesToDelete.push(id); renderFileList(); }
+    function removeNewFile(index) { newFiles.splice(index, 1); renderFileList(); }
 
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + ['Bytes', 'KB', 'MB', 'GB'][i];
     }
 
-    function getFileType(mimeType) {
-        if (mimeType.startsWith('image/')) return 'IMAGE';
-        if (mimeType.startsWith('audio/')) return 'AUDIO';
-        return 'DOC';
+    function getFileType(mime) { return mime.startsWith('image/') ? 'IMAGE' : (mime.startsWith('audio/') ? 'AUDIO' : 'DOC'); }
+
+    async function generateAiSummary() {
+        const summaryBox = document.getElementById('ai-summary-box');
+        const summaryText = document.getElementById('ai-summary-text');
+        summaryBox.style.display = 'block';
+        summaryText.innerText = '⏳ 생성 중...';
+        try {
+            const response = await fetch('/api/v1/documents/ai-summary', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: tiptapEditor.getHTML() })
+            });
+            const result = await response.json();
+            if (result.data) summaryText.innerText = result.data;
+        } catch (error) {
+            summaryBox.style.display = 'none';
+        }
     }
 
     async function saveDocument(isTemp) {
         const title = document.getElementById('doc-title').value.trim();
         const contentJson = tiptapEditor.getJSON();
-        const contentHtml = tiptapEditor.getHTML();
-        const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
-
-        let startDate = null;
-        let endDate = null;
-
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
-        const isAttendanceCategory = normalized.includes('휴가') || normalized.includes('출장');
 
-        if (isAttendanceCategory) {
-            startDate = document.getElementById('startDate').value;
-            endDate = document.getElementById('endDate').value;
+        if (!title || !checkedRadio) return;
 
-            if (!isTemp) {
-                if (!startDate || !endDate) {
-                    return Swal.fire({
-                        icon: 'warning',
-                        title: '입력 오류',
-                        text: '시작일과 종료일을 입력해주세요.',
-                        confirmButtonColor: '#339af0'
-                    });
-                }
-                if (startDate > endDate) {
-                    return Swal.fire({
-                        icon: 'warning',
-                        title: '입력 오류',
-                        text: '종료일이 시작일보다 빠를 수 없습니다.',
-                        confirmButtonColor: '#339af0'
-                    });
-                }
-            }
-
-            contentJson.attendanceInfo = {
-                startDate: startDate,
-                endDate: endDate
-            };
-
-            if (window.targetAtteNo) {
-                contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
-            }
-
-            if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
-                contentJson.attendanceInfo.delegate = {
-                    empId: selectedDelegate.empId,
-                    empName: selectedDelegate.empName,
-                    posName: selectedDelegate.posName,
-                    depName: selectedDelegate.depName
-                };
-            }
-        }
-
-        if (!title || !contentText) {
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '제목과 내용을 모두 입력해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        if (!checkedRadio) {
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '카테고리를 선택해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        if (!isTemp && selectedApprovers.length === 0) {
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '문서를 상신하려면 결재선을 최소 1명 이상 지정해야 합니다.',
-                confirmButtonColor: '#339af0'
-            });
+        if (normalized.includes('휴가') || normalized.includes('출장')) {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            contentJson.attendanceInfo = { startDate: start, endDate: end, targetAtteNo: window.targetAtteNo };
+            if (selectedDelegate) contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName };
         }
 
         try {
@@ -2114,9 +2323,9 @@
                 docfoCatNo: parseInt(checkedRadio.value, 10),
                 title: title,
                 content: JSON.stringify(contentJson),
-                cnttHtml: contentHtml,
+                cnttHtml: tiptapEditor.getHTML(),
                 temp: isTemp,
-                aiSumm: document.getElementById('include-ai-summ').checked ? document.getElementById('ai-summary-text').innerText : null,
+                aiSumm: document.getElementById('ai-summary-text').innerText,
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,
@@ -2135,154 +2344,70 @@
                 const result = await response.json();
                 const docNo = result.data?.docNo || result.data;
 
-                if (attachedFiles.length > 0 && docNo) {
-                    await uploadFiles(docNo);
-                }
+                // ✅ 기존 파일 복사 (물리적 업로드)
+                const activeExisting = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId));
+                if (activeExisting.length > 0) await copyExistingFiles(activeExisting, docNo);
 
-                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && docNo) {
-                    await registerDelegate(docNo, selectedDelegate.empId);
-                }
+                // ✅ 신규 파일 업로드
+                if (newFiles.length > 0) await uploadFiles(docNo);
 
-                const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.";
-                const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
-
-                // ✅ 성공 메시지 표시 후 페이지 이동
-                Swal.fire({
-                    icon: 'success',
-                    title: '완료',
-                    text: successMessage,
-                    confirmButtonColor: '#339af0'
-                }).then(() => {
-                    location.href = targetUrl;
-                });
-            } else {
-                const err = await response.json().catch(() => ({}));
-                Swal.fire({
-                    icon: 'error',
-                    title: '오류 발생',
-                    text: err.message || "문서 처리에 실패했습니다.",
-                    confirmButtonColor: '#339af0'
+                Swal.fire({ icon: 'success', title: '완료' }).then(() => {
+                    location.href = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
                 });
             }
-        } catch (e) {
-            Swal.fire({
-                icon: 'error',
-                title: '통신 오류',
-                text: '서버와의 통신에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
+        } catch (e) {}
     }
 
-    async function registerDelegate(docNo, delegateEmpId) {
-        try {
-            const response = await fetch('/api/v1/delegates', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId })
-            });
-            if (response.ok) {
-                console.log('✅ 대직자 등록 성공');
-            }
-        } catch (e) {
-            console.warn('⚠️ 대직자 등록 실패:', e);
-        }
-    }
-
-    async function uploadFiles(docNo) {
-        for (const file of attachedFiles) {
+    async function copyExistingFiles(files, newDocNo) {
+        for (const file of files) {
             try {
-                const presignRes = await fetch('/api/v1/attachments/presign', {
+                const resUrl = await fetch(`/api/v1/attachments/${file.attachmentId}/download-url`, { credentials: 'include' });
+                const dataUrl = await resUrl.json();
+                const blob = await (await fetch(dataUrl.data.url)).blob();
+
+                const presign = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        domain: 'APPROVAL',
-                        entityId: docNo,
-                        fileType: getFileType(file.type),
-                        originalName: file.name,
-                        contentType: file.type,
-                        size: file.size
+                        domain: 'APPROVAL', entityId: newDocNo, fileType: file.fileType,
+                        originalName: file.originalName, contentType: file.contentType, size: file.size
                     })
                 });
-
-                if (!presignRes.ok) continue;
-                const presignData = await presignRes.json();
-                const { objectKey, uploadUrl } = presignData.data;
-
-                const uploadRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': file.type },
-                    body: file
-                });
-
-                if (!uploadRes.ok) continue;
-                const etag = uploadRes.headers.get('ETag');
-
+                const presignData = await presign.json();
+                const upload = await fetch(presignData.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.contentType }, body: blob });
                 await fetch('/api/v1/attachments/complete', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        domain: 'APPROVAL',
-                        entityId: docNo,
-                        fileType: getFileType(file.type),
-                        objectKey: objectKey,
-                        originalName: file.name,
-                        contentType: file.type,
-                        size: file.size,
-                        etag: etag ? etag.replace(/"/g, '') : null
+                        domain: 'APPROVAL', entityId: newDocNo, fileType: file.fileType,
+                        objectKey: presignData.data.objectKey, originalName: file.originalName,
+                        contentType: file.contentType, size: file.size, etag: upload.headers.get('ETag')?.replace(/"/g, '')
                     })
                 });
-            } catch (e) {
-                console.error('파일 업로드 오류:', e);
-            }
+            } catch (e) { console.error('기존 파일 복사 오류', e); }
         }
     }
 
-    async function generateAiSummary() {
-        const html = tiptapEditor.getHTML();
-        const text = tiptapEditor.getText().trim();
-
-        if (text.length < 100) {
-            return Swal.fire({
-                icon: 'warning',
-                title: 'AI 요약 오류',
-                text: '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        const summaryBox = document.getElementById('ai-summary-box');
-        const summaryText = document.getElementById('ai-summary-text');
-        summaryBox.style.display = 'block';
-        summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
-
-        try {
-            const response = await fetch('/api/v1/documents/ai-summary', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: html })
-            });
-
-            if (!response.ok) throw new Error('AI 요약 생성 실패');
-            const result = await response.json();
-
-            if (result.data) {
-                summaryText.innerText = result.data;
-            } else {
-                throw new Error('요약 데이터가 없습니다');
-            }
-        } catch (error) {
-            summaryBox.style.display = 'none';
-            Swal.fire({
-                icon: 'error',
-                title: 'AI 요약 실패',
-                text: 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
-                confirmButtonColor: '#339af0'
-            });
+    async function uploadFiles(docNo) {
+        for (const file of newFiles) {
+            try {
+                const presign = await fetch('/api/v1/attachments/presign', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), originalName: file.name, contentType: file.type, size: file.size })
+                });
+                const presignData = await presign.json();
+                const upload = await fetch(presignData.data.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+                await fetch('/api/v1/attachments/complete', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), objectKey: presignData.data.objectKey, originalName: file.name, contentType: file.type, size: file.size, etag: upload.headers.get('ETag')?.replace(/"/g, '') })
+                });
+            } catch (e) {}
         }
     }
 </script>

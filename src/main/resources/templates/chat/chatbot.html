@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 규정 어시스턴트</title>
+    <title>비즈포탈 어시스턴트</title>
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <style>
         :root {
@@ -92,6 +92,42 @@
             background: #eef2ff;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0; font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        /* 아바타 펄스 애니메이션 (유지) */
+        .avatar.thinking {
+            position: relative;
+            z-index: 1;
+            background: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .avatar.thinking::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            background: var(--primary-color);
+            opacity: 0.6;
+            z-index: -1;
+            animation: avatar-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .avatar.thinking::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            background: var(--primary-color);
+            opacity: 0.4;
+            z-index: -1;
+            animation: avatar-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) 0.6s infinite;
+        }
+
+        @keyframes avatar-pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            80%, 100% { transform: scale(2.2); opacity: 0; }
         }
 
         .bubble {
@@ -101,37 +137,54 @@
             line-height: 1.6;
             white-space: pre-wrap;
             word-break: break-all;
+            position: relative;
+        }
+
+        /* ✅ [수정] 깜빡임 없는 정적 "..." */
+        .thinking-dots {
+            font-weight: bold;
+            color: var(--text-muted);
+            letter-spacing: 2px;
         }
 
         .msg-group.bot .bubble { background-color: var(--bot-bubble); border-top-left-radius: 2px; }
         .msg-group.me .bubble { background-color: var(--user-bubble); color: white; border-top-right-radius: 2px; }
 
-        .msg-group.guide .bubble {
-            background: linear-gradient(135deg, #f5f7ff 0%, #ffffff 100%);
-            border: 1px solid #e0e7ff;
-            color: var(--primary-color);
-            font-weight: 600;
+        .action-area { margin-top: 14px; display: flex; justify-content: flex-start; }
+        .action-btn {
+            background: #ffffff; border: 1px solid var(--primary-color); color: var(--primary-color);
+            padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1);
+            white-space: nowrap; line-height: 1;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-color); color: white;
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
         }
 
         .time-info { font-size: 11px; color: var(--text-muted); margin-top: 6px; display: block; }
         .me .time-info { text-align: right; }
 
         .bottom-area { padding: 24px; background: white; border-top: 1px solid var(--border-color); }
+
         .input-wrapper {
-            background: var(--bg-main);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 10px 16px;
-            display: flex; align-items: flex-end; gap: 12px;
+            background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 16px;
+            padding: 10px 16px; display: flex; align-items: flex-end; gap: 12px;
+            transition: opacity 0.3s ease;
         }
+        .input-wrapper.loading { opacity: 0.6; cursor: not-allowed; }
+        .input-wrapper.loading textarea { cursor: not-allowed; }
+
         textarea { flex: 1; border: none; background: transparent; outline: none; font-size: 15px; padding: 8px 0; resize: none; max-height: 150px; }
         .send-btn {
             background: var(--primary-color); color: white; border: none;
             width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
         }
-
-        .system-msg { align-self: center; font-size: 12px; color: var(--text-muted); background: #f3f4f6; padding: 4px 12px; border-radius: 99px; margin: 10px 0; }
+        .send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
     </style>
 </head>
 
@@ -141,7 +194,7 @@
         <div class="title">
             <div class="bot-logo">AI</div>
             <div class="title-text">
-                <h1>사내 규정 어시스턴트</h1>
+                <h1>비즈포탈 어시스턴트</h1>
                 <div class="status-area">
                     <span id="connDot" class="status-dot"></span>
                     <span id="statusText">연결 대기 중</span>
@@ -153,11 +206,10 @@
         </div>
     </div>
 
-    <div class="msgs" id="messages">
-    </div>
+    <div class="msgs" id="messages"></div>
 
     <div class="bottom-area">
-        <div class="input-wrapper">
+        <div id="inputWrapper" class="input-wrapper">
             <textarea id="messageInput" placeholder="궁금한 규정에 대해 물어보세요..." rows="1" autocomplete="off"></textarea>
             <button id="sendBtn" class="send-btn" onclick="sendQuestion()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -165,83 +217,86 @@
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:#9ca3af; padding: 0 4px;">
             <span id="byteInfo">0 / 61440 bytes</span>
-            <span>대화 맥락은 세션 동안 유지됩니다.</span>
+            <span>사내 규정 및 회사 데이터 기반 답변입니다.</span>
         </div>
     </div>
 </div>
 
 <script>
-    /**
-     * 세션 ID 관리 (sessionStorage 사용)
-     * 탭을 닫거나 새로고침하면 초기화되어 '초기 진입' 상태를 만듭니다.
-     */
+    const msgDomMap = new Map();
+    let isProcessing = false;
+
     function getSessionId() {
-        // 1. 우선 URL 주소창에서 sessionId가 있는지 확인합니다.
-        const urlParams = new URLSearchParams(window.location.search);
-        let sessionId = urlParams.get('sessionId');
-
-        // 2. 만약 URL에 없다면(직접 접속 등), 현재 창의 sessionStorage를 확인합니다.
-        if (!sessionId) {
-            sessionId = sessionStorage.getItem("CHAT_SESSION_ID");
-        }
-
-        // 3. 둘 다 없으면 최후의 수단으로 새로 생성합니다.
+        let sessionId = sessionStorage.getItem("CHAT_SESSION_ID");
         if (!sessionId) {
             sessionId = crypto.randomUUID();
+            sessionStorage.setItem("CHAT_SESSION_ID", sessionId);
         }
-
-        // 4. 가져온 ID를 현재 창의 세션스토리지에 저장하여 새로고침 시에도 유지되게 합니다.
-        sessionStorage.setItem("CHAT_SESSION_ID", sessionId);
         return sessionId;
     }
 
-    function authHeaders() {
-        return {
-            'Content-Type': 'application/json',
-            'X-Session-Id': getSessionId()
-        };
-    }
-
+    function authHeaders() { return { 'Content-Type': 'application/json', 'X-Session-Id': getSessionId() }; }
     function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
     function linkify(text) { return text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" style="color:inherit; font-weight:600;">${url}</a>`); }
     function nowTime() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 
-    const msgDomMap = new Map();
+    function setIsUpdating(loading) {
+        isProcessing = loading;
+        const input = document.getElementById("messageInput");
+        const btn = document.getElementById("sendBtn");
+        const wrapper = document.getElementById("inputWrapper");
+
+        input.disabled = loading;
+        btn.disabled = loading;
+
+        if (loading) {
+            wrapper.classList.add("loading");
+            input.placeholder = "답변을 생성하고 있습니다...";
+        } else {
+            wrapper.classList.remove("loading");
+            input.placeholder = "궁금한 규정에 대해 물어보세요...";
+            input.focus();
+        }
+    }
+
+    function moveToParent(url) {
+        if (window.opener && !window.opener.closed) {
+            window.opener.location.href = url;
+            window.opener.focus();
+        } else { window.location.href = url; }
+    }
 
     function appendBubble({ role, senderLabel, content, messageId, createdAt }) {
         const box = document.getElementById("messages");
         const group = document.createElement("div");
+        const isBot = role !== "USER";
+        group.className = isBot ? "msg-group bot" : "msg-group me";
 
-        const isGuide = senderLabel === "시스템 가이드";
-        group.className = (role === "USER") ? "msg-group me" : (isGuide ? "msg-group bot guide" : "msg-group bot");
+        const isThinking = (isBot && !content && senderLabel !== "시스템 가이드");
+        const avatarClass = isThinking ? "avatar thinking" : "avatar";
 
-        let html = "";
-        if (role !== "USER") {
-            html += `<div class="avatar">${isGuide ? '📍' : '🤖'}</div>`;
-        }
+        // ✅ 정적 "..." 텍스트 삽입
+        const displayContent = isThinking ? `<span class="thinking-dots">...</span>` : linkify(escapeHtml(content ?? ""));
 
-        const safeContent = linkify(escapeHtml(content ?? ""));
+        let html = isBot ? `<div class="${avatarClass}">🤖</div>` : "";
         const time = createdAt ? new Date(createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : nowTime();
 
-        html += `
-            <div class="msg-content">
-                <div class="bubble">${safeContent}</div>
-                <span class="time-info">${time}</span>
-            </div>
-        `;
-
+        html += `<div class="msg-content"><div class="bubble">${displayContent}</div><span class="time-info">${time}</span></div>`;
         group.innerHTML = html;
         box.appendChild(group);
 
         if (messageId) {
-            msgDomMap.set(messageId, { bubbleEl: group.querySelector(".bubble"), timeEl: group.querySelector(".time-info") });
+            msgDomMap.set(messageId, {
+                bubbleEl: group.querySelector(".bubble"),
+                timeEl: group.querySelector(".time-info"),
+                avatarEl: group.querySelector(".avatar"),
+                isThinking: isThinking
+            });
         }
-
         box.scrollTop = box.scrollHeight;
         return group;
     }
 
-    // [시스템 가이드] 탭 진입 시 최초 노출
     async function showDocumentGuide() {
         try {
             const res = await fetch("/api/v1/prov-documents/chatbot?size=100", { method: "GET", headers: authHeaders() });
@@ -250,20 +305,18 @@
             const docs = raw?.data?.content ?? [];
             if (docs.length > 0) {
                 const listText = docs.map(d => `• ${d.docTitle}`).join("\n");
-                appendBubble({
-                    role: "ASSISTANT",
-                    senderLabel: "시스템 가이드",
-                    content: `안녕하세요! 😊 현재 아래 규정들에 대해 질문하실 수 있습니다.\n\n${listText}\n\n무엇이 궁금하신가요?`
-                });
+                appendBubble({ role: "ASSISTANT", senderLabel: "시스템 가이드", content: `안녕하세요! 😊 질문하실 수 있는 규정 목록입니다.\n\n${listText}` });
             }
         } catch (e) { console.error("가이드 로드 실패:", e); }
     }
 
     async function sendQuestion() {
+        if (isProcessing) return;
         const input = document.getElementById("messageInput");
         const question = input.value.trim();
         if (!question) return;
 
+        setIsUpdating(true);
         appendBubble({ role: "USER", content: question });
         input.value = "";
         input.style.height = "auto";
@@ -276,16 +329,17 @@
             });
             const raw = await res.json();
             if(raw.data?.assistantMessageId) {
-                // 답변을 위한 빈 버블 미리 생성
-                appendBubble({role:"ASSISTANT", messageId:raw.data.assistantMessageId, content:""});
+                appendBubble({ role: "ASSISTANT", messageId: raw.data.assistantMessageId, content: "" });
             }
-        } catch (e) { console.error("전송 오류:", e); }
+        } catch (e) {
+            console.error("전송 오류:", e);
+            setIsUpdating(false);
+        }
     }
 
-    let es = null;
     function connectSse() {
         const sId = getSessionId();
-        es = new EventSource(`/api/v1/chatbot/stream?sessionId=${sId}`, { withCredentials: true });
+        const es = new EventSource(`/api/v1/chatbot/stream?sessionId=${sId}`, { withCredentials: true });
 
         es.addEventListener("connected", () => {
             document.getElementById("statusText").innerText = "온라인";
@@ -296,9 +350,34 @@
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
             if(ref) {
-                ref.bubbleEl.innerText += data.delta;
-                const msgsContainer = document.getElementById("messages");
-                msgsContainer.scrollTop = msgsContainer.scrollHeight;
+                if (ref.isThinking) {
+                    if (ref.avatarEl) ref.avatarEl.classList.remove("thinking");
+                    ref.bubbleEl.innerHTML = ""; // ✅ "..." 싹 지우기
+                    ref.isThinking = false;
+                }
+
+                // 텍스트 출력
+                const textNode = document.createTextNode(data.delta);
+                ref.bubbleEl.appendChild(textNode);
+
+                document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+            }
+        });
+
+        es.addEventListener("action", (e) => {
+            const data = JSON.parse(e.data);
+            const ref = msgDomMap.get(data.messageId);
+            if (ref && data.url) {
+                if (ref.bubbleEl.querySelector(".action-area")) return;
+                const actionArea = document.createElement("div");
+                actionArea.className = "action-area";
+                actionArea.innerHTML = `
+                    <button class="action-btn" onclick="moveToParent('${data.url}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        <span>${escapeHtml(data.label || '페이지로 이동')}</span>
+                    </button>`;
+                ref.bubbleEl.appendChild(actionArea);
+                document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
             }
         });
 
@@ -306,27 +385,23 @@
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
             if(ref) ref.timeEl.innerText = nowTime();
+            setIsUpdating(false);
         });
+
+        es.onerror = () => { setIsUpdating(false); };
     }
 
     window.addEventListener("load", () => {
         connectSse();
         showDocumentGuide();
-
         const input = document.getElementById("messageInput");
-
-        // 자동 높이 조절 및 바이트 체크
         input.addEventListener("input", function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
             document.getElementById("byteInfo").innerText = `${new TextEncoder().encode(this.value).length} / 61440 bytes`;
         });
-
-        // [수정된 부분] 한글 입력 중복 방지 로직 (e.isComposing)
         input.addEventListener("keydown", e => {
-            // 한글 조합 중일 때는 엔터 이벤트를 무시하여 중복 전송 방지
-            if (e.isComposing) return;
-
+            if (e.isComposing || isProcessing) return;
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendQuestion();

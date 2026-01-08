@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 /**
- * Please explain the class!!!
+ * 문서양식 서비스(함수 선언부)
  *
  * @author : 정종원
  * @filename : DocFormService

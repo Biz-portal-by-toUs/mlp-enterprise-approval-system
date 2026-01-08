@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResChatRoomUpdateDto;
+import com.multi.mlpenterpriseapprovalsystem.chat.dto.ResUserStatusUpdateDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
@@ -43,7 +44,6 @@ public class ChatRedisSubscriber implements MessageListener {
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
 
         try {
-            // 방 메시지 브로드캐스트
             if (channel.startsWith("room:")) {
                 ResChatMessageDto dto = objectMapper.readValue(body, ResChatMessageDto.class);
                 String roomNo = channel.split(":")[1];
@@ -51,7 +51,6 @@ public class ChatRedisSubscriber implements MessageListener {
                 return;
             }
 
-            // 유저별 방 목록 업데이트
             if (channel.startsWith("user:") && channel.endsWith(":room-update")) {
 
                 ResChatRoomUpdateDto dto = objectMapper.readValue(body, ResChatRoomUpdateDto.class);
@@ -64,6 +63,13 @@ public class ChatRedisSubscriber implements MessageListener {
                         "/sub/chat/room-updates",
                         dto
                 );
+                return;
+            }
+
+            if (channel.equals("user:status-update")) {
+                ResUserStatusUpdateDto dto = objectMapper.readValue(body, ResUserStatusUpdateDto.class);
+
+                messagingTemplate.convertAndSend("/sub/public/user-status", dto);
                 return;
             }
 

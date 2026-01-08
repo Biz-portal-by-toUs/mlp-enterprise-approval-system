@@ -889,6 +889,15 @@
             const startedDate = formData.get("startedAt");
             const endedDate = formData.get("endedAt");
 
+            // ✅ [추가] 팝업 기간 validation
+            if (isPopup === "true" && startedDate && endedDate) {
+                if (startedDate > endedDate) {
+                    alert("팝업 시작일은 종료일보다 클 수 없습니다.");
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
             if (isPopup === "true") {
                 if (startedDate) formData.set("startedAt", `${startedDate}T00:00:00`);
                 if (endedDate) formData.set("endedAt", `${endedDate}T23:59:59`);
@@ -896,6 +905,7 @@
                 formData.delete("startedAt");
                 formData.delete("endedAt");
             }
+
 
             try {
                 const response = await fetch('/api/v1/notice', {
