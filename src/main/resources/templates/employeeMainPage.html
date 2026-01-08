@@ -473,6 +473,11 @@
         /* =========================
         Portal Dashboard Base (기존 유지)
         ========================== */
+
+        /* 1. 최상단에 전역 박스 모델 설정 추가 (패딩 때문에 너비가 넓어지는 현상 방지) */
+        .portal, .portal * {
+            box-sizing: border-box;
+        }
         .portal {
             --gap: 16px;
             --bd: 1px solid rgba(0, 0, 0, 0.12);
@@ -484,17 +489,21 @@
             --accent-purple: #6f42c1;
             --line: #eeeeee;
 
+            /* 2. 전체 너비 설정 최적화 */
             max-width: 1760px;
-            width: min(1760px, calc(100vw - 36px));
+            width: 100%;             /* 100vw 대신 100% 사용 */
             margin: 0 auto;
             padding: 16px;
             color: var(--text);
             font-family: 'Malgun Gothic', 'dotum', sans-serif;
+            overflow-x: hidden;      /* 가로 스크롤 방지 강제화 */
         }
 
+        /* 3. 그리드 컬럼을 유연하게 변경 (핵심 수정) */
         .portal-grid {
             display: grid;
-            grid-template-columns: 380px 1fr 380px;
+            /* 고정 380px 대신 minmax를 사용하여 화면이 좁아지면 컬럼도 같이 줄어들게 함 */
+            grid-template-columns: minmax(300px, 380px) 1fr minmax(300px, 380px);
             gap: var(--gap);
             align-items: start;
         }
@@ -669,7 +678,12 @@
         .clock-mini .time { font-size: 28px; font-weight: bold; }
         .clock-mini .date { font-size: 13px; opacity: 0.8; }
 
-        @media (max-width: 1300px) { .portal-grid { grid-template-columns: 1fr; } }
+        /* 4. 브레이크포인트 조정 (반응형 시점) */
+        @media (max-width: 1400px) { /* 1300px에서 1400px로 상향 조정 */
+            .portal-grid {
+                grid-template-columns: 1fr; /* 화면이 작아지면 한 줄로 쌓기 */
+            }
+        }
     </style>
 </th:block>
 
