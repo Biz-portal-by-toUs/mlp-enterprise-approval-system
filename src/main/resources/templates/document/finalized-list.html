@@ -645,6 +645,12 @@
             docs.forEach((doc, index) => {
                 const no = (currentPage * pageSize) + index + 1;
                 const tr = document.createElement('tr');
+
+                // AI 요약 버튼 (안정적인 데이터 처리 방식)
+                const aiSummBtn = doc.aiSumm
+                    ? `<button type="button" class="page-btn-nav ai-summary-btn" style="padding:4px 10px;" data-summary="${escapeHtml(doc.aiSumm)}">보기</button>`
+                    : '-';
+
                 tr.innerHTML = `
                     <td>${no}</td>
                     <td>${doc.docId || '-'}</td>
@@ -654,14 +660,24 @@
                     <td>${doc.writer}<br><span style="font-size:12px;color:#868e96;">${doc.writerId}</span></td>
                     <td>${formatDate(doc.submittedAt)}</td>
                     <td>${formatDate(doc.updatedAt)}</td>
-                    <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
+                    <td>${aiSummBtn}</td>
                 `;
 
-                // ✅ 제목 셀에만 클릭 이벤트 직접 할당
+                // 제목 셀에만 클릭 이벤트 직접 할당
                 const titleCell = tr.querySelector('.title-cell');
                 titleCell.addEventListener('click', () => {
                     location.href = `/documents/${doc.docNo}?status=FINALIZED`;
                 });
+
+                // AI 요약 버튼 클릭 이벤트 바인딩
+                const summaryBtn = tr.querySelector('.ai-summary-btn');
+                if (summaryBtn) {
+                    summaryBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const summary = e.currentTarget.getAttribute('data-summary');
+                        showAiSummaryModal(summary);
+                    });
+                }
 
                 tbody.appendChild(tr);
             });
@@ -711,7 +727,8 @@
         }
 
         function showAiSummaryModal(summary) {
-            document.getElementById('ai-summary-text').textContent = summary || '내용 없음';
+            const formattedSummary = summary ? summary.replace(/\\n/g, '\n') : '내용 없음';
+            document.getElementById('ai-summary-text').textContent = formattedSummary;
             document.getElementById('ai-summary-modal').classList.add('show');
         }
 
@@ -720,7 +737,14 @@
         }
 
         function escapeHtml(text) {
-            return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;")
+                .replace(/\n/g, "\\n");
         }
 
         function formatDate(str) {
