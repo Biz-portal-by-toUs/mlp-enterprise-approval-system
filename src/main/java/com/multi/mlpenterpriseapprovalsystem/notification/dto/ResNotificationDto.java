@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class NotificationResponseDto {
+public class ResNotificationDto {
 
     private Long notiNo;           // 알림 고유 번호 (Cursor ID로 사용)
     private String content;        // 알림 내용
@@ -30,8 +30,8 @@ public class NotificationResponseDto {
     /**
      * Entity를 DTO로 변환하는 정적 팩토리 메서드
      */
-    public static NotificationResponseDto fromEntity(Notifications entity) {
-        return NotificationResponseDto.builder()
+    public static ResNotificationDto fromEntity(Notifications entity) {
+        return ResNotificationDto.builder()
                 .notiNo(entity.getNotiNo())
                 .content(entity.getContent())
                 .title(entity.getTitle())

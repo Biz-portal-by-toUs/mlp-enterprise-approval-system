@@ -3,7 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.notification.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
-import com.multi.mlpenterpriseapprovalsystem.notification.dto.NotificationResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.notification.dto.ResNotificationDto;
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public ResponseEntity<ResponseDto<List<NotificationResponseDto>>> getNotifications(
+    public ResponseEntity<ResponseDto<List<ResNotificationDto>>> getNotifications(
             @RequestParam(name = "type", required = false) NotificationType type,
             @RequestParam(name = "lastNotifiedAt", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime cursorAt,
@@ -41,7 +41,7 @@ public class NotificationController {
 
         String empId = user.getUsername();
 
-        List<NotificationResponseDto> notifications =
+        List<ResNotificationDto> notifications =
                 notificationService.getNotifications(empId, type, cursorAt, cursorId, size);
 
         return ResponseEntity

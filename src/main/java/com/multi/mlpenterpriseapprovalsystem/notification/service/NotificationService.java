@@ -7,7 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
-import com.multi.mlpenterpriseapprovalsystem.notification.dto.NotificationResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.notification.dto.ResNotificationDto;
 import com.multi.mlpenterpriseapprovalsystem.notification.redis.RedisNotificationPublisher;
 import com.multi.mlpenterpriseapprovalsystem.notification.repository.NotificationsRepository;
 import lombok.RequiredArgsConstructor;
@@ -68,13 +68,13 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public List<NotificationResponseDto> getNotifications(String empId, NotificationType type, LocalDateTime cursorAt, Long cursorId, int size) {
+    public List<ResNotificationDto> getNotifications(String empId, NotificationType type, LocalDateTime cursorAt, Long cursorId, int size) {
         Pageable pageable = PageRequest.of(0, size);
 
         List<Notifications> list = notificationsRepository.findNotificationsByCursor(empId, type, cursorAt, cursorId, pageable);
 
         return list.stream()
-                .map(NotificationResponseDto::fromEntity)
+                .map(ResNotificationDto::fromEntity)
                 .collect(Collectors.toList());
     }
 

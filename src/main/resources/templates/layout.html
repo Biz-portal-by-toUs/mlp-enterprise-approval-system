@@ -1036,39 +1036,8 @@
         return {};
     }
 
-    /* ✅ 1. 알림 관련 로직 */
-    function updateNotiBadge(count) {
-        const badge = document.getElementById('notiBadge');
-        if (!badge) return;
-        if (count > 0) {
-            badge.innerText = count > 99 ? '99+' : count;
-            badge.style.display = 'flex';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
 
-    function showNotiToast(message, url) {
-        let container = document.querySelector('.toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'toast-container';
-            document.body.appendChild(container);
-        }
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `<span>🔔</span> <span>${message}</span>`;
-        if (url) {
-            toast.onclick = () => {
-                location.href = url;
-            };
-        }
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 500);
-        }, 4000);
-    }
+
 
     function toggleNoti(force) {
         const panel = document.getElementById('notiPanel');
@@ -1096,38 +1065,132 @@
         }
     }
 
+    /* ==========================================
+   🚀 알림 시스템 통합 로직 (배지 + 토스트 + 읽음)
+   ========================================== */
 
+    /* 1. 알림 배지 UI 업데이트 */
+    function updateNotiBadge(count) {
+        const badge = document.getElementById('notiBadge');
+        if (!badge) return;
 
-    async function initNotificationSystem() {
-        const empId = document.getElementById('me')?.dataset?.empNo;
-        if (!empId) return;
+        const num = parseInt(count);
+        if (num > 0) {
+            badge.innerText = num > 99 ? '99+' : num;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
 
+    /* 2. 서버에서 안 읽은 알림 개수 직접 가져오기 */
+    async function refreshUnreadCount() {
         try {
-            const res = await fetch('/api/v1/notifications/unread-count');
+            const res = await fetch('/api/v1/notifications/unread-count', {
+                credentials: 'include' // 세션 유지를 위해 필수
+            });
             if (res.ok) {
                 const result = await res.json();
+                // NotificationController 응답 구조(ResponseDto.data)에 맞춰 반영
                 updateNotiBadge(result.data);
             }
-        } catch (e) { console.error("초기 알림 카운트 로드 실패", e); }
+        } catch (e) {
+            console.error("📌 [Badge] 알림 카운트 로드 실패:", e);
+        }
+    }
 
-        const eventSource = new EventSource('/api/v1/notifications/stream', {
-            withCredentials: true
-        });
+    /* 3. 실시간 알림 토스트 표시 및 클릭 시 읽음 처리 */
+    async function showNotiToast(message, url, notiNo) { // ✅ 변수명 notiNo로 통일
+        console.log("📌 [Toast] 수신 - 번호:", notiNo, "URL:", url);
+
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.style.cursor = 'pointer';
+        toast.innerHTML = `<span>🔔</span> <span>${message || '새 알림이 있습니다.'}</span>`;
+
+        // ✅ 토스트 클릭 이벤트 (읽음 처리 후 이동)
+        toast.onclick = async () => {
+            if (notiNo) {
+                try {
+                    // 1. 읽음 처리 API 호출 (notiNo 사용)
+                    await fetch(`/api/v1/notifications/${notiNo}/read`, {
+                        method: 'PATCH',
+                        headers: {
+                            ...getCsrfHeader(),
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'include'
+                    });
+                    // 2. 읽음 처리 성공 후 배지 숫자 갱신
+                    await refreshUnreadCount();
+                } catch (e) {
+                    console.error("📌 [Toast] 읽음 처리 실패:", e);
+                }
+            }
+
+            // 3. 페이지 이동
+            if (url && url !== '#' && url !== 'null') {
+                location.href = url;
+            } else {
+                toast.remove();
+            }
+        };
+
+        container.appendChild(toast);
+        setTimeout(() => { if(toast.parentElement) toast.remove(); }, 5000);
+    }
+
+    /* 4. SSE 연결 및 실시간 알림 수신 */
+    async function initNotificationSystem() {
+        const meEl = document.getElementById('me');
+        const empId = meEl?.dataset?.empNo;
+        if (!empId) return;
+
+        // 초기 로딩 시 배지 숫자 세팅
+        await refreshUnreadCount();
+
+        // SSE 연결
+        const eventSource = new EventSource('/api/v1/notifications/stream', { withCredentials: true });
 
         eventSource.addEventListener('notification', (e) => {
-            const data = JSON.parse(e.data);
-            updateNotiBadge(data.unreadCount);
+            try {
+                const data = JSON.parse(e.data);
+                console.log("📌 [SSE] 수신:", data);
 
-            showNotiToast(data.notification.content, data.notification.url);
+                // 실시간 배지 숫자 업데이트 (서버에서 unreadCount를 같이 보내줄 때)
+                if (data.unreadCount !== undefined) {
+                    updateNotiBadge(data.unreadCount);
+                }
 
-            const iframe = document.getElementById('notiIframe');
-            if (iframe && iframe.contentWindow && typeof iframe.contentWindow.appendRealtimeNoti === 'function') {
-                iframe.contentWindow.appendRealtimeNoti(data.notification);
+                // 토스트 띄우기 (id 대신 notiNo 사용)
+                if (data.notification) {
+                    showNotiToast(
+                        data.notification.content,
+                        data.notification.url,
+                        data.notification.notiNo // ✅ 서버 필드명에 맞춰 notiNo 사용
+                    );
+                }
+            } catch (err) {
+                console.error("📌 [SSE] 파싱 에러:", err);
             }
         });
 
-        eventSource.onerror = () => { console.warn("SSE 연결 끊김, 재연결 시도 중..."); };
+        eventSource.onerror = () => { console.warn("📌 [SSE] 연결 끊김, 재연결 시도 중..."); };
     }
+
+
+
+
+
+
+
 
     /* ✅ 2. 기존 로직 */
     function toggleChat(force) {
