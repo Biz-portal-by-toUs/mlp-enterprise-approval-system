@@ -9,6 +9,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * Please explain the class!!!
  *
@@ -142,4 +144,18 @@ public class Attachment extends BaseEntity {
     public void changeDisplayOrder(Integer displayOrder) {
         this.displayOrder = displayOrder;
     }
+
+    public void rename(String originalName, String ext) {
+        this.originalName = originalName;
+        this.ext = ext;
+    }
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 7)
+    private String deletedBy;
+
+    @Column(name = "delete_batch_id", length = 36)
+    private String deleteBatchId;
 }
