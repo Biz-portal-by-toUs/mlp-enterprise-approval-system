@@ -17,18 +17,23 @@
         }
 
         /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
-
         /* ===== page-only namespace: ms-* (mail sent) ===== */
+
+        /* ===== toolbar ===== */
         .ms-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
         .ms-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
         .ms-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 
+        /* ===== inputs ===== */
         .ms-searchWrap{
             flex:1;max-width:420px;display:flex;align-items:center;height:40px;
             border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;
         }
         .ms-searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
+        .ms-dateWrap{flex:0 0 auto;max-width:160px;}
+        .ms-dateInput{font-size:14px;}
 
+        /* ===== buttons ===== */
         .ms-btn{
             height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:800;
             cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;
@@ -36,7 +41,9 @@
         .ms-btn:hover{filter:brightness(0.9);}
         .ms-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
         .ms-btn.ghost:hover{background:#f8fafc;filter:none;}
+        .ms-btn:disabled{opacity:.6;cursor:not-allowed;}
 
+        /* ===== table ===== */
         .ms-tableWrap{
             width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
             overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);
@@ -53,20 +60,26 @@
         table.ms-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
 
         /* ===== columns (sent) ===== */
-        th.ms-col-no, td.ms-col-no{ width:90px; }
+        th.ms-col-check, td.ms-col-check{ width:56px; }
+        .ms-check{
+            width:16px;height:16px;
+            accent-color: var(--primary);
+            cursor:pointer;
+        }
+        .ms-check:disabled{opacity:.6;cursor:not-allowed;}
+
         th.ms-col-star, td.ms-col-star{ width:60px; }
         th.ms-col-date, td.ms-col-date{ width:180px; }
         th.ms-col-recv, td.ms-col-recv{ width:180px; }
 
         th.ms-col-title-h{text-align:left;padding-left:20px;}
         td.ms-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
-
         .ms-titleLink{
             color:var(--primary);text-decoration:none;display:block;width:100%;
             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;
         }
 
-        /* ===== 중요(별) ===== */
+        /* ===== star ===== */
         .ms-starBtn{
             display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
             border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;
@@ -75,8 +88,11 @@
         .ms-starBtn:hover{background:#f8fafc;border-color:var(--line);}
         .ms-starBtn:disabled{opacity:.6;cursor:not-allowed;}
 
+        /* ===== selected row ===== */
+        .ms-mailTable tbody tr.is-selected td{ background:#f8fafc; }
+
         /* ===== pager ===== */
-        .ms-pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .ms-pager-wrapper{display:flex;align-items:center;justify-content:center;margin-top:16px;}
         .ms-pager{display:flex;align-items:center;gap:4px;}
         .ms-pageBtn{
             min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
@@ -86,10 +102,17 @@
         .ms-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
         .ms-pageBtn.active:hover{filter:brightness(0.9);}
 
-        .ms-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        /* ===== count pill (메일쓰기 밑) ===== */
+        .ms-countPill{
+            margin-top:6px;
+            text-align:right;
+            font-size:14px;
+            font-weight:800;
+            color:var(--primary);
+        }
 
+        /* ===== responsive ===== */
         @media (max-width:760px){
-            .ms-pager-status{position:static;margin-left:10px;}
             th.ms-col-date, td.ms-col-date{ width:140px; }
             th.ms-col-recv, td.ms-col-recv{ width:140px; }
         }
@@ -105,13 +128,26 @@
             <div class="ms-toolbar">
                 <div class="ms-toolbar-left">
                     <div class="ms-searchWrap">
-                        <input id="q" class="ms-searchInput" type="text" placeholder="제목 검색"/>
+                        <input id="keyword" class="ms-searchInput" type="text" placeholder="제목 검색"/>
                     </div>
+
+                    <!-- 기간(from/to) -->
+                    <div class="ms-searchWrap ms-dateWrap">
+                        <input id="from" class="ms-searchInput ms-dateInput" type="date" aria-label="시작일"/>
+                    </div>
+                    <span style="color:var(--mut); font-weight:800;">~</span>
+                    <div class="ms-searchWrap ms-dateWrap">
+                        <input id="to" class="ms-searchInput ms-dateInput" type="date" aria-label="종료일"/>
+                    </div>
+
                     <button class="ms-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
                 <div class="ms-toolbar-right">
+                    <button class="ms-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
+
                     <button class="ms-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
+                    <div id="countPill" class="ms-countPill">0건</div>
                 </div>
             </div>
 
@@ -119,7 +155,9 @@
                 <table class="ms-mailTable">
                     <thead>
                     <tr>
-                        <th class="ms-col-no">번호</th>
+                        <th class="ms-col-check">
+                            <input id="checkAll" class="ms-check" type="checkbox" aria-label="전체 선택"/>
+                        </th>
                         <th class="ms-col-star">중요</th>
                         <th class="ms-col-recv">수신인</th>
                         <th class="ms-col-title-h">제목</th>
@@ -132,22 +170,43 @@
 
             <div class="ms-pager-wrapper">
                 <div id="pagerControls" class="ms-pager"></div>
-
-                <div class="ms-pager-status">
-                    <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
-                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
-                </div>
             </div>
 
             <script>
-                // ===== constants (paging 10 fixed) =====
+                // ===== constants =====
                 const PAGE_SIZE = 10;
 
+                // ===== common utils =====
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
                     return {};
+                }
+
+                function todayYmd(){
+                    const d = new Date();
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth()+1).padStart(2,'0');
+                    const day = String(d.getDate()).padStart(2,'0');
+                    return `${y}-${m}-${day}`;
+                }
+
+                function syncDateConstraints(){
+                    const fromEl = document.getElementById('from');
+                    const toEl = document.getElementById('to');
+
+                    const fromVal = (fromEl.value || '').trim();
+                    const toVal = (toEl.value || '').trim();
+                    const today = todayYmd();
+
+                    toEl.max = today;
+                    toEl.min = fromVal || '';
+                    fromEl.max = toVal || today;
+
+                    if (toVal && fromVal && toVal < fromVal) toEl.value = fromVal;
+                    if (toEl.value && toEl.value > today) toEl.value = today;
+                    if (fromEl.value && toEl.value && fromEl.value > toEl.value) fromEl.value = toEl.value;
                 }
 
                 function starEmoji(isPrior){
@@ -190,6 +249,36 @@
                         .replaceAll("'","&#039;");
                 }
 
+                // ===== selection (bulk) =====
+                function getSelectedMailNos(){
+                    return Array.from(document.querySelectorAll('.rowCheck:checked'))
+                        .map(cb => cb.dataset.mailNo)
+                        .filter(Boolean);
+                }
+
+                function syncHeaderCheck(){
+                    const all = document.getElementById('checkAll');
+                    const rows = Array.from(document.querySelectorAll('.rowCheck'));
+                    const checked = rows.filter(r => r.checked);
+
+                    if (rows.length === 0){
+                        all.checked = false;
+                        all.indeterminate = false;
+                        all.disabled = true;
+                        return;
+                    }
+
+                    all.disabled = false;
+                    all.checked = checked.length === rows.length;
+                    all.indeterminate = checked.length > 0 && checked.length < rows.length;
+                }
+
+                function syncBulkUi(){
+                    const selected = getSelectedMailNos();
+                    document.getElementById('btnBulkTrash').disabled = selected.length === 0;
+                }
+
+                // ===== pager =====
                 function buildPager(page, totalPages, onGo){
                     const pager = document.getElementById('pagerControls');
                     pager.innerHTML = '';
@@ -221,6 +310,7 @@
                     pager.appendChild(mkBtn('»', last, current === last, false));
                 }
 
+                // ===== fetch =====
                 async function fetchJson(url){
                     const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
                     const json = await res.json().catch(()=> null);
@@ -233,12 +323,15 @@
                     return json?.data;
                 }
 
+                // ===== state (URL) =====
                 function getState(){
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
                         size: PAGE_SIZE,
-                        q: (params.get('q') || '').trim()
+                        keyword: (params.get('keyword') || '').trim(),
+                        from: (params.get('from') || '').trim(),
+                        to: (params.get('to') || '').trim()
                     };
                 }
 
@@ -246,30 +339,50 @@
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
                     params.set('size', String(PAGE_SIZE));
-                    if (next.q) params.set('q', next.q);
+
+                    params.set('keyword', (next.keyword || '').trim());
+                    params.set('from', (next.from || '').trim());
+                    params.set('to', (next.to || '').trim());
+
+                    if (!params.get('keyword')) params.delete('keyword');
+                    if (!params.get('from')) params.delete('from');
+                    if (!params.get('to')) params.delete('to');
+
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
+                // ===== render =====
                 function renderRows(items, page, size, totalElements){
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
+                    // 페이지 바뀔 때 선택 초기화
+                    const checkAll = document.getElementById('checkAll');
+                    checkAll.checked = false;
+                    checkAll.indeterminate = false;
+
                     if (!items || items.length === 0){
                         tb.innerHTML = `<tr><td colspan="5" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
+                        syncHeaderCheck();
+                        syncBulkUi();
                         return;
                     }
 
                     items.forEach((it, idx) => {
-                        const num = totalElements - (page * size) - idx;
+                        // (번호는 제거했지만, 기존 로직 유지용 변수 필요하면 남겨도 됨)
                         const title = escapeHtml(it.title);
                         const receivers = escapeHtml(it.receivers);
                         const createdAt = fmtDate(it.createdAt);
-
                         const isPrior = !!it.isPrior;
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="ms-col-no">${num}</td>
+                            <td class="ms-col-check">
+                                <input class="ms-check rowCheck"
+                                       type="checkbox"
+                                       data-mail-no="${escapeHtml(it.mailNo)}"
+                                       aria-label="메일 선택"/>
+                            </td>
 
                             <td class="ms-col-star">
                                 <button type="button"
@@ -287,11 +400,25 @@
                             <td class="ms-col-date">${createdAt}</td>
                         `;
 
+                        // row click (checkbox / star / a 제외)
                         tr.addEventListener('click', (e) => {
-                            if (e.target && (e.target.closest('.ms-starBtn') || e.target.tagName === 'A')) return;
+                            if (e.target && (
+                                e.target.closest('.ms-starBtn') ||
+                                e.target.tagName === 'A' ||
+                                e.target.classList.contains('rowCheck')
+                            )) return;
                             location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
                         });
 
+                        // checkbox select -> row highlight + ui sync
+                        const rowCb = tr.querySelector('.rowCheck');
+                        rowCb.addEventListener('change', () => {
+                            tr.classList.toggle('is-selected', rowCb.checked);
+                            syncHeaderCheck();
+                            syncBulkUi();
+                        });
+
+                        // star toggle
                         const starBtn = tr.querySelector('.ms-starBtn');
                         starBtn.addEventListener('click', async (e) => {
                             e.preventDefault();
@@ -317,19 +444,38 @@
 
                         tb.appendChild(tr);
                     });
+
+                    syncHeaderCheck();
+                    syncBulkUi();
                 }
 
+                // ===== api url =====
                 function buildSentApiUrl(st){
                     const params = new URLSearchParams();
                     params.set('page', String(st.page));
                     params.set('size', String(PAGE_SIZE));
-                    if (st.q) params.set('q', st.q);
+                    if (st.keyword) params.set('keyword', st.keyword);
+                    if (st.from) params.set('from', st.from);
+                    if (st.to) params.set('to', st.to);
                     return `/api/v1/mails/sent?${params.toString()}`;
                 }
 
+                // ===== bulk delete =====
+                async function bulkMoveToTrash(mailNos){
+                    await Promise.all(mailNos.map(no =>
+                        patchNoBody(`/api/v1/mails/${encodeURIComponent(no)}/trash`)
+                    ));
+                }
+
+                // ===== main load =====
                 async function load(){
                     const st = getState();
-                    document.getElementById('q').value = st.q;
+
+                    document.getElementById('keyword').value = st.keyword;
+                    document.getElementById('from').value = st.from;
+                    document.getElementById('to').value = st.to;
+
+                    syncDateConstraints();
 
                     const url = buildSentApiUrl(st);
                     const data = await fetchJson(url);
@@ -338,28 +484,69 @@
                     renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
-                    document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
                     buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, q:st.q });
+                        setUrlState({ page:p, keyword:st.keyword, from:st.from, to:st.to });
                         load().catch(console.error);
                     });
                 }
 
+                // ===== events =====
                 document.getElementById('btnSearch').addEventListener('click', () => {
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, q });
+                    syncDateConstraints();
+
+                    const keyword = (document.getElementById('keyword').value || '').trim();
+                    const from = (document.getElementById('from').value || '').trim();
+                    const to = (document.getElementById('to').value || '').trim();
+
+                    setUrlState({ page:0, keyword, from, to });
                     load().catch(console.error);
                 });
 
-                document.getElementById('q').addEventListener('keydown', (e) => {
+                document.getElementById('keyword').addEventListener('keydown', (e) => {
                     if (e.key === 'Enter'){
                         e.preventDefault();
                         document.getElementById('btnSearch').click();
                     }
                 });
 
+                document.getElementById('from').addEventListener('change', () => {
+                    syncDateConstraints();
+                });
+
+                document.getElementById('to').addEventListener('change', () => {
+                    syncDateConstraints();
+                });
+
+                document.getElementById('checkAll').addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    document.querySelectorAll('.rowCheck').forEach(cb => {
+                        cb.checked = checked;
+                        cb.closest('tr')?.classList.toggle('is-selected', checked);
+                    });
+                    syncHeaderCheck();
+                    syncBulkUi();
+                });
+
+                document.getElementById('btnBulkTrash').addEventListener('click', async () => {
+                    const mailNos = getSelectedMailNos();
+                    if (mailNos.length === 0) return;
+
+                    if (!confirm(`선택한 ${mailNos.length}건을 삭제(휴지통 이동)할까요?`)) return;
+
+                    try{
+                        await bulkMoveToTrash(mailNos);
+                        await load();
+                    }catch(err){
+                        console.error(err);
+                        alert('삭제 처리에 실패했습니다.');
+                    }
+                });
+
                 window.addEventListener('DOMContentLoaded', () => {
+                    document.getElementById('to').max = todayYmd();
+                    syncDateConstraints();
+
                     load().catch(err => {
                         console.error(err);
                         document.getElementById('tbody').innerHTML =
