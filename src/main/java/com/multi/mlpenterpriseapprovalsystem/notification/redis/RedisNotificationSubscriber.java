@@ -5,7 +5,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.sse.SseManager;
 import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
-import com.multi.mlpenterpriseapprovalsystem.notification.dto.NotificationResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.notification.dto.ResNotificationDto;
 import com.multi.mlpenterpriseapprovalsystem.notification.repository.NotificationsRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
@@ -77,7 +77,7 @@ public class RedisNotificationSubscriber implements MessageListener {
         long unreadCount = notificationsRepository.countByReceiver_EmpIdAndIsReadFalse(empId);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("notification", NotificationResponseDto.fromEntity(noti));
+        data.put("notification", ResNotificationDto.fromEntity(noti));
         data.put("unreadCount", unreadCount);
 
         sseManager.sendToUser(empId, "notification", data);
