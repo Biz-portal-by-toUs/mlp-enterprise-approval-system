@@ -139,7 +139,7 @@
             <div class="mi-toolbar">
                 <div class="mi-toolbar-left">
                     <div class="mi-searchWrap">
-                        <input id="keyword" class="mi-searchInput" type="text" placeholder="제목 검색"/>
+                        <input id="keyword" class="mi-searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
                     </div>
                     <!-- 기간(from/to) -->
                     <div class="mi-searchWrap mi-dateWrap">
@@ -166,7 +166,7 @@
                     <thead>
                     <tr>
                         <th class="mi-col-check">
-                            <input id="checkAll" type="checkbox" aria-label="전체 선택"/>
+                            <input id="checkAll" class="mi-check" type="checkbox" aria-label="전체 선택"/>
                         </th>
                         <th class="mi-col-star">중요</th>
                         <th class="mi-col-read">읽음</th>
@@ -187,6 +187,7 @@
                 // ===== constants =====
                 const PAGE_SIZE = 10;
                 const INBOX_ROLE = 'RECIPIENT';
+                const KEYWORD_MAX = 50;
 
                 // ===== auth / headers =====
                 function getMeEmpId(){
@@ -201,6 +202,11 @@
                 }
 
                 // ===== format / utils =====
+                function clampKeyword(s){
+                    const v = (s || '').trim();
+                    return v.length > KEYWORD_MAX ? v.slice(0, KEYWORD_MAX) : v;
+                }
+
                 function todayYmd(){
                     const d = new Date();
                     const y = d.getFullYear();
@@ -314,7 +320,7 @@
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
                         size: PAGE_SIZE,
-                        keyword: (params.get('keyword') || '').trim(),
+                        keyword: clampKeyword(params.get('keyword') || ''),
                         from: (params.get('from') || '').trim(),
                         to: (params.get('to') || '').trim()
                     };
@@ -491,7 +497,7 @@
 
                     const st = getState();
 
-                    document.getElementById('keyword').value = st.keyword;
+                    document.getElementById('keyword').value = clampKeyword(st.keyword);
                     document.getElementById('from').value = st.from;
                     document.getElementById('to').value = st.to;
 
@@ -515,12 +521,19 @@
                 document.getElementById('btnSearch').addEventListener('click', () => {
                     syncDateConstraints();
 
-                    const keyword = (document.getElementById('keyword').value || '').trim();
+                    const keyword = clampKeyword(document.getElementById('keyword').value);
+                    document.getElementById('keyword').value = keyword;
                     const from = (document.getElementById('from').value || '').trim();
                     const to = (document.getElementById('to').value || '').trim();
 
                     setUrlState({ page:0, keyword, from, to });
                     load().catch(console.error);
+                });
+
+                document.getElementById('keyword').addEventListener('input', () => {
+                    const el = document.getElementById('keyword');
+                    const v = clampKeyword(el.value);
+                    if (el.value !== v) el.value = v;
                 });
 
                 document.getElementById('keyword').addEventListener('keydown', (e) => {
