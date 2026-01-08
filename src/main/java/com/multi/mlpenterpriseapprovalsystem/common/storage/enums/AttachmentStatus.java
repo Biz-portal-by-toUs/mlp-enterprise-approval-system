@@ -8,7 +8,5 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.enums;
  * @since : 2025. 12. 24. 수요일
  */
 public enum AttachmentStatus {
-    ACTIVE, DELETED, PURGED
+    ACTIVE, DELETED
 }
-
-// 스케줄러가 S3 삭제까지 끝냈으면 PURGED

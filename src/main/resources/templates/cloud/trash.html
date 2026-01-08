@@ -27,11 +27,9 @@
 
             /* =========================================================
                1) SIDEBAR (tabs / tree / footer dock)
-               - 휴지통 페이지에서도 sidebar 깨지지 않게 필요한 것만 포함
             ========================================================= */
             .cloud-page .subbar{ display:flex; flex-direction:column; }
 
-            /* 트리만 스크롤 + footer 고정 */
             .cloud-subbar{
                 display:flex;
                 flex-direction:column;
@@ -46,7 +44,6 @@
             }
             .cloud-tree{ list-style:none; margin:0; padding:0; }
 
-            /* scope tabs */
             .cloud-scope-tabs{
                 display:grid;
                 grid-template-columns: 1fr 1fr;
@@ -75,9 +72,7 @@
                 border-color:transparent;
             }
 
-            /* footer(휴지통) */
-
-            .cloud-sidebar-footer {
+            .cloud-sidebar-footer{
                 flex: 0 0 auto;
                 padding: 10px 12px 12px;
                 border-top: 1px solid rgba(59, 130, 246, .14);
@@ -85,22 +80,19 @@
             }
             .cloud-footer-link{
                 display: grid;
-                grid-template-columns: 18px 1fr 18px; /* 좌/우 동일 폭 */
+                grid-template-columns: 18px 1fr 18px;
                 align-items: center;
                 height: 38px;
                 padding: 0 12px;
                 border-radius: 12px;
                 text-decoration: none;
-
                 font-weight: 900;
                 font-size: 13px;
                 color:#1d4ed8;
                 background: rgba(59,130,246,.12);
                 border: 1px solid rgba(59,130,246,.10);
             }
-
             .cloud-footer-link:hover{ background: rgba(59,130,246,.18); }
-
             .cloud-footer-ico{
                 width: 18px;
                 height: 18px;
@@ -109,7 +101,6 @@
                 background: url("/images/icons/trash.png") center/contain no-repeat;
                 opacity: .95;
             }
-
             .cloud-footer-text{
                 justify-self: center;
                 text-align: center;
@@ -118,14 +109,11 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
-
-            /* 오른쪽 균형용 더미 */
             .cloud-footer-spacer{
                 width: 18px;
                 height: 18px;
                 justify-self: end;
             }
-
             .cloud-footer-link.active{
                 background: var(--primary);
                 color:#fff;
@@ -137,7 +125,7 @@
             }
 
             /* =========================================================
-               2) MAIN (topbar / actions / body)
+               2) MAIN
             ========================================================= */
             .cloud-main{ display:flex; flex-direction:column; min-width:0; background: var(--bg); }
 
@@ -156,8 +144,7 @@
                 margin:0;
                 color: var(--text);
             }
-            .cloud-actions{ display:flex; gap:10px; align-items:center; }
-
+            .cloud-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
             .cloud-body{ flex:1; overflow:auto; padding:18px; }
 
             /* 버튼 통일 */
@@ -180,21 +167,15 @@
             .cloud-page .btn:disabled{ opacity:.5; cursor:not-allowed; }
 
             /* =========================================================
-               3) TRASH (hint / empty / grid cards)
+               3) TRASH (grid)
             ========================================================= */
             .trash-wrap{ max-width:1080px; }
-            .trash-hint{
-                font-weight:800;
-                color: rgba(17,24,39,.55);
-                margin-bottom:10px;
-            }
             .empty{
                 color: rgba(17,24,39,.55);
                 font-weight:900;
                 padding: 18px 4px;
             }
 
-            /* 카드 그리드 */
             .file-grid{
                 display:flex;
                 flex-wrap:wrap;
@@ -264,7 +245,6 @@
                 text-overflow:ellipsis;
             }
 
-            /* 삭제 묶음 배지(개수만 표시) */
             .batch-badge{
                 position:absolute;
                 top:6px;
@@ -279,6 +259,45 @@
                 backdrop-filter: blur(6px);
             }
 
+            /* ✅ 체크박스 UI (hover=네모, selected=체크) */
+            .card-check{
+                position:absolute;
+                top:6px;
+                left:6px;
+                width:18px;
+                height:18px;
+                border-radius:6px;
+                border:2px solid rgba(59,130,246,.55);
+                background: rgba(255,255,255,.92);
+                display:none;
+                align-items:center;
+                justify-content:center;
+                box-shadow: 0 6px 14px rgba(0,0,0,.12);
+                pointer-events:none;
+            }
+            .card-check::after{
+                content:"✓";
+                font-size:12px;
+                font-weight:900;
+                line-height:1;
+                color:#fff;
+                opacity:0;
+            }
+            .folder-card:hover .card-check,
+            .file-card:hover .card-check{ display:flex; }
+
+            .folder-card.selected .card-check,
+            .file-card.selected .card-check{
+                display:flex;
+                background: var(--primary);
+                border-color: transparent;
+            }
+            .folder-card.selected .card-check::after,
+            .file-card.selected .card-check::after{ opacity:1; }
+
+            /* =========================================================
+               4) CONTEXT MENU
+            ========================================================= */
             .trash-ctx{
                 position: fixed;
                 z-index: 9999;
@@ -288,6 +307,7 @@
                 border-radius: 12px;
                 box-shadow: 0 14px 30px rgba(0,0,0,.16);
                 padding: 6px;
+                max-width: min(520px, calc(100vw - 16px));
             }
 
             .trash-ctx .ctx-btn{
@@ -323,7 +343,7 @@
                 display: grid;
                 grid-template-columns: 74px 1fr;
                 gap: 8px;
-                align-items: center;
+                align-items: start;
                 padding: 4px 0;
                 font-size: 12px;
             }
@@ -335,6 +355,15 @@
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+            }
+
+            .trash-ctx .ctx-row .v.wrap{
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                line-height: 1.35;
             }
         </style>
     </th:block>
@@ -354,7 +383,11 @@
 
                 <div class="cloud-actions">
                     <!-- PRVT일 때만 비우기 -->
-                    <button class="btn" id="btnEmpty" th:if="${trashScope} == 'PRVT'">휴지통 비우기</button>
+                    <button class="btn" id="btnPurgeSelected"
+                            th:if="${trashScope != null and trashScope.name() == 'PRVT'}" disabled>선택 삭제</button>
+
+                    <button class="btn" id="btnEmpty"
+                            th:if="${trashScope != null and trashScope.name() == 'PRVT'}">휴지통 비우기</button>
 
                     <button class="btn" id="btnReload">새로고침</button>
                 </div>
@@ -362,9 +395,6 @@
 
             <div class="cloud-body">
                 <div class="trash-wrap">
-                    <div class="trash-hint">
-                        삭제된 폴더/파일이 함께 표시됩니다. (복구는 내부적으로 삭제 묶음(batchId) 단위로 동작)
-                    </div>
 
                     <div class="file-grid" id="trashGrid"></div>
                     <div class="empty" id="trashEmpty" style="display:none;">휴지통이 비어있습니다.</div>
@@ -374,6 +404,9 @@
         <!-- ✅ 휴지통 우클릭 메뉴(기본은 숨김) -->
         <div class="trash-ctx" id="trashCtx" role="menu" aria-label="휴지통 메뉴" style="display:none;">
             <button type="button" class="ctx-btn" id="ctxRestore" role="menuitem">복구</button>
+            <button type="button" class="ctx-btn" id="ctxPurgeDeptFile" role="menuitem" style="display:none;">
+                영구삭제
+            </button>
             <button type="button" class="ctx-btn" id="ctxInfoToggle" role="menuitem">삭제 상세 정보</button>
 
             <div class="sep"></div>
@@ -384,7 +417,7 @@
 
                 <div class="ctx-row">
                     <span class="k">파일명</span>
-                    <span class="v" id="infoName">-</span>
+                    <span class="v wrap" id="infoName">-</span>
                 </div>
                 <div class="ctx-row">
                     <span class="k">파일 크기</span>
@@ -408,22 +441,35 @@
         const TRASH_SCOPE = /*[[${trashScope}]]*/ "DEPT"; // "DEPT" | "PRVT"
         const SCOPE = String(TRASH_SCOPE || "DEPT").toUpperCase();
 
+        // ✅ 선택 영구삭제 API (서버에 맞춰 수정!)
+        // 예) "/api/v1/cloud/trash/purge/prvt"
+        const PURGE_SELECTED_ENDPOINT = "/api/v1/cloud/trash/purge/prvt";
+
         const state = {
             selectedBatchId: null,
             selectedCardEl: null,
+
+            // ✅ PRVT 멀티선택용
+            selectedKeys: new Set(),
+            lastClickedIndex: null,
+            items: [],
+            itemByKey: new Map(),
         };
 
         const el = {
             grid: document.getElementById("trashGrid"),
             empty: document.getElementById("trashEmpty"),
+
             btnReload: document.getElementById("btnReload"),
-            btnEmpty: document.getElementById("btnEmpty"),
+            btnEmpty: document.getElementById("btnEmpty"),                 // PRVT 전체 비우기
+            btnPurgeSelected: document.getElementById("btnPurgeSelected"), // PRVT 선택 삭제
         };
 
         // ✅ 우클릭 메뉴 상태
         const ctx = {
             el: document.getElementById("trashCtx"),
             btnRestore: document.getElementById("ctxRestore"),
+            btnPurgeDeptFile: document.getElementById("ctxPurgeDeptFile"),
             btnInfo: document.getElementById("ctxInfoToggle"),
 
             infoWrap: document.getElementById("ctxInfo"),
@@ -435,119 +481,10 @@
             currentBatchId: null,
             currentItem: null,
             isInfoOpen: false,
+            openedAt: 0,
         };
 
-        function closeTrashCtx(){
-            if (!ctx.el) return;
-            ctx.el.style.display = "none";
-            ctx.currentBatchId = null;
-            ctx.currentItem = null;
-        }
-
-        function openTrashCtx(x, y, item, batchId){
-            if (!ctx.el) return;
-
-            ctx.currentItem = item;
-            ctx.currentBatchId = batchId || null;
-
-            // ✅ 정보 채우기(필드명은 서버에 맞게 여러 후보로)
-            const name = safe(item?.originalName || item?.name || item?.title || ("item-" + item?.id));
-            const deletedAt = fmtDate(item?.deletedAt);
-            const deletedBy =
-                safe(item?.deletedByName || item?.deletedBy || item?.deletedUserName || item?.deletedUser || item?.deleterName) || "-";
-
-            const isFolder = isFolderKind(item?.kind);
-            const sizeText = isFolder ? "폴더" : (item?.size != null ? humanBytes(item.size) : "-");
-
-            ctx.infoName.textContent = name || "-";
-            ctx.infoSize.textContent = sizeText || "-";
-            ctx.infoDeletedAt.textContent = deletedAt || "-";
-            ctx.infoDeletedBy.textContent = deletedBy || "-";
-
-            // ✅ batchId 없으면 복구 비활성
-            const b = String(batchId ?? "").trim();
-            ctx.currentBatchId = b || null;
-            ctx.btnRestore.disabled = (b.length === 0);
-
-            // ✅ 메뉴 열 때 상세정보는 항상 닫고 시작
-            ctx.isInfoOpen = false;
-            if (ctx.infoWrap) ctx.infoWrap.style.display = "none";
-            if (ctx.btnInfo) ctx.btnInfo.textContent = "삭제 상세 정보";
-
-            // ✅ 화면 밖으로 안 나가게 위치 잡기 (처음은 대략 값)
-            const menuW = 240;
-            const menuH = 110; // 상세정보 닫힌 상태 기준
-            const pad = 8;
-
-            let left = x;
-            let top = y;
-
-            const maxL = window.innerWidth - menuW - pad;
-            const maxT = window.innerHeight - menuH - pad;
-
-            if (left > maxL) left = maxL;
-            if (top > maxT) top = maxT;
-
-            ctx.el.style.left = left + "px";
-            ctx.el.style.top = top + "px";
-            ctx.el.style.display = "block";
-
-
-        }
-
-        ctx.btnInfo?.addEventListener("click", () => {
-            if (!ctx.infoWrap) return;
-
-            ctx.isInfoOpen = !ctx.isInfoOpen;
-            ctx.infoWrap.style.display = ctx.isInfoOpen ? "block" : "none";
-            ctx.btnInfo.textContent = ctx.isInfoOpen ? "삭제 상세 정보 숨기기" : "삭제 상세 정보";
-
-            // ✅ 펼쳤을 때 화면 밖으로 나가면 위로 올려주기
-            const rect = ctx.el.getBoundingClientRect();
-            const pad = 8;
-            const overflowBottom = rect.bottom - (window.innerHeight - pad);
-            if (overflowBottom > 0) {
-                const newTop = Math.max(pad, rect.top - overflowBottom);
-                ctx.el.style.top = newTop + "px";
-            }
-        });
-
-        // ✅ 복구 클릭
-        ctx.btnRestore?.addEventListener("click", async () => {
-            const batchId = ctx.currentBatchId;
-            if (!batchId) return;
-
-            closeTrashCtx();
-            await restoreBatch(batchId); // 네가 이미 만든 함수(Confirm+API+reload)
-        });
-
-        // ✅ 바깥 클릭/스크롤/ESC 닫기
-        document.addEventListener("click", (e) => {
-            if (!ctx.el) return;
-            if (ctx.el.style.display === "block" && !e.target.closest("#trashCtx")) closeTrashCtx();
-        });
-        document.addEventListener("scroll", closeTrashCtx, true);
-        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrashCtx(); });
-
-        async function apiJson(url, opt = {}) {
-            const res = await fetch(url, {
-                credentials: "include",
-                headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
-                ...opt,
-            });
-
-            const text = await res.text();
-
-            let json = null;
-            try { json = text ? JSON.parse(text) : null; }
-            catch { throw new Error("서버 응답이 JSON이 아닙니다. (로그인 만료/에러 페이지일 수 있어요)"); }
-
-            if (!res.ok) {
-                const msg = json?.message || json?.error || res.statusText;
-                throw new Error(msg);
-            }
-            return (json && typeof json === "object" && "data" in json) ? json.data : json;
-        }
+        ctx.el?.addEventListener("contextmenu", (e) => e.preventDefault(), true);
 
         function safe(s){ return (s == null) ? "" : String(s); }
 
@@ -574,11 +511,6 @@
                 ?? it?.batch
                 ?? it?.extra1;
 
-            card.addEventListener("click", () => {
-                console.log("clicked item:", it, "deleteBatchId:", it.deleteBatchId, "batchId:", getBatchId(it));
-                selectCard(card, getBatchId(it));
-            });
-
             return raw == null ? "" : String(raw).trim();
         }
 
@@ -591,7 +523,6 @@
             return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
         }
 
-        // (선택) 파일 아이콘: ext로 대략 매칭. 없으면 unknown 사용
         function resolveFileIcon(it){
             const ICONS = {
                 word: "/images/icons/word.png",
@@ -625,16 +556,191 @@
             return ICONS[type] || ICONS.unknown;
         }
 
+        async function apiJson(url, opt = {}) {
+            const res = await fetch(url, {
+                credentials: "include",
+                headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
+                ...opt,
+            });
+
+            const text = await res.text();
+            let json = null;
+
+            try { json = text ? JSON.parse(text) : null; }
+            catch { throw new Error("서버 응답이 JSON이 아닙니다. (로그인 만료/에러 페이지일 수 있어요)"); }
+
+            if (!res.ok) {
+                const msg = json?.message || json?.error || res.statusText;
+                throw new Error(msg);
+            }
+            return (json && typeof json === "object" && "data" in json) ? json.data : json;
+        }
+
+        function closeTrashCtx(){
+            if (!ctx.el) return;
+            ctx.el.style.display = "none";
+            ctx.currentBatchId = null;
+            ctx.currentItem = null;
+        }
+
+        function openTrashCtx(x, y, item, batchId){
+            if (!ctx.el) return;
+
+            ctx.openedAt = Date.now();
+            ctx.currentItem = item;
+            ctx.currentBatchId = batchId || null;
+
+            const name = safe(item?.originalName || item?.name || item?.title || ("item-" + item?.id));
+            const deletedAt = fmtDate(item?.deletedAt);
+            const deletedBy =
+                safe(item?.deletedByName || item?.deletedBy || item?.deletedUserName || item?.deletedUser || item?.deleterName) || "-";
+
+            const folder = isFolder(item);
+            const sizeText = folder ? "폴더" : (item?.size != null ? humanBytes(item.size) : "-");
+
+            ctx.infoName && (ctx.infoName.textContent = name || "-");
+            ctx.infoSize && (ctx.infoSize.textContent = sizeText || "-");
+            ctx.infoDeletedAt && (ctx.infoDeletedAt.textContent = deletedAt || "-");
+            ctx.infoDeletedBy && (ctx.infoDeletedBy.textContent = deletedBy || "-");
+
+            const b = String(batchId ?? "").trim();
+            ctx.currentBatchId = b || null;
+            const hasId = item && item.id != null;
+            ctx.btnRestore && (ctx.btnRestore.disabled = (b.length === 0 && !hasId));
+
+            // ✅ DEPT + FILE일 때만 "영구삭제" 버튼 노출
+            if (ctx.btnPurgeDeptFile) {
+                const isDept = (SCOPE === "DEPT");
+                const isFile = String(item?.type || "").toUpperCase() === "FILE";
+                const canShow = isDept && isFile;
+
+                ctx.btnPurgeDeptFile.style.display = canShow ? "block" : "none";
+                ctx.btnPurgeDeptFile.disabled = !canShow || item?.id == null;
+            }
+
+            ctx.isInfoOpen = false;
+            if (ctx.infoWrap) ctx.infoWrap.style.display = "none";
+            if (ctx.btnInfo) ctx.btnInfo.textContent = "삭제 상세 정보";
+
+            ctx.el.style.left = x + "px";
+            ctx.el.style.top  = y + "px";
+            ctx.el.style.display = "block";
+
+            requestAnimationFrame(() => {
+                const rect = ctx.el.getBoundingClientRect();
+                const pad = 8;
+
+                let left = x, top = y;
+                const maxL = window.innerWidth  - rect.width  - pad;
+                const maxT = window.innerHeight - rect.height - pad;
+
+                if (left > maxL) left = maxL;
+                if (top  > maxT) top  = maxT;
+
+                ctx.el.style.left = Math.max(pad, left) + "px";
+                ctx.el.style.top  = Math.max(pad, top)  + "px";
+            });
+        }
+
+        ctx.btnInfo?.addEventListener("click", () => {
+            if (!ctx.infoWrap) return;
+
+            ctx.isInfoOpen = !ctx.isInfoOpen;
+            ctx.infoWrap.style.display = ctx.isInfoOpen ? "block" : "none";
+            ctx.btnInfo.textContent = ctx.isInfoOpen ? "삭제 상세 정보 숨기기" : "삭제 상세 정보";
+
+            const rect = ctx.el.getBoundingClientRect();
+            const pad = 8;
+            const overflowBottom = rect.bottom - (window.innerHeight - pad);
+            if (overflowBottom > 0) {
+                const newTop = Math.max(pad, rect.top - overflowBottom);
+                ctx.el.style.top = newTop + "px";
+            }
+        });
+
+        // ✅ 복구 클릭
+        ctx.btnRestore?.addEventListener("click", async () => {
+            const batchId = ctx.currentBatchId;
+            const item = ctx.currentItem;
+            closeTrashCtx();
+
+            if (batchId) {
+                await restoreBatch(batchId);
+                return;
+            }
+
+            // 단건 복구 API가 있으면 여기에서 호출
+            if (item?.id != null && typeof restoreOne === "function") {
+                await restoreOne(item.type, item.id);
+            }
+        });
+
+        async function purgeDeptFileOne(item){
+            const id = item?.id;
+            if (id == null) return alert("삭제할 파일 ID가 없습니다.");
+
+            if (!confirm("이 파일을 영구삭제할까요?\n(되돌릴 수 없습니다)")) return;
+
+            await apiJson(`/api/v1/cloud/trash/purge/dept/file/${encodeURIComponent(id)}`, {
+                method: "POST"
+            });
+
+            await loadTrash();
+            alert("영구삭제 완료!");
+        }
+
+        ctx.btnPurgeDeptFile?.addEventListener("click", async () => {
+            const item = ctx.currentItem;
+            closeTrashCtx();
+
+            try{
+                await purgeDeptFileOne(item);
+            }catch(e){
+                alert(e.message);
+            }
+        });
+
+        // ✅ 바깥 클릭/스크롤/ESC 닫기
+        document.addEventListener("pointerdown", (e) => {
+            if (!ctx.el || ctx.el.style.display !== "block") return;
+            if (e.target.closest("#trashCtx")) return;
+            if (e.button === 2 || e.ctrlKey) return;
+            if (Date.now() - (ctx.openedAt || 0) < 150) return;
+            closeTrashCtx();
+        }, true);
+        document.addEventListener("scroll", closeTrashCtx, true);
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrashCtx(); });
+
+        /* =========================================================
+           ✅ PRVT 멀티 선택(선택 삭제 버튼 enable/disable)
+        ========================================================= */
+        function getItemKey(it){
+            const t = String(it?.type || "ITEM").toUpperCase();
+            const id = (it?.id != null) ? String(it.id) : "";
+            const b = getBatchId(it);
+            return id ? `${t}:${id}` : (b ? `BATCH:${b}` : `TMP:${Math.random().toString(36).slice(2)}`);
+        }
+
+        function updateTrashActionButtons(){
+            if (SCOPE !== "PRVT") return;
+            if (!el.btnPurgeSelected) return;
+            el.btnPurgeSelected.disabled = (state.selectedKeys.size === 0);
+        }
+
         function clearSelection(){
             state.selectedBatchId = null;
             if (state.selectedCardEl) state.selectedCardEl.classList.remove("selected");
             state.selectedCardEl = null;
+
+            // PRVT 선택도 같이 정리
+            state.selectedKeys.clear();
+            state.lastClickedIndex = null;
+            updateTrashActionButtons();
         }
 
         function selectCard(cardEl, batchId){
             if (state.selectedCardEl) state.selectedCardEl.classList.remove("selected");
             cardEl.classList.add("selected");
-
             state.selectedCardEl = cardEl;
 
             const b = (batchId == null) ? "" : String(batchId).trim();
@@ -642,43 +748,57 @@
         }
 
         function render(items){
-            el.grid.innerHTML = "";
-            el.empty.style.display = (items.length === 0) ? "block" : "none";
+            state.items = items || [];
+            state.itemByKey.clear();
             clearSelection();
-            if (items.length === 0) return;
+
+            el.grid.innerHTML = "";
+            el.empty.style.display = (state.items.length === 0) ? "block" : "none";
+            if (state.items.length === 0) return;
 
             // batch 개수 계산(배지용)
             const batchCount = new Map();
-            for (const it of items){
+            for (const it of state.items){
                 const b = getBatchId(it);
                 if (!b) continue;
                 batchCount.set(b, (batchCount.get(b) || 0) + 1);
             }
 
             // 최신 삭제순
-            const sorted = [...items].sort((a,b) => {
+            const sorted = [...state.items].sort((a,b) => {
                 const ta = new Date(a.deletedAt || 0).getTime();
                 const tb = new Date(b.deletedAt || 0).getTime();
                 return tb - ta;
             });
 
-            for (const it of sorted) {
-                const card = document.createElement("div");           // ✅ 추가
-                const batchId = getBatchId(it);                       // ✅ getBatchId는 값만 반환
+            sorted.forEach((it) => {
+                const card = document.createElement("div");
+                const batchId = getBatchId(it);
                 const count = batchId ? (batchCount.get(batchId) || 1) : 1;
+                const folder = isFolder(it);
 
-                const folder = isFolder(it);                          // ✅ folder boolean
+                const key = getItemKey(it);
+                state.itemByKey.set(key, it);
+
+                card.dataset.key = key;
+                card.dataset.batchId = batchId || "";
+                card.dataset.itemId = safe(it?.id || "");
                 card.className = folder ? "folder-card" : "file-card";
 
-                const badgeNeeded = count > 1;
-                if (badgeNeeded) {
+                // ✅ 체크박스(hover/selected UI)
+                const check = document.createElement("div");
+                check.className = "card-check";
+                card.appendChild(check);
+
+                // 배치 배지
+                if (count > 1) {
                     const badge = document.createElement("div");
                     badge.className = "batch-badge";
                     badge.textContent = `${count}개`;
                     card.appendChild(badge);
                 }
 
-                if (folder) {                                         // ✅ isFolder 말고 folder 사용
+                if (folder) {
                     const ico = document.createElement("div");
                     ico.className = "folder-ico-large";
 
@@ -720,29 +840,61 @@
                     card.appendChild(meta);
                 }
 
-                card.addEventListener("click", () => {
-                    console.log("clicked item:", it,
-                        "deleteBatchId:", it?.deleteBatchId,
-                        "delete_batch_id:", it?.delete_batch_id,
-                        "resolved batchId:", batchId
-                    );
+                // ✅ 클릭: PRVT면 멀티 선택(Cloud와 동일 UX), DEPT면 배치 단일 선택
+                card.addEventListener("click", (e) => {
+                    e.stopPropagation();
+
+                    if (SCOPE === "PRVT") {
+                        const cards = Array.from(el.grid.querySelectorAll(".folder-card, .file-card"));
+                        const myIdx = cards.indexOf(card);
+
+                        const isToggle = e.ctrlKey || e.metaKey;
+                        const isRange = e.shiftKey;
+
+                        if (!isToggle && !isRange) {
+                            // 단일 클릭 -> 다른 선택 해제
+                            state.selectedKeys.clear();
+                            cards.forEach(c => c.classList.remove("selected"));
+                        }
+
+                        if (isRange && state.lastClickedIndex != null) {
+                            const [a, b] = [state.lastClickedIndex, myIdx].sort((x,y)=>x-y);
+                            for (let i=a; i<=b; i++){
+                                const c = cards[i];
+                                if (!c) continue;
+                                c.classList.add("selected");
+                                state.selectedKeys.add(c.dataset.key);
+                            }
+                        } else {
+                            if (card.classList.contains("selected")) {
+                                card.classList.remove("selected");
+                                state.selectedKeys.delete(key);
+                            } else {
+                                card.classList.add("selected");
+                                state.selectedKeys.add(key);
+                            }
+                        }
+
+                        state.lastClickedIndex = myIdx;
+                        updateTrashActionButtons();
+                        return;
+                    }
+
+                    // DEPT: 기존처럼 batch 단일 선택
                     selectCard(card, batchId);
                 });
 
+                // DEPT만 더블클릭 복구(선택 UX 충돌 방지)
                 card.addEventListener("dblclick", async () => {
+                    if (SCOPE === "PRVT") return;
                     if (!batchId) return;
                     await restoreBatch(batchId);
                 });
 
-                card.addEventListener("contextmenu", (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    selectCard(card, batchId);
-                    openTrashCtx(e.clientX, e.clientY, it, batchId);
-                });
-
                 el.grid.appendChild(card);
-            }
+            });
+
+            updateTrashActionButtons();
         }
 
         async function loadTrash(){
@@ -757,25 +909,55 @@
 
         async function restoreBatch(batchId){
             if (!batchId) return;
-            if (!confirm("복구할까요? (해당 항목이 속한 삭제 묶음(batchId) 단위로 복구됩니다)")) return;
+            if (!confirm("삭제한 파일을 복구할까요?")) return;
 
-            try{
-                await apiJson(`/api/v1/cloud/trash/restore/${encodeURIComponent(batchId)}?scope=${encodeURIComponent(SCOPE)}`, {
-                    method: "POST"
-                });
-                await loadTrash();
-                alert("복구 완료!");
-            }catch(e){
-                alert(e.message);
-            }
+            await apiJson(`/api/v1/cloud/trash/restore/${encodeURIComponent(batchId)}?scope=${encodeURIComponent(SCOPE)}`, {
+                method: "POST"
+            });
+
+            await loadTrash();
+            alert("복구 완료!");
         }
 
+        /* =========================================================
+           ✅ PRVT: 선택 삭제 / 휴지통 비우기
+        ========================================================= */
+        async function purgeSelectedPrvt(){
+            if (SCOPE !== "PRVT") return;
+
+            const keys = Array.from(state.selectedKeys);
+            if (keys.length === 0) return alert("삭제할 항목을 선택해주세요.");
+
+            // 서버로 보낼 payload(기본형): items: [{type, id}]
+            const items = keys
+                .map(k => state.itemByKey.get(k))
+                .filter(Boolean)
+                .map(it => ({ type: String(it.type || "").toUpperCase(), id: it.id }))
+                .filter(x => x.id != null);
+
+            if (items.length === 0) return alert("선택 항목의 id가 없어 삭제할 수 없습니다.");
+
+            if (!confirm(`선택한 ${items.length}개를 영구 삭제할까요?\n(되돌릴 수 없습니다)`)) return;
+
+            // ✅ TODO: 서버 엔드포인트/바디 규격에 맞춰 여기만 수정하면 됨
+            await apiJson(PURGE_SELECTED_ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({ items }),
+            });
+
+            await loadTrash();
+            alert("선택 삭제 완료!");
+        }
+
+        el.btnPurgeSelected?.addEventListener("click", () => {
+            purgeSelectedPrvt().catch(e => alert(e.message));
+        });
 
         el.btnReload?.addEventListener("click", () => loadTrash().catch(e => alert(e.message)));
 
         // PRVT 비우기
         el.btnEmpty?.addEventListener("click", async () => {
-            if (!confirm("휴지통을 비울까요? (개인함만 가능)")) return;
+            if (!confirm("휴지통을 비울까요?")) return;
             try{
                 await apiJson(`/api/v1/cloud/trash/empty/prvt`, { method: "POST" });
                 await loadTrash();
@@ -785,7 +967,48 @@
             }
         });
 
+        /* =========================================================
+           ✅ 우클릭(컨텍스트 메뉴) 이벤트 위임
+           - PRVT에서는 우클릭한 카드만 단일 선택으로 맞춤
+           - DEPT는 배치 선택 유지
+        ========================================================= */
+        function bindTrashGridContextMenu(){
+            el.grid?.addEventListener("contextmenu", (e) => {
+                const cardEl = e.target.closest(".folder-card, .file-card");
+                if (!cardEl || !el.grid.contains(cardEl)) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                let batchId = (cardEl.dataset.batchId || "").trim();
+
+                const itemId = (cardEl.dataset.itemId || "").trim();
+                const item = (state.items || []).find(it => String(it?.id ?? "") === itemId) || null;
+
+                if (!batchId && item) {
+                    batchId = getBatchId(item);
+                    cardEl.dataset.batchId = batchId || "";
+                }
+
+                if (SCOPE === "PRVT") {
+                    // 우클릭한 항목만 단일 선택
+                    state.selectedKeys.clear();
+                    state.lastClickedIndex = null;
+                    el.grid.querySelectorAll(".selected").forEach(x => x.classList.remove("selected"));
+
+                    cardEl.classList.add("selected");
+                    state.selectedKeys.add(cardEl.dataset.key);
+                    updateTrashActionButtons();
+                } else {
+                    selectCard(cardEl, batchId);
+                }
+
+                openTrashCtx(e.clientX, e.clientY, item || {}, batchId);
+            }, { capture: true });
+        }
+
         window.addEventListener("DOMContentLoaded", () => {
+            bindTrashGridContextMenu();
             loadTrash().catch(e => alert(e.message));
         });
     </script>

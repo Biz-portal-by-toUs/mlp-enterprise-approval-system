@@ -8,25 +8,52 @@
        sec:authorize="isAuthenticated()"
        th:fragment="cloudSidebar(active)">
 
-    <div class="subbar-title">파일함</div>
+    <div class="cloud-tree-head">
+        <div class="cloud-tree-title">파일함</div>
 
-    <!-- ✅ 공유함/개인함 탭 -->
-    <div class="cloud-scope-tabs" role="tablist" aria-label="파일함 전환">
-        <a class="cloud-scope-tab"
+        <div class="cloud-tree-tools" th:if="${hideTreeTools != true}">
+            <button type="button" class="tree-tool" id="btnCollapseAll" title="모두 접기">▲</button>
+            <button type="button" class="tree-tool" id="btnExpandAll" title="모두 열기">▼</button>
+        </div>
+    </div>
+
+    <!-- ✅ 공유함/개인함 탭 or 뒤로가기 -->
+    <div class="cloud-scope-tabs"
+         role="tablist"
+         aria-label="파일함 전환"
+         th:style="${(isTrash == true or activeAdminLog == true)} ? 'grid-template-columns:1fr;' : null">
+
+        <!-- ✅ 뒤로가기 버튼: 휴지통(/cloud/trash) 또는 관리자로그(/cloud/trash/admin-log) -->
+        <!-- 크기: 휴지통 버튼급(조금 더 큰 버튼) -->
+        <a class="cloud-scope-tab active"
+           th:if="${isTrash == true or activeAdminLog == true}"
+           th:href="${activeAdminLog == true}
+              ? @{/cloud/trash(scope=${active}=='prvt' ? 'PRVT' : 'DEPT')}
+              : (${active}=='prvt' ? @{/cloud/prvt} : @{/cloud/dept})"
            role="tab"
-           th:href="@{/cloud/dept}" href="/cloud/dept"
-           th:classappend="${active}=='dept' ? ' active' : ''"
-           th:attr="aria-selected=${active}=='dept'">
-            공유함
+           aria-selected="true"
+           style="height:38px; border-radius:12px;">
+            ← 뒤로가기
         </a>
 
-        <a class="cloud-scope-tab"
-           role="tab"
-           th:href="@{/cloud/prvt}" href="/cloud/prvt"
-           th:classappend="${active}=='prvt' ? ' active' : ''"
-           th:attr="aria-selected=${active}=='prvt'">
-            개인함
-        </a>
+        <!-- ✅ 평소에는 공유함/개인함 탭 -->
+        <th:block th:if="${!(isTrash == true or activeAdminLog == true)}">
+            <a class="cloud-scope-tab"
+               role="tab"
+               th:href="@{/cloud/dept}" href="/cloud/dept"
+               th:classappend="${active}=='dept' ? ' active' : ''"
+               th:attr="aria-selected=${active}=='dept'">
+                공유함
+            </a>
+
+            <a class="cloud-scope-tab"
+               role="tab"
+               th:href="@{/cloud/prvt}" href="/cloud/prvt"
+               th:classappend="${active}=='prvt' ? ' active' : ''"
+               th:attr="aria-selected=${active}=='prvt'">
+                개인함
+            </a>
+        </th:block>
     </div>
 
     <!-- ✅ 트리(스크롤 영역) -->
@@ -34,14 +61,35 @@
         <ul class="cloud-tree" id="treeRoot"></ul>
     </div>
 
-    <!-- ✅ 맨 아래 고정 휴지통 -->
-    <div class="cloud-sidebar-footer">
+    <!-- ✅ 관리자 삭제 로그 버튼:
+         - 공유함 휴지통(DEPT)에서만 보이게
+         - 관리자로그 화면에서는 "버튼 자체도 숨김"(요구사항)
+    -->
+    <div class="cloud-sidebar-footer"
+         sec:authorize="hasAnyAuthority('ROLE_SYS_ADMIN','ROLE_COM_ADMIN','ROLE_SEC_ADMIN','ROLE_THR_ADMIN')"
+         th:if="${(isTrash == true) and (trashScope != null) and (trashScope.name() == 'DEPT')}"
+         style="border-top:0; padding-top:0;">
+        <a class="cloud-footer-link"
+           th:href="@{/cloud/trash/admin-log(scope=${trashScope})}">
+            <span class="cloud-footer-ico" aria-hidden="true"
+                  style="background-image:url('/images/icons/log.png');"></span>
+            <span class="cloud-footer-text">관리자 삭제 로그</span>
+            <span class="cloud-footer-spacer" aria-hidden="true"></span>
+        </a>
+    </div>
+
+    <!-- ✅ 휴지통 버튼:
+         - 관리자 삭제 로그 화면에서는 숨김(뒤로가기만 보여야 함)
+         - 그 외(일반/휴지통)에서는 표시
+    -->
+    <div class="cloud-sidebar-footer" th:if="${activeAdminLog != true}">
         <a class="cloud-footer-link"
            th:href="@{/cloud/trash(scope=${active}=='prvt' ? 'PRVT' : 'DEPT')}"
-           th:classappend="${active}=='trash' ? ' active' : ''"
+           th:classappend="${isTrash} ? ' active' : ''"
            href="/cloud/trash">
             <span class="cloud-footer-ico" aria-hidden="true"></span>
             <span class="cloud-footer-text">휴지통</span>
+            <span class="cloud-footer-spacer" aria-hidden="true"></span>
         </a>
     </div>
 

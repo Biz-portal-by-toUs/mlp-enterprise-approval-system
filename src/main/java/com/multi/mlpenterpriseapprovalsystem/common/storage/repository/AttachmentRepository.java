@@ -56,53 +56,229 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
     @Modifying
     @Query(value = """
-            UPDATE attachment a
-            JOIN folder f ON f.folder_no = a.entity_id
-            SET a.status = 'DELETED',
-                a.deleted_at = NOW(),
-                a.deleted_by = :actor,
-                a.delete_batch_id = :batchId
-            WHERE a.com_id = :comId
-              AND a.domain = 'CLOUD'
-              AND (f.folder_no = :targetId OR f.path LIKE CONCAT(:prefix, '%'))
-            """, nativeQuery = true)
-    int softDeleteCloudFilesInTree(String comId, Long targetId, String prefix, String actor, String batchId);
+    UPDATE attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    SET a.status = 'DELETED',
+        a.deleted_at = NOW(),
+        a.deleted_by = :actor,
+        a.delete_batch_id = :batchId
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'ACTIVE'
+      AND (
+          f.folder_no = :targetId
+          OR f.path = :basePath
+          OR f.path LIKE CONCAT(:basePath, '/%')
+      )
+""", nativeQuery = true)
+    int softDeleteCloudFilesInTree(
+            @Param("comId") String comId,
+            @Param("targetId") Long targetId,
+            @Param("basePath") String basePath,
+            @Param("actor") String actor,
+            @Param("batchId") String batchId
+    );
+
+    @Query(value = """
+    SELECT a.object_key
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND f.scope = 'prvt'
+      AND f.owner_id = :ownerId
+""", nativeQuery = true)
+    List<String> findMyPrvtDeletedObjectKeys(@Param("comId") String comId,
+                                             @Param("ownerId") String ownerId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
-            UPDATE attachment
-            SET status = 'ACTIVE',
-                deleted_at = NULL,
-                deleted_by = NULL,
-                delete_batch_id = NULL
-            WHERE com_id = :comId
-              AND domain = 'CLOUD'
-              AND delete_batch_id = :batchId
-            """, nativeQuery = true)
-    int restoreAttachmentBatch(@Param("comId") String comId, @Param("batchId") String batchId);
+    UPDATE attachment
+    SET status = 'DELETED',
+        deleted_at = NOW(),
+        deleted_by = :actor,
+        delete_batch_id = :batchId
+    WHERE com_id = :comId
+      AND domain = 'CLOUD'
+      AND attachment_id = :attachmentId
+      AND status = 'ACTIVE'
+""", nativeQuery = true)
+    int softDeleteCloudAttachmentById(@Param("comId") String comId,
+                                      @Param("attachmentId") Long attachmentId,
+                                      @Param("actor") String actor,
+                                      @Param("batchId") String batchId);
+
+    @Modifying
+    @Query(value = """
+    DELETE a
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND f.scope = 'prvt'
+      AND f.owner_id = :ownerId
+""", nativeQuery = true)
+    int hardDeleteMyPrvtDeletedAttachments(@Param("comId") String comId,
+                                           @Param("ownerId") String ownerId);
+
+    @Query(value = """
+        SELECT a.object_key
+        FROM attachment a
+        WHERE a.domain = 'CLOUD'
+          AND a.status = 'DELETED'
+          AND a.deleted_at < DATE_SUB(NOW(), INTERVAL :days DAY)
+    """, nativeQuery = true)
+    List<String> findExpiredDeletedCloudObjectKeys(@Param("days") int days);
+
+    @Modifying
+    @Query(value = """
+        DELETE FROM attachment
+        WHERE domain = 'CLOUD'
+          AND status = 'DELETED'
+          AND deleted_at < DATE_SUB(NOW(), INTERVAL :days DAY)
+    """, nativeQuery = true)
+    int hardDeleteExpiredDeletedCloudAttachments(@Param("days") int days);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
     UPDATE attachment a
     JOIN folder f ON f.folder_no = a.entity_id
-    SET a.status = 'PURGED',
-        a.purged_at = NOW()
+    SET a.status = 'ACTIVE',
+        a.deleted_at = NULL,
+        a.deleted_by = NULL,
+        a.delete_batch_id = NULL
     WHERE a.com_id = :comId
       AND a.domain = 'CLOUD'
-      AND a.status = 'DELETED'
-      AND f.scope = 'PRVT'
+      AND a.delete_batch_id = :batchId
+      AND f.scope = 'prvt'
       AND f.owner_id = :ownerId
-    """, nativeQuery = true)
-    int purgeMyPrvtTrashFiles(@Param("comId") String comId, @Param("ownerId") String ownerId);
+""", nativeQuery = true)
+    int restoreAttachmentBatch(@Param("comId") String comId,
+                               @Param("batchId") String batchId,
+                               @Param("ownerId") String ownerId);
+
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
-        UPDATE attachment
-        SET status = 'PURGED',
-            purged_at = NOW()
-        WHERE domain = 'CLOUD'
-          AND status = 'DELETED'
-          AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
-        """, nativeQuery = true)
-    int purgeExpiredCloudAttachments();
+    UPDATE attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    SET a.status = 'ACTIVE',
+        a.deleted_at = NULL,
+        a.deleted_by = NULL,
+        a.delete_batch_id = NULL
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.delete_batch_id = :batchId
+      AND f.scope = 'dept'
+      AND f.dep_no = :depNo
+""", nativeQuery = true)
+    int restoreDeptAttachmentBatch(@Param("comId") String comId,
+                                   @Param("depNo") Long depNo,
+                                   @Param("batchId") String batchId);
+
+
+    @Query(value = """
+    SELECT a.object_key
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND a.attachment_id IN (:ids)
+      AND f.scope = 'prvt'
+      AND f.owner_id = :ownerId
+""", nativeQuery = true)
+    List<String> findMyPrvtDeletedObjectKeysByAttachmentIds(String comId, String ownerId, List<Long> ids);
+
+    @Query(value = """
+    SELECT a.object_key
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND a.entity_id IN (:folderNos)
+      AND f.scope = 'prvt'
+      AND f.owner_id = :ownerId
+""", nativeQuery = true)
+    List<String> findMyPrvtDeletedObjectKeysByFolderNos(String comId, String ownerId, List<Long> folderNos);
+
+    @Modifying
+    @Query(value = """
+    DELETE a
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND a.attachment_id IN (:ids)
+      AND f.scope = 'prvt'
+      AND f.owner_id = :ownerId
+""", nativeQuery = true)
+    int hardDeleteMyPrvtDeletedAttachmentsByIds(String comId, String ownerId, List<Long> ids);
+
+    @Modifying
+    @Query(value = """
+    DELETE a
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND a.entity_id IN (:folderNos)
+      AND f.scope = 'prvt'
+      AND f.owner_id = :ownerId
+""", nativeQuery = true)
+    int hardDeleteMyPrvtDeletedAttachmentsByFolderNos(String comId, String ownerId, List<Long> folderNos);
+
+    @Query("""
+    select a from Attachment a
+    where a.comId = :comId
+      and a.domain = :domain
+      and a.status = :status
+      and a.attachmentId in :ids
+""")
+    List<Attachment> findAllForZip(
+            @Param("comId") String comId,
+            @Param("domain") AttachmentDomain domain,
+            @Param("status") AttachmentStatus status,
+            @Param("ids") List<Long> ids
+    );
+
+    boolean existsByComIdAndDomainAndEntityIdAndStatusAndOriginalName(
+            String comId,
+            AttachmentDomain domain,
+            Long entityId,
+            AttachmentStatus status,
+            String originalName
+    );
+
+    // ✅ rename 시 "자기 자신" 제외
+    boolean existsByComIdAndDomainAndEntityIdAndStatusAndOriginalNameAndAttachmentIdNot(
+            String comId,
+            AttachmentDomain domain,
+            Long entityId,
+            AttachmentStatus status,
+            String originalName,
+            Long attachmentId
+    );
+
+    @Modifying
+    @Query(value = """
+DELETE FROM attachment
+WHERE com_id = :comId
+  AND domain = 'CLOUD'
+  AND attachment_id = :attachmentId
+  AND status = 'DELETED'
+""", nativeQuery = true)
+    int hardDeleteDeletedCloudAttachmentById(
+            @Param("comId") String comId,
+            @Param("attachmentId") Long attachmentId
+    );
+
+
 }
+
+

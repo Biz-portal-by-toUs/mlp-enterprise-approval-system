@@ -2,6 +2,8 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.cloud.domain.Folder;
+import com.multi.mlpenterpriseapprovalsystem.cloud.enums.FolderScope;
+import com.multi.mlpenterpriseapprovalsystem.cloud.repository.CloudTrashLogRepository;
 import com.multi.mlpenterpriseapprovalsystem.cloud.repository.FolderRepository;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
@@ -25,10 +27,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 import static com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain.CLOUD;
 
@@ -48,6 +47,7 @@ public class AttachmentServiceImpl implements AttachmentService {
     private final S3Client s3Client;
     private final FolderRepository folderRepository;
     private final EmployeeRepository employeeRepository;
+    private final CloudTrashLogRepository cloudTrashLogRepository;
 
     @Value("${app.s3.bucket}")
     private String bucket;
@@ -134,8 +134,22 @@ public class AttachmentServiceImpl implements AttachmentService {
                     }
                 }
 
+                // 4-4) ✅ (추가) CLOUD일 때 중복 파일명 자동 suffix 처리
+                String finalOriginalName = req.originalName();
+                if (domain == AttachmentDomain.CLOUD) {
+                    finalOriginalName = makeUniqueOriginalName(
+                            comId,
+                            domain,
+                            req.entityId(),
+                            AttachmentStatus.ACTIVE,
+                            req.originalName(),
+                            null
+                    );
+                }
+
                 // 4-4) ext 추출(선택)
-                String ext = extractExt(req.originalName());
+                String ext = extractExt(finalOriginalName);
+
 
                 // 4-5) 엔티티 생성 + 저장
                 Attachment saved = attachmentRepository.save(
@@ -145,7 +159,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                                 req.entityId(),
                                 displayOrder,
                                 fileType,
-                                req.originalName(),
+                                finalOriginalName,
                                 req.contentType(),
                                 req.size(),
                                 ext,
@@ -197,40 +211,67 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Transactional
     @Override
     public Long softDelete(Long attachmentId, CustomUser user) {
-        // 1) 조회 (테넌트 + ACTIVE만)
+
         Attachment a = attachmentRepository
                 .findByAttachmentIdAndComIdAndStatus(attachmentId, user.getComId(), AttachmentStatus.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "첨부파일이 없습니다."));
 
-        // 2) 권한 체크: 업로더만 삭제 가능 (너희 정책에 맞게 subjectId/empNo 매핑)
-        String requesterId = user.getUsername(); // 예: emp_no
+        String requesterId = user.getUsername();
+
+        // ✅ 권한 체크
         if (a.getDomain() == AttachmentDomain.PROV_DOCUMENT) {
             boolean isAdmin = user.getAuthorities().stream()
-                    .anyMatch(auth -> Objects.equals(auth.getAuthority(), "ROLE_COM_ADMIN"));
-
+                    .anyMatch(auth -> "ROLE_COM_ADMIN".equals(auth.getAuthority()));
             if (!isAdmin) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자만 사내 규정 첨부파일을 삭제할 수 있습니다.");
             }
-        }
-        else if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
-            // 일반 도메인(CLOUD 등)은 본인이 업로드한 파일인지 확인합니다.
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 첨부파일만 삭제할 수 있습니다.");
+
+        } else if (a.getDomain() == CLOUD) {
+            // ✅ CLOUD: 폴더 scope에 따라 권한 분기
+            Folder folder = folderRepository.findByFolderNoAndComId(a.getEntityId(), user.getComId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "폴더가 없습니다."));
+
+            if (folder.getScope() == FolderScope.DEPT /* 프로젝트 enum에 맞게 */) {
+                // 공유함(DEPT): 같은 부서면 삭제 허용
+                Long myDepNo = resolveDepNo(user);
+                if (!Objects.equals(myDepNo, folder.getDepNo())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "같은 부서만 삭제할 수 있습니다.");
+                }
+            } else {
+                // 개인함(PRVT): 기존 정책 유지(업로더만)
+                if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 첨부파일만 삭제할 수 있습니다.");
+                }
+            }
+
+        } else {
+            // ✅ 그 외 도메인: 기존 정책 유지(업로더만)
+            if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 첨부파일만 삭제할 수 있습니다.");
+            }
         }
 
-        // 3) domain 분기
+
         if (a.getDomain() == CLOUD) {
-            // ✅ CLOUD: soft delete
-            a.softDelete(); // status=DELETED
-            // save 안 해도 영속 상태면 flush되지만 명시적으로 해도 OK
-            // attachmentRepository.save(a);
-            return a.getAttachmentId();
+            String batchId = UUID.randomUUID().toString();
+
+            int updated = attachmentRepository.softDeleteCloudAttachmentById(
+                    user.getComId(), attachmentId, requesterId, batchId
+            );
+
+            if (updated == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "삭제 대상이 없거나 이미 삭제되었습니다.");
+            }
+            // ✅ DELETE 로그 적재 (soft-delete 된 직후)
+            cloudTrashLogRepository.insertDeleteLogForAttachment(user.getComId(), attachmentId);
+
+
+            return attachmentId; // (원하면 batchId도 응답에 같이 내려줄 수 있음)
         }
 
-        // ✅ 그 외(PROV_DOCUMENT 포함): hard delete (S3 + DB 실제 삭제)
-        // PROV_DOCUMENT는 용량 관리 및 보안을 위해 S3 파일까지 지우는 하드 삭제를 수행하게 됩니다.
+        // 그 외 도메인: 기존 하드삭제 유지
         deleteObjectFromS3(a.getObjectKey());
         attachmentRepository.delete(a);
-
         return attachmentId;
     }
 
@@ -340,6 +381,101 @@ public class AttachmentServiceImpl implements AttachmentService {
             if (o != null && o > max) max = o;
         }
         return max + 1;
+    }
+
+    @Transactional
+    public void renameCloudAttachment(CustomUser user, Long attachmentId, String newOriginalName) {
+        if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.");
+        if (newOriginalName == null || newOriginalName.isBlank())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일명이 필요합니다.");
+
+        Attachment a = attachmentRepository
+                .findByAttachmentIdAndComIdAndStatus(attachmentId, user.getComId(), AttachmentStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 없습니다."));
+
+        if (a.getDomain() != CLOUD)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CLOUD 파일만 이름 변경 가능합니다.");
+
+        // ✅ 폴더 조회 (파일이 속한 폴더 = entityId)
+        Folder folder = folderRepository.findByFolderNoAndComId(a.getEntityId(), user.getComId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "폴더가 없습니다."));
+
+        // ✅ 권한 정책
+        if (folder.getScope() == FolderScope.DEPT /* 또는 FolderScope.DEPT / enum명에 맞게 */) {
+            // 공유함: 같은 부서면 rename 허용
+            Long myDepNo = resolveDepNo(user);
+            if (!Objects.equals(myDepNo, folder.getDepNo())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "같은 부서만 이름 변경할 수 있습니다.");
+            }
+        } else {
+            // 개인함: 기존 정책 유지(업로더만)
+            String requesterId = user.getUsername();
+            if (a.getCreatedBy() == null || !a.getCreatedBy().equals(requesterId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 업로드한 파일만 이름 변경할 수 있습니다.");
+            }
+        }
+
+        String trimmed = newOriginalName.trim();
+
+        String finalOriginalName = makeUniqueOriginalName(
+                user.getComId(),
+                CLOUD,
+                a.getEntityId(),            // ✅ 폴더번호(현재 파일이 속한 폴더)
+                AttachmentStatus.ACTIVE,
+                trimmed,
+                a.getAttachmentId()         // ✅ 자기 자신 제외
+        );
+
+        String ext = extractExt(finalOriginalName);
+        a.rename(finalOriginalName, ext);
+    }
+
+    private static String sanitizeFileBaseName(String input) {
+        String cleaned = String.valueOf(input);
+        cleaned = cleaned.replaceAll("[\\\\/:*?\"<>|]", "_");
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        if (cleaned.length() > 80) cleaned = cleaned.substring(0, 80);
+        if (cleaned.isBlank()) cleaned = "file";
+        return cleaned;
+    }
+
+    private String makeUniqueOriginalName(
+            String comId,
+            AttachmentDomain domain,
+            Long entityId,
+            AttachmentStatus status,
+            String requestedName,
+            Long excludeAttachmentId // 업로드면 null, rename이면 자기 attachmentId
+    ) {
+        String cleaned = sanitizeFileBaseName(Optional.ofNullable(requestedName).orElse("file"));
+
+        String base = cleaned;
+        String ext = "";
+        int dot = cleaned.lastIndexOf('.');
+        if (dot > 0 && dot < cleaned.length() - 1) {
+            base = cleaned.substring(0, dot);
+            ext = cleaned.substring(dot);
+        }
+
+        String first = base + ext;
+
+        boolean exists0 = (excludeAttachmentId == null)
+                ? attachmentRepository.existsByComIdAndDomainAndEntityIdAndStatusAndOriginalName(comId, domain, entityId, status, first)
+                : attachmentRepository.existsByComIdAndDomainAndEntityIdAndStatusAndOriginalNameAndAttachmentIdNot(comId, domain, entityId, status, first, excludeAttachmentId);
+
+        if (!exists0) return first;
+
+        int i = 1;
+        while (true) {
+            String candidate = base + "(" + i + ")" + ext;
+
+            boolean exists = (excludeAttachmentId == null)
+                    ? attachmentRepository.existsByComIdAndDomainAndEntityIdAndStatusAndOriginalName(comId, domain, entityId, status, candidate)
+                    : attachmentRepository.existsByComIdAndDomainAndEntityIdAndStatusAndOriginalNameAndAttachmentIdNot(comId, domain, entityId, status, candidate, excludeAttachmentId);
+
+            if (!exists) return candidate;
+            i++;
+        }
     }
 
 }

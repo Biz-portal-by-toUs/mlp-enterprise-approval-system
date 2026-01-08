@@ -1115,6 +1115,27 @@ ALTER TABLE folder
     ADD INDEX idx_folder_batch (delete_batch_id);
 -- 여기까지 해주기
 
+CREATE TABLE cloud_trash_log (
+                                 log_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                 com_id       VARCHAR(3)  NOT NULL,
+                                 scope        VARCHAR(10) NOT NULL,        -- 'dept' | 'prvt'
+                                 dep_no       BIGINT NULL,
+
+                                 action       VARCHAR(10) NOT NULL,        -- 'DELETE' | 'RESTORE' | 'PURGE'
+                                 action_at    DATETIME    NOT NULL,
+                                 actor        VARCHAR(50) NULL,            -- 작업자(empId 등)
+                                 batch_id     VARCHAR(64) NULL,
+
+                                 item_type    VARCHAR(10) NOT NULL,        -- 'FILE' | 'FOLDER'
+                                 item_id      BIGINT      NOT NULL,
+                                 item_name    VARCHAR(255) NULL,
+
+                                 INDEX idx_log_main (com_id, scope, dep_no, action_at),
+                                 INDEX idx_log_batch (batch_id),
+                                 INDEX idx_log_name (item_name)
+);
+
+-- 여기까지 해주세요!!
 # 사원 추가 변경
 ALTER TABLE employee
     MODIFY COLUMN msg_stat CHAR(1) NOT NULL DEFAULT 'H',

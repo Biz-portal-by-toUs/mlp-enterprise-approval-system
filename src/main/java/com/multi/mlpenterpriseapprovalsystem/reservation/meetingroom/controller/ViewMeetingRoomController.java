@@ -29,32 +29,32 @@ public class ViewMeetingRoomController {
     // 회의실 조회
     @GetMapping
     public String meetingRoomList() {  // JWT 인증 연동 전 임시 사용
-        return "reservation/meeting-rooms/meeting-room-list";
+        return "reservation/meetingrooms/meeting-room-list";
     }
 
     // 회의실 등록
     @GetMapping("/register")
     public String addMeetingRoom() {
-        return "reservation/meeting-rooms/meeting-room-register";
+        return "reservation/meetingrooms/meeting-room-register";
     }
 
     // 회의실 수정
     @GetMapping("/{roomNo}/edit")
     public String editMeetingRoom(@PathVariable(name = "roomNo") Long roomNo, Model model) {
         model.addAttribute("roomNo", roomNo);
-        return "reservation/meeting-rooms/meeting-room-edit";
+        return "reservation/meetingrooms/meeting-room-edit";
     }
 
     // 회의실 예약 화면
     @GetMapping("/reservation")
     public String meetingRoomReservation() {
-        return "reservation/meeting-rooms/meeting-room-reservation";
+        return "reservation/meetingrooms/meeting-room-reservation";
     }
 
     // 회의실 예약 등록 화면
     @GetMapping("/{roomNo}/reservation")
     public String meetingRoomReservation(@PathVariable(name = "roomNo") Long roomNo) {
-        return "reservation/meeting-rooms/meeting-room-reservation";
+        return "reservation/meetingrooms/meeting-room-reservation";
     }
 
 }

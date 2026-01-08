@@ -16,4 +16,7 @@ public interface AttachmentService {
     Long softDelete(Long attachmentId, CustomUser user);
 
     void moveCloudAttachment(CustomUser user, Long attachmentId, Long toFolderNo);
+
+    void renameCloudAttachment(CustomUser user, Long attachmentId, String newOriginalName);
+
 }

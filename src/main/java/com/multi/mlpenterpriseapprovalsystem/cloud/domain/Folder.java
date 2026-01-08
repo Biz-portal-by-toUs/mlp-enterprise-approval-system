@@ -58,6 +58,16 @@ public class Folder {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // ✅ soft delete
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 7)
+    private String deletedBy;
+
+    @Column(name = "delete_batch_id", length = 36)
+    private String deleteBatchId;
+
     @Column(name = "path", nullable = false, length = 255)
     private String path;
 

@@ -57,6 +57,11 @@ public class FolderController {
             @RequestParam(required = false, name = "parentId") Long parentId,
             @AuthenticationPrincipal CustomUser user
     ) {
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ResponseDto<>(HttpStatus.UNAUTHORIZED, "인증이 필요합니다.", null));
+        }
+
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "부서 폴더 조회 성공",
                 folderService.listDept(user, parentId)));
     }
