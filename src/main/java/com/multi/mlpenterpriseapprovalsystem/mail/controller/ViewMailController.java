@@ -46,4 +46,9 @@ public class ViewMailController {
     public String drafts() {
         return "mail/drafts";
     }
+
+    @GetMapping("/self")
+    public String self() {
+        return "mail/self";
+    }
 }
