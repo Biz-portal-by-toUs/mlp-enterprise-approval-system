@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class ViewPaymentMethodController {
 
     @GetMapping("/payment-methods/register")
-    public String viewPaymentMethods(Model model) {
-        return "register";
+    public String viewPaymentMethodRegister(Model model) {
+        return "/payment/method/register";
     }
 
     @GetMapping("/payment-methods")
     public String viewPaymentMethods(){
-        return "/payment/list";
+        return "/payment/method/list";
     }
 }
