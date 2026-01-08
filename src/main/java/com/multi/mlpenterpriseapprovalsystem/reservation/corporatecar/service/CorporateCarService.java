@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.corporatecar.service;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.corporatecar.domain.CorporateCar;
@@ -19,40 +20,49 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
  * 법인 차량 관리 도메인의 비즈니스 로직을 담당하는 Service.
- * <p>
- * 법인 차량 정보의 조회, 등록, 수정, 삭제와 관련된 비즈니스 로직을 처리한다.
- * 데이터 접근은 Repository 계층에 위임하며, 도메인 규칙 및 처리 흐름을 관리한다.
+ *
+ * - 이미지 저장: 로컬 -> S3 업로드
+ * - DB(imgUrl): S3 objectKey 저장
+ * - 응답(imageUrl): objectKey -> presigned GET URL로 변환해서 내려줌
  *
  * @author : 송현님
  * @filename : CorporateCarService
- * @since : 2025-12-21 오후 12:58 일요일
+ * @since : 2025-12-21
  */
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class CorporateCarService {
+
     private final CorporateCarRepository corporateCarRepository;
     private final CompanyRepository companyRepository;
 
-    @Value("${image.image-dir}")  // 서버의 실제 저장 위치
-    private String IMAGE_DIR;
-    @Value("${image.image-url}")  // 브라우저에서 접근하는 주소
-    private String IMAGE_URL;
+    private final S3Client s3Client;
+    private final S3UrlService s3UrlService;
 
+    @Value("${app.s3.bucket}")
+    private String bucket;
+
+    @Value("${app.s3.env}")
+    private String env;
+
+    @Transactional(readOnly = true)
     public ResCorporateCarDto getCorporateCar(Long carNo, CustomUser user) {
 
         CorporateCar corporateCar = corporateCarRepository.findById(carNo)
@@ -70,18 +80,16 @@ public class CorporateCarService {
                 .carType(corporateCar.getCarType())
                 .fuel(corporateCar.getFuel())
                 .capacity(corporateCar.getCap())
-                .imageUrl(corporateCar.getImgUrl())
+                // ✅ objectKey -> presigned url
+                .imageUrl(toImageUrl(corporateCar.getImgUrl()))
                 .build();
     }
 
-
-
     @Transactional(readOnly = true)
     public Page<ResCorporateCarDto> selectCorporateCarsWithPaging(String comId, Pageable pageable) {
-        // 반환 타입이 Page<ResCorporateCarDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
+
         Page<CorporateCar> corporateCars = corporateCarRepository.findByCompany_ComId(comId, pageable);
 
-        // Entity -> Response DTO로 변환 (Page.map()은 Page 형태 유지하면서 내부 요소만 변환)
         return corporateCars.map(corporateCar -> ResCorporateCarDto.builder()
                 .carNo(corporateCar.getCarNo())
                 .carName(corporateCar.getCarName())
@@ -89,69 +97,25 @@ public class CorporateCarService {
                 .carType(corporateCar.getCarType())
                 .fuel(corporateCar.getFuel())
                 .capacity(corporateCar.getCap())
-                .imageUrl(corporateCar.getImgUrl())
+                // ✅ objectKey -> presigned url
+                .imageUrl(toImageUrl(corporateCar.getImgUrl()))
                 .build());
     }
 
     public Long registerCorporateCar(CustomUser user, ReqCorporateCarDto corporateCarDto, MultipartFile imageFile) {
 
-        // 1. 권한 체크
-        boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a ->
-                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
-                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
-                                a.getAuthority().equals("ROLE_THR_ADMIN")
-                );
-
-        if (!isAdmin) {
-            throw new CustomException(
-                    ErrorCode.FORBIDDEN
-            );
-        }
+        if (!isAdmin(user)) throw new CustomException(ErrorCode.FORBIDDEN);
 
         String comId = user.getComId();
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
-        // 차량 번호로 변경
-        if (corporateCarRepository.existsByCompany_ComIdAndPlateNo(
-                comId,
-                corporateCarDto.getPlateNo()
-        )) {
+        // 차량번호 중복 체크
+        if (corporateCarRepository.existsByCompany_ComIdAndPlateNo(comId, corporateCarDto.getPlateNo())) {
             throw new CustomException(ErrorCode.DUPLICATE_CAR_PLATE_NO);
         }
 
-        String savedUrl = null;
-
-        // 이미지 파일이 있을 때
-        if (imageFile != null && !imageFile.isEmpty()) {
-            try {
-                // 확장자 추출(.jpg, .png 등)
-                String ext = Optional.ofNullable(imageFile.getOriginalFilename())
-                        .filter(f -> f.contains("."))
-                        .map(f -> f.substring(f.lastIndexOf(".")))
-                        .orElse("");
-
-                // UUID로 파일명 생성(중복 방지)
-                String fileName = UUID.randomUUID() + ext;
-
-                // 저장 경로 생성: IMAGE_DIR + fileName
-                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);  // imageDir = C:/.../uploads
-
-                // uploads 폴더 없으면 생성(있으면 그냥 통과)
-                Files.createDirectories(savePath.getParent());
-
-                // 실제 파일 저장(디스크에 write)
-                imageFile.transferTo(savePath.toFile());
-
-                // 브라우저에서 접근할 URL 생성(정적 리소스 매핑 필요)
-                savedUrl = IMAGE_URL + "/" + fileName; // imageUrl = http://localhost:8090/uploads
-            } catch (IOException e) {
-                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
-            }
-        }
-
-        // 요청 DTO 값으로 CorporateCar 엔티티 생성 (회사 FK 포함)
+        // 1) 먼저 저장해서 carNo 확보 (이미지는 일단 null)
         CorporateCar corporateCar = CorporateCar.builder()
                 .company(company)
                 .carName(corporateCarDto.getCarName())
@@ -159,48 +123,36 @@ public class CorporateCarService {
                 .cap(corporateCarDto.getCapacity())
                 .carType(corporateCarDto.getCarType())
                 .fuel(corporateCarDto.getFuel())
-                .imgUrl(savedUrl)
+                .imgUrl(null) // ✅ DB에는 objectKey 저장
                 .build();
 
-        return corporateCarRepository.save(corporateCar).getCarNo();
+        CorporateCar saved = corporateCarRepository.save(corporateCar);
 
+        // 2) 이미지 있으면 S3 업로드 후 objectKey 저장
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String key = uploadCorporateCarImageToS3(comId, saved.getCarNo(), imageFile);
+            saved.changeImageUrl(key);
+        }
+
+        return saved.getCarNo();
     }
 
     public Long updateCorporateCar(Long carNo, CustomUser user, ReqCorporateCarDto corporateCarDto, MultipartFile imageFile) {
 
-        // 1. 권한 체크
-        boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a ->
-                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
-                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
-                                a.getAuthority().equals("ROLE_THR_ADMIN")
-                );
+        if (!isAdmin(user)) throw new CustomException(ErrorCode.FORBIDDEN);
 
-        if (!isAdmin) {
-            throw new CustomException(
-                    ErrorCode.FORBIDDEN
-            );
-        }
-
-        // 수정할 회의실 조회
         CorporateCar corporateCar = corporateCarRepository.findById(carNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.CORPORATE_CAR_NOT_FOUND));
 
-        // 같은 회사 데이터인지 검증(보안)
         String comId = user.getComId();
         if (!corporateCar.getCompany().getComId().equals(comId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
+        // 차량번호 변경 시 중복 체크
         String newPlateNo = corporateCarDto.getPlateNo();
-
         if (!corporateCar.getPlateNo().equals(newPlateNo)) {
-            // 이름 변경 시에만 중복 검사
-            if (corporateCarRepository.existsByCompany_ComIdAndPlateNoAndCarNoNot(
-                    comId,
-                    newPlateNo,
-                    carNo
-            )) {
+            if (corporateCarRepository.existsByCompany_ComIdAndPlateNoAndCarNoNot(comId, newPlateNo, carNo)) {
                 throw new CustomException(ErrorCode.DUPLICATE_CAR_PLATE_NO);
             }
         }
@@ -208,44 +160,58 @@ public class CorporateCarService {
         boolean isImageChanged = imageFile != null && !imageFile.isEmpty();
         boolean isInfoChanged = !isSame(corporateCar, corporateCarDto);
 
-        if (!isImageChanged && !isInfoChanged) {
-            // 변경 없음 → 그냥 바로 리턴
-            return corporateCar.getCarNo();
+        if (!isImageChanged && !isInfoChanged) return corporateCar.getCarNo();
+
+        // ✅ 이미지 변경: 새로 업로드 -> DB 반영 -> 커밋 후 oldKey 삭제
+        if (isImageChanged) {
+            String oldKey = corporateCar.getImgUrl();
+            String newKey = uploadCorporateCarImageToS3(comId, corporateCar.getCarNo(), imageFile);
+            corporateCar.changeImageUrl(newKey);
+
+            // ✅ 커밋 성공 후에만 삭제(롤백이면 실행 안 됨)
+            deleteAfterCommit(oldKey);
         }
 
-        // 이미지 파일이 있으면 새로 저장하고 imgUrl만 교체
-        if (imageFile != null && !imageFile.isEmpty()) {
-
-            // 확장자 추출
-            String ext = Optional.ofNullable(imageFile.getOriginalFilename())
-                    .filter(f -> f.contains("."))
-                    .map(f -> f.substring(f.lastIndexOf(".")))
-                    .orElse("");
-
-            // UUID 파일명 생성
-            String fileName = UUID.randomUUID() + ext;
-
-
-            try {
-                // 저장 경로 생성 및 디렉토리 생성
-                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);
-                Files.createDirectories(savePath.getParent());
-
-                // 실제 파일 저장
-                imageFile.transferTo(savePath.toFile());
-
-                // 접근 URL 생성 후 엔티티에 반영
-                String savedUrl = IMAGE_URL + "/" + fileName;
-                corporateCar.changeImageUrl(savedUrl);
-            } catch (IOException e) {
-                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
-            }
-        }
-
-        // 이미지 외의 필드(이름/인원/위치/장비/비고 등) 업데이트
         corporateCar.updateInfo(corporateCarDto);
-
         return corporateCar.getCarNo();
+    }
+
+    public void deleteCorporateCar(Long carNo) {
+
+        CorporateCar corporateCar = corporateCarRepository.findById(carNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.CORPORATE_CAR_NOT_FOUND));
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        CustomUser user = (CustomUser) authentication.getPrincipal();
+
+        if (!isAdmin(user)) throw new CustomException(ErrorCode.FORBIDDEN);
+
+        if (!corporateCar.getCompany().getComId().equals(user.getComId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        String oldKey = corporateCar.getImgUrl();
+
+        corporateCarRepository.delete(corporateCar);
+
+        // ✅ DB 삭제 커밋된 다음에만 S3 삭제
+        deleteAfterCommit(oldKey);
+    }
+
+    /* ===================== helpers ===================== */
+
+    private boolean isAdmin(CustomUser user) {
+        return user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role ->
+                        role.equals("ROLE_COM_ADMIN") ||
+                                role.equals("ROLE_SEC_ADMIN") ||
+                                role.equals("ROLE_THR_ADMIN")
+                );
     }
 
     private boolean isSame(CorporateCar corporateCar, ReqCorporateCarDto dto) {
@@ -256,39 +222,85 @@ public class CorporateCarService {
                 && Objects.equals(corporateCar.getFuel(), dto.getFuel());
     }
 
+    private String uploadCorporateCarImageToS3(String comId, Long carNo, MultipartFile imageFile) {
+        if (imageFile == null || imageFile.isEmpty()) return null;
 
-    public void deleteCorporateCar(Long carNo) {
-
-        CorporateCar corporateCar = corporateCarRepository.findById(carNo)
-                .orElseThrow(() -> new CustomException(ErrorCode.CORPORATE_CAR_NOT_FOUND));
-
-        // 권한 체크
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        String contentType = imageFile.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         }
 
-        CustomUser user = (CustomUser) authentication.getPrincipal();
+        String original = Optional.ofNullable(imageFile.getOriginalFilename()).orElse("image");
+        String safeName = original.replaceAll("\\s+", "_")
+                .replaceAll("[\\\\/:*?\"<>|]", "_");
 
-        boolean canDelete = user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(role ->
-                        role.equals("ROLE_COM_ADMIN") ||
-                                role.equals("ROLE_SEC_ADMIN") ||
-                                role.equals("ROLE_THR_ADMIN")
-                );
+        String ext = "";
+        int dot = safeName.lastIndexOf('.');
+        if (dot > 0 && dot < safeName.length() - 1) ext = safeName.substring(dot);
 
-        if (!canDelete) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
+        String key = String.format("%s/%s/corporate-car/%d/%s%s",
+                env, comId, carNo, UUID.randomUUID(), ext
+        );
+
+        try {
+            PutObjectRequest putReq = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(
+                    putReq,
+                    RequestBody.fromInputStream(imageFile.getInputStream(), imageFile.getSize())
+            );
+
+            return key;
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    private String toImageUrl(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) return null;
+
+        // 과거 데이터가 URL이면 그대로 내려줌(마이그레이션 전 호환)
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+            return objectKey;
         }
 
-        // 회사 체크
-        if (!corporateCar.getCompany().getComId().equals(user.getComId())) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
+        return s3UrlService.presignGetUrl(objectKey);
+    }
+
+    private void deleteS3ObjectQuietly(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) return;
+
+        // 과거 데이터가 URL이면 삭제 시도 안 함
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) return;
+
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(objectKey)
+                    .build());
+        } catch (Exception e) {
+            log.warn("[corporate-car] S3 delete failed. key={}", objectKey, e);
+        }
+    }
+
+    private void deleteAfterCommit(String oldKey) {
+        if (oldKey == null || oldKey.isBlank()) return;
+
+        // 트랜잭션이 없으면 즉시 삭제(정책에 따라 return로 바꿔도 됨)
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteS3ObjectQuietly(oldKey);
+            return;
         }
 
-        corporateCarRepository.delete(corporateCar);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteS3ObjectQuietly(oldKey);
+            }
+        });
     }
 }
