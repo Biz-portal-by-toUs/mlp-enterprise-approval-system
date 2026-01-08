@@ -31,6 +31,21 @@
         .title{ font-size:52px; font-weight:900; margin:0; letter-spacing:-1.5px; }
         .desc{ color:#555; font-weight:600; margin-top:12px; font-size:18px; }
 
+        /* 예치금 배지 스타일 */
+        .credit-badge {
+            background: #eef3ff;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
         .plan-container{
             display:flex;
             gap:24px;
@@ -69,14 +84,36 @@
         .plan-price{ font-size:44px; font-weight:900; margin-bottom:30px; }
         .plan-price span{ font-size:18px; font-weight:600; }
 
+        .usage-info{
+            margin-top:-20px;
+            margin-bottom:25px;
+        }
+
         .usage-period{
             font-size:14px;
             font-weight:700;
-            margin-top:-20px;
-            margin-bottom:25px;
             opacity:0.95;
+            margin:0;
         }
         .plan-card.featured .usage-period { color: var(--white); }
+
+        .pending-info{
+            margin:4px 0 0 0;
+            font-size:13px;
+            font-weight:800;
+            color:#ffeb3b;
+        }
+
+        .warning-text{
+            color: #ff5252;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 5px;
+            background: rgba(255,255,255,0.9);
+            padding: 4px;
+            border-radius: 4px;
+            display: inline-block;
+        }
 
         .btn-plan{
             appearance:none; border:none; background:var(--primary); color:var(--white);
@@ -111,6 +148,8 @@
         <section class="title-section">
             <h1 class="title">요금제 안내</h1>
             <p class="desc">귀하의 비즈니스 성장에 딱 맞는 요금제를 선택하세요.</p>
+
+            <div id="creditInfo" style="margin-top: 20px;"></div>
         </section>
 
         <div class="plan-container" id="planList"></div>
@@ -120,21 +159,15 @@
 <script th:inline="javascript">
     const planListEl = document.getElementById('planList');
 
-    // SweetAlert2 기반 토스트 설정
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'bottom',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true
-    });
-
     // 1. 초기 데이터 로드
     async function init() {
         try {
             const resMe = await fetch('/api/v1/company/subscription/me');
             const meJson = await resMe.json();
             const currentSub = meJson.data;
+
+            // 예치금 정보 렌더링
+            renderCreditInfo(currentSub.creditBalance);
 
             const resPlans = await fetch('/api/v1/subscriptions');
             const plansJson = await resPlans.json();
@@ -145,14 +178,46 @@
         }
     }
 
+    // 예치금 배지 렌더링 함수
+    function renderCreditInfo(balance) {
+        const el = document.getElementById('creditInfo');
+        if (balance > 0) {
+            el.innerHTML = `
+                <div class="credit-badge">
+                    <span>💰 보유 예치금: ₩${Math.round(balance).toLocaleString()}</span>
+                    <small style="font-size: 11px; opacity: 0.8; margin-left:5px;">(다음 결제 시 자동 공제됩니다)</small>
+                </div>
+            `;
+        } else {
+            el.innerHTML = '';
+        }
+    }
+
     // 2. 카드 렌더링 함수
     function renderPlans(plans, currentSub) {
         const currentSubNo = currentSub.subNo;
         const status = currentSub.status;
+        const pendingSubNo = currentSub.pendingSubNo;
+        const pendingSubName = currentSub.pendingSubName;
         const expiryDate = currentSub.nextBillingDate ? new Date(currentSub.nextBillingDate).toLocaleDateString() : null;
+        const empCnt = currentSub.empCnt || 0;
+        const pendingLimit = currentSub.pendingLimit || 30;
 
         planListEl.innerHTML = plans.map(plan => {
             const isCurrent = plan.subNo === currentSubNo;
+            const isPending = plan.subNo === pendingSubNo;
+            const name = plan.subName.toLowerCase();
+
+            // 요금제별 특화 기능 로직 추가 (9개 요금제 대응)
+            let specificFeatures = '';
+            if (name.includes('pro')) {
+                specificFeatures = `<li class="feature-item">챗봇기능 사용가능</li>`;
+            } else if (name.includes('ultimate')) {
+                specificFeatures = `
+                    <li class="feature-item">챗봇기능 사용가능</li>
+                    <li class="feature-item">회의 요약 기능 추가</li>
+                `;
+            }
 
             return `
                 <div class="plan-card ${isCurrent ? 'featured' : ''}">
@@ -163,21 +228,34 @@
                     </div>
 
                     <button class="btn-plan"
-                            onclick="handlePlanSelection(${plan.subNo})"
-                            ${isCurrent ? 'disabled' : ''}>
-                        ${isCurrent ? '현재 요금제' : '요금제 변경'}
+                            onclick="handlePlanSelection(${plan.subNo}, ${plan.subPrice})"
+                            ${isCurrent || isPending ? 'disabled' : ''}>
+                        ${isCurrent ? '현재 요금제' : (isPending ? '변경 예약됨' : '요금제 변경')}
                     </button>
 
                     ${isCurrent && expiryDate ? `
-                        <p class="usage-period">
-                            ${status === 'CANCELED' ? '만료 예정일: ' : '다음 결제일: '} ${expiryDate}
-                        </p>
+                        <div class="usage-info">
+                            <p class="usage-period">
+                                ${status === 'CANCELED' && !pendingSubName ? '만료 예정일: ' : '다음 결제일: '} ${expiryDate}
+                            </p>
+                            ${pendingSubName ? `
+                                <p class="pending-info">
+                                    ${expiryDate}부터 ${pendingSubName.toUpperCase()}로 전환 예약됨
+                                </p>
+                                ${empCnt > pendingLimit ? `
+                                    <div class="warning-text">⚠️ 주의: 현재 인원(${empCnt}명)이 예약 한도(${pendingLimit}명)를 초과합니다. 만료 전 조정하지 않으면 자동 연장됩니다.</div>
+                                ` : ''}
+                            ` : ''}
+                            ${status === 'CANCELED' && !pendingSubName && empCnt > 30 ? `
+                                <div class="warning-text">⚠️ 주의: 현재 인원(${empCnt}명)이 무료 한도(30명)를 초과합니다. 조정하지 않으면 해지가 취소됩니다.</div>
+                            ` : ''}
+                        </div>
                     ` : ''}
 
                     <div class="feature-title">주요 기능 :</div>
                     <ul class="feature-list">
                         <li class="feature-item">${plan.subDesc}</li>
-                        <li class="feature-item">모든 핵심 기능 포함</li>
+                        ${specificFeatures}
                         <li class="feature-item">연중무휴 기술 지원</li>
                     </ul>
                 </div>
@@ -186,25 +264,22 @@
     }
 
     // 3. 요금제 변경 로직 (SweetAlert2 적용)
-    async function handlePlanSelection(subNo) {
+    async function handlePlanSelection(subNo, subPrice) {
         let url = '';
         let method = '';
-        let title = '';
-        let text = '';
+        let title = '요금제 변경 확인';
+        let text = '보유하신 예치금이 있다면 결제 금액에서 최우선으로 차감됩니다.\n현재보다 낮은 요금제는 만료 후 전환되며, 높은 요금제(인원 확장 포함)는 즉시 차액 결제됩니다.';
 
         if (subNo === 1) { // 무료 요금제 선택 시 (해지 예약)
             url = '/api/v1/company/subscription/cancel';
             method = 'PATCH';
             title = '구독 해지 예약';
-            text = "무료 요금제로 변경하시겠습니까? 다음 결제가 중단되며 만료일까지 유료 혜택이 유지됩니다.";
-        } else { // 유료 요금제 선택 시 (업그레이드)
+            text = "무료 요금제로 변경하시겠습니까? 보유한 예치금은 다음 결제 시까지 보존되나, 만료일 이후 혜택이 제한됩니다.";
+        } else {
             url = `/api/v1/company/subscription/upgrade?subNo=${subNo}`;
             method = 'POST';
-            title = '요금제 업그레이드';
-            text = "해당 요금제로 변경하시겠습니까? 확인 시 즉시 결제가 진행됩니다.";
         }
 
-        // [SweetAlert2] 확인창 띄우기
         const result = await Swal.fire({
             title: title,
             text: text,
@@ -215,14 +290,19 @@
         });
 
         if (result.isConfirmed) {
-            Swal.showLoading(); // 처리 중 로딩 표시
+            Swal.showLoading();
             try {
                 const res = await fetch(url, { method: method });
                 const json = await res.json();
                 Swal.close();
 
                 if (res.ok) {
-                    await Swal.fire('처리 완료', '요금제 변경 요청이 정상적으로 처리되었습니다.', 'success');
+                    await Swal.fire({
+                        title: '처리 완료',
+                        text: '요금제 변경 요청이 정상적으로 처리되었습니다.',
+                        icon: 'success',
+                        confirmButtonText: '확인'
+                    });
                     location.reload();
                 } else {
                     Swal.fire('변경 실패', json.message || "오류가 발생했습니다.", 'error');

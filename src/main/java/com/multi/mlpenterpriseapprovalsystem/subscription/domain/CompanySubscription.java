@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.subscription.enums.SubStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -49,6 +50,36 @@ public class CompanySubscription extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "sub_stat", nullable = false)
     private SubStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pending_sub_no")
+    private Subscription pendingSubscription; // 만료 후 변경될 예약 요금제
+
+    @Column(name = "credit_balance", nullable = false)
+    @Builder.Default
+    private BigDecimal creditBalance = BigDecimal.ZERO; // 예치금
+
+    // 예치금 추가 메서드
+    public void addCredit(BigDecimal amount) {
+        this.creditBalance = this.creditBalance.add(amount);
+    }
+
+    // 예치금 사용 메서드 (남은 예치금 반환)
+    public void useCredit(BigDecimal amount) {
+        this.creditBalance = this.creditBalance.subtract(amount).max(BigDecimal.ZERO);
+    }
+
+    // 요금제 예약 메서드 (다운그레이드용)
+    public void reservePlanChange(Subscription nextPlan) {
+        this.pendingSubscription = nextPlan;
+        this.autoRenewal = false; // 예약 변경이므로 다음 자동 결제는 막음
+        this.status = SubStatus.CANCELED; // 해지 예약과 유사한 상태로 취급
+    }
+
+    // 업그레이드 시 예약 정보 초기화
+    public void clearPendingPlan() {
+        this.pendingSubscription = null;
+    }
 
     // 결제 수단 변경
     public void changePaymentMethod(PaymentMethod newMethod) {

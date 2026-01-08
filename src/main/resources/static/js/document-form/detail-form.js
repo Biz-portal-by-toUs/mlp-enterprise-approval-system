@@ -66,17 +66,44 @@ const VIEW_BASE = '/form'
 // ===== perms from server (html data-*) =====
 function readPerms() {
     const root = document.documentElement
-    const b = (v) => String(v).toLowerCase() === 'true'
-    return {
-        isEmployee: b(root.dataset.isEmployee),
-        canEdit: b(root.dataset.canEdit),
-        canDelete: b(root.dataset.canDelete),
+
+    const raw = {
+        isEmployee: root.dataset.isEmployee,
+        canEdit: root.dataset.canEdit,
+        canDelete: root.dataset.canDelete,
+        canApprove: root.dataset.canApprove,
     }
+
+    const b = (v) => String(v ?? '').trim().toLowerCase() === 'true'
+
+    const out = {
+        isEmployee: b(raw.isEmployee),
+        canEdit: b(raw.canEdit),
+        canDelete: b(raw.canDelete),
+        canApprove: b(raw.canApprove),
+    }
+
+    console.info('[detail-form perms]', { raw, out })
+    return out
 }
+
 const PERM = readPerms()
 
 function markFormListDirty() {
-    try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
+    // localStorage flag (다른 탭/창도 공유)
+    try {
+        localStorage.setItem('documentForm:dirty', String(Date.now())); // timestamp로 매번 변경 보장
+    } catch (_) {}
+
+    // opener로 즉시 신호(같은 출처일 때만)
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(
+                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
+                window.location.origin
+            );
+        }
+    } catch (_) {}
 }
 
 // ✅ 쿠키 기반 fetch (Authorization/localStorage 사용 X)
@@ -258,13 +285,28 @@ function bootViewer(mountEl, json) {
     return viewer
 }
 
+function isResponseDto(obj) {
+    return obj && typeof obj === 'object' && ('data' in obj) && ('message' in obj || 'status' in obj)
+}
+
+async function unwrapResponseDto(res) {
+    // res.json() 결과를 받아서 ResponseDto면 data만 반환
+    const body = await res.json().catch(() => null)
+    if (!body) return null
+    return isResponseDto(body) ? body.data : body
+}
+
 async function fetchDetail(docfoNo) {
     const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
     if (!res.ok) {
         const t = await res.text().catch(() => '')
         throw new Error(`상세 조회 실패: HTTP ${res.status} ${t}`)
     }
-    return res.json()
+
+    // ResponseDto 언랩
+    const detail = await unwrapResponseDto(res)
+    if (!detail) throw new Error('상세 조회 응답이 비어있습니다.')
+    return detail
 }
 
 async function deleteForm(docfoNo) {
@@ -273,6 +315,7 @@ async function deleteForm(docfoNo) {
         const t = await res.text().catch(() => '')
         throw new Error(`삭제 실패: HTTP ${res.status} ${t}`)
     }
+
     return true
 }
 

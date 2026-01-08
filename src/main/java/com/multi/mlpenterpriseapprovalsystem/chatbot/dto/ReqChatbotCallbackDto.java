@@ -3,6 +3,8 @@ package com.multi.mlpenterpriseapprovalsystem.chatbot.dto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
  * fastapi에서 스프링으로 요청하는 Callback reqDto
  *
@@ -13,9 +15,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class ReqChatbotCallbackDto {
-    private String messageId;      // ✅ assistantMessageId (Mongo _id String)
-    private String chunk;          // 스트리밍 delta
-    private Boolean done;          // 완료 여부
-    private Boolean success;       // 성공/실패
-    private String errorMessage;   // 실패 시 메시지
+    private String messageId;
+    private String chunk;
+    private Boolean done;
+    private Boolean success;
+    private String errorMessage;
+    private String sessionId;
+
+    private String actionId;         // null 가능
+    private Map<String, Object> params; // null 가능
 }

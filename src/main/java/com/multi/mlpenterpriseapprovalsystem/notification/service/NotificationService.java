@@ -4,23 +4,23 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.sse.SseManager;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
-import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
 import com.multi.mlpenterpriseapprovalsystem.notification.dto.NotificationResponseDto;
+import com.multi.mlpenterpriseapprovalsystem.notification.redis.RedisNotificationPublisher;
 import com.multi.mlpenterpriseapprovalsystem.notification.repository.NotificationsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +37,8 @@ public class NotificationService {
     private final SseManager sseManager;
     private final EmployeeRepository employeeRepository;
 
+    private final RedisNotificationPublisher redisNotificationPublisher;
+
     @Transactional
     public void sendNotification(Employee receiver, NotificationType type, String title, String content, String url) {
         Notifications noti = Notifications.builder()
@@ -47,20 +49,15 @@ public class NotificationService {
                 .title(title)
                 .url(url)
                 .build();
+
         notificationsRepository.save(noti);
 
-        long unreadCount = notificationsRepository.countByReceiver_EmpIdAndIsReadFalse(receiver.getEmpId());
-
-        if (receiver.getMsgStat()== MsgStat.FOCUS){
-            return;
-        }
-
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("notification", NotificationResponseDto.fromEntity(noti));
-        data.put("unreadCount", unreadCount);
-
-        sseManager.sendToUser(receiver.getEmpId(), "notification", data);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisNotificationPublisher.publish(receiver.getEmpId(), noti.getNotiNo());
+            }
+        });
     }
 
     @Transactional
@@ -87,10 +84,10 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long notiNo, String empId) {
         Notifications notification = notificationsRepository.findById(notiNo)
-                .orElseThrow(() -> new IllegalArgumentException("해당 알림이 존재하지 않습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!notification.getReceiver().getEmpId().equals(empId)) {
-            throw new IllegalStateException("알림 읽음 권한이 없습니다.");
+            throw new CustomException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
         }
 
         notification.markAsRead();
@@ -118,6 +115,23 @@ public class NotificationService {
     }
 
 
+    @Transactional
+    public void deleteNotification(String username, Long notiNo) {
+        Notifications notification = notificationsRepository.findById(notiNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
+        if (!notification.getReceiver().getEmpId().equals(username)) {
+            throw new CustomException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
+        }
 
+        notificationsRepository.delete(notification);
+    }
+
+    @Transactional
+    public void deleteAllNotification(String empId) {
+        Employee employee = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        notificationsRepository.deleteAllByEmpId(empId);
+    }
 }

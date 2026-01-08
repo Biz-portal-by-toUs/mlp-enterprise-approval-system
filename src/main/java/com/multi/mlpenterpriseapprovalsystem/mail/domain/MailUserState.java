@@ -11,12 +11,13 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 사용자별 메일 수신 상태(읽음, 중요, 삭제 여부 및 역할) 관리 엔티티
  *
  * @author : 김승기
  * @filename : MailUserState
  * @since : 2025. 12. 16. 화요일
  */
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -70,5 +71,13 @@ public class MailUserState extends BaseEntity {
         mus.isPrior = false;
         mus.deletedAt = null;
         return mus;
+    }
+
+    public void setPrior(boolean prior) {
+        this.isPrior = prior;
+    }
+
+    public void togglePrior() {
+        this.isPrior = (this.isPrior == null) ? Boolean.TRUE : !this.isPrior;
     }
 }

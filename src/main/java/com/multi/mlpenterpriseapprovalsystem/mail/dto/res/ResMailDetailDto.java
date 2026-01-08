@@ -1,30 +1,33 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.dto.res;
 
-import com.multi.mlpenterpriseapprovalsystem.mail.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
 
-import java.time.*;
+import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 메일 상세정보 반환 Dto
  *
  * @author : 정종원
  * @filename : ResMailDetailDto
  * @since : 2025-12-30 화요일
  */
 public record ResMailDetailDto(
-        String mailId,
+        Long mailNo,        // ✅ 상세/상태변경 키
+        String mailId,      // (선택) 내부 식별/디버그용
         String title,
-        String cntt,              // JSON 문자열(또는 HTML이면 cnttHtml)
 
-        // 발신자
+        // 렌더용: JSON + HTML
+        String cnttJson,
+        String cnttHtml,
+
         String senderEmpId,
-        String senderName,
+        String senderEmpName,
 
-        // 내 상태
-        MailRole myRole,
+        String receivers,
+
+        MailRole role,
         boolean isRead,
         boolean isPrior,
         LocalDateTime deletedAt,
-
         LocalDateTime createdAt
 ) {}

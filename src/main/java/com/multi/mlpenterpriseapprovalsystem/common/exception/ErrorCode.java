@@ -65,9 +65,28 @@ public enum ErrorCode {
     START_DATE_MUST_BE_TODAY_OR_LATER(HttpStatus.BAD_REQUEST, "START_DATE_MUST_BE_TODAY_OR_LATER", "시작일은 오늘 이후여야 합니다."),
     END_DATE_BEFORE_START_DATE(HttpStatus.BAD_REQUEST, "END_DATE_BEFORE_START_DATE", "종료일이 시작일보다 빠를 수 없습니다."),
     DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD(HttpStatus.CONFLICT, "DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD", "대직자가 해당 기간에 이미 근태 일정이 있습니다"),
+    BAD_ATTENDANCE_REQUEST(HttpStatus.BAD_REQUEST, "BAD_ATTENDANCE_REQUEST", "잘못된 근태 파라미터 요청입니다"),
+    CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE(HttpStatus.CONFLICT, "CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE", "나를 대직자로 선택한 기간엔 휴가를 갈 수 없습니다"),
 
     // 문서 양식 관련
     DOCUMENT_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_NOT_FOUND", "문서 양식을 찾을 수 없습니다"),
+    DOCUMENT_FORM_COMPANY_MISMATCH(HttpStatus.FORBIDDEN, "DOCUMENT_FORM_COMPANY_MISMATCH", "해당 회사의 문서 양식이 아닙니다"),
+    DOCUMENT_FORM_DELETE_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_DELETE_ALREADY_DELETED", "이미 삭제된 양식입니다"),
+    DOCUMENT_FORM_DELETE_ALREADY_WAITING(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_DELETE_ALREADY_WAITING", "이미 삭제대기 상태입니다"),
+    DOCUMENT_FORM_DELETE_ONLY_WAITING(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_DELETE_ONLY_WAITING", "삭제대기(W) 상태에서만 처리할 수 있습니다"),
+    DOCUMENT_FORM_DELETE_REQUEST_FORBIDDEN(HttpStatus.FORBIDDEN, "DOCUMENT_FORM_DELETE_REQUEST_FORBIDDEN", "삭제 요청 권한이 없습니다"),
+
+    DOCUMENT_FORM_TEMP_ONLY_OWNER(HttpStatus.FORBIDDEN, "DOCUMENT_FORM_TEMP_ONLY_OWNER", "본인이 작성한 임시양식만 처리할 수 있습니다"),
+    DOCUMENT_FORM_TEMP_ONLY_T(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_TEMP_ONLY_T", "임시저장(T) 상태에서만 가능합니다"),
+    DOCUMENT_FORM_TEMP_DELETE_TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_TEMP_DELETE_TARGET_NOT_FOUND", "삭제 대상이 없습니다"),
+
+    DOCUMENT_FORM_INVALID_NEXT_STATUS(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_INVALID_NEXT_STATUS", "허용되지 않은 상태 변경입니다"),
+    REJECT_REASON_REQUIRED_FOR_REJECT(HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED_FOR_REJECT", "반려 사유는 필수입니다"),
+
+    DOCUMENT_FORM_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_TITLE_REQUIRED", "문서 양식 제목은 필수입니다"),
+    DOCUMENT_FORM_TITLE_FORBIDDEN(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_TITLE_FORBIDDEN", "문서 양식 제목에 금칙어가 포함되어 생성/수정할 수 없습니다"),
+    DOCUMENT_FORM_CNTT_JSON_EMPTY(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_CNTT_JSON_EMPTY", "cnttJson은 필수입니다"),
+    DOCUMENT_FORM_CNTT_JSON_MUST_BE_JSON(HttpStatus.BAD_REQUEST, "DOCUMENT_FORM_CNTT_JSON_MUST_BE_JSON", "cnttJson은 JSON 형식이어야 합니다"),
 
     // 문서 양식 내 카테고리 관련
     DOCUMENT_FORM_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_CATEGORY_NOT_FOUND", "문서 양식 카테고리를 찾을 수 없습니다"),
@@ -134,6 +153,7 @@ public enum ErrorCode {
     SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND", "해당 회사의 구독 정보를 찾을 수 없습니다"),
     ALREADY_FREE_PLAN(HttpStatus.CONFLICT, "ALREADY_FREE_PLAN", "이미 무료 요금제입니다"),
     ALREADY_CANCELED_SUBSCRIPTION(HttpStatus.CONFLICT, "ALREADY_CANCELED_SUBSCRIPTION", "이미 해지 예약된 상태입니다"),
+    ALREADY_PENDING_PLAN(HttpStatus.CONFLICT, "ALREADY_PENDING_PLAN", "이미 해당 요금제로 변경 예약된 상태입니다"),
 
     // 결제 실패
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_FAILED", "결제에 실패했습니다"),
@@ -176,6 +196,10 @@ public enum ErrorCode {
     SCHEDULE_NOT_AUTH(HttpStatus.BAD_REQUEST,"SCHEDULE_NOT_AUTH","일정에 접근할 권한이 없습니다"),
     TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "TODO_NOT_FOUND", "투두리스트를 찾을 수 없습니다"),
 
+    // 알림 관련
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", "알림을 찾을 수 없습니다."),
+    NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "NOTIFICATION_ACCESS_DENIED", "해당 알림에 대한 접근 권한이 없습니다."),
+
 
 
 
@@ -204,9 +228,17 @@ public enum ErrorCode {
     CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CHAT_ACCESS_DENIED", "해당 채팅방에 접근할 권한이 없습니다"),
     INVALID_MEMBER_COUNT(HttpStatus.BAD_REQUEST, "INVALID_MEMBER_COUNT", "채팅방 멤버는 최소 1명 이상이어야 합니다"),
     ALREADY_CHAT_MEMBER(HttpStatus.CONFLICT, "ALREADY_CHAT_MEMBER", "이미 채팅방에 참여 중인 멤버입니다"),
-    INVALID_ROOM_TYPE(HttpStatus.BAD_REQUEST,"INVALID_ROOM_TYPE","맞지 않는 채팅방타입입니다");
+    INVALID_ROOM_TYPE(HttpStatus.BAD_REQUEST,"INVALID_ROOM_TYPE","맞지 않는 채팅방타입입니다"),
 
-
+    // 메일 관련
+    MAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_NOT_FOUND", "메일을 찾을 수 없습니다"),
+    MAIL_STATE_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_STATE_NOT_FOUND", "메일 상태 정보를 찾을 수 없습니다"),
+    MAIL_ACCESS_DENIED(HttpStatus.FORBIDDEN, "MAIL_ACCESS_DENIED", "해당 메일에 접근 권한이 없습니다"),
+    MAIL_DRAFT_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_DRAFT_NOT_FOUND", "임시저장 메일을 찾을 수 없습니다"),
+    MAIL_ALREADY_SENT(HttpStatus.BAD_REQUEST, "MAIL_ALREADY_SENT", "이미 발송된 메일입니다"),
+    MAIL_PURGE_ONLY_AFTER_TRASH(HttpStatus.BAD_REQUEST, "MAIL_PURGE_ONLY_AFTER_TRASH", "완전 삭제는 휴지통을 거친 메일만 가능합니다"),
+    MAIL_SENDER_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_SENDER_NOT_FOUND", "발신자를 찾을 수 없습니다"),
+    MAIL_RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_RECEIVER_NOT_FOUND", "수신자를 찾을 수 없습니다");
 
 
     private final HttpStatus status;

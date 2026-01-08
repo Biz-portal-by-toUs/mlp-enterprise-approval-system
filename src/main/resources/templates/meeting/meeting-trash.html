@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+  <title>회의 휴지통 - Bizportal</title>
+  <style>
+    /* 기존 스타일 유지 */
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .select {
+      height: 40px; border-radius: 8px; border: 1px solid var(--line);
+      background: #fff; padding: 0 12px; font-size: 14px; font-weight: 600; outline: none;
+    }
+    .date-filter { display: flex; align-items: center; gap: 8px; }
+    .searchWrap {
+      flex: 1; display: flex; align-items: center; height: 40px;
+      border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 0 14px;
+    }
+    .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; }
+    .searchBtn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px; }
+
+    /* 테이블 스타일 */
+    .tableWrap { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead th { background: #f9fafb; border-bottom: 1px solid var(--line); text-align: center; padding: 14px 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+    tbody td { border-bottom: 1px solid var(--line); text-align: center; padding: 12px 10px; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ✅ 버튼 스타일 추가 */
+    .action-btns { display: flex; gap: 6px; justify-content: center; }
+    .btn-sm {
+      padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--line); background: #fff; transition: 0.15s;
+    }
+    .btn-restore { color: #10b981; border-color: #10b981; }
+    .btn-restore:hover { background: #ecfdf5; }
+    .btn-delete { color: #ef4444; border-color: #ef4444; }
+    .btn-delete:hover { background: #fef2f2; }
+
+    /* 페이지네이션 스타일 유지 */
+    .pager-wrapper { display: flex; align-items: center; justify-content: center; position: relative; margin-top: 16px; }
+    .pager { display: flex; align-items: center; gap: 4px; }
+    .pageBtn { min-width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line); background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .pageBtn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .pager-status { position: absolute; right: 0; display: flex; gap: 12px; align-items: center; }
+  </style>
+</head>
+
+<body>
+<div layout:fragment="content">
+  <div class="page-with-subbar">
+    <div th:replace="~{sidebar/meeting-sidebar :: meetingSidebar(${active})}"></div>
+
+    <main style="padding: 24px; min-width: 0; flex: 1;">
+      <div class="toolbar">
+        <div class="date-filter">
+          <input id="fromDate" class="select" type="date">
+          <span style="font-weight: 600; color: var(--muted);">~</span>
+          <input id="toDate" class="select" type="date">
+        </div>
+
+        <div class="searchWrap">
+          <input id="keyword" class="searchInput" placeholder="삭제된 회의 제목 검색..." />
+          <button id="searchBtn" class="searchBtn">
+            <svg viewBox="0 0 24 24" width="20" fill="none" stroke="#666" stroke-width="3">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+          </button>
+        </div>
+        <div style="font-size: 13px; color: var(--muted); font-weight: 600;">* 휴지통 항목은 본인만 확인 가능합니다.</div>
+      </div>
+
+      <section class="tableWrap">
+        <table>
+          <thead>
+          <tr>
+            <th style="width:80px">번호</th>
+            <th>회의 제목</th>
+            <th style="width:180px">회의 일시</th>
+            <th style="width:120px">주최자</th>
+            <th style="width:200px">관리</th> </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </section>
+
+      <div class="pager-wrapper">
+        <div id="pager" class="pager"></div>
+        <div class="pager-status">
+          <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+          <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+  <script th:inline="javascript">
+    const $ = (id) => document.getElementById(id);
+    const API_BASE = "";
+    const PAGE_SIZE = 10;
+
+    function authHeadersJson() {
+      const raw = getCookie("accessToken");
+      const headers = { "Content-Type": "application/json" };
+      if (raw) headers["Authorization"] = `Bearer ${raw}`;
+      return headers;
+    }
+
+    function getCookie(name) {
+      let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+      return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+    }
+
+    function formatDateTime(isoLike){
+      if (!isoLike) return "-";
+      return isoLike.replace("T", " ").substring(0, 16).replaceAll("-", ".");
+    }
+
+    // ✅ 1. 목록 로드 (URL: /api/v1/meetings/trash)
+    async function loadPage(page){
+      try{
+        const qs = new URLSearchParams();
+        qs.set("page", String(page));
+        qs.set("size", String(PAGE_SIZE));
+
+        const kw = $("keyword").value.trim();
+        if (kw) qs.set("keyword", kw);
+        if ($("fromDate").value) qs.set("fromDate", $("fromDate").value);
+        if ($("toDate").value) qs.set("toDate", $("toDate").value);
+
+        const res = await fetch(`${API_BASE}/api/v1/meetings/trash?${qs.toString()}`, {
+          headers: authHeadersJson(),
+          credentials: "include"
+        });
+        const json = await res.json();
+        const data = json.data;
+
+        const meetings = data.meetings || [];
+        const curPage = data.page ?? page;
+        const totalPages = data.totalPages ?? 0;
+        const totalElements = data.totalElements ?? 0;
+
+        const tb = $("tbody");
+        tb.innerHTML = "";
+
+        if (meetings.length === 0) {
+          tb.innerHTML = '<tr><td colspan="5" style="padding:40px; color:var(--muted)">휴지통이 비어 있습니다.</td></tr>';
+        }
+
+        meetings.forEach((m, index) => {
+          const rowNum = totalElements - (curPage * PAGE_SIZE) - index;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+                          <td>${rowNum}</td>
+                          <td style="text-align:left; padding-left:20px; font-weight:700">${escapeHtml(m.title)}</td>
+                          <td>${formatDateTime(m.startAt)}</td>
+                          <td>${escapeHtml(m.writerName)}</td>
+                          <td>
+                              <div class="action-btns">
+                                  <button class="btn-sm btn-restore" onclick="restoreMeeting(${m.meetNo})">복구</button>
+                                  <button class="btn-sm btn-delete" onclick="hardDeleteMeeting(${m.meetNo})">삭제</button>
+                              </div>
+                          </td>
+                        `;
+          tb.appendChild(tr);
+        });
+
+        renderPager(curPage, totalPages);
+        $("countPill").textContent = `${totalElements}건`;
+        $("pageInfo").textContent = `page ${curPage + 1} / ${Math.max(totalPages,1)}`;
+      } catch(e){
+        console.error(e);
+      }
+    }
+
+    // ✅ 2. 복구 로직
+    async function restoreMeeting(meetNo) {
+      if(!confirm("이 회의를 복구하시겠습니까?")) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/restore`, {
+          method: 'PATCH',
+          headers: authHeadersJson(),
+          credentials: "include"
+        });
+        if(res.ok) {
+          alert("회의가 복구되었습니다.");
+          loadPage(0);
+        }
+      } catch(e) { alert("복구 중 오류가 발생했습니다."); }
+    }
+
+    // ✅ 3. 영구 삭제 로직
+    async function hardDeleteMeeting(meetNo) {
+      if(!confirm("영구 삭제 시 복구가 불가능합니다. 정말 삭제하시겠습니까?")) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/hard`, {
+          method: 'DELETE',
+          headers: authHeadersJson(),
+          credentials: "include"
+        });
+        if(res.ok) {
+          alert("영구 삭제되었습니다.");
+          loadPage(0);
+        }
+      } catch(e) { alert("삭제 중 오류가 발생했습니다."); }
+    }
+
+    function renderPager(page, totalPages) {
+      const wrap = $("pager");
+      wrap.innerHTML = "";
+      if (totalPages <= 0) return;
+
+      const createBtn = (txt, target, active = false, disabled = false) => {
+        const b = document.createElement("button");
+        b.className = `pageBtn ${active ? 'active' : ''}`;
+        b.textContent = txt;
+        b.disabled = disabled;
+        b.onclick = () => loadPage(target);
+        return b;
+      };
+
+      wrap.appendChild(createBtn("<", page - 1, false, page <= 0));
+      for (let i = 0; i < totalPages; i++) {
+        if(i >= page - 2 && i <= page + 2) // 간략 페이징
+          wrap.appendChild(createBtn(i + 1, i, i === page));
+      }
+      wrap.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
+    }
+
+    $("searchBtn").onclick = () => loadPage(0);
+    $("keyword").onkeydown = (e) => { if (e.key === 'Enter') loadPage(0); };
+    $("fromDate").onchange = () => loadPage(0);
+    $("toDate").onchange = () => loadPage(0);
+
+    window.onload = () => loadPage(0);
+  </script>
+</th:block>
+</body>
+</html>

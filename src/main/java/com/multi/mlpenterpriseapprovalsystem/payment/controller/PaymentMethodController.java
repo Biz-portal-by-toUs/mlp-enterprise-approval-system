@@ -52,7 +52,6 @@ public class PaymentMethodController {
                                                                    @AuthenticationPrincipal CustomUser customUser) {
         log.info("[/api/v1/company/payment-method] VerifyRequestDto = " + reqVerifyDto.toString());
 
-        // AccessToken에서 회사코드 꺼냈다고 가정
         String comId = customUser.getComId();
 
         // 카드 등록

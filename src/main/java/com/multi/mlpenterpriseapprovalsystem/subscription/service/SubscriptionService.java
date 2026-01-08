@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,17 +29,14 @@ public class SubscriptionService {
     public List<ResSubscriptionDto> getSubscriptions() {
         List<Subscription> subscriptions = subscriptionRepository.findAll();
 
-        List<ResSubscriptionDto> resSubscriptionDtos = new ArrayList<>();
-        for (Subscription subscription : subscriptions) {
-            resSubscriptionDtos.add(
-                    ResSubscriptionDto.builder()
+        return subscriptions.stream()
+                .map(subscription -> ResSubscriptionDto.builder()
                         .subNo(subscription.getSubNo())
                         .subName(subscription.getSubName())
                         .subPrice(subscription.getSubPrice())
                         .subDesc(subscription.getSubDesc())
-                    .build());
-        }
-
-        return resSubscriptionDtos;
+                        .subLimit(subscription.getSubLimit())
+                        .build())
+                .toList();
     }
 }

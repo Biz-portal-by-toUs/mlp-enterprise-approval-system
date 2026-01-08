@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -26,7 +27,10 @@ public class ChatbotStreamController {
     private final ChatbotService chatbotService;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@AuthenticationPrincipal CustomUser user) {
-        return chatbotService.connectUserStream(user.getUsername());
+    public SseEmitter stream(
+            @AuthenticationPrincipal CustomUser user,
+            @RequestParam String sessionId
+    ) {
+        return chatbotService.connectUserStream(user.getUsername(), sessionId);
     }
 }

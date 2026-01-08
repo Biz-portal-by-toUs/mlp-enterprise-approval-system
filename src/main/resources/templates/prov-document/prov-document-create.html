@@ -74,10 +74,9 @@
         progress { width: 100%; height: 8px; border-radius: 4px; overflow: hidden; appearance: none; border: none; background: #e2e8f0; }
         progress::-webkit-progress-value { background: var(--primary); }
 
-        /* style 태그 안에 추가 또는 수정 */
         #submitBtn {
-            width: 200px;            /* ✅ 원하는 길이로 조절 */
-            justify-content: center; /* ✅ 내용물(아이콘+텍스트) 중앙 정렬 */
+            width: 200px;
+            justify-content: center;
         }
     </style>
 </head>
@@ -107,8 +106,8 @@
                 <div class="form-card">
                     <div class="form-grid">
                         <div class="field" style="margin-bottom:0">
-                            <span class="label">규정 제목 (최대 30자)</span>
-                            <input id="docTitle" class="input" placeholder="규정의 제목을 입력하세요" maxlength="30">
+                            <span class="label">규정 제목 (최대 50자)</span>
+                            <input id="docTitle" class="input" placeholder="규정의 제목을 입력하세요" maxlength="50">
                         </div>
                         <div class="field" style="margin-bottom:0">
                             <span class="label">공개 설정</span>
@@ -146,9 +145,8 @@
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
         const $ = (id) => document.getElementById(id);
-        const API_BASE = "http://localhost:8090";
+        const API_BASE = "";
 
-        // Meeting 코드의 헬퍼 함수들 도입
         function unwrapMaybeResponseDto(resJson) {
             return (resJson && resJson.data) ? resJson.data : resJson;
         }
@@ -170,8 +168,15 @@
             const desc = $("description").value.trim();
             const file = $("file").files[0];
 
-            if (!title || !desc || !file) {
-                alert("모든 필드를 입력하고 파일을 선택해주세요.");
+            // ✅ 제목 입력 여부 검증
+            if (!title) {
+                alert("규정 제목을 입력해주세요.");
+                $("docTitle").focus();
+                return;
+            }
+
+            if (!desc || !file) {
+                alert("상세 설명과 첨부 파일을 모두 선택 및 입력해주세요.");
                 return;
             }
 
@@ -182,17 +187,16 @@
                 const statusMsg = $("statusMsg");
                 progWrap.style.display = "block";
 
-                // 1) 정보 생성 (Meeting 방식: fetchOptions 사용)
+                // 1) 정보 생성
                 statusMsg.textContent = "1/5 규정 정보 생성 중...";
                 const cRes = await fetch(`${API_BASE}/api/v1/prov-documents`,
                     fetchOptions("POST", { docTitle: title, description: desc, isPublic: $("isPublic").value === "true" }));
                 const cResult = await cRes.json();
                 const provData = unwrapMaybeResponseDto(cResult);
-                // 서버 응답이 숫자인지 객체인지에 따라 provNo 추출
                 const provNo = (typeof provData === 'number') ? provData : provData.provNo;
                 progEl.value = 20;
 
-                // 2) Presign URL 발급 (Meeting 방식: contentType 기본값 처리 추가)
+                // 2) Presign URL 발급
                 statusMsg.textContent = "2/5 업로드 주소 발급 중...";
                 const pRes = await fetch(`${API_BASE}/api/v1/attachments/presign`,
                     fetchOptions("POST", {
@@ -200,7 +204,7 @@
                         entityId: provNo,
                         fileType: "DOC",
                         originalName: file.name,
-                        contentType: file.type || "application/octet-stream", //
+                        contentType: file.type || "application/octet-stream",
                         size: file.size
                     }));
                 const pResult = await pRes.json();
@@ -212,11 +216,11 @@
                 await fetch(uploadUrl, {
                     method: "PUT",
                     body: file,
-                    headers: { "Content-Type": file.type || "application/octet-stream" } //
+                    headers: { "Content-Type": file.type || "application/octet-stream" }
                 });
                 progEl.value = 70;
 
-                // 4) Complete (이 단계가 성공해야 attachment 테이블에 저장됨)
+                // 4) Complete
                 statusMsg.textContent = "4/5 업로드 완료 확인 중...";
                 await fetch(`${API_BASE}/api/v1/attachments/complete`,
                     fetchOptions("POST", {
@@ -225,7 +229,7 @@
                         fileType: "DOC",
                         objectKey,
                         originalName: file.name,
-                        contentType: file.type || "application/octet-stream", //
+                        contentType: file.type || "application/octet-stream",
                         size: file.size
                     }));
                 progEl.value = 90;
@@ -237,7 +241,7 @@
                         provNo,
                         objectKey,
                         originalName: file.name,
-                        contentType: file.type || "application/octet-stream", //
+                        contentType: file.type || "application/octet-stream",
                         size: file.size
                     }));
 

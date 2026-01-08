@@ -7,12 +7,14 @@ import com.multi.mlpenterpriseapprovalsystem.employee.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -107,8 +109,7 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK, "사원 목록 조회 성공", list));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
-    @GetMapping("/admin/employees/{empNo}") // ✅ 요청하신 POST 방식
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")    @GetMapping("/admin/employees/{empNo}") // ✅ 요청하신 POST 방식
     public ResponseEntity<ResponseDto<ResAdminEmployeeDetailDto>> getEmployeeDetail(
             @AuthenticationPrincipal CustomUser user,
             @PathVariable(name="empNo") Long empNo
@@ -120,8 +121,7 @@ public class EmployeeController {
                 .body(new ResponseDto<>(HttpStatus.OK, "사원 상세 조회 성공", dto));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
-    @PatchMapping("/admin/employees/{empNo}/retire")
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")    @PatchMapping("/admin/employees/{empNo}/retire")
     public ResponseEntity<ResponseDto<Void>> retireEmployee(
             @AuthenticationPrincipal CustomUser user,
             @PathVariable(name="empNo") Long empNo
@@ -135,7 +135,7 @@ public class EmployeeController {
         ));
     }
 
-    @PreAuthorize("hasRole('COM_ADMIN')")
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")
     @PostMapping("/admin/employees")
     public ResponseEntity<ResponseDto<ResAdminEmployeeCreateDto>> createEmployee(
             @AuthenticationPrincipal CustomUser user,
@@ -149,6 +149,7 @@ public class EmployeeController {
         ));
     }
 
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")
     @PatchMapping("/admin/employees/{empNo}/object-key")
     public void updateEmployeeObjectKey(@PathVariable(name="empNo") Long empNo,
                                         @Valid @RequestBody ReqEmployeeObjectKeyUpdateDto req,
@@ -158,6 +159,7 @@ public class EmployeeController {
         employeeService.updateObjectKey(comId, empNo, req.getObjectKey());
     }
 
+    @PreAuthorize("hasAnyRole('COM_ADMIN', 'SEC_ADMIN')")
     @PatchMapping("/admin/employees/{empNo}")
     public ResponseEntity<ResponseDto<Void>> updateEmployee(
             @AuthenticationPrincipal CustomUser user,
@@ -174,4 +176,26 @@ public class EmployeeController {
                 null
         ));
     }
+
+    // 선택 가능한 대직자 조회
+    @GetMapping("/delegates/available")
+    public ResponseEntity<ResponseDto<List<ResEmployeeDetailDto>>> getAvailableDelegates(
+            @AuthenticationPrincipal CustomUser customUser,
+            @RequestParam(name = "startAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
+            @RequestParam(name = "endAt") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt)
+    {
+        String comId = customUser.getComId();
+        String myEmpId = customUser.getUsername();
+
+        LocalDateTime normalizedStart = startAt.toLocalDate().atStartOfDay();
+        LocalDateTime normalizedEnd = endAt.toLocalDate().atTime(23, 59, 59);
+
+        List<ResEmployeeDetailDto> resEmployeeDetailDtos = employeeService.getAvailableDelegates(comId, myEmpId, normalizedStart, normalizedEnd);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "선택 가능한 대직자 조회 완료", resEmployeeDetailDtos)
+        );
+    }
+
 }

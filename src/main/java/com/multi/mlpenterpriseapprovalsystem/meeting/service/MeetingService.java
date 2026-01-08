@@ -128,6 +128,58 @@ public class MeetingService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public ResMeetingListDto getDeletedMeetingList(String empId,
+                                                   String keyword,
+                                                   LocalDate fromDate,
+                                                   LocalDate toDate,
+                                                   Pageable pageable) {
+
+        // 1. 사용자 정보 및 소속 회사 확인
+        Employee me = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+        String comId = me.getCompany().getComId();
+
+        // 2. 날짜 필터링 로직 (기존 로직 유지)
+        LocalDate f = fromDate;
+        LocalDate t = toDate;
+        if (f != null && t != null && f.isAfter(t)) {
+            LocalDate tmp = f;
+            f = t;
+            t = tmp;
+        }
+
+        LocalDateTime from = (f != null) ? f.atStartOfDay() : null;
+        LocalDateTime toExclusive = (t != null) ? t.plusDays(1).atStartOfDay() : null;
+
+        // 3. 레포지토리 호출 (삭제된 데이터 전용 쿼리)
+        // 휴지통은 보통 본인이 삭제한 것만 보거나, 전체를 보더라도 isDeleted=true 조건이 필수입니다.
+        Page<Meeting> page = meetingRepository.findDeletedMeetings(comId, empId, keyword, from, toExclusive, pageable);
+
+        // 4. DTO 변환 (기존 로직 유지)
+        List<ResMeetingSimpleDto> items = page.getContent().stream()
+                .map(m -> ResMeetingSimpleDto.builder()
+                        .meetNo(m.getMeetNo())
+                        .title(m.getTitle())
+                        .startAt(m.getStartedAt())
+                        .endAt(m.getCreatedAt()) // 필요 시 종료시간이나 삭제시간으로 변경 가능
+                        .aiStatus(String.valueOf(m.getAiStatus()))
+                        .writerEmpId(m.getWriter().getEmpId())
+                        .writerName(m.getWriter().getEmpName())
+                        .participantCount(m.getMeetingEmps().size())
+                        .build())
+                .toList();
+
+        return ResMeetingListDto.builder()
+                .meetings(items)
+                .page(page.getNumber())
+                .size(page.getSize())
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .hasNext(page.hasNext())
+                .build();
+    }
+
     /**
      * 3) getMeetingDetail() : 비공개면 권한 체크(참석자)
      */
@@ -196,6 +248,27 @@ public class MeetingService {
                 .objectKey(audioKey)
                 .participants(participants)
                 .build();
+    }
+
+    @Transactional
+    public Long restoreMeeting(String empId, Long meetNo) {
+
+        Meeting meeting = meetingRepository.findById(meetNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
+
+        if (!meeting.getWriter().getEmpId().equals(empId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        if (!meeting.getIsDeleted()) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // 4. 복구 수행
+        meeting.setDeleted(false);
+        // JPA 더티 체킹에 의해 별도의 save 없이 트랜잭션 종료 시 반영됩니다.
+
+        return meetNo;
     }
 
     @Transactional
@@ -328,9 +401,6 @@ public class MeetingService {
         }
 
         meeting.delete();
-        meetingEmpRepository.deleteAllByMeeting_MeetNo(meetNo);
-        meetingDeptRepository.deleteAllByMeeting_MeetNo(meetNo);
-
         return meeting.getMeetNo();
     }
 
@@ -374,15 +444,41 @@ public class MeetingService {
         meeting.markAiDone(request.getSttText(), request.getAiText());
         meeting.setAudioObjectKey(request.getObjectKey());
 
-        // ✅ 알림 전송 로직 추가 (작성자에게 알림)
-        notificationService.sendNotification(
-                meeting.getWriter(),
-                NotificationType.MEETING,
-                "회의록 요약 완료", // UI에 제목으로 표시됨
-                "\"" + meeting.getTitle() + "\" 회의의 AI 요약이 완료되었습니다.",
-                "/meeting/" + meeting.getMeetNo()
-        );
+        List<MeetingEmp> meetingEmps = meetingEmpRepository.findAllByMeeting_MeetNo(meetNo);
+
+        String title = "회의록 요약 완료";
+        String content = "\"" + meeting.getTitle() + "\" 회의의 AI 요약이 완료되었습니다.";
+        String url = "/meeting/" + meeting.getMeetNo();
+
+        for (MeetingEmp me : meetingEmps) {
+            Employee receiver = me.getEmployee();
+
+
+            notificationService.sendNotification(
+                    receiver,
+                    NotificationType.MEETING,
+                    title,
+                    content,
+                    url
+            );
+        }
 
         return meeting.getMeetNo();
+    }
+
+    @Transactional
+    public Long hardDeleteMeeting(String empId, Long meetNo) {
+        Meeting meeting = meetingRepository.findById(meetNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
+
+        if (!meeting.getWriter().getEmpId().equals(empId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        meetingEmpRepository.deleteAllByMeeting_MeetNo(meetNo);
+        meetingDeptRepository.deleteAllByMeeting_MeetNo(meetNo);
+        meetingRepository.delete(meeting);
+
+        return meetNo;
     }
 }

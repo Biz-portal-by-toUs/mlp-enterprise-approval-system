@@ -34,6 +34,13 @@ public class ViewMeetingController {
         return "meeting/meeting-list";
     }
 
+    // ✅ (추가) 휴지통 화면
+    @GetMapping("/trash")
+    public String meetingTrash(Model model) {
+        model.addAttribute("active", "trash");
+        return "meeting/meeting-trash";
+    }
+
     @GetMapping("/{meetNo}")
     public String meetingDetail(@PathVariable(name = "meetNo") Long meetNo, Model model) {
         model.addAttribute("meetNo", meetNo);
@@ -45,5 +52,7 @@ public class ViewMeetingController {
         model.addAttribute("meetNo", meetNo);
         return "meeting/meeting-update";
     }
+
+
 
 }

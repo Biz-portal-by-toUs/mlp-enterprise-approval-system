@@ -71,11 +71,13 @@ public class PasswordService {
             throw new CustomException(ErrorCode.NOT_BLANK);
         }
 
-        Employee emp = employeeRepository.findByEmpId(req.getEmpId())
+        String empId = normalizeEmpId(req.getEmpId());
+
+        Employee emp = employeeRepository.findByEmpId(empId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
         boolean ok =
-                req.getEmpId().equals(emp.getEmpId()) &&
+                empId.equals(emp.getEmpId()) &&
                         req.getEmpName().equals(emp.getEmpName()) &&
                         req.getEmail().equals(emp.getEmail());
 
@@ -84,6 +86,11 @@ public class PasswordService {
         }
 
         return new ResVerifyDto(emp.getEmpNo(), TokenSubjectType.EMPLOYEE);
+    }
+
+    private String normalizeEmpId(String empId) {
+        if (empId == null) return null;
+        return empId.trim().toUpperCase();
     }
 
     public ResChangePasswordDto changePassword(CustomUser user, @Valid ReqChangeMyPasswordDto req) {

@@ -82,4 +82,12 @@ public class Company extends BaseEntity {
     public void changePassword(String encodedPwd) {
         this.pwd = encodedPwd;
     }
+
+    public void increaseEmpCnt() {
+        this.empCnt += 1;
+    }
+
+    public void decreaseEmpCnt() {
+        if (this.empCnt > 0) this.empCnt -= 1;
+    }
 }

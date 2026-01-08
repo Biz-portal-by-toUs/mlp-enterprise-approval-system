@@ -33,7 +33,7 @@ public class Meeting extends BaseEntity {
     @Column(name = "meet_no")
     private Long meetNo;
 
-    @Column(name = "title", nullable = false, length = 30)
+    @Column(name = "title", nullable = false, length = 50)
     private String title;
 
     @Lob
@@ -134,4 +134,7 @@ public class Meeting extends BaseEntity {
         this.sttText = sttText;
     }
 
+    public void setDeleted(boolean b) {
+        this.isDeleted = b;
+    }
 }

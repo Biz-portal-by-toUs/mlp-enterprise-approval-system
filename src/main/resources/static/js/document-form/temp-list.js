@@ -1,7 +1,11 @@
+// /js/document-form/temp-list.js
 (() => {
     const API_BASE = '/api/v1/forms/temp';
     const VIEW_BASE = '/form';
 
+    const blockSize = 5;
+
+    // ===== DOM =====
     const elTbody = document.getElementById('tbody');
     const elInfo = document.getElementById('pageInfo');
     const elPager = document.getElementById('pagerControls');
@@ -10,13 +14,23 @@
     const btnSearch = document.getElementById('btnSearch');
     const elCountPill = document.getElementById('countPill');
 
-    let page = 0;
-    let totalPages = 1;
-    let totalElements = 0;
+    if (!elTbody || !elPager || !btnSearch) {
+        console.warn('[temp-list] required DOM missing, script aborted');
+        return;
+    }
 
-    // ===============================
-    // role (layout에서 class가 내려온다는 가정)
-    // ===============================
+    // ===== perms from server (html data-*) =====
+    function readPerms() {
+        const root = document.documentElement;
+        const b = (v) => String(v ?? '').trim().toLowerCase() === 'true';
+
+        return {
+            isEmployee: b(root?.dataset?.isEmployee)
+        };
+    }
+
+    const PERM = readPerms();
+
     function hasRoleClass(name) {
         const html = document.documentElement?.classList;
         const body = document.body?.classList;
@@ -24,19 +38,19 @@
     }
 
     function isEmployee() {
+        // dataset 우선, 없으면 class로 보조
+        if (typeof PERM.isEmployee === 'boolean') return PERM.isEmployee;
         return hasRoleClass('role-employee') || hasRoleClass('role-EMPLOYEE');
     }
 
-    // ✅ 정책: 임시저장은 직원 접근 불가라면 유지 (원하면 이 블록 지워도 됨)
+    // 정책: 임시저장은 직원 접근 불가
     if (isEmployee()) {
         alert('권한이 없습니다. (임시저장 문서양식은 관리자만 접근 가능합니다.)');
         location.replace('/form/forms');
         return;
     }
 
-    // ===============================
-    // utils
-    // ===============================
+    // ===== util =====
     function esc(s) {
         return String(s ?? '')
             .replaceAll('&', '&amp;')
@@ -46,9 +60,19 @@
             .replaceAll("'", '&#39;');
     }
 
+    function markFormListDirty() {
+        try {
+            localStorage.setItem("list:dirty", "true");
+            // storage 이벤트가 같은 탭에서는 안 떠서, timestamp도 같이 써주면 더 확실
+            localStorage.setItem("list:dirty:ts", String(Date.now()));
+        } catch (_) {}
+    }
+
     function openDetail(docfoNo) {
         if (docfoNo == null) return;
-        const id = String(docfoNo);
+        const id = String(docfoNo).trim();
+        if (!id) return;
+
         window.open(
             `${VIEW_BASE}/${encodeURIComponent(id)}`,
             '_blank',
@@ -56,16 +80,24 @@
         );
     }
 
-    // ===============================
-    // ✅ cookie 기반 fetch + refresh retry (detail-form.js와 동일 패턴)
-    // ===============================
+    // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
     async function refreshAccessTokenIfPossible() {
         const res = await fetch('/auth/refresh', {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
+            headers: { 'Accept': 'application/json' },
         });
         return res.ok;
+    }
+
+    function isResponseDto(obj) {
+        return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+    }
+
+    async function unwrapJson(res) {
+        const body = await res.json().catch(() => null);
+        if (!body) return null;
+        return isResponseDto(body) ? body.data : body;
     }
 
     async function apiFetch(url, options = {}, _retried = false) {
@@ -77,102 +109,96 @@
             headers.set('Content-Type', 'application/json');
         }
 
-        const res = await fetch(url, { ...options, headers, credentials: 'same-origin' });
+        const res = await fetch(url, {
+            ...options,
+            headers,
+            credentials: 'same-origin',
+        });
 
         if (res.status === 401 && !_retried) {
             const ok = await refreshAccessTokenIfPossible().catch(() => false);
             if (ok) return apiFetch(url, options, true);
         }
+
         return res;
     }
 
-    // ===============================
-    // response normalize
-    // ===============================
     function normalizePage(data) {
         if (data && Array.isArray(data.content)) {
             return {
                 items: data.content,
                 page: data.number ?? 0,
-                size: data.size ?? Number(elSize?.value || 15),
+                size: data.size ?? Number(elSize?.value || 10),
                 totalPages: data.totalPages ?? 1,
                 totalElements: data.totalElements ?? data.content.length,
             };
-        }
-        if (Array.isArray(data)) {
-            return { items: data, page: 0, size: data.length, totalPages: 1, totalElements: data.length };
         }
         if (data && data.data && Array.isArray(data.data.content)) {
             return {
                 items: data.data.content,
                 page: data.data.number ?? 0,
-                size: data.data.size ?? Number(elSize?.value || 15),
+                size: data.data.size ?? Number(elSize?.value || 10),
                 totalPages: data.data.totalPages ?? 1,
                 totalElements: data.data.totalElements ?? data.data.content.length,
             };
         }
-        return { items: [], page: 0, size: Number(elSize?.value || 15), totalPages: 1, totalElements: 0 };
+        if (Array.isArray(data)) {
+            return { items: data, page: 0, size: data.length, totalPages: 1, totalElements: data.length };
+        }
+        return { items: [], page: 0, size: Number(elSize?.value || 10), totalPages: 1, totalElements: 0 };
     }
+
+    // ===== state =====
+    let page = 0;
+    let totalPages = 1;
+    let totalElements = 0;
 
     function buildUrl() {
         const params = new URLSearchParams();
         params.set('page', String(page));
-        params.set('size', String(Number(elSize?.value || 15)));
+        params.set('size', String(Number(elSize?.value || 10)));
 
         const q = (elQ?.value || '').trim();
-        if (q) {
-            params.set('q', q);
-            params.set('docfoName', q);
-            params.set('keyword', q);
-        }
+        if (q) params.set('q', q);
 
         return `${API_BASE}?${params.toString()}`;
     }
 
-    // ===============================
-    // render
-    // ===============================
+    // ===== render =====
     function render(rows) {
-        if (!elTbody) return;
-
         if (!rows || rows.length === 0) {
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">조회 결과가 없어요.</td></tr>`;
             return;
         }
 
-        const size = Number(elSize?.value || 15);
+        const size = Number(elSize?.value || 10);
 
-        elTbody.innerHTML = rows
-            .map((r, idx) => {
-                const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
-                const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
+        elTbody.innerHTML = rows.map((r, idx) => {
+            const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
+            const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
+            const idStr = String(docfoNo ?? '').trim();
 
-                const idStr = String(docfoNo ?? '');
-                const rowNo = page * size + idx + 1;
+            const rowNo = (page * size) + idx + 1;
 
-                return `
-          <tr>
-            <td class="col-no">${rowNo}</td>
-            <td class="col-title">
-              <a class="titleLink" href="javascript:void(0)" onclick="window.openDetail('${esc(idStr)}')">
-                ${esc(docfoName)}
-              </a>
-            </td>
-          </tr>
-        `;
-            })
-            .join('');
+            return `
+        <tr data-row-id="${esc(idStr)}">
+          <td class="col-no">${rowNo}</td>
+          <td class="col-title">
+            <a class="titleLink" href="javascript:void(0)" data-open="${esc(idStr)}">
+              ${esc(docfoName)}
+            </a>
+          </td>
+        </tr>
+      `;
+        }).join('');
     }
 
     function renderPager() {
-        if (!elPager) return;
-
         elPager.innerHTML = '';
 
         const tp = Math.max(1, Number(totalPages) || 1);
         const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        const blockSize = 5;
         const currentBlock = Math.floor(cur / blockSize);
         const startPage = currentBlock * blockSize;
         let endPage = startPage + blockSize - 1;
@@ -183,6 +209,7 @@
             b.className = `pageBtn ${active ? 'active' : ''}`;
             b.textContent = txt;
             b.disabled = disabled;
+            b.type = 'button';
             b.onclick = () => {
                 page = target;
                 load();
@@ -191,23 +218,28 @@
         };
 
         elPager.appendChild(createBtn('<', cur - 1, false, cur <= 0));
-
         for (let i = startPage; i <= endPage; i++) {
-            elPager.appendChild(createBtn(String(i + 1), i, i === cur, i === cur));
+            elPager.appendChild(createBtn(String(i + 1), i, i === cur, false));
         }
-
         elPager.appendChild(createBtn('>', cur + 1, false, cur >= tp - 1));
     }
 
-    // ===============================
-    // load
-    // ===============================
+    // ===== load =====
     async function load() {
-        if (!elTbody) return;
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
             const res = await apiFetch(buildUrl(), { method: 'GET' });
+
+            if (res.status === 401) {
+                elTbody.innerHTML = `<tr><td colspan="2" class="muted">로그인이 만료되었습니다. 다시 로그인 해주세요.</td></tr>`;
+                return;
+            }
+            if (res.status === 403) {
+                elTbody.innerHTML = `<tr><td colspan="2" class="muted">권한이 없습니다.</td></tr>`;
+                return;
+            }
+
             if (!res.ok) {
                 const t = await res.text().catch(() => '');
                 throw new Error(`HTTP ${res.status} ${t}`);
@@ -227,14 +259,20 @@
         } catch (err) {
             console.error(err);
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
+            totalPages = 1;
             renderPager();
         }
     }
 
-    // ===============================
-    // events
-    // ===============================
-    btnSearch?.addEventListener('click', () => {
+    // ===== events =====
+    elTbody.addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-open]');
+        if (a) {
+            openDetail(a.getAttribute('data-open'));
+        }
+    });
+
+    btnSearch.addEventListener('click', () => {
         page = 0;
         load();
     });
@@ -251,8 +289,30 @@
         load();
     });
 
-    // expose
-    window.openDetail = openDetail;
+    function consumeDirtyAndReload() {
+        try {
+            const dirty = localStorage.getItem("list:dirty");
+            if (dirty === "true") {
+                localStorage.setItem("list:dirty", "false");
+                load();
+            }
+        } catch (_) {}
+    }
 
+    // (1) 페이지가 다시 포커스될 때(팝업 닫고 돌아오면) 체크
+    window.addEventListener("visibilitychange", () => {
+        if (!document.hidden) consumeDirtyAndReload();
+    });
+
+    // (2) 다른 탭/창에서 localStorage 변경되면 즉시 반영
+    window.addEventListener("storage", (e) => {
+        if (e.key === "list:dirty" || e.key === "list:dirty:ts") {
+            consumeDirtyAndReload();
+        }
+    });
+
+    window.addEventListener("focus", () => consumeDirtyAndReload());
+
+    // init
     load();
 })();

@@ -59,6 +59,16 @@ function markFormListDirty() {
     try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
 }
 
+function isResponseDto(obj) {
+    return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+}
+
+async function unwrapJson(res) {
+    const body = await res.json().catch(() => null);
+    if (!body) return null;
+    return isResponseDto(body) ? body.data : body;
+}
+
 // 새 표 기본 열 폭(px)
 const DEFAULT_COL_WIDTH = 160
 
@@ -1056,7 +1066,7 @@ function wireSave(editor) {
 
         // 응답이 createTemp는 Long, saveTemp는 no content라 상황별 처리
         if (method === 'POST') {
-            const id = await res.json().catch(() => null)
+            const id = await unwrapJson(res)
             return id
         }
         return true
@@ -1330,7 +1340,7 @@ async function restoreIfDocfoNoExists(editor) {
         return
     }
 
-    const dto = await res.json()
+    const dto = await unwrapJson(res)
 
     // 백엔드 Detail DTO 기준: docfoName, cnttJson, categories
     const docfoName = dto?.docfoName || dto?.docfo_name || ''

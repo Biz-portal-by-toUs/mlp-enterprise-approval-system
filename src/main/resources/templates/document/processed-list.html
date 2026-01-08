@@ -196,7 +196,7 @@
                 background: #fcfdfe;
             }
 
-            /* ✅ 제목 셀 중앙정렬 수정 */
+            /* 제목 셀 중앙정렬 수정 */
             .title-cell {
                 text-align: center !important;
                 padding-left: 10px !important;
@@ -496,7 +496,7 @@
                     <label>사원번호</label>
                     <input type="text" id="search-writerId" class="search-input" placeholder="사원번호 입력" maxlength="15">
                 </div>
-                <button class="btn-search" onclick="loadData(0)">검색</button>
+                <button class="btn-search" onclick="handleSearch()">검색</button>
             </div>
 
             <div class="sort-options">
@@ -624,6 +624,18 @@
         let allCategories = [];
         let currentUserId = null;
 
+        // ✅ 실제 "적용된" 검색 필터를 저장하는 객체
+        let appliedSearchFilters = {
+            docfoCatName: '',
+            writerDepName: '',
+            docStat: '',
+            myApprStat: '',
+            docId: '',
+            title: '',
+            writerName: '',
+            writerId: ''
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchCurrentUser();
             fetchDepartments();
@@ -652,15 +664,32 @@
             }
         }
 
+        /**
+         * ✅ 검색 버튼 클릭 시 실행되는 함수
+         * 현재 입력창의 값들을 appliedSearchFilters 스냅샷에 저장하고 0페이지를 로드함
+         */
+        function handleSearch() {
+            const catValue = document.getElementById('search-docfoCatName').value;
+
+            appliedSearchFilters.docfoCatName = catValue === '전체' ? '' : catValue;
+            appliedSearchFilters.writerDepName = document.getElementById('search-writerDepName').value;
+            appliedSearchFilters.docStat = document.getElementById('search-docStat').value;
+            appliedSearchFilters.myApprStat = document.getElementById('search-myApprStat').value;
+            appliedSearchFilters.docId = document.getElementById('search-docId').value;
+            appliedSearchFilters.title = document.getElementById('search-title').value;
+            appliedSearchFilters.writerName = document.getElementById('search-writerName').value;
+            appliedSearchFilters.writerId = document.getElementById('search-writerId').value;
+
+            loadData(0);
+        }
+
         function applySort() {
             currentBasis = document.getElementById('sort-basis').value;
-            currentPage = 0;
             loadData(0);
         }
 
         function changeOrder(order) {
             currentOrder = order;
-            currentPage = 0;
             document.querySelectorAll('.sort-order-group span').forEach(el => el.classList.remove('active'));
             document.getElementById('order-' + order).classList.add('active');
             loadData(0);
@@ -741,22 +770,26 @@
             } catch (e) { console.error("부서 로드 실패", e); }
         }
 
+        /**
+         * ✅ 데이터를 불러오는 핵심 함수
+         * 입력창이 아닌 'appliedSearchFilters'에 저장된 스냅샷 값을 기준으로 요청을 보냄
+         */
         async function loadData(page) {
             currentPage = page;
-            const catValue = document.getElementById('search-docfoCatName').value;
             const sortValue = `${currentBasis}_${currentOrder}`;
 
             const params = new URLSearchParams({
                 page: page,
                 sort: sortValue,
-                docfoCatName: catValue === '전체' ? '' : catValue,
-                writerDepName: document.getElementById('search-writerDepName').value,
-                docStat: document.getElementById('search-docStat').value,
-                myApprStat: document.getElementById('search-myApprStat').value,
-                docId: document.getElementById('search-docId').value,
-                title: document.getElementById('search-title').value,
-                writerName: document.getElementById('search-writerName').value,
-                writerId: document.getElementById('search-writerId').value
+                // 스냅샷된 필터값 사용
+                docfoCatName: appliedSearchFilters.docfoCatName,
+                writerDepName: appliedSearchFilters.writerDepName,
+                docStat: appliedSearchFilters.docStat,
+                myApprStat: appliedSearchFilters.myApprStat,
+                docId: appliedSearchFilters.docId,
+                title: appliedSearchFilters.title,
+                writerName: appliedSearchFilters.writerName,
+                writerId: appliedSearchFilters.writerId
             });
 
             try {
@@ -791,13 +824,24 @@
             docs.forEach((doc, index) => {
                 const no = (currentPage * pageSize) + index + 1;
 
+                // ✅ 수정: 내 결재일 찾기 로직 개선 (대직자로 결재한 경우도 포함)
                 let myApprovalDate = '-';
                 if (doc.resApprovalLineDtos && Array.isArray(doc.resApprovalLineDtos) && currentUserId) {
-                    const myApproval = doc.resApprovalLineDtos.find(line =>
-                        line.approverId === currentUserId &&
-                        (line.apprStat === 'A' || line.apprStat === 'R') &&
-                        line.endedAt
-                    );
+                    const myApproval = doc.resApprovalLineDtos.find(line => {
+                        // 조건 1: 내가 결재자이고 승인/반려 상태이며 결재일이 있는 경우
+                        const isMyDirectApproval = line.approverId === currentUserId &&
+                            (line.apprStat === 'A' || line.apprStat === 'R') &&
+                            line.endedAt;
+
+                        // 조건 2: 내가 대직자로서 실제 결재한 경우 (isDelegate=true, isActualAppr=true)
+                        const isMyDelegateApproval = line.approverId === currentUserId &&
+                            line.isDelegate === true &&
+                            line.isActualAppr === true &&
+                            (line.apprStat === 'A' || line.apprStat === 'R') &&
+                            line.endedAt;
+
+                        return isMyDirectApproval || isMyDelegateApproval;
+                    });
 
                     if (myApproval && myApproval.endedAt) {
                         myApprovalDate = formatDate(myApproval.endedAt);

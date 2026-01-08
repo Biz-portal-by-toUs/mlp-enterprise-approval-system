@@ -1,224 +1,190 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="UTF-8"/>
-    <title>사내 규정 챗봇</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비즈포탈 어시스턴트</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <style>
         :root {
-            --primary-color: #007bff;
-            --me-bubble: #ffeb33;
-            --bg-color: #f8f9fa;
-            --border-color: #eee;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-main: #f9fafb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --bot-bubble: #f3f4f6;
+            --user-bubble: #4f46e5;
         }
+
         body {
             font-family: 'Pretendard', sans-serif;
             margin: 0;
-            background-color: var(--bg-color);
-            color: #333;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden;
         }
+
         .wrap {
             height: 100vh;
             display: flex;
             flex-direction: column;
-            position: relative;
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 40px rgba(0,0,0,0.05);
         }
+
         .top {
-            padding: 14px 18px;
+            padding: 20px 24px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            z-index: 10;
-            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .title {
-            flex: 1;
-            min-width: 0;
-            position: relative;
-            overflow: visible !important;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .title-text {
-            display: block;
-            font-weight: 800;
-            font-size: 16px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
-            background: #bbb;
-            box-shadow: 0 0 0 4px rgba(0,0,0,0.03);
-            flex-shrink: 0;
-        }
-        .status-dot.on { background: #2ecc71; }
-        .status-dot.off { background: #ff3b30; }
 
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
+        .title { display: flex; align-items: center; gap: 12px; }
+        .bot-logo {
+            width: 32px; height: 32px;
+            background: var(--primary-color);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 18px;
         }
-        .actions button {
-            padding: 8px 14px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: #fff;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .actions button:hover {
-            background: #f8f9fa;
-            border-color: #bbb;
-        }
-        .btn-primary {
-            background: var(--primary-color) !important;
-            color: white !important;
-            border: none !important;
-        }
+        .title-text h1 { margin: 0; font-size: 18px; font-weight: 700; }
+
+        .status-area { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; }
+        .status-dot.on { background: #10b981; box-shadow: 0 0 8px #10b981; }
 
         .msgs {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 24px;
+            scroll-behavior: smooth;
         }
-        .msg {
-            display: flex;
-            flex-direction: column;
-            max-width: 80%;
-        }
-        .msg.me { align-self: flex-end; align-items: flex-end; }
-        .msg.bot { align-self: flex-start; align-items: flex-start; }
 
-        .sender-info {
-            font-size: 12px;
-            font-weight: 700;
-            color: #555;
-            margin-bottom: 4px;
+        .msg-group {
+            display: flex;
+            gap: 14px;
+            max-width: 85%;
+            animation: fadeInUp 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-group.me { flex-direction: row-reverse; align-self: flex-end; }
+
+        .avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: #eef2ff;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        /* 아바타 펄스 애니메이션 (유지) */
+        .avatar.thinking {
+            position: relative;
+            z-index: 1;
+            background: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .avatar.thinking::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            background: var(--primary-color);
+            opacity: 0.6;
+            z-index: -1;
+            animation: avatar-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .avatar.thinking::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            background: var(--primary-color);
+            opacity: 0.4;
+            z-index: -1;
+            animation: avatar-pulse 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) 0.6s infinite;
+        }
+
+        @keyframes avatar-pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            80%, 100% { transform: scale(2.2); opacity: 0; }
         }
 
         .bubble {
-            padding: 10px 14px;
-            border-radius: 14px;
-            font-size: 14px;
-            line-height: 1.5;
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            word-break: break-all;
-            cursor: pointer;
-            transition: max-height 0.3s ease-out;
-            overflow: hidden;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.6;
             white-space: pre-wrap;
-        }
-        .msg.me .bubble {
-            background-color: var(--me-bubble);
-            border-top-right-radius: 2px;
-        }
-        .msg.bot .bubble {
-            background-color: white;
-            border-top-left-radius: 2px;
-        }
-
-        .bubble a {
-            color: #007bff;
-            text-decoration: underline;
             word-break: break-all;
+            position: relative;
         }
 
-        .bubble.collapsed { max-height: 150px; }
-        .bubble.collapsed::after {
-            content: "클릭하여 더보기";
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 50px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            font-size: 11px;
-            color: #888;
-            padding-bottom: 4px;
-            pointer-events: none;
-        }
-        .me .bubble.collapsed::after { background: linear-gradient(transparent, var(--me-bubble)); }
-        .bot .bubble.collapsed::after { background: linear-gradient(transparent, white); }
-
-        .time-info { font-size: 10px; color: #aaa; margin-top: 4px; }
-
-        .bottom {
-            padding: 10px 15px 5px;
-            background: white;
-            border-top: 1px solid var(--border-color);
-        }
-        .bottom textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            outline: none;
-            font-size: 14px;
-            resize: none;
-            height: 40px;
-            max-height: 100px;
-            overflow: hidden;
-            line-height: 1.4;
-            font-family: inherit;
-            box-sizing: border-box;
-        }
-        .bottom textarea:focus { border-color: var(--primary-color); }
-
-        .bytebar {
-            padding: 0 15px 12px;
-            background: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .bytebar button {
-            padding: 8px 20px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .bytebar button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .bytebar .warn { color:#ff3b30; font-weight:700; }
-
-        .hint {
-            font-size: 12px;
-            color: #888;
-            padding: 10px 20px 0;
+        /* ✅ [수정] 깜빡임 없는 정적 "..." */
+        .thinking-dots {
+            font-weight: bold;
+            color: var(--text-muted);
+            letter-spacing: 2px;
         }
 
-        .msg.system {
-            align-self: center;
-            background: rgba(0, 0, 0, 0.05);
-            color: #888;
-            font-size: 12px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            margin: 8px 0;
-            max-width: 92%;
-            text-align: center;
+        .msg-group.bot .bubble { background-color: var(--bot-bubble); border-top-left-radius: 2px; }
+        .msg-group.me .bubble { background-color: var(--user-bubble); color: white; border-top-right-radius: 2px; }
+
+        .action-area { margin-top: 14px; display: flex; justify-content: flex-start; }
+        .action-btn {
+            background: #ffffff; border: 1px solid var(--primary-color); color: var(--primary-color);
+            padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1);
+            white-space: nowrap; line-height: 1;
         }
+
+        .action-btn:hover {
+            background: var(--primary-color); color: white;
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .time-info { font-size: 11px; color: var(--text-muted); margin-top: 6px; display: block; }
+        .me .time-info { text-align: right; }
+
+        .bottom-area { padding: 24px; background: white; border-top: 1px solid var(--border-color); }
+
+        .input-wrapper {
+            background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 16px;
+            padding: 10px 16px; display: flex; align-items: flex-end; gap: 12px;
+            transition: opacity 0.3s ease;
+        }
+        .input-wrapper.loading { opacity: 0.6; cursor: not-allowed; }
+        .input-wrapper.loading textarea { cursor: not-allowed; }
+
+        textarea { flex: 1; border: none; background: transparent; outline: none; font-size: 15px; padding: 8px 0; resize: none; max-height: 150px; }
+        .send-btn {
+            background: var(--primary-color); color: white; border: none;
+            width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
     </style>
 </head>
 
@@ -226,317 +192,134 @@
 <div class="wrap">
     <div class="top">
         <div class="title">
-            <span id="connDot" class="status-dot"></span>
-            <div class="title-text" id="pageTitle">사내 규정 챗봇</div>
+            <div class="bot-logo">AI</div>
+            <div class="title-text">
+                <h1>비즈포탈 어시스턴트</h1>
+                <div class="status-area">
+                    <span id="connDot" class="status-dot"></span>
+                    <span id="statusText">연결 대기 중</span>
+                </div>
+            </div>
         </div>
         <div class="actions">
-            <button onclick="reloadRecent()">새로고침</button>
-            <button onclick="clearUi()" style="color:#ff3b30; border-color:#ffcfcf;">화면만 지우기</button>
-            <button class="btn-primary" onclick="sendQuestion()">전송</button>
+            <button style="border:none; background:none; color:var(--text-muted); font-size:12px; cursor:pointer;" onclick="location.reload()">새로고침</button>
         </div>
     </div>
-
-    <div class="hint">규정/사내 정책에 대해 물어보면, 답변이 실시간으로 스트리밍됩니다.</div>
 
     <div class="msgs" id="messages"></div>
 
-    <div class="bottom">
-        <textarea id="messageInput" placeholder="규정에 대해 질문해보세요..." rows="1" autocomplete="off"></textarea>
-    </div>
-
-    <div class="bytebar">
-        <div id="byteGroup">
-            <span id="byteInfo">0 / 61440 bytes</span>
-            <span id="byteWarn" style="display:none;" class="warn">용량 초과</span>
+    <div class="bottom-area">
+        <div id="inputWrapper" class="input-wrapper">
+            <textarea id="messageInput" placeholder="궁금한 규정에 대해 물어보세요..." rows="1" autocomplete="off"></textarea>
+            <button id="sendBtn" class="send-btn" onclick="sendQuestion()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
         </div>
-        <button id="sendBtn" onclick="sendQuestion()">전송</button>
+        <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:#9ca3af; padding: 0 4px;">
+            <span id="byteInfo">0 / 61440 bytes</span>
+            <span>사내 규정 및 회사 데이터 기반 답변입니다.</span>
+        </div>
     </div>
 </div>
 
 <script>
-    // 쿠키 기반 인증: 별도 Authorization 헤더 불필요
-    function authHeaders() { return { 'Content-Type': 'application/json' }; }
-
-    function escapeHtml(str) {
-        return String(str ?? "").replace(/[&<>"']/g, s => ({
-            "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-        }[s]));
-    }
-
-    function linkify(text) {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.replace(urlRegex, function(url) {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
-        });
-    }
-
-    const MAX_BYTES = 60 * 1024;
-    function utf8Bytes(str) { return new TextEncoder().encode(str).length; }
-
-    function updateByteInfo() {
-        const input = document.getElementById("messageInput");
-        const info = document.getElementById("byteInfo");
-        const warn = document.getElementById("byteWarn");
-        const btn  = document.getElementById("sendBtn");
-        if (!input || !info) return;
-        const b = utf8Bytes(input.value || "");
-        info.textContent = `${b} / ${MAX_BYTES} bytes`;
-        const tooBig = b > MAX_BYTES;
-        info.style.color = tooBig ? "#ff3b30" : "#777";
-        if (warn) warn.style.display = tooBig ? "inline" : "none";
-        if (btn) btn.disabled = tooBig;
-    }
-
-    function nowTime() {
-        return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    }
-
-    // messageId -> { bubbleEl, timeEl, containerEl, role }
     const msgDomMap = new Map();
+    let isProcessing = false;
 
-    function appendSystem(text) {
-        const box = document.getElementById("messages");
-        const div = document.createElement("div");
-        div.className = "msg system";
-        div.innerHTML = `<span>${escapeHtml(text)}</span>`;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+    function getSessionId() {
+        let sessionId = sessionStorage.getItem("CHAT_SESSION_ID");
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            sessionStorage.setItem("CHAT_SESSION_ID", sessionId);
+        }
+        return sessionId;
+    }
+
+    function authHeaders() { return { 'Content-Type': 'application/json', 'X-Session-Id': getSessionId() }; }
+    function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+    function linkify(text) { return text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" style="color:inherit; font-weight:600;">${url}</a>`); }
+    function nowTime() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+
+    function setIsUpdating(loading) {
+        isProcessing = loading;
+        const input = document.getElementById("messageInput");
+        const btn = document.getElementById("sendBtn");
+        const wrapper = document.getElementById("inputWrapper");
+
+        input.disabled = loading;
+        btn.disabled = loading;
+
+        if (loading) {
+            wrapper.classList.add("loading");
+            input.placeholder = "답변을 생성하고 있습니다...";
+        } else {
+            wrapper.classList.remove("loading");
+            input.placeholder = "궁금한 규정에 대해 물어보세요...";
+            input.focus();
+        }
+    }
+
+    function moveToParent(url) {
+        if (window.opener && !window.opener.closed) {
+            window.opener.location.href = url;
+            window.opener.focus();
+        } else { window.location.href = url; }
     }
 
     function appendBubble({ role, senderLabel, content, messageId, createdAt }) {
         const box = document.getElementById("messages");
-        const div = document.createElement("div");
-        div.className = (role === "USER") ? "msg me" : "msg bot";
+        const group = document.createElement("div");
+        const isBot = role !== "USER";
+        group.className = isBot ? "msg-group bot" : "msg-group me";
 
-        let html = "";
-        if (role !== "USER") {
-            html += `<div class="sender-info">${escapeHtml(senderLabel || "규정 챗봇")}</div>`;
-        }
+        const isThinking = (isBot && !content && senderLabel !== "시스템 가이드");
+        const avatarClass = isThinking ? "avatar thinking" : "avatar";
 
-        const safeContent = linkify(escapeHtml(content ?? ""));
-        html += `<div class="bubble" onclick="toggleExpand(event, this)">${safeContent}</div>`;
-        const t = createdAt ? new Date(createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : nowTime();
-        html += `<div class="time-info">${t}</div>`;
+        // ✅ 정적 "..." 텍스트 삽입
+        const displayContent = isThinking ? `<span class="thinking-dots">...</span>` : linkify(escapeHtml(content ?? ""));
 
-        div.innerHTML = html;
-        box.appendChild(div);
+        let html = isBot ? `<div class="${avatarClass}">🤖</div>` : "";
+        const time = createdAt ? new Date(createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : nowTime();
 
-        const bubble = div.querySelector(".bubble");
-        const timeEl = div.querySelector(".time-info");
-        if (bubble && bubble.scrollHeight > 150) bubble.classList.add("collapsed");
+        html += `<div class="msg-content"><div class="bubble">${displayContent}</div><span class="time-info">${time}</span></div>`;
+        group.innerHTML = html;
+        box.appendChild(group);
 
         if (messageId) {
-            msgDomMap.set(messageId, { bubbleEl: bubble, timeEl, containerEl: div, role });
+            msgDomMap.set(messageId, {
+                bubbleEl: group.querySelector(".bubble"),
+                timeEl: group.querySelector(".time-info"),
+                avatarEl: group.querySelector(".avatar"),
+                isThinking: isThinking
+            });
         }
-
         box.scrollTop = box.scrollHeight;
-        return { div, bubble, timeEl };
+        return group;
     }
 
-    function toggleExpand(event, element) {
-        if (event.target.tagName === 'A') return;
-        if (element.classList.contains("collapsed")) {
-            element.classList.remove("collapsed");
-            element.style.maxHeight = element.scrollHeight + "px";
-        } else if (element.scrollHeight > 150) {
-            element.classList.add("collapsed");
-            element.style.maxHeight = "150px";
-        }
-    }
-
-    function setConn(isOn) {
-        const dot = document.getElementById("connDot");
-        dot.classList.toggle("on", !!isOn);
-        dot.classList.toggle("off", !isOn);
-    }
-
-    // SSE
-    let es = null;
-    function connectSse() {
+    async function showDocumentGuide() {
         try {
-            if (es) es.close();
-        } catch (_) {}
-
-        // same-origin이면 쿠키 자동 포함
-        es = new EventSource("/api/v1/chatbot/stream", {
-            withCredentials: true
-        });
-
-        es.addEventListener("connected", (e) => {
-            setConn(true);
-            appendSystem("챗봇 연결됨");
-        });
-
-        es.addEventListener("chunk", (e) => {
-            const data = safeJson(e.data);
-            if (!data) return;
-            onChunk(data.messageId, data.delta);
-        });
-
-        es.addEventListener("buffer", (e) => {
-            const data = safeJson(e.data);
-            if (!data) return;
-            onBuffer(data.messageId, data.text);
-        });
-
-        es.addEventListener("done", (e) => {
-            const data = safeJson(e.data);
-            if (!data) return;
-            onDone(data.messageId);
-        });
-
-        es.addEventListener("error", (e) => {
-            // 서버의 "error" 이벤트와, 네트워크 에러가 둘 다 여기로 올 수 있음
-            // 네트워크 에러는 e.data가 비어있을 수 있음
-            if (e?.data) {
-                const data = safeJson(e.data);
-                if (data?.messageId) onError(data.messageId, data.message || "오류가 발생했습니다.");
-            } else {
-                setConn(false);
-                appendSystem("연결 끊김 (재연결 시도)");
-            }
-        });
-
-        // 네트워크 에러 핸들링: 브라우저가 자동 재연결 시도하지만 상태 표시만 갱신
-        es.onerror = () => {
-            setConn(false);
-        };
-        es.onopen = () => {
-            setConn(true);
-        };
-    }
-
-    function safeJson(raw) {
-        try { return JSON.parse(raw); } catch (_) { return null; }
-    }
-
-    // 스트리밍 반영
-    function ensureAssistantBubble(messageId) {
-        if (!messageId) return null;
-        if (msgDomMap.has(messageId)) return msgDomMap.get(messageId);
-
-        // 혹시 buffer/delta가 먼저 왔는데 화면에 말풍선이 없으면 임시 생성
-        appendBubble({
-            role: "ASSISTANT",
-            senderLabel: "규정 챗봇",
-            content: "",
-            messageId
-        });
-        return msgDomMap.get(messageId);
-    }
-
-    function setBubbleText(bubbleEl, text) {
-        if (!bubbleEl) return;
-        bubbleEl.innerHTML = linkify(escapeHtml(text ?? ""));
-        // 길면 collapse
-        if (bubbleEl.scrollHeight > 150) bubbleEl.classList.add("collapsed");
-    }
-
-    function onChunk(messageId, delta) {
-        const ref = ensureAssistantBubble(messageId);
-        if (!ref) return;
-        const bubble = ref.bubbleEl;
-        const current = bubble ? (bubble.innerText ?? "") : "";
-        const next = current + (delta ?? "");
-        setBubbleText(bubble, next);
-        document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
-    }
-
-    function onBuffer(messageId, text) {
-        const ref = ensureAssistantBubble(messageId);
-        if (!ref) return;
-        setBubbleText(ref.bubbleEl, text ?? "");
-        document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
-    }
-
-    function onDone(messageId) {
-        const ref = msgDomMap.get(messageId);
-        if (!ref) return;
-        if (ref.timeEl) ref.timeEl.textContent = nowTime();
-    }
-
-    function onError(messageId, message) {
-        const ref = ensureAssistantBubble(messageId);
-        if (!ref) return;
-        const bubble = ref.bubbleEl;
-        const current = bubble ? (bubble.innerText ?? "") : "";
-        const next = (current ? (current + "\n\n") : "") + "[ERROR] " + (message ?? "오류");
-        setBubbleText(bubble, next);
-        if (ref.timeEl) ref.timeEl.textContent = nowTime();
-    }
-
-    // 초기 로드(최근 메시지)
-    async function loadRecent(limit = 50) {
-        try {
-            // 엔드포인트를 /messages/recent에서 /messages로 변경
-            // 컨트롤러 파라미터 명칭인 limit을 그대로 사용함
-            const url = `/api/v1/chatbot/messages?limit=${encodeURIComponent(limit)}`;
-
-            const res = await fetch(url, {
-                method: "GET",
-                // HttpOnly 쿠키 인증을 위해 credentials 포함 (필요시)
-                headers: authHeaders()
-            });
-
-            if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
-            }
-
+            const res = await fetch("/api/v1/prov-documents/chatbot?size=100", { method: "GET", headers: authHeaders() });
+            if (!res.ok) return;
             const raw = await res.json();
-            // ResponseDto 구조에 따라 raw.data에서 리스트를 추출
-            const list = raw?.data ?? [];
-
-            // 서버에서 최신순(DESC)으로 데이터를 줄 경우, 화면 출력을 위해 reverse()
-            const msgs = Array.isArray(list) ? list.slice().reverse() : [];
-
-            const box = document.getElementById("messages");
-            box.innerHTML = ""; // 기존 화면 초기화
-            msgDomMap.clear();
-
-            msgs.forEach(m => {
-                // 컨트롤러에서 반환하는 객체의 필드명(content, role, id, createdAt) 확인 필요
-                const role = (m.role === "USER") ? "USER" : "ASSISTANT";
-                appendBubble({
-                    role,
-                    senderLabel: "규정 챗봇",
-                    content: m.content ?? "",
-                    messageId: m.id, // 컨트롤러의 ChatbotMessage 객체 필드명에 맞춤
-                    createdAt: m.createdAt
-                });
-            });
-
-            box.scrollTop = box.scrollHeight;
-        } catch (e) {
-            console.error("메시지 로드 실패:", e);
-            appendSystem("최근 메시지를 불러오지 못했습니다.");
-        }
+            const docs = raw?.data?.content ?? [];
+            if (docs.length > 0) {
+                const listText = docs.map(d => `• ${d.docTitle}`).join("\n");
+                appendBubble({ role: "ASSISTANT", senderLabel: "시스템 가이드", content: `안녕하세요! 😊 질문하실 수 있는 규정 목록입니다.\n\n${listText}` });
+            }
+        } catch (e) { console.error("가이드 로드 실패:", e); }
     }
 
-    async function reloadRecent() {
-        await loadRecent(50);
-        appendSystem("새로고침 완료");
-    }
-
-    function clearUi() {
-        document.getElementById("messages").innerHTML = "";
-        msgDomMap.clear();
-        appendSystem("화면만 초기화(서버 데이터는 유지)");
-    }
-
-    // 질문 전송
     async function sendQuestion() {
+        if (isProcessing) return;
         const input = document.getElementById("messageInput");
-        const question = (input.value || "").trim();
+        const question = input.value.trim();
         if (!question) return;
-        if (utf8Bytes(question) > MAX_BYTES) { alert("메시지 용량이 너무 큽니다."); return; }
 
-        // UI: 내 말풍선 먼저 추가
+        setIsUpdating(true);
         appendBubble({ role: "USER", content: question });
-
-        // 입력창 초기화
         input.value = "";
-        input.style.height = "40px";
-        updateByteInfo();
+        input.style.height = "auto";
 
         try {
             const res = await fetch("/api/v1/chatbot/messages", {
@@ -544,51 +327,82 @@
                 headers: authHeaders(),
                 body: JSON.stringify({ question })
             });
-
-            if (!res.ok) {
-                appendSystem("전송 실패");
-                return;
-            }
-
             const raw = await res.json();
-            const data = raw?.data ?? raw;
-            const assistantMessageId = data?.assistantMessageId;
-
-            // assistant placeholder 말풍선 생성(스트리밍 대상)
-            if (assistantMessageId) {
-                appendBubble({
-                    role: "ASSISTANT",
-                    senderLabel: "규정 챗봇",
-                    content: "",
-                    messageId: assistantMessageId
-                });
-            } else {
-                // 그래도 서버에서 chunk가 오면 ensureAssistantBubble이 만들긴 함
-                appendSystem("assistantMessageId 없음(서버 응답 확인 필요)");
+            if(raw.data?.assistantMessageId) {
+                appendBubble({ role: "ASSISTANT", messageId: raw.data.assistantMessageId, content: "" });
             }
         } catch (e) {
-            console.error(e);
-            appendSystem("전송 중 오류");
+            console.error("전송 오류:", e);
+            setIsUpdating(false);
         }
     }
 
-    window.addEventListener("load", async () => {
-        setConn(false);
-        connectSse();
-        await loadRecent(50);
-        updateByteInfo();
+    function connectSse() {
+        const sId = getSessionId();
+        const es = new EventSource(`/api/v1/chatbot/stream?sessionId=${sId}`, { withCredentials: true });
 
-        const messageInput = document.getElementById("messageInput");
-        messageInput.addEventListener("input", function() {
-            this.style.height = '40px';
-            const newHeight = this.scrollHeight;
-            this.style.height = newHeight + 'px';
-            this.style.overflowY = newHeight >= 100 ? 'auto' : 'hidden';
-            updateByteInfo();
+        es.addEventListener("connected", () => {
+            document.getElementById("statusText").innerText = "온라인";
+            document.getElementById("connDot").classList.add("on");
         });
 
-        messageInput.addEventListener("keydown", function(e) {
-            if (!e.isComposing && e.key === 'Enter' && !e.shiftKey) {
+        es.addEventListener("chunk", (e) => {
+            const data = JSON.parse(e.data);
+            const ref = msgDomMap.get(data.messageId);
+            if(ref) {
+                if (ref.isThinking) {
+                    if (ref.avatarEl) ref.avatarEl.classList.remove("thinking");
+                    ref.bubbleEl.innerHTML = ""; // ✅ "..." 싹 지우기
+                    ref.isThinking = false;
+                }
+
+                // 텍스트 출력
+                const textNode = document.createTextNode(data.delta);
+                ref.bubbleEl.appendChild(textNode);
+
+                document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+            }
+        });
+
+        es.addEventListener("action", (e) => {
+            const data = JSON.parse(e.data);
+            const ref = msgDomMap.get(data.messageId);
+            if (ref && data.url) {
+                if (ref.bubbleEl.querySelector(".action-area")) return;
+                const actionArea = document.createElement("div");
+                actionArea.className = "action-area";
+                actionArea.innerHTML = `
+                    <button class="action-btn" onclick="moveToParent('${data.url}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        <span>${escapeHtml(data.label || '페이지로 이동')}</span>
+                    </button>`;
+                ref.bubbleEl.appendChild(actionArea);
+                document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+            }
+        });
+
+        es.addEventListener("done", (e) => {
+            const data = JSON.parse(e.data);
+            const ref = msgDomMap.get(data.messageId);
+            if(ref) ref.timeEl.innerText = nowTime();
+            setIsUpdating(false);
+        });
+
+        es.onerror = () => { setIsUpdating(false); };
+    }
+
+    window.addEventListener("load", () => {
+        connectSse();
+        showDocumentGuide();
+        const input = document.getElementById("messageInput");
+        input.addEventListener("input", function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            document.getElementById("byteInfo").innerText = `${new TextEncoder().encode(this.value).length} / 61440 bytes`;
+        });
+        input.addEventListener("keydown", e => {
+            if (e.isComposing || isProcessing) return;
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendQuestion();
             }

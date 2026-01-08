@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.chatbot.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotCallbackDto;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.service.ChatbotService;
+import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -26,16 +27,17 @@ public class ChatbotCallbackController {
     private String callbackKey;
 
     @PostMapping("/callback")
-    public ResponseEntity<Void> callback(
+    public ResponseEntity<ResponseDto<Void>> callback(
             @RequestBody ReqChatbotCallbackDto request,
             @RequestHeader(value = "X-AI-CALLBACK-KEY", required = false) String key
     ) {
-        // callbackKey 검증(회의 AI랑 동일)
+
         if (callbackKey != null && !callbackKey.isBlank()) {
-            if (key == null || !callbackKey.equals(key)) {
+            if (!callbackKey.equals(key)) {
                 return ResponseEntity.status(401).build();
             }
         }
+
 
         chatbotService.handleCallback(request);
         return ResponseEntity.ok().build();

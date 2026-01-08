@@ -11,6 +11,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeIdentityVerifyDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
+import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResAdminEmployeeCreateDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -42,11 +43,11 @@ public class AuthController {
     private final PasswordService passwordService;
 
     @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseDto<Void>> signUpCompany(
+    public ResponseEntity<ResponseDto<ResAdminEmployeeCreateDto>> signUpCompany(
             @ModelAttribute @Valid ReqCompanySignupDto reqCompanySignupDto,
             @RequestPart(value = "logo", required = false) MultipartFile logo
     ) {
-        ResponseDto<Void> response = authService.signUpCompany(reqCompanySignupDto, logo);
+        ResponseDto<ResAdminEmployeeCreateDto> response = authService.signUpCompany(reqCompanySignupDto, logo);
 
         return ResponseEntity
                 .status(response.getStatus())

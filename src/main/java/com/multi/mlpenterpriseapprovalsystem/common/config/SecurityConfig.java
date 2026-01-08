@@ -61,14 +61,12 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/notifications/stream", "/api/v1/chatbot/stream").authenticated()
 
-                        .requestMatchers("/api/v1/prov-documents/**").hasRole("COM_ADMIN")
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
                                 "/admin/**",
                                 "/attachment-test",
                                 "/schedule/**",
-                                "/api/v1/mails/**",
                                 "/org-chart/**").permitAll()
                         .requestMatchers(
                                 "/uploads/**",
@@ -87,7 +85,7 @@ public class SecurityConfig {
                                 "THR_ADMIN")
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("COM_ADMIN")
+                        .requestMatchers("/api/v1/admin/departments/**", "/api/v1/admin/positions/**").hasAnyRole("COM_ADMIN")
                         .anyRequest().authenticated()
                 )
 

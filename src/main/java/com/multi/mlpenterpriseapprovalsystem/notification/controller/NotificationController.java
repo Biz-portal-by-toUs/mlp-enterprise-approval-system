@@ -44,24 +44,24 @@ public class NotificationController {
         List<NotificationResponseDto> notifications =
                 notificationService.getNotifications(empId, type, cursorAt, cursorId, size);
 
-        return ResponseEntity.ok(
-                new ResponseDto<>(HttpStatus.OK, "알림 조회 성공", notifications)
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "알림 조회 성공", notifications));
     }
 
     /**
      * 알림 하나 읽음 처리
      */
     @PatchMapping("/{notiNo}/read")
-    public ResponseEntity<ResponseDto<Void>> readNotification(
+    public ResponseEntity<ResponseDto<Long>> readNotification(
             @PathVariable(name = "notiNo") Long notiNo,
             @AuthenticationPrincipal CustomUser user) {
 
         notificationService.markAsRead(notiNo, user.getUsername());
 
-        return ResponseEntity.ok(
-                new ResponseDto<>(HttpStatus.OK, "알림 읽음 처리 성공", null)
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "알림 읽음 처리 성공", notiNo));
     }
 
     /**
@@ -73,17 +73,38 @@ public class NotificationController {
 
         notificationService.markAllAsRead(user.getUsername());
 
-        return ResponseEntity.ok(
-                new ResponseDto<>(HttpStatus.OK, "전체 알림 읽음 처리 성공", null)
-        );
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "전체 알림 읽음 처리 성공", null));
     }
 
     @GetMapping("/unread-count")
     public ResponseEntity<ResponseDto<Long>> getUnreadCount(@AuthenticationPrincipal CustomUser user) {
         long count = notificationService.getUnreadCount(user.getUsername());
-        return ResponseEntity.ok(
-                new ResponseDto<>(HttpStatus.OK, "안 읽은 알림 개수 조회 성공", count)
-        );
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "안 읽은 알림 개수 조회 성공", count));
     }
 
+    @DeleteMapping("/{notiNo}")
+    public ResponseEntity<ResponseDto<Long>> deleteNotification(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable(name = "notiNo") Long notiNo) {
+
+        notificationService.deleteNotification(user.getUsername(), notiNo);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "알림 삭제 성공", notiNo));
+    }
+
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<ResponseDto<Void>> deleteAllNotifications(@AuthenticationPrincipal CustomUser user) {
+        notificationService.deleteAllNotification(user.getUsername());
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "알림 전체 삭제 성공", null));
+    }
 }
