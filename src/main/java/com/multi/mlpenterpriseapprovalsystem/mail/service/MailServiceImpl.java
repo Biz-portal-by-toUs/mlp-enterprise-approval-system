@@ -19,8 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.*;
 
 @Service
@@ -85,17 +84,25 @@ public class MailServiceImpl implements MailService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResMailListDto> getInbox(String userEmpId, String q, Pageable pageable) {
+    public Page<ResMailListDto> getInbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
         String keyword = (q == null) ? null : q.trim();
-        return mailUserStateRepository.findMailbox(userEmpId, MailRole.RECIPIENT, keyword, pageable)
+
+        LocalDateTime fromDt = (from == null) ? null : from.atStartOfDay();
+        LocalDateTime toDt   = (to == null) ? null : to.atTime(LocalTime.MAX);
+
+        return mailUserStateRepository.findMailbox(userEmpId, MailRole.RECIPIENT, keyword, fromDt, toDt, pageable)
                 .map(this::toListDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable) {
+    public Page<ResMailListDto> getSent(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
         String keyword = (q == null) ? null : q.trim();
-        return mailUserStateRepository.findMailbox(senderEmpId, MailRole.SENDER, keyword, pageable)
+
+        LocalDateTime fromDt = (from == null) ? null : from.atStartOfDay();
+        LocalDateTime toDt   = (to == null) ? null : to.atTime(LocalTime.MAX);
+
+        return mailUserStateRepository.findMailbox(userEmpId, MailRole.SENDER, keyword, fromDt, toDt, pageable)
                 .map(this::toListDto);
     }
 
@@ -416,11 +423,13 @@ public class MailServiceImpl implements MailService {
         return new ResMailSendDto(savedNormal.getMailNo(), savedNormal.getMailId(), savedNormal.getCreatedAt());
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ResMailListDto> getSelfMailbox(String userEmpId, String q, Pageable pageable) {
+    public Page<ResMailListDto> getSelfMailbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
         String keyword = (q == null) ? null : q.trim();
-        return mailUserStateRepository.findSelfMailbox(userEmpId, keyword, pageable)
+
+        LocalDateTime fromDt = (from == null) ? null : from.atStartOfDay();
+        LocalDateTime toDt   = (to == null) ? null : to.atTime(LocalTime.MAX);
+
+        return mailUserStateRepository.findSelfMailbox(userEmpId, keyword, fromDt, toDt, pageable)
                 .map(this::toListDto);
     }
 

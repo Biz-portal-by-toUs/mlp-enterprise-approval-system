@@ -8,9 +8,12 @@ import com.multi.mlpenterpriseapprovalsystem.mail.service.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.*;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.*;
 
 /**
  * 메일 Rest API 컨트롤러
@@ -45,11 +48,15 @@ public class MailController {
     @GetMapping("/inbox")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> inbox(
             @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(name = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getInbox(empId, keyword, pageable);
+        Page<ResMailListDto> res = mailService.getInbox(empId, keyword, from, to, pageable);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -60,11 +67,15 @@ public class MailController {
     @GetMapping("/sent")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> sent(
             @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(name = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getSent(empId, keyword, pageable);
+        Page<ResMailListDto> res = mailService.getSent(empId, keyword, from, to, pageable);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -260,11 +271,15 @@ public class MailController {
     @GetMapping("/self")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> selfMailbox(
             @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(name = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getSelfMailbox(empId, keyword, pageable);
+        Page<ResMailListDto> res = mailService.getSelfMailbox(empId, keyword, from, to, pageable);
 
         return ResponseEntity
                 .status(HttpStatus.OK)

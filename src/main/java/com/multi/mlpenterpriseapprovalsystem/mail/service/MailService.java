@@ -4,13 +4,17 @@ import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
 import org.springframework.data.domain.*;
 
+import java.time.*;
+
 public interface MailService {
 
     ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req);
 
-    Page<ResMailListDto> getInbox(String userEmpId, String q, Pageable pageable);
+    Page<ResMailListDto> getInbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
 
-    Page<ResMailListDto> getSent(String senderEmpId, String q, Pageable pageable);
+    Page<ResMailListDto> getSent(String senderEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
+
+    Page<ResMailListDto> getSelfMailbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
 
     Page<ResMailListDto> getTrash(String userEmpId, Pageable pageable);
 
@@ -39,6 +43,4 @@ public interface MailService {
     void deleteDraft(String mailId, String senderEmpId);
 
     ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req);
-
-    Page<ResMailListDto> getSelfMailbox(String userEmpId, String q, Pageable pageable);
 }
