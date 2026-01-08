@@ -66,6 +66,15 @@
             border-radius:999px;
             background: var(--primary);
         }
+        .subbar.form-subbar .subbar-badge{
+            margin-left:6px;
+            font-size:11px;
+            font-weight:800;
+            color: rgba(31,41,55,.65);
+        }
+        .subbar.form-subbar .subbar-item.active .subbar-badge{
+            color:#1d4ed8;
+        }
     </style>
 
     <h3 class="subbar-title">메일</h3>
@@ -73,11 +82,19 @@
     <nav class="subbar-nav" id="mailNav" th:attr="data-active=${active}">
         <a class="subbar-item" data-key="received"
            th:href="@{/mail/received}"
-           th:classappend="${active} == 'received' ? ' active' : ''">받은 메일함</a>
+           th:classappend="${active} == 'received' ? ' active' : ''">받은 메일함
+            <span class="subbar-badge"
+                  th:if="${unreadInboxCount != null and unreadInboxCount > 0}"
+                  th:text="'(' + ${unreadInboxCount} + ')'">(0)</span>
+        </a>
 
         <a class="subbar-item" data-key="sent"
            th:href="@{/mail/sent}"
            th:classappend="${active} == 'sent' ? ' active' : ''">보낸 메일함</a>
+
+        <a class="subbar-item" data-key="self"
+           th:href="@{/mail/self}"
+           th:classappend="${active} == 'self' ? ' active' : ''">내게 쓴 메일함</a>
 
         <a class="subbar-item" data-key="drafts"
            th:href="@{/mail/drafts}"

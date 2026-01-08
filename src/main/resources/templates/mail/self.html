@@ -6,104 +6,112 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>보낸 메일함</title>
+    <title>내게쓴메일함</title>
 
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
             --mut:#64748b;
             --line:#e2e8f0;
+            --bg:#f1f5f9;
+            --card:#ffffff;
             --danger:#ef4444;
         }
 
         /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
-        /* ===== page-only namespace: ms-* (mail sent) ===== */
+        /* ===== page-only namespace: mi-* ===== */
 
         /* ===== toolbar ===== */
-        .ms-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
-        .ms-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
-        .ms-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .mi-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .mi-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .mi-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 
         /* ===== inputs ===== */
-        .ms-searchWrap{
+        .mi-searchWrap{
             flex:1;max-width:420px;display:flex;align-items:center;height:40px;
             border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;
         }
-        .ms-searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
-        .ms-dateWrap{flex:0 0 auto;max-width:160px;}
-        .ms-dateInput{font-size:14px;}
+        .mi-searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
 
         /* ===== buttons ===== */
-        .ms-btn{
+        .mi-btn{
             height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:800;
             cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;
         }
-        .ms-btn:hover{filter:brightness(0.9);}
-        .ms-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
-        .ms-btn.ghost:hover{background:#f8fafc;filter:none;}
-        .ms-btn:disabled{opacity:.6;cursor:not-allowed;}
+        .mi-btn:hover{filter:brightness(0.9);}
+        .mi-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .mi-btn.ghost:hover{background:#f8fafc;filter:none;}
+        .mi-btn:disabled{opacity:.6;cursor:not-allowed;}
 
         /* ===== table ===== */
-        .ms-tableWrap{
+        .mi-tableWrap{
             width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
             overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);
         }
-        table.ms-mailTable{width:100%;border-collapse:collapse;table-layout:fixed;}
-        table.ms-mailTable thead th{
+        table.mi-mailTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.mi-mailTable thead th{
             background:#f9fafb;border-bottom:1px solid var(--line);text-align:center;
             padding:14px 10px;font-size:14px;color:var(--mut);font-weight:700;
         }
-        table.ms-mailTable tbody td{
+        table.mi-mailTable tbody td{
             border-bottom:1px solid var(--line);text-align:center;padding:12px 10px;
             font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         }
-        table.ms-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
+        table.mi-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
 
-        /* ===== columns (sent) ===== */
-        th.ms-col-check, td.ms-col-check{ width:56px; }
-        .ms-check{
+        /* ===== columns (self) ===== */
+        th.mi-col-check, td.mi-col-check{width:56px;}
+        .mi-check{
             width:16px;height:16px;
             accent-color: var(--primary);
             cursor:pointer;
         }
-        .ms-check:disabled{opacity:.6;cursor:not-allowed;}
+        .mi-check:disabled{opacity:.6;cursor:not-allowed;}
 
-        th.ms-col-star, td.ms-col-star{ width:60px; }
-        th.ms-col-date, td.ms-col-date{ width:180px; }
-        th.ms-col-recv, td.ms-col-recv{ width:180px; }
+        th.mi-col-star, td.mi-col-star{width:60px;}
+        th.mi-col-read, td.mi-col-read{width:90px;}
+        th.mi-col-date, td.mi-col-date{width:180px;}
 
-        th.ms-col-title-h{text-align:left;padding-left:20px;}
-        td.ms-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
-        .ms-titleLink{
+        th.mi-col-title-h{text-align:left;padding-left:20px;}
+        td.mi-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
+
+        .mi-titleLink{
             color:var(--primary);text-decoration:none;display:block;width:100%;
             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;
         }
 
-        /* ===== star ===== */
-        .ms-starBtn{
+        /* ===== badges / star ===== */
+        .mi-badgePill{
+            display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;
+            border-radius:999px;font-size:12px;font-weight:900;border:1px solid rgba(17,24,39,.10);
+        }
+        .mi-pill-unread{background:#eff6ff;color:#1d4ed8;border-color:#dbeafe;}
+        .mi-pill-read{background:#f1f5f9;color:#334155;}
+
+        .mi-starBtn{
             display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
             border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;
             font-size:18px;line-height:1;transition:0.15s;
         }
-        .ms-starBtn:hover{background:#f8fafc;border-color:var(--line);}
-        .ms-starBtn:disabled{opacity:.6;cursor:not-allowed;}
+        .mi-starBtn:hover{background:#f8fafc;border-color:var(--line);}
+        .mi-starBtn:disabled{opacity:.6;cursor:not-allowed;}
 
         /* ===== selected row ===== */
-        .ms-mailTable tbody tr.is-selected td{ background:#f8fafc; }
+        .mi-mailTable tbody tr.is-selected td{background:#f8fafc;}
 
         /* ===== pager ===== */
-        .ms-pager-wrapper{display:flex;align-items:center;justify-content:center;margin-top:16px;}
-        .ms-pager{display:flex;align-items:center;gap:4px;}
-        .ms-pageBtn{
+        .mi-pager-wrapper{display:flex;align-items:center;justify-content:center;margin-top:16px;}
+        .mi-pager{display:flex;align-items:center;gap:4px;}
+        .mi-pageBtn{
             min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
             background:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:0.15s;
         }
-        .ms-pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
-        .ms-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
-        .ms-pageBtn.active:hover{filter:brightness(0.9);}
+        .mi-pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .mi-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .mi-pageBtn.active:hover{filter:brightness(0.9);}
 
         /* ===== count pill (메일쓰기 밑) ===== */
-        .ms-countPill{
+        .mi-countPill{
             margin-top:6px;
             text-align:right;
             font-size:14px;
@@ -113,8 +121,7 @@
 
         /* ===== responsive ===== */
         @media (max-width:760px){
-            th.ms-col-date, td.ms-col-date{ width:140px; }
-            th.ms-col-recv, td.ms-col-recv{ width:140px; }
+            th.mi-col-date, td.mi-col-date{width:140px;}
         }
     </style>
 </head>
@@ -125,51 +132,41 @@
         <div th:replace="~{sidebar/mail-sidebar :: mailSidebar(${sidebarKey})}"></div>
 
         <main class="page-main">
-            <div class="ms-toolbar">
-                <div class="ms-toolbar-left">
-                    <div class="ms-searchWrap">
-                        <input id="keyword" class="ms-searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
+            <div class="mi-toolbar">
+                <div class="mi-toolbar-left">
+                    <div class="mi-searchWrap">
+                        <input id="keyword" class="mi-searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
                     </div>
-
-                    <!-- 기간(from/to) -->
-                    <div class="ms-searchWrap ms-dateWrap">
-                        <input id="from" class="ms-searchInput ms-dateInput" type="date" aria-label="시작일"/>
-                    </div>
-                    <span style="color:var(--mut); font-weight:800;">~</span>
-                    <div class="ms-searchWrap ms-dateWrap">
-                        <input id="to" class="ms-searchInput ms-dateInput" type="date" aria-label="종료일"/>
-                    </div>
-
-                    <button class="ms-btn ghost" id="btnSearch" type="button">조회</button>
+                    <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
-                <div class="ms-toolbar-right">
-                    <button class="ms-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
+                <div class="mi-toolbar-right">
+                    <button class="mi-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
 
-                    <button class="ms-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
-                    <div id="countPill" class="ms-countPill">0건</div>
+                    <button class="mi-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
+                    <div id="countPill" class="mi-countPill">0건</div>
                 </div>
             </div>
 
-            <section class="ms-tableWrap">
-                <table class="ms-mailTable">
+            <section class="mi-tableWrap">
+                <table class="mi-mailTable">
                     <thead>
                     <tr>
-                        <th class="ms-col-check">
-                            <input id="checkAll" class="ms-check" type="checkbox" aria-label="전체 선택"/>
+                        <th class="mi-col-check">
+                            <input id="checkAll" class="mi-check" type="checkbox" aria-label="전체 선택"/>
                         </th>
-                        <th class="ms-col-star">중요</th>
-                        <th class="ms-col-recv">수신인</th>
-                        <th class="ms-col-title-h">제목</th>
-                        <th class="ms-col-date">발신일</th>
+                        <th class="mi-col-star">중요</th>
+                        <th class="mi-col-read">읽음</th>
+                        <th class="mi-col-title-h">제목</th>
+                        <th class="mi-col-date">작성일</th>
                     </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
                 </table>
             </section>
 
-            <div class="ms-pager-wrapper">
-                <div id="pagerControls" class="ms-pager"></div>
+            <div class="mi-pager-wrapper">
+                <div id="pagerControls" class="mi-pager"></div>
             </div>
 
             <script>
@@ -177,7 +174,7 @@
                 const PAGE_SIZE = 10;
                 const KEYWORD_MAX = 50;
 
-                // ===== common utils =====
+                // ===== headers =====
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
@@ -185,50 +182,10 @@
                     return {};
                 }
 
+                // ===== utils =====
                 function clampKeyword(s){
                     const v = (s || '').trim();
                     return v.length > KEYWORD_MAX ? v.slice(0, KEYWORD_MAX) : v;
-                }
-
-                function todayYmd(){
-                    const d = new Date();
-                    const y = d.getFullYear();
-                    const m = String(d.getMonth()+1).padStart(2,'0');
-                    const day = String(d.getDate()).padStart(2,'0');
-                    return `${y}-${m}-${day}`;
-                }
-
-                function syncDateConstraints(){
-                    const fromEl = document.getElementById('from');
-                    const toEl = document.getElementById('to');
-
-                    const fromVal = (fromEl.value || '').trim();
-                    const toVal = (toEl.value || '').trim();
-                    const today = todayYmd();
-
-                    toEl.max = today;
-                    toEl.min = fromVal || '';
-                    fromEl.max = toVal || today;
-
-                    if (toVal && fromVal && toVal < fromVal) toEl.value = fromVal;
-                    if (toEl.value && toEl.value > today) toEl.value = today;
-                    if (fromEl.value && toEl.value && fromEl.value > toEl.value) fromEl.value = toEl.value;
-                }
-
-                function starEmoji(isPrior){
-                    return isPrior ? '⭐' : '☆';
-                }
-
-                async function patchNoBody(url){
-                    const res = await fetch(url, {
-                        method: 'PATCH',
-                        credentials: 'include',
-                        headers: { ...getCsrfHeaders() }
-                    });
-                    if(!res.ok){
-                        const t = await res.text().catch(()=> '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
-                    }
                 }
 
                 function fmtDate(iso){
@@ -253,6 +210,10 @@
                         .replaceAll('>','&gt;')
                         .replaceAll('"','&quot;')
                         .replaceAll("'","&#039;");
+                }
+
+                function starEmoji(isPrior){
+                    return isPrior ? '⭐' : '☆';
                 }
 
                 // ===== selection (bulk) =====
@@ -280,11 +241,62 @@
                 }
 
                 function syncBulkUi(){
-                    const selected = getSelectedMailNos();
-                    document.getElementById('btnBulkTrash').disabled = selected.length === 0;
+                    document.getElementById('btnBulkTrash').disabled = getSelectedMailNos().length === 0;
                 }
 
-                // ===== pager =====
+                // ===== network =====
+                async function fetchJson(url){
+                    const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
+                    const json = await res.json().catch(()=> null);
+                    if(!res.ok){
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
+                    }
+                    return json?.data;
+                }
+
+                async function patchNoBody(url){
+                    const res = await fetch(url, {
+                        method: 'PATCH',
+                        credentials: 'include',
+                        headers: { ...getCsrfHeaders() }
+                    });
+                    if(!res.ok){
+                        const t = await res.text().catch(()=> '');
+                        throw new Error(`HTTP ${res.status} ${t}`);
+                    }
+                }
+
+                // ===== state (URL) =====
+                function getState(){
+                    const params = new URLSearchParams(location.search);
+                    return {
+                        page: Math.max(parseInt(params.get('page') || '0', 10), 0),
+                        size: PAGE_SIZE,
+                        keyword: clampKeyword(params.get('keyword') || '')
+                    };
+                }
+
+                function setUrlState(next){
+                    const params = new URLSearchParams();
+                    params.set('page', String(next.page ?? 0));
+                    params.set('size', String(PAGE_SIZE));
+                    params.set('keyword', (next.keyword || '').trim());
+
+                    if (!params.get('keyword')) params.delete('keyword');
+
+                    history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
+                }
+
+                function buildSelfApiUrl(st){
+                    const params = new URLSearchParams();
+                    params.set('page', String(st.page));
+                    params.set('size', String(PAGE_SIZE));
+                    if (st.keyword) params.set('keyword', st.keyword);
+                    return `/api/v1/mails/self?${params.toString()}`;
+                }
+
+                // ===== UI =====
                 function buildPager(page, totalPages, onGo){
                     const pager = document.getElementById('pagerControls');
                     pager.innerHTML = '';
@@ -292,14 +304,14 @@
                     const mkBtn = (label, target, disabled, active) => {
                         const b = document.createElement('button');
                         b.type='button';
-                        b.className = 'ms-pageBtn' + (active ? ' active' : '');
+                        b.className = 'mi-pageBtn' + (active ? ' active' : '');
                         b.disabled = !!disabled;
                         b.textContent = label;
                         b.onclick = () => onGo(target);
                         return b;
                     };
 
-                    const current = page; // 0-base
+                    const current = page;
                     const last = Math.max(totalPages - 1, 0);
 
                     pager.appendChild(mkBtn('«', 0, current === 0, false));
@@ -316,49 +328,7 @@
                     pager.appendChild(mkBtn('»', last, current === last, false));
                 }
 
-                // ===== fetch =====
-                async function fetchJson(url){
-                    const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
-                    const json = await res.json().catch(()=> null);
-
-                    if(!res.ok){
-                        const msg = json?.message || `HTTP ${res.status}`;
-                        throw new Error(`HTTP ${res.status} ${msg}`);
-                    }
-
-                    return json?.data;
-                }
-
-                // ===== state (URL) =====
-                function getState(){
-                    const params = new URLSearchParams(location.search);
-                    return {
-                        page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: PAGE_SIZE,
-                        keyword: clampKeyword(params.get('keyword') || ''),
-                        from: (params.get('from') || '').trim(),
-                        to: (params.get('to') || '').trim()
-                    };
-                }
-
-                function setUrlState(next){
-                    const params = new URLSearchParams();
-                    params.set('page', String(next.page ?? 0));
-                    params.set('size', String(PAGE_SIZE));
-
-                    params.set('keyword', (next.keyword || '').trim());
-                    params.set('from', (next.from || '').trim());
-                    params.set('to', (next.to || '').trim());
-
-                    if (!params.get('keyword')) params.delete('keyword');
-                    if (!params.get('from')) params.delete('from');
-                    if (!params.get('to')) params.delete('to');
-
-                    history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
-                }
-
-                // ===== render =====
-                function renderRows(items, page, size, totalElements){
+                function renderRows(items){
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
@@ -374,49 +344,55 @@
                         return;
                     }
 
-                    items.forEach((it, idx) => {
-                        // (번호는 제거했지만, 기존 로직 유지용 변수 필요하면 남겨도 됨)
+                    items.forEach((it) => {
                         const title = escapeHtml(it.title);
-                        const receivers = escapeHtml(it.receivers);
                         const createdAt = fmtDate(it.createdAt);
+
+                        const isRead = !!it.isRead;
+                        const pill = isRead
+                            ? `<span class="mi-badgePill mi-pill-read">읽음</span>`
+                            : `<span class="mi-badgePill mi-pill-unread">안읽음</span>`;
+
                         const isPrior = !!it.isPrior;
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="ms-col-check">
-                                <input class="ms-check rowCheck"
+                            <td class="mi-col-check">
+                                <input class="mi-check rowCheck"
                                        type="checkbox"
                                        data-mail-no="${escapeHtml(it.mailNo)}"
                                        aria-label="메일 선택"/>
                             </td>
 
-                            <td class="ms-col-star">
+                            <td class="mi-col-star">
                                 <button type="button"
-                                        class="ms-starBtn"
+                                        class="mi-starBtn"
                                         data-mail-no="${escapeHtml(it.mailNo)}"
                                         aria-label="중요메일 토글">
                                     ${starEmoji(isPrior)}
                                 </button>
                             </td>
 
-                            <td class="ms-col-recv">${receivers || '-'}</td>
-                            <td class="ms-col-title">
-                                <a class="ms-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}?box=sent">${title}</a>
+                            <td class="mi-col-read">${pill}</td>
+
+                            <td class="mi-col-title">
+                                <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}?box=self">${title}</a>
                             </td>
-                            <td class="ms-col-date">${createdAt}</td>
+
+                            <td class="mi-col-date">${createdAt}</td>
                         `;
 
                         // row click (checkbox / star / a 제외)
                         tr.addEventListener('click', (e) => {
                             if (e.target && (
-                                e.target.closest('.ms-starBtn') ||
+                                e.target.closest('.mi-starBtn') ||
                                 e.target.tagName === 'A' ||
                                 e.target.closest('.rowCheck')
                             )) return;
                             location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
                         });
 
-                        // checkbox select -> row highlight + ui sync
+                        // checkbox -> highlight + sync
                         const rowCb = tr.querySelector('.rowCheck');
                         rowCb.addEventListener('change', () => {
                             tr.classList.toggle('is-selected', rowCb.checked);
@@ -425,7 +401,7 @@
                         });
 
                         // star toggle
-                        const starBtn = tr.querySelector('.ms-starBtn');
+                        const starBtn = tr.querySelector('.mi-starBtn');
                         starBtn.addEventListener('click', async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -455,17 +431,6 @@
                     syncBulkUi();
                 }
 
-                // ===== api url =====
-                function buildSentApiUrl(st){
-                    const params = new URLSearchParams();
-                    params.set('page', String(st.page));
-                    params.set('size', String(PAGE_SIZE));
-                    if (st.keyword) params.set('keyword', st.keyword);
-                    if (st.from) params.set('from', st.from);
-                    if (st.to) params.set('to', st.to);
-                    return `/api/v1/mails/sent?${params.toString()}`;
-                }
-
                 // ===== bulk delete =====
                 async function bulkMoveToTrash(mailNos){
                     await Promise.all(mailNos.map(no =>
@@ -478,43 +443,28 @@
                     const st = getState();
 
                     document.getElementById('keyword').value = clampKeyword(st.keyword);
-                    document.getElementById('from').value = st.from;
-                    document.getElementById('to').value = st.to;
 
-                    syncDateConstraints();
-
-                    const url = buildSentApiUrl(st);
+                    const url = buildSelfApiUrl(st);
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
-                    renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
+                    renderRows(items);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
 
-                    buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, keyword:st.keyword, from:st.from, to:st.to });
+                    buildPager(data.number ?? st.page, data.totalPages ?? 1, (p) => {
+                        setUrlState({ page:p, keyword:st.keyword });
                         load().catch(console.error);
                     });
                 }
 
                 // ===== events =====
                 document.getElementById('btnSearch').addEventListener('click', () => {
-                    syncDateConstraints();
-
                     const keyword = clampKeyword(document.getElementById('keyword').value);
                     document.getElementById('keyword').value = keyword;
-                    const from = (document.getElementById('from').value || '').trim();
-                    const to = (document.getElementById('to').value || '').trim();
 
-                    setUrlState({ page:0, keyword, from, to });
+                    setUrlState({ page:0, keyword });
                     load().catch(console.error);
-                });
-
-                document.getElementById('keyword').addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter'){
-                        e.preventDefault();
-                        document.getElementById('btnSearch').click();
-                    }
                 });
 
                 document.getElementById('keyword').addEventListener('input', () => {
@@ -523,12 +473,11 @@
                     if (el.value !== v) el.value = v;
                 });
 
-                document.getElementById('from').addEventListener('change', () => {
-                    syncDateConstraints();
-                });
-
-                document.getElementById('to').addEventListener('change', () => {
-                    syncDateConstraints();
+                document.getElementById('keyword').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter'){
+                        e.preventDefault();
+                        document.getElementById('btnSearch').click();
+                    }
                 });
 
                 document.getElementById('checkAll').addEventListener('change', (e) => {
@@ -556,10 +505,8 @@
                     }
                 });
 
+                // ===== boot =====
                 window.addEventListener('DOMContentLoaded', () => {
-                    document.getElementById('to').max = todayYmd();
-                    syncDateConstraints();
-
                     load().catch(err => {
                         console.error(err);
                         document.getElementById('tbody').innerHTML =

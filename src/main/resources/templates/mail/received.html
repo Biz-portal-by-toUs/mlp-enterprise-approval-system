@@ -19,18 +19,24 @@
         }
 
         /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
-
         /* ===== page-only namespace: mi-* ===== */
+
+        /* ===== toolbar ===== */
         .mi-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
         .mi-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
         .mi-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 
+        /* ===== inputs ===== */
         .mi-searchWrap{
             flex:1;max-width:420px;display:flex;align-items:center;height:40px;
             border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;
         }
         .mi-searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
 
+        .mi-dateWrap{flex:0 0 auto;max-width:160px;}
+        .mi-dateInput{font-size:14px;}
+
+        /* ===== buttons ===== */
         .mi-btn{
             height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:800;
             cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;
@@ -39,6 +45,7 @@
         .mi-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
         .mi-btn.ghost:hover{background:#f8fafc;filter:none;}
 
+        /* ===== table ===== */
         .mi-tableWrap{
             width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
             overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);
@@ -54,7 +61,14 @@
         }
         table.mi-mailTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
 
-        th.mi-col-no, td.mi-col-no{width:90px;}
+        /* ===== columns ===== */
+        th.mi-col-check, td.mi-col-check{width:56px;}
+        .mi-check{
+            width:16px;height:16px;
+            accent-color: var(--primary);
+            cursor:pointer;
+        }
+        .mi-check:disabled{opacity:.6;cursor:not-allowed;}
         th.mi-col-star, td.mi-col-star{width:60px;}
         th.mi-col-read, td.mi-col-read{width:90px;}
         th.mi-col-date, td.mi-col-date{width:180px;}
@@ -62,11 +76,13 @@
 
         th.mi-col-title-h{text-align:left;padding-left:20px;}
         td.mi-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
+
         .mi-titleLink{
             color:var(--primary);text-decoration:none;display:block;width:100%;
             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;
         }
 
+        /* ===== badges / star ===== */
         .mi-badgePill{
             display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;
             border-radius:999px;font-size:12px;font-weight:900;border:1px solid rgba(17,24,39,.10);
@@ -82,7 +98,8 @@
         .mi-starBtn:hover{background:#f8fafc;border-color:var(--line);}
         .mi-starBtn:disabled{opacity:.6;cursor:not-allowed;}
 
-        .mi-pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        /* ===== pager ===== */
+        .mi-pager-wrapper{display:flex;align-items:center;justify-content:center;margin-top:16px;}
         .mi-pager{display:flex;align-items:center;gap:4px;}
         .mi-pageBtn{
             min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
@@ -92,10 +109,21 @@
         .mi-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
         .mi-pageBtn.active:hover{filter:brightness(0.9);}
 
-        .mi-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        /* ===== count pill ===== */
+        .mi-countPill{
+            margin-top:6px;
+            text-align:right;
+            font-size:14px;
+            font-weight:800;
+            color:var(--primary);
+        }
 
+        .mi-mailTable tbody tr.is-selected td{
+            background:#f8fafc; /* 연하게 */
+        }
+
+        /* ===== responsive ===== */
         @media (max-width:760px){
-            .mi-pager-status{position:static;margin-left:10px;}
             th.mi-col-date, td.mi-col-date{width:140px;}
             th.mi-col-sender, td.mi-col-sender{width:120px;}
         }
@@ -105,19 +133,31 @@
 <body>
 <div layout:fragment="content">
     <div class="page-with-subbar">
-        <div th:replace="~{sidebar/mail-sidebar :: mailSidebar('received')}"></div>
+        <div th:replace="~{sidebar/mail-sidebar :: mailSidebar(${sidebarKey})}"></div>
 
         <main class="page-main">
             <div class="mi-toolbar">
                 <div class="mi-toolbar-left">
                     <div class="mi-searchWrap">
-                        <input id="q" class="mi-searchInput" type="text" placeholder="제목 검색"/>
+                        <input id="keyword" class="mi-searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
+                    </div>
+                    <!-- 기간(from/to) -->
+                    <div class="mi-searchWrap mi-dateWrap">
+                        <input id="from" class="mi-searchInput mi-dateInput" type="date" aria-label="시작일"/>
+                    </div>
+                    <span style="color:var(--mut); font-weight:800;">~</span>
+                    <div class="mi-searchWrap mi-dateWrap">
+                        <input id="to" class="mi-searchInput mi-dateInput" type="date" aria-label="종료일"/>
                     </div>
                     <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
                 <div class="mi-toolbar-right">
+                    <button class="mi-btn ghost" id="btnBulkRead" type="button" disabled>읽음</button>
+                    <button class="mi-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
+
                     <button class="mi-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
+                    <div id="countPill" class="mi-countPill">0건</div>
                 </div>
             </div>
 
@@ -125,7 +165,9 @@
                 <table class="mi-mailTable">
                     <thead>
                     <tr>
-                        <th class="mi-col-no">번호</th>
+                        <th class="mi-col-check">
+                            <input id="checkAll" class="mi-check" type="checkbox" aria-label="전체 선택"/>
+                        </th>
                         <th class="mi-col-star">중요</th>
                         <th class="mi-col-read">읽음</th>
                         <th class="mi-col-sender">발신인</th>
@@ -139,18 +181,15 @@
 
             <div class="mi-pager-wrapper">
                 <div id="pagerControls" class="mi-pager"></div>
-
-                <div class="mi-pager-status">
-                    <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
-                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
-                </div>
             </div>
 
             <script>
-                // ===== constants (paging 10 fixed) =====
+                // ===== constants =====
                 const PAGE_SIZE = 10;
                 const INBOX_ROLE = 'RECIPIENT';
+                const KEYWORD_MAX = 50;
 
+                // ===== auth / headers =====
                 function getMeEmpId(){
                     return document.getElementById('me')?.dataset?.empNo?.trim() || '';
                 }
@@ -160,6 +199,20 @@
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
                     return {};
+                }
+
+                // ===== format / utils =====
+                function clampKeyword(s){
+                    const v = (s || '').trim();
+                    return v.length > KEYWORD_MAX ? v.slice(0, KEYWORD_MAX) : v;
+                }
+
+                function todayYmd(){
+                    const d = new Date();
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth()+1).padStart(2,'0');
+                    const day = String(d.getDate()).padStart(2,'0');
+                    return `${y}-${m}-${day}`;
                 }
 
                 function fmtDate(iso){
@@ -190,6 +243,65 @@
                     return isPrior ? '⭐' : '☆';
                 }
 
+                // ===== date constraints =====
+                function syncDateConstraints(){
+                    const fromEl = document.getElementById('from');
+                    const toEl = document.getElementById('to');
+
+                    const fromVal = (fromEl.value || '').trim();
+                    const toVal = (toEl.value || '').trim();
+                    const today = todayYmd();
+
+                    toEl.max = today;
+                    toEl.min = fromVal || '';
+                    fromEl.max = toVal || today;
+
+                    if (toVal && fromVal && toVal < fromVal) toEl.value = fromVal;
+                    if (toEl.value && toEl.value > today) toEl.value = today;
+                    if (fromEl.value && toEl.value && fromEl.value > toEl.value) fromEl.value = toEl.value;
+                }
+
+                // ===== selection / bulk UI =====
+                function getSelectedMailNos(){
+                    return Array.from(document.querySelectorAll('.rowCheck:checked'))
+                        .map(cb => cb.dataset.mailNo)
+                        .filter(Boolean);
+                }
+
+                function syncHeaderCheck(){
+                    const all = document.getElementById('checkAll');
+                    const rows = Array.from(document.querySelectorAll('.rowCheck'));
+                    const checked = rows.filter(r => r.checked);
+
+                    if (rows.length === 0){
+                        all.checked = false;
+                        all.indeterminate = false;
+                        all.disabled = true;
+                        return;
+                    }
+
+                    all.disabled = false;
+                    all.checked = checked.length === rows.length;
+                    all.indeterminate = checked.length > 0 && checked.length < rows.length;
+                }
+
+                function syncBulkUi(){
+                    const has = getSelectedMailNos().length > 0;
+                    document.getElementById('btnBulkRead').disabled = !has;
+                    document.getElementById('btnBulkTrash').disabled = !has;
+                }
+
+                // ===== network =====
+                async function fetchJson(url){
+                    const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
+                    const json = await res.json().catch(()=> null);
+                    if(!res.ok){
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(`HTTP ${res.status} ${msg}`);
+                    }
+                    return json?.data;
+                }
+
                 async function patchNoBody(url){
                     const res = await fetch(url, {
                         method: 'PATCH',
@@ -202,6 +314,45 @@
                     }
                 }
 
+                // ===== url state =====
+                function getState(){
+                    const params = new URLSearchParams(location.search);
+                    return {
+                        page: Math.max(parseInt(params.get('page') || '0', 10), 0),
+                        size: PAGE_SIZE,
+                        keyword: clampKeyword(params.get('keyword') || ''),
+                        from: (params.get('from') || '').trim(),
+                        to: (params.get('to') || '').trim()
+                    };
+                }
+
+                function setUrlState(next){
+                    const params = new URLSearchParams();
+                    params.set('page', String(next.page ?? 0));
+                    params.set('size', String(PAGE_SIZE));
+
+                    params.set('keyword', (next.keyword || '').trim());
+                    params.set('from', (next.from || '').trim());
+                    params.set('to', (next.to || '').trim());
+
+                    if (!params.get('keyword')) params.delete('keyword');
+                    if (!params.get('from')) params.delete('from');
+                    if (!params.get('to')) params.delete('to');
+
+                    history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
+                }
+
+                function buildInboxApiUrl(st){
+                    const params = new URLSearchParams();
+                    params.set('page', String(st.page));
+                    params.set('size', String(PAGE_SIZE));
+                    if (st.keyword) params.set('keyword', st.keyword);
+                    if (st.from) params.set('from', st.from);
+                    if (st.to) params.set('to', st.to);
+                    return `/api/v1/mails/inbox?${params.toString()}`;
+                }
+
+                // ===== UI builders =====
                 function buildPager(page, totalPages, onGo){
                     const pager = document.getElementById('pagerControls');
                     pager.innerHTML = '';
@@ -233,44 +384,18 @@
                     pager.appendChild(mkBtn('»', last, current === last, false));
                 }
 
-                async function fetchJson(url){
-                    const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
-                    const json = await res.json().catch(()=> null);
-                    if(!res.ok){
-                        const msg = json?.message || `HTTP ${res.status}`;
-                        throw new Error(`HTTP ${res.status} ${msg}`);
-                    }
-                    return json?.data; // ✅ ResponseDto<T> -> data
-                }
-
-                function getState(){
-                    const params = new URLSearchParams(location.search);
-                    return {
-                        page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: PAGE_SIZE,
-                        q: (params.get('q') || '').trim()
-                    };
-                }
-
-                function setUrlState(next){
-                    const params = new URLSearchParams();
-                    params.set('page', String(next.page ?? 0));
-                    params.set('size', String(PAGE_SIZE));
-                    if (next.q) params.set('q', next.q);
-                    history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
-                }
-
                 function renderRows(items, page, size, totalElements){
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
                     if (!items || items.length === 0){
                         tb.innerHTML = `<tr><td colspan="6" style="padding:18px; color:#64748b; font-weight:800;">메일이 없습니다.</td></tr>`;
+                        syncHeaderCheck();
+                        syncBulkUi();
                         return;
                     }
 
-                    items.forEach((it, idx) => {
-                        const num = totalElements - (page * size) - idx;
+                    items.forEach((it) => {
                         const title = escapeHtml(it.title);
                         const senderName = escapeHtml(it.senderName);
                         const createdAt = fmtDate(it.createdAt);
@@ -284,28 +409,40 @@
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="mi-col-no">${num}</td>
+                            <td class="mi-col-check">
+                              <input class="mi-check rowCheck"
+                                     type="checkbox"
+                                     data-mail-no="${escapeHtml(it.mailNo)}"
+                                     aria-label="메일 선택"/>
+                            </td>
 
                             <td class="mi-col-star">
-                                <button type="button"
-                                        class="mi-starBtn"
-                                        data-mail-no="${escapeHtml(it.mailNo)}"
-                                        aria-label="중요메일 토글">
-                                    ${starEmoji(isPrior)}
-                                </button>
+                              <button type="button"
+                                      class="mi-starBtn"
+                                      data-mail-no="${escapeHtml(it.mailNo)}"
+                                      aria-label="중요메일 토글">
+                                ${starEmoji(isPrior)}
+                              </button>
                             </td>
 
                             <td class="mi-col-read">${pill}</td>
                             <td class="mi-col-sender">${senderName}</td>
                             <td class="mi-col-title">
-                                <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}">${title}</a>
+                              <a class="mi-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}?box=received">${title}</a>
                             </td>
                             <td class="mi-col-date">${createdAt}</td>
-                        `;
+                          `;
 
                         tr.addEventListener('click', (e) => {
-                            if (e.target && (e.target.closest('.mi-starBtn') || e.target.tagName === 'A')) return;
+                            if (e.target && (e.target.closest('.mi-starBtn') || e.target.tagName === 'A' || e.target.closest('.rowCheck'))) return;
                             location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
+                        });
+
+                        const rowCb = tr.querySelector('.rowCheck');
+                        rowCb.addEventListener('change', () => {
+                            tr.classList.toggle('is-selected', rowCb.checked);
+                            syncHeaderCheck();
+                            syncBulkUi();
                         });
 
                         const starBtn = tr.querySelector('.mi-starBtn');
@@ -333,16 +470,25 @@
 
                         tb.appendChild(tr);
                     });
+
+                    syncHeaderCheck();
+                    syncBulkUi();
                 }
 
-                function buildInboxApiUrl(st){
-                    const params = new URLSearchParams();
-                    params.set('page', String(st.page));
-                    params.set('size', String(PAGE_SIZE));
-                    if (st.q) params.set('q', st.q);
-                    return `/api/v1/mails/inbox?${params.toString()}`;
+                // ===== bulk actions =====
+                async function bulkMarkRead(mailNos){
+                    await Promise.all(mailNos.map(no =>
+                        patchNoBody(`/api/v1/mails/${encodeURIComponent(no)}/read`)
+                    ));
                 }
 
+                async function bulkMoveToTrash(mailNos){
+                    await Promise.all(mailNos.map(no =>
+                        patchNoBody(`/api/v1/mails/${encodeURIComponent(no)}/trash`)
+                    ));
+                }
+
+                // ===== core loader =====
                 async function load(){
                     const me = getMeEmpId();
                     if(!me){
@@ -350,7 +496,12 @@
                     }
 
                     const st = getState();
-                    document.getElementById('q').value = st.q;
+
+                    document.getElementById('keyword').value = clampKeyword(st.keyword);
+                    document.getElementById('from').value = st.from;
+                    document.getElementById('to').value = st.to;
+
+                    syncDateConstraints();
 
                     const url = buildInboxApiUrl(st);
                     const data = await fetchJson(url);
@@ -359,28 +510,85 @@
                     renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
-                    document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
                     buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, q:st.q });
+                        setUrlState({ page:p, keyword:st.keyword, from:st.from, to:st.to });
                         load().catch(console.error);
                     });
                 }
 
+                // ===== event bindings =====
                 document.getElementById('btnSearch').addEventListener('click', () => {
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, q });
+                    syncDateConstraints();
+
+                    const keyword = clampKeyword(document.getElementById('keyword').value);
+                    document.getElementById('keyword').value = keyword;
+                    const from = (document.getElementById('from').value || '').trim();
+                    const to = (document.getElementById('to').value || '').trim();
+
+                    setUrlState({ page:0, keyword, from, to });
                     load().catch(console.error);
                 });
 
-                document.getElementById('q').addEventListener('keydown', (e) => {
+                document.getElementById('keyword').addEventListener('input', () => {
+                    const el = document.getElementById('keyword');
+                    const v = clampKeyword(el.value);
+                    if (el.value !== v) el.value = v;
+                });
+
+                document.getElementById('keyword').addEventListener('keydown', (e) => {
                     if (e.key === 'Enter'){
                         e.preventDefault();
                         document.getElementById('btnSearch').click();
                     }
                 });
 
+                document.getElementById('from').addEventListener('change', syncDateConstraints);
+                document.getElementById('to').addEventListener('change', syncDateConstraints);
+
+                document.getElementById('checkAll').addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    document.querySelectorAll('.rowCheck').forEach(cb => {
+                        cb.checked = checked;
+                        cb.closest('tr')?.classList.toggle('is-selected', checked);
+                    });
+                    syncHeaderCheck();
+                    syncBulkUi();
+                });
+
+                document.getElementById('btnBulkRead').addEventListener('click', async () => {
+                    const mailNos = getSelectedMailNos();
+                    if (mailNos.length === 0) return;
+
+                    try{
+                        await bulkMarkRead(mailNos);
+                        await load();
+                    }catch(err){
+                        console.error(err);
+                        alert('읽음 처리에 실패했습니다.');
+                    }
+                });
+
+                document.getElementById('btnBulkTrash').addEventListener('click', async () => {
+                    const mailNos = getSelectedMailNos();
+                    if (mailNos.length === 0) return;
+
+                    if (!confirm(`선택한 ${mailNos.length}건을 삭제(휴지통 이동)할까요?`)) return;
+
+                    try{
+                        await bulkMoveToTrash(mailNos);
+                        await load();
+                    }catch(err){
+                        console.error(err);
+                        alert('삭제 처리에 실패했습니다.');
+                    }
+                });
+
+                // ===== boot =====
                 window.addEventListener('DOMContentLoaded', () => {
+                    document.getElementById('to').max = todayYmd();
+                    syncDateConstraints();
+
                     load().catch(err => {
                         console.error(err);
                         document.getElementById('tbody').innerHTML =

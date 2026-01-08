@@ -59,11 +59,21 @@
             box-shadow: 0 0 0 4px rgba(44, 92, 255, .10);
         }
 
-        .mw-help {
-            margin-top: 6px;
-            color: var(--mut);
-            font-size: 12px;
-            font-weight: 700;
+        /* ✅ 내게쓰기 토글 */
+        .mw-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
+            font-size: 13px;
+            color: var(--fg);
+            user-select: none;
+        }
+        .mw-toggle input[type="checkbox"]{
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
         }
 
         /* ===== TipTap Editor ===== */
@@ -198,14 +208,17 @@
 
         /* ===== receiver (naver mail style) ===== */
         .mw-rx-item{
-            padding:10px 12px;
-            cursor:pointer;
-            display:flex;
-            justify-content:space-between;
-            gap:10px;
-            border-bottom:1px solid rgba(15,23,42,.06);
-            font-weight:800;
-            font-size:13px;
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom: 1px solid rgba(15,23,42,.06);
+            font-weight: 800;
+            font-size: 13px;
+
+            height: 48px;
+            align-items: center;
         }
         .mw-rx-item:hover{ background: rgba(44,92,255,.06); }
         .mw-rx-sub{ color: var(--mut); font-weight:700; font-size:12px; }
@@ -275,6 +288,11 @@
             border-radius:12px;
             box-shadow:0 10px 24px rgba(15,23,42,.10);
             overflow:hidden;
+
+            max-height: 288px;
+            overflow-y: auto;
+
+            -webkit-overflow-scrolling: touch;
         }
 
         @media (max-width: 760px) {
@@ -292,9 +310,25 @@
         <main class="page-main">
             <section class="mw-card">
 
+                <!-- ✅ 내 empId 주입 -->
+                <script th:inline="javascript">
+                    window.__ME_EMP_ID = /*[[${#authentication.name}]]*/ '';
+                </script>
+
+                <!-- ✅ 내게쓰기 체크박스 (받는사람 라인에 같이) -->
                 <div class="mw-row">
                     <div class="mw-k">받는 사람</div>
                     <div style="position:relative;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+                            <label class="mw-toggle">
+                                <input id="selfWrite" type="checkbox">
+                                내게쓰기
+                            </label>
+                            <div style="color:var(--mut); font-size:12px; font-weight:800;">
+                                내게쓰기 ON 시: 내게쓴메일 1건 + (다른 수신자 있으면) 일반메일 1건
+                            </div>
+                        </div>
+
                         <div id="receiverBox" class="mw-rx-box" tabindex="0">
                             <div id="receiverTokens" class="mw-rx-tokens"></div>
                             <input id="receiverInput" class="mw-rx-input"
@@ -313,7 +347,10 @@
                 <div class="mw-row">
                     <div class="mw-k">제목</div>
                     <div>
-                        <input id="title" class="mw-input" type="text" placeholder="제목 입력" maxlength="100">
+                        <input id="title" class="mw-input" type="text" placeholder="제목 입력" maxlength="50">
+                        <div id="titleCounter" style="margin-top:6px; text-align:right; font-weight:900; color:var(--mut); font-size:12px;">
+                            0 / 50
+                        </div>
                     </div>
                 </div>
 
@@ -370,8 +407,11 @@
                 </div>
             </section>
 
-            <!-- ✅ 공통 유틸(중복 제거) -->
+            <!-- 공통 유틸(중복 제거) -->
             <script>
+                const MAX_RECEIVERS = 5;
+                const RX_DD_MAX_VISIBLE = 6;
+
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
@@ -407,6 +447,25 @@
                         .split(',')
                         .map(s => s.trim())
                         .filter(Boolean);
+                }
+
+                function uniqueIds(list){
+                    return Array.from(new Set((list || []).map(s => (s || '').trim()).filter(Boolean)));
+                }
+
+                // ✅ (추가) UI 토큰 목록과 “실제 발송 계획”을 분리
+                function buildSendPlan(){
+                    const selfChecked = !!document.getElementById('selfWrite')?.checked;
+                    const me = (window.__ME_EMP_ID || '').trim();
+
+                    // hidden(#receivers) 기준(= UI 토큰)
+                    const uiReceivers = uniqueIds(parseReceivers(document.getElementById('receivers').value));
+
+                    // 발송용 분리
+                    const wantSelf = selfChecked; // 정책: 체크박스가 ON이면 self 발송을 “항상” 한다
+                    const others = uiReceivers.filter(id => id !== me);
+
+                    return { selfChecked, me, uiReceivers, wantSelf, others };
                 }
             </script>
 
@@ -546,6 +605,18 @@
             </script>
 
             <script>
+                function canAddReceiver(empId) {
+                    if (!empId) return false;
+                    if (selectedReceivers.has(empId)) return true; // 이미 있으면 OK(중복)
+                    return selectedReceivers.size < MAX_RECEIVERS;
+                }
+
+                function showReceiverLimitError() {
+                    showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
+                }
+            </script>
+
+            <script>
                 // ===== Receiver search (name -> pick -> empIds) : Naver-mail style =====
                 let receiverSearchTimer = null;
                 const selectedReceivers = new Map(); // empId -> { empId, empName, depName, posName }
@@ -616,7 +687,7 @@
                         const empName = emp.empName ?? '';
                         const depName = emp.depName ?? emp.department?.depName ?? '';
                         const posName = emp.posName ?? emp.position?.posName ?? '';
-                        const disabled = selectedReceivers.has(empId);
+                        const disabled = selectedReceivers.has(empId) || !canAddReceiver(empId);
 
                         const left = `${empName} (${empId})`.trim();
                         const right = [depName, posName].filter(Boolean).join(' · ');
@@ -637,6 +708,11 @@
                 window.pickReceiver = function(empId, empName, depName, posName){
                     if (!empId) return;
 
+                    if (!canAddReceiver(empId)) {
+                        showReceiverLimitError();
+                        return;
+                    }
+
                     selectedReceivers.set(empId, { empId, empName, depName, posName });
                     renderReceiverTokens();
 
@@ -649,11 +725,40 @@
                     closeReceiverDropdown();
                 };
 
+                // 내게쓰기 체크박스: 토글하면 “토큰 목록”에만 나를 넣고/빼기
+                function applySelfWriteToggle(){
+                    const cb = document.getElementById('selfWrite');
+                    const me = (window.__ME_EMP_ID || '').trim();
+                    if (!cb || !me) return;
+
+                    if (cb.checked){
+                        if (!selectedReceivers.has(me)) {
+                            if (!canAddReceiver(me)) {
+                                cb.checked = false;
+                                showReceiverLimitError();
+                                return;
+                            }
+                            selectedReceivers.set(me, { empId: me, empName: '나', depName: '', posName: '' });
+                            renderReceiverTokens();
+                        }
+                    } else {
+                        if (selectedReceivers.has(me)){
+                            selectedReceivers.delete(me);
+                            renderReceiverTokens();
+                        }
+                    }
+                }
+
                 document.addEventListener('DOMContentLoaded', () => {
                     renderReceiverTokens();
 
                     const box = document.getElementById('receiverBox');
                     const input = document.getElementById('receiverInput');
+                    const selfCb = document.getElementById('selfWrite');
+
+                    if (selfCb){
+                        selfCb.addEventListener('change', applySelfWriteToggle);
+                    }
 
                     if (!box || !input) return;
 
@@ -677,9 +782,17 @@
 
                         if (e.key === 'Enter') {
                             e.preventDefault();
+
                             const items = await searchEmployeesByName(input.value);
                             const first = items?.[0];
-                            if (first && !selectedReceivers.has(first.empId)) {
+                            if (!first) return;
+
+                            if (!canAddReceiver(first.empId)) {
+                                showReceiverLimitError();
+                                return;
+                            }
+
+                            if (!selectedReceivers.has(first.empId)) {
                                 window.pickReceiver(
                                     first.empId,
                                     first.empName,
@@ -703,6 +816,35 @@
                 });
             </script>
 
+            <script>
+                const TITLE_LIMIT = 50;
+
+                function enforceTitleLimit() {
+                    const el = document.getElementById('title');
+                    const counter = document.getElementById('titleCounter');
+                    if (!el) return;
+
+                    const render = () => {
+                        const len = (el.value || '').length;
+                        if (counter) counter.textContent = `${len} / ${TITLE_LIMIT}`;
+                    };
+
+                    const cut = () => {
+                        const v = el.value || '';
+                        if (v.length > TITLE_LIMIT) el.value = v.slice(0, TITLE_LIMIT);
+                        render();
+                    };
+
+                    el.addEventListener('input', cut);
+                    el.addEventListener('paste', () => setTimeout(cut, 0));
+
+                    // 초기값(초안 로딩 등)
+                    cut();
+                }
+
+                window.addEventListener('DOMContentLoaded', enforceTitleLimit);
+            </script>
+
             <!-- 전송 로직 -->
             <script>
                 async function fetchJsonWithDto(url, options){
@@ -712,7 +854,6 @@
                         const msg = json?.message || `HTTP ${res.status}`;
                         throw new Error(msg);
                     }
-                    // ResponseDto<T> 에서 data만 꺼내기
                     return json?.data;
                 }
 
@@ -724,7 +865,7 @@
                     if (el) el.value = mailId || '';
                 }
 
-                // 임시저장 저장
+                // 임시저장
                 async function saveDraft(){
                     showErr('');
 
@@ -736,10 +877,17 @@
                     if (!title && !text) return showErr('제목 또는 내용을 입력한 후 임시저장하세요.');
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
+                    const plan = buildSendPlan();
+
+                    if (plan.uiReceivers.length > MAX_RECEIVERS) {
+                        return showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
+                    }
+
                     const body = {
                         mailId: getDraftMailId() || null,
                         title,
-                        cnttJson
+                        cnttJson,
+                        receiverEmpIds: plan.uiReceivers
                     };
 
                     const data = await fetchJsonWithDto(`/api/v1/mails/drafts`, {
@@ -753,66 +901,26 @@
                         body: JSON.stringify(body)
                     });
 
-                    // data: ResMailDraftSavedDto { mailId, mailNo, savedAt }
                     if (data?.mailId) setDraftMailId(data.mailId);
-
                     return data;
                 }
 
-                // 임시저장 버튼
                 document.getElementById('btnDraft').addEventListener('click', async () => {
                     try{
-                        const saved = await saveDraft();
-                        alert('임시저장 완료');
-                        // 필요하면 drafts 페이지로 이동
-                        // location.href = '/mail/drafts';
+                        await saveDraft();
+                        location.href = '/mail/drafts'; // ✅ 임시보관함으로 이동
                     }catch(e){
                         console.error(e);
                         showErr(e.message || '임시저장에 실패했습니다.');
                     }
                 });
 
-                // 전송 버튼
-                document.getElementById('btnSend').addEventListener('click', async () => {
-                    showErr('');
+                // 일반 전송: selfWrite ON이면 POST 2번, OFF이면 1번
+                async function sendNormalMailWithOptionalSelfSplit({title, cnttJson}){
+                    const { selfChecked, me, uiReceivers, wantSelf, others } = buildSendPlan();
 
-                    const draftMailId = getDraftMailId();
-
-                    const receivers = parseReceivers(document.getElementById('receivers').value);
-                    const title = (document.getElementById('title').value || '').trim();
-
-                    const cnttJson = (window.__mailEditorGetJsonString ? window.__mailEditorGetJsonString() : '').trim();
-                    const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
-                    const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
-
-                    if (!receivers.length) return showErr('받는 사람을 1명 이상 입력하세요.');
-                    if (!title) return showErr('제목을 입력하세요.');
-                    if (!text) return showErr('내용을 입력하세요.');
-                    if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
-
-                    try {
-                        // 초안이면: draft 발송 API 사용
-                        if (draftMailId){
-                            const body = { receiverEmpIds: receivers };
-
-                            await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(draftMailId)}/send`, {
-                                method: 'POST',
-                                credentials: 'include',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                    ...getCsrfHeaders()
-                                },
-                                body: JSON.stringify(body)
-                            });
-
-                            location.href = '/mail/sent';
-                            return;
-                        }
-
-                        // 일반 전송
-                        const body = { title, cnttJson, receiverEmpIds: receivers };
-
+                    if (!selfChecked){
+                        // OFF: UI 수신자 그대로 1번
                         await fetchJsonWithDto(`/api/v1/mails`, {
                             method: 'POST',
                             credentials: 'include',
@@ -821,8 +929,87 @@
                                 'Accept': 'application/json',
                                 ...getCsrfHeaders()
                             },
-                            body: JSON.stringify(body)
+                            body: JSON.stringify({ title, cnttJson, receiverEmpIds: uiReceivers })
                         });
+                        return;
+                    }
+
+                    // ON: self는 무조건 1번 + others가 있으면 1번 추가
+                    if (!me) throw new Error('내게쓰기 처리에 필요한 사용자 정보가 없습니다.');
+
+                    if (wantSelf){
+                        await fetchJsonWithDto(`/api/v1/mails`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                ...getCsrfHeaders()
+                            },
+                            body: JSON.stringify({ title, cnttJson, receiverEmpIds: [me] })
+                        });
+                    }
+
+                    if (others.length > 0){
+                        await fetchJsonWithDto(`/api/v1/mails`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                ...getCsrfHeaders()
+                            },
+                            body: JSON.stringify({ title, cnttJson, receiverEmpIds: others })
+                        });
+                    }
+                }
+
+                document.getElementById('btnSend').addEventListener('click', async () => {
+                    showErr('');
+
+                    const draftMailId = getDraftMailId();
+
+                    const title = (document.getElementById('title').value || '').trim();
+                    const cnttJson = (window.__mailEditorGetJsonString ? window.__mailEditorGetJsonString() : '').trim();
+                    const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
+                    const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
+
+                    // receiver 검증은 “발송 계획 기준”으로
+                    const plan = buildSendPlan();
+
+                    if (plan.uiReceivers.length > MAX_RECEIVERS) {
+                        return showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
+                    }
+                    const hasAnyReceiverUi = plan.uiReceivers.length > 0;
+                    const selfChecked = plan.selfChecked;
+
+                    if (!hasAnyReceiverUi) return showErr('받는 사람을 1명 이상 입력하세요.');
+                    if (selfChecked && !plan.me) return showErr('내게쓰기 처리에 필요한 사용자 정보가 없습니다.');
+
+                    if (!title) return showErr('제목을 입력하세요.');
+                    if (!text) return showErr('내용을 입력하세요.');
+                    if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
+
+                    try {
+                        // draft 발송은 “1번만” (서버에서 self+others 분리/복제 처리 가능)
+                        if (draftMailId){
+                            await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(draftMailId)}/send`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    ...getCsrfHeaders()
+                                },
+                                body: JSON.stringify({ receiverEmpIds: plan.uiReceivers })
+                            });
+
+                            location.href = '/mail/sent';
+                            return;
+                        }
+
+                        // 일반 전송: selfWrite ON이면 2번 요청
+                        await sendNormalMailWithOptionalSelfSplit({ title, cnttJson });
 
                         location.href = '/mail/sent';
                     } catch (e) {
@@ -831,8 +1018,9 @@
                     }
                 });
             </script>
+
             <script>
-                // ✅ draft 편집 진입: /mail/write?mailId=... 로 들어오면 초안 상세 불러오기
+                // draft 편집 진입: /mail/write?mailId=... 로 들어오면 초안 상세 불러오기
                 async function loadDraftIfAny(){
                     const params = new URLSearchParams(location.search);
                     const mailId = (params.get('mailId') || '').trim();
@@ -849,26 +1037,35 @@
                         const data = json?.data;
                         if (!data) return;
 
-                        // draftMailId 세팅(이후 임시저장/발송에 사용)
                         document.getElementById('draftMailId').value = data.mailId || mailId;
-
-                        // 제목 채우기
                         document.getElementById('title').value = data.title || '';
 
-                        // 내용(JSON) 채우기: TipTap editor는 module scope라 직접 접근이 어려움
-                        // -> 가장 쉬운 방식: hidden에 먼저 넣고, TipTap init 시 content로 주입하는 방식
-                        // 현재 구조를 크게 안 바꾸기 위해, 새로고침 방식으로 간단히 처리:
-                        // 1) cnttJson hidden에 저장
-                        // 2) TipTap 모듈에서 window.__mailEditorSetJson 가 있으면 호출 (아래에서 추가해주면 완벽)
                         const cnttJson = data.cnttJson || data.cntt || '';
-                        if (cnttJson){
-                            // TipTap 모듈에 setter를 추가했다면:
-                            if (window.__mailEditorSetJsonString){
-                                window.__mailEditorSetJsonString(cnttJson);
-                            } else {
-                                // setter가 없다면: 안내만(최소 변경)
-                                console.warn('[draft] editor setter not found. TipTap 모듈에 window.__mailEditorSetJsonString 추가 권장.');
-                            }
+                        if (cnttJson && window.__mailEditorSetJsonString){
+                            window.__mailEditorSetJsonString(cnttJson);
+                        }
+
+                        /// draft 상세 receiverEmpIds로 토큰 복원
+                        if (Array.isArray(data.receiverEmpIds)) {
+                            selectedReceivers.clear();
+
+                            // 내게쓰기 체크 여부 복원(서버가 self를 receiverEmpIds에 넣어놨다면 체크 ON으로)
+                            const me = (window.__ME_EMP_ID || '').trim();
+                            const hasMe = me && data.receiverEmpIds.some(id => (id || '').trim() === me);
+                            const selfCb = document.getElementById('selfWrite');
+                            if (selfCb) selfCb.checked = !!hasMe;
+
+                            // receiverEmpIds는 empId만 있으니, 우선 empId 기반 토큰 표시(이름은 empId로 대체)
+                            data.receiverEmpIds.forEach(id => {
+                                const empId = (id || '').trim();
+                                if (!empId) return;
+                                selectedReceivers.set(empId, { empId, empName: empId, depName: '', posName: '' });
+                            });
+
+                            renderReceiverTokens();
+
+                            // 내게쓰기 토글 로직 적용(체크박스 기준으로 me 토큰 유지/제거 정리)
+                            applySelfWriteToggle();
                         }
 
                     }catch(e){

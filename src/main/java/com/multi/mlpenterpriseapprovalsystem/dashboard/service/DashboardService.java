@@ -46,7 +46,7 @@ public class DashboardService {
         Employee emp = employeeRepository.findByEmpId(user.getUsername())
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
         // 1. 안 읽은 메일 개수 조회
-        int unreadMailCount = mailUserStateRepository.countByUserAndIsReadFalse(emp);
+        int unreadMailCount = (int) mailUserStateRepository.countUnreadInboxOnly(emp.getEmpId());
 
         // 2. 결재 대기 중인 문서 개수 조회 (ApprStat.AWAITING 가정)
         int awaitingApprovalCount = approvalLineRepository.countByApproverAndApprStat(emp, ApprStat.I);

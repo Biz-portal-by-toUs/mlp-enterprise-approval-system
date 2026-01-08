@@ -1,18 +1,20 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.dto.res;
 
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.*;
 
 /**
- * 임시저장된 메일 조회 Dto
+ * Please explain the class!!!
  *
  * @author : 정종원
- * @filename : ResMailDraftSavedDto
- * @since : 2026-01-07 수요일
+ * @filename : ResMailDraftDetailDto
+ * @since : 2026-01-08 목요일
  */
-public record ResMailDraftSavedDto(
+public record ResMailDraftDetailDto(
         Long mailNo,
         String mailId,
+        String title,
+        String cnttJson,
         LocalDateTime savedAt,
         List<String> receiverEmpIds
 ) {}
