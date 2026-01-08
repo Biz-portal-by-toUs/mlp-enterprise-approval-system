@@ -50,6 +50,7 @@ public class ResDocumentDto {
 
     private Boolean isResubmitted;
     private Long resubmittedForDocNo;
+    private Boolean resubmittedForTemp; // 재상신된 대상 문서의 임시저장 여부
     private Long resubmittedByDocNo;
 
 
@@ -84,6 +85,8 @@ public class ResDocumentDto {
                 .isResubmitted(document.getIsResubmitted())
                 .resubmittedForDocNo(document.getResubmittedFor() != null ?
                         document.getResubmittedFor().getDocNo() : null)
+                .resubmittedForTemp(document.getResubmittedFor() != null ?
+                        document.getResubmittedFor().getTemp() : null)
                 .resubmittedByDocNo(document.getResubmittedBy() != null ?
                         document.getResubmittedBy().getDocNo() : null)
                 .build();
@@ -121,6 +124,8 @@ public class ResDocumentDto {
                 .isResubmitted(document.getIsResubmitted())
                 .resubmittedForDocNo(document.getResubmittedFor() != null ?
                         document.getResubmittedFor().getDocNo() : null)
+                .resubmittedForTemp(document.getResubmittedFor() != null ?
+                        document.getResubmittedFor().getTemp() : null)
                 .resubmittedByDocNo(document.getResubmittedBy() != null ?
                         document.getResubmittedBy().getDocNo() : null)
                 .build();
