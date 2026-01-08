@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationTyp
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,4 +35,8 @@ public interface NotificationsRepository extends JpaRepository<Notifications, Lo
     long countByReceiver_EmpIdAndIsReadFalse(String empId);
 
     List<Notifications> findByReceiver_EmpIdAndIsReadFalse(String empId);
+
+    @Modifying
+    @Query("DELETE FROM Notifications n WHERE n.receiver.empId = :empId")
+    void deleteAllByEmpId(@Param("empId") String empId);
 }
