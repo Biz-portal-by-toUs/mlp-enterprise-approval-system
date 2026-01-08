@@ -2,178 +2,271 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout}">
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
     <title>내 예약 조회</title>
 
     <th:block layout:fragment="pageStyles">
         <style>
-            h2 { margin-bottom: 16px; }
+            /* ✅ 회의실 조회 페이지처럼: h2는 margin-bottom 16px 규격 */
+            h2 { margin: 0 0 16px; }
 
-            /* ===== 회의실 예약 페이지 느낌으로 맞춤 ===== */
             .my-reservation-page{
                 font-family: Pretendard, Arial, sans-serif;
                 background:#f7f8fa;
                 width:100%;
             }
-            .timetable-section{
-                padding: 20px 20px 32px; /* 회의실 예약과 동일 */
+            .timetable-section{ padding: 20px 20px 32px; }
+
+            /* ✅ 상단 구조: 1줄(타이틀) + 2줄(오른쪽 컨트롤) */
+            .top-area{
+                display:flex;
+                flex-direction:column;
+                gap:10px;
+                margin-bottom: 14px;
             }
 
-            /* ===== 상단 필터 ===== */
-            .table-top{
+            /* ✅ 컨트롤 줄: 오른쪽 정렬 */
+            .controls-row{
                 display:flex;
                 justify-content:flex-end;
-                align-items:center;
-                margin: 10px 0 14px;
-            }
-
-            .filter-bar{
-                display:flex;
-                align-items:center;
-                gap:10px;
+                align-items:flex-end;
+                gap:16px;
                 flex-wrap:wrap;
             }
 
-            .filter-bar input[type="date"],
-            .filter-bar select{
-                height:40px;                 /* 예약 페이지 버튼 높이와 맞춤 */
-                border:1px solid #dfe3ea;
-                border-radius:10px;
-                padding:0 12px;
-                background:#fff;
+            /* 오른쪽 도구 영역 */
+            .right-tools{
+                display:flex;
+                flex-direction:column;
+                align-items:flex-end;
+                gap:10px;
+                min-width: 320px;
+            }
+
+            /* ===== 링크 탭(회의실/법인차량/공유설비) ===== */
+            .domain-tabs{
+                display:flex;
+                align-items:center;
+                gap:14px;
+                flex-wrap:wrap;
+            }
+            .domain-link{
                 font-size:14px;
-                outline:none;
-                box-sizing:border-box;
-            }
-
-            .filter-bar input[type="date"]:focus,
-            .filter-bar select:focus{
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(26,115,232,.12);
-            }
-
-            .tilde{
-                padding:0 4px;
+                font-weight:800;
                 color:#666;
-            }
-
-            /* ✅ 조회 버튼 = 예약 페이지 버튼 스타일 */
-            .reserve-action-btn{
-                height:40px;
-                padding:0 20px;
-                border-radius:8px;
-                font-size:14px;
-                font-weight:700;
+                text-decoration:none;
                 cursor:pointer;
-                border:none;
-                background: var(--primary);
-                color:#fff;
-                white-space:nowrap;
-                transition:0.15s;
+                padding: 2px 0;
+                border-bottom:2px solid transparent;
+                transition: .15s;
             }
-            .reserve-action-btn:hover{ filter: brightness(0.9); }
-            .reserve-action-btn:active{ transform: translateY(1px); }
+            .domain-link:hover{ color:#111; }
+            .domain-link.active{
+                color: var(--primary);
+                border-bottom-color: var(--primary);
+            }
 
-            /* ===== 테이블 ===== */
+            /* ===== 날짜/조회 스타일(회의 목록 화면 느낌) ===== */
+            .toolbar { display:flex; align-items:center; gap: 12px; }
+            .select{
+                height: 40px;
+                border-radius: 8px;
+                border: 1px solid var(--line);
+                background: #fff;
+                padding: 0 12px;
+                font-size: 14px;
+                font-weight: 600;
+                outline: none;
+            }
+            .date-filter{ display:flex; align-items:center; gap:8px; }
+            .btn{
+                height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
+                cursor: pointer; border: none; background: var(--primary); color: #fff;
+                white-space: nowrap; transition: 0.15s;
+            }
+            .btn:hover{ filter: brightness(0.9); }
+
+            /* ===== 테이블(회의 목록 화면 느낌) ===== */
+            .tableWrap{
+                background: #fff;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            }
             table{
                 width:100%;
                 border-collapse:collapse;
-                background:#fff;
-                border-radius:12px;
-                overflow:hidden;
-                border:1px solid #eef2f7;
+                table-layout: fixed; /* ✅ 고정 레이아웃 */
             }
-
             thead th{
-                text-align:left;
-                padding:12px 16px;
-                white-space: nowrap;
-                font-size:14px;
-                font-weight:800;
-                color:#111;
-                border-bottom:1px solid #eef2f7;
                 background:#f9fafb;
+                border-bottom: 1px solid var(--line);
+                text-align:center;
+                padding: 14px 10px;
+                font-size: 14px;
+                color: var(--muted);
+                font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
-
             tbody td{
-                padding:14px 16px;
-                font-size:14px;
-                border-top:1px solid #f4f6f9;
-                vertical-align:middle;
+                border-bottom: 1px solid var(--line);
+                text-align:center;
+                padding: 12px 10px;
+                font-size: 15px;
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                vertical-align: middle;
             }
+            tbody tr:hover td{ background:#fcfdfe; }
 
             .empty{
-                padding:24px 10px;
-                color:#777;
+                padding:40px;
+                color: var(--muted);
                 text-align:center;
+                font-weight:600;
             }
 
-            /* 사용 목적(4번째 컬럼) 가운데 정렬 */
-            thead th:nth-child(4),
-            tbody td:nth-child(4){
-                text-align:center;
+            /* 좌측정렬이 필요한 컬럼 */
+            .ta-left{ text-align:left !important; padding-left:20px !important; }
+
+            /* 목적/참가자 폭 비슷하게 */
+            .col-purpose, .col-attendees{
+                width: 260px;
+                max-width: 260px;
+            }
+
+            /* 참가자: 기본 2줄 클램프 + 더보기(전체 펼치기) */
+            .attendees-cell{
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: clip !important;
+            }
+            .attendees-text{
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                overflow: hidden;
+                line-height: 1.35;
+                white-space: normal;
+            }
+            .attendees-text.expanded{
+                -webkit-line-clamp: unset;
+                overflow: visible;
+            }
+            .attendees-more{
+                display:inline-block;
+                margin-top:6px;
+                font-size:13px;
+                font-weight:800;
+                color: var(--primary);
+                cursor:pointer;
+                user-select:none;
+            }
+
+            /* ===== 페이징(회의 목록 느낌) ===== */
+            .pager-wrapper{
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                position: relative;
+                margin-top: 16px;
+            }
+            .pager{ display:flex; align-items:center; gap:4px; }
+            .pageBtn{
+                min-width:36px; height:36px;
+                border-radius:6px;
+                border:1px solid var(--line);
+                background:#fff;
+                font-size:14px;
+                font-weight:600;
+                cursor:pointer;
+                transition:.15s;
+            }
+            .pageBtn:hover:not(.active):not(:disabled){ background:#f1f5f9; }
+            .pageBtn.active{
+                background: var(--primary);
+                color:#fff;
+                border-color: var(--primary);
+            }
+            .pageBtn.active:hover{ filter: brightness(0.9); }
+
+            .pager-status{
+                position:absolute;
+                right:0;
+                display:flex;
+                gap:12px;
+                align-items:center;
             }
 
             @media (max-width: 900px){
-                .timetable-section{ padding:18px 16px; }
-                .table-top{ justify-content:flex-start; }
+                .timetable-section{ padding: 18px 16px; }
+                .controls-row{ justify-content:flex-start; }
+                .right-tools{ align-items:flex-start; width:100%; }
+                .pager-status{ position: static; margin-left: 12px; }
+                .col-purpose, .col-attendees{ width: 180px; max-width: 180px; }
             }
         </style>
     </th:block>
 </head>
 
 <body>
-
 <div layout:fragment="content">
     <section class="page-with-subbar">
-        <!-- 왼쪽: 예약 서브 사이드바 -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('my')"></aside>
 
-        <!-- 오른쪽 -->
         <div class="my-reservation-page">
             <div class="timetable-section">
-                <!-- ✅ 회의실 예약 페이지처럼 h2 사용 -->
-                <h2>내 예약 조회</h2>
-                <br><br>
 
-                <!-- 상단 필터 -->
-                <div class="table-top">
-                    <div class="filter-bar">
-                        <input type="date" id="fromDate">
-                        <span class="tilde">~</span>
-                        <input type="date" id="toDate">
+                <!-- ✅ 1) 제목은 회의실 조회처럼 맨 위에 -->
+                <div class="top-area">
+                    <h2>내 예약 조회</h2>
 
-                        <select id="domainFilter">
-                            <option value="ALL">전체</option>
-                            <option value="MEETING_ROOM">회의실</option>
-                            <option value="CORPORATE_CAR">법인 차량</option>
-                            <option value="SHARED_EQUIPMENT">공유 설비</option>
-                        </select>
+                    <!-- ✅ 2) 오른쪽 컨트롤은 "제목 아래" 줄에 위치 -->
+                    <div class="controls-row">
+                        <div class="right-tools">
+                            <div class="domain-tabs" aria-label="예약 카테고리">
+                                <a href="javascript:void(0)" class="domain-link active" data-domain="MEETING_ROOM">회의실</a>
+                                <a href="javascript:void(0)" class="domain-link" data-domain="CORPORATE_CAR">법인 차량</a>
+                                <a href="javascript:void(0)" class="domain-link" data-domain="SHARED_EQUIPMENT">공유 설비</a>
+                            </div>
 
-                        <!-- ✅ 버튼 스타일 통일 -->
-                        <button id="btnSearch" type="button" class="reserve-action-btn">조회</button>
+                            <div class="toolbar">
+                                <div class="date-filter">
+                                    <input id="fromDate" class="select" type="date" />
+                                    <span style="font-weight: 600; color: var(--muted);">~</span>
+                                    <input id="toDate" class="select" type="date" />
+                                </div>
+                                <button id="btnSearch" class="btn" type="button">조회</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <table>
-                    <thead>
-                    <tr>
-                        <th style="width:140px;">예약대상</th>
-                        <th style="width:140px;">예약일자</th>
-                        <th style="width:160px;">예약시간</th>
-                        <th>사용 목적</th>
-                        <th style="width:140px;">장소</th>
-                        <th style="width:120px;">예약상태</th>
-                    </tr>
-                    </thead>
-                    <tbody id="tbody">
-                    <tr><td class="empty" colspan="6">기간을 선택하고 조회를 눌러주세요.</td></tr>
-                    </tbody>
-                </table>
+                <section class="tableWrap">
+                    <table>
+                        <colgroup id="colgroup"></colgroup>
+                        <thead id="thead"></thead>
+                        <tbody id="tbody">
+                        <tr><td class="empty" colspan="7">조회 중...</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <div class="pager-wrapper">
+                    <div id="pager" class="pager"></div>
+                    <div class="pager-status">
+                        <span id="countPill" style="font-size:14px; display: none !important; font-weight:600; color:var(--primary)">0건</span>
+                        <span id="pageInfo" style="font-size:13px; display: none !important; color:var(--muted)">page 1 / 1</span>
+                    </div>
+                </div>
 
             </div>
         </div>
@@ -184,11 +277,26 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const API_BASE = window.location.origin;
+            const PAGE_SIZE = 10;
 
             const fromEl = document.getElementById("fromDate");
             const toEl   = document.getElementById("toDate");
-            const domainEl = document.getElementById("domainFilter");
             const btnSearch = document.getElementById("btnSearch");
+
+            const colgroupEl = document.getElementById("colgroup");
+            const theadEl = document.getElementById("thead");
+            const tbodyEl = document.getElementById("tbody");
+            const pagerEl = document.getElementById("pager");
+            const countPillEl = document.getElementById("countPill");
+            const pageInfoEl = document.getElementById("pageInfo");
+
+            const tabEls = Array.from(document.querySelectorAll(".domain-link[data-domain]"));
+
+            let currentDomain = "MEETING_ROOM";
+            let currentPage = 0;
+
+            let ALL_ROWS = [];
+            let VIEW_ROWS = [];
 
             async function apiFetchJson(path) {
                 const res = await fetch(API_BASE + path, { credentials: "include" });
@@ -200,7 +308,29 @@
                 return res.json();
             }
 
+            function unwrapMaybeResponseDto(resJson) {
+                if (resJson && typeof resJson === "object" && "data" in resJson) return resJson.data;
+                return resJson;
+            }
+
+            function escapeHtml(str) {
+                return String(str ?? "").replace(/[&<>"']/g, s => ({
+                    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+                }[s]));
+            }
+
             function fmtDate(d){ return d.toISOString().slice(0,10); }
+
+            function parseYMD(ymd){
+                const [y,m,d] = ymd.split("-").map(Number);
+                return new Date(y, m-1, d, 0,0,0,0);
+            }
+
+            function addDays(date, days){
+                const d = new Date(date);
+                d.setDate(d.getDate() + days);
+                return d;
+            }
 
             function addMonths(date, months){
                 const d = new Date(date);
@@ -208,23 +338,17 @@
                 return d;
             }
 
-            function parseYMD(ymd){
-                const [y,m,d] = ymd.split("-").map(Number);
-                return new Date(y, m-1, d, 0,0,0,0);
-            }
-
             function getMaxToDateStr(fromStr){
-                const maxTo = addMonths(parseYMD(fromStr), 1);
-                return fmtDate(maxTo);
+                return fmtDate(addMonths(parseYMD(fromStr), 1));
             }
 
-            function enforceDateRules(changedBy){
+            function enforceDateRules(){
                 const from = fromEl.value;
                 const to   = toEl.value;
-
                 if (!from) return;
 
                 const maxToStr = getMaxToDateStr(from);
+
                 toEl.min = from;
                 toEl.max = maxToStr;
 
@@ -240,11 +364,20 @@
 
                 const fixedTo = toEl.value || from;
                 fromEl.max = fixedTo;
-                const minFromByTo = fmtDate(addMonths(parseYMD(fixedTo), -1));
-                fromEl.min = minFromByTo;
+                fromEl.min = fmtDate(addMonths(parseYMD(fixedTo), -1));
             }
 
-            // ---- "사용중" 상태 계산 ----
+            function validateBeforeSearch(){
+                const from = fromEl.value;
+                const to   = toEl.value;
+
+                if (!from || !to) { alert("시작일과 종료일을 모두 선택해주세요."); return false; }
+                if (to < from) { alert("종료일은 시작일보다 빠를 수 없습니다."); return false; }
+                const maxToStr = getMaxToDateStr(from);
+                if (to > maxToStr) { alert("조회 기간은 최대 1개월까지만 가능합니다."); return false; }
+                return true;
+            }
+
             function parseTimeRange(timeStr){
                 if (!timeStr) return null;
                 const cleaned = String(timeStr).trim();
@@ -256,11 +389,18 @@
                 return { start, end };
             }
 
+            function toStartDateTime(dateStr, timeStr){
+                if (!dateStr) return null;
+                const range = parseTimeRange(timeStr);
+                const startHHMM = range?.start || "00:00";
+                const dt = new Date(`${dateStr}T${startHHMM}:00`);
+                return Number.isNaN(dt.getTime()) ? null : dt;
+            }
+
             function isNowInReservation(dateStr, timeStr){
                 if (!dateStr || !timeStr) return false;
                 const range = parseTimeRange(timeStr);
                 if (!range) return false;
-
                 const startDt = new Date(`${dateStr}T${range.start}:00`);
                 const endDt   = new Date(`${dateStr}T${range.end}:00`);
                 const now = new Date();
@@ -280,95 +420,296 @@
                 return raw;
             }
 
-            function render(rows){
-                const tbody = document.getElementById("tbody");
-                if (!rows || rows.length === 0){
-                    tbody.innerHTML = `<tr><td class="empty" colspan="6">조회 결과가 없습니다.</td></tr>`;
+            function sortUpcomingFirst(rows){
+                const now = new Date();
+                const upcoming = [];
+                const past = [];
+
+                for (const r of rows) {
+                    const dt = toStartDateTime(r.date, r.time) || new Date(0);
+                    (dt >= now ? upcoming : past).push({ r, dt });
+                }
+                upcoming.sort((a,b) => a.dt - b.dt);
+                past.sort((a,b) => b.dt - a.dt);
+
+                return [...upcoming.map(x => x.r), ...past.map(x => x.r)];
+            }
+
+            function normalizeAttendees(r){
+                if (Array.isArray(r.attendeeNames)) return r.attendeeNames.filter(Boolean).map(String);
+                const v = r.attendees ?? r.attendee ?? "";
+                if (!v) return [];
+                if (Array.isArray(v)) return v.filter(Boolean).map(String);
+                return String(v).split(",").map(s => s.trim()).filter(Boolean);
+            }
+
+            function renderColgroup(domain){
+                if (domain === "MEETING_ROOM") {
+                    colgroupEl.innerHTML = `
+                      <col style="width:140px" />
+                      <col style="width:160px" />
+                      <col style="width:220px" />
+                      <col style="width:260px" />
+                      <col style="width:260px" />
+                      <col style="width:140px" />
+                      <col style="width:120px" />
+                    `;
                     return;
                 }
-                tbody.innerHTML = rows.map(r => {
+                if (domain === "CORPORATE_CAR") {
+                    colgroupEl.innerHTML = `
+                      <col style="width:140px" />
+                      <col style="width:160px" />
+                      <col style="width:220px" />
+                      <col style="width:160px" />
+                      <col style="width:260px" />
+                      <col style="width:120px" />
+                    `;
+                    return;
+                }
+                colgroupEl.innerHTML = `
+                  <col style="width:140px" />
+                  <col style="width:160px" />
+                  <col style="width:220px" />
+                  <col style="width:160px" />
+                  <col style="width:260px" />
+                  <col style="width:120px" />
+                `;
+            }
+
+            function renderHeader(domain){
+                if (domain === "MEETING_ROOM") {
+                    theadEl.innerHTML = `
+                      <tr>
+                        <th>예약일자</th>
+                        <th>예약시간</th>
+                        <th class="ta-left">회의실명</th>
+                        <th class="ta-left col-purpose">예약 목적</th>
+                        <th class="ta-left col-attendees">참가자</th>
+                        <th>예약자</th>
+                        <th>예약상태</th>
+                      </tr>
+                    `;
+                    return;
+                }
+                if (domain === "CORPORATE_CAR") {
+                    theadEl.innerHTML = `
+                      <tr>
+                        <th>예약일자</th>
+                        <th>예약시간</th>
+                        <th class="ta-left">차량명</th>
+                        <th>차량번호</th>
+                        <th class="ta-left col-purpose">예약 목적</th>
+                        <th>예약상태</th>
+                      </tr>
+                    `;
+                    return;
+                }
+                theadEl.innerHTML = `
+                  <tr>
+                    <th>예약일자</th>
+                    <th>예약시간</th>
+                    <th class="ta-left">설비명</th>
+                    <th>설비번호</th>
+                    <th class="ta-left col-purpose">예약 목적</th>
+                    <th>예약상태</th>
+                  </tr>
+                `;
+            }
+
+            function renderBody(domain, rows){
+                const colCount = (domain === "MEETING_ROOM") ? 7 : 6;
+
+                if (!rows || rows.length === 0){
+                    tbodyEl.innerHTML = `<tr><td class="empty" colspan="${colCount}">조회 결과가 없습니다.</td></tr>`;
+                    return;
+                }
+
+                if (domain === "MEETING_ROOM") {
+                    tbodyEl.innerHTML = rows.map((r, idx) => {
+                        const statusText = computeStatus(r);
+
+                        const roomName = r.roomName ?? r.meetingRoomName ?? r.target ?? "-";
+                        const purpose  = r.purpose ?? r.purp ?? "-";
+                        const hostName = r.hostName ?? r.resvEmpName ?? r.host ?? "-";
+
+                        const attendeesArr = normalizeAttendees(r);
+                        const attendeesFull = attendeesArr.length ? attendeesArr.join(", ") : "-";
+                        const shouldShowMore = attendeesArr.length >= 4 || attendeesFull.length >= 35;
+
+                        return `
+                          <tr>
+                            <td>${escapeHtml(r.date ?? "-")}</td>
+                            <td>${escapeHtml(r.time ?? "-")}</td>
+                            <td class="ta-left" title="${escapeHtml(roomName)}">${escapeHtml(roomName)}</td>
+                            <td class="ta-left col-purpose" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+                            <td class="ta-left col-attendees attendees-cell">
+                              <div class="attendees-text" data-row="${idx}" title="${escapeHtml(attendeesFull)}">${escapeHtml(attendeesFull)}</div>
+                              ${shouldShowMore ? `<span class="attendees-more" data-action="toggle-attendees" data-row="${idx}">더보기</span>` : ``}
+                            </td>
+                            <td>${escapeHtml(hostName)}</td>
+                            <td>${escapeHtml(statusText)}</td>
+                          </tr>
+                        `;
+                    }).join("");
+                    return;
+                }
+
+                if (domain === "CORPORATE_CAR") {
+                    tbodyEl.innerHTML = rows.map(r => {
+                        const statusText = computeStatus(r);
+
+                        const carName = r.carName ?? r.target ?? "-";
+                        const plateNo   = r.plateNo ?? r.plateNo ?? "-";
+                        const purpose = r.purpose ?? r.purp ?? "-";
+
+                        return `
+                          <tr>
+                            <td>${escapeHtml(r.date ?? "-")}</td>
+                            <td>${escapeHtml(r.time ?? "-")}</td>
+                            <td class="ta-left" title="${escapeHtml(carName)}">${escapeHtml(carName)}</td>
+                            <td title="${escapeHtml(plateNo)}">${escapeHtml(plateNo)}</td>
+                            <td class="ta-left col-purpose" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+                            <td>${escapeHtml(statusText)}</td>
+                          </tr>
+                        `;
+                    }).join("");
+                    return;
+                }
+
+                tbodyEl.innerHTML = rows.map(r => {
                     const statusText = computeStatus(r);
+
+                    const eqName = r.eqName ?? r.equipmentName ?? r.target ?? "-";
+                    const eqId   = r.eqId ?? r.eqNumber ?? r.eqId ?? r.serialNo ?? "-";
+                    const purpose = r.purpose ?? r.purp ?? "-";
+
                     return `
                       <tr>
-                        <td>${r.target ?? "-"}</td>
-                        <td>${r.date ?? "-"}</td>
-                        <td>${r.time ?? "-"}</td>
-                        <td>${r.purpose ?? "-"}</td>
-                        <td>${r.location ?? "-"}</td>
-                        <td>${statusText}</td>
+                        <td>${escapeHtml(r.date ?? "-")}</td>
+                        <td>${escapeHtml(r.time ?? "-")}</td>
+                        <td class="ta-left" title="${escapeHtml(eqName)}">${escapeHtml(eqName)}</td>
+                        <td title="${escapeHtml(eqId)}">${escapeHtml(eqId)}</td>
+                        <td class="ta-left col-purpose" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+                        <td>${escapeHtml(statusText)}</td>
                       </tr>
                     `;
                 }).join("");
             }
 
-            let ALL_ROWS = [];
-            let selectedDomain = "ALL";
+            tbodyEl.addEventListener("click", (e) => {
+                const t = e.target;
+                if (!(t instanceof HTMLElement)) return;
+                if (t.dataset.action !== "toggle-attendees") return;
 
-            function applyDomainFilter(domain){
-                const rows = (domain === "ALL")
-                    ? ALL_ROWS
-                    : ALL_ROWS.filter(r => r.domain === domain);
-                render(rows);
+                const row = t.dataset.row;
+                const textEl = tbodyEl.querySelector(`.attendees-text[data-row="${CSS.escape(row)}"]`);
+                if (!textEl) return;
+
+                const expanded = textEl.classList.toggle("expanded");
+                t.textContent = expanded ? "접기" : "더보기";
+            });
+
+            function renderPager(page, totalPages) {
+                pagerEl.innerHTML = "";
+                if (totalPages <= 0) return;
+
+                const blockSize = 5;
+                const currentBlock = Math.floor(page / blockSize);
+                const startPage = currentBlock * blockSize;
+                let endPage = startPage + blockSize - 1;
+                if (endPage > totalPages - 1) endPage = totalPages - 1;
+
+                const createBtn = (txt, target, active = false, disabled = false) => {
+                    const b = document.createElement("button");
+                    b.className = `pageBtn ${active ? 'active' : ''}`;
+                    b.textContent = txt;
+                    b.disabled = disabled;
+                    b.onclick = () => { currentPage = target; renderPage(); };
+                    return b;
+                };
+
+                pagerEl.appendChild(createBtn("<", page - 1, false, page <= 0));
+                for (let i = startPage; i <= endPage; i++) {
+                    pagerEl.appendChild(createBtn(String(i + 1), i, i === page));
+                }
+                pagerEl.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
             }
 
-            function validateBeforeSearch(){
-                const from = fromEl.value;
-                const to   = toEl.value;
+            function renderPage(){
+                const total = VIEW_ROWS.length;
+                const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-                if (!from || !to) {
-                    alert("시작일과 종료일을 모두 선택해주세요.");
-                    return false;
-                }
-                if (to < from) {
-                    alert("종료일은 시작일보다 빠를 수 없습니다.");
-                    return false;
-                }
-                const maxToStr = getMaxToDateStr(from);
-                if (to > maxToStr) {
-                    alert("조회 기간은 최대 1개월까지만 가능합니다.");
-                    return false;
-                }
-                return true;
+                if (currentPage >= totalPages) currentPage = totalPages - 1;
+                if (currentPage < 0) currentPage = 0;
+
+                const start = currentPage * PAGE_SIZE;
+                const pageRows = VIEW_ROWS.slice(start, start + PAGE_SIZE);
+
+                renderColgroup(currentDomain);
+                renderHeader(currentDomain);
+                renderBody(currentDomain, pageRows);
+
+                renderPager(currentPage, totalPages);
+
+                countPillEl.textContent = `${total}건`;
+                pageInfoEl.textContent = `page ${currentPage + 1} / ${totalPages}`;
             }
 
-            async function search() {
+            async function fetchRows(from, to){
+                const json = await apiFetchJson(
+                    `/api/v1/my-reservations?domain=${encodeURIComponent(currentDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+                );
+                return unwrapMaybeResponseDto(json) || [];
+            }
+
+            async function search(){
                 if (!validateBeforeSearch()) return;
 
                 const from = fromEl.value;
                 const to   = toEl.value;
 
                 try {
-                    const res = await apiFetchJson(`/api/v1/my-reservations?from=${from}&to=${to}`);
-                    ALL_ROWS = res.data || [];
-                    applyDomainFilter(selectedDomain);
+                    const rows = await fetchRows(from, to);
+                    ALL_ROWS = Array.isArray(rows) ? rows : [];
+                    VIEW_ROWS = sortUpcomingFirst(ALL_ROWS);
+                    currentPage = 0;
+                    renderPage();
                 } catch (err) {
                     console.error(err);
-                    alert("서버에 연결할 수 없습니다. API 서버 상태/포트를 확인해주세요.");
+                    tbodyEl.innerHTML = `<tr><td class="empty" colspan="7" style="color:red;">오류: ${escapeHtml(err.message)}</td></tr>`;
                 }
             }
 
-            // 초기값 세팅
-            const today = new Date();
-            fromEl.value = fmtDate(today);
+            function setActiveTab(domain){
+                tabEls.forEach(el => el.classList.toggle("active", el.dataset.domain === domain));
+            }
 
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate()+1);
-            toEl.value = fmtDate(tomorrow);
-
-            enforceDateRules("init");
-
-            fromEl.addEventListener("change", () => enforceDateRules("from"));
-            toEl.addEventListener("change",   () => enforceDateRules("to"));
-
-            domainEl.addEventListener("change", (e) => {
-                selectedDomain = e.target.value;
-                applyDomainFilter(selectedDomain);
+            tabEls.forEach(a => {
+                a.addEventListener("click", () => {
+                    const d = a.dataset.domain;
+                    if (!d) return;
+                    currentDomain = d;
+                    setActiveTab(d);
+                    search(); // 탭 클릭 즉시 갱신
+                });
             });
 
+            fromEl.addEventListener("change", enforceDateRules);
+            toEl.addEventListener("change", enforceDateRules);
             btnSearch.addEventListener("click", search);
 
+            const today = new Date();
+            fromEl.value = fmtDate(addDays(today, -7));
+            toEl.value   = fmtDate(addDays(today,  7));
+            enforceDateRules();
+
+            renderColgroup(currentDomain);
+            renderHeader(currentDomain);
+            search();
+
             setInterval(() => {
-                if (ALL_ROWS.length > 0) applyDomainFilter(selectedDomain);
+                if (VIEW_ROWS.length > 0) renderPage();
             }, 60_000);
         });
     </script>
