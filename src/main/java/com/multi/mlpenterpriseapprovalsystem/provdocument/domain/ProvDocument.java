@@ -44,7 +44,7 @@ public class ProvDocument extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "proc_stat", nullable = false, length = 20)
     private ProvProcStat procStat;
-    @Column(name = "error_msg", length = 20)
+    @Column(name = "error_msg", columnDefinition = "TEXT")
     private String errorMsg;
 
 

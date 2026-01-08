@@ -27,6 +27,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -480,5 +481,15 @@ public class MeetingService {
         meetingRepository.delete(meeting);
 
         return meetNo;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleAiRequestFailure(Long meetNo, String errorMessage) {
+        Meeting meeting = meetingRepository.findByMeetNoAndIsDeletedFalse(meetNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
+
+        meeting.markAiFailed(errorMessage);
+
+        log.info("[AI STATUS UPDATED TO FAILED] meetNo={}", meetNo);
     }
 }

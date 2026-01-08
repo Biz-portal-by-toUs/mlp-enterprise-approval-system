@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +51,6 @@ public class MeetingAiClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .doOnNext(res -> log.info("[AI] requested meetNo={}, res={}", meetNo, res))
-                .doOnError(e -> log.error("[AI] request failed meetNo={}", meetNo, e))
-                .subscribe();
+                .block(Duration.ofSeconds(10));
     }
 }
