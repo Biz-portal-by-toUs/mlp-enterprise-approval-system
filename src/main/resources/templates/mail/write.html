@@ -348,6 +348,9 @@
                     <div class="mw-k">제목</div>
                     <div>
                         <input id="title" class="mw-input" type="text" placeholder="제목 입력" maxlength="50">
+                        <div id="titleCounter" style="margin-top:6px; text-align:right; font-weight:900; color:var(--mut); font-size:12px;">
+                            0 / 50
+                        </div>
                     </div>
                 </div>
 
@@ -404,8 +407,11 @@
                 </div>
             </section>
 
-            <!-- ✅ 공통 유틸(중복 제거) -->
+            <!-- 공통 유틸(중복 제거) -->
             <script>
+                const MAX_RECEIVERS = 5;
+                const RX_DD_MAX_VISIBLE = 6;
+
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
@@ -599,6 +605,18 @@
             </script>
 
             <script>
+                function canAddReceiver(empId) {
+                    if (!empId) return false;
+                    if (selectedReceivers.has(empId)) return true; // 이미 있으면 OK(중복)
+                    return selectedReceivers.size < MAX_RECEIVERS;
+                }
+
+                function showReceiverLimitError() {
+                    showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
+                }
+            </script>
+
+            <script>
                 // ===== Receiver search (name -> pick -> empIds) : Naver-mail style =====
                 let receiverSearchTimer = null;
                 const selectedReceivers = new Map(); // empId -> { empId, empName, depName, posName }
@@ -669,7 +687,7 @@
                         const empName = emp.empName ?? '';
                         const depName = emp.depName ?? emp.department?.depName ?? '';
                         const posName = emp.posName ?? emp.position?.posName ?? '';
-                        const disabled = selectedReceivers.has(empId);
+                        const disabled = selectedReceivers.has(empId) || !canAddReceiver(empId);
 
                         const left = `${empName} (${empId})`.trim();
                         const right = [depName, posName].filter(Boolean).join(' · ');
@@ -690,6 +708,11 @@
                 window.pickReceiver = function(empId, empName, depName, posName){
                     if (!empId) return;
 
+                    if (!canAddReceiver(empId)) {
+                        showReceiverLimitError();
+                        return;
+                    }
+
                     selectedReceivers.set(empId, { empId, empName, depName, posName });
                     renderReceiverTokens();
 
@@ -702,15 +725,19 @@
                     closeReceiverDropdown();
                 };
 
-                // ✅ 내게쓰기 체크박스: 토글하면 “토큰 목록”에만 나를 넣고/빼기
-                // ✅ 전송 payload는 buildSendPlan()으로 따로 계산(= UI와 발송 분리)
+                // 내게쓰기 체크박스: 토글하면 “토큰 목록”에만 나를 넣고/빼기
                 function applySelfWriteToggle(){
                     const cb = document.getElementById('selfWrite');
                     const me = (window.__ME_EMP_ID || '').trim();
                     if (!cb || !me) return;
 
                     if (cb.checked){
-                        if (!selectedReceivers.has(me)){
+                        if (!selectedReceivers.has(me)) {
+                            if (!canAddReceiver(me)) {
+                                cb.checked = false;
+                                showReceiverLimitError();
+                                return;
+                            }
                             selectedReceivers.set(me, { empId: me, empName: '나', depName: '', posName: '' });
                             renderReceiverTokens();
                         }
@@ -755,9 +782,17 @@
 
                         if (e.key === 'Enter') {
                             e.preventDefault();
+
                             const items = await searchEmployeesByName(input.value);
                             const first = items?.[0];
-                            if (first && !selectedReceivers.has(first.empId)) {
+                            if (!first) return;
+
+                            if (!canAddReceiver(first.empId)) {
+                                showReceiverLimitError();
+                                return;
+                            }
+
+                            if (!selectedReceivers.has(first.empId)) {
                                 window.pickReceiver(
                                     first.empId,
                                     first.empName,
@@ -786,18 +821,24 @@
 
                 function enforceTitleLimit() {
                     const el = document.getElementById('title');
+                    const counter = document.getElementById('titleCounter');
                     if (!el) return;
 
-                    // 입력/붙여넣기/자동완성 등 모든 변경에 대해 컷
+                    const render = () => {
+                        const len = (el.value || '').length;
+                        if (counter) counter.textContent = `${len} / ${TITLE_LIMIT}`;
+                    };
+
                     const cut = () => {
                         const v = el.value || '';
                         if (v.length > TITLE_LIMIT) el.value = v.slice(0, TITLE_LIMIT);
+                        render();
                     };
 
                     el.addEventListener('input', cut);
                     el.addEventListener('paste', () => setTimeout(cut, 0));
 
-                    // 초기값(초안 로딩 등)도 컷
+                    // 초기값(초안 로딩 등)
                     cut();
                 }
 
@@ -838,14 +879,16 @@
 
                     const plan = buildSendPlan();
 
+                    if (plan.uiReceivers.length > MAX_RECEIVERS) {
+                        return showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
+                    }
+
                     const body = {
                         mailId: getDraftMailId() || null,
                         title,
                         cnttJson,
                         receiverEmpIds: plan.uiReceivers
                     };
-
-                    const bodyObj = plan.uiReceivers.length > 0 ? { receiverEmpIds: plan.uiReceivers } : null;
 
                     const data = await fetchJsonWithDto(`/api/v1/mails/drafts`, {
                         method: 'POST',
@@ -855,7 +898,7 @@
                             'Accept': 'application/json',
                             ...getCsrfHeaders()
                         },
-                        body: bodyObj ? JSON.stringify(bodyObj) : null
+                        body: JSON.stringify(body)
                     });
 
                     if (data?.mailId) setDraftMailId(data.mailId);
@@ -933,6 +976,10 @@
 
                     // receiver 검증은 “발송 계획 기준”으로
                     const plan = buildSendPlan();
+
+                    if (plan.uiReceivers.length > MAX_RECEIVERS) {
+                        return showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
+                    }
                     const hasAnyReceiverUi = plan.uiReceivers.length > 0;
                     const selfChecked = plan.selfChecked;
 
