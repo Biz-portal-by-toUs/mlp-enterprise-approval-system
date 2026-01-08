@@ -1,10 +1,14 @@
 package com.multi.mlpenterpriseapprovalsystem.cloud.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.cloud.enums.FolderScope;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Set;
 
 /**
  * 클라우드(공유/개인 파일함) 화면을 띄워주는 뷰 컨트롤러
@@ -15,6 +19,19 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 @Controller
 public class ViewCloudController {
+
+    private static final Set<String> ADMIN_AUTHORITIES = Set.of(
+            "SYS_ADMIN", "COM_ADMIN", "SEC_ADMIN", "THR_ADMIN",
+            "ROLE_SYS_ADMIN", "ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"
+    );
+
+    private boolean isAdmin(CustomUser user) {
+        return user != null
+                && user.getAuthorities() != null
+                && user.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(ADMIN_AUTHORITIES::contains);
+    }
 
     /** 기본 진입: 공유함으로 */
     @GetMapping("/cloud")
@@ -38,17 +55,63 @@ public class ViewCloudController {
         return "cloud/cloud";
     }
 
+
     /** ✅ 휴지통 */
     @GetMapping("/cloud/trash")
-    public String trash(@RequestParam(defaultValue = "DEPT") FolderScope scope, Model model) {
-        // sidebar 탭 active 표시용 (dept/prvt)
-        String active = (scope == FolderScope.PRVT) ? "prvt" : "dept";
+    public String trash(
+            @RequestParam(defaultValue = "DEPT") FolderScope scope,
+            Model model,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String tabActive = (scope == FolderScope.PRVT) ? "prvt" : "dept";
 
-        model.addAttribute("active", active);
-        model.addAttribute("scope", active);      // (JS에서 dept/prvt 문자열로 쓰는 용도)
-        model.addAttribute("trashScope", scope);  // (REST 호출할 때 DEPT/PRVT로 쓰는 용도)
+        model.addAttribute("active", tabActive);
+        model.addAttribute("scope", tabActive);
+        model.addAttribute("trashScope", scope);
+
+        model.addAttribute("isTrash", true);
+        model.addAttribute("activeAdminLog", false);
+        model.addAttribute("hideTreeTools", true);
+
+        // ✅ 사이드바 토글 숨기고 뒤로가기 노출
+        model.addAttribute("showBackButton", true);
+        model.addAttribute("backUrl", "/cloud/" + tabActive); // dept -> /cloud/dept, prvt -> /cloud/prvt
+
+        // ✅ 관리자 삭제 로그 버튼: "공유함 휴지통(DEPT)"에서만 + 관리자만
+        boolean showAdminLogButton = isAdmin(user) && scope == FolderScope.DEPT;
+        model.addAttribute("showAdminLogButton", showAdminLogButton);
 
         return "cloud/trash";
+    }
+
+    @GetMapping("/cloud/trash/admin-log")
+    public String adminTrashLog(
+            @RequestParam(defaultValue = "DEPT", name = "scope") FolderScope scope,
+            Model model,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        if (!isAdmin(user)) {
+            return "redirect:/cloud/trash?scope=" + scope.name();
+        }
+
+        String tabActive = (scope == FolderScope.PRVT) ? "prvt" : "dept";
+
+        model.addAttribute("active", tabActive);
+        model.addAttribute("scope", tabActive);
+        model.addAttribute("trashScope", scope);
+
+        model.addAttribute("isTrash", false);
+        model.addAttribute("activeAdminLog", true);
+        model.addAttribute("hideTreeTools", true);
+
+        // ✅ 관리자로그 화면도 "휴지통 진입 상태"로 보고 토글 숨김 + 뒤로가기
+        model.addAttribute("showBackButton", true);
+        model.addAttribute("backUrl", "/cloud/" + tabActive);
+
+        // ✅ 관리자 삭제 로그 버튼은 공유함(DEPT)에서만
+        model.addAttribute("showAdminLogButton", scope == FolderScope.DEPT);
+
+        return "cloud/admin-log";
     }
 }
 
