@@ -111,8 +111,14 @@
         .mi-pageBtn.active:hover{filter:brightness(0.9);}
 
         /* ===== count pill (메일쓰기 밑) ===== */
+        .mi-countBar{
+            display:flex;
+            justify-content:flex-end;
+            margin: 6px 0 12px;
+        }
+
         .mi-countPill{
-            margin-top:6px;
+            margin-top:0; /* 기존 6px이면 0으로 */
             text-align:right;
             font-size:14px;
             font-weight:800;
@@ -138,14 +144,17 @@
                         <input id="keyword" class="mi-searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
                     </div>
                     <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
+                    <button class="mi-btn ghost" id="btnReset" type="button" disabled>초기화</button>
                 </div>
 
                 <div class="mi-toolbar-right">
                     <button class="mi-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
 
                     <button class="mi-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
-                    <div id="countPill" class="mi-countPill">0건</div>
                 </div>
+            </div>
+            <div class="mi-countBar">
+                <div id="countPill" class="mi-countPill">0건</div>
             </div>
 
             <section class="mi-tableWrap">
@@ -242,6 +251,13 @@
 
                 function syncBulkUi(){
                     document.getElementById('btnBulkTrash').disabled = getSelectedMailNos().length === 0;
+                }
+
+                function syncResetBtn(){
+                    const hasFilter =
+                        document.getElementById('keyword').value;
+
+                    document.getElementById('btnReset').disabled = !hasFilter;
                 }
 
                 // ===== network =====
@@ -440,22 +456,26 @@
 
                 // ===== main load =====
                 async function load(){
-                    const st = getState();
+                    try {
+                        const st = getState();
 
-                    document.getElementById('keyword').value = clampKeyword(st.keyword);
+                        document.getElementById('keyword').value = clampKeyword(st.keyword);
 
-                    const url = buildSelfApiUrl(st);
-                    const data = await fetchJson(url);
+                        const url = buildSelfApiUrl(st);
+                        const data = await fetchJson(url);
 
-                    const items = data.content || [];
-                    renderRows(items);
+                        const items = data.content || [];
+                        renderRows(items);
 
-                    document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
+                        document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
 
-                    buildPager(data.number ?? st.page, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, keyword:st.keyword });
-                        load().catch(console.error);
-                    });
+                        buildPager(data.number ?? st.page, data.totalPages ?? 1, (p) => {
+                            setUrlState({page: p, keyword: st.keyword});
+                            load().catch(console.error);
+                        });
+                    } finally {
+                        syncResetBtn();
+                    }
                 }
 
                 // ===== events =====
@@ -467,10 +487,17 @@
                     load().catch(console.error);
                 });
 
+                document.getElementById('btnReset').addEventListener('click', () => {
+                    document.getElementById('keyword').value = '';
+                    setUrlState({ page: 0, keyword: '' });
+                    load().catch(console.error);
+                });
+
                 document.getElementById('keyword').addEventListener('input', () => {
                     const el = document.getElementById('keyword');
                     const v = clampKeyword(el.value);
                     if (el.value !== v) el.value = v;
+                    syncResetBtn();
                 });
 
                 document.getElementById('keyword').addEventListener('keydown', (e) => {
@@ -511,6 +538,7 @@
                         console.error(err);
                         document.getElementById('tbody').innerHTML =
                             `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('countPill').textContent = `0건`;
                     });
                 });
             </script>
