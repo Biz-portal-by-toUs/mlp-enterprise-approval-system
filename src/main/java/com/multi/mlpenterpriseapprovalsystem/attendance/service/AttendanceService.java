@@ -14,6 +14,8 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -44,16 +46,18 @@ public class AttendanceService {
     private final ObjectMapper objectMapper;
     private final AttendanceSchedule attendanceSchedule;
     private final DepartmentRepository departmentRepository;
+    private final NotificationService notificationService;
 
     public AttendanceService(AttendanceRepository attendanceRepository,
                              EmployeeRepository employeeRepository,
                              @Qualifier("objectMapper") ObjectMapper objectMapper,
-                             AttendanceSchedule attendanceSchedule, DepartmentRepository departmentRepository) {
+                             AttendanceSchedule attendanceSchedule, DepartmentRepository departmentRepository, NotificationService notificationService) {
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
         this.objectMapper = objectMapper;
         this.attendanceSchedule = attendanceSchedule;
         this.departmentRepository = departmentRepository;
+        this.notificationService = notificationService;
     }
 
     // 근태 식별자로 근태 조회
@@ -184,6 +188,11 @@ public class AttendanceService {
         attendanceRepository.save(attendance);
         document.linkAttendance(attendance); // 문서와 근태 연결 (이력 생성)
 
+        // ✅ 대직자 알림 추가
+        if (delegate != null) {
+            notifyDelegate(writer, delegate, document, "[대직 지정]", "님의 대직자로 지정되었습니다.");
+        }
+
         log.info("근태 등록 완료: empId={}, type={}, period={} ~ {}, days={}",
                 writer.getEmpId(), type, info.getStartAt(), info.getEndAt(), days);
 
@@ -304,6 +313,20 @@ public class AttendanceService {
         // 기존 근태 정보 수정
         targetAttendance.modifyDates(info.getStartAt(), info.getEndAt(), newDays); // 근태의 시간정보 갱신
         targetAttendance.updateRecentDocument(document); // 근태 엔티티의 '최근 문서' 필드도 현재의 수정 문서로 교체
+
+
+        // ✅ 대직자 변경 알림 추가
+        if (!java.util.Objects.equals(oldDelegate, newDelegate)) {
+            // 기존 대직자에게 해제 알림
+            if (oldDelegate != null) {
+                notifyDelegate(writer, oldDelegate, document, "[대직 해제]", "님의 대직 지정이 취소(변경)되었습니다.");
+            }
+            // 새 대직자에게 지정 알림
+            if (newDelegate != null) {
+                notifyDelegate(writer, newDelegate, document, "[대직 지정]", "님의 대직자로 지정되었습니다.");
+            }
+        }
+
         // 근태 엔티티의 대직자 정보도 새 대직자로 갱신해줘야 함!
         if (targetAttendance.getType() == AtteType.V) {
             targetAttendance.updateDelegate(newDelegate);
@@ -422,6 +445,11 @@ public class AttendanceService {
         Employee writer = document.getWriter();
         // 대직자
         Employee delegate = targetAttendance.getDelegate();
+
+        // ✅ 대직자 해제 알림 추가
+        if (delegate != null) {
+            notifyDelegate(writer, delegate, document, "[대직 해제]", "님의 근태 취소로 대직 지정이 해제되었습니다.");
+        }
 
         // 휴가이며, 대직자가 있고, 시작일이 오늘이면 결재라인에서 제거
         if(targetAttendance.getType() == AtteType.V && delegate != null && startDate.equals(today)) {
@@ -662,4 +690,19 @@ public class AttendanceService {
         return overlaps.stream().map(ResAttendanceDto::toDto).toList();
     }
 
+
+    /**
+     * 대직자에게 알림 전송 (지정/해제)
+     */
+    private void notifyDelegate(Employee writer, Employee delegate, Document document, String title, String messageSuffix) {
+        if (delegate == null) return;
+
+        notificationService.sendNotification(
+                delegate,
+                NotificationType.OTHER, // 또는 별도의 ATTENDANCE 타입이 있다면 사용
+                title,
+                writer.getEmpName() + " " + writer.getPositions().getPosName() + messageSuffix,
+                "/documents/" + document.getDocNo() + "?status=FINALIZED" // 최종 승인 문서 상세로 이동
+        );
+    }
 }
