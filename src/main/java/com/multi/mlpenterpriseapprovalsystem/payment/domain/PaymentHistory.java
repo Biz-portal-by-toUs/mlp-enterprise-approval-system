@@ -2,8 +2,12 @@ package com.multi.mlpenterpriseapprovalsystem.payment.domain;
 
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,6 +23,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "payment_history")
 public class PaymentHistory {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,6 +41,7 @@ public class PaymentHistory {
     private PaymentMethod paymentMethod;
 
     @CreatedDate
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     public PaymentHistory(Company company, BigDecimal subPrice, boolean payResult, PaymentMethod paymentMethod) {
