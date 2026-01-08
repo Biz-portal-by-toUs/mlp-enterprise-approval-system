@@ -29,7 +29,7 @@ public class ReqCorporateCarDto {
     private String carType;
 
     @NotBlank(message = "차량 번호는 필수입니다.")
-    @Size(max = 20, message = "차량 번호는 20자 이내여야 합니다.")
+    @Size(max = 8, message = "차량 번호는 8자 이내여야 합니다.")
     private String plateNo;
 
     @NotNull(message = "수용 인원은 필수입니다.")
