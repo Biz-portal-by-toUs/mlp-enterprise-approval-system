@@ -10,6 +10,8 @@ import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRep
 import com.multi.mlpenterpriseapprovalsystem.document.service.ApprovalLineService;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,6 +40,7 @@ public class AttendanceSchedule {
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final ApprovalLineRepository approvalLineRepository;
+    private final NotificationService notificationService;
 
     @Scheduled(cron = "0 1 0 * * *")
     public void updateEmployeeDelegates() {
@@ -60,6 +63,17 @@ public class AttendanceSchedule {
                 onLeave.updateDelegate(null);
                 onLeave.updateAtteStatus("C");
 
+                // ✅ [알림] 대직 종료 알림
+                if (delegate != null) {
+                    notificationService.sendNotification(
+                            delegate,
+                            NotificationType.OTHER,
+                            "[대직 업무 종료]",
+                            onLeave.getEmpName() + "님의 복귀로 대직 업무가 종료되었습니다.",
+                            "/documents/me?status=PROCESSED" // 내가 처리한 문서함으로 이동
+                    );
+                }
+
                 log.info("근태 종료 처리: 사원={}, 기존대직자={}", onLeave.getEmpId(),
                         delegate != null ? delegate.getEmpId() : "없음");
             }
@@ -81,8 +95,26 @@ public class AttendanceSchedule {
         // [Step 3] 결재라인 대직자 투입 실행
         for (Attendance attendance : attendances) {
             if (attendance.getStartAt().toLocalDate().isEqual(today) && attendance.getType() == AtteType.V) {
-                if (attendance.getDelegate() != null) {
-                    addDelegateToApprovalLines(attendance.getEmployee(), attendance.getDelegate());
+//                if (attendance.getDelegate() != null) {
+//                    addDelegateToApprovalLines(attendance.getEmployee(), attendance.getDelegate());
+//                }
+
+                Employee onLeave = attendance.getEmployee();
+                Employee delegate = attendance.getDelegate();
+
+                if (delegate != null) {
+                    addDelegateToApprovalLines(onLeave, delegate);
+
+                    // ✅ [알림] 오늘부터 대직 업무 시작 알림
+                    notificationService.sendNotification(
+                            delegate,
+                            NotificationType.OTHER,
+                            "[대직 업무 시작]",
+                            "오늘부터 " + onLeave.getEmpName() + "님의 대직 업무가 시작됩니다. 결재할 문서를 확인해주세요.",
+                            "/documents/me?status=AWAITING" // 결재할 문서함으로 이동
+                    );
+
+                    log.info("대직 시작 알림 발송: 대직자={}", delegate.getEmpId());
                 }
             }
         }

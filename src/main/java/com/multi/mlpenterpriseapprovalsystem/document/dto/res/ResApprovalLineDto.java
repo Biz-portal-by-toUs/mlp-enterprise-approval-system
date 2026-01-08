@@ -41,6 +41,9 @@ public class ResApprovalLineDto {
     @JsonProperty("isDelegate")
     private boolean isDelegate;
 
+    // ✅ 추가: 누구를 대신해서 결재했는지 표시할 이름
+    private String targetApproverName;
+
     public static ResApprovalLineDto toDto(ApprovalLine approvalLine) {
         return ResApprovalLineDto.builder()
                 .apprlNo(approvalLine.getApprlNo())
@@ -57,6 +60,9 @@ public class ResApprovalLineDto {
                 .endedAt(approvalLine.getEndedAt())
                 .isActualAppr(approvalLine.getIsActualAppr())
                 .rejReason(approvalLine.getRejReason())
+                // ✅ 추가: targetApprover가 존재할 경우 이름 매핑
+                .targetApproverName(approvalLine.getTargetApprover() != null ?
+                        approvalLine.getTargetApprover().getEmpName() : null)
                 .isDelegate(approvalLine.getIsDelegate())
                 .build();
     }

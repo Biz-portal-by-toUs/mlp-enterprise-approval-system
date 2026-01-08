@@ -29,6 +29,22 @@
 
             .page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
 
+            /* 휴가 신청 버튼 스타일 */
+            .btn-apply {
+                background: #339af0;
+                color: white;
+                padding: 10px 18px;
+                border-radius: 6px;
+                border: none;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .btn-apply:hover {
+                background: #228be6;
+            }
+
             /* 테이블 공통 스타일 */
             .doc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 15px 12px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
@@ -75,6 +91,7 @@
             <div id="vacation-container" class="detail-content-area">
                 <div class="page-header">
                     <h1 class="page-title">내 휴가 관리</h1>
+                    <button class="btn-apply" onclick="goToVacationApply()">휴가 신청</button>
                 </div>
 
                 <div id="loading" class="loading">휴가 정보를 불러오는 중...</div>
@@ -187,6 +204,14 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        function goToVacationApply() {
+            if (!vacationFormDocfoNo) {
+                alert('휴가 신청서 양식을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            location.href = `/documents/create?docfoNo=${vacationFormDocfoNo}`;
         }
 
         function modifyVacation(atteNo) {

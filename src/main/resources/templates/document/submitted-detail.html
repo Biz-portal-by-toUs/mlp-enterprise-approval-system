@@ -11,7 +11,7 @@
         <script th:src="@{/js/jiheon-temp-origin/tiptap.min.js}"></script>
 
         <style>
-            /* ✅ 여백 최적화: 고정 너비를 해제하고 결재할 문서 상세와 동일하게 설정 */
+            /* ✅ 여백 최적화 */
             .detail-content-area {
                 background: white;
                 padding: 40px;
@@ -70,7 +70,7 @@
             .info-value { font-size: 14px; color: #333; font-weight: 500; }
             .doc-id { font-size: 15px; font-weight: bold; color: #339af0; }
 
-            /* ✅ 결재라인 디자인 개선 */
+            /* 결재라인 디자인 */
             .approval-section-title { font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 12px; padding-left: 10px; border-left: 3px solid #339af0; }
             .approval-card-container { display: flex; gap: 10px; flex-wrap: nowrap; align-items: stretch; }
             .approval-card {
@@ -127,7 +127,7 @@
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
             .file-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: center; }
 
-            /* ✅ 개편된 심플 반려 정보 (결재한 문서 상세와 동일) */
+            /* 반려 정보 */
             .reject-card { background: linear-gradient(135deg, #fff5f5 0%, #fff 100%); border: 1px solid #ffc9c9; border-radius: 10px; padding: 20px; }
             .reject-reason-box { background: #fff; border: 1px solid #ffc9c9; border-radius: 6px; padding: 15px; font-size: 14px; color: #333; min-height: 60px; }
 
@@ -137,7 +137,7 @@
 
             .loading { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
 
-            /* ✅ 레이아웃 상속 시 패딩 정의 (결재할 문서와 동일) */
+            /* 레이아웃 상속 패딩 */
             .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
 
             /* 모달 및 토스트 */
@@ -362,8 +362,9 @@
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
 
-                // 실제 결재자가 대직자인 경우 확인
-                const isDelegate = line.isDelegate && line.isActualAppr;
+                // ✅ 수정: 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
+                const isDelegateAppr = line.isDelegate && line.isActualAppr;
+                const delegateLabel = isDelegateAppr ? `-대직(${line.targetApproverName || ''})-` : '';
 
                 card.innerHTML = `
                     <div class="approval-seq">결재자 ${line.seq}</div>
@@ -374,7 +375,7 @@
                         <div class="approval-pos">${line.approverPosName || ''}</div>
                     </div>
                     <div style="margin-top: auto; width: 100%;">
-                        ${isDelegate ? '<div style="font-size: 10px; color: #fa5252; font-weight: 700; margin-bottom: 4px;">-대직-</div>' : ''}
+                        ${isDelegateAppr ? `<div style="font-size: 10px; color: #fa5252; font-weight: 700; margin-bottom: 4px;">${delegateLabel}</div>` : ''}
                         <div class="approval-date" style="margin-top: 0; border-top: 1px solid #f1f3f5; padding-top: 8px;">
                             ${line.endedAt ? formatDateTimeInline(line.endedAt) : '-'}
                         </div>
