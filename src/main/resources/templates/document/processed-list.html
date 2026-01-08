@@ -857,6 +857,12 @@
                     : `<span class="doc-badge doc-badge-${doc.myApprStat}">${getMyApprStatusName(doc.myApprStat)}</span>`;
 
                 const tr = document.createElement('tr');
+
+                // AI 요약 버튼 처리 (안정적인 데이터 처리 방식)
+                const aiSummBtn = doc.aiSumm
+                    ? `<button type="button" class="page-btn-nav ai-summary-btn" style="padding:4px 10px;" data-summary="${escapeHtml(doc.aiSumm)}">보기</button>`
+                    : '-';
+
                 tr.innerHTML = `
                     <td>${no}</td>
                     <td>${doc.docId || '-'}</td>
@@ -870,14 +876,24 @@
                     <td>${formatDate(doc.submittedAt)}</td>
                     <td>${myApprBadge}</td>
                     <td>${myApprovalDate}</td>
-                    <td>${doc.aiSumm ? `<button class="page-btn-nav" style="padding:4px 10px;" onclick="showAiSummaryModal('${escapeHtml(doc.aiSumm)}')">보기</button>` : '-'}</td>
+                    <td>${aiSummBtn}</td>
                 `;
 
-                // ✅ 행 전체 클릭 이벤트를 제거하고 제목 셀에만 클릭 이벤트를 할당합니다.
+                // 제목 셀 클릭 시 상세 이동
                 const titleCell = tr.querySelector('.title-cell');
                 titleCell.addEventListener('click', () => {
                     location.href = `/documents/${doc.docNo}?status=PROCESSED`;
                 });
+
+                // AI 요약 버튼 클릭 이벤트 바인딩
+                const summaryBtn = tr.querySelector('.ai-summary-btn');
+                if (summaryBtn) {
+                    summaryBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const summary = e.currentTarget.getAttribute('data-summary');
+                        showAiSummaryModal(summary);
+                    });
+                }
 
                 tbody.appendChild(tr);
             });
@@ -906,12 +922,25 @@
         }
 
         function closeRejectModal() { document.getElementById('reject-modal').classList.remove('show'); }
+
         function showAiSummaryModal(summary) {
-            document.getElementById('ai-summary-text').textContent = summary || 'AI 요약 내용이 없습니다.';
+            const formattedSummary = summary ? summary.replace(/\\n/g, '\n') : 'AI 요약 내용이 없습니다.';
+            document.getElementById('ai-summary-text').textContent = formattedSummary;
             document.getElementById('ai-summary-modal').classList.add('show');
         }
+
         function closeAiSummaryModal() { document.getElementById('ai-summary-modal').classList.remove('show'); }
-        function escapeHtml(text) { return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;")
+                .replace(/\n/g, "\\n");
+        }
 
         function renderPagination(totalPages, currentPage) {
             const nav = document.getElementById('pagination-nav');
