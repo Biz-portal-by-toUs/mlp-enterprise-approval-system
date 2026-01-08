@@ -13,6 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
+
 /**
  * 임베딩 요청 클라이언트
  *
@@ -63,6 +65,6 @@ public class EmbeddingClient {
                                 .map(body -> new CustomException(ErrorCode.EMBEDDING_DELETE_FAILED))
                 )
                 .toBodilessEntity()
-                .block();
+                .block(Duration.ofSeconds(10));
     }
 }

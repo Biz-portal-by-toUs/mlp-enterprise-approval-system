@@ -16,12 +16,15 @@ import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationTyp
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.event.ProvEmbeddingRequestedEvent;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.repository.ProvDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -46,6 +49,7 @@ public class ProvDocumentService {
     private final AttachmentRepository attachmentRepository;
     private final EmployeeRepository employeeRepository;
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher publisher;
 
     @Transactional
     public Long create(String comId, ReqProvDocumentCreateDto req) {
@@ -90,9 +94,21 @@ public class ProvDocumentService {
                 .callbackUrl("/api/v1/prov-documents/" + doc.getProvNo() + "/embedding")
                 .build();
 
-        embeddingClient.requestProvEmbedding(embeddingReq);
+        publisher.publishEvent(new ProvEmbeddingRequestedEvent(doc.getProvNo(), embeddingReq));
+
 
         return doc.getProvNo();
+    }
+
+    /**
+     * AI 요청 실패 시 별도 트랜잭션으로 상태를 업데이트하는 메서드
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleEmbeddingFailure(Long provNo, String errorMessage) {
+        ProvDocument doc = provDocumentRepository.findById(provNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.PROV_DOCUMENT_NOT_FOUND));
+        doc.markFailed(errorMessage); //
+        log.info("[EMBEDDING STATUS UPDATED TO FAILED] provNo={}", provNo);
     }
 
     @Transactional(readOnly = true)
