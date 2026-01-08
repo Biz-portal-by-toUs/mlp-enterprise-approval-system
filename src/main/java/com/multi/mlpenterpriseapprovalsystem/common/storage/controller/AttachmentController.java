@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.AttachmentDto;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.ReqRenameAttachmentDto;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.service.AttachmentPresignService;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.service.AttachmentQueryService;
@@ -113,5 +114,15 @@ public class AttachmentController {
     ){
         attachmentService.moveCloudAttachment(user, attachmentId, toFolderNo);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "이동 성공", null));
+    }
+
+    @PatchMapping("/{attachmentId}/rename")
+    public ResponseEntity<ResponseDto<Void>> rename(
+            @PathVariable Long attachmentId,
+            @RequestBody ReqRenameAttachmentDto req,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        attachmentService.renameCloudAttachment(user, attachmentId, req.getOriginalName());
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "파일 이름 변경 성공", null));
     }
 }
