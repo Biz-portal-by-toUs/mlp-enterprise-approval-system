@@ -196,13 +196,35 @@
         try {
             const res = await fetch(`/api/v1/notifications/read-all`, { method: 'PATCH' });
             if (res.ok) {
-                document.querySelectorAll('.noti-card.unread').forEach(el => el.classList.remove('unread'));
+                location.reload();
+
                 if(window.parent && window.parent.initNotificationSystem) {
                     window.parent.initNotificationSystem();
                 }
             }
         } catch (e) { console.error("전체 읽음 처리 실패", e); }
     };
+
+    window.deleteAllNotifications = async function() {
+        if(!confirm("모든 알림을 삭제하시겠습니까?")) return;
+
+        try {
+            const res = await fetch(`/api/v1/notifications/delete-all`, { method: 'DELETE' });
+
+            if (res.ok) {
+
+                location.reload();
+
+                if(window.parent && window.parent.initNotificationSystem) {
+                    window.parent.initNotificationSystem();
+                }
+            }
+        } catch (e) {
+            console.error("전체 삭제 처리 실패", e);
+        }
+    };
+
+
 
     // ✅ 백엔드 컨트롤러 ResponseDto에 맞춘 삭제 함수
     async function deleteNoti(id, btn) {
