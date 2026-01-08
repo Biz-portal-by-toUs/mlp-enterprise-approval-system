@@ -746,6 +746,7 @@
                 <section class="portlet h-combined">
                     <div class="portlet-head">
                         <div class="portlet-title">주간 일정 및 할 일</div>
+                        <a href="/schedule/calendar" style="font-size:11px; color:#888;">더보기</a>
                     </div>
 
                     <div class="calendar-controls" style="padding: 10px 14px 5px;">
@@ -1153,9 +1154,11 @@
                     }
 
                     const transparentBg = color + "15";
+                    const scope = String(e.scope || 'PERSONAL').toUpperCase(); // ✅ 추가
 
-                    td.innerHTML = `<div class="cal-event bar-style" title="${e.title}"
-                                 style="border-left:4px solid ${color}; background:${transparentBg}; color:${color};">
+
+                    td.innerHTML = `<div class="cal-event bar-style" data-sch-no="${e.schNo}"data-scope="${scope}" title="${e.title}"
+                                 style="border-left:4px solid ${color}; background:${transparentBg}; color:${color}; cursor:pointer;">
                                  ${timeContent}
                             </div>`;
                     tr.appendChild(td);
@@ -1174,6 +1177,22 @@
             table.appendChild(thead); table.appendChild(tbody);
             grid.innerHTML = ''; grid.appendChild(table);
         }
+        (function bindWeekEventClick(){
+            const grid = document.getElementById('weekGrid');
+            if (!grid || grid.dataset.bound === '1') return;
+            grid.dataset.bound = '1';
+
+            grid.addEventListener('click', (e) => {
+                const el = e.target.closest('.cal-event[data-sch-no]');
+                if (!el) return;
+
+                const schNo = el.dataset.schNo;
+                const scope = el.dataset.scope || 'PERSONAL';
+
+                // ✅ 캘린더 페이지로 이동 + 상세 자동 오픈용 파라미터 전달
+                window.location.href = `/schedule/calendar?open=1&schNo=${encodeURIComponent(schNo)}&scope=${encodeURIComponent(scope)}`;
+            });
+        })();
         /*]]>*/
 
         function updateClock() {

@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 사원 개인 일정 관련 컨트롤러
  *
@@ -68,5 +70,12 @@ public class ScheduleController {
         scheduleService.updateItem(user, schNo, request);
 
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "일정 수정 성공", null));
+    }
+
+    @GetMapping("/holidays")
+    public ResponseEntity<ResponseDto<List<HolidayDto>>> holidays(@RequestParam(name="year") int year,
+                                     @RequestParam(name="month") int month) {
+
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "공휴일 조회 성공", scheduleService.getHolidays(year, month)));
     }
 }
