@@ -11,7 +11,7 @@
         <script th:src="@{/js/jiheon-temp-origin/tiptap.min.js}"></script>
 
         <style>
-            /* ✅ 여백 최적화: 고정 너비(1100px)를 해제하여 화면에 가득 차게 설정 */
+            /* ✅ 여백 최적화: 고정 너비를 해제하여 화면에 가득 차게 설정 */
             .detail-content-area {
                 background: white;
                 padding: 40px;
@@ -52,7 +52,7 @@
             .info-value { font-size: 14px; color: #333; font-weight: 500; }
             .doc-id { font-size: 15px; font-weight: bold; color: #339af0; }
 
-            /* ✅ 개선된 결재라인 디자인 */
+            /* 결재라인 디자인 */
             .approval-section-title {
                 font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 12px;
                 padding-left: 10px; border-left: 3px solid #339af0;
@@ -131,7 +131,7 @@
 
             .loading { text-align: center; padding: 100px; color: #868e96; font-size: 16px; }
 
-            /* ✅ 레이아웃 상속 시 패딩 정의 (목록 페이지와 일치) */
+            /* 레이아웃 상속 시 패딩 정의 */
             .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
 
             /* 버튼 그룹 */
@@ -290,7 +290,7 @@
             } catch (error) { console.error('파일 다운로드 오류', error); }
         }
 
-        /* ✅ 개선된 결재라인 렌더링 함수 */
+        /* ✅ 개선된 결재라인 렌더링 함수 (대직자 정보 포함) */
         function renderApprovalLine(lines) {
             const container = document.getElementById('approval-line');
             container.innerHTML = '';
@@ -303,18 +303,16 @@
                 lineBySeq[line.seq].push(line);
             });
 
-            // 2. 각 순번에서 보여줄 결재자 선별 (완료 시 실제결재자, 미완료 시 원결재자)
+            // 2. 각 순번에서 보여줄 결재자 선별
             const sortedSeqs = Object.keys(lineBySeq).sort((a, b) => a - b);
             const displayLines = [];
 
             sortedSeqs.forEach(seq => {
                 const stepLines = lineBySeq[seq];
-                // 실제 결재한 사람이 있는지 확인 (isActualAppr: true)
                 const actualApprover = stepLines.find(l => l.isActualAppr === true);
                 if (actualApprover) {
                     displayLines.push(actualApprover);
                 } else {
-                    // 완료되지 않았다면 대직자가 아닌 원결재자(!isDelegate)를 선택
                     const originalApprover = stepLines.find(l => !l.isDelegate);
                     if (originalApprover) displayLines.push(originalApprover);
                 }
@@ -325,8 +323,9 @@
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
 
-                // 실제 결재자가 대직자인 경우 확인
-                const isDelegate = line.isDelegate && line.isActualAppr;
+                // ✅ 수정: 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
+                const isDelegateAppr = line.isDelegate && line.isActualAppr;
+                const delegateLabel = isDelegateAppr ? `-대직(${line.targetApproverName || ''})-` : '';
 
                 card.innerHTML = `
                     <div class="approval-seq">결재자 ${line.seq}</div>
@@ -337,7 +336,7 @@
                         <div class="approval-pos">${line.approverPosName || ''}</div>
                     </div>
                     <div style="margin-top: auto; width: 100%;">
-                        ${isDelegate ? '<div style="font-size: 10px; color: #fa5252; font-weight: 700; margin-bottom: 4px;">-대직-</div>' : ''}
+                        ${isDelegateAppr ? `<div style="font-size: 10px; color: #fa5252; font-weight: 700; margin-bottom: 4px;">${delegateLabel}</div>` : ''}
                         <div class="approval-date" style="margin-top: 0; border-top: 1px solid #f1f3f5; padding-top: 8px;">
                             ${line.endedAt ? formatDateTimeInline(line.endedAt) : '-'}
                         </div>
