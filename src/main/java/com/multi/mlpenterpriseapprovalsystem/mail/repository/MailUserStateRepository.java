@@ -147,5 +147,19 @@ public interface MailUserStateRepository extends JpaRepository<MailUserState, Lo
     )
     Page<MailUserState> findTrash(@Param("userEmpId") String userEmpId, Pageable pageable);
 
-    int countByUserAndIsReadFalse(Employee user);
+    @Query("""
+select count(mus)
+from MailUserState mus
+where mus.user.empId = :empId
+  and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
+  and mus.deletedAt is null
+  and mus.isRead = false
+  and exists (
+      select 1
+      from MailUserState x
+      where x.mail.mailNo = mus.mail.mailNo
+        and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+  )
+""")
+    long countUnreadInboxOnly(@Param("empId") String empId);
 }

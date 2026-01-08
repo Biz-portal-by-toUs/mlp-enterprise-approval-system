@@ -1,6 +1,9 @@
 package com.multi.mlpenterpriseapprovalsystem.mail.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.mail.service.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/mail")
 @RequiredArgsConstructor
 public class ViewMailController {
+
+    private final MailService mailService;
 
     @GetMapping
     public String mailHome() {
@@ -76,5 +81,15 @@ public class ViewMailController {
             case "received", "sent", "self", "drafts", "trash" -> v;
             default -> null;
         };
+    }
+
+    @ModelAttribute
+    public void commonMailSidebarCounts(Model model,
+                                        @AuthenticationPrincipal CustomUser user) {
+        if (user == null) return;
+        String empId = user.getUsername();
+
+        long unread = mailService.countUnreadInbox(empId); // 아래 3) 참고
+        model.addAttribute("unreadInboxCount", unread);
     }
 }

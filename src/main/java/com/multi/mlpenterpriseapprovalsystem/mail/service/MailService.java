@@ -43,4 +43,6 @@ public interface MailService {
     void deleteDraft(String mailId, String senderEmpId);
 
     ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req);
+
+    long countUnreadInbox(String empId);
 }

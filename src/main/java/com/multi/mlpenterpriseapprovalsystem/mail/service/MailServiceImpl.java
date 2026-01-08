@@ -433,6 +433,11 @@ public class MailServiceImpl implements MailService {
                 .map(this::toListDto);
     }
 
+    @Override
+    public long countUnreadInbox(String empId){
+        return mailUserStateRepository.countUnreadInboxOnly(empId);
+    }
+
     // helpers
     private String generateMailId(String senderEmpId) {
         return "MAIL_" + Instant.now().toEpochMilli() + "_" + senderEmpId;
