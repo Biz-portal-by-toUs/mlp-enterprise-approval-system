@@ -87,6 +87,7 @@ public enum ErrorCode {
 
     // 공유함 관련
     FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLDER_NOT_FOUND", "폴더를 찾을 수 없습니다"),
+    TRASH_PURGE_FORBIDDEN(HttpStatus.FORBIDDEN, "TRASH_PURGE_FORBIDDEN", "영구 삭제 권한이 없습니다"),
 
     // 클라우드/폴더 관련
     FOLDER_ACCESS_DENIED(HttpStatus.FORBIDDEN, "FOLDER_ACCESS_DENIED", "폴더 접근 권한이 없습니다"),
@@ -107,6 +108,7 @@ public enum ErrorCode {
 
     // 파일 업로드 실패
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_FAILED", "파일 업로드에 실패했습니다"),
+    FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_DELETE_FAILED", "파일 삭제에 실패했습니다"),
 
     // 권한 관련
     FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "권한이 없습니다"),
