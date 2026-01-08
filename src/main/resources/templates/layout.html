@@ -1037,6 +1037,11 @@
             const data = JSON.parse(e.data);
             updateNotiBadge(data.unreadCount);
             showNotiToast(data.notification.content);
+
+            const iframe = document.getElementById('notiIframe');
+            if (iframe && iframe.contentWindow && typeof iframe.contentWindow.appendRealtimeNoti === 'function') {
+                iframe.contentWindow.appendRealtimeNoti(data.notification);
+            }
         });
 
         eventSource.onerror = () => { console.warn("SSE 연결 끊김, 재연결 시도 중..."); };
