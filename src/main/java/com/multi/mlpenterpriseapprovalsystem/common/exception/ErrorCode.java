@@ -152,6 +152,8 @@ public enum ErrorCode {
     ALREADY_FREE_PLAN(HttpStatus.CONFLICT, "ALREADY_FREE_PLAN", "이미 무료 요금제입니다"),
     ALREADY_CANCELED_SUBSCRIPTION(HttpStatus.CONFLICT, "ALREADY_CANCELED_SUBSCRIPTION", "이미 해지 예약된 상태입니다"),
     ALREADY_PENDING_PLAN(HttpStatus.CONFLICT, "ALREADY_PENDING_PLAN", "이미 해당 요금제로 변경 예약된 상태입니다"),
+    CANNOT_RESUME_FREE_PLAN(HttpStatus.FORBIDDEN, "CANNOT_RESUME_FREE_PLAN", "만료된 구독은 복구할 수 없습니다"),
+    ALREADY_ACTIVE_SUBSCRIPTION(HttpStatus.CONFLICT, "ALREADY_ACTIVE_SUBSCRIPTION", "이미 활성화된 구독입니다"),
 
     // 결제 실패
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_FAILED", "결제에 실패했습니다"),
