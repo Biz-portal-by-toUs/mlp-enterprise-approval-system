@@ -59,6 +59,16 @@ public class CompanySubscription extends BaseEntity {
     @Builder.Default
     private BigDecimal creditBalance = BigDecimal.ZERO; // 예치금
 
+    /**
+     * 변경 예약 또는 해지 예약을 취소하고 기존 상태로 복구
+     */
+    public void resumeSubscription() {
+        // 상태가 FREE(완전 종료)인 경우에는 복구가 불가능하므로 서비스 레이어에서 체크 필요
+        this.status = SubStatus.ACTIVE;
+        this.autoRenewal = true;
+        this.pendingSubscription = null; // 예약된 요금제 제거
+    }
+
     // 예치금 추가 메서드
     public void addCredit(BigDecimal amount) {
         this.creditBalance = this.creditBalance.add(amount);
