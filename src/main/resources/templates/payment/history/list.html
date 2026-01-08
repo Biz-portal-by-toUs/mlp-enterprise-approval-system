@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - 결제 내역 관리</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --border:#d7d7d7;
+            --primary:#2f66d7;
+            --danger:#ef4444;
+            --white:#ffffff;
+            --muted: #666;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{ min-height:100vh; border:2px solid #222; margin:12px; background:var(--bg); display:flex; flex-direction:column; }
+        header{ display:flex; align-items:center; justify-content:space-between; padding:26px 28px; }
+        .brand{ font-family: Georgia, serif; font-weight:700; font-size:40px; cursor:pointer; }
+
+        main{ flex:1; display:flex; flex-direction:column; align-items:center; padding:40px 24px; }
+        /* 테이블 형태가 아닌 결제수단 관리와 동일한 카드형 리스트를 위해 너비 조정 */
+        .container{ width:min(800px, 92vw); }
+        .title-section{ text-align:left; margin-bottom:32px; }
+        .title{ font-size:42px; font-weight:900; margin:0; letter-spacing:-1px; }
+        .desc{ color:#555; font-weight:600; margin-top:8px; }
+
+        /* 리스트 스타일 (결제 수단 관리 디자인 계승) */
+        .payment-list{ display:flex; flex-direction:column; gap:16px; margin-bottom:32px; }
+        .payment-item{
+            background:#fff;
+            border:1px solid var(--border);
+            border-radius:16px;
+            padding:24px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            transition: all 0.2s ease;
+        }
+
+        .info-group { display:flex; flex-direction:column; gap:6px; }
+        .date-text { font-size: 14px; font-weight: 700; color: var(--primary); }
+        .card-name{ font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px; }
+        .card-mask{ font-family: monospace; color:#666; font-size:14px; font-weight:600; }
+
+        .status-group { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+        .amount-text { font-size: 20px; font-weight: 900; color: var(--text); }
+
+        .badge{
+            color:var(--white);
+            font-size:12px;
+            padding:4px 10px;
+            border-radius:6px;
+            font-weight:900;
+        }
+        .badge-success { background: var(--primary); }
+        .badge-fail { background: var(--danger); }
+
+        /* 페이지네이션 (문서 목록 로직 디자인) */
+        .pager-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-top: 20px;
+            padding-bottom: 40px;
+        }
+        .pagination { display: flex; align-items: center; gap: 6px; }
+        .page-btn-nav, .page-btn-num {
+            min-width: 38px;
+            height: 38px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+        }
+        .page-btn-num.active {
+            background-color: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+        .page-btn-nav:disabled {
+            background: #eee;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        .pager-status { position: absolute; right: 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+
+        .btn{
+            appearance:none; border:1px solid var(--border); background:#fff;
+            padding:10px 18px; border-radius:10px; font-weight:800; cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="brand" onclick="location.href='/'">Bizportal</div>
+        <button class="btn" onclick="location.href='/company'">대시보드</button>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="title-section">
+                <h1 class="title">결제 내역</h1>
+
+            </section>
+
+            <div class="payment-list" id="paymentList">
+            </div>
+
+            <div class="pager-wrapper">
+                <div id="pagination-nav" class="pagination"></div>
+                <div class="pager-status">
+                    <span id="pageInfo">page 1 / 1</span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const listEl = document.getElementById('paymentList');
+    const API_URL = '/api/v1/company/payment-history';
+    let currentPage = 0;
+
+    // 1. 데이터 로드 (문서 목록 페이징 로직 적용)
+    async function loadData(page) {
+        currentPage = page;
+        try {
+            const res = await fetch(`${API_URL}?page=${page}`);
+            const json = await res.json();
+
+            if (res.ok) {
+                renderHistory(json.data.content);
+                renderPagination(json.data.totalPages, page);
+                document.getElementById('pageInfo').textContent =
+                    `page ${page + 1} / ${Math.max(json.data.totalPages, 1)}`;
+            }
+        } catch (e) {
+            console.error("내역을 불러오지 못했습니다.", e);
+        }
+    }
+
+    // 2. 리스트 렌더링 (결제 수단 관리 디자인 스타일)
+    function renderHistory(list) {
+        if (!list || list.length === 0) {
+            listEl.innerHTML = '<p style="text-align:center; padding:60px; color:#888; font-weight:600;">결제 내역이 없습니다.</p>';
+            return;
+        }
+
+        listEl.innerHTML = list.map(h => {
+            const cardDisplay = h.paymentMethodNo
+                ? `${h.cardType} <span class="card-mask">(${h.mask})</span>`
+                : '기타/예치금';
+
+            return `
+        <div class="payment-item">
+          <div class="info-group">
+            <div class="date-text">${formatDate(h.createdAt)}</div>
+            <div class="card-name">${cardDisplay}</div>
+          </div>
+          <div class="status-group">
+            <div class="amount-text">₩${Math.round(h.amount).toLocaleString()}</div>
+            <span class="badge ${h.payResult ? 'badge-success' : 'badge-fail'}">
+              ${h.payResult ? '결제 성공' : '결제 실패'}
+            </span>
+          </div>
+        </div>
+      `;
+        }).join('');
+    }
+
+    // 3. 페이지네이션 (문서 목록 로직 완벽 이식)
+    function renderPagination(totalPages, page) {
+        const nav = document.getElementById('pagination-nav');
+        if (totalPages <= 1) { nav.innerHTML = ''; return; }
+        nav.innerHTML = '';
+
+        const createBtn = (txt, target, disabled) => {
+            const b = document.createElement('button');
+            b.className = 'page-btn-nav';
+            b.textContent = txt;
+            b.disabled = disabled;
+            if (!disabled) b.onclick = () => loadData(target);
+            return b;
+        };
+
+        // 이전 버튼
+        nav.appendChild(createBtn('<', page - 1, page === 0));
+
+        // 페이지 번호 블록 (5개 단위)
+        const blockSize = 5;
+        const startPage = Math.floor(page / blockSize) * blockSize;
+        let endPage = startPage + blockSize - 1;
+        if (endPage > totalPages - 1) endPage = totalPages - 1;
+
+        for (let i = startPage; i <= endPage; i++) {
+            const b = document.createElement('button');
+            b.className = `page-btn-num ${i === page ? 'active' : ''}`;
+            b.textContent = i + 1;
+            b.onclick = () => loadData(i);
+            nav.appendChild(b);
+        }
+
+        // 다음 버튼
+        nav.appendChild(createBtn('>', page + 1, page === totalPages - 1));
+    }
+
+    function formatDate(str) {
+        if (!str) return '-';
+        const d = new Date(str);
+        return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => loadData(0));
+</script>
+</body>
+</html>
