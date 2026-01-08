@@ -168,7 +168,7 @@
             }
 
             .cloud-page .caret {
-                font-size: 10px;
+                font-size: 17px;
                 opacity: .85;
             }
 
@@ -422,6 +422,103 @@
                 background: rgba(59, 130, 246, .10);
                 border: 1px solid rgba(59, 130, 246, .35);
             }
+
+            .folder-card.selected {
+                background: rgba(59, 130, 246, .16);
+                border-color: rgba(59, 130, 246, .45);
+            }
+
+            /* ====== ✅ 그리드 선택 체크박스(hover/selected 시 표시) ====== */
+            .folder-card, .file-card {
+                position: relative; /* 체크박스 absolute 기준 */
+            }
+
+            /* 체크 UI */
+            .card-check {
+                position: absolute;
+                top: 6px;
+                left: 6px;
+                width: 18px;
+                height: 18px;
+                border-radius: 6px;
+                border: 2px solid rgba(59, 130, 246, .55);
+                background: rgba(255, 255, 255, .92);
+                display: none; /* 기본 숨김 */
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 6px 14px rgba(0, 0, 0, .12);
+                pointer-events: none; /* 클릭 방해 X */
+            }
+
+            /* 체크 표시 */
+            .card-check::after {
+                content: "✓";
+                font-size: 12px;
+                font-weight: 900;
+                line-height: 1;
+                color: #fff;
+                opacity: 0; /* 선택 안되면 체크 숨김 */
+            }
+
+            /* hover면 박스만 보임 */
+            .folder-card:hover .card-check,
+            .file-card:hover .card-check {
+                display: flex;
+            }
+
+            /* selected면 박스 + 체크 표시 */
+            .folder-card.selected .card-check,
+            .file-card.selected .card-check {
+                display: flex;
+                background: var(--primary);
+                border-color: transparent;
+            }
+
+            .folder-card.selected .card-check::after,
+            .file-card.selected .card-check::after {
+                opacity: 1;
+            }
+
+            .cloud-tree-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 10px;
+            }
+
+            .cloud-tree-tools {
+                display: flex;
+                gap: 6px;
+            }
+
+            .tree-tool {
+                height: 26px;
+                width: 26px;
+                border-radius: 8px;
+                border: 1px solid rgba(17, 24, 39, .12);
+                background: #fff;
+                font-weight: 900;
+                cursor: pointer;
+            }
+
+            .tree-tool:hover {
+                background: rgba(59, 130, 246, .10);
+            }
+
+            /* ✅ 폴더 children 애니메이션 */
+            .cloud-tree .children {
+                overflow: hidden;
+                max-height: 0;
+                opacity: 0;
+                transition: max-height .20s ease, opacity .15s ease;
+                will-change: max-height, opacity;
+            }
+
+            /* 열렸을 때 opacity만 1로 (max-height는 JS에서 scrollHeight로 설정) */
+            .cloud-tree .children.open {
+                opacity: 1;
+            }
         </style>
     </th:block>
 </head>
@@ -442,7 +539,7 @@
                 <div class="cloud-actions">
                     <button class="btn primary" id="btnUpload">파일 업로드</button>
                     <button class="btn" id="btnDownload" disabled>파일 다운로드</button>
-                    <button class="btn" id="btnDeleteFile" disabled>파일 삭제</button>
+                    <button class="btn" id="btnDeleteSelected" disabled>선택 삭제</button>
                     <input type="file" id="fileInput" multiple style="display:none"/>
                 </div>
             </div>
@@ -477,6 +574,7 @@
 
             ctxFolderNo: null,
             ctxFolderName: null,
+            ctxOriginalName: null,
 
             treeIndex: {
                 nodeById: new Map(),
@@ -484,6 +582,15 @@
                 childrenById: new Map(),
                 parentById: new Map(),
             },
+
+            selection: {
+                folderNos: new Set(),      // 현재 그리드에서 선택된 폴더들
+                attachmentIds: new Set(),  // 현재 그리드에서 선택된 파일들
+                lastClickedIndex: null,    // SHIFT range 선택용
+            },
+
+            ctxKind: null,              // "blank" | "folder" | "file"
+            ctxAttachmentId: null,
         };
 
         /** ====== 엘리먼트 ====== */
@@ -493,7 +600,7 @@
             breadcrumb: document.getElementById("breadcrumb"),
             btnUpload: document.getElementById("btnUpload"),
             btnDownload: document.getElementById("btnDownload"),
-            btnDeleteFile: document.getElementById("btnDeleteFile"),
+            btnDeleteSelected: document.getElementById("btnDeleteSelected"),
             fileInput: document.getElementById("fileInput"),
             fileGrid: document.getElementById("fileGrid"),
 
@@ -508,17 +615,20 @@
         async function apiJson(url, opt = {}) {
             const res = await fetch(url, {
                 credentials: "include",
-                headers: {"Content-Type": "application/json", ...(opt.headers || {})},
+                headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
                 ...opt,
             });
 
             const text = await res.text();
-            const json = text ? JSON.parse(text) : null;
+
+            let json = null;
+            try { json = text ? JSON.parse(text) : null; } catch (e) {}
 
             if (!res.ok) {
-                const msg = json?.message || json?.error || res.statusText;
-                throw new Error(msg);
+                // JSON이면 message 보여주고, 아니면 원문 text(=html/stack message 일부)라도 보여주기
+                throw new Error(json?.message || json?.error || text || res.statusText);
             }
+
             return json && "data" in json ? json.data : json;
         }
 
@@ -526,10 +636,12 @@
         function folderBase() {
             return state.scope === "dept" ? "/api/v1/folders/dept" : "/api/v1/folders/prvt";
         }
+
         function folderListUrl(parentId) {
             const qs = parentId == null ? "" : `?parentId=${encodeURIComponent(parentId)}`;
             return folderBase() + qs;
         }
+
         function attachmentListUrl(folderNo) {
             return `/api/v1/attachments?domain=CLOUD&entityId=${encodeURIComponent(folderNo)}`;
         }
@@ -544,20 +656,19 @@
             const s = String(name ?? "");
             return s.length > 20 ? s.slice(0, 20) + "…" : s;
         }
+
         function humanBytes(n) {
             if (n == null) return "";
             let v = Number(n);
             const units = ["B", "KB", "MB", "GB", "TB"];
             let i = 0;
-            while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+            while (v >= 1024 && i < units.length - 1) {
+                v /= 1024;
+                i++;
+            }
             return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
         }
-        function clearFileSelection() {
-            state.selectedAttachmentId = null;
-            document.querySelectorAll(".file-card.selected").forEach(x => x.classList.remove("selected"));
-            el.btnDownload.disabled = true;
-            el.btnDeleteFile.disabled = true;
-        }
+
 
         /** ====== breadcrumb ====== */
         function setBreadcrumbFromNode(nodeEl) {
@@ -607,6 +718,31 @@
                 card.className = "folder-card";
                 card.dataset.folderNo = f.folderNo;
 
+                const check = document.createElement("div");
+                check.className = "card-check";
+                card.appendChild(check);
+
+                card.addEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // 우클릭한 폴더를 단일 선택으로 맞춤
+                    clearGridSelection();
+                    card.classList.add("selected");
+                    state.selection.folderNos.add(Number(card.dataset.folderNo));
+                    updateActionButtons();
+
+                    // rename/delete 대상(폴더)
+                    state.selectedFolderNo = f.folderNo;
+                    state.selectedFolderName = f.folderName;
+
+                    openCtxMenu(e.clientX, e.clientY, {
+                        kind: "folder",
+                        folderNo: f.folderNo,
+                        folderName: f.folderName,
+                    });
+                });
+
                 const ico = document.createElement("div");
                 ico.className = "folder-ico-large";
 
@@ -617,17 +753,66 @@
                 card.appendChild(ico);
                 card.appendChild(name);
 
-                card.addEventListener("click", async () => {
-                    state.treeIndex.parentById.set(f.folderNo, state.selectedFolderNo);
+                card.addEventListener("click", (e) => {
+                    e.stopPropagation();
 
-                    state.selectedFolderNo = f.folderNo;
-                    state.selectedFolderName = f.folderName;
+                    // ✅ 더블클릭이면 "열기"
+                    if (e.detail === 2) {
+                        (async () => {
+                            state.treeIndex.parentById.set(f.folderNo, state.selectedFolderNo);
 
-                    await loadFolderContent(f.folderNo);
-                    await syncTreeToFolder(f.folderNo);
+                            state.selectedFolderNo = f.folderNo;
+                            state.selectedFolderName = f.folderName;
+
+                            await loadFolderContent(f.folderNo);
+                            await syncTreeToFolder(f.folderNo);
+                        })().catch(err => alert(err.message));
+                        return;
+                    }
+
+                    // ✅ 단일클릭이면 "선택 토글"
+                    const isToggle = e.ctrlKey || e.metaKey;
+                    const isRange = e.shiftKey;
+
+                    const cards = Array.from(el.fileGrid.querySelectorAll(".folder-card, .file-card"));
+                    const idx = cards.indexOf(card);
+
+                    if (!isToggle && !isRange) {
+                        clearGridSelection();
+                    }
+
+                    if (isRange && state.selection.lastClickedIndex != null) {
+                        const [a, b] = [state.selection.lastClickedIndex, idx].sort((x, y) => x - y);
+                        for (let i = a; i <= b; i++) {
+                            const c = cards[i];
+                            if (!c) continue;
+                            if (c.classList.contains("folder-card")) {
+                                c.classList.add("selected");
+                                state.selection.folderNos.add(Number(c.dataset.folderNo));
+                            } else if (c.classList.contains("file-card")) {
+                                c.classList.add("selected");
+                                state.selection.attachmentIds.add(Number(c.dataset.attachmentId));
+                            }
+                        }
+                    } else {
+                        const id = Number(card.dataset.folderNo);
+                        if (state.selection.folderNos.has(id)) {
+                            state.selection.folderNos.delete(id);
+                            card.classList.remove("selected");
+                        } else {
+                            state.selection.folderNos.add(id);
+                            card.classList.add("selected");
+                        }
+                    }
+
+                    state.selection.lastClickedIndex = idx;
+                    updateActionButtons();
                 });
 
-                card.addEventListener("dragover", (e) => { e.preventDefault(); card.classList.add("drop"); });
+                card.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    card.classList.add("drop");
+                });
                 card.addEventListener("dragleave", () => card.classList.remove("drop"));
 
                 card.addEventListener("drop", async (e) => {
@@ -662,12 +847,64 @@
             });
         }
 
+        function clearGridSelection() {
+            state.selection.folderNos.clear();
+            state.selection.attachmentIds.clear();
+            state.selection.lastClickedIndex = null;
+
+            el.fileGrid.querySelectorAll(".selected").forEach(x => x.classList.remove("selected"));
+            updateActionButtons();
+        }
+
+        function updateActionButtons() {
+            const fileCount = state.selection.attachmentIds.size;
+            const anySelected = fileCount > 0 || state.selection.folderNos.size > 0;
+
+            // 다운로드: 파일이 1개 이상 선택돼야 가능
+            el.btnDownload.disabled = fileCount < 1;
+            el.btnDownload.textContent = (fileCount <= 1)
+                ? "파일 다운로드"
+                : `ZIP 다운로드 (${fileCount})`;
+
+            // 선택 삭제: 뭐라도 선택되면
+            el.btnDeleteSelected.disabled = !anySelected;
+        }
+
+        // 기존 clearFileSelection()은 멀티 선택과 충돌나서, 아래처럼 "그리드 선택 초기화"로 대체 추천
+        function clearFileSelection() {
+            // (호환용) 기존 코드가 호출하니까 내부는 멀티 선택 초기화로 연결
+            clearGridSelection();
+        }
+
         function renderFileCards(files) {
             files.forEach(a => {
                 const card = document.createElement("div");
                 card.className = "file-card";
                 card.draggable = true;
                 card.dataset.attachmentId = a.attachmentId;
+
+                const check = document.createElement("div");
+                check.className = "card-check";
+                card.appendChild(check);
+
+                card.addEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // 우클릭한 파일을 단일 선택으로 맞춤
+                    clearGridSelection();
+                    card.classList.add("selected");
+                    state.selection.attachmentIds.add(Number(card.dataset.attachmentId));
+                    updateActionButtons();
+
+                    const fullName = a.originalName || ("file-" + a.attachmentId);
+
+                    openCtxMenu(e.clientX, e.clientY, {
+                        kind: "file",
+                        attachmentId: a.attachmentId,
+                        originalName: fullName,
+                    });
+                });
 
                 const fullName = a.originalName || ("file-" + a.attachmentId);
 
@@ -695,12 +932,45 @@
                 card.appendChild(nm);
                 card.appendChild(size);
 
-                card.addEventListener("click", () => {
-                    clearFileSelection();
-                    card.classList.add("selected");
-                    state.selectedAttachmentId = a.attachmentId;
-                    el.btnDownload.disabled = false;
-                    el.btnDeleteFile.disabled = false;
+                card.addEventListener("click", (e) => {
+                    e.stopPropagation();
+
+                    const isToggle = e.ctrlKey || e.metaKey;
+                    const isRange = e.shiftKey;
+
+                    const cards = Array.from(el.fileGrid.querySelectorAll(".folder-card, .file-card"));
+                    const idx = cards.indexOf(card);
+
+                    if (!isToggle && !isRange) {
+                        clearGridSelection();
+                    }
+
+                    if (isRange && state.selection.lastClickedIndex != null) {
+                        const [aIdx, bIdx] = [state.selection.lastClickedIndex, idx].sort((x, y) => x - y);
+                        for (let i = aIdx; i <= bIdx; i++) {
+                            const c = cards[i];
+                            if (!c) continue;
+                            if (c.classList.contains("folder-card")) {
+                                c.classList.add("selected");
+                                state.selection.folderNos.add(Number(c.dataset.folderNo));
+                            } else {
+                                c.classList.add("selected");
+                                state.selection.attachmentIds.add(Number(c.dataset.attachmentId));
+                            }
+                        }
+                    } else {
+                        const id = Number(card.dataset.attachmentId);
+                        if (state.selection.attachmentIds.has(id)) {
+                            state.selection.attachmentIds.delete(id);
+                            card.classList.remove("selected");
+                        } else {
+                            state.selection.attachmentIds.add(id);
+                            card.classList.add("selected");
+                        }
+                    }
+
+                    state.selection.lastClickedIndex = idx;
+                    updateActionButtons();
                 });
 
                 card.addEventListener("dragstart", (e) => {
@@ -715,24 +985,25 @@
 
         /** ====== 왼쪽 트리 로딩 ====== */
         async function loadChildren(parentId, containerUl) {
-            const [folders, files] = await Promise.all([
-                apiJson(folderListUrl(parentId)),
-                (parentId == null ? Promise.resolve([]) : apiJson(attachmentListUrl(parentId)))
-            ]);
+            const folders = await apiJson(folderListUrl(parentId));
+            const files = parentId == null ? [] : await apiJson(attachmentListUrl(parentId));
 
             containerUl.innerHTML = "";
 
-            const hasFolders = folders && folders.length > 0;
-            const hasFiles = files && files.length > 0;
+            const hasFolders = Array.isArray(folders) && folders.length > 0;
+            const hasFiles = Array.isArray(files) && files.length > 0;
 
             if (!hasFolders && !hasFiles) {
                 const li = document.createElement("li");
                 li.className = "empty";
                 li.textContent = parentId == null ? "폴더가 없습니다." : "파일이 없습니다.";
                 containerUl.appendChild(li);
+
+                containerUl.dataset.loaded = "1";
                 return;
             }
 
+            // ===== 폴더 렌더 =====
             if (hasFolders) {
                 for (const f of folders) {
                     const li = document.createElement("li");
@@ -760,41 +1031,58 @@
                     const children = document.createElement("ul");
                     children.className = "children";
                     children.style.display = "none";
+                    children.style.maxHeight = "0px";
+                    children.classList.remove("open");
 
                     state.treeIndex.nodeById.set(f.folderNo, node);
                     state.treeIndex.caretById.set(f.folderNo, caret);
                     state.treeIndex.childrenById.set(f.folderNo, children);
                     state.treeIndex.parentById.set(f.folderNo, parentId);
 
-                    node.addEventListener("click", async (e) => {
+                    // ✅ 클릭: 폴더 열기/닫기 + lazy load
+                    node.addEventListener("click", (e) => {
                         e.stopPropagation();
                         closeCtxMenu();
 
-                        document.querySelectorAll(".node.selected, .file-node.selected").forEach(x => x.classList.remove("selected"));
+                        document.querySelectorAll(".node.selected, .file-node.selected")
+                            .forEach(x => x.classList.remove("selected"));
                         node.classList.add("selected");
 
                         state.selectedFolderNo = f.folderNo;
                         state.selectedFolderName = f.folderName;
-
                         setBreadcrumbFromNode(node);
-                        await loadFolderContent(f.folderNo);
 
-                        const opened = children.style.display === "block";
+                        loadFolderContent(f.folderNo).catch(err => alert(err.message));
+
+                        const opened = children.classList.contains("open");
                         if (opened) {
-                            children.style.display = "none";
-                            caret.textContent = "▸";
-                        } else {
-                            await loadChildren(f.folderNo, children);
-                            children.style.display = "block";
-                            caret.textContent = "▾";
+                            closeChildren(children, caret);
+                            return;
                         }
+
+                        // 1) UI는 즉시 열기
+                        openChildren(children, caret);
+
+                        // 2) 내용은 비동기로 채움
+                        (async () => {
+                            if (children.dataset.loaded !== "1") {
+                                children.innerHTML = `<li class="empty">로딩중…</li>`;
+                                await loadChildren(f.folderNo, children);
+                            }
+                            openChildren(children, caret);
+                        })().catch(err => {
+                            closeChildren(children, caret);
+                            alert(err.message);
+                        });
                     });
 
+                    // ✅ 우클릭(컨텍스트 메뉴) — 반드시 루프 안!
                     node.addEventListener("contextmenu", async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
 
-                        document.querySelectorAll(".node.selected, .file-node.selected").forEach(x => x.classList.remove("selected"));
+                        document.querySelectorAll(".node.selected, .file-node.selected")
+                            .forEach(x => x.classList.remove("selected"));
                         node.classList.add("selected");
 
                         state.selectedFolderNo = f.folderNo;
@@ -810,6 +1098,7 @@
                         });
                     });
 
+                    // ✅ 드래그 드롭(파일 이동)
                     node.addEventListener("dragover", (e) => { e.preventDefault(); node.classList.add("drop"); });
                     node.addEventListener("dragleave", () => node.classList.remove("drop"));
                     node.addEventListener("drop", async (e) => {
@@ -831,7 +1120,7 @@
                         const toFolderNo = f.folderNo;
 
                         try {
-                            await apiJson(`/api/v1/attachments/${attachmentId}/move?toFolderNo=${toFolderNo}`, {method: "POST"});
+                            await apiJson(`/api/v1/attachments/${attachmentId}/move?toFolderNo=${toFolderNo}`, { method: "POST" });
                             if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
                             if (fromFolderNo != null) await refreshTreeChildren(fromFolderNo);
                             await refreshTreeChildren(toFolderNo);
@@ -846,6 +1135,7 @@
                 }
             }
 
+            // ===== 파일 렌더(폴더 안) =====
             if (hasFiles) {
                 for (const a of files) {
                     const li = document.createElement("li");
@@ -872,14 +1162,17 @@
 
                     fileNode.addEventListener("click", (e) => {
                         e.stopPropagation();
-                        document.querySelectorAll(".node.selected, .file-node.selected").forEach(x => x.classList.remove("selected"));
+
+                        document.querySelectorAll(".node.selected, .file-node.selected")
+                            .forEach(x => x.classList.remove("selected"));
                         fileNode.classList.add("selected");
 
-                        state.selectedAttachmentId = a.attachmentId;
-                        el.btnDownload.disabled = false;
-                        el.btnDeleteFile.disabled = false;
+                        clearGridSelection();
+                        state.selection.attachmentIds.add(Number(a.attachmentId));
+                        updateActionButtons();
 
                         if (parentId != null) state.selectedFolderNo = parentId;
+
                         alert(fullName);
                     });
 
@@ -897,7 +1190,9 @@
                     containerUl.appendChild(li);
                 }
             }
+            containerUl.dataset.loaded = "1";
         }
+
 
         async function initTree() {
             state.selectedFolderNo = null;
@@ -918,11 +1213,24 @@
                 await refreshRootPreserveOpen();
                 return;
             }
+
             const childrenUl = state.treeIndex.childrenById.get(folderNo);
             if (!childrenUl) return;
+
             const caret = state.treeIndex.caretById.get(folderNo);
+            const wasOpen = childrenUl.classList.contains("open");
+
             await loadChildren(folderNo, childrenUl);
-            if (childrenUl.style.display === "block" && caret) caret.textContent = "▾";
+
+            if (wasOpen) {
+                openChildren(childrenUl, caret);
+            } else {
+                // 닫힌 상태 유지(표시만)
+                if (caret) caret.textContent = "▸";
+                childrenUl.style.display = "none";
+                childrenUl.style.maxHeight = "0px";
+                childrenUl.classList.remove("open");
+            }
         }
 
         /** ====== 폴더 CRUD ====== */
@@ -934,7 +1242,7 @@
 
             await apiJson(folderBase(), {
                 method: "POST",
-                body: JSON.stringify({ parentId: parent, folderName: name.trim() }),
+                body: JSON.stringify({parentId: parent, folderName: name.trim()}),
             });
 
             await refreshTreeChildren(parent);
@@ -976,19 +1284,84 @@
         }
 
         /** ====== 파일 삭제/다운로드 ====== */
-        async function deleteSelectedFile() {
-            if (!state.selectedAttachmentId) return alert("삭제할 파일을 선택해주세요.");
-            if (!confirm("파일을 삭제하시겠습니까?")) return;
+        async function deleteSelectedItems() {
+            const folderNos = Array.from(state.selection.folderNos);
+            const attachmentIds = Array.from(state.selection.attachmentIds);
 
-            await apiJson(`/api/v1/attachments/${state.selectedAttachmentId}`, {method: "DELETE"});
-            await loadFolderContent(state.selectedFolderNo);
+            if (folderNos.length === 0 && attachmentIds.length === 0) {
+                alert("삭제할 항목을 선택해주세요.");
+                return;
+            }
+            if (!confirm(`선택한 항목을 삭제하시겠습니까?\n폴더: ${folderNos.length}개, 파일: ${attachmentIds.length}개`)) return;
+
+            // ✅ 폴더 먼저 삭제(폴더 삭제가 트리/파일까지 영향을 줄 수 있으니까)
+            for (const folderNo of folderNos) {
+                await apiJson(`/api/v1/folders/${folderNo}`, {method: "DELETE"});
+            }
+
+            // ✅ 파일 삭제
+            for (const id of attachmentIds) {
+                await apiJson(`/api/v1/attachments/${id}`, {method: "DELETE"});
+            }
+
+            // UI 갱신
+            clearGridSelection();
+            if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
+            await refreshTreeChildren(state.selectedFolderNo); // 좌측 트리 갱신(선택 폴더 기준)
         }
 
-        async function downloadSelectedFile() {
-            if (!state.selectedAttachmentId) return alert("다운로드할 파일을 선택해주세요.");
-            const res = await apiJson(`/api/v1/attachments/${state.selectedAttachmentId}/download-url`);
-            window.open(res.url, "_blank");
+        async function downloadSelectedFiles() {
+            const ids = Array.from(state.selection.attachmentIds);
+            if (ids.length < 1) return alert("다운로드할 파일을 선택해주세요.");
+
+            // 1개면 기존 presigned url
+            if (ids.length === 1) {
+                const res = await apiJson(`/api/v1/attachments/${ids[0]}/download-url`);
+                window.open(res.url, "_blank");
+                return;
+            }
+
+            // 여러개면 zip
+            await downloadZip(ids);
         }
+
+        /** ====== zip 다운로드 헬퍼 ====== */
+        function filenameFromDisposition(disposition) {
+            if (!disposition) return null;
+            let m = disposition.match(/filename\*\=UTF-8''([^;]+)/i);
+            if (m && m[1]) return decodeURIComponent(m[1]);
+            m = disposition.match(/filename="?([^"]+)"?/i);
+            if (m && m[1]) return m[1];
+            return null;
+        }
+
+        async function downloadZip(fileIds) {
+            const res = await fetch("/api/files/download-zip", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fileIds, zipName: null }),
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || res.statusText);
+            }
+
+            const blob = await res.blob();
+            const cd = res.headers.get("Content-Disposition");
+            const filename = filenameFromDisposition(cd) || "files.zip";
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
 
         /** ====== 업로드 ====== */
         function openUploadPicker() {
@@ -1063,36 +1436,101 @@
 
             let type = "unknown";
             for (const [k, arr] of Object.entries(EXT_GROUPS)) {
-                if (arr.includes(ext)) { type = k; break; }
+                if (arr.includes(ext)) {
+                    type = k;
+                    break;
+                }
             }
             return ICONS[type] || ICONS.unknown;
         }
 
+        const btnCollapseAll = document.getElementById("btnCollapseAll");
+        const btnExpandAll = document.getElementById("btnExpandAll");
+
+        btnCollapseAll?.addEventListener("click", () => {
+            for (const [id, ul] of state.treeIndex.childrenById.entries()) {
+                if (!ul) continue;
+                const caret = state.treeIndex.caretById.get(id);
+                if (ul.classList.contains("open")) closeChildren(ul, caret);
+            }
+        });
+
+        btnExpandAll?.addEventListener("click", () => {
+            expandAllFrom(null).catch(e => alert(e.message || "전체 펼치기 실패"));
+        });
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms)); // 서버 보호
+
+        async function expandAllFrom(folderNo) {
+            const container = folderNo == null ? el.treeRoot : state.treeIndex.childrenById.get(folderNo);
+            if (!container) return;
+
+            // 1) 현재 컨테이너 내용 먼저 로드
+            if (container.dataset.loaded !== "1") {
+                await loadChildren(folderNo, container);
+            }
+
+            // 2) 직계 자식 폴더들 순회
+            const nodes = Array.from(container.querySelectorAll(":scope > li > .node"));
+            for (const node of nodes) {
+                const id = Number(node.dataset.folderNo);
+                const ul = state.treeIndex.childrenById.get(id);
+                const caret = state.treeIndex.caretById.get(id);
+                if (!ul) continue;
+
+                // ✅ 핵심: 자식 ul도 "먼저 로드"한 뒤 열기
+                if (ul.dataset.loaded !== "1") {
+                    await loadChildren(id, ul);
+                    await sleep(10); // 선택(폴더 많으면 10~50ms 추천)
+                }
+
+                openChildren(ul, caret);
+
+                // 3) 더 내려가기
+                await expandAllFrom(id);
+            }
+        }
+
         /** ====== 컨텍스트 메뉴 ====== */
         function openCtxMenu(x, y, opt) {
-            state.ctxFolderNo = opt?.folderNo ?? null;
-            state.ctxFolderName = opt?.folderName ?? null;
+            // ===== 1) 어떤 대상을 우클릭했는지 state에 저장 =====
+            state.ctxKind = opt.kind ?? "blank";                 // "blank" | "folder" | "file"
+            state.ctxFolderNo = opt.folderNo ?? null;
+            state.ctxFolderName = opt.folderName ?? null;
+            state.ctxAttachmentId = opt.attachmentId ?? null;
+            state.ctxOriginalName = opt.originalName ?? null;    // ✅ 파일 rename prompt 기본값용
 
-            if (opt?.kind === "folder") {
+            // ===== 2) 메뉴 문구/버튼 활성화 =====
+            if (state.ctxKind === "folder") {
                 el.ctxCreateLabel.textContent = "하위 폴더 생성";
                 el.ctxRename.disabled = false;
                 el.ctxDelete.disabled = false;
+
+            } else if (state.ctxKind === "file") {
+                el.ctxCreateLabel.textContent = "폴더 생성";
+                el.ctxRename.disabled = false;   // ✅ 이제 파일도 이름 변경 가능
+                el.ctxDelete.disabled = false;
+
             } else {
+                // blank(빈 공간)
                 el.ctxCreateLabel.textContent = "폴더 생성";
                 el.ctxRename.disabled = true;
                 el.ctxDelete.disabled = true;
             }
 
+            // ===== 3) 메뉴 열기 + 위치 계산 =====
             el.ctx.classList.add("open");
 
             const menuW = 190;
             const menuH = 150;
             const pad = 8;
+
             let left = x;
             let top = y;
 
             const maxL = window.innerWidth - menuW - pad;
             const maxT = window.innerHeight - menuH - pad;
+
             if (left > maxL) left = maxL;
             if (top > maxT) top = maxT;
 
@@ -1100,9 +1538,70 @@
             el.ctx.style.top = top + "px";
         }
 
+        function openChildren(ul, caret) {
+            if (!ul) return;
+
+            // display를 block으로 만들어야 scrollHeight 측정 가능
+            ul.style.display = "block";
+            ul.classList.add("open");
+
+            // max-height가 none이면(완전 열린 상태) 다시 닫고 열 때를 위해 초기화
+            if (ul.style.maxHeight === "none") ul.style.maxHeight = "0px";
+
+            // 다음 프레임에 높이 적용 → transition 동작
+            requestAnimationFrame(() => {
+                ul.style.maxHeight = ul.scrollHeight + "px";
+            });
+
+            // 열림 표시
+            if (caret) caret.textContent = "▾";
+
+            // 트랜지션 끝나면 max-height를 none으로 풀어줘야
+            // 안에서 더 로드/추가될 때 잘 늘어남
+            const onEnd = (e) => {
+                if (e.propertyName !== "max-height") return;
+                ul.style.maxHeight = "none";
+                ul.removeEventListener("transitionend", onEnd);
+            };
+            ul.addEventListener("transitionend", onEnd);
+        }
+
+        function closeChildren(ul, caret) {
+            if (!ul) return;
+
+            // max-height가 none이면 현재 높이로 고정 후 0으로 내려야 애니메이션 됨
+            const currentH = ul.scrollHeight;
+
+            ul.style.maxHeight = currentH + "px";
+            ul.classList.remove("open");
+
+            requestAnimationFrame(() => {
+                ul.style.maxHeight = "0px";
+            });
+
+            if (caret) caret.textContent = "▸";
+
+            // 닫힘 애니메이션 끝나면 display none 처리
+            const onEnd = (e) => {
+                if (e.propertyName !== "max-height") return;
+                ul.style.display = "none";
+                ul.removeEventListener("transitionend", onEnd);
+            };
+            ul.addEventListener("transitionend", onEnd);
+        }
+
         function closeCtxMenu() {
             el.ctx.classList.remove("open");
         }
+
+        el.fileGrid?.addEventListener("contextmenu", (e) => {
+            const onCard = e.target.closest?.(".folder-card, .file-card");
+            if (onCard) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            openCtxMenu(e.clientX, e.clientY, {kind: "blank"});
+        });
 
         el.treeRoot?.addEventListener("contextmenu", (e) => {
             const onNode = e.target.closest?.(".node");
@@ -1119,12 +1618,61 @@
 
         el.ctxRename?.addEventListener("click", () => {
             closeCtxMenu();
-            renameFolder().catch(e => alert(e.message));
+
+            // 1) 폴더면 기존 renameFolder 사용
+            if (state.ctxKind === "folder" && state.ctxFolderNo) {
+                renameFolder().catch(e => alert(e.message));
+                return;
+            }
+
+            // 2) 파일이면 rename API 호출
+            if (state.ctxKind === "file" && state.ctxAttachmentId) {
+                (async () => {
+                    const oldName = state.ctxOriginalName || "";
+                    let next = prompt("새 파일명(확장자 포함)", oldName);
+                    if (!next) return;
+                    next = next.trim();
+
+                    // 확장자 안 쓰면 기존 확장자 유지
+                    const oldExt = oldName.includes(".") ? oldName.split(".").pop() : "";
+                    if (oldExt && !next.includes(".")) next = `${next}.${oldExt}`;
+
+                    await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}/rename`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ originalName: next }),
+                    });
+
+                    // UI 갱신
+                    clearGridSelection();
+                    if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
+                    await refreshTreeChildren(state.selectedFolderNo);
+                })().catch(e => alert(e.message));
+
+                return;
+            }
+
+            alert("이름 변경 대상이 없습니다.");
         });
 
         el.ctxDelete?.addEventListener("click", () => {
             closeCtxMenu();
-            deleteFolder().catch(e => alert(e.message));
+
+            if (state.ctxKind === "folder" && state.ctxFolderNo) {
+                deleteFolder().catch(e => alert(e.message));
+                return;
+            }
+
+            if (state.ctxKind === "file" && state.ctxAttachmentId) {
+                // file 단건 삭제
+                (async () => {
+                    if (!confirm("파일을 삭제하시겠습니까?")) return;
+                    await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}`, {method: "DELETE"});
+                    clearGridSelection();
+                    if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
+                    await refreshTreeChildren(state.selectedFolderNo);
+                })().catch(e => alert(e.message));
+                return;
+            }
         });
 
         document.addEventListener("click", (e) => {
@@ -1139,8 +1687,9 @@
 
         /** ====== 이벤트 ====== */
         el.btnUpload?.addEventListener("click", openUploadPicker);
-        el.btnDeleteFile?.addEventListener("click", () => deleteSelectedFile().catch(e => alert(e.message)));
-        el.btnDownload?.addEventListener("click", () => downloadSelectedFile().catch(e => alert(e.message)));
+        el.btnDeleteSelected?.addEventListener("click", () => deleteSelectedItems().catch(e => alert(e.message)));
+        el.btnDownload?.addEventListener("click", () => downloadSelectedFiles().catch(e => alert(e.message)));
+
 
         el.fileInput?.addEventListener("change", async (e) => {
             const files = Array.from(e.target.files || []);
@@ -1167,10 +1716,13 @@
             const childrenUl = state.treeIndex.childrenById.get(folderNo);
             const caret = state.treeIndex.caretById.get(folderNo);
             if (!childrenUl || !caret) return;
-            if (childrenUl.style.display === "block") return;
-            await loadChildren(folderNo, childrenUl);
-            childrenUl.style.display = "block";
-            caret.textContent = "▾";
+
+            if (childrenUl.classList.contains("open")) return;
+
+            if (childrenUl.dataset.loaded !== "1") {
+                await loadChildren(folderNo, childrenUl);
+            }
+            openChildren(childrenUl, caret);
         }
 
         async function syncTreeToFolder(targetFolderNo) {
@@ -1206,7 +1758,7 @@
         function snapshotExpanded() {
             const expanded = [];
             for (const [id, ul] of state.treeIndex.childrenById.entries()) {
-                if (ul && ul.style.display === "block") expanded.push(id);
+                if (ul && ul.classList.contains("open")) expanded.push(id);
             }
             return expanded;
         }
