@@ -386,6 +386,103 @@
             margin-left: 4px;
         }
 
+        /* ==========================
+   ✅ 개선된 댓글 카드형 UI
+   ========================== */
+        #comment {
+            background: var(--card, #ffffff);
+            border: 1px solid rgba(17, 24, 39, .08);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        #commentList {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .comment-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(17, 24, 39, .05);
+            transition: background-color 0.2s ease;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-item:hover {
+            background-color: rgba(59, 130, 246, 0.02);
+        }
+
+        .comment-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .comment-who-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 아바타 아이콘 스타일 */
+        .comment-avatar {
+            width: 28px;
+            height: 28px;
+            background: rgba(17, 24, 39, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .comment-name {
+            font-weight: 1000;
+            color: #111827;
+            font-size: 14px;
+        }
+
+        .comment-meta-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #9ca3af;
+        }
+
+        .comment-body {
+            padding-left: 36px; /* 아바타 크기 + 간격만큼 들여쓰기 */
+            font-size: 14px;
+            line-height: 1.6;
+            font-weight: 700;
+            color: #374151;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .comment-actions .comment-delete-btn {
+            opacity: 0; /* 평소엔 숨겼다가 호버 시 노출 (선택 사항) */
+            transition: opacity 0.2s ease;
+        }
+
+        .comment-item:hover .comment-delete-btn {
+            opacity: 1;
+        }
+
+        .comment-empty {
+            padding: 40px 0;
+            text-align: center;
+            color: #9ca3af;
+            font-weight: 800;
+        }
+
     </style>
 </th:block>
 
@@ -878,37 +975,38 @@
 
                         const deleteBtnHtml = canDeleteComment(r)
                             ? `
-                              <button type="button"
-                                      class="btn btn-danger btn-sm comment-delete-btn"
-                                      data-comment-no="${r.commentNo}">
-                                   삭제
-                              </button>
-                            `
+          <button type="button"
+                  class="btn btn-danger btn-sm comment-delete-btn"
+                  style="padding: 4px 8px; font-size: 11px;"
+                  data-comment-no="${r.commentNo}">
+               삭제
+          </button>
+        `
                             : ``;
 
                         commentList.append(`
-                                  <div class="comment-item">
-                    <div class="comment-top">
-                      <div class="comment-who-line">
-                        <span class="comment-name">${escapeHtml(r.empName ?? "-")}</span>
-                        <span class="dot">·</span>
+        <div class="comment-item">
+            <div class="comment-top">
+                <div class="comment-who-line">
+                    <div class="comment-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span class="comment-name">${escapeHtml(r.empName ?? "-")}</span>
+                    <div class="comment-meta-info">
                         <span class="comment-dept">${escapeHtml(r.depName ?? "-")}</span>
-                        <span class="dot">·</span>
+                        <span>•</span>
                         <span class="comment-date">${createdAt}</span>
-                      </div>
-
-                      <div class="comment-actions">
-                        ${deleteBtnHtml}
-                      </div>
                     </div>
-
-                    <div class="comment-body">
-                      ${escapeHtml(r.contents ?? "")}
-                    </div>
-                  </div>
-                `);
-
+                </div>
+                <div class="comment-actions">
+                    ${deleteBtnHtml}
+                </div>
+            </div>
+            <div class="comment-body">${escapeHtml(r.contents ?? "")}</div>
+        </div>
+    `);
                     });
+
                 } else {
                     commentList.append(`<div class="comment-empty">댓글 로딩에 실패했습니다.</div>`);
                 }
