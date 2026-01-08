@@ -38,11 +38,35 @@
         tbody td { border-bottom: 1px solid var(--line); text-align: center; padding: 12px 10px; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         tbody tr:hover td { background: #fcfdfe; cursor: pointer; }
 
-        .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .status-NONE { background: #f3f4f6; color: #6b7280; }
-        .status-PROCESSING { background: #eff6ff; color: #2b6ae6; border: 1px solid #bfdbfe; }
-        .status-DONE { background: #ecfdf5; color: #10b981; }
-        .status-FAILED { background: #fef2f2; color: #ef4444; }
+        /* 통일된 상태 배지 디자인 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            min-width: 65px;
+            border: 1px solid transparent;
+        }
+
+        /* 완료: 초록색 */
+        .status-DONE {
+            background: #ecfdf5; color: #10b981; border-color: #a7f3d0;
+        }
+        /* 실패: 빨간색 */
+        .status-FAILED {
+            background: #fef2f2; color: #ef4444; border-color: #fecaca;
+        }
+        /* 처리 중: 파란색 */
+        .status-PROCESSING {
+            background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe;
+        }
+        /* 대기/미요약: 회색 */
+        .status-NONE, .status-CREATED, .status-UPLOADED {
+            background: #f3f4f6; color: #6b7280; border-color: #e5e7eb;
+        }
 
         .pager-wrapper {
             display: flex; align-items: center; justify-content: center;
@@ -155,13 +179,13 @@
             return `${yy}.${mm}.${dd} ${hhmm}`;
         }
 
-        function getAiStatusBadge(status) {
-            let label = "미요약";
+        function getStatusBadge(status) {
             const s = status || 'NONE';
+            let label = "미요약";
             switch(s) {
-                case 'PROCESSING': label = "요약 중"; break;
                 case 'DONE': label = "완료"; break;
                 case 'FAILED': label = "실패"; break;
+                case 'PROCESSING': label = "요약 중"; break;
                 default: label = "미요약"; break;
             }
             return `<span class="status-badge status-${s}">${label}</span>`;
@@ -218,15 +242,16 @@
                 }
 
                 meetings.forEach((m, index) => {
-                    const rowNum = totalElements - (curPage * PAGE_SIZE) - index;
+                    const rowNum = (curPage * PAGE_SIZE) + index + 1;
+
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
-                          <td>${rowNum}</td>
-                          <td style="text-align:left; padding-left:20px; font-weight:700" title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</td>
-                          <td>${formatDateTime(m.startAt)}</td> <td>${getAiStatusBadge(m.aiStatus)}</td>
-                          <td>${escapeHtml(m.writerName)}</td>
-                          <td>${m.participantCount || 0}명</td>
-                        `;
+                      <td>${rowNum}</td>
+                      <td style="text-align:left; padding-left:20px; font-weight:700" title="${escapeHtml(m.title)}">${escapeHtml(m.title)}</td>
+                      <td>${formatDateTime(m.startAt)}</td> <td>${getStatusBadge(m.aiStatus)}</td>
+                      <td>${escapeHtml(m.writerName)}</td>
+                      <td>${m.participantCount || 0}명</td>
+                    `;
                     tr.onclick = () => location.href = `/meeting/${m.meetNo}`;
                     tb.appendChild(tr);
                 });

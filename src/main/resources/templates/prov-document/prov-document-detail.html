@@ -129,8 +129,25 @@
         $("editBtn").onclick = () => location.href = `/admin/prov-document/${encodeURIComponent(provNoFromPath)}/update`;
         $("deleteBtn").onclick = async () => {
             if (!confirm("정말 이 규정을 삭제하시겠습니까?")) return;
-            await fetch(`${API_BASE}/api/v1/prov-documents/${encodeURIComponent(provNoFromPath)}`, { method: "DELETE", credentials: "include" });
-            location.href = "/admin/prov-document/list";
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/prov-documents/${encodeURIComponent(provNoFromPath)}`, {
+                    method: "DELETE",
+                    credentials: "include"
+                });
+
+                if (!res.ok) {
+                    alert("삭제 중 오류가 발생했습니다.");
+                    return;
+                }
+
+                alert("규정이 성공적으로 삭제되었습니다.");
+                location.href = "/admin/prov-document/list";
+
+            } catch (error) {
+                console.error("삭제 요청 중 네트워크 오류 발생:", error);
+                alert("서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+            }
         };
         window.onload = loadDetail;
     </script>

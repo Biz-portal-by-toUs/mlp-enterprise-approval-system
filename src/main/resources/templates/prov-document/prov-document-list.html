@@ -52,10 +52,34 @@
         .prov-page .row td:first-child { border-top-left-radius: 14px; border-bottom-left-radius: 14px; text-align: center; }
         .prov-page .row td:last-child { border-top-right-radius: 14px; border-bottom-right-radius: 14px; text-align: center; }
 
-        .status-badge { padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 900; }
-        .status-DONE { background: #f3fff6; color: #1b7f3a; }
-        .status-FAILED { background: #fff5f4; color: #b42318; }
-        .status-PROCESSING { background: #f0f7ff; color: #2b5db8; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            min-width: 65px;
+            border: 1px solid transparent;
+        }
+
+        /* 완료: 초록색 */
+        .status-DONE {
+            background: #ecfdf5; color: #10b981; border-color: #a7f3d0;
+        }
+        /* 실패: 빨간색 */
+        .status-FAILED {
+            background: #fef2f2; color: #ef4444; border-color: #fecaca;
+        }
+        /* 처리 중: 파란색 */
+        .status-PROCESSING {
+            background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe;
+        }
+        /* 대기/미요약: 회색 */
+        .status-NONE, .status-CREATED, .status-UPLOADED {
+            background: #f3f4f6; color: #6b7280; border-color: #e5e7eb;
+        }
 
         .pager .pageBtn {
             min-width: 38px; height: 38px; border-radius: 10px; border: 0; background: #fff;
@@ -124,9 +148,16 @@
         function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
         function formatDateTime(isoLike){ if (!isoLike) return "-"; return isoLike.replace("T", " ").slice(0, 10).replace(/-/g, "."); }
 
-        function getProcStatBadge(procStat) {
+        function getStatusBadge(procStat) {
             const s = procStat || "CREATED";
-            let label = s === "DONE" ? "완료" : s === "FAILED" ? "실패" : s === "PROCESSING" ? "처리 중" : "대기";
+            let label = "대기";
+            switch(s) {
+                case 'DONE': label = "완료"; break;
+                case 'FAILED': label = "실패"; break;
+                case 'PROCESSING': label = "처리 중"; break;
+                case 'UPLOADED': label = "업로드됨"; break;
+                default: label = "대기"; break;
+            }
             return `<span class="status-badge status-${s}">${label}</span>`;
         }
 
@@ -159,19 +190,23 @@
                     tb.innerHTML = '<tr><td colspan="5" style="padding:40px; color:var(--muted)">데이터가 없습니다.</td></tr>';
                 }
 
-                docs.forEach((d) => {
+                // 기존 docs.forEach((d) => { ... }) 부분을 아래와 같이 수정
+                docs.forEach((d, index) => { // index 파라미터 추가
+                    const rowNum = (page * PAGE_SIZE) + index + 1; // 오름차순 번호 계산
                     const tr = document.createElement("tr");
                     tr.className = "row";
                     tr.innerHTML = `
-                        <td style="text-align:center">${d.provNo}</td>
+                        <td style="text-align:center">${rowNum}</td>
                         <td style="font-size:15px"><b>${escapeHtml(d.docTitle)}</b></td>
                         <td style="text-align:center">${d.isPublic ? "공개" : "비공개"}</td>
-                        <td style="text-align:center">${getProcStatBadge(d.procStat)}</td>
+                        <td style="text-align:center">${getStatusBadge(d.procStat)}</td>
                         <td style="text-align:center">${formatDateTime(d.updatedAt)}</td>
                     `;
                     tr.onclick = () => location.href = `/admin/prov-document/${d.provNo}`;
                     tb.appendChild(tr);
                 });
+
+
 
                 renderPager(data.number, data.totalPages);
                 $("countPill").textContent = `총 ${data.totalElements}건의 규정`;
