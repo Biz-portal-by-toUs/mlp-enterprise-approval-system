@@ -29,17 +29,16 @@
         .pill { background: #fff; border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
         .pill button { border: none; background: none; color: var(--danger); cursor: pointer; font-size: 14px; }
         .list-container {
-            flex: 1 1 0;           /* grow:1, shrink:1, basis:0 적용 */
-            min-height: 200px;     /* 최소 높이는 유지 */
-            overflow-y: auto;      /* 넘치면 내부 스크롤 생성 */
+            flex: 1 1 0;
+            min-height: 200px;
+            overflow-y: auto;
             border: 1px solid var(--line);
             border-radius: 10px;
             background: #fff;
         }
 
-        /* 추가로 오른쪽 카드가 무한정 커지지 않도록 설정 */
         .container-grid > .card:last-child {
-            min-height: 0;         /* 그리드 아이템이 내용물에 의해 강제로 커지는 것 방지 */
+            min-height: 0;
         }
         .emp-row { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         progress { width: 100%; height: 4px; border-radius: 2px; overflow: hidden; margin-top: 10px; appearance: none; }
@@ -121,11 +120,49 @@
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
-        // [기존 meeting-create.html의 JS 로직 전체 복사]
         const $ = (id) => document.getElementById(id);
         const progEl = $("progress");
         const statusMsg = $("statusMsg");
         const API_BASE = "";
+
+        // ---------------- [추가] IndexedDB 유틸리티 ----------------
+        const DB_NAME = "MeetingRecordingDB";
+        const STORE_NAME = "temp_chunks";
+        let db;
+
+        const initDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { autoIncrement: true });
+                    }
+                };
+                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                request.onerror = (e) => reject(e);
+            });
+        };
+
+        async function saveChunkToDB(chunk) {
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).add(chunk);
+        }
+
+        async function clearDB() {
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).clear();
+        }
+
+        async function getAllChunksFromDB() {
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_NAME, "readonly");
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+        // --------------------------------------------------------
 
         function updateStatus(msg) { statusMsg.textContent = msg; }
         function unwrapMaybeResponseDto(resJson) { return (resJson && resJson.data) ? resJson.data : resJson; }
@@ -196,30 +233,109 @@
             } catch (err) { console.error(err); } finally { loading = false; }
         }
 
-        // 녹음/타이머
+        // ---------------- [수정] 녹음/타이머/이탈 방지 로직 ----------------
         let mediaRecorder = null, chunks = [], audioFile = null, audioBlobUrl = null, timerInterval = null, seconds = 0;
+        let isRecording = false;
+
+        const preventExit = (e) => {
+            if (isRecording) {
+                e.preventDefault();
+                e.returnValue = ""; // 브라우저 표준 확인 창 활성화
+            }
+        };
+
         function formatTimer(s) { const h = String(Math.floor(s/3600)).padStart(2,'0'); const m = String(Math.floor((s%3600)/60)).padStart(2,'0'); const sc = String(s%60).padStart(2,'0'); return `${h}:${m}:${sc}`; }
-        function resetRecordingUI() { clearInterval(timerInterval); seconds = 0; $("recTimer").textContent = "00:00:00"; $("recState").textContent = "대기"; $("recState").style.color = "var(--primary)"; $("recStartBtn").textContent = "시작"; $("recStartBtn").disabled = false; $("recPauseBtn").disabled = true; $("recPauseBtn").textContent = "일시 중지"; $("recEndBtn").disabled = true; }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => { seconds++; $("recTimer").textContent = formatTimer(seconds); }, 1000);
+        }
+
+        function resetRecordingUI() {
+            clearInterval(timerInterval);
+            seconds = 0;
+            $("recTimer").textContent = "00:00:00";
+            $("recState").textContent = "대기";
+            $("recState").style.color = "var(--primary)";
+            $("recStartBtn").textContent = "시작";
+            $("recStartBtn").disabled = false;
+            $("recPauseBtn").disabled = true;
+            $("recPauseBtn").textContent = "일시 중지";
+            $("recEndBtn").disabled = true;
+        }
+
         $("recStartBtn").onclick = async () => {
             try {
-                if (mediaRecorder && mediaRecorder.state === "paused") { mediaRecorder.resume(); timerInterval = setInterval(() => { seconds++; $("recTimer").textContent = formatTimer(seconds); }, 1000); $("recState").textContent = "녹음중"; }
-                else {
-                    chunks = []; const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
-                    mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) chunks.push(e.data); };
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: "audio/webm" }); audioFile = new File([blob], `rec_${Date.now()}.webm`, { type: "audio/webm" });
-                        if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = URL.createObjectURL(blob);
-                        $("audioPreview").src = audioBlobUrl; $("audioPreview").style.display = "block"; $("fileInfo").textContent = `준비됨: ${(audioFile.size/1024).toFixed(1)} KB`; resetRecordingUI();
-                    };
-                    mediaRecorder.start(); timerInterval = setInterval(() => { seconds++; $("recTimer").textContent = formatTimer(seconds); }, 1000); $("recState").textContent = "녹음중";
+                if (mediaRecorder && mediaRecorder.state === "paused") {
+                    mediaRecorder.resume();
+                    startTimer();
+                    $("recState").textContent = "녹음중";
                 }
-                $("recState").style.color = "var(--danger)"; $("recStartBtn").disabled = true; $("recPauseBtn").disabled = false; $("recEndBtn").disabled = false;
+                else {
+                    chunks = [];
+                    await clearDB(); // ✅ 녹음 시작 시 이전 임시 데이터 삭제
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        if(e.data.size > 0) {
+                            chunks.push(e.data);
+                            saveChunkToDB(e.data); // ✅ 3초마다 DB에 조각 저장
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: "audio/webm" });
+                        audioFile = new File([blob], `rec_${Date.now()}.webm`, { type: "audio/webm" });
+                        if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+                        audioBlobUrl = URL.createObjectURL(blob);
+                        $("audioPreview").src = audioBlobUrl;
+                        $("audioPreview").style.display = "block";
+                        $("fileInfo").textContent = `준비됨: ${(audioFile.size/1024).toFixed(1)} KB`;
+
+                        isRecording = false; // ✅ 녹음 종료 상태
+                        window.removeEventListener("beforeunload", preventExit); // ✅ 이탈 방지 해제
+                        resetRecordingUI();
+                    };
+
+                    mediaRecorder.start(3000); // ✅ 3초마다 조각 생성 (ondataavailable 호출)
+                    startTimer();
+                    $("recState").textContent = "녹음중";
+                }
+
+                isRecording = true; // ✅ 녹음 중 상태
+                window.addEventListener("beforeunload", preventExit); // ✅ 이탈 방지 활성화
+
+                $("recState").style.color = "var(--danger)";
+                $("recStartBtn").disabled = true;
+                $("recPauseBtn").disabled = false;
+                $("recEndBtn").disabled = false;
             } catch (e) { alert("마이크 권한이 필요합니다."); }
         };
-        $("recPauseBtn").onclick = () => { if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.pause(); clearInterval(timerInterval); $("recState").textContent = "일시중지"; $("recState").style.color = "var(--muted)"; $("recStartBtn").textContent = "다시 시작"; $("recStartBtn").disabled = false; $("recPauseBtn").disabled = true; } };
+
+        $("recPauseBtn").onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.pause();
+                clearInterval(timerInterval);
+                $("recState").textContent = "일시중지";
+                $("recState").style.color = "var(--muted)";
+                $("recStartBtn").textContent = "다시 시작";
+                $("recStartBtn").disabled = false;
+                $("recPauseBtn").disabled = true;
+            }
+        };
+
         $("recEndBtn").onclick = () => { if (mediaRecorder) mediaRecorder.stop(); };
-        $("clearAudioBtn").onclick = () => { audioFile = null; chunks = []; if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl); $("audioPreview").style.display = "none"; $("fileInfo").textContent = "선택된 파일 없음"; resetRecordingUI(); };
+
+        $("clearAudioBtn").onclick = async () => {
+            audioFile = null;
+            chunks = [];
+            if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+            $("audioPreview").style.display = "none";
+            $("fileInfo").textContent = "선택된 파일 없음";
+            await clearDB(); // ✅ 초기화 시 DB도 비움
+            resetRecordingUI();
+        };
 
         // 생성 요청
         $("createBtn").onclick = async () => {
@@ -245,6 +361,8 @@
                     await fetch(`${API_BASE}/api/v1/attachments/complete`, fetchOptions("POST", { domain: "MEETING", entityId: meetNo, fileType: "AUDIO", objectKey, originalName: audioFile.name, contentType: audioFile.type, size: audioFile.size }));
                     await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/ai-request`, fetchOptions("POST", { objectKey, size: audioFile.size, contentType: audioFile.type, originalName: audioFile.name, title: $("title").value.trim() }));
                 }
+
+                await clearDB(); // ✅ 최종 성공 시 임시 DB 비우기
                 progEl.value = 100; updateStatus("🎉 완료되었습니다!");
                 setTimeout(() => { if(confirm("등록 완료! 목록으로 이동할까요?")) location.href = "/meeting"; }, 500);
             } catch (e) { alert("오류: " + e.message); $("createBtn").disabled = false; }
@@ -253,10 +371,29 @@
         $("empSearchKeyword").oninput = () => { clearTimeout(kwTimer); kwTimer = setTimeout(() => { cursor = null; hasNext = true; $("empList").innerHTML = ""; loadMoreEmp(); }, 300); };
         $("empList").onscroll = (e) => { if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreEmp(); };
 
-        window.onload = () => {
+        window.onload = async () => {
             const now = new Date();
             $("todayLabel").textContent = now.toISOString().split('T')[0];
             $("startedAtTime").value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            await initDB();
+            const savedChunks = await getAllChunksFromDB();
+            if (savedChunks.length > 0) {
+                if (confirm("이전에 완료하지 못한 녹음 데이터가 있습니다. 복구하시겠습니까?")) {
+                    chunks = savedChunks;
+                    const blob = new Blob(chunks, { type: "audio/webm" });
+                    audioFile = new File([blob], `recovered_${Date.now()}.webm`, { type: "audio/webm" });
+                    audioBlobUrl = URL.createObjectURL(blob);
+
+                    $("audioPreview").src = audioBlobUrl;
+                    $("audioPreview").style.display = "block";
+                    $("fileInfo").textContent = `복구됨: ${(audioFile.size/1024).toFixed(1)} KB`;
+                    updateStatus("💡 녹음 데이터가 성공적으로 복구되었습니다.");
+                } else {
+                    await clearDB();
+                }
+            }
+
             loadDepartments(); loadMoreEmp();
         };
     </script>
