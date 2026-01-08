@@ -22,6 +22,6 @@ public class ViewMyReservationController {
 
     @GetMapping("/my-reservations")
     public String page() {
-        return "reservation/my/my-reservations";
+        return "reservation/myreservation/my-reservations";
     }
 }

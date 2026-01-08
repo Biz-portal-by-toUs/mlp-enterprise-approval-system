@@ -28,29 +28,29 @@ public class ViewSharedEquipmentController {
 
     @GetMapping
     public String sharedEquipmentList() {
-        return "reservation/shared-equipment/shared-equipment-list";
+        return "reservation/sharedequipment/shared-equipment-list";
     }
 
     @GetMapping("/register")
     public String addSharedEquipment() {
-        return "reservation/shared-equipment/shared-equipment-register";
+        return "reservation/sharedequipment/shared-equipment-register";
     }
 
     @GetMapping("/{eqNo}/edit")
     public String editSharedEquipment(@PathVariable(name = "eqNo") Long eqNo, Model model) {
         model.addAttribute("eqNo", eqNo);
-        return "reservation/shared-equipment/shared-equipment-edit";
+        return "reservation/sharedequipment/shared-equipment-edit";
     }
 
     // 공유 설비 예약 조회 화면
     @GetMapping("/reservation")
     public String sharedEquipmentReservation() {
-        return "reservation/shared-equipment/shared-equipment-reservation";
+        return "reservation/sharedequipment/shared-equipment-reservation";
     }
 
     // 공유 설비 예약 등록 화면
     @GetMapping("/{eqNo}/reservation")
     public String sharedEquipmentReservation(@PathVariable(name = "eqNo") Long eqNo) {
-        return "reservation/shared-equipment/shared-equipment-reservation";
+        return "reservation/sharedequipment/shared-equipment-reservation";
     }
 }

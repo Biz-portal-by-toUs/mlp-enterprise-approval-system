@@ -28,30 +28,30 @@ public class ViewCorporateCarController {
 
     @GetMapping
     public String corporateCarList() {
-        return "reservation/corporate-cars/corporate-car-list";
+        return "reservation/corporatecars/corporate-car-list";
     }
 
     @GetMapping("/register")
     public String addCorporateCar() {
-        return "reservation/corporate-cars/corporate-car-register";
+        return "reservation/corporatecars/corporate-car-register";
     }
 
     @GetMapping("/{carNo}/edit")
     public String editCorporateCar(@PathVariable(name = "carNo") Long carNo, Model model) {
         model.addAttribute("carNo", carNo);
-        return "reservation/corporate-cars/corporate-car-edit";
+        return "reservation/corporatecars/corporate-car-edit";
     }
 
     // 법인 차량 예약 조회 화면
     @GetMapping("/reservation")
     public String corporateCarReservation() {
-        return "reservation/corporate-cars/corporate-car-reservation";
+        return "reservation/corporatecars/corporate-car-reservation";
     }
 
     // 법인 차량 예약 등록 화면
     @GetMapping("/{carNo}/reservation")
     public String corporateCarReservation(@PathVariable(name = "carNo") Long carNo) {
-        return "reservation/corporate-cars/corporate-car-reservation";
+        return "reservation/corporatecars/corporate-car-reservation";
     }
 
 }
