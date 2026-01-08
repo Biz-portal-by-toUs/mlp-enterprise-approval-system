@@ -19,16 +19,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "prov_document")
 public class ProvDocument extends BaseEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long provNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
-    @Column(name = "doc_title",length = 30)
+    @Column(name = "doc_title", nullable = false, length = 50)
     private String docTitle;
-    @Column(name="description",columnDefinition = "text")
+    @Column(name = "description", columnDefinition = "text")
     private String description;
     @Column(name = "is_public")
     private Boolean isPublic;
@@ -45,7 +46,6 @@ public class ProvDocument extends BaseEntity {
     private ProvProcStat procStat;
     @Column(name = "error_msg", length = 20)
     private String errorMsg;
-
 
 
     public void markUploaded(String fileName, String objectKey, Long fileSize) {
