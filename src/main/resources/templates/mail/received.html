@@ -93,6 +93,8 @@
         .mi-pageBtn.active:hover{filter:brightness(0.9);}
 
         .mi-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        .mi-dateWrap{flex:0 0 auto; max-width:160px;}
+        .mi-dateInput{font-size:14px;}
 
         @media (max-width:760px){
             .mi-pager-status{position:static;margin-left:10px;}
@@ -111,13 +113,25 @@
             <div class="mi-toolbar">
                 <div class="mi-toolbar-left">
                     <div class="mi-searchWrap">
-                        <input id="q" class="mi-searchInput" type="text" placeholder="제목 검색"/>
+                        <input id="keyword" class="mi-searchInput" type="text" placeholder="제목 검색"/>
+                    </div>
+                    <!-- 기간(from/to) -->
+                    <div class="mi-searchWrap mi-dateWrap">
+                        <input id="from" class="mi-searchInput mi-dateInput" type="date" aria-label="시작일"/>
+                    </div>
+                    <span style="color:var(--mut); font-weight:800;">~</span>
+                    <div class="mi-searchWrap mi-dateWrap">
+                        <input id="to" class="mi-searchInput mi-dateInput" type="date" aria-label="종료일"/>
                     </div>
                     <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
 
                 <div class="mi-toolbar-right">
                     <button class="mi-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
+                    <div id="countPill"
+                         style="margin-top:6px; text-align:right; font-size:14px; font-weight:800; color:var(--primary)">
+                        0건
+                    </div>
                 </div>
             </div>
 
@@ -141,8 +155,7 @@
                 <div id="pagerControls" class="mi-pager"></div>
 
                 <div class="mi-pager-status">
-                    <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
-                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
                 </div>
             </div>
 
@@ -160,6 +173,37 @@
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
                     return {};
+                }
+
+                function todayYmd(){
+                    const d = new Date();
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth()+1).padStart(2,'0');
+                    const day = String(d.getDate()).padStart(2,'0');
+                    return `${y}-${m}-${day}`;
+                }
+
+                function syncDateConstraints(){
+                    const fromEl = document.getElementById('from');
+                    const toEl = document.getElementById('to');
+
+                    const fromVal = (fromEl.value || '').trim();
+                    const toVal = (toEl.value || '').trim();
+                    const today = todayYmd();
+
+                    toEl.max = today;
+                    toEl.min = fromVal || '';
+                    fromEl.max = toVal || today;
+                    if (toVal && fromVal && toVal < fromVal) {
+                        // to가 from보다 작으면 to를 from으로 보정
+                        toEl.value = fromVal;
+                    }
+                    if (toEl.value && toEl.value > today) {
+                        toEl.value = today;
+                    }
+                    if (fromEl.value && toEl.value && fromEl.value > toEl.value) {
+                        fromEl.value = toEl.value;
+                    }
                 }
 
                 function fmtDate(iso){
@@ -248,7 +292,9 @@
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
                         size: PAGE_SIZE,
-                        q: (params.get('q') || '').trim()
+                        keyword: (params.get('keyword') || '').trim(),
+                        from: (params.get('from') || '').trim(), // yyyy-mm-dd
+                        to: (params.get('to') || '').trim()
                     };
                 }
 
@@ -256,7 +302,16 @@
                     const params = new URLSearchParams();
                     params.set('page', String(next.page ?? 0));
                     params.set('size', String(PAGE_SIZE));
-                    if (next.q) params.set('q', next.q);
+
+                    params.set('keyword', (next.keyword || '').trim());
+                    params.set('from', (next.from || '').trim());
+                    params.set('to', (next.to || '').trim());
+
+                    // 빈 값 파라미터는 제거
+                    if (!params.get('keyword')) params.delete('keyword');
+                    if (!params.get('from')) params.delete('from');
+                    if (!params.get('to')) params.delete('to');
+
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
@@ -339,7 +394,9 @@
                     const params = new URLSearchParams();
                     params.set('page', String(st.page));
                     params.set('size', String(PAGE_SIZE));
-                    if (st.q) params.set('q', st.q);
+                    if (st.keyword) params.set('keyword', st.keyword);
+                    if (st.from) params.set('from', st.from);
+                    if (st.to) params.set('to', st.to);
                     return `/api/v1/mails/inbox?${params.toString()}`;
                 }
 
@@ -350,7 +407,13 @@
                     }
 
                     const st = getState();
-                    document.getElementById('q').value = st.q;
+
+                    document.getElementById('keyword').value = st.keyword;
+                    document.getElementById('from').value = st.from;
+                    document.getElementById('to').value = st.to;
+
+                    // 제약 동기화 (값 세팅 후!)
+                    syncDateConstraints();
 
                     const url = buildInboxApiUrl(st);
                     const data = await fetchJson(url);
@@ -362,25 +425,44 @@
                     document.getElementById('pageInfo').textContent = `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
                     buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, q:st.q });
+                        setUrlState({ page:p, keyword:st.keyword, from:st.from, to:st.to });
                         load().catch(console.error);
                     });
                 }
 
                 document.getElementById('btnSearch').addEventListener('click', () => {
-                    const q = (document.getElementById('q').value || '').trim();
-                    setUrlState({ page:0, q });
+                    // 먼저 보정
+                    syncDateConstraints();
+
+                    // 보정된 값 읽기
+                    const keyword = (document.getElementById('keyword').value || '').trim();
+                    const from = (document.getElementById('from').value || '').trim();
+                    const to = (document.getElementById('to').value || '').trim();
+
+                    setUrlState({ page:0, keyword, from, to });
                     load().catch(console.error);
                 });
 
-                document.getElementById('q').addEventListener('keydown', (e) => {
+                document.getElementById('keyword').addEventListener('keydown', (e) => {
                     if (e.key === 'Enter'){
                         e.preventDefault();
                         document.getElementById('btnSearch').click();
                     }
                 });
 
+                document.getElementById('from').addEventListener('change', () => {
+                    syncDateConstraints();
+                });
+
+                document.getElementById('to').addEventListener('change', () => {
+                    syncDateConstraints();
+                });
+
                 window.addEventListener('DOMContentLoaded', () => {
+                    // 초기 max 세팅
+                    document.getElementById('to').max = todayYmd();
+                    syncDateConstraints();
+
                     load().catch(err => {
                         console.error(err);
                         document.getElementById('tbody').innerHTML =
