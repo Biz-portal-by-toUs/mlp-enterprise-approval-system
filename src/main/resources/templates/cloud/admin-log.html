@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>관리자 삭제 로그</title>
+
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* ===== cloud 공통 레이아웃 ===== */
+            .content-wrap:has(.cloud-page) {
+                padding: 0;
+            }
+
+            .cloud-page {
+                height: calc(100vh - var(--topbar-h) - var(--footer-h));
+                background: #f7f8fa; /* 예약페이지 톤 */
+            }
+
+            .cloud-page .page-with-subbar {
+                display: grid;
+                grid-template-columns: 220px 1fr;
+                min-height: calc(100vh - var(--topbar-h) - var(--footer-h));
+            }
+
+            .cloud-page .subbar {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* ===== sidebar에서 쓰는 클래스들 (admin-log에서도 스타일 먹게) ===== */
+            .cloud-scope-tabs {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 10px 12px 12px;
+                border-bottom: 1px solid rgba(59, 130, 246, .14);
+                background: rgba(255, 255, 255, .30);
+            }
+
+            .cloud-scope-tab {
+                height: 38px; /* 휴지통 버튼급 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px;
+                text-decoration: none;
+                font-weight: 900;
+                font-size: 13px;
+                color: #1d4ed8;
+                background: rgba(59, 130, 246, .12);
+                border: 1px solid rgba(59, 130, 246, .10);
+                box-sizing: border-box;
+            }
+
+            .cloud-scope-tab:hover {
+                background: rgba(59, 130, 246, .18);
+            }
+
+            .cloud-scope-tab.active {
+                background: var(--primary);
+                color: #fff;
+                border-color: transparent;
+            }
+
+            /* ===== 오른쪽 본문 ===== */
+            .cloud-main {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                background: #f7f8fa;
+            }
+
+            .cloud-topbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 16px 18px;
+                background: #fff;
+                border-bottom: 1px solid #eef2f7;
+            }
+
+            .cloud-title {
+                font-size: 24px;
+                font-weight: 900;
+                margin: 0;
+                color: #111;
+            }
+
+            .cloud-body {
+                flex: 1;
+                overflow: auto;
+                padding: 20px 20px 32px;
+            }
+
+            /* ✅ 화면 꽉 차게 */
+            .log-wrap {
+                width: 100%;
+                max-width: none;
+            }
+
+            .hint {
+                font-weight: 800;
+                color: #666;
+                margin: 0 0 12px;
+            }
+
+            /* ===== 예약 페이지 스타일(필터바) ===== */
+            .table-top {
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                margin: 10px 0 14px;
+            }
+
+            .filter-bar {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .input {
+                height: 40px;
+                border: 1px solid #dfe3ea;
+                border-radius: 10px;
+                padding: 0 12px;
+                background: #fff;
+                font-size: 14px;
+                outline: none;
+                box-sizing: border-box;
+                font-weight: 800;
+                min-width: 320px;
+            }
+
+            .input:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(26, 115, 232, .12);
+            }
+
+            .reserve-action-btn {
+                height: 40px;
+                padding: 0 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                border: none;
+                background: var(--primary);
+                color: #fff;
+                white-space: nowrap;
+                transition: 0.15s;
+            }
+
+            .reserve-action-btn:hover {
+                filter: brightness(0.9);
+            }
+
+            .reserve-action-btn:active {
+                transform: translateY(1px);
+            }
+
+            .btn-lite {
+                height: 40px;
+                padding: 0 16px;
+                border-radius: 10px;
+                border: 1px solid #dfe3ea;
+                background: #fff;
+                font-weight: 800;
+                cursor: pointer;
+                color: #111;
+            }
+
+            /* ===== 테이블(예약 페이지 톤) ===== */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background: #fff;
+                border-radius: 12px;
+                overflow: hidden;
+                border: 1px solid #eef2f7;
+            }
+
+            thead th {
+                text-align: left;
+                padding: 12px 16px;
+                white-space: nowrap;
+                font-size: 14px;
+                font-weight: 800;
+                color: #111;
+                border-bottom: 1px solid #eef2f7;
+                background: #f9fafb;
+            }
+
+            tbody td {
+                padding: 14px 16px;
+                font-size: 14px;
+                border-top: 1px solid #f4f6f9;
+                vertical-align: middle;
+                font-weight: 800;
+                color: #111827;
+            }
+
+            tbody tr:hover {
+                background: rgba(59, 130, 246, .06);
+            }
+
+            .pill {
+                display: inline-block;
+                padding: 3px 8px;
+                border-radius: 999px;
+                font-size: 11px;
+                font-weight: 900;
+                border: 1px solid rgba(17, 24, 39, .10);
+                background: rgba(17, 24, 39, .03);
+            }
+
+            .muted {
+                color: #666;
+                font-weight: 800;
+            }
+
+            .empty {
+                padding: 24px 10px;
+                color: #777;
+                text-align: center;
+                font-weight: 800;
+            }
+
+            .pager {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                align-items: center;
+                margin-top: 12px;
+            }
+
+            .table-top {
+                display: flex;
+                justify-content: flex-end;
+                margin: 10px 0 14px;
+            }
+
+            .filter-bar {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .tilde {
+                padding: 0 4px;
+                color: #666;
+                font-weight: 800;
+            }
+
+            .input-date {
+                height: 40px;
+                border: 1px solid #dfe3ea;
+                border-radius: 10px;
+                padding: 0 12px;
+                background: #fff;
+                font-size: 14px;
+                outline: none;
+                box-sizing: border-box;
+                font-weight: 800;
+            }
+
+            .input-date:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(26, 115, 232, .12);
+            }
+
+            /* ===== 회의실 페이징 스타일 ===== */
+            .paging {
+                margin-top: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .page-btn {
+                min-width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                border: 1px solid #e5e7eb;
+                background: #fff;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 800;
+            }
+
+            .page-btn.active {
+                background: var(--primary);
+                border-color: var(--primary);
+                color: #fff;
+                font-weight: 900;
+            }
+
+            .page-btn:disabled {
+                opacity: .5;
+                cursor: not-allowed
+            }
+
+            /* 폴더명 클릭(링크처럼) */
+            .link-folder {
+                background: none;
+                border: none;
+                padding: 0;
+                cursor: pointer;
+                font-weight: 900;
+                color: #1d4ed8;
+            }
+
+            .link-folder:hover {
+                text-decoration: underline;
+            }
+
+            /* 폴더 상세(토글 영역) */
+            .child-row td {
+                background: #fbfcfe;
+                padding: 12px 16px;
+            }
+
+            .child-list {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                font-weight: 800;
+                color: #111827;
+            }
+
+            .child-item {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .child-item .icon {
+                width: 18px;
+                text-align: center;
+            }
+
+            .child-item .name {
+                color: #111827;
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content" class="cloud-page">
+    <div class="page-with-subbar">
+
+        <!-- ✅ 왼쪽 sidebar -->
+        <th:block th:replace="~{sidebar/cloud-sidebar :: cloudSidebar(${active})}"></th:block>
+
+        <!-- ✅ 오른쪽 -->
+        <section class="cloud-main">
+            <div class="cloud-topbar">
+                <h1 class="cloud-title">관리자 삭제 로그</h1>
+            </div>
+
+            <div class="cloud-body">
+                <div class="log-wrap">
+
+                    <div class="table-top">
+                        <div class="filter-bar">
+                            <input type="date" id="fromDate" class="input-date">
+                            <span class="tilde">~</span>
+                            <input type="date" id="toDate" class="input-date">
+
+                            <input class="input" id="q" placeholder="파일/폴더명 검색"/>
+                            <button id="btnSearch" type="button" class="reserve-action-btn">조회</button>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                        <tr>
+                            <th style="width:110px;">상태</th>
+                            <th style="width:160px;">일시</th>
+                            <th style="width:90px;">유형</th>
+                            <th>이름</th>
+                            <th style="width:140px;">사용자</th>
+                            <th style="width:260px;">batchId</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tbody"></tbody>
+                    </table>
+
+                    <div class="paging" id="paging"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script th:inline="javascript">
+        // scope: URL에서 읽기 (없으면 DEPT)
+        // scope: URL에서 읽기 (없으면 DEPT)
+        const scope = new URLSearchParams(window.location.search).get("scope") || "DEPT";
+        console.log("[admin-log] scope(from url):", scope);
+
+        const size = 10;  // 페이지당 10개
+        let page = 0;     // 0-base page
+
+        const el = {
+            tbody: document.getElementById("tbody"),
+            q: document.getElementById("q"),
+            fromDate: document.getElementById("fromDate"),
+            toDate: document.getElementById("toDate"),
+            btnSearch: document.getElementById("btnSearch"),
+            paging: document.getElementById("paging"),
+        };
+
+        async function apiJson(url, opt = {}) {
+            const res = await fetch(url, {
+                credentials: "include",
+                headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
+                ...opt,
+            });
+
+            const text = await res.text();
+            const json = text ? JSON.parse(text) : null;
+
+            if (!res.ok) {
+                console.error("[apiJson] Error response:", json);
+                throw new Error(json?.message || json?.error || res.statusText);
+            }
+
+            // ResponseDto { data: ... } 래핑이면 data 언랩
+            return json && "data" in json ? json.data : json;
+        }
+
+        function actionLabel(a) {
+            const v = String(a || "").toUpperCase();
+            if (v === "DELETE") return "삭제";
+            if (v === "RESTORE") return "복구";
+            if (v === "PURGE") return "영구삭제";
+            return v || "-";
+        }
+
+        function fmtDT(dt) {
+            if (!dt) return "";
+            return String(dt).replace("T", " ").slice(0, 19);
+        }
+
+        // ✅ 같은 batchId에 폴더 로그가 있으면, 그 batch의 파일 로그는 메인에서 숨김(폴더 펼침에서만 보여줌)
+        function collapseNested(items) {
+            if (!Array.isArray(items)) return [];
+
+            const hasFolderBatch = new Set(
+                items
+                    .filter(x => String(x.itemType || "").toUpperCase() === "FOLDER" && x.batchId)
+                    .map(x => x.batchId)
+            );
+
+            return items.filter(x => {
+                const type = String(x.itemType || "").toUpperCase();
+                if (type !== "FILE") return true;
+                return !hasFolderBatch.has(x.batchId);
+            });
+        }
+
+        function render(rows) {
+            el.tbody.innerHTML = "";
+
+            if (!rows || rows.length === 0) {
+                el.tbody.innerHTML = `<tr><td class="empty" colspan="6">조회 결과가 없습니다.</td></tr>`;
+                return;
+            }
+
+            for (const it of rows) {
+                const tr = document.createElement("tr");
+                const isFolder = String(it.itemType || "").toUpperCase() === "FOLDER";
+
+                tr.innerHTML = `
+      <td><span class="pill">${actionLabel(it.action)}</span></td>
+      <td>${fmtDT(it.actionAt)}</td>
+      <td><span class="pill">${isFolder ? "폴더" : "파일"}</span></td>
+      <td>
+        ${
+                    isFolder
+                        ? `<button type="button"
+                  class="link-folder"
+                  data-folder-no="${it.itemId ?? ""}"
+                  data-batch-id="${it.batchId ?? ""}">
+                ${it.itemName || "-"}
+              </button>`
+                        : `${it.itemName || "-"}`
+                }
+      </td>
+      <td>${it.actor || "-"}</td>
+      <td>${it.batchId || "-"}</td>
+    `;
+
+                el.tbody.appendChild(tr);
+            }
+
+            // 폴더 클릭 토글 바인딩
+            el.tbody.querySelectorAll(".link-folder").forEach(btn => {
+                btn.addEventListener("click", () => toggleFolderDetail(btn));
+            });
+        }
+
+        function renderPaging(current, total) {
+            el.paging.innerHTML = "";
+            if (!total || total <= 1) return;
+
+            const mkBtn = (label, onClick, disabled = false, active = false) => {
+                const b = document.createElement("button");
+                b.className = "page-btn" + (active ? " active" : "");
+                b.textContent = label;
+                b.disabled = disabled;
+                b.addEventListener("click", onClick);
+                return b;
+            };
+
+            el.paging.appendChild(mkBtn("‹", () => loadLogs(current - 1), current === 0));
+
+            const windowSize = 5;
+            const start = Math.max(0, current - Math.floor(windowSize / 2));
+            const end = Math.min(total - 1, start + windowSize - 1);
+            const realStart = Math.max(0, end - windowSize + 1);
+
+            for (let p = realStart; p <= end; p++) {
+                el.paging.appendChild(mkBtn(String(p + 1), () => loadLogs(p), false, p === current));
+            }
+
+            el.paging.appendChild(mkBtn("›", () => loadLogs(current + 1), current >= total - 1));
+        }
+
+        async function loadLogs(p = 0) {
+            page = p;
+
+            const q = (el.q?.value || "").trim();
+            const from = el.fromDate.value;
+            const to = el.toDate.value;
+
+            const limit = size;
+            const offset = page * size;
+
+            const url =
+                `/api/v1/cloud/trash/admin-log?scope=${encodeURIComponent(scope)}`
+                + `&limit=${limit}&offset=${offset}`
+                + `&q=${encodeURIComponent(q)}`
+                + `&from=${encodeURIComponent(from)}`
+                + `&to=${encodeURIComponent(to)}`;
+
+            console.log("[admin-log] request url:", url);
+
+            const slice = await apiJson(url); // { items, hasNext, limit, offset }
+
+            const rows = slice.items;
+            render(rows);
+
+            const current = Math.floor((slice.offset || 0) / (slice.limit || size));
+            const total = slice.hasNext ? current + 2 : current + 1;
+            renderPaging(current, Math.min(total, 5));
+        }
+
+        async function toggleFolderDetail(btn) {
+            const tr = btn.closest("tr");
+            const next = tr.nextElementSibling;
+
+            // 열려있으면 닫기
+            if (next && next.classList.contains("child-row")) {
+                next.remove();
+                return;
+            }
+
+            const folderNo = btn.dataset.folderNo;
+            const batchId = btn.dataset.batchId;
+
+            // 안전장치
+            if (!folderNo || !batchId) {
+                const detailTr = document.createElement("tr");
+                detailTr.className = "child-row";
+                detailTr.innerHTML = `<td colspan="6"><div class="muted">상세 조회에 필요한 값이 없습니다.</div></td>`;
+                tr.insertAdjacentElement("afterend", detailTr);
+                return;
+            }
+
+            const detailTr = document.createElement("tr");
+            detailTr.className = "child-row";
+            detailTr.innerHTML = `<td colspan="6">불러오는 중...</td>`;
+            tr.insertAdjacentElement("afterend", detailTr);
+
+            try {
+                const items = await apiJson(
+                    `/api/v1/cloud/trash/admin-log/children?batchId=${encodeURIComponent(batchId)}&folderNo=${encodeURIComponent(folderNo)}`
+                );
+
+                if (!items || items.length === 0) {
+                    detailTr.innerHTML = `<td colspan="6"><div class="muted">하위 항목이 없습니다.</div></td>`;
+                    return;
+                }
+
+                const html = items.map(x => {
+                    const isFolder = String(x.itemType || "").toUpperCase() === "FOLDER";
+                    return `
+        <div class="child-item">
+          <div class="icon">${isFolder ? "📁" : "📄"}</div>
+          <div class="name">${x.itemName || "-"}</div>
+        </div>
+      `;
+                }).join("");
+
+                detailTr.innerHTML = `<td colspan="6"><div class="child-list">${html}</div></td>`;
+            } catch (e) {
+                detailTr.innerHTML = `<td colspan="6"><div class="muted">상세 조회 실패: ${e.message}</div></td>`;
+            }
+        }
+
+        // 조회 버튼
+        el.btnSearch?.addEventListener("click", () => {
+            loadLogs(0).catch(e => alert(e.message));
+        });
+
+        // 초기 로딩: 최근 7일
+        window.addEventListener("DOMContentLoaded", () => {
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(today.getDate() - 7);
+
+            const fmtYMD = (d) => {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, "0");
+                const dd = String(d.getDate()).padStart(2, "0");
+                return `${yyyy}-${mm}-${dd}`;
+            };
+
+            el.fromDate.value = fmtYMD(weekAgo);
+            el.toDate.value = fmtYMD(today);
+
+            loadLogs(0).catch(e => alert(e.message));
+        });
+
+    </script>
+</th:block>
+
+</body>
+</html>
+
+
