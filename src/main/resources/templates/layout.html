@@ -355,6 +355,23 @@
         }
         .read-all-btn:hover, .chatbot-btn:hover { background: #dbeafe; }
 
+        .delete-all-btn {
+            font-size: 11px;
+            font-weight: 800;
+            color: #ef4444;
+            background: #fef2f2;
+            border: 1px solid #fee2e2;
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .delete-all-btn:hover {
+            background: #fee2e2;
+            border-color: #fecaca;
+        }
+
         .noti-body { flex: 1; overflow: hidden; }
         .noti-iframe { width: 100%; height: 100%; border: none; }
         .noti-close-btn { border:0; background:transparent; cursor:pointer; font-size:20px; color:#6b7280; }
@@ -906,7 +923,8 @@
     <div class="noti-head">
         <div class="noti-head-left">
             <span>알림 센터</span>
-            <button type="button" class="read-all-btn" onclick="readAllInIframe()">모두 읽기</button>
+            <button type="button" class="read-all-btn" onclick="readAllInIframe()">전체 읽기</button>
+            <button type="button" class="delete-all-btn" onclick="deleteAllInIframe()">전체 삭제</button>
         </div>
         <button class="noti-close-btn" type="button" onclick="toggleNoti(false)">×</button>
     </div>
@@ -968,7 +986,7 @@
         setTimeout(() => {
             toast.style.opacity = '0';
             setTimeout(() => toast.remove(), 500);
-        }, 6500);
+        }, 4000);
     }
 
     function toggleNoti(force) {
@@ -989,6 +1007,15 @@
             await iframe.contentWindow.readAllNotifications();
         }
     }
+
+    async function deleteAllInIframe() {
+        const iframe = document.getElementById('notiIframe');
+        if (iframe && iframe.contentWindow.deleteAllNotifications) {
+            await iframe.contentWindow.deleteAllNotifications();
+        }
+    }
+
+
 
     async function initNotificationSystem() {
         const empId = document.getElementById('me')?.dataset?.empNo;
