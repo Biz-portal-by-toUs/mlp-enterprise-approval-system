@@ -128,7 +128,7 @@
             <div class="ms-toolbar">
                 <div class="ms-toolbar-left">
                     <div class="ms-searchWrap">
-                        <input id="keyword" class="ms-searchInput" type="text" placeholder="제목 검색"/>
+                        <input id="keyword" class="ms-searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
                     </div>
 
                     <!-- 기간(from/to) -->
@@ -175,6 +175,7 @@
             <script>
                 // ===== constants =====
                 const PAGE_SIZE = 10;
+                const KEYWORD_MAX = 50;
 
                 // ===== common utils =====
                 function getCsrfHeaders(){
@@ -182,6 +183,11 @@
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
                     return {};
+                }
+
+                function clampKeyword(s){
+                    const v = (s || '').trim();
+                    return v.length > KEYWORD_MAX ? v.slice(0, KEYWORD_MAX) : v;
                 }
 
                 function todayYmd(){
@@ -471,7 +477,7 @@
                 async function load(){
                     const st = getState();
 
-                    document.getElementById('keyword').value = st.keyword;
+                    document.getElementById('keyword').value = clampKeyword(st.keyword);
                     document.getElementById('from').value = st.from;
                     document.getElementById('to').value = st.to;
 
@@ -495,7 +501,8 @@
                 document.getElementById('btnSearch').addEventListener('click', () => {
                     syncDateConstraints();
 
-                    const keyword = (document.getElementById('keyword').value || '').trim();
+                    const keyword = clampKeyword(document.getElementById('keyword').value);
+                    document.getElementById('keyword').value = keyword;
                     const from = (document.getElementById('from').value || '').trim();
                     const to = (document.getElementById('to').value || '').trim();
 
@@ -508,6 +515,12 @@
                         e.preventDefault();
                         document.getElementById('btnSearch').click();
                     }
+                });
+
+                document.getElementById('keyword').addEventListener('input', () => {
+                    const el = document.getElementById('keyword');
+                    const v = clampKeyword(el.value);
+                    if (el.value !== v) el.value = v;
                 });
 
                 document.getElementById('from').addEventListener('change', () => {
