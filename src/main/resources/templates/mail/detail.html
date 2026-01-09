@@ -207,13 +207,17 @@
 
                 // Tiptap JSON -> HTML 렌더러
                 async function renderTiptap(jsonOrString) {
-                    // ✅ 다른 페이지와 버전 통일하고 싶으면 2.11.5로 바꿔도 됨
-                    const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.2');
-                    const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.2')).default;
+                    const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.5');
+                    const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.5')).default;
 
-                    const doc = (typeof jsonOrString === 'string')
-                        ? JSON.parse(jsonOrString)
-                        : jsonOrString;
+                    let doc = jsonOrString;
+
+                    if (typeof jsonOrString === 'string') {
+                        const s = jsonOrString.trim();
+                        if (!s) return '';
+                        try { doc = JSON.parse(s); }
+                        catch { return escapeHtml(s); }
+                    }
 
                     return generateHTML(doc, [StarterKit]);
                 }
@@ -222,7 +226,7 @@
                     if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
 
                     const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
-                    const names = Array.isArray(data.receiverEmpNames) ? data.receiverEmpNames : null;
+                    const names = Array.isArray(data.receiverNames) ? data.receiverNames : null;
 
                     if (ids && ids.length){
                         if (names && names.length === ids.length){
@@ -260,7 +264,9 @@
 
                     if (role === 'SENDER') {
                         partyLabelEl.textContent = '수신인';
-                        partyTxtEl.textContent = buildReceiversText(data);
+                        partyTxtEl.textContent = (data.receivers && String(data.receivers).trim())
+                            ? String(data.receivers).trim()
+                            : '-';
                     } else {
                         partyLabelEl.textContent = '발신인';
                         partyTxtEl.textContent =

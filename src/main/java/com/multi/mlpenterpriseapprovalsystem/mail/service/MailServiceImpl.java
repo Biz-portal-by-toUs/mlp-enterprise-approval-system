@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.util.*;
+import java.util.stream.*;
 
 @Service
 @RequiredArgsConstructor
@@ -212,14 +213,14 @@ public class MailServiceImpl implements MailService {
     private ResMailDetailDto buildDetailDtoFromState(MailUserState mus) {
         Mail mail = mus.getMail();
 
-        String receivers = null;
+        String receiversText = null;
+        List<String> receiverEmpIds = null;
+        List<String> receiverNames = null;
+
         if (mus.getRole() == MailRole.SENDER) {
-            List<String> receiverDisplays =
-                    mailUserStateRepository.findRecipientDisplayByMailNo(mail.getMailNo());
-            receivers = receiverDisplays.stream()
-                    .distinct()
-                    .reduce((a, b) -> a + ", " + b)
-                    .orElse("");
+            receiverEmpIds = mailUserStateRepository.findRecipientEmpIdsByMailNo(mail.getMailNo());
+            receiverNames = mapEmpIdsToNames(receiverEmpIds);
+            receiversText = buildReceiversText(receiverEmpIds);
         }
 
         return new ResMailDetailDto(
@@ -230,7 +231,9 @@ public class MailServiceImpl implements MailService {
                 null,
                 mail.getSender().getEmpId(),
                 mail.getSender().getEmpName(),
-                receivers,
+                receiversText,
+                receiverEmpIds,
+                receiverNames,
                 mus.getRole(),
                 Boolean.TRUE.equals(mus.getIsRead()),
                 Boolean.TRUE.equals(mus.getIsPrior()),
@@ -322,8 +325,14 @@ public class MailServiceImpl implements MailService {
         Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
 
-        // TEXT -> List<String>
+        // empId 목록 (draftReceivers TEXT -> List)
         List<String> receiverEmpIds = splitEmpIds(mail.getDraftReceivers());
+
+        // empName 목록 (IN 한방)
+        List<String> receiverNames = mapEmpIdsToNames(receiverEmpIds);
+
+        // UI 표시용 문자열
+        String receiversText = buildReceiversText(receiverEmpIds);
 
         return new ResMailDraftDetailDto(
                 mail.getMailNo(),
@@ -331,7 +340,9 @@ public class MailServiceImpl implements MailService {
                 mail.getTitle(),
                 mail.getCntt(),
                 mail.getSavedAt(),
-                receiverEmpIds
+                receiverEmpIds,
+                receiverNames,
+                receiversText
         );
     }
 
@@ -483,5 +494,33 @@ public class MailServiceImpl implements MailService {
                 .filter(s -> !s.isBlank())
                 .distinct()
                 .toList();
+    }
+
+    private List<String> mapEmpIdsToNames(List<String> empIds) {
+        if (empIds == null || empIds.isEmpty()) return List.of();
+
+        Map<String, String> nameMap = employeeRepository.findByEmpIdIn(empIds).stream()
+                .collect(Collectors.toMap(Employee::getEmpId, Employee::getEmpName));
+
+        return empIds.stream()
+                .map(id -> nameMap.getOrDefault(id, id))
+                .toList();
+    }
+
+    private String buildReceiversText(List<String> empIds) {
+        if (empIds == null || empIds.isEmpty()) return "";
+
+        // empIds -> nameMap (IN 한방)
+        Map<String, String> nameMap = employeeRepository.findByEmpIdIn(empIds).stream()
+                .collect(Collectors.toMap(Employee::getEmpId, Employee::getEmpName, (a, b) -> a));
+
+        return empIds.stream()
+                .map(id -> {
+                    String nm = nameMap.getOrDefault(id, "");
+                    String label = (nm == null || nm.isBlank()) ? "" : nm.trim();
+                    return label.isBlank() ? id : (label + "(" + id + ")");
+                })
+                .distinct()
+                .collect(Collectors.joining(", "));
     }
 }
