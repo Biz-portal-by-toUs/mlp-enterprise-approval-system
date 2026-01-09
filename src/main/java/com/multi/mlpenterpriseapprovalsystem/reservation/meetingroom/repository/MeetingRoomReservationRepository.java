@@ -37,4 +37,20 @@ public interface MeetingRoomReservationRepository extends JpaRepository<MeetingR
                               @Param("endedAt") LocalDateTime endedAt);
 
     List<MeetingRoomReservation> findAllByCompany_ComIdAndResvEmp_EmpIdAndStartedAtBetween(String comId, String empId, LocalDateTime from, LocalDateTime toExclusive);
+
+    @Query("""
+    select distinct r
+    from MeetingRoomReservation r
+    join MeetingRoomAttendee a
+      on a.meetingRoomReservation = r
+    where r.company.comId = :comId
+      and a.employee.empId = :empId
+      and r.startedAt between :from and :toExclusive
+""")
+    List<MeetingRoomReservation> findAllAttendingByEmp(
+            @Param("comId") String comId,
+            @Param("empId") String empId,
+            @Param("from") LocalDateTime from,
+            @Param("toExclusive") LocalDateTime toExclusive
+    );
 }

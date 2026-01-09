@@ -16,4 +16,6 @@ import java.util.List;
 
 public interface MeetingRoomAttendeeRepository extends JpaRepository<MeetingRoomAttendee, Long> {
     List<MeetingRoomAttendee> findAllByMeetingRoomReservation_MeetingResvNo(Long meetingResvNo);
+
+    List<MeetingRoomAttendee> findAllByMeetingRoomReservation_MeetingResvNoIn(List<Long> meetingResvNos);
 }

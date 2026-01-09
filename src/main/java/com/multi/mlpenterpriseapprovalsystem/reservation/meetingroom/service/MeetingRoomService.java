@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.service.S3UrlService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.dto.ReqMeetingRoomDto;
@@ -19,12 +20,15 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,17 +52,20 @@ public class MeetingRoomService {
     private final MeetingRoomRepository meetingRoomRepository;
     private final CompanyRepository companyRepository;
 
-    @Value("${image.image-dir}")  // 서버의 실제 저장 위치
-    private String IMAGE_DIR;
-    @Value("${image.image-url}")  // 브라우저에서 접근하는 주소
-    private String IMAGE_URL;
+    private final S3Client s3Client;
+    private final S3UrlService s3UrlService;
 
+    @Value("${app.s3.bucket}")
+    private String bucket;
+
+    @Value("${app.s3.env}")
+    private String env;
+
+    @Transactional(readOnly = true)
     public ResMeetingRoomDto getMeetingRoom(Long roomNo, CustomUser user) {
-
         MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
 
-        // 같은 회사인지 체크
         if (!meetingRoom.getCompany().getComId().equals(user.getComId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
@@ -68,138 +75,78 @@ public class MeetingRoomService {
                 .roomName(meetingRoom.getRoomName())
                 .capacity(meetingRoom.getCap())
                 .location(meetingRoom.getLoc())
-                .imageUrl(meetingRoom.getImgUrl())
+                // ✅ objectKey -> presigned url
+                .imageUrl(toImageUrl(meetingRoom.getImgUrl()))
                 .equipList(meetingRoom.getEquipList())
                 .note(meetingRoom.getNote())
                 .build();
     }
 
-
-
     @Transactional(readOnly = true)
     public Page<ResMeetingRoomDto> selectMeetingRoomsWithPaging(String comId, Pageable pageable) {
-        // 반환 타입이 Page<ResMeetingRoomDto>인 이유는 데이터 뿐만 아니라 totalPages, totalElements, first/last 같은 페이지 정보도 같이 주려고
         Page<MeetingRoom> meetingRooms = meetingRoomRepository.findByCompany_ComId(comId, pageable);
 
-        // Entity -> Response DTO로 변환 (Page.map()은 Page 형태 유지하면서 내부 요소만 변환)
         return meetingRooms.map(meetingRoom -> ResMeetingRoomDto.builder()
                 .roomNo(meetingRoom.getRoomNo())
                 .comId(meetingRoom.getCompany().getComId())
                 .roomName(meetingRoom.getRoomName())
                 .capacity(meetingRoom.getCap())
                 .location(meetingRoom.getLoc())
-                .imageUrl(meetingRoom.getImgUrl())
+                // ✅ objectKey -> presigned url
+                .imageUrl(toImageUrl(meetingRoom.getImgUrl()))
                 .equipList(meetingRoom.getEquipList())
                 .note(meetingRoom.getNote())
                 .build());
     }
 
     public Long registerMeetingRoom(CustomUser user, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
-
-        // 1. 권한 체크
-        boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a ->
-                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
-                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
-                                a.getAuthority().equals("ROLE_THR_ADMIN")
-                );
-
-        if (!isAdmin) {
-            throw new CustomException(
-                    ErrorCode.FORBIDDEN
-            );
-        }
+        boolean isAdmin = isAdmin(user);
+        if (!isAdmin) throw new CustomException(ErrorCode.FORBIDDEN);
 
         String comId = user.getComId();
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
-        if (meetingRoomRepository.existsByCompany_ComIdAndRoomName(
-                comId,
-                meetingRoomDto.getRoomName()
-        )) {
+        if (meetingRoomRepository.existsByCompany_ComIdAndRoomName(comId, meetingRoomDto.getRoomName())) {
             throw new CustomException(ErrorCode.DUPLICATE_MEETING_ROOM_NAME);
         }
 
-        String savedUrl = null;
-
-        // 이미지 파일이 있을 때
-        if (imageFile != null && !imageFile.isEmpty()) {
-            try {
-                // 확장자 추출(.jpg, .png 등)
-                String ext = Optional.ofNullable(imageFile.getOriginalFilename())
-                        .filter(f -> f.contains("."))
-                        .map(f -> f.substring(f.lastIndexOf(".")))
-                        .orElse("");
-
-                // UUID로 파일명 생성(중복 방지)
-                String fileName = UUID.randomUUID() + ext;
-
-                // 저장 경로 생성: IMAGE_DIR + fileName
-                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);  // imageDir = C:/.../uploads
-
-                // uploads 폴더 없으면 생성(있으면 그냥 통과)
-                Files.createDirectories(savePath.getParent());
-
-                // 실제 파일 저장(디스크에 write)
-                imageFile.transferTo(savePath.toFile());
-
-                // 브라우저에서 접근할 URL 생성(정적 리소스 매핑 필요)
-                savedUrl = IMAGE_URL + "/" + fileName; // imageUrl = http://localhost:8090/uploads
-            } catch (IOException e) {
-                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
-            }
-        }
-
-        // 요청 DTO 값으로 MeetingRoom 엔티티 생성 (회사 FK 포함)
+        // 1) 먼저 저장해서 roomNo 확보
         MeetingRoom meetingRoom = MeetingRoom.builder()
                 .company(company)
                 .roomName(meetingRoomDto.getRoomName())
                 .cap(meetingRoomDto.getCapacity())
                 .loc(meetingRoomDto.getLocation())
-                .imgUrl(savedUrl)
+                .imgUrl(null) // ✅ DB에는 objectKey 저장
                 .equipList(meetingRoomDto.getEquipList())
                 .note(meetingRoomDto.getNote())
                 .build();
 
-        return meetingRoomRepository.save(meetingRoom).getRoomNo();
+        MeetingRoom saved = meetingRoomRepository.save(meetingRoom);
+
+        // 2) 이미지 있으면 S3 업로드 후 objectKey 저장
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String key = uploadMeetingRoomImageToS3(comId, saved.getRoomNo(), imageFile);
+            saved.changeImageUrl(key);
+        }
+
+        return saved.getRoomNo();
     }
 
     public Long updateMeetingRoom(Long roomNo, CustomUser user, ReqMeetingRoomDto meetingRoomDto, MultipartFile imageFile) {
+        if (!isAdmin(user)) throw new CustomException(ErrorCode.FORBIDDEN);
 
-        // 1. 권한 체크
-        boolean isAdmin = user.getAuthorities().stream()
-                .anyMatch(a ->
-                        a.getAuthority().equals("ROLE_COM_ADMIN") ||
-                                a.getAuthority().equals("ROLE_SEC_ADMIN") ||
-                                a.getAuthority().equals("ROLE_THR_ADMIN")
-                );
-
-        if (!isAdmin) {
-            throw new CustomException(
-                    ErrorCode.FORBIDDEN
-            );
-        }
-
-        // 수정할 회의실 조회
         MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
 
-        // 같은 회사 데이터인지 검증(보안)
         String comId = user.getComId();
         if (!meetingRoom.getCompany().getComId().equals(comId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
         String newName = meetingRoomDto.getRoomName();
-
         if (!meetingRoom.getRoomName().equals(newName)) {
-            // 이름 변경 시에만 중복 검사
-            if (meetingRoomRepository.existsByCompany_ComIdAndRoomNameAndRoomNoNot(
-                    comId,
-                    newName,
-                    roomNo
-            )) {
+            if (meetingRoomRepository.existsByCompany_ComIdAndRoomNameAndRoomNoNot(comId, newName, roomNo)) {
                 throw new CustomException(ErrorCode.DUPLICATE_MEETING_ROOM_NAME);
             }
         }
@@ -207,44 +154,53 @@ public class MeetingRoomService {
         boolean isImageChanged = imageFile != null && !imageFile.isEmpty();
         boolean isInfoChanged = !isSame(meetingRoom, meetingRoomDto);
 
-        if (!isImageChanged && !isInfoChanged) {
-            // 변경 없음 → 그냥 바로 리턴
-            return meetingRoom.getRoomNo();
+        if (!isImageChanged && !isInfoChanged) return meetingRoom.getRoomNo();
+
+        if (isImageChanged) {
+            String oldKey = meetingRoom.getImgUrl();
+            String newKey = uploadMeetingRoomImageToS3(comId, meetingRoom.getRoomNo(), imageFile);
+            meetingRoom.changeImageUrl(newKey);
+
+            // ✅ 커밋 성공 후에만 oldKey 삭제
+            deleteAfterCommit(oldKey);
         }
 
-        // 이미지 파일이 있으면 새로 저장하고 imgUrl만 교체
-        if (imageFile != null && !imageFile.isEmpty()) {
-
-            // 확장자 추출
-            String ext = Optional.ofNullable(imageFile.getOriginalFilename())
-                    .filter(f -> f.contains("."))
-                    .map(f -> f.substring(f.lastIndexOf(".")))
-                    .orElse("");
-
-            // UUID 파일명 생성
-            String fileName = UUID.randomUUID() + ext;
-
-
-            try {
-                // 저장 경로 생성 및 디렉토리 생성
-                Path savePath = Paths.get(IMAGE_DIR).resolve(fileName);
-                Files.createDirectories(savePath.getParent());
-
-                // 실제 파일 저장
-                imageFile.transferTo(savePath.toFile());
-
-                // 접근 URL 생성 후 엔티티에 반영
-                String savedUrl = IMAGE_URL + "/" + fileName;
-                meetingRoom.changeImageUrl(savedUrl);
-            } catch (IOException e) {
-                throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
-            }
-        }
-
-        // 이미지 외의 필드(이름/인원/위치/장비/비고 등) 업데이트
         meetingRoom.updateInfo(meetingRoomDto);
-
         return meetingRoom.getRoomNo();
+    }
+
+    public void deleteMeetingRoom(Long roomNo) {
+        MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
+
+        // 권한 체크(기존 로직 유지)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        CustomUser user = (CustomUser) authentication.getPrincipal();
+        if (!isAdmin(user)) throw new CustomException(ErrorCode.FORBIDDEN);
+
+        if (!meetingRoom.getCompany().getComId().equals(user.getComId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        String key = meetingRoom.getImgUrl(); // objectKey
+        meetingRoomRepository.delete(meetingRoom);
+        deleteAfterCommit(key);
+    }
+
+    /* ===================== helpers ===================== */
+
+    private boolean isAdmin(CustomUser user) {
+        return user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role ->
+                        role.equals("ROLE_COM_ADMIN") ||
+                                role.equals("ROLE_SEC_ADMIN") ||
+                                role.equals("ROLE_THR_ADMIN")
+                );
     }
 
     private boolean isSame(MeetingRoom meetingRoom, ReqMeetingRoomDto dto) {
@@ -255,41 +211,86 @@ public class MeetingRoomService {
                 && Objects.equals(meetingRoom.getNote(), dto.getNote());
     }
 
+    private String uploadMeetingRoomImageToS3(String comId, Long roomNo, MultipartFile imageFile) {
+        if (imageFile == null || imageFile.isEmpty()) return null;
 
-    public void deleteMeetingRoom(Long roomNo) {
-
-        MeetingRoom meetingRoom = meetingRoomRepository.findById(roomNo)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_NOT_FOUND));
-
-        // 권한 체크
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        String contentType = imageFile.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         }
 
-        CustomUser user = (CustomUser) authentication.getPrincipal();
+        String original = Optional.ofNullable(imageFile.getOriginalFilename()).orElse("image");
+        String safeName = original.replaceAll("\\s+", "_")
+                .replaceAll("[\\\\/:*?\"<>|]", "_");
 
-        boolean canDelete = user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(role ->
-                        role.equals("ROLE_COM_ADMIN") ||
-                                role.equals("ROLE_SEC_ADMIN") ||
-                                role.equals("ROLE_THR_ADMIN")
-                );
+        String ext = "";
+        int dot = safeName.lastIndexOf('.');
+        if (dot > 0 && dot < safeName.length() - 1) ext = safeName.substring(dot);
 
-        if (!canDelete) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
+        String key = String.format("%s/%s/meeting-room/%d/%s%s",
+                env, comId, roomNo, UUID.randomUUID(), ext
+        );
+
+        try {
+            PutObjectRequest putReq = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(
+                    putReq,
+                    RequestBody.fromInputStream(imageFile.getInputStream(), imageFile.getSize())
+            );
+
+            return key;
+        } catch (IOException e) {
+            throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    private void deleteS3ObjectQuietly(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) return;
+
+        // ✅ 혹시 과거 데이터가 "http..." URL로 저장돼있다면 삭제 시도 안 함(안전장치)
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) return;
+
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(objectKey)
+                    .build());
+        } catch (Exception e) {
+            log.warn("[meeting-room] S3 delete failed. key={}", objectKey, e);
+        }
+    }
+
+    private String toImageUrl(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) return null;
+
+        // ✅ 과거 로컬/정적 URL이 남아있으면 그대로 내려주기(마이그레이션 전에도 깨지지 않게)
+        if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+            return objectKey;
         }
 
-        // 회사 체크
-        if (!meetingRoom.getCompany().getComId().equals(user.getComId())) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
+        return s3UrlService.presignGetUrl(objectKey);
+    }
+
+    private void deleteAfterCommit(String oldKey) {
+        if (oldKey == null || oldKey.isBlank()) return;
+
+        // 트랜잭션 동기화가 활성일 때만 afterCommit 등록
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            // 트랜잭션이 없으면 즉시 삭제(정책에 따라 그냥 return 해도 됨)
+            deleteS3ObjectQuietly(oldKey);
+            return;
         }
 
-        meetingRoomRepository.delete(meetingRoom);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteS3ObjectQuietly(oldKey);
+            }
+        });
     }
 }
-
-
