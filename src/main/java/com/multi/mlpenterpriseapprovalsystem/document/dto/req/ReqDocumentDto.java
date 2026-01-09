@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.dto.req;
 
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class ReqDocumentDto {
     private String docStat;
     private String myApprStat;
 
+    @Size(max = 100, message = "제목은 최대 100자까지 입력 가능합니다.")
     private String title;
     private String content;
     private String cnttHtml;
