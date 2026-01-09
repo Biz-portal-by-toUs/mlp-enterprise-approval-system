@@ -112,6 +112,25 @@
 
         .mt-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
 
+        th.mt-col-check, td.mt-col-check{width:56px;}
+        .mt-check{
+            width:16px;height:16px;
+            accent-color: var(--primary);
+            cursor:pointer;
+        }
+        .mt-check:disabled{opacity:.6;cursor:not-allowed;}
+
+        .mt-countBar{
+            display:flex;
+            justify-content:flex-end;
+            margin: 6px 0 12px;
+        }
+        .mt-countPill{
+            font-size:14px;
+            font-weight:900;
+            color:var(--primary);
+        }
+
         @media (max-width:760px){
             .mt-pager-status{position:static;margin-left:10px;}
             th.mt-col-act, td.mt-col-act{width:190px;}
@@ -127,29 +146,28 @@
 
         <main class="page-main">
             <div class="mt-toolbar">
-                <div class="mt-toolbar-left">
-                    <select id="size" class="mt-select">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                    </select>
-
-                    <button class="mt-btn ghost" id="btnSearch" type="button">조회</button>
+                <div class="mt-toolbar">
+                    <div class="mt-toolbar-left">
+                        <button class="mt-btn ghost" id="btnBulkRestore" type="button" disabled>복구</button>
+                        <button class="mt-btn ghost danger" id="btnBulkPurge" type="button" disabled>삭제</button>
+                    </div>
+                    <div class="mt-toolbar-right"></div>
                 </div>
 
-                <!-- 필요하면 우측 영역 확장 가능 -->
-                <div class="mt-toolbar-right"></div>
+            </div>
+            <div class="mt-countBar">
+                <div id="countPill" class="mt-countPill">0건</div>
             </div>
 
             <section class="mt-tableWrap">
                 <table class="mt-mailTable">
                     <thead>
                     <tr>
-                        <th class="mt-col-no">번호</th>
+                        <th class="mt-col-check">
+                            <input id="checkAll" class="mt-check" type="checkbox" aria-label="전체 선택"/>
+                        </th>
                         <th>제목</th>
-                        <th>보낸사람</th>
                         <th class="mt-col-date">삭제일</th>
-                        <th class="mt-col-act">작업</th>
                     </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
@@ -158,14 +176,10 @@
 
             <div class="mt-pager-wrapper">
                 <div id="pagerControls" class="mt-pager"></div>
-
-                <div class="mt-pager-status">
-                    <span id="countPill" style="font-size:14px; font-weight:900; color:var(--primary)">0건</span>
-                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
-                </div>
             </div>
 
             <script>
+                // ===== csrf / common =====
                 function getCsrfHeaders(){
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
@@ -197,6 +211,37 @@
                         .replaceAll("'","&#039;");
                 }
 
+                // ===== selection / bulk =====
+                function getSelectedMailNos(){
+                    return Array.from(document.querySelectorAll('.rowCheck:checked'))
+                        .map(cb => cb.dataset.mailNo)
+                        .filter(Boolean);
+                }
+
+                function syncHeaderCheck(){
+                    const all = document.getElementById('checkAll');
+                    const rows = Array.from(document.querySelectorAll('.rowCheck'));
+                    const checked = rows.filter(r => r.checked);
+
+                    if (rows.length === 0){
+                        all.checked = false;
+                        all.indeterminate = false;
+                        all.disabled = true;
+                        return;
+                    }
+
+                    all.disabled = false;
+                    all.checked = checked.length === rows.length;
+                    all.indeterminate = checked.length > 0 && checked.length < rows.length;
+                }
+
+                function syncBulkUi(){
+                    const has = getSelectedMailNos().length > 0;
+                    document.getElementById('btnBulkRestore').disabled = !has;
+                    document.getElementById('btnBulkPurge').disabled = !has;
+                }
+
+                // ===== pager =====
                 function buildPager(page, totalPages, onGo){
                     const pager = document.getElementById('pagerControls');
                     pager.innerHTML = '';
@@ -211,7 +256,7 @@
                         return b;
                     };
 
-                    const current = page;
+                    const current = page; // 0-base
                     const last = Math.max(totalPages - 1, 0);
 
                     pager.appendChild(mkBtn('«', 0, current === 0, false));
@@ -228,6 +273,7 @@
                     pager.appendChild(mkBtn('»', last, current === last, false));
                 }
 
+                // ===== network =====
                 async function fetchJson(url){
                     const res = await fetch(url, { credentials:'include', headers:{ 'Accept':'application/json' }});
                     const json = await res.json().catch(()=> null);
@@ -253,11 +299,12 @@
                     return json?.data;
                 }
 
+                // ===== state (URL) =====
                 function getState(){
                     const params = new URLSearchParams(location.search);
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
-                        size: parseInt(params.get('size') || document.getElementById('size').value || '20', 10),
+                        size: Math.max(parseInt(params.get('size') || '20', 10), 1),
                     };
                 }
 
@@ -268,98 +315,130 @@
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
-                function renderRows(items, page, size, totalElements){
+                // ===== render =====
+                function renderRows(items){
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
+                    // 페이지 바뀔 때 선택 초기화(네가 말한 "초기화는 검색조건만"과 별개로,
+                    // 페이지 이동은 UX상 선택 유지가 애매해서 여기서는 초기화 유지)
+                    const checkAll = document.getElementById('checkAll');
+                    checkAll.checked = false;
+                    checkAll.indeterminate = false;
+
                     if (!items || items.length === 0){
-                        tb.innerHTML = `<tr><td colspan="5" style="padding:18px; color:#64748b; font-weight:900;">휴지통이 비어 있습니다.</td></tr>`;
+                        tb.innerHTML = `<tr><td colspan="3" style="padding:18px; color:#64748b; font-weight:900;">휴지통이 비어 있습니다.</td></tr>`;
+                        syncHeaderCheck();
+                        syncBulkUi();
                         return;
                     }
 
-                    items.forEach((it, idx) => {
-                        const num = totalElements - (page * size) - idx;
+                    items.forEach((it) => {
                         const title = escapeHtml(it.title);
-                        const senderName = escapeHtml(it.senderEmpName);
-                        const senderId = escapeHtml(it.senderEmpId);
                         const deletedAt = fmtDate(it.deletedAt);
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-        <td class="mt-col-no">${num}</td>
-        <td class="mt-col-title"><a class="mt-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}?box=trash">${title}</a></td>
-        <td>${senderName} (${senderId})</td>
-        <td class="mt-col-date">${deletedAt}</td>
-        <td class="mt-col-act">
-          <div class="mt-row-actions">
-            <button type="button" data-act="restore">복원</button>
-            <button type="button" class="danger" data-act="purge">완전삭제</button>
-          </div>
-        </td>
-      `;
+                            <td class="mt-col-check">
+                              <input class="mt-check rowCheck"
+                                     type="checkbox"
+                                     data-mail-no="${escapeHtml(it.mailNo)}"
+                                     aria-label="메일 선택"/>
+                            </td>
+                            <td class="mt-col-title">
+                              <a class="mt-titleLink" href="/mail/${encodeURIComponent(it.mailNo)}?box=trash">${title}</a>
+                            </td>
+                            <td class="mt-col-date">${deletedAt}</td>
+                          `;
 
                         tr.addEventListener('click', (e) => {
-                            const act = e.target?.getAttribute?.('data-act');
-                            if (act) return;
-                            if (e.target && e.target.tagName === 'A') return;
+                            if (e.target && (e.target.tagName === 'A' || e.target.closest('.rowCheck'))) return;
                             location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
                         });
 
-                        tr.querySelector('[data-act="restore"]').addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            await api('PATCH', `/api/v1/mails/${encodeURIComponent(it.mailNo)}/restore`);
-                            load().catch(console.error);
-                        });
-
-                        tr.querySelector('[data-act="purge"]').addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                            await api('DELETE', `/api/v1/mails/${encodeURIComponent(it.mailNo)}/purge`);
-                            load().catch(console.error);
+                        const rowCb = tr.querySelector('.rowCheck');
+                        rowCb.addEventListener('change', () => {
+                            tr.classList.toggle('is-selected', rowCb.checked);
+                            syncHeaderCheck();
+                            syncBulkUi();
                         });
 
                         tb.appendChild(tr);
                     });
+
+                    syncHeaderCheck();
+                    syncBulkUi();
                 }
 
+                // ===== core load =====
                 async function load(){
                     const st = getState();
-                    document.getElementById('size').value = String(st.size);
-
                     const url = `/api/v1/mails/trash?page=${st.page}&size=${st.size}&sort=deletedAt,desc`;
                     const data = await fetchJson(url);
 
                     const items = data.content || [];
-                    renderRows(items, data.number ?? st.page, data.size ?? st.size, data.totalElements ?? items.length);
+                    renderRows(items);
 
                     document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
-                    document.getElementById('pageInfo').textContent =
-                        `page ${(data.number ?? 0) + 1} / ${Math.max(data.totalPages ?? 1, 1)}`;
 
-                    buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
+                    buildPager(data.number ?? st.page, data.totalPages ?? 1, (p) => {
                         setUrlState({ page:p, size:st.size });
                         load().catch(console.error);
                     });
                 }
 
-                // 조회 버튼: 검색이 없으니 "첫 페이지로 + 새로고침" 역할
-                document.getElementById('btnSearch').addEventListener('click', () => {
-                    const size = parseInt(document.getElementById('size').value, 10);
-                    setUrlState({ page:0, size });
-                    load().catch(console.error);
+                // ===== events =====
+                document.getElementById('checkAll').addEventListener('change', (e) => {
+                    const checked = e.target.checked;
+                    document.querySelectorAll('.rowCheck').forEach(cb => {
+                        cb.checked = checked;
+                        cb.closest('tr')?.classList.toggle('is-selected', checked);
+                    });
+                    syncHeaderCheck();
+                    syncBulkUi();
                 });
 
-                document.getElementById('size').addEventListener('change', () => {
-                    const size = parseInt(document.getElementById('size').value, 10);
-                    setUrlState({ page:0, size });
-                    load().catch(console.error);
+                document.getElementById('btnBulkRestore').addEventListener('click', async () => {
+                    const mailNos = getSelectedMailNos();
+                    if (mailNos.length === 0) return;
+
+                    try{
+                        await Promise.all(mailNos.map(no =>
+                            api('PATCH', `/api/v1/mails/${encodeURIComponent(no)}/restore`)
+                        ));
+                        await load();
+                    }catch(err){
+                        console.error(err);
+                        alert('복구에 실패했습니다.');
+                    }
+                });
+
+                document.getElementById('btnBulkPurge').addEventListener('click', async () => {
+                    const mailNos = getSelectedMailNos();
+                    if (mailNos.length === 0) return;
+
+                    if (!confirm(`선택한 ${mailNos.length}건을 완전 삭제하면 복구할 수 없습니다. 진행할까요?`)) return;
+
+                    try{
+                        await Promise.all(mailNos.map(no =>
+                            api('DELETE', `/api/v1/mails/${encodeURIComponent(no)}/purge`)
+                        ));
+                        await load();
+                    }catch(err){
+                        console.error(err);
+                        alert('삭제에 실패했습니다.');
+                    }
                 });
 
                 window.addEventListener('DOMContentLoaded', () => {
                     load().catch(err => {
                         console.error(err);
                         document.getElementById('tbody').innerHTML =
-                            `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                            `<tr><td colspan="3" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('countPill').textContent = `0건`;
+                        // 페이저 비우기
+                        const pager = document.getElementById('pagerControls');
+                        if (pager) pager.innerHTML = '';
                     });
                 });
             </script>

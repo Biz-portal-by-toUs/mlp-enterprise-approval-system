@@ -162,4 +162,13 @@ where mus.user.empId = :empId
   )
 """)
     long countUnreadInboxOnly(@Param("empId") String empId);
+
+    @Query("""
+        select mus.user.empId
+        from MailUserState mus
+        where mus.mail.mailNo = :mailNo
+          and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
+        order by mus.user.empName asc
+    """)
+    List<String> findRecipientEmpIdsByMailNo(@Param("mailNo") Long mailNo);
 }

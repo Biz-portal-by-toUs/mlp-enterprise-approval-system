@@ -18,7 +18,7 @@ public interface MailService {
 
     Page<ResMailListDto> getTrash(String userEmpId, Pageable pageable);
 
-    // ✅ 상세/상태: mailNo 기준
+    // 상세/상태: mailNo 기준
     ResMailDetailDto getDetail(Long mailNo, String viewerEmpId);
 
     void markAsRead(Long mailNo, String userEmpId);
@@ -43,6 +43,8 @@ public interface MailService {
     void deleteDraft(String mailId, String senderEmpId);
 
     ResMailSendDto sendDraft(String mailId, String senderEmpId, ReqMailDraftSendDto req);
+
+    ResMailReplyPayloadDto getReplyPayload(Long mailNo, String viewerEmpId);
 
     long countUnreadInbox(String empId);
 }

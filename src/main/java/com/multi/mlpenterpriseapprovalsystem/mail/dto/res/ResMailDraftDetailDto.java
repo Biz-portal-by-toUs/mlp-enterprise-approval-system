@@ -16,5 +16,7 @@ public record ResMailDraftDetailDto(
         String title,
         String cnttJson,
         LocalDateTime savedAt,
-        List<String> receiverEmpIds
+        List<String> receiverEmpIds,
+        List<String> receiverNames,
+        String receivers
 ) {}

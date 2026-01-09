@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.mail.dto.res;
 import com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole;
 
 import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * 메일 상세정보 반환 Dto
@@ -24,6 +25,8 @@ public record ResMailDetailDto(
         String senderEmpName,
 
         String receivers,
+        List<String> receiverEmpIds,
+        List<String> receiverNames,
 
         MailRole role,
         boolean isRead,

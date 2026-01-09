@@ -59,7 +59,7 @@
             box-shadow: 0 0 0 4px rgba(44, 92, 255, .10);
         }
 
-        /* ✅ 내게쓰기 토글 */
+        /* 내게쓰기 토글 */
         .mw-toggle {
             display: inline-flex;
             align-items: center;
@@ -69,7 +69,8 @@
             color: var(--fg);
             user-select: none;
         }
-        .mw-toggle input[type="checkbox"]{
+
+        .mw-toggle input[type="checkbox"] {
             width: 16px;
             height: 16px;
             accent-color: var(--primary);
@@ -96,6 +97,7 @@
             white-space: nowrap;
             -webkit-overflow-scrolling: touch;
         }
+
         .mw-toolbar::-webkit-scrollbar { height: 0; }
         .mw-toolbar { scrollbar-width: none; }
 
@@ -190,6 +192,7 @@
             color: #fff;
             transition: 0.15s;
         }
+
         .mw-btn:hover { filter: brightness(0.92); }
 
         .mw-btn.ghost {
@@ -216,7 +219,6 @@
             border-bottom: 1px solid rgba(15,23,42,.06);
             font-weight: 800;
             font-size: 13px;
-
             height: 48px;
             align-items: center;
         }
@@ -288,10 +290,8 @@
             border-radius:12px;
             box-shadow:0 10px 24px rgba(15,23,42,.10);
             overflow:hidden;
-
             max-height: 288px;
             overflow-y: auto;
-
             -webkit-overflow-scrolling: touch;
         }
 
@@ -315,7 +315,7 @@
                     window.__ME_EMP_ID = /*[[${#authentication.name}]]*/ '';
                 </script>
 
-                <!-- ✅ 내게쓰기 체크박스 (받는사람 라인에 같이) -->
+                <!-- 받는 사람 -->
                 <div class="mw-row">
                     <div class="mw-k">받는 사람</div>
                     <div style="position:relative;">
@@ -325,7 +325,7 @@
                                 내게쓰기
                             </label>
                             <div style="color:var(--mut); font-size:12px; font-weight:800;">
-                                내게쓰기 ON 시: 내게쓴메일 1건 + (다른 수신자 있으면) 일반메일 1건
+                                내게쓰기 ON 시: 수신자는 나만 가능(추가 불가)
                             </div>
                         </div>
 
@@ -344,16 +344,19 @@
                     </div>
                 </div>
 
+                <!-- 제목 -->
                 <div class="mw-row">
                     <div class="mw-k">제목</div>
                     <div>
                         <input id="title" class="mw-input" type="text" placeholder="제목 입력" maxlength="50">
-                        <div id="titleCounter" style="margin-top:6px; text-align:right; font-weight:900; color:var(--mut); font-size:12px;">
+                        <div id="titleCounter"
+                             style="margin-top:6px; text-align:right; font-weight:900; color:var(--mut); font-size:12px;">
                             0 / 50
                         </div>
                     </div>
                 </div>
 
+                <!-- 내용 -->
                 <div class="mw-row">
                     <div class="mw-k">내용</div>
                     <div>
@@ -401,18 +404,15 @@
                 <div id="err" class="mw-err"></div>
 
                 <div class="mw-actions">
-                    <button class="mw-btn ghost" type="button" onclick="history.back()">취소</button>
+                    <button class="mw-btn ghost" type="button" id="btnCancel">취소</button>
                     <button class="mw-btn ghost" type="button" id="btnDraft">임시저장</button>
                     <button class="mw-btn" type="button" id="btnSend">전송</button>
                 </div>
             </section>
 
-            <!-- 공통 유틸(중복 제거) -->
+            <!-- ✅ 공통 유틸(전역) -->
             <script>
-                const MAX_RECEIVERS = 5;
-                const RX_DD_MAX_VISIBLE = 6;
-
-                function getCsrfHeaders(){
+                function getCsrfHeaders() {
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
@@ -425,16 +425,16 @@
                     el.textContent = msg || '';
                 }
 
-                function escapeHtml(str){
+                function escapeHtml(str) {
                     return String(str ?? '')
-                        .replaceAll('&','&amp;')
-                        .replaceAll('<','&lt;')
-                        .replaceAll('>','&gt;')
-                        .replaceAll('"','&quot;')
-                        .replaceAll("'",'&#039;');
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#039;');
                 }
 
-                function escapeJs(str){
+                function escapeJs(str) {
                     return String(str ?? '')
                         .replaceAll('\\', '\\\\')
                         .replaceAll("'", "\\'")
@@ -449,35 +449,56 @@
                         .filter(Boolean);
                 }
 
-                function uniqueIds(list){
+                function uniqueIds(list) {
                     return Array.from(new Set((list || []).map(s => (s || '').trim()).filter(Boolean)));
                 }
 
-                // ✅ (추가) UI 토큰 목록과 “실제 발송 계획”을 분리
-                function buildSendPlan(){
+                function buildSendPlan() {
                     const selfChecked = !!document.getElementById('selfWrite')?.checked;
                     const me = (window.__ME_EMP_ID || '').trim();
-
-                    // hidden(#receivers) 기준(= UI 토큰)
                     const uiReceivers = uniqueIds(parseReceivers(document.getElementById('receivers').value));
-
-                    // 발송용 분리
-                    const wantSelf = selfChecked; // 정책: 체크박스가 ON이면 self 발송을 “항상” 한다
-                    const others = uiReceivers.filter(id => id !== me);
-
-                    return { selfChecked, me, uiReceivers, wantSelf, others };
+                    return { selfChecked, me, uiReceivers };
                 }
+
+                // ✅ 대기 유틸
+                function waitUntil(fn, { interval = 50, timeout = 8000 } = {}) {
+                    return new Promise((resolve) => {
+                        const start = Date.now();
+                        const t = setInterval(() => {
+                            try {
+                                if (fn()) { clearInterval(t); resolve(true); return; }
+                            } catch {}
+                            if (Date.now() - start > timeout) { clearInterval(t); resolve(false); }
+                        }, interval);
+                    });
+                }
+
+                // ✅ (중요) 답신→답신에서 원문 합쳐짐 방지: 중첩된 quote 제거 (전역!)
+                window.stripNestedQuotesFromHtml = function stripNestedQuotesFromHtml(html) {
+                    const s = String(html || '').trim();
+                    if (!s) return '';
+
+                    const temp = document.createElement('div');
+                    temp.innerHTML = s;
+
+                    // write/editor에서 생성한 quote wrapper들 제거
+                    temp.querySelectorAll('[data-locked-quote]').forEach(el => el.remove());
+                    temp.querySelectorAll('details[data-locked-quote]').forEach(el => el.remove());
+
+                    return temp.innerHTML.trim();
+                };
             </script>
 
-            <!-- TipTap: 표 기능 제외 -->
+            <!-- ✅ TipTap (module) -->
             <script type="module">
                 const LIMIT = 5000;
 
-                import {Editor} from "https://esm.sh/@tiptap/core@2.11.5";
+                import { Editor, Node } from "https://esm.sh/@tiptap/core@2.11.5";
                 import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
                 import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
                 import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
                 import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
+                import { generateHTML } from "https://esm.sh/@tiptap/html@2.11.5";
 
                 const hidden = document.getElementById("cnttJson");
                 const editorEl = document.getElementById("mailEditor");
@@ -490,16 +511,131 @@
 
                 charLimitEl.textContent = String(LIMIT);
 
+                // ✅ lockedQuote: write에서도 "원문 제목/발신자"까지 함께 접힘 (details)
+                const LockedQuote = Node.create({
+                    name: "lockedQuote",
+                    group: "block",
+                    atom: true,
+
+                    addAttributes() {
+                        return {
+                            title: { default: "" },
+                            sender: { default: "" },
+                            html: { default: "" },
+                        };
+                    },
+
+                    parseHTML() {
+                        return [{ tag: 'details[data-locked-quote="1"]' }];
+                    },
+
+                    renderHTML({ node }) {
+                        const title = String(node.attrs.title || "").trim();
+                        const sender = String(node.attrs.sender || "").trim();
+                        const html = String(node.attrs.html || "").trim();
+
+                        const sanitized = html.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+
+                        return [
+                            "details",
+                            {
+                                "data-locked-quote": "1",
+                                style: [
+                                    "border-left:4px solid #e2e8f0",
+                                    "background:#f8fafc",
+                                    "padding:12px",
+                                    "border-radius:10px",
+                                    "margin:12px 0",
+                                ].join(";"),
+                            },
+
+                            [
+                                "summary",
+                                {
+                                    style: [
+                                        "list-style:none",
+                                        "cursor:pointer",
+                                        "outline:none",
+                                    ].join(";"),
+                                },
+
+                                [
+                                    "div",
+                                    {
+                                        style: [
+                                            "display:grid",
+                                            "grid-template-columns:64px 1fr",
+                                            "row-gap:6px",
+                                            "column-gap:10px",
+                                            "margin-bottom:10px",
+                                            "font-size:12px",
+                                            "font-weight:900",
+                                        ].join(";"),
+                                    },
+                                    ["div", { style: "color:#64748b" }, "제목:"],
+                                    ["div", { style: "color:#0f172a; word-break:break-word" }, title || "-"],
+                                    ["div", { style: "color:#64748b" }, "발신자:"],
+                                    ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
+                                ],
+
+                                [
+                                    "div",
+                                    {
+                                        style: [
+                                            "display:flex",
+                                            "align-items:center",
+                                            "justify-content:space-between",
+                                            "gap:10px",
+                                            "margin:6px 0 0 0",
+                                        ].join(";"),
+                                    },
+                                    ["div", { style: "color:#64748b; font-weight:900; font-size:12px" }, "원문"],
+                                    [
+                                        "span",
+                                        {
+                                            style: [
+                                                "border:1px solid rgba(15,23,42,.12)",
+                                                "background:#fff",
+                                                "border-radius:999px",
+                                                "padding:6px 10px",
+                                                "font-size:12px",
+                                                "font-weight:900",
+                                                "color:#0f172a",
+                                                "user-select:none",
+                                            ].join(";"),
+                                        },
+                                        "열기/닫기",
+                                    ],
+                                ],
+                            ],
+
+                            [
+                                "div",
+                                {
+                                    style: [
+                                        "margin-top:10px",
+                                        "background:#fff",
+                                        "border-radius:10px",
+                                        "padding:10px 12px",
+                                    ].join(";"),
+                                },
+                                ["div", { "data-locked-quote-body": "1", "data-html": sanitized }, ""],
+                            ],
+                        ];
+                    },
+                });
+
                 const editor = new Editor({
                     element: editorEl,
                     extensions: [
                         StarterKit,
                         Underline,
-                        TextAlign.configure({types: ["heading", "paragraph"]}),
-                        CharacterCount.configure({limit: LIMIT}),
+                        TextAlign.configure({ types: ["heading", "paragraph"] }),
+                        CharacterCount.configure({ limit: LIMIT }),
+                        LockedQuote,
                     ],
-                    content: {type: "doc", content: [{type: "paragraph"}]},
-                    onCreate() { syncHidden(); refreshToolbar(); refreshCount(); },
+                    content: { type: "doc", content: [{ type: "paragraph" }] },
+                    onCreate() { syncHidden(); refreshToolbar(); refreshCount(); window.__MAIL_EDITOR_READY__ = true; },
                     onUpdate() { syncHidden(); refreshToolbar(); refreshCount(); },
                     onSelectionUpdate() { refreshToolbar(); }
                 });
@@ -526,10 +662,11 @@
                         strike: editor.isActive("strike"),
                         bulletList: editor.isActive("bulletList"),
                         orderedList: editor.isActive("orderedList"),
-                        alignLeft: editor.isActive({textAlign: "left"}) ||
+                        alignLeft:
+                            editor.isActive({ textAlign: "left" }) ||
                             (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
-                        alignCenter: editor.isActive({textAlign: "center"}),
-                        alignRight: editor.isActive({textAlign: "right"}),
+                        alignCenter: editor.isActive({ textAlign: "center" }),
+                        alignRight: editor.isActive({ textAlign: "right" }),
                     };
 
                     toolbar.querySelectorAll(".mw-tb-btn").forEach(btn => {
@@ -542,14 +679,14 @@
                         if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
                     });
 
-                    if (editor.isActive("heading", {level: 2})) headingSelect.value = "h2";
+                    if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
                     else headingSelect.value = "p";
                 }
 
                 headingSelect.addEventListener("change", () => {
                     const v = headingSelect.value;
                     const chain = editor.chain().focus();
-                    if (v === "h2") chain.setHeading({level: 2}).run();
+                    if (v === "h2") chain.setHeading({ level: 2 }).run();
                     else chain.setParagraph().run();
                     refreshToolbar();
                     syncHidden();
@@ -570,14 +707,11 @@
                         case "italic": chain.toggleItalic().run(); break;
                         case "underline": chain.toggleUnderline().run(); break;
                         case "strike": chain.toggleStrike().run(); break;
-
                         case "alignLeft": chain.setTextAlign("left").run(); break;
                         case "alignCenter": chain.setTextAlign("center").run(); break;
                         case "alignRight": chain.setTextAlign("right").run(); break;
-
                         case "bulletList": chain.toggleBulletList().run(); break;
                         case "orderedList": chain.toggleOrderedList().run(); break;
-
                         case "undo": chain.undo().run(); break;
                         case "redo": chain.redo().run(); break;
                         default: break;
@@ -588,6 +722,7 @@
                     refreshCount();
                 });
 
+                // ===== 외부 API =====
                 window.__mailEditorGetJsonString = () => hidden.value || JSON.stringify(editor.getJSON());
                 window.__mailEditorGetText = () => editor.getText();
                 window.__mailEditorGetCount = () => editor.storage.characterCount.characters();
@@ -602,81 +737,156 @@
                         console.error(e);
                     }
                 };
-            </script>
 
-            <script>
-                function canAddReceiver(empId) {
-                    if (!empId) return false;
-                    if (selectedReceivers.has(empId)) return true; // 이미 있으면 OK(중복)
-                    return selectedReceivers.size < MAX_RECEIVERS;
+                // ✅ JSON → HTML (원문 HTML 만들기용)
+                window.__mailQuoteJsonToHtml = (quoteCnttJson) => {
+                    try {
+                        const s = String(quoteCnttJson || "").trim();
+                        if (!s) return "";
+                        const doc = JSON.parse(s);
+                        // StarterKit 등 확장들을 그대로 이용해 HTML 생성
+                        const html = generateHTML(doc, editor.extensionManager.extensions);
+
+                        // ✅ lockedQuote의 data-html은 "그대로 HTML"이어야 함 (escape 금지)
+                        return html;
+                    } catch (e) {
+                        console.error("quote json -> html failed", e);
+                        return "";
+                    }
+                };
+
+                // ✅ 답신 템플릿: 본문 빈 문단 + lockedQuote 1개
+                window.__mailEditorApplyReplyTemplate = ({ quoteTitle = '', quoteSender = '', quoteHtml = '' } = {}) => {
+                    const safeTitle = String(quoteTitle || '').trim();
+                    const safeSender = String(quoteSender || '').trim();
+                    const safeQuote = String(quoteHtml || '').trim();
+
+                    const doc = {
+                        type: 'doc',
+                        content: [
+                            { type: 'paragraph', content: [] },
+                            { type: 'paragraph', content: [] },
+                            { type: 'lockedQuote', attrs: { title: safeTitle, sender: safeSender, html: safeQuote } },
+                        ],
+                    };
+
+                    editor.commands.setContent(doc);
+                    syncHidden();
+                    refreshToolbar();
+                    refreshCount();
+
+                    // 커서는 맨 위
+                    try { editor.commands.focus("start"); } catch(e) {}
+                };
+
+                // ✅ lockedQuote 내부 placeholder(data-html) → 실제 innerHTML 주입 (write에서도 적용)
+                function hydrateLockedQuoteBodies(rootEl) {
+                    if (!rootEl) return;
+                    rootEl.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
+                        const raw = el.getAttribute('data-html') || '';
+                        el.innerHTML = raw;
+                        el.removeAttribute('data-html');
+                    });
                 }
 
-                function showReceiverLimitError() {
-                    showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
-                }
+                // 에디터 DOM이 렌더링된 후 주입되도록 약간 지연
+                const obs = new MutationObserver(() => hydrateLockedQuoteBodies(editorEl));
+                obs.observe(editorEl, { childList: true, subtree: true });
             </script>
 
+            <!-- Receiver -->
             <script>
-                // ===== Receiver search (name -> pick -> empIds) : Naver-mail style =====
                 let receiverSearchTimer = null;
-                const selectedReceivers = new Map(); // empId -> { empId, empName, depName, posName }
 
-                function openReceiverDropdown(){
+                // empId -> { empId, empName, depName, posName }
+                const selectedReceivers = new Map();
+
+                // 내게쓰기 ON일 때: 나만 허용(추가/검색/삭제 모두 막음)
+                let selfOnlyMode = false;
+
+                function isMe(empId) {
+                    const me = (window.__ME_EMP_ID || '').trim();
+                    return me && (empId || '').trim() === me;
+                }
+
+                function openReceiverDropdown() {
+                    if (selfOnlyMode) return;
                     const dd = document.getElementById('receiverDropdown');
                     if (dd) dd.style.display = '';
                 }
-                function closeReceiverDropdown(){
+
+                function closeReceiverDropdown() {
                     const dd = document.getElementById('receiverDropdown');
                     if (dd) dd.style.display = 'none';
                 }
 
-                function syncHiddenReceivers(){
+                function syncHiddenReceivers() {
                     const ids = Array.from(selectedReceivers.keys());
                     document.getElementById('receivers').value = ids.join(',');
                 }
 
-                function renderReceiverTokens(){
+                function renderReceiverTokens() {
                     const wrap = document.getElementById('receiverTokens');
                     if (!wrap) return;
 
                     wrap.innerHTML = Array.from(selectedReceivers.values()).map(r => {
                         const label = `${r.empName ?? ''}`.trim();
+
+                        const removeHtml = selfOnlyMode
+                            ? ``
+                            : `<span class="x" title="삭제" onclick="removeReceiver('${r.empId}')">×</span>`;
+
                         return `
-                            <span class="mw-rx-chip" data-id="${r.empId}">
-                              <span>${escapeHtml(label)}</span>
-                              <span class="x" title="삭제" onclick="removeReceiver('${r.empId}')">×</span>
-                            </span>
-                          `;
+        <span class="mw-rx-chip" data-id="${r.empId}">
+          <span>${escapeHtml(label)}</span>
+          ${removeHtml}
+        </span>
+      `;
                     }).join('');
 
                     syncHiddenReceivers();
                 }
 
-                // inline onclick이 있으니 전역으로 명확히 노출
-                window.removeReceiver = function(empId){
+                window.renderReceiverTokens = renderReceiverTokens;
+
+                window.removeReceiver = function (empId) {
+                    if (selfOnlyMode) return;
                     selectedReceivers.delete(empId);
                     renderReceiverTokens();
                     document.getElementById('receiverInput')?.focus();
                 };
 
-                async function searchEmployeesByName(keyword){
+                function canAddReceiver(empId) {
+                    if (!empId) return false;
+                    if (selfOnlyMode) return isMe(empId) || selectedReceivers.has(empId);
+                    return true;
+                }
+
+                async function searchEmployeesByName(keyword) {
+                    if (selfOnlyMode) return [];
+
                     let url = `/api/v1/employees?size=20&excludeMe=true`;
                     if (keyword && keyword.trim()) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
 
                     const res = await fetch(url, {
                         credentials: 'include',
-                        headers: { 'Accept':'application/json', ...getCsrfHeaders() }
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
                     });
                     if (!res.ok) return [];
-                    const result = await res.json();
-                    return result.data?.items || [];
+                    const result = await res.json().catch(() => null);
+                    return result?.data?.items || [];
                 }
 
-                function renderReceiverDropdown(items){
+                function renderReceiverDropdown(items) {
                     const inner = document.getElementById('receiverDropdownInner');
                     if (!inner) return;
 
-                    if (!items || items.length === 0){
+                    if (selfOnlyMode) {
+                        closeReceiverDropdown();
+                        return;
+                    }
+
+                    if (!items || items.length === 0) {
                         inner.innerHTML = `<div style="padding:12px; color:var(--mut); font-weight:800; font-size:12px;">검색 결과가 없습니다.</div>`;
                         openReceiverDropdown();
                         return;
@@ -687,37 +897,34 @@
                         const empName = emp.empName ?? '';
                         const depName = emp.depName ?? emp.department?.depName ?? '';
                         const posName = emp.posName ?? emp.position?.posName ?? '';
+
                         const disabled = selectedReceivers.has(empId) || !canAddReceiver(empId);
 
                         const left = `${empName} (${empId})`.trim();
                         const right = [depName, posName].filter(Boolean).join(' · ');
 
                         return `
-                            <div class="mw-rx-item"
-                                 style="${disabled ? 'opacity:.55; cursor:not-allowed;' : ''}"
-                                 onclick="${disabled ? '' : `pickReceiver('${empId}', '${escapeJs(empName)}', '${escapeJs(depName)}', '${escapeJs(posName)}')`}">
-                              <div>${escapeHtml(left)}</div>
-                              <div class="mw-rx-sub">${escapeHtml(right)}</div>
-                            </div>
-                          `;
+        <div class="mw-rx-item"
+             style="${disabled ? 'opacity:.55; cursor:not-allowed;' : ''}"
+             onclick="${disabled ? '' : `pickReceiver('${empId}', '${escapeJs(empName)}', '${escapeJs(depName)}', '${escapeJs(posName)}')`}">
+          <div>${escapeHtml(left)}</div>
+          <div class="mw-rx-sub">${escapeHtml(right)}</div>
+        </div>
+      `;
                     }).join('');
 
                     openReceiverDropdown();
                 }
 
-                window.pickReceiver = function(empId, empName, depName, posName){
+                window.pickReceiver = function (empId, empName, depName, posName) {
                     if (!empId) return;
-
-                    if (!canAddReceiver(empId)) {
-                        showReceiverLimitError();
-                        return;
-                    }
+                    if (!canAddReceiver(empId)) return;
 
                     selectedReceivers.set(empId, { empId, empName, depName, posName });
                     renderReceiverTokens();
 
                     const input = document.getElementById('receiverInput');
-                    if (input){
+                    if (input) {
                         input.value = '';
                         input.focus();
                     }
@@ -725,51 +932,66 @@
                     closeReceiverDropdown();
                 };
 
-                // 내게쓰기 체크박스: 토글하면 “토큰 목록”에만 나를 넣고/빼기
-                function applySelfWriteToggle(){
+                // 내게쓰기 토글
+                function applySelfWriteToggle() {
                     const cb = document.getElementById('selfWrite');
+                    const input = document.getElementById('receiverInput');
                     const me = (window.__ME_EMP_ID || '').trim();
-                    if (!cb || !me) return;
+                    if (!cb || !input || !me) return;
 
-                    if (cb.checked){
-                        if (!selectedReceivers.has(me)) {
-                            if (!canAddReceiver(me)) {
-                                cb.checked = false;
-                                showReceiverLimitError();
-                                return;
-                            }
-                            selectedReceivers.set(me, { empId: me, empName: '나', depName: '', posName: '' });
-                            renderReceiverTokens();
-                        }
+                    if (cb.checked) {
+                        selfOnlyMode = true;
+
+                        selectedReceivers.clear();
+                        selectedReceivers.set(me, { empId: me, empName: '나', depName: '', posName: '' });
+
+                        input.value = '';
+                        input.disabled = true;
+                        closeReceiverDropdown();
+
+                        renderReceiverTokens();
                     } else {
-                        if (selectedReceivers.has(me)){
-                            selectedReceivers.delete(me);
-                            renderReceiverTokens();
-                        }
+                        selfOnlyMode = false;
+
+                        selectedReceivers.delete(me);
+
+                        input.disabled = false;
+                        input.value = '';
+
+                        renderReceiverTokens();
                     }
                 }
 
-                document.addEventListener('DOMContentLoaded', () => {
-                    renderReceiverTokens();
+                window.applySelfWriteToggle = applySelfWriteToggle;
 
+                document.addEventListener('DOMContentLoaded', () => {
                     const box = document.getElementById('receiverBox');
                     const input = document.getElementById('receiverInput');
                     const selfCb = document.getElementById('selfWrite');
 
-                    if (selfCb){
+                    if (selfCb) {
                         selfCb.addEventListener('change', applySelfWriteToggle);
+                        applySelfWriteToggle();
                     }
+
+                    renderReceiverTokens();
 
                     if (!box || !input) return;
 
-                    box.addEventListener('click', () => input.focus());
+                    box.addEventListener('click', () => {
+                        if (selfOnlyMode) return;
+                        input.focus();
+                    });
 
                     input.addEventListener('focus', async () => {
+                        if (selfOnlyMode) return;
                         const items = await searchEmployeesByName(input.value);
                         renderReceiverDropdown(items);
                     });
 
                     input.addEventListener('input', (e) => {
+                        if (selfOnlyMode) return;
+
                         if (receiverSearchTimer) clearTimeout(receiverSearchTimer);
                         receiverSearchTimer = setTimeout(async () => {
                             const items = await searchEmployeesByName(e.target.value);
@@ -778,6 +1000,8 @@
                     });
 
                     input.addEventListener('keydown', async (e) => {
+                        if (selfOnlyMode) return;
+
                         if (e.key === 'Escape') return closeReceiverDropdown();
 
                         if (e.key === 'Enter') {
@@ -786,11 +1010,6 @@
                             const items = await searchEmployeesByName(input.value);
                             const first = items?.[0];
                             if (!first) return;
-
-                            if (!canAddReceiver(first.empId)) {
-                                showReceiverLimitError();
-                                return;
-                            }
 
                             if (!selectedReceivers.has(first.empId)) {
                                 window.pickReceiver(
@@ -809,6 +1028,7 @@
                     });
 
                     document.addEventListener('click', (e) => {
+                        if (selfOnlyMode) return;
                         const dd = e.target.closest('#receiverDropdown');
                         const inBox = e.target.closest('#receiverBox');
                         if (!dd && !inBox) closeReceiverDropdown();
@@ -816,6 +1036,7 @@
                 });
             </script>
 
+            <!-- 제목 카운터 + 답신 payload -->
             <script>
                 const TITLE_LIMIT = 50;
 
@@ -837,17 +1058,119 @@
 
                     el.addEventListener('input', cut);
                     el.addEventListener('paste', () => setTimeout(cut, 0));
-
-                    // 초기값(초안 로딩 등)
                     cut();
                 }
 
-                window.addEventListener('DOMContentLoaded', enforceTitleLimit);
+                async function applyReplyPayloadIfAny() {
+                    const raw = sessionStorage.getItem('mail.reply.payload');
+                    if (!raw || raw === 'null' || raw === 'undefined') {
+                        sessionStorage.removeItem('mail.reply.payload');
+                        return;
+                    }
+
+                    let payload;
+                    try { payload = JSON.parse(raw); }
+                    catch (e) {
+                        console.error('reply payload parse error', e, raw);
+                        sessionStorage.removeItem('mail.reply.payload');
+                        return;
+                    }
+
+                    // 중복 방지 (페이지 인스턴스)
+                    if (window.__REPLY_APPLIED_ONCE__ === payload?.payloadKey) return;
+
+                    // selfWrite OFF
+                    const selfCb = document.getElementById('selfWrite');
+                    if (selfCb) {
+                        selfCb.checked = false;
+                        if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
+                    }
+
+                    // 제목
+                    const titleEl = document.getElementById('title');
+                    if (titleEl && payload?.title) {
+                        titleEl.value = payload.title;
+                        titleEl.dispatchEvent(new Event('input', { bubbles:true }));
+                    }
+
+                    // 수신자 적용(준비 대기)
+                    const receiversOk = await waitUntil(
+                        () => (typeof selectedReceivers !== 'undefined') && (typeof renderReceiverTokens === 'function'),
+                        { timeout: 8000 }
+                    );
+
+                    if (receiversOk && Array.isArray(payload?.receivers)) {
+                        try {
+                            selectedReceivers.clear();
+                            payload.receivers.forEach(r => {
+                                if (!r?.empId) return;
+                                selectedReceivers.set(r.empId, {
+                                    empId: r.empId,
+                                    empName: r.empName || r.empId,
+                                    depName: '',
+                                    posName: ''
+                                });
+                            });
+                            renderReceiverTokens();
+                        } catch (e) {
+                            console.error('apply receivers failed', e);
+                        }
+                    }
+
+                    // 에디터 준비 대기
+                    const editorOk = await waitUntil(
+                        () => window.__MAIL_EDITOR_READY__ &&
+                            typeof window.__mailQuoteJsonToHtml === 'function' &&
+                            typeof window.__mailEditorApplyReplyTemplate === 'function',
+                        { timeout: 8000 }
+                    );
+
+                    if (!editorOk) return;
+
+                    const quoteJson = String(payload?.quoteCnttJson || '').trim();
+                    const quoteHtmlFromServer = String(payload?.quoteHtml || '').trim();
+
+                    const computedQuoteHtml = quoteHtmlFromServer
+                        ? quoteHtmlFromServer
+                        : (quoteJson ? (window.__mailQuoteJsonToHtml(quoteJson) || '') : '');
+
+                    // ✅ 원문 제목/발신자
+                    const quoteTitle = String(payload?.originalTitle || '').trim()
+                        || String(payload?.title || '').replace(/^RE:\s*/i, '').trim();
+
+                    const quoteSender = `${payload?.originalSenderEmpName ?? ''} (${payload?.originalSenderEmpId ?? ''})`
+                        .trim()
+                        .replace(/^\(\)$/,'');
+
+                    // ✅ (핵심) 답신→답신 중첩 방지
+                    const cleanedQuoteHtml = (window.stripNestedQuotesFromHtml ? window.stripNestedQuotesFromHtml(computedQuoteHtml) : computedQuoteHtml);
+
+                    window.__mailEditorApplyReplyTemplate({
+                        quoteTitle,
+                        quoteSender: quoteSender || '-',
+                        quoteHtml: cleanedQuoteHtml
+                    });
+
+                    window.__REPLY_APPLIED_ONCE__ = payload?.payloadKey || 'applied';
+                    sessionStorage.removeItem('mail.reply.payload');
+                }
+
+                document.getElementById('btnCancel')?.addEventListener('click', () => {
+                    sessionStorage.removeItem('mail.reply.payload');
+                    history.back();
+                });
+
+                function bootWritePage() {
+                    enforceTitleLimit();
+                    applyReplyPayloadIfAny().catch(console.error);
+                }
+                window.addEventListener('DOMContentLoaded', bootWritePage);
+                window.addEventListener('pageshow', bootWritePage);
             </script>
 
             <!-- 전송 로직 -->
             <script>
-                async function fetchJsonWithDto(url, options){
+                async function fetchJsonWithDto(url, options) {
                     const res = await fetch(url, options);
                     const json = await res.json().catch(() => null);
                     if (!res.ok) {
@@ -857,16 +1180,16 @@
                     return json?.data;
                 }
 
-                function getDraftMailId(){
+                function getDraftMailId() {
                     return (document.getElementById('draftMailId')?.value || '').trim();
                 }
-                function setDraftMailId(mailId){
+
+                function setDraftMailId(mailId) {
                     const el = document.getElementById('draftMailId');
                     if (el) el.value = mailId || '';
                 }
 
-                // 임시저장
-                async function saveDraft(){
+                async function saveDraft() {
                     showErr('');
 
                     const title = (document.getElementById('title').value || '').trim();
@@ -878,10 +1201,6 @@
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
                     const plan = buildSendPlan();
-
-                    if (plan.uiReceivers.length > MAX_RECEIVERS) {
-                        return showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
-                    }
 
                     const body = {
                         mailId: getDraftMailId() || null,
@@ -905,66 +1224,30 @@
                     return data;
                 }
 
-                document.getElementById('btnDraft').addEventListener('click', async () => {
-                    try{
+                document.getElementById('btnDraft')?.addEventListener('click', async () => {
+                    try {
                         await saveDraft();
-                        location.href = '/mail/drafts'; // ✅ 임시보관함으로 이동
-                    }catch(e){
+                        location.href = '/mail/drafts';
+                    } catch (e) {
                         console.error(e);
                         showErr(e.message || '임시저장에 실패했습니다.');
                     }
                 });
 
-                // 일반 전송: selfWrite ON이면 POST 2번, OFF이면 1번
-                async function sendNormalMailWithOptionalSelfSplit({title, cnttJson}){
-                    const { selfChecked, me, uiReceivers, wantSelf, others } = buildSendPlan();
-
-                    if (!selfChecked){
-                        // OFF: UI 수신자 그대로 1번
-                        await fetchJsonWithDto(`/api/v1/mails`, {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                ...getCsrfHeaders()
-                            },
-                            body: JSON.stringify({ title, cnttJson, receiverEmpIds: uiReceivers })
-                        });
-                        return;
-                    }
-
-                    // ON: self는 무조건 1번 + others가 있으면 1번 추가
-                    if (!me) throw new Error('내게쓰기 처리에 필요한 사용자 정보가 없습니다.');
-
-                    if (wantSelf){
-                        await fetchJsonWithDto(`/api/v1/mails`, {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                ...getCsrfHeaders()
-                            },
-                            body: JSON.stringify({ title, cnttJson, receiverEmpIds: [me] })
-                        });
-                    }
-
-                    if (others.length > 0){
-                        await fetchJsonWithDto(`/api/v1/mails`, {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                ...getCsrfHeaders()
-                            },
-                            body: JSON.stringify({ title, cnttJson, receiverEmpIds: others })
-                        });
-                    }
+                async function sendMailOnce({title, cnttJson, receiverEmpIds}) {
+                    await fetchJsonWithDto(`/api/v1/mails`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
+                        },
+                        body: JSON.stringify({title, cnttJson, receiverEmpIds})
+                    });
                 }
 
-                document.getElementById('btnSend').addEventListener('click', async () => {
+                document.getElementById('btnSend')?.addEventListener('click', async () => {
                     showErr('');
 
                     const draftMailId = getDraftMailId();
@@ -974,25 +1257,17 @@
                     const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
                     const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
 
-                    // receiver 검증은 “발송 계획 기준”으로
                     const plan = buildSendPlan();
 
-                    if (plan.uiReceivers.length > MAX_RECEIVERS) {
-                        return showErr(`받는 사람은 최대 ${MAX_RECEIVERS}명까지 선택할 수 있습니다.`);
-                    }
-                    const hasAnyReceiverUi = plan.uiReceivers.length > 0;
-                    const selfChecked = plan.selfChecked;
-
-                    if (!hasAnyReceiverUi) return showErr('받는 사람을 1명 이상 입력하세요.');
-                    if (selfChecked && !plan.me) return showErr('내게쓰기 처리에 필요한 사용자 정보가 없습니다.');
+                    if (plan.uiReceivers.length === 0) return showErr('받는 사람을 1명 이상 입력하세요.');
+                    if (plan.selfChecked && !plan.me) return showErr('내게쓰기 처리에 필요한 사용자 정보가 없습니다.');
 
                     if (!title) return showErr('제목을 입력하세요.');
                     if (!text) return showErr('내용을 입력하세요.');
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
                     try {
-                        // draft 발송은 “1번만” (서버에서 self+others 분리/복제 처리 가능)
-                        if (draftMailId){
+                        if (draftMailId) {
                             await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(draftMailId)}/send`, {
                                 method: 'POST',
                                 credentials: 'include',
@@ -1001,16 +1276,14 @@
                                     'Accept': 'application/json',
                                     ...getCsrfHeaders()
                                 },
-                                body: JSON.stringify({ receiverEmpIds: plan.uiReceivers })
+                                body: JSON.stringify({receiverEmpIds: plan.uiReceivers})
                             });
 
                             location.href = '/mail/sent';
                             return;
                         }
 
-                        // 일반 전송: selfWrite ON이면 2번 요청
-                        await sendNormalMailWithOptionalSelfSplit({ title, cnttJson });
-
+                        await sendMailOnce({ title, cnttJson, receiverEmpIds: plan.uiReceivers });
                         location.href = '/mail/sent';
                     } catch (e) {
                         console.error(e);
@@ -1019,56 +1292,56 @@
                 });
             </script>
 
+            <!-- draft 로드 -->
             <script>
-                // draft 편집 진입: /mail/write?mailId=... 로 들어오면 초안 상세 불러오기
-                async function loadDraftIfAny(){
+                async function loadDraftIfAny() {
                     const params = new URLSearchParams(location.search);
                     const mailId = (params.get('mailId') || '').trim();
                     if (!mailId) return;
 
-                    try{
+                    try {
                         const res = await fetch(`/api/v1/mails/drafts/${encodeURIComponent(mailId)}`, {
-                            credentials:'include',
-                            headers:{ 'Accept':'application/json', ...getCsrfHeaders() }
+                            credentials: 'include',
+                            headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
                         });
-                        const json = await res.json().catch(()=>null);
-                        if(!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
+                        const json = await res.json().catch(() => null);
+                        if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
 
                         const data = json?.data;
                         if (!data) return;
 
                         document.getElementById('draftMailId').value = data.mailId || mailId;
                         document.getElementById('title').value = data.title || '';
+                        document.getElementById('title').dispatchEvent(new Event('input', { bubbles:true }));
 
                         const cnttJson = data.cnttJson || data.cntt || '';
-                        if (cnttJson && window.__mailEditorSetJsonString){
+                        if (cnttJson && window.__mailEditorSetJsonString) {
                             window.__mailEditorSetJsonString(cnttJson);
                         }
 
-                        /// draft 상세 receiverEmpIds로 토큰 복원
                         if (Array.isArray(data.receiverEmpIds)) {
                             selectedReceivers.clear();
 
-                            // 내게쓰기 체크 여부 복원(서버가 self를 receiverEmpIds에 넣어놨다면 체크 ON으로)
                             const me = (window.__ME_EMP_ID || '').trim();
-                            const hasMe = me && data.receiverEmpIds.some(id => (id || '').trim() === me);
                             const selfCb = document.getElementById('selfWrite');
+
+                            const hasMe = me && data.receiverEmpIds.some(id => (id || '').trim() === me);
                             if (selfCb) selfCb.checked = !!hasMe;
 
-                            // receiverEmpIds는 empId만 있으니, 우선 empId 기반 토큰 표시(이름은 empId로 대체)
-                            data.receiverEmpIds.forEach(id => {
+                            const names = Array.isArray(data.receiverNames) ? data.receiverNames : [];
+
+                            data.receiverEmpIds.forEach((id, i) => {
                                 const empId = (id || '').trim();
                                 if (!empId) return;
-                                selectedReceivers.set(empId, { empId, empName: empId, depName: '', posName: '' });
+
+                                const nm = (names[i] || '').trim();
+                                selectedReceivers.set(empId, { empId, empName: nm || empId, depName: '', posName: '' });
                             });
 
                             renderReceiverTokens();
-
-                            // 내게쓰기 토글 로직 적용(체크박스 기준으로 me 토큰 유지/제거 정리)
-                            applySelfWriteToggle();
+                            if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
                         }
-
-                    }catch(e){
+                    } catch (e) {
                         console.error(e);
                         showErr(e.message || '임시저장 불러오기에 실패했습니다.');
                     }
