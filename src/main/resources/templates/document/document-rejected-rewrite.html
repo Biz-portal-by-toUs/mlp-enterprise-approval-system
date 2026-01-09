@@ -1794,14 +1794,18 @@
         if (url) { tiptapEditor.chain().focus().setImage({ src: url }).run(); }
     }
 
+    // ✅ 파일 처리 로직 (기존 활성 파일 + 새 파일 합쳐서 최대 5개)
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
         const maxCount = 5;
-        const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
+
+        // 현재 유지되고 있는 기존 파일의 개수 (삭제 목록에 없는 것들)
+        const activeExistingCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length;
 
         for (let file of files) {
-            if (currentCount + newFiles.length >= maxCount) {
+            // (기존 파일 개수 + 이미 추가된 새 파일 개수) 가 5개 이상이면 중단
+            if (activeExistingCount + newFiles.length >= maxCount) {
                 Swal.fire({
                     icon: 'warning',
                     title: '첨부 제한',
@@ -1810,6 +1814,7 @@
                 });
                 break;
             }
+
             if (file.size > maxSize) {
                 Swal.fire({
                     icon: 'warning',
@@ -1819,6 +1824,7 @@
                 });
                 continue;
             }
+
             if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
                 Swal.fire({
                     icon: 'info',
@@ -1908,12 +1914,12 @@
         const html = tiptapEditor.getHTML();
         const text = tiptapEditor.getText().trim();
 
-        // 내용 100자 이상 조건 추가
+        // 내용 100자 이상 조건
         if (text.length < 100) {
             return Swal.fire({
                 icon: 'warning',
                 title: 'AI 요약 오류',
-                text: '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
+                text: '요약을 진행하려면 내용을 최소 100자 이상 입력해주세요.',
                 confirmButtonColor: '#339af0'
             });
         }
@@ -1957,7 +1963,7 @@
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
 
-        // 상신(재상신) 시 필수 입력 벨리데이션
+        // 상신 시 필수 벨리데이션
         if (!isTemp) {
             if (!title) {
                 Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '제목을 입력해주세요.', confirmButtonColor: '#339af0' });
@@ -1976,7 +1982,6 @@
                 return;
             }
         } else {
-            // 임시저장일 경우 제목은 필수
             if (!title) {
                 Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
                 return;
@@ -2310,7 +2315,6 @@
         const searchInput = document.getElementById('approver-search');
         const searchResults = document.getElementById('search-results');
 
-        // 검색 벨리데이션 (20자 제한)
         searchInput.addEventListener('input', (e) => {
             if (e.target.value.length > 20) {
                 e.target.value = e.target.value.substring(0, 20);
@@ -2478,7 +2482,6 @@
             const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
             const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
 
-            // ✅ 대직자 정보 표시 (이름 오른쪽에 가로 배치)
             let delegateHtml = '';
             if (emp.delegateName) {
                 const isMe = emp.delegateId === myInfo.empId;
