@@ -8,6 +8,9 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import io.jsonwebtoken.Claims;
@@ -39,6 +42,7 @@ import java.util.Optional;
 @Transactional
 public class TokenService {
 
+    private final CompanyRepository companyRepository;
     // 운영 https면 true, 로컬 http면 false
     @Value("${app.cookie.secure:false}")
     private boolean cookieSecure;
@@ -237,6 +241,7 @@ public class TokenService {
     // =========================================================
     // ✅ 여기부터: AccessToken 재발급 (RefreshToken 기반)
     // =========================================================
+
     /**
      * ✅ AccessToken 재발급 (새 AccessToken만 발급)
      * - 만료된 accessToken(Authorization 헤더)에서 subject 정보 추출
@@ -247,20 +252,50 @@ public class TokenService {
         String refreshToken = extractCookie(request, "refreshToken")
                 .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
-        // 1) 클라이언트 RT 서명/만료 검증
+        //1) 클라이언트 RT 서명/만료 검증
+        Claims rtClaims = tokenProvider.parseClaims(refreshToken);
+
+        // ✅ 여기서부터: AT 헤더 없이 RT claims로 subject 정보 추출
+        Long subjectId = tokenProvider.getSubjectIdFromClaims(rtClaims);
+        TokenSubjectType subjectType = tokenProvider.getSubjectTypeFromClaims(rtClaims);
+
+        String comId;
+        String username;
+        List<String> roles;
+
+        if(subjectType == TokenSubjectType.EMPLOYEE) {
+            Employee emp = employeeRepository.findById(subjectId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+
+            comId = emp.getCompany().getComId();
+            username = emp.getEmpId();
+//            roles = List.of(emp.getRole().name());
+
+            // ✅ 여기서 로그를 찍어보세요!
+            log.info("[Refresh] DB에서 조회된 사원명: {}", emp.getEmpName());
+            log.info("[Refresh] DB에서 조회된 Role 값: {}", emp.getRole()); // Enum이 null인지 확인
+
+            if (emp.getRole() == null) {
+                log.error("[Refresh] 에러: 사원번호 {}의 권한(Role) 정보가 DB에 없습니다!", subjectId);
+            }
+
+            roles = List.of("ROLE_" + emp.getRole().name());
+        } else if(subjectType == TokenSubjectType.COMPANY) {
+            Company com = companyRepository.findById(subjectId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+
+            comId = com.getComId();
+            username = com.getEmail();
+//            roles = List.of(com.getRole().name());
+            roles = List.of("ROLE_" + com.getRole().name());
+        } else {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
         if (!tokenProvider.validateToken(refreshToken)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 2) RT에서 Claims 추출 (RT는 유효하니 그대로 파싱하면 됨)
-        Claims rtClaims = tokenProvider.parseClaims(refreshToken);
-
-        // ✅ 여기서부터: AT 헤더 없이 RT claims로 subject 정보 추출
-        Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
-        TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
-        String comId = tokenProvider.getComId(rtClaims.getSubject());
-        String username = tokenProvider.getUsername(rtClaims.getSubject());
-        List<String> roles = tokenProvider.getRoles(rtClaims.getSubject());
 
         // 3) DB에서 현재 유효 RT(최신 revoked=false) 조회
         RefreshToken dbRT = refreshTokenRepository
@@ -288,7 +323,7 @@ public class TokenService {
         // ✅ 쿠키만 쓸 거면 accessToken을 바디로 굳이 안 내려도 됨
         // (호환/디버깅용으로 남겨도 되고, 없애고 싶으면 null로)
         return ResTokenDto.builder()
-                .accessToken(null) // 또는 newAccessToken (원하면 유지)
+                .accessToken(newAccessToken)
                 .expiresInSeconds(tokenProvider.getAccessExpSeconds())
                 .subjectType(subjectType.name())
                 .role(roles.isEmpty() ? null : roles.get(0))

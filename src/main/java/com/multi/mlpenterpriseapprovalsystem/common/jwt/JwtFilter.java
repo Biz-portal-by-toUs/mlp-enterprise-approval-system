@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ApiExceptionDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.TokenException;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -34,9 +36,12 @@ public class JwtFilter extends OncePerRequestFilter {
     public static final String BEARER_PREFIX = "Bearer ";
 
     private final TokenProvider tokenProvider;
+    private final TokenService tokenService;
 
-    public JwtFilter(TokenProvider tokenProvider) {
+    public JwtFilter(TokenProvider tokenProvider, TokenService tokenService) {
+
         this.tokenProvider = tokenProvider;
+        this.tokenService = tokenService;
     }
 
     private static final String[] EXACT_PATHS = {
@@ -47,6 +52,7 @@ public class JwtFilter extends OncePerRequestFilter {
             "/auth/companies/**",
             "/auth/employee/**",
             "/auth/refresh",
+            "/refresh",
             "/auth/logout",
             "/auth/password",
             "/auth/verify/**",
@@ -83,32 +89,29 @@ public class JwtFilter extends OncePerRequestFilter {
 
             String jwt = resolveToken(request);
             log.info("[JwtFilter] jwt : {}", jwt);
-            if (StringUtils.hasText(jwt)) {
+            // 1. Access Token이 있고 유효한 경우 -> 그대로 진행
+            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
+
                 log.info("[JwtFilter] JWT 토큰이 존재합니다.");
+                authenticateUser(jwt, request);
+            }
+            // 2. Access Token이 없거나 만료된 경우 -> Refresh 시도
+            else {
+                log.info("[JwtFilter] Access Token 만료/부재. 자동 재발급 시도...");
+                try {
+                    // 내부에서 RT 검증, DB 체크, 새 AT 쿠키 설정까지 다 수행함
+                    ResTokenDto resTokenDto = tokenService.refreshAccessToken(request, response);
 
-                if (tokenProvider.validateToken(jwt)) {
-
-                    log.info("[JwtFilter] JWT 토큰이 유효합니다.");
-
-                    Claims claims = tokenProvider.parseClaims(jwt);
-                    String comId = (String) claims.get("comId");
-                    request.setAttribute("comId", comId);
-
-                    log.info("[JwtFilter] request에 comId 세팅 완료: {}", comId);
-
-                    Authentication authentication = tokenProvider.getAuthentication(jwt);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                    log.info("[JwtFilter] SecurityContext에 Authentication 객체 설정 완료: {}", authentication);
-                    log.info("[JwtFilter] SecurityContext에 Authentication 객체 설정 완료  authentication.getAuthorities(): {}", authentication.getAuthorities());
-
-                    log.info("[JwtFilter] SecurityContextHolder 객체 확인: {}", SecurityContextHolder.getContext().getAuthentication());
-
-                } else {
-                    log.warn("[JwtFilter] JWT 토큰이 유효하지 않습니다.");
+                    String newAt = resTokenDto.getAccessToken();
+                    if (newAt != null) {
+                        authenticateUser(newAt, request);
+                        log.info("[JwtFilter] 자동 재발급 및 인증 성공");
+                    }
+                } catch (Exception e) {
+                    // 리프레시 토큰도 없거나 만료된 경우 (진짜 비로그인 상태)
+                    log.info("[JwtFilter] 자동 재발급 실패: {}", e.getMessage());
+                    // 여기서 아무 처리를 안 하면 '익명 사용자'로 filterChain을 타게 됨
                 }
-            } else {
-                log.info("[JwtFilter] JWT 토큰이 존재하지 않습니다.");
             }
 
             // 4. 필터 체인 계속 진행
@@ -128,6 +131,30 @@ public class JwtFilter extends OncePerRequestFilter {
             response.getWriter().write(convertObjectToJson(errorResponse));
             response.getWriter().flush();
         }
+    }
+
+    // 중복 로직을 별도 메서드로 분리
+    private void authenticateUser(String jwt, HttpServletRequest request) {
+        Claims claims = tokenProvider.parseClaims(jwt);
+        String comId = (String) claims.get("comId");
+        request.setAttribute("comId", comId);
+        log.info("[JwtFilter] request에 comId 세팅 완료: {}", comId);
+
+        Authentication authentication = tokenProvider.getAuthentication(jwt);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("[JwtFilter] SecurityContext에 Authentication 객체 설정 완료: {}", authentication.getName());
+        log.info("[JwtFilter] SecurityContext에 Authentication 객체 설정 완료  authentication.getAuthorities(): {}", authentication.getAuthorities());
+
+        log.info("[JwtFilter] SecurityContextHolder 객체 확인: {}", SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    // 쿠키 설정 편의 메서드
+    private void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
+        Cookie cookie = new Cookie("accessToken", accessToken);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(60); // 1분 (테스트용)
+        response.addCookie(cookie);
     }
 
     private String resolveToken(HttpServletRequest request) {
@@ -152,6 +179,11 @@ public class JwtFilter extends OncePerRequestFilter {
     private Optional<String> extractCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) return Optional.empty();
+
+        for (Cookie c : cookies) {
+            // 모든 쿠키를 다 찍어서 서버가 뭘 보고 있는지 확인하세요
+            log.info("[JwtFilter] 발견된 쿠키 - 이름: {}, 값: {}", c.getName(), c.getValue());
+        }
 
         return Arrays.stream(cookies)
                 .filter(c -> name.equals(c.getName()))
