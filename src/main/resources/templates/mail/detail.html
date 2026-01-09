@@ -117,9 +117,7 @@
             <section class="md-card">
                 <div class="md-meta">
                     <div class="md-k">제목</div><div class="md-v" id="titleTxt">-</div>
-
                     <div class="md-k" id="partyLabel">-</div><div class="md-v" id="partyTxt">-</div>
-
                     <div class="md-k">수신/발신일</div><div class="md-v" id="createdAtTxt">-</div>
                 </div>
 
@@ -172,29 +170,41 @@
                     return {};
                 }
 
-                async function api(method, url) {
-                    const res = await fetch(url, {
-                        method,
-                        credentials: 'include',
-                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
-                    });
+                async function api(method, url, { timeoutMs = 8000 } = {}) {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-                    if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
-                    if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
+                    try {
+                        const res = await fetch(url, {
+                            method,
+                            credentials: 'include',
+                            headers: { 'Accept': 'application/json', ...getCsrfHeaders() },
+                            signal: controller.signal,
+                        });
 
-                    if (res.status === 204) return null;
+                        if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
+                        if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
+                        if (res.status === 204) return null;
 
-                    const json = await res.json().catch(() => null);
+                        const text = await res.text();
+                        const json = text ? (() => { try { return JSON.parse(text); } catch { return null; } })() : null;
 
-                    if (!res.ok) {
-                        const msg = json?.message || `HTTP ${res.status}`;
-                        throw new Error(`HTTP ${res.status} ${msg}`);
+                        if (!res.ok) {
+                            const msg = json?.message || text || `HTTP ${res.status}`;
+                            throw new Error(`HTTP ${res.status} ${msg}`);
+                        }
+
+                        return json?.data;
+                    } catch (e) {
+                        if (e?.name === 'AbortError') {
+                            throw new Error('timeout::요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+                        }
+                        throw e;
+                    } finally {
+                        clearTimeout(timer);
                     }
-
-                    return json?.data;
                 }
 
-                // (선택) 상세에서 active를 바꾸고 싶을 때만 사용. sidebar 구조가 다르면 조용히 무시됨.
                 function setSidebarActive(key) {
                     const nav = document.getElementById('mailNav');
                     if (!nav) return;
@@ -215,10 +225,8 @@
                 }
 
                 function buildReceiversText(data) {
-                    // ✅ 서버에서 receivers(문자열) 내려주면 그걸 우선 사용
                     if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
 
-                    // ✅ 그래도 없으면 receiverEmpIds + receiverNames 조합(상세 DTO 확장 대비)
                     const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
                     const names = Array.isArray(data.receiverNames) ? data.receiverNames : null;
 
@@ -229,7 +237,6 @@
                         return ids.join(', ');
                     }
 
-                    // ✅ 단건 수신자 응답 대비
                     if (data.receiverEmpId || data.receiverEmpName) {
                         return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
                     }
@@ -237,7 +244,6 @@
                     return '-';
                 }
 
-                // 답신 버튼을 element 수정 없이 동적으로 추가
                 function ensureReplyButton() {
                     let btn = document.getElementById('btnReply');
                     if (btn) return btn;
@@ -251,7 +257,6 @@
                     btn.className = 'md-btn ghost';
                     btn.textContent = '답신';
 
-                    // 위치: "목록" 다음(원하면 여기만 바꾸면 됨)
                     const backBtn = document.getElementById('btnBack');
                     if (backBtn && backBtn.nextSibling) actions.insertBefore(btn, backBtn.nextSibling);
                     else actions.prepend(btn);
@@ -259,6 +264,257 @@
                     return btn;
                 }
 
+                // =========================
+                // TipTap renderer (detail)
+                // - write와 같은 "블록 + 열기/닫기" UI
+                // - html attr는 encodeURIComponent로 attribute 깨짐 방지
+                // =========================
+                let __tiptapRendererPromise = null;
+
+                function getTiptapRenderer() {
+                    if (__tiptapRendererPromise) return __tiptapRendererPromise;
+
+                    __tiptapRendererPromise = (async () => {
+                        const { generateHTML } = await import("https://esm.sh/@tiptap/html@2.11.5");
+                        const StarterKit = (await import("https://esm.sh/@tiptap/starter-kit@2.11.5")).default;
+                        const { Node } = await import("https://esm.sh/@tiptap/core@2.11.5");
+
+                        const LockedQuote = Node.create({
+                            name: "lockedQuote",
+                            group: "block",
+                            atom: true,
+
+                            addAttributes() {
+                                return {
+                                    title: { default: "" },
+                                    sender: { default: "" },
+                                    html: { default: "" },
+                                };
+                            },
+
+                            parseHTML() {
+                                return [{ tag: 'div[data-locked-quote="1"]' }];
+                            },
+
+                            renderHTML({ node }) {
+                                const title = String(node.attrs.title || "").trim();
+                                const sender = String(node.attrs.sender || "").trim();
+                                const html = String(node.attrs.html || "").trim();
+
+                                // 최소 방어: script 제거
+                                const sanitized = html.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+                                const encoded = encodeURIComponent(sanitized);
+
+                                // ✅ “본문과 확실히 구분되는” 카드형 블록 + 헤더/구분선
+                                return [
+                                    "div",
+                                    {
+                                        "data-locked-quote": "1",
+                                        "data-open": "0",
+                                        style: [
+                                            "margin:18px 0 0 0",                 // 본문 아래에서 띄우기
+                                            "border:1px solid #e2e8f0",          // 테두리
+                                            "border-left:6px solid #cbd5e1",     // 강조 라인
+                                            "background:#f8fafc",                // 배경
+                                            "border-radius:14px",
+                                            "padding:14px 14px 12px 14px",
+                                            "box-shadow:0 1px 3px rgba(0,0,0,0.05)"
+                                        ].join(";"),
+                                    },
+
+                                    // ===== 상단 바(배지 + 버튼) =====
+                                    [
+                                        "div",
+                                        {
+                                            style: [
+                                                "display:flex",
+                                                "align-items:center",
+                                                "justify-content:space-between",
+                                                "gap:10px",
+                                                "margin:0 0 10px 0",
+                                            ].join(";"),
+                                        },
+
+                                        // 배지(원문 인용)
+                                        [
+                                            "div",
+                                            {
+                                                style: [
+                                                    "display:inline-flex",
+                                                    "align-items:center",
+                                                    "gap:8px",
+                                                    "font-weight:900",
+                                                    "font-size:12px",
+                                                    "color:#0f172a",
+                                                ].join(";"),
+                                            },
+                                            [
+                                                "span",
+                                                {
+                                                    style: [
+                                                        "display:inline-flex",
+                                                        "align-items:center",
+                                                        "height:22px",
+                                                        "padding:0 10px",
+                                                        "border-radius:999px",
+                                                        "background:#e2e8f0",
+                                                        "color:#0f172a",
+                                                        "font-weight:900",
+                                                        "font-size:12px",
+                                                    ].join(";"),
+                                                },
+                                                "원문 인용",
+                                            ],
+                                            [
+                                                "span",
+                                                { style: "color:#64748b; font-weight:900; font-size:12px;" },
+                                                "본문과 구분됩니다",
+                                            ],
+                                        ],
+
+                                        // 토글 버튼(오른쪽)
+                                        [
+                                            "button",
+                                            {
+                                                type: "button",
+                                                "data-quote-toggle": "1",
+                                                style: [
+                                                    "border:1px solid rgba(15,23,42,.12)",
+                                                    "background:#fff",
+                                                    "border-radius:999px",
+                                                    "padding:6px 12px",
+                                                    "font-size:12px",
+                                                    "font-weight:900",
+                                                    "cursor:pointer",
+                                                    "color:#0f172a",
+                                                    "user-select:none",
+                                                ].join(";"),
+                                            },
+                                            "열기",
+                                        ],
+                                    ],
+
+                                    // ===== 제목/발신자 영역 =====
+                                    [
+                                        "div",
+                                        {
+                                            style: [
+                                                "display:grid",
+                                                "grid-template-columns:64px 1fr",
+                                                "row-gap:6px",
+                                                "column-gap:10px",
+                                                "font-size:12px",
+                                                "font-weight:900",
+                                                "padding:10px 12px",
+                                                "background:#fff",
+                                                "border-radius:12px",
+                                                "border:1px solid rgba(15,23,42,.08)",
+                                            ].join(";"),
+                                        },
+                                        ["div", { style: "color:#64748b" }, "제목:"],
+                                        ["div", { style: "color:#0f172a; word-break:break-word" }, title || "-"],
+                                        ["div", { style: "color:#64748b" }, "발신자:"],
+                                        ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
+                                    ],
+
+                                    // ===== 구분선 =====
+                                    ["div", { style: "height:10px" }, ""],
+
+                                    // ===== 원문 본문(초기 숨김) =====
+                                    [
+                                        "div",
+                                        {
+                                            "data-quote-body-wrap": "1",
+                                            style: [
+                                                "background:#fff",
+                                                "border-radius:12px",
+                                                "padding:12px",
+                                                "border:1px solid rgba(15,23,42,.08)",
+                                                "display:none",
+                                            ].join(";"),
+                                        },
+                                        ["div", { "data-locked-quote-body": "1", "data-html-enc": encoded }, ""],
+                                    ],
+                                ];
+                            },
+                        });
+
+                        return { generateHTML, extensions: [StarterKit, LockedQuote] };
+                    })();
+
+                    return __tiptapRendererPromise;
+                }
+
+                async function renderTiptapCached(jsonOrString) {
+                    const { generateHTML, extensions } = await getTiptapRenderer();
+
+                    let doc = jsonOrString;
+
+                    if (typeof jsonOrString === "string") {
+                        const s = jsonOrString.trim();
+                        if (!s) return "";
+                        try { doc = JSON.parse(s); }
+                        catch { return escapeHtml(s); }
+                    }
+
+                    const html = generateHTML(doc, extensions);
+
+                    // ✅ lockedQuote 내부 data-html-enc를 실제 innerHTML로 주입
+                    const temp = document.createElement("div");
+                    temp.innerHTML = html;
+
+                    temp.querySelectorAll("[data-locked-quote-body]").forEach((el) => {
+                        const enc = el.getAttribute("data-html-enc") || "";
+                        let raw = "";
+                        try { raw = decodeURIComponent(enc); } catch { raw = enc; }
+                        el.innerHTML = raw;
+                        el.removeAttribute("data-html-enc");
+                    });
+
+                    // 초기 버튼 텍스트 정리(혹시 open값 꼬여도 강제)
+                    temp.querySelectorAll('[data-locked-quote="1"]').forEach(wrap => {
+                        wrap.dataset.open = "0";
+                        const btn = wrap.querySelector('[data-quote-toggle="1"]');
+                        const body = wrap.querySelector('[data-quote-body-wrap="1"]');
+                        if (btn) btn.textContent = "열기";
+                        if (body) body.style.display = "none";
+                    });
+
+                    return temp.innerHTML;
+                }
+
+                // ✅ 블록 토글(열기/닫기): write와 같은 “블록 안에서” 동작
+                function bindQuoteToggle(containerEl) {
+                    if (!containerEl || containerEl.__quoteToggleBound) return;
+                    containerEl.__quoteToggleBound = true;
+
+                    containerEl.addEventListener("click", (e) => {
+                        const btn = e.target.closest('[data-quote-toggle="1"]');
+                        if (!btn) return;
+
+                        const wrap = btn.closest('[data-locked-quote="1"]');
+                        if (!wrap) return;
+
+                        const body = wrap.querySelector('[data-quote-body-wrap="1"]');
+                        const isOpen = (wrap.dataset.open || "0") === "1";
+
+                        if (!body) return;
+
+                        if (isOpen) {
+                            wrap.dataset.open = "0";
+                            body.style.display = "none";
+                            btn.textContent = "열기";
+                        } else {
+                            wrap.dataset.open = "1";
+                            body.style.display = "";
+                            btn.textContent = "닫기";
+                        }
+                    });
+                }
+
+                // =========================
+                // main
+                // =========================
                 async function loadDetail() {
                     const mailNo = getMailNoFromPath();
                     const box = document.getElementById('contentBox');
@@ -268,32 +524,23 @@
                         return;
                     }
 
-                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}`);
+                    box.textContent = '로딩 중...';
+
+                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}`, { timeoutMs: 8000 });
 
                     setText('titleTxt', data.title ?? '-');
                     setText('createdAtTxt', fmtDate(data.createdAt));
 
                     const role = String(data.role || '').toUpperCase();
 
-                    // ===== ✅ 답신 버튼(RECIPIENT일 때만 노출/동작) =====
-                    const isRecipient = (role === 'RECIPIENT' || role === 'RECEIVER'); // 방어
+                    // ===== 답신 버튼 =====
+                    const isRecipient = (role === 'RECIPIENT' || role === 'RECEIVER');
                     if (isRecipient) {
                         const btnReply = ensureReplyButton();
                         if (btnReply) {
                             btnReply.onclick = async () => {
                                 try {
-                                    const res = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}/reply`);
-                                    // res = { payloadKey, replyToMailNo, title, receivers, quoteCnttJson }
-
-                                    if (res?.payloadKey) {
-                                        const appliedKey = `mail.reply.applied:${res.payloadKey}`;
-                                        if (sessionStorage.getItem(appliedKey)) {
-                                            // 이미 적용된 답신이면 그냥 write로 이동만(혹은 아무것도 안 함)
-                                            location.href = '/mail/write';
-                                            return;
-                                        }
-                                    }
-
+                                    const res = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}/reply`, { timeoutMs: 8000 });
                                     sessionStorage.setItem('mail.reply.payload', JSON.stringify(res));
                                     location.href = '/mail/write';
                                 } catch (e) {
@@ -303,42 +550,44 @@
                             };
                         }
                     } else {
-                        // 혹시 이전 화면 캐시 등으로 남아있을 경우 숨김
                         const btnReply = document.getElementById('btnReply');
                         if (btnReply) btnReply.style.display = 'none';
                     }
 
-                    // 라벨/값 동적 변경
+                    // 라벨/값
                     const partyLabelEl = document.getElementById('partyLabel');
                     const partyTxtEl = document.getElementById('partyTxt');
 
                     if (role === 'SENDER') {
                         partyLabelEl.textContent = '수신인';
-                        // ✅ receivers 우선, 없으면 receiverEmpIds 등으로 조립
                         partyTxtEl.textContent = buildReceiversText(data);
                     } else {
                         partyLabelEl.textContent = '발신인';
-                        partyTxtEl.textContent =
-                            `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
+                        partyTxtEl.textContent = `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
                     }
 
-                    // 내용 렌더
+                    // ✅ 내용 렌더: cnttHtml 우선, 없으면 cnttJson
                     try {
                         if (data.cnttHtml && String(data.cnttHtml).trim()) {
                             box.innerHTML = String(data.cnttHtml);
                         } else if (data.cnttJson && String(data.cnttJson).trim()) {
-                            // JSON은 상세에서 변환하지 않고, 안전하게 텍스트로만 표시
-                            box.textContent = '[내용(JSON) 렌더링 미지원]';
+                            box.innerHTML = await renderTiptapCached(data.cnttJson);
+                        } else if (data.cntt && String(data.cntt).trim()) {
+                            // 혹시 cntt에 json이 내려오면 fallback
+                            box.innerHTML = await renderTiptapCached(data.cntt);
                         } else {
                             box.textContent = '';
                         }
+
+                        // ✅ 렌더 후 토글 바인딩
+                        bindQuoteToggle(box);
                     } catch (e) {
                         console.error(e);
                         box.textContent = '';
                     }
 
-                    // 읽음 처리(실패해도 무시)
-                    try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/read`); } catch (e) {}
+                    // 읽음 처리(비동기)
+                    api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/read`, { timeoutMs: 4000 }).catch(() => {});
 
                     const isTrashed = !!data.deletedAt;
 
@@ -355,18 +604,18 @@
 
                     document.getElementById('btnTrash').onclick = async () => {
                         if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`);
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`, { timeoutMs: 8000 });
                         location.href = '/mail/trash';
                     };
 
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`);
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`, { timeoutMs: 8000 });
                         location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
                     };
 
                     document.getElementById('btnPurge').onclick = async () => {
                         if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`);
+                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`, { timeoutMs: 8000 });
                         location.href = '/mail/trash';
                     };
                 }
@@ -381,6 +630,11 @@
                             box.textContent = msg.split('::')[1];
                             return;
                         }
+                        if (msg.startsWith('timeout::')) {
+                            box.textContent = msg.split('::')[1];
+                            return;
+                        }
+
                         box.textContent = '메일 상세 조회에 실패했습니다.';
                     });
                 });

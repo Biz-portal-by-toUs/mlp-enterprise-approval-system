@@ -404,13 +404,13 @@
                 <div id="err" class="mw-err"></div>
 
                 <div class="mw-actions">
-                    <button class="mw-btn ghost" type="button" onclick="history.back()">취소</button>
+                    <button class="mw-btn ghost" type="button" id="btnCancel">취소</button>
                     <button class="mw-btn ghost" type="button" id="btnDraft">임시저장</button>
                     <button class="mw-btn" type="button" id="btnSend">전송</button>
                 </div>
             </section>
 
-            <!-- 공통 유틸 -->
+            <!-- ✅ 공통 유틸(전역) -->
             <script>
                 function getCsrfHeaders() {
                     const csrfParamEl = document.getElementById('csrfParam');
@@ -459,17 +459,46 @@
                     const uiReceivers = uniqueIds(parseReceivers(document.getElementById('receivers').value));
                     return { selfChecked, me, uiReceivers };
                 }
+
+                // ✅ 대기 유틸
+                function waitUntil(fn, { interval = 50, timeout = 8000 } = {}) {
+                    return new Promise((resolve) => {
+                        const start = Date.now();
+                        const t = setInterval(() => {
+                            try {
+                                if (fn()) { clearInterval(t); resolve(true); return; }
+                            } catch {}
+                            if (Date.now() - start > timeout) { clearInterval(t); resolve(false); }
+                        }, interval);
+                    });
+                }
+
+                // ✅ (중요) 답신→답신에서 원문 합쳐짐 방지: 중첩된 quote 제거 (전역!)
+                window.stripNestedQuotesFromHtml = function stripNestedQuotesFromHtml(html) {
+                    const s = String(html || '').trim();
+                    if (!s) return '';
+
+                    const temp = document.createElement('div');
+                    temp.innerHTML = s;
+
+                    // write/editor에서 생성한 quote wrapper들 제거
+                    temp.querySelectorAll('[data-locked-quote]').forEach(el => el.remove());
+                    temp.querySelectorAll('details[data-locked-quote]').forEach(el => el.remove());
+
+                    return temp.innerHTML.trim();
+                };
             </script>
 
-            <!-- TipTap -->
+            <!-- ✅ TipTap (module) -->
             <script type="module">
                 const LIMIT = 5000;
 
-                import {Editor} from "https://esm.sh/@tiptap/core@2.11.5";
+                import { Editor, Node } from "https://esm.sh/@tiptap/core@2.11.5";
                 import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
                 import Underline from "https://esm.sh/@tiptap/extension-underline@2.11.5";
                 import TextAlign from "https://esm.sh/@tiptap/extension-text-align@2.11.5";
                 import CharacterCount from "https://esm.sh/@tiptap/extension-character-count@2.11.5";
+                import { generateHTML } from "https://esm.sh/@tiptap/html@2.11.5";
 
                 const hidden = document.getElementById("cnttJson");
                 const editorEl = document.getElementById("mailEditor");
@@ -482,16 +511,131 @@
 
                 charLimitEl.textContent = String(LIMIT);
 
+                // ✅ lockedQuote: write에서도 "원문 제목/발신자"까지 함께 접힘 (details)
+                const LockedQuote = Node.create({
+                    name: "lockedQuote",
+                    group: "block",
+                    atom: true,
+
+                    addAttributes() {
+                        return {
+                            title: { default: "" },
+                            sender: { default: "" },
+                            html: { default: "" },
+                        };
+                    },
+
+                    parseHTML() {
+                        return [{ tag: 'details[data-locked-quote="1"]' }];
+                    },
+
+                    renderHTML({ node }) {
+                        const title = String(node.attrs.title || "").trim();
+                        const sender = String(node.attrs.sender || "").trim();
+                        const html = String(node.attrs.html || "").trim();
+
+                        const sanitized = html.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+
+                        return [
+                            "details",
+                            {
+                                "data-locked-quote": "1",
+                                style: [
+                                    "border-left:4px solid #e2e8f0",
+                                    "background:#f8fafc",
+                                    "padding:12px",
+                                    "border-radius:10px",
+                                    "margin:12px 0",
+                                ].join(";"),
+                            },
+
+                            [
+                                "summary",
+                                {
+                                    style: [
+                                        "list-style:none",
+                                        "cursor:pointer",
+                                        "outline:none",
+                                    ].join(";"),
+                                },
+
+                                [
+                                    "div",
+                                    {
+                                        style: [
+                                            "display:grid",
+                                            "grid-template-columns:64px 1fr",
+                                            "row-gap:6px",
+                                            "column-gap:10px",
+                                            "margin-bottom:10px",
+                                            "font-size:12px",
+                                            "font-weight:900",
+                                        ].join(";"),
+                                    },
+                                    ["div", { style: "color:#64748b" }, "제목:"],
+                                    ["div", { style: "color:#0f172a; word-break:break-word" }, title || "-"],
+                                    ["div", { style: "color:#64748b" }, "발신자:"],
+                                    ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
+                                ],
+
+                                [
+                                    "div",
+                                    {
+                                        style: [
+                                            "display:flex",
+                                            "align-items:center",
+                                            "justify-content:space-between",
+                                            "gap:10px",
+                                            "margin:6px 0 0 0",
+                                        ].join(";"),
+                                    },
+                                    ["div", { style: "color:#64748b; font-weight:900; font-size:12px" }, "원문"],
+                                    [
+                                        "span",
+                                        {
+                                            style: [
+                                                "border:1px solid rgba(15,23,42,.12)",
+                                                "background:#fff",
+                                                "border-radius:999px",
+                                                "padding:6px 10px",
+                                                "font-size:12px",
+                                                "font-weight:900",
+                                                "color:#0f172a",
+                                                "user-select:none",
+                                            ].join(";"),
+                                        },
+                                        "열기/닫기",
+                                    ],
+                                ],
+                            ],
+
+                            [
+                                "div",
+                                {
+                                    style: [
+                                        "margin-top:10px",
+                                        "background:#fff",
+                                        "border-radius:10px",
+                                        "padding:10px 12px",
+                                    ].join(";"),
+                                },
+                                ["div", { "data-locked-quote-body": "1", "data-html": sanitized }, ""],
+                            ],
+                        ];
+                    },
+                });
+
                 const editor = new Editor({
                     element: editorEl,
                     extensions: [
                         StarterKit,
                         Underline,
-                        TextAlign.configure({types: ["heading", "paragraph"]}),
-                        CharacterCount.configure({limit: LIMIT}),
+                        TextAlign.configure({ types: ["heading", "paragraph"] }),
+                        CharacterCount.configure({ limit: LIMIT }),
+                        LockedQuote,
                     ],
-                    content: {type: "doc", content: [{type: "paragraph"}]},
-                    onCreate() { syncHidden(); refreshToolbar(); refreshCount(); },
+                    content: { type: "doc", content: [{ type: "paragraph" }] },
+                    onCreate() { syncHidden(); refreshToolbar(); refreshCount(); window.__MAIL_EDITOR_READY__ = true; },
                     onUpdate() { syncHidden(); refreshToolbar(); refreshCount(); },
                     onSelectionUpdate() { refreshToolbar(); }
                 });
@@ -518,10 +662,11 @@
                         strike: editor.isActive("strike"),
                         bulletList: editor.isActive("bulletList"),
                         orderedList: editor.isActive("orderedList"),
-                        alignLeft: editor.isActive({textAlign: "left"}) ||
+                        alignLeft:
+                            editor.isActive({ textAlign: "left" }) ||
                             (!editor.getAttributes("paragraph").textAlign && !editor.getAttributes("heading").textAlign),
-                        alignCenter: editor.isActive({textAlign: "center"}),
-                        alignRight: editor.isActive({textAlign: "right"}),
+                        alignCenter: editor.isActive({ textAlign: "center" }),
+                        alignRight: editor.isActive({ textAlign: "right" }),
                     };
 
                     toolbar.querySelectorAll(".mw-tb-btn").forEach(btn => {
@@ -534,14 +679,14 @@
                         if (cmd === "redo") btn.disabled = !editor.can().chain().focus().redo().run();
                     });
 
-                    if (editor.isActive("heading", {level: 2})) headingSelect.value = "h2";
+                    if (editor.isActive("heading", { level: 2 })) headingSelect.value = "h2";
                     else headingSelect.value = "p";
                 }
 
                 headingSelect.addEventListener("change", () => {
                     const v = headingSelect.value;
                     const chain = editor.chain().focus();
-                    if (v === "h2") chain.setHeading({level: 2}).run();
+                    if (v === "h2") chain.setHeading({ level: 2 }).run();
                     else chain.setParagraph().run();
                     refreshToolbar();
                     syncHidden();
@@ -577,6 +722,7 @@
                     refreshCount();
                 });
 
+                // ===== 외부 API =====
                 window.__mailEditorGetJsonString = () => hidden.value || JSON.stringify(editor.getJSON());
                 window.__mailEditorGetText = () => editor.getText();
                 window.__mailEditorGetCount = () => editor.storage.characterCount.characters();
@@ -591,162 +737,61 @@
                         console.error(e);
                     }
                 };
-                import { generateJSON, generateHTML } from "https://esm.sh/@tiptap/html@2.11.5";
 
-                // locked quote를 식별할 데이터 속성
-                const QUOTE_ATTR = 'data-locked-quote';
+                // ✅ JSON → HTML (원문 HTML 만들기용)
+                window.__mailQuoteJsonToHtml = (quoteCnttJson) => {
+                    try {
+                        const s = String(quoteCnttJson || "").trim();
+                        if (!s) return "";
+                        const doc = JSON.parse(s);
+                        // StarterKit 등 확장들을 그대로 이용해 HTML 생성
+                        const html = generateHTML(doc, editor.extensionManager.extensions);
 
-                function buildLockedQuoteHtml(quoteHtml) {
-                    const safe = String(quoteHtml || '').trim();
-                    if (!safe) return '';
+                        // ✅ lockedQuote의 data-html은 "그대로 HTML"이어야 함 (escape 금지)
+                        return html;
+                    } catch (e) {
+                        console.error("quote json -> html failed", e);
+                        return "";
+                    }
+                };
 
-                    // 인용 블록은 blockquote로 감싸고 data-locked-quote 속성 부여
-                    // style은 element 수정 없이 inline로 가볍게
-                    return `
-    <blockquote ${QUOTE_ATTR}="1"
-      style="border-left:4px solid #e2e8f0; padding:10px 12px; margin:12px 0; background:#f8fafc; border-radius:10px;">
-      <div style="font-weight:900; color:#64748b; margin-bottom:6px;">원문</div>
-      ${safe}
-    </blockquote>
-  `;
-                }
+                // ✅ 답신 템플릿: 본문 빈 문단 + lockedQuote 1개
+                window.__mailEditorApplyReplyTemplate = ({ quoteTitle = '', quoteSender = '', quoteHtml = '' } = {}) => {
+                    const safeTitle = String(quoteTitle || '').trim();
+                    const safeSender = String(quoteSender || '').trim();
+                    const safeQuote = String(quoteHtml || '').trim();
 
-                function insertLockedQuote(quoteHtml) {
-                    const html = buildLockedQuoteHtml(quoteHtml);
-                    if (!html) return;
+                    const doc = {
+                        type: 'doc',
+                        content: [
+                            { type: 'paragraph', content: [] },
+                            { type: 'paragraph', content: [] },
+                            { type: 'lockedQuote', attrs: { title: safeTitle, sender: safeSender, html: safeQuote } },
+                        ],
+                    };
 
-                    // 현재 본문 뒤에 인용을 추가 (앞에 구분용 빈 문단도 추가)
-                    const current = editor.getHTML();
-
-                    // TipTap: HTML -> JSON 변환 후 setContent
-                    const nextHtml = `${current}<p></p>${html}`;
-                    const json = generateJSON(nextHtml, editor.extensionManager.extensions);
-
-                    editor.commands.setContent(json, false);
+                    editor.commands.setContent(doc);
                     syncHidden();
                     refreshToolbar();
                     refreshCount();
-                }
 
-                // ✅ 삭제/수정 방지: selection이 locked quote 안으로 들어가면 밖으로 튕김
-                function selectionInsideLockedQuote(view) {
-                    const { state } = view;
-                    const { from } = state.selection;
-                    const dom = view.domAtPos(from).node;
-                    const el = dom?.nodeType === 1 ? dom : dom?.parentElement;
-                    return el?.closest?.(`blockquote[${QUOTE_ATTR}="1"]`);
-                }
+                    // 커서는 맨 위
+                    try { editor.commands.focus("start"); } catch(e) {}
+                };
 
-                // 키 입력 방지(Backspace/Delete/Enter 포함)
-                editor.registerPlugin(
-                    new (await import("https://esm.sh/@tiptap/pm/state@2.11.5")).Plugin({
-                        props: {
-                            handleKeyDown(view, event) {
-                                const locked = selectionInsideLockedQuote(view);
-                                if (!locked) return false;
-
-                                // locked 영역에서는 모든 키 입력 막기(탭/방향키는 허용하고 싶으면 조건 분기)
-                                const allowKeys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Escape'];
-                                if (allowKeys.includes(event.key)) return false;
-
-                                event.preventDefault();
-                                return true;
-                            },
-                            handlePaste(view) {
-                                const locked = selectionInsideLockedQuote(view);
-                                if (!locked) return false;
-                                return true; // paste 차단
-                            },
-                            handleDrop(view) {
-                                const locked = selectionInsideLockedQuote(view);
-                                if (!locked) return false;
-                                return true; // drag-drop 차단
-                            }
-                        }
-                    })
-                );
-
-                // 외부에서 호출할 API
-                function ensureQuoteHost() {
-                    // mw-editor-wrap 안에 host를 만든다 (없으면 생성)
-                    const wrap = document.querySelector('.mw-editor-wrap');
-                    if (!wrap) return null;
-
-                    let host = document.getElementById('lockedQuoteHost');
-                    if (!host) {
-                        host = document.createElement('div');
-                        host.id = 'lockedQuoteHost';
-                        host.style.borderTop = '1px solid rgba(15, 23, 42, .10)';
-                        host.style.background = '#f8fafc';
-                        host.style.padding = '12px 14px';
-                        host.style.marginTop = '0';
-                        host.style.borderRadius = '0 0 12px 12px';
-                        host.style.display = 'none';
-                        wrap.appendChild(host);
-                    }
-                    return host;
-                }
-
-                function lockHostEvents(host){
-                    // 클릭/드래그/붙여넣기 등 전부 차단 (캡처링으로 확실히)
-                    const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
-                    ['keydown','beforeinput','input','paste','drop','cut','copy','dragstart','mousedown','mouseup'].forEach(t => {
-                        host.addEventListener(t, stop, true);
+                // ✅ lockedQuote 내부 placeholder(data-html) → 실제 innerHTML 주입 (write에서도 적용)
+                function hydrateLockedQuoteBodies(rootEl) {
+                    if (!rootEl) return;
+                    rootEl.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
+                        const raw = el.getAttribute('data-html') || '';
+                        el.innerHTML = raw;
+                        el.removeAttribute('data-html');
                     });
                 }
 
-                // quoteHtml을 잠금 블록으로 렌더
-                function renderLockedQuoteHtml(quoteHtml) {
-                    const safe = String(quoteHtml || '').trim();
-                    if (!safe) return '';
-
-                    // 안전상: script 태그 제거(간단 방어). 더 빡세게 하려면 서버에서 sanitize 권장.
-                    const sanitized = safe.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
-
-                    return `
-                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
-                          <div style="font-weight:900; color:#64748b;">원문</div>
-                          <div style="font-size:12px; font-weight:900; color:#94a3b8;">(수정 불가)</div>
-                        </div>
-                        <div style="border-left:4px solid #e2e8f0; padding:10px 12px; background:#fff; border-radius:10px;">
-                          ${sanitized}
-                        </div>
-                      `;
-                }
-
-                window.__mailEditorInsertLockedQuote = (quoteHtml) => {
-                    const host = ensureQuoteHost();
-                    if (!host) return;
-
-                    host.innerHTML = renderLockedQuoteHtml(quoteHtml);
-                    host.style.display = '';
-
-                    // contenteditable 완전 off
-                    host.setAttribute('contenteditable', 'false');
-
-                    // 이벤트 차단 1회만
-                    if (!host.__locked) {
-                        lockHostEvents(host);
-                        host.__locked = true;
-                    }
-
-                    // TipTap 본문 커서는 위쪽으로 이동
-                    try {
-                        editor.commands.focus('start');
-                    } catch(e) {}
-                };
-                window.__mailQuoteJsonToHtml = (quoteCnttJson) => {
-                    try {
-                        const s = String(quoteCnttJson || '').trim();
-                        if (!s) return '';
-                        const doc = JSON.parse(s);
-                        // editor.extensionManager.extensions를 쓰면 현재 에디터와 동일한 확장 기반으로 변환됨
-                        return generateHTML(doc, editor.extensionManager.extensions);
-                    } catch (e) {
-                        console.error('quote json -> html failed', e);
-                        return '';
-                    }
-                };
+                // 에디터 DOM이 렌더링된 후 주입되도록 약간 지연
+                const obs = new MutationObserver(() => hydrateLockedQuoteBodies(editorEl));
+                obs.observe(editorEl, { childList: true, subtree: true });
             </script>
 
             <!-- Receiver -->
@@ -787,21 +832,22 @@
                     wrap.innerHTML = Array.from(selectedReceivers.values()).map(r => {
                         const label = `${r.empName ?? ''}`.trim();
 
-                        // selfOnlyMode면 X(삭제) 버튼 숨김
                         const removeHtml = selfOnlyMode
                             ? ``
                             : `<span class="x" title="삭제" onclick="removeReceiver('${r.empId}')">×</span>`;
 
                         return `
-              <span class="mw-rx-chip" data-id="${r.empId}">
-                <span>${escapeHtml(label)}</span>
-                ${removeHtml}
-              </span>
-            `;
+        <span class="mw-rx-chip" data-id="${r.empId}">
+          <span>${escapeHtml(label)}</span>
+          ${removeHtml}
+        </span>
+      `;
                     }).join('');
 
                     syncHiddenReceivers();
                 }
+
+                window.renderReceiverTokens = renderReceiverTokens;
 
                 window.removeReceiver = function (empId) {
                     if (selfOnlyMode) return;
@@ -812,7 +858,6 @@
 
                 function canAddReceiver(empId) {
                     if (!empId) return false;
-
                     if (selfOnlyMode) return isMe(empId) || selectedReceivers.has(empId);
                     return true;
                 }
@@ -859,13 +904,13 @@
                         const right = [depName, posName].filter(Boolean).join(' · ');
 
                         return `
-              <div class="mw-rx-item"
-                   style="${disabled ? 'opacity:.55; cursor:not-allowed;' : ''}"
-                   onclick="${disabled ? '' : `pickReceiver('${empId}', '${escapeJs(empName)}', '${escapeJs(depName)}', '${escapeJs(posName)}')`}">
-                <div>${escapeHtml(left)}</div>
-                <div class="mw-rx-sub">${escapeHtml(right)}</div>
-              </div>
-            `;
+        <div class="mw-rx-item"
+             style="${disabled ? 'opacity:.55; cursor:not-allowed;' : ''}"
+             onclick="${disabled ? '' : `pickReceiver('${empId}', '${escapeJs(empName)}', '${escapeJs(depName)}', '${escapeJs(posName)}')`}">
+          <div>${escapeHtml(left)}</div>
+          <div class="mw-rx-sub">${escapeHtml(right)}</div>
+        </div>
+      `;
                     }).join('');
 
                     openReceiverDropdown();
@@ -887,7 +932,7 @@
                     closeReceiverDropdown();
                 };
 
-                // 내게쓰기 토글: ON이면 "나만" / OFF면 "나 제거 + 입력 허용"
+                // 내게쓰기 토글
                 function applySelfWriteToggle() {
                     const cb = document.getElementById('selfWrite');
                     const input = document.getElementById('receiverInput');
@@ -917,15 +962,16 @@
                     }
                 }
 
+                window.applySelfWriteToggle = applySelfWriteToggle;
+
                 document.addEventListener('DOMContentLoaded', () => {
                     const box = document.getElementById('receiverBox');
                     const input = document.getElementById('receiverInput');
                     const selfCb = document.getElementById('selfWrite');
 
-                    // ✅ 이벤트 연결
                     if (selfCb) {
                         selfCb.addEventListener('change', applySelfWriteToggle);
-                        applySelfWriteToggle(); // 초기 상태 반영
+                        applySelfWriteToggle();
                     }
 
                     renderReceiverTokens();
@@ -1015,48 +1061,46 @@
                     cut();
                 }
 
-                function applyReplyPayloadIfAny(){
+                async function applyReplyPayloadIfAny() {
                     const raw = sessionStorage.getItem('mail.reply.payload');
-                    if (!raw) return;
-
-                    // ✅ 여기서는 remove 하지 말고, "적용 성공" 후 remove 하는 게 안전
-                    let payload = null;
-                    try { payload = JSON.parse(raw); }
-                    catch(e){
-                        console.error('reply payload parse error', e);
+                    if (!raw || raw === 'null' || raw === 'undefined') {
                         sessionStorage.removeItem('mail.reply.payload');
                         return;
                     }
 
-                    // ✅ payloadKey 중복 방지 (한 번 적용됐으면 다시 적용하지 않음)
-                    if (payload?.payloadKey) {
-                        const appliedKey = `mail.reply.applied:${payload.payloadKey}`;
-                        if (sessionStorage.getItem(appliedKey)) {
-                            // 이미 적용된 적 있으면 payload만 제거하고 끝
-                            sessionStorage.removeItem('mail.reply.payload');
-                            return;
-                        }
-                        sessionStorage.setItem(appliedKey, "1");
+                    let payload;
+                    try { payload = JSON.parse(raw); }
+                    catch (e) {
+                        console.error('reply payload parse error', e, raw);
+                        sessionStorage.removeItem('mail.reply.payload');
+                        return;
                     }
 
-                    // ✅ 이제 payload는 "이번에 적용"할 거니까 제거
-                    sessionStorage.removeItem('mail.reply.payload');
+                    // 중복 방지 (페이지 인스턴스)
+                    if (window.__REPLY_APPLIED_ONCE__ === payload?.payloadKey) return;
 
-                    try{
-                        // 답신이면 selfWrite는 무조건 OFF
-                        const selfCb = document.getElementById('selfWrite');
-                        if (selfCb) {
-                            selfCb.checked = false;
-                            if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
-                        }
+                    // selfWrite OFF
+                    const selfCb = document.getElementById('selfWrite');
+                    if (selfCb) {
+                        selfCb.checked = false;
+                        if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
+                    }
 
-                        // 제목
-                        if (payload.title && document.getElementById('title')) {
-                            document.getElementById('title').value = payload.title;
-                        }
+                    // 제목
+                    const titleEl = document.getElementById('title');
+                    if (titleEl && payload?.title) {
+                        titleEl.value = payload.title;
+                        titleEl.dispatchEvent(new Event('input', { bubbles:true }));
+                    }
 
-                        // 수신자
-                        if (Array.isArray(payload.receivers)) {
+                    // 수신자 적용(준비 대기)
+                    const receiversOk = await waitUntil(
+                        () => (typeof selectedReceivers !== 'undefined') && (typeof renderReceiverTokens === 'function'),
+                        { timeout: 8000 }
+                    );
+
+                    if (receiversOk && Array.isArray(payload?.receivers)) {
+                        try {
                             selectedReceivers.clear();
                             payload.receivers.forEach(r => {
                                 if (!r?.empId) return;
@@ -1068,47 +1112,60 @@
                                 });
                             });
                             renderReceiverTokens();
-                        }
-                    } catch(e){
-                        console.error('apply payload base fields failed', e);
-                    }
-
-                    // ✅ 인용(원문) 삽입: quoteCnttJson 우선, (옵션) quoteHtml 지원도 가능
-                    const quoteJson = String(payload.quoteCnttJson || '').trim();
-                    const quoteHtml = String(payload.quoteHtml || '').trim(); // 서버가 html로 주는 버전 대비
-
-                    const getQuoteHtml = () => {
-                        if (quoteHtml) return quoteHtml;
-                        if (quoteJson && typeof window.__mailQuoteJsonToHtml === 'function') {
-                            return window.__mailQuoteJsonToHtml(quoteJson) || '';
-                        }
-                        return '';
-                    };
-
-                    const htmlToInsert = getQuoteHtml();
-                    if (htmlToInsert) {
-                        const tryApply = () => {
-                            if (typeof window.__mailEditorInsertLockedQuote === 'function') {
-                                window.__mailEditorInsertLockedQuote(htmlToInsert);
-                                return true;
-                            }
-                            return false;
-                        };
-
-                        // 모듈 로딩 타이밍 대응
-                        if (!tryApply()) {
-                            let t = 0;
-                            const timer = setInterval(() => {
-                                t += 1;
-                                if (tryApply() || t > 20) clearInterval(timer);
-                            }, 100);
+                        } catch (e) {
+                            console.error('apply receivers failed', e);
                         }
                     }
+
+                    // 에디터 준비 대기
+                    const editorOk = await waitUntil(
+                        () => window.__MAIL_EDITOR_READY__ &&
+                            typeof window.__mailQuoteJsonToHtml === 'function' &&
+                            typeof window.__mailEditorApplyReplyTemplate === 'function',
+                        { timeout: 8000 }
+                    );
+
+                    if (!editorOk) return;
+
+                    const quoteJson = String(payload?.quoteCnttJson || '').trim();
+                    const quoteHtmlFromServer = String(payload?.quoteHtml || '').trim();
+
+                    const computedQuoteHtml = quoteHtmlFromServer
+                        ? quoteHtmlFromServer
+                        : (quoteJson ? (window.__mailQuoteJsonToHtml(quoteJson) || '') : '');
+
+                    // ✅ 원문 제목/발신자
+                    const quoteTitle = String(payload?.originalTitle || '').trim()
+                        || String(payload?.title || '').replace(/^RE:\s*/i, '').trim();
+
+                    const quoteSender = `${payload?.originalSenderEmpName ?? ''} (${payload?.originalSenderEmpId ?? ''})`
+                        .trim()
+                        .replace(/^\(\)$/,'');
+
+                    // ✅ (핵심) 답신→답신 중첩 방지
+                    const cleanedQuoteHtml = (window.stripNestedQuotesFromHtml ? window.stripNestedQuotesFromHtml(computedQuoteHtml) : computedQuoteHtml);
+
+                    window.__mailEditorApplyReplyTemplate({
+                        quoteTitle,
+                        quoteSender: quoteSender || '-',
+                        quoteHtml: cleanedQuoteHtml
+                    });
+
+                    window.__REPLY_APPLIED_ONCE__ = payload?.payloadKey || 'applied';
+                    sessionStorage.removeItem('mail.reply.payload');
                 }
 
-                window.addEventListener('DOMContentLoaded', () => {
-                    enforceTitleLimit();
+                document.getElementById('btnCancel')?.addEventListener('click', () => {
+                    sessionStorage.removeItem('mail.reply.payload');
+                    history.back();
                 });
+
+                function bootWritePage() {
+                    enforceTitleLimit();
+                    applyReplyPayloadIfAny().catch(console.error);
+                }
+                window.addEventListener('DOMContentLoaded', bootWritePage);
+                window.addEventListener('pageshow', bootWritePage);
             </script>
 
             <!-- 전송 로직 -->
@@ -1132,7 +1189,6 @@
                     if (el) el.value = mailId || '';
                 }
 
-                // 임시저장
                 async function saveDraft() {
                     showErr('');
 
@@ -1168,7 +1224,7 @@
                     return data;
                 }
 
-                document.getElementById('btnDraft').addEventListener('click', async () => {
+                document.getElementById('btnDraft')?.addEventListener('click', async () => {
                     try {
                         await saveDraft();
                         location.href = '/mail/drafts';
@@ -1191,7 +1247,7 @@
                     });
                 }
 
-                document.getElementById('btnSend').addEventListener('click', async () => {
+                document.getElementById('btnSend')?.addEventListener('click', async () => {
                     showErr('');
 
                     const draftMailId = getDraftMailId();
@@ -1236,7 +1292,7 @@
                 });
             </script>
 
-            <!-- draft 로드 + reply payload 적용 -->
+            <!-- draft 로드 -->
             <script>
                 async function loadDraftIfAny() {
                     const params = new URLSearchParams(location.search);
@@ -1256,6 +1312,7 @@
 
                         document.getElementById('draftMailId').value = data.mailId || mailId;
                         document.getElementById('title').value = data.title || '';
+                        document.getElementById('title').dispatchEvent(new Event('input', { bubbles:true }));
 
                         const cnttJson = data.cnttJson || data.cntt || '';
                         if (cnttJson && window.__mailEditorSetJsonString) {
@@ -1291,8 +1348,6 @@
                 }
 
                 window.addEventListener('DOMContentLoaded', () => {
-                    // 순서 중요: 답신 payload → draft 로드(있으면 draft가 최종)
-                    applyReplyPayloadIfAny();
                     loadDraftIfAny().catch(console.error);
                 });
             </script>

@@ -470,12 +470,16 @@ public class MailServiceImpl implements MailService {
 
         Mail mail = mus.getMail();
 
-        // 답신 제목 생성 (RE: 중복 방지)
+        // 원문 제목
         String originTitle = (mail.getTitle() == null) ? "" : mail.getTitle().trim();
+
+        // 답신 제목 생성 (RE: 중복 방지)
         String replyTitle = normalizeReplyTitle(originTitle);
 
-        // 기본 수신자 = 원 발신자 1명
+        // 원 발신자
         Employee sender = mail.getSender();
+
+        // 기본 수신자 = 원 발신자 1명
         List<ResMailReplyPayloadDto.ReceiverItem> receivers = List.of(
                 new ResMailReplyPayloadDto.ReceiverItem(sender.getEmpId(), sender.getEmpName())
         );
@@ -483,17 +487,21 @@ public class MailServiceImpl implements MailService {
         // 원문 JSON
         String quoteCnttJson = (mail.getCntt() == null) ? "" : mail.getCntt();
 
+        String quoteHtml = null;
+
         // 중복 방지 키 (같은 원문메일에 대한 reply payload는 항상 동일한 키)
-        // - mailNo 기준으로 고정시키면 "한 번만 적용"을 프론트에서 매우 쉽게 처리 가능
-        // - viewerEmpId까지 넣고 싶으면 붙여도 됨(사용자별로 다르게)
-        String payloadKey = "reply:" + mailNo; // 또는 "reply:" + mailNo + ":" + viewerEmpId
+        String payloadKey = "reply:" + mailNo;
 
         return new ResMailReplyPayloadDto(
                 payloadKey,
                 mail.getMailNo(),
                 replyTitle,
                 receivers,
-                quoteCnttJson
+                quoteCnttJson,
+                originTitle,
+                quoteHtml,
+                sender.getEmpId(),
+                sender.getEmpName()
         );
     }
 

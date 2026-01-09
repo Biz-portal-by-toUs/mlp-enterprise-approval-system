@@ -14,7 +14,11 @@ public record ResMailReplyPayloadDto(
         Long replyToMailNo,  // 원문 mailNo
         String title,        // RE: 처리된 제목
         List<ReceiverItem> receivers,
-        String quoteCnttJson // 원문 tiptap JSON (mail.getCntt())
+        String quoteCnttJson, // 원문 tiptap JSON (mail.getCntt())
+        String originalTitle,
+        String quoteHtml,
+        String originalSenderEmpId,
+        String originalSenderEmpName
 ) {
     public record ReceiverItem(String empId, String empName) {}
 }
