@@ -295,9 +295,80 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        /* ===== attachments (메일 첨부) ===== */
+        .mw-att-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            margin-bottom:8px;
+        }
+        .mw-att-note{
+            color:var(--mut);
+            font-size:12px;
+            font-weight:800;
+        }
+        .mw-att-upload{
+            display:flex;
+            gap:8px;
+            align-items:center;
+            flex-wrap:wrap;
+        }
+        .mw-att-list{
+            margin-top:10px;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+        }
+        .mw-att-item{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:10px 12px;
+            border:1px solid var(--line);
+            border-radius:12px;
+            background:#fff;
+        }
+        .mw-att-name{
+            font-weight:900;
+            word-break:break-word;
+        }
+        .mw-att-meta{
+            color:var(--mut);
+            font-weight:800;
+            font-size:12px;
+            margin-top:2px;
+        }
+        .mw-att-actions{
+            display:flex;
+            gap:8px;
+            flex:0 0 auto;
+        }
+        .mw-att-mini{
+            height:32px;
+            padding:0 12px;
+            border-radius:10px;
+            font-size:13px;
+            font-weight:900;
+            cursor:pointer;
+            border:1px solid var(--line);
+            background:#fff;
+            color:var(--fg);
+        }
+        .mw-att-mini:hover{ background:#f8fafc; }
+        .mw-att-mini.danger{
+            border-color: rgba(239,68,68,.35);
+            background: rgba(239,68,68,.06);
+            color:#ef4444;
+        }
+        .mw-att-mini.danger:hover{ background: rgba(239,68,68,.10); }
+
         @media (max-width: 760px) {
             .mw-row { grid-template-columns: 1fr; }
             .mw-k { padding-top: 0; }
+            .mw-att-item{ align-items:flex-start; flex-direction:column; }
+            .mw-att-actions{ width:100%; justify-content:flex-end; }
         }
     </style>
 </head>
@@ -356,6 +427,26 @@
                     </div>
                 </div>
 
+                <!-- ✅ 첨부 (A안: domain=MAIL, entityId=mailNo) -->
+                <div class="mw-row">
+                    <div class="mw-k">첨부</div>
+                    <div>
+                        <div class="mw-att-head">
+                            <div class="mw-att-note">
+                                첨부 추가 시 임시저장(draft)이 자동 생성됩니다.
+                            </div>
+                            <div class="mw-att-note" id="attStatusText"></div>
+                        </div>
+
+                        <div class="mw-att-upload">
+                            <input id="attachInput" type="file" multiple>
+                            <button type="button" class="mw-btn ghost" id="btnAttachUpload">추가</button>
+                        </div>
+
+                        <div id="attachList" class="mw-att-list"></div>
+                    </div>
+                </div>
+
                 <!-- 내용 -->
                 <div class="mw-row">
                     <div class="mw-k">내용</div>
@@ -398,6 +489,8 @@
 
                         <input type="hidden" id="cnttJson"/>
                         <input type="hidden" id="draftMailId" value="">
+                        <!-- ✅ (추가) 첨부용 mailNo -->
+                        <input type="hidden" id="draftMailNo" value="">
                     </div>
                 </div>
 
@@ -744,10 +837,7 @@
                         const s = String(quoteCnttJson || "").trim();
                         if (!s) return "";
                         const doc = JSON.parse(s);
-                        // StarterKit 등 확장들을 그대로 이용해 HTML 생성
                         const html = generateHTML(doc, editor.extensionManager.extensions);
-
-                        // ✅ lockedQuote의 data-html은 "그대로 HTML"이어야 함 (escape 금지)
                         return html;
                     } catch (e) {
                         console.error("quote json -> html failed", e);
@@ -775,11 +865,9 @@
                     refreshToolbar();
                     refreshCount();
 
-                    // 커서는 맨 위
                     try { editor.commands.focus("start"); } catch(e) {}
                 };
 
-                // ✅ lockedQuote 내부 placeholder(data-html) → 실제 innerHTML 주입 (write에서도 적용)
                 function hydrateLockedQuoteBodies(rootEl) {
                     if (!rootEl) return;
                     rootEl.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
@@ -789,7 +877,6 @@
                     });
                 }
 
-                // 에디터 DOM이 렌더링된 후 주입되도록 약간 지연
                 const obs = new MutationObserver(() => hydrateLockedQuoteBodies(editorEl));
                 obs.observe(editorEl, { childList: true, subtree: true });
             </script>
@@ -1076,24 +1163,20 @@
                         return;
                     }
 
-                    // 중복 방지 (페이지 인스턴스)
                     if (window.__REPLY_APPLIED_ONCE__ === payload?.payloadKey) return;
 
-                    // selfWrite OFF
                     const selfCb = document.getElementById('selfWrite');
                     if (selfCb) {
                         selfCb.checked = false;
                         if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
                     }
 
-                    // 제목
                     const titleEl = document.getElementById('title');
                     if (titleEl && payload?.title) {
                         titleEl.value = payload.title;
                         titleEl.dispatchEvent(new Event('input', { bubbles:true }));
                     }
 
-                    // 수신자 적용(준비 대기)
                     const receiversOk = await waitUntil(
                         () => (typeof selectedReceivers !== 'undefined') && (typeof renderReceiverTokens === 'function'),
                         { timeout: 8000 }
@@ -1117,7 +1200,6 @@
                         }
                     }
 
-                    // 에디터 준비 대기
                     const editorOk = await waitUntil(
                         () => window.__MAIL_EDITOR_READY__ &&
                             typeof window.__mailQuoteJsonToHtml === 'function' &&
@@ -1134,7 +1216,6 @@
                         ? quoteHtmlFromServer
                         : (quoteJson ? (window.__mailQuoteJsonToHtml(quoteJson) || '') : '');
 
-                    // ✅ 원문 제목/발신자
                     const quoteTitle = String(payload?.originalTitle || '').trim()
                         || String(payload?.title || '').replace(/^RE:\s*/i, '').trim();
 
@@ -1142,7 +1223,6 @@
                         .trim()
                         .replace(/^\(\)$/,'');
 
-                    // ✅ (핵심) 답신→답신 중첩 방지
                     const cleanedQuoteHtml = (window.stripNestedQuotesFromHtml ? window.stripNestedQuotesFromHtml(computedQuoteHtml) : computedQuoteHtml);
 
                     window.__mailEditorApplyReplyTemplate({
@@ -1183,10 +1263,17 @@
                 function getDraftMailId() {
                     return (document.getElementById('draftMailId')?.value || '').trim();
                 }
-
                 function setDraftMailId(mailId) {
                     const el = document.getElementById('draftMailId');
                     if (el) el.value = mailId || '';
+                }
+
+                function getDraftMailNo() {
+                    return (document.getElementById('draftMailNo')?.value || '').trim();
+                }
+                function setDraftMailNo(mailNo) {
+                    const el = document.getElementById('draftMailNo');
+                    if (el) el.value = mailNo || '';
                 }
 
                 async function saveDraft() {
@@ -1221,6 +1308,8 @@
                     });
 
                     if (data?.mailId) setDraftMailId(data.mailId);
+                    if (data?.mailNo) setDraftMailNo(String(data.mailNo));
+
                     return data;
                 }
 
@@ -1311,6 +1400,7 @@
                         if (!data) return;
 
                         document.getElementById('draftMailId').value = data.mailId || mailId;
+                        document.getElementById('draftMailNo').value = data.mailNo ? String(data.mailNo) : '';
                         document.getElementById('title').value = data.title || '';
                         document.getElementById('title').dispatchEvent(new Event('input', { bubbles:true }));
 
@@ -1341,6 +1431,11 @@
                             renderReceiverTokens();
                             if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
                         }
+
+                        // ✅ draft 로드되면 첨부 목록 갱신
+                        if (typeof refreshAttachList === 'function') {
+                            refreshAttachList().catch(console.error);
+                        }
                     } catch (e) {
                         console.error(e);
                         showErr(e.message || '임시저장 불러오기에 실패했습니다.');
@@ -1351,6 +1446,201 @@
                     loadDraftIfAny().catch(console.error);
                 });
             </script>
+
+            <!-- ✅ 첨부 로직 (A안: MAIL + mailNo) -->
+            <script>
+                function setAttStatus(msg) {
+                    const el = document.getElementById('attStatusText');
+                    if (el) el.textContent = msg || '';
+                }
+
+                function inferFileType(mime) {
+                    const m = String(mime || '').toLowerCase();
+                    if (m.startsWith('image/')) return 'IMAGE';
+                    if (m.startsWith('audio/')) return 'AUDIO';
+                    return 'DOC';
+                }
+
+                function formatBytes(bytes) {
+                    const n = Number(bytes || 0);
+                    if (!n) return '0B';
+                    const kb = n / 1024;
+                    if (kb < 1024) return `${Math.ceil(kb)}KB`;
+                    return `${(kb / 1024).toFixed(1)}MB`;
+                }
+
+                async function ensureDraftForAttach() {
+                    const mailNo = (document.getElementById('draftMailNo')?.value || '').trim();
+                    if (mailNo) return mailNo;
+
+                    // 첨부는 mailNo 필요 -> 최소 1회 draft 생성
+                    setAttStatus('임시저장 생성 중...');
+                    const data = await saveDraft(); // 위에서 정의한 saveDraft 재사용
+                    const newNo = String(data?.mailNo || '').trim();
+                    if (newNo) {
+                        document.getElementById('draftMailNo').value = newNo;
+                        setAttStatus('');
+                        return newNo;
+                    }
+                    setAttStatus('');
+                    throw new Error('첨부를 위한 임시저장 생성에 실패했습니다.');
+                }
+
+                async function refreshAttachList() {
+                    const mailNo = (document.getElementById('draftMailNo')?.value || '').trim();
+                    const wrap = document.getElementById('attachList');
+                    if (!wrap) return;
+
+                    if (!mailNo) {
+                        wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
+                        return;
+                    }
+
+                    const res = await fetch(`/api/v1/attachments?domain=MAIL&entityId=${encodeURIComponent(mailNo)}`, {
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
+                    });
+                    const json = await res.json().catch(() => null);
+                    const items = json?.data || [];
+
+                    if (!items.length) {
+                        wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
+                        return;
+                    }
+
+                    wrap.innerHTML = items.map(it => `
+                        <div class="mw-att-item">
+                            <div style="min-width:0;">
+                                <div class="mw-att-name">${escapeHtml(it.originalName)}</div>
+                                <div class="mw-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
+                            </div>
+                            <div class="mw-att-actions">
+                                <button type="button" class="mw-att-mini" onclick="previewAttach(${it.attachmentId})">미리보기</button>
+                                <button type="button" class="mw-att-mini danger" onclick="deleteAttach(${it.attachmentId})">삭제</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                async function previewAttach(attachmentId) {
+                    try {
+                        const res = await fetch(`/api/v1/attachments/${attachmentId}/preview-url`, {
+                            credentials: 'include',
+                            headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
+                        });
+                        const json = await res.json().catch(() => null);
+                        if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
+                        const url = json?.data?.url;
+                        if (!url) throw new Error('미리보기 URL이 없습니다.');
+                        window.open(url, '_blank', 'noopener');
+                    } catch (e) {
+                        console.error(e);
+                        showErr(e.message || '미리보기에 실패했습니다.');
+                    }
+                }
+
+                async function deleteAttach(attachmentId) {
+                    try {
+                        showErr('');
+                        await fetchJsonWithDto(`/api/v1/attachments/${attachmentId}`, {
+                            method: 'DELETE',
+                            credentials: 'include',
+                            headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
+                        });
+                        await refreshAttachList();
+                    } catch (e) {
+                        console.error(e);
+                        showErr(e.message || '삭제에 실패했습니다.');
+                    }
+                }
+
+                async function uploadOneFile(file, mailNo) {
+                    // 1) presign
+                    const presign = await fetchJsonWithDto(`/api/v1/attachments/presign`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
+                        },
+                        body: JSON.stringify({
+                            domain: 'MAIL',
+                            entityId: Number(mailNo),
+                            fileType: inferFileType(file.type),
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size
+                        })
+                    });
+
+                    // 2) PUT to S3
+                    const putRes = await fetch(presign.uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                        body: file
+                    });
+                    if (!putRes.ok) throw new Error('S3 업로드 실패');
+
+                    // ETag(선택)
+                    const etag = putRes.headers.get('ETag') || putRes.headers.get('etag') || null;
+
+                    // 3) complete
+                    await fetchJsonWithDto(`/api/v1/attachments/complete`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
+                        },
+                        body: JSON.stringify({
+                            domain: 'MAIL',
+                            entityId: Number(mailNo),
+                            fileType: inferFileType(file.type),
+                            objectKey: presign.objectKey,
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size,
+                            etag: etag
+                        })
+                    });
+                }
+
+                document.getElementById('btnAttachUpload')?.addEventListener('click', async () => {
+                    try {
+                        showErr('');
+
+                        const input = document.getElementById('attachInput');
+                        const files = Array.from(input?.files || []);
+                        if (!files.length) return;
+
+                        const mailNo = await ensureDraftForAttach();
+
+                        setAttStatus('업로드 중...');
+                        for (const f of files) {
+                            await uploadOneFile(f, mailNo);
+                        }
+
+                        if (input) input.value = '';
+                        setAttStatus('');
+                        await refreshAttachList();
+                    } catch (e) {
+                        console.error(e);
+                        setAttStatus('');
+                        showErr(e.message || '첨부 업로드에 실패했습니다.');
+                    }
+                });
+
+                window.previewAttach = previewAttach;
+                window.deleteAttach = deleteAttach;
+                window.refreshAttachList = refreshAttachList;
+
+                window.addEventListener('DOMContentLoaded', () => {
+                    refreshAttachList().catch(console.error);
+                });
+            </script>
+
         </main>
     </div>
 </div>
