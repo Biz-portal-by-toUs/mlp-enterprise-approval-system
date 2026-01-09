@@ -31,22 +31,14 @@ public class MailServiceImpl implements MailService {
     private final EmployeeRepository employeeRepository;
     private final NotificationService noti;
 
-    // =========================
-    // ===== send / list =====
-    // =========================
-
+    // send / list
     @Override
     @Transactional
     public ResMailSendDto sendMail(String senderEmpId, ReqMailSendDto req) {
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
-        String mailId = generateMailId(senderEmpId);
-
-        Mail mail = Mail.create(mailId, req.title(), req.cnttJson(), sender);
-        Mail saved = mailRepository.save(mail);
-
-        // 수신자 정규화
+        // 1수신자 정규화/검증 먼저
         Set<String> unique = new LinkedHashSet<>();
         if (req.receiverEmpIds() != null) {
             for (String id : req.receiverEmpIds()) {
@@ -54,29 +46,46 @@ public class MailServiceImpl implements MailService {
             }
         }
 
-        boolean isSelfMail = (unique.size() == 1 && unique.contains(senderEmpId));
+        // 발송은 수신자 필수
+        if (unique.isEmpty()) {
+            throw new CustomException(ErrorCode.MAIL_RECEIVER_REQUIRED);
+        }
 
-        if (isSelfMail) {
-            // 내게쓴메일: RECIPIENT row만 1개
+        boolean hasSelf = unique.contains(senderEmpId);
+
+        // 내게쓰기(self) + others 혼합 금지
+        if (hasSelf && unique.size() > 1) {
+            throw new CustomException(ErrorCode.MAIL_SELF_ONLY_MODE);
+        }
+
+        // Mail 생성/저장
+        String mailId = generateMailId(senderEmpId);
+        Mail mail = Mail.create(mailId, req.title(), req.cnttJson(), sender);
+        Mail saved = mailRepository.save(mail);
+
+        // 3상태 저장
+        if (hasSelf) {
+            // self-only: RECIPIENT 1개만
             mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.RECIPIENT));
-        } else {
-            // 일반메일: SENDER row 1개 + RECIPIENT rows
-            mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.SENDER));
+            return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getCreatedAt());
+        }
 
-            for (String recvEmpId : unique) {
-                Employee recv = employeeRepository.findByEmpId(recvEmpId)
-                        .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
+        // normal: SENDER 1개 + RECIPIENT N개
+        mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.SENDER));
 
-                mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT));
+        for (String recvEmpId : unique) {
+            Employee recv = employeeRepository.findByEmpId(recvEmpId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
 
-                noti.sendNotification(
-                        recv.getEmpId(),
-                        NotificationType.MAIL,
-                        "[메일]",
-                        saved.getTitle(),
-                        "/mail/" + saved.getMailNo()
-                );
-            }
+            mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT));
+
+            noti.sendNotification(
+                    recv.getEmpId(),
+                    NotificationType.MAIL,
+                    "[메일]",
+                    saved.getTitle(),
+                    "/mail/" + saved.getMailNo()
+            );
         }
 
         return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getCreatedAt());
@@ -237,19 +246,31 @@ public class MailServiceImpl implements MailService {
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
+        // 제목/내용 기본값 처리
         String title = (req.title() == null) ? "" : req.title().trim();
         String cnttJson = (req.cnttJson() == null) ? "{}" : req.cnttJson();
 
-        // ✅ 수신자 정규화 + TEXT로 저장(콤마)
+        // 수신자 정규화
         List<String> receiverEmpIds = normalizeEmpIds(req.receiverEmpIds());
-        String draftReceivers = joinEmpIds(receiverEmpIds);
 
+        // 정책: 내게쓰기(self-only) 혼합 금지
+        boolean hasSelf = receiverEmpIds.contains(senderEmpId);
+        if (hasSelf && receiverEmpIds.size() > 1) {
+            throw new CustomException(ErrorCode.MAIL_SELF_ONLY_MODE);
+        }
+
+        // TEXT로 저장
+        String draftReceivers = joinEmpIds(receiverEmpIds); // 비어있으면 null 처리됨(아래 joinEmpIds 기준)
+
+        // 신규/수정 분기
         Mail mail;
-        if (req.mailId() == null || req.mailId().isBlank()) {
+        boolean isCreate = (req.mailId() == null || req.mailId().isBlank());
+
+        if (isCreate) {
             String mailId = generateMailId(senderEmpId);
             mail = Mail.createDraft(mailId, title, cnttJson, sender);
 
-            // ✅ 신규 draft에도 수신자 저장
+            // 신규 draft에도 수신자 저장
             mail.updateDraft(title, cnttJson, draftReceivers);
         } else {
             mail = mailRepository.findDraftDetail(req.mailId(), senderEmpId)
@@ -259,10 +280,11 @@ public class MailServiceImpl implements MailService {
                 throw new CustomException(ErrorCode.MAIL_ALREADY_SENT);
             }
 
-            // ✅ draft 업데이트 시 수신자까지 저장
+            // draft 업데이트 시 수신자까지 저장
             mail.updateDraft(title, cnttJson, draftReceivers);
         }
 
+        // 5저장
         Mail saved = mailRepository.save(mail);
 
         return new ResMailDraftSavedDto(
@@ -300,7 +322,7 @@ public class MailServiceImpl implements MailService {
         Mail mail = mailRepository.findDraftDetail(mailId, senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
 
-        // ✅ TEXT -> List<String>
+        // TEXT -> List<String>
         List<String> receiverEmpIds = splitEmpIds(mail.getDraftReceivers());
 
         return new ResMailDraftDetailDto(
@@ -331,96 +353,87 @@ public class MailServiceImpl implements MailService {
         Employee sender = employeeRepository.findByEmpId(senderEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MAIL_SENDER_NOT_FOUND));
 
-        // ✅ 1) req 수신자 우선, 없으면 draft_receivers fallback
+        // req 수신자 우선, 없으면 draft_receivers fallback
         List<String> receiverList = normalizeEmpIds(req == null ? null : req.receiverEmpIds());
         if (receiverList.isEmpty()) {
             receiverList = splitEmpIds(draft.getDraftReceivers());
         }
+
+        // 발송은 수신자 필수
         if (receiverList.isEmpty()) {
-            throw new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND); // 너희 에러코드에 맞게 교체
+            throw new CustomException(ErrorCode.MAIL_RECEIVER_REQUIRED);
         }
 
+        // Set 정규화
         Set<String> unique = new LinkedHashSet<>(receiverList);
 
-        boolean wantSelf = unique.contains(senderEmpId);
-        Set<String> others = new LinkedHashSet<>(unique);
-        others.remove(senderEmpId);
+        boolean hasSelf = unique.contains(senderEmpId);
 
-        // case 1) 내게쓰기만
-        if (wantSelf && others.isEmpty()) {
-            draft.clearDraft();
-            Mail savedSelf = mailRepository.save(draft);
-
-            mailUserStateRepository.findByMail_MailNoAndUser_EmpId(savedSelf.getMailNo(), senderEmpId)
-                    .orElseGet(() -> mailUserStateRepository.save(
-                            MailUserState.create(savedSelf, sender, MailRole.RECIPIENT)
-                    ));
-
-            return new ResMailSendDto(savedSelf.getMailNo(), savedSelf.getMailId(), savedSelf.getSavedAt());
+        // 내게쓰기(self) + others 혼합 금지
+        if (hasSelf && unique.size() > 1) {
+            throw new CustomException(ErrorCode.MAIL_SELF_ONLY_MODE);
         }
 
-        // case 2) 일반메일만(내가 수신자에 없음)
-        if (!wantSelf) {
-            draft.clearDraft();
-            Mail saved = mailRepository.save(draft);
+        // draft -> sent 전환
+        draft.clearDraft();
+        Mail saved = mailRepository.save(draft);
 
-            mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), senderEmpId)
-                    .orElseGet(() -> mailUserStateRepository.save(
-                            MailUserState.create(saved, sender, MailRole.SENDER)
-                    ));
+        // 상태 저장(안전 보강: role 꼬임 교정)
+        if (hasSelf) {
+            Optional<MailUserState> opt = mailUserStateRepository
+                    .findByMail_MailNoAndUser_EmpId(saved.getMailNo(), senderEmpId);
 
-            for (String recvEmpId : unique) {
-                Employee recv = employeeRepository.findByEmpId(recvEmpId)
-                        .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
-
-                mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), recvEmpId)
-                        .orElseGet(() -> mailUserStateRepository.save(
-                                MailUserState.create(saved, recv, MailRole.RECIPIENT)
-                        ));
-
-                noti.sendNotification(
-                        recv.getEmpId(),
-                        NotificationType.MAIL,
-                        "[메일]",
-                        saved.getTitle(),
-                        "/mail/" + saved.getMailNo()
-                );
+            if (opt.isEmpty()) {
+                mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.RECIPIENT));
+            } else {
+                MailUserState mus = opt.get();
+                if (mus.getRole() == MailRole.SENDER) {
+                    // 같은 키에서 SENDER로 잡혀있으면 self 규칙 위반 -> 삭제 후 RECIPIENT 생성
+                    mailUserStateRepository.delete(mus);
+                    mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.RECIPIENT));
+                }
             }
 
-            return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getSavedAt());
+            return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getCreatedAt());
         }
 
-        // case 3) 내게쓰기 + 다른사람(복제 발송)
-        draft.clearDraft();
-        Mail savedSelf = mailRepository.save(draft);
-
-        mailUserStateRepository.findByMail_MailNoAndUser_EmpId(savedSelf.getMailNo(), senderEmpId)
+        // normal-only
+        // sender row(보낸메일함 노출용): 있으면 유지, 없으면 생성
+        mailUserStateRepository.findByMail_MailNoAndUser_EmpId(saved.getMailNo(), senderEmpId)
                 .orElseGet(() -> mailUserStateRepository.save(
-                        MailUserState.create(savedSelf, sender, MailRole.RECIPIENT)
+                        MailUserState.create(saved, sender, MailRole.SENDER)
                 ));
 
-        String newMailId = generateMailId(senderEmpId);
-        Mail clone = Mail.create(newMailId, savedSelf.getTitle(), savedSelf.getCntt(), sender);
-        Mail savedNormal = mailRepository.save(clone);
-
-        mailUserStateRepository.save(MailUserState.create(savedNormal, sender, MailRole.SENDER));
-
-        for (String recvEmpId : others) {
+        // recipients + notification
+        for (String recvEmpId : unique) {
             Employee recv = employeeRepository.findByEmpId(recvEmpId)
                     .orElseThrow(() -> new CustomException(ErrorCode.MAIL_RECEIVER_NOT_FOUND));
 
-            mailUserStateRepository.save(MailUserState.create(savedNormal, recv, MailRole.RECIPIENT));
+            Optional<MailUserState> opt = mailUserStateRepository
+                    .findByMail_MailNoAndUser_EmpId(saved.getMailNo(), recvEmpId);
+
+            if (opt.isEmpty()) {
+                mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT));
+            } else {
+                // role 꼬임 방어
+                MailUserState mus = opt.get();
+                if (mus.getRole() != MailRole.RECIPIENT) {
+                    // 같은 키에서 SENDER로 잡힌 이상데이터 -> 삭제 후 RECIPIENT로 교정
+                    mailUserStateRepository.delete(mus);
+                    mailUserStateRepository.save(MailUserState.create(saved, recv, MailRole.RECIPIENT));
+                }
+            }
 
             noti.sendNotification(
                     recv.getEmpId(),
                     NotificationType.MAIL,
                     "[메일]",
-                    savedNormal.getTitle(),
-                    "/mail/" + savedNormal.getMailNo()
+                    saved.getTitle(),
+                    "/mail/" + saved.getMailNo()
             );
         }
 
-        return new ResMailSendDto(savedNormal.getMailNo(), savedNormal.getMailId(), savedNormal.getCreatedAt());
+        return new ResMailSendDto(saved.getMailNo(), saved.getMailId(), saved.getCreatedAt());
     }
 
     public Page<ResMailListDto> getSelfMailbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
