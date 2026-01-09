@@ -165,7 +165,7 @@
                     el.style.display = on ? '' : 'none';
                 }
 
-                function getCsrfHeaders(){
+                function getCsrfHeaders() {
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
@@ -195,7 +195,7 @@
                 }
 
                 // (선택) 상세에서 active를 바꾸고 싶을 때만 사용. sidebar 구조가 다르면 조용히 무시됨.
-                function setSidebarActive(key){
+                function setSidebarActive(key) {
                     const nav = document.getElementById('mailNav');
                     if (!nav) return;
                     nav.dataset.active = key;
@@ -205,41 +205,58 @@
                     });
                 }
 
-                // Tiptap JSON -> HTML 렌더러
-                async function renderTiptap(jsonOrString) {
-                    const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.5');
-                    const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.5')).default;
-
-                    let doc = jsonOrString;
-
-                    if (typeof jsonOrString === 'string') {
-                        const s = jsonOrString.trim();
-                        if (!s) return '';
-                        try { doc = JSON.parse(s); }
-                        catch { return escapeHtml(s); }
-                    }
-
-                    return generateHTML(doc, [StarterKit]);
+                function escapeHtml(str) {
+                    return String(str ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#039;');
                 }
 
-                function buildReceiversText(data){
+                function buildReceiversText(data) {
+                    // ✅ 서버에서 receivers(문자열) 내려주면 그걸 우선 사용
                     if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
 
+                    // ✅ 그래도 없으면 receiverEmpIds + receiverNames 조합(상세 DTO 확장 대비)
                     const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
                     const names = Array.isArray(data.receiverNames) ? data.receiverNames : null;
 
-                    if (ids && ids.length){
-                        if (names && names.length === ids.length){
+                    if (ids && ids.length) {
+                        if (names && names.length === ids.length) {
                             return ids.map((id, i) => `${names[i] ?? ''} (${id ?? ''})`.trim()).join(', ');
                         }
                         return ids.join(', ');
                     }
 
-                    if (data.receiverEmpId || data.receiverEmpName){
+                    // ✅ 단건 수신자 응답 대비
+                    if (data.receiverEmpId || data.receiverEmpName) {
                         return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
                     }
 
                     return '-';
+                }
+
+                // 답신 버튼을 element 수정 없이 동적으로 추가
+                function ensureReplyButton() {
+                    let btn = document.getElementById('btnReply');
+                    if (btn) return btn;
+
+                    const actions = document.querySelector('.md-actions');
+                    if (!actions) return null;
+
+                    btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.id = 'btnReply';
+                    btn.className = 'md-btn ghost';
+                    btn.textContent = '답신';
+
+                    // 위치: "목록" 다음(원하면 여기만 바꾸면 됨)
+                    const backBtn = document.getElementById('btnBack');
+                    if (backBtn && backBtn.nextSibling) actions.insertBefore(btn, backBtn.nextSibling);
+                    else actions.prepend(btn);
+
+                    return btn;
                 }
 
                 async function loadDetail() {
@@ -258,15 +275,47 @@
 
                     const role = String(data.role || '').toUpperCase();
 
+                    // ===== ✅ 답신 버튼(RECIPIENT일 때만 노출/동작) =====
+                    const isRecipient = (role === 'RECIPIENT' || role === 'RECEIVER'); // 방어
+                    if (isRecipient) {
+                        const btnReply = ensureReplyButton();
+                        if (btnReply) {
+                            btnReply.onclick = async () => {
+                                try {
+                                    const res = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}/reply`);
+                                    // res = { payloadKey, replyToMailNo, title, receivers, quoteCnttJson }
+
+                                    if (res?.payloadKey) {
+                                        const appliedKey = `mail.reply.applied:${res.payloadKey}`;
+                                        if (sessionStorage.getItem(appliedKey)) {
+                                            // 이미 적용된 답신이면 그냥 write로 이동만(혹은 아무것도 안 함)
+                                            location.href = '/mail/write';
+                                            return;
+                                        }
+                                    }
+
+                                    sessionStorage.setItem('mail.reply.payload', JSON.stringify(res));
+                                    location.href = '/mail/write';
+                                } catch (e) {
+                                    console.error(e);
+                                    alert('답신 payload 조회 중 오류가 발생했습니다.');
+                                }
+                            };
+                        }
+                    } else {
+                        // 혹시 이전 화면 캐시 등으로 남아있을 경우 숨김
+                        const btnReply = document.getElementById('btnReply');
+                        if (btnReply) btnReply.style.display = 'none';
+                    }
+
                     // 라벨/값 동적 변경
                     const partyLabelEl = document.getElementById('partyLabel');
                     const partyTxtEl = document.getElementById('partyTxt');
 
                     if (role === 'SENDER') {
                         partyLabelEl.textContent = '수신인';
-                        partyTxtEl.textContent = (data.receivers && String(data.receivers).trim())
-                            ? String(data.receivers).trim()
-                            : '-';
+                        // ✅ receivers 우선, 없으면 receiverEmpIds 등으로 조립
+                        partyTxtEl.textContent = buildReceiversText(data);
                     } else {
                         partyLabelEl.textContent = '발신인';
                         partyTxtEl.textContent =
@@ -276,15 +325,16 @@
                     // 내용 렌더
                     try {
                         if (data.cnttHtml && String(data.cnttHtml).trim()) {
-                            box.innerHTML = data.cnttHtml;
+                            box.innerHTML = String(data.cnttHtml);
                         } else if (data.cnttJson && String(data.cnttJson).trim()) {
-                            box.innerHTML = await renderTiptap(data.cnttJson);
+                            // JSON은 상세에서 변환하지 않고, 안전하게 텍스트로만 표시
+                            box.textContent = '[내용(JSON) 렌더링 미지원]';
                         } else {
                             box.textContent = '';
                         }
                     } catch (e) {
                         console.error(e);
-                        box.textContent = data.cnttJson ?? '';
+                        box.textContent = '';
                     }
 
                     // 읽음 처리(실패해도 무시)

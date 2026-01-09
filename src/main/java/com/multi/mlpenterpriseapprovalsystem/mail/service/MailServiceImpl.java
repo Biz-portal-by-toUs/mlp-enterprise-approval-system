@@ -458,6 +458,46 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ResMailReplyPayloadDto getReplyPayload(Long mailNo, String viewerEmpId) {
+        MailUserState mus = mailUserStateRepository.findByMail_MailNoAndUser_EmpId(mailNo, viewerEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_ACCESS_DENIED));
+
+        // 수신자가 아닐 때 답신 불가 정책
+        if (mus.getRole() != MailRole.RECIPIENT) {
+            throw new CustomException(ErrorCode.MAIL_REPLY_ONLY_RECIPIENT);
+        }
+
+        Mail mail = mus.getMail();
+
+        // 답신 제목 생성 (RE: 중복 방지)
+        String originTitle = (mail.getTitle() == null) ? "" : mail.getTitle().trim();
+        String replyTitle = normalizeReplyTitle(originTitle);
+
+        // 기본 수신자 = 원 발신자 1명
+        Employee sender = mail.getSender();
+        List<ResMailReplyPayloadDto.ReceiverItem> receivers = List.of(
+                new ResMailReplyPayloadDto.ReceiverItem(sender.getEmpId(), sender.getEmpName())
+        );
+
+        // 원문 JSON
+        String quoteCnttJson = (mail.getCntt() == null) ? "" : mail.getCntt();
+
+        // 중복 방지 키 (같은 원문메일에 대한 reply payload는 항상 동일한 키)
+        // - mailNo 기준으로 고정시키면 "한 번만 적용"을 프론트에서 매우 쉽게 처리 가능
+        // - viewerEmpId까지 넣고 싶으면 붙여도 됨(사용자별로 다르게)
+        String payloadKey = "reply:" + mailNo; // 또는 "reply:" + mailNo + ":" + viewerEmpId
+
+        return new ResMailReplyPayloadDto(
+                payloadKey,
+                mail.getMailNo(),
+                replyTitle,
+                receivers,
+                quoteCnttJson
+        );
+    }
+
+    @Override
     public long countUnreadInbox(String empId){
         return mailUserStateRepository.countUnreadInboxOnly(empId);
     }
@@ -465,6 +505,14 @@ public class MailServiceImpl implements MailService {
     // helpers
     private String generateMailId(String senderEmpId) {
         return "MAIL_" + Instant.now().toEpochMilli() + "_" + senderEmpId;
+    }
+
+    private String normalizeReplyTitle(String originTitle) {
+        String t = (originTitle == null) ? "" : originTitle.trim();
+        if (t.isBlank()) return "RE:";
+        // "RE:" 또는 "Re:" 등 이미 붙어있으면 그대로
+        if (t.regionMatches(true, 0, "RE:", 0, 3)) return t;
+        return "RE: " + t;
     }
 
     private MailUserState mustFindState(Long mailNo, String userEmpId) {

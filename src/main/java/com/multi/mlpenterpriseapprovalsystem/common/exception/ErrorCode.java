@@ -242,7 +242,8 @@ public enum ErrorCode {
     MAIL_SENDER_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_SENDER_NOT_FOUND", "발신자를 찾을 수 없습니다"),
     MAIL_RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "MAIL_RECEIVER_NOT_FOUND", "수신자를 찾을 수 없습니다"),
     MAIL_RECEIVER_REQUIRED(HttpStatus.BAD_REQUEST, "MAIL_RECEIVER_REQUIRED", "받는 사람을 1명 이상 입력하세요"),
-    MAIL_SELF_ONLY_MODE(HttpStatus.BAD_REQUEST, "MAIL_SELF_ONLY_MODE", "내게쓰기 모드에서는 받는 사람을 추가할 수 없습니다");
+    MAIL_SELF_ONLY_MODE(HttpStatus.BAD_REQUEST, "MAIL_SELF_ONLY_MODE", "내게쓰기 모드에서는 받는 사람을 추가할 수 없습니다"),
+    MAIL_REPLY_ONLY_RECIPIENT(HttpStatus.BAD_REQUEST, "MAIL_REPLY_ONLY_RECIPIENT", "해당 메일에 답신 가능한 사용자가 아닙니다.");
 
 
     private final HttpStatus status;
