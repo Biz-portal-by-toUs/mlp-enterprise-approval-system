@@ -355,23 +355,6 @@
         }
         .read-all-btn:hover, .chatbot-btn:hover { background: #dbeafe; }
 
-        .delete-all-btn {
-            font-size: 11px;
-            font-weight: 800;
-            color: #ef4444;
-            background: #fef2f2;
-            border: 1px solid #fee2e2;
-            padding: 3px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .delete-all-btn:hover {
-            background: #fee2e2;
-            border-color: #fecaca;
-        }
-
         .noti-body { flex: 1; overflow: hidden; }
         .noti-iframe { width: 100%; height: 100%; border: none; }
         .noti-close-btn { border:0; background:transparent; cursor:pointer; font-size:20px; color:#6b7280; }
@@ -388,11 +371,6 @@
             white-space: normal;    /* 기본 줄바꿈 허용 */
             word-break: break-all;  /* 단어가 길어도 강제 줄바꿈 */
             line-height: 1.4;       /* 줄 간격 살짝 넓혀서 가독성 확보 */
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .toast:hover {
-            background: #f8fafc; /* 마우스 호버 시 살짝 어둡게 */
         }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
@@ -718,7 +696,7 @@
 
         /* ====== 서브 사이드바 ====== */
         .page-with-subbar{ display:grid; grid-template-columns: 220px 1fr; gap:0; align-items: stretch; min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px); transition: grid-template-columns .18s ease; }
-        .subbar{ height:100%; background: rgba(59,130,246,.08); overflow:hidden; transition: opacity .18s ease; }
+        .subbar{ height:100%; background: rgba(59,130,246,.08); border-right: 1px solid rgba(59,130,246,.14); box-shadow: 10px 0 24px rgba(17,24,39,.10); overflow:hidden; transition: opacity .18s ease; }
         .subbar-title{ font-weight:700; font-size:12px; color: rgba(31,41,55,.72); padding: 12px 14px 10px; border-bottom: 1px solid rgba(59,130,246,.14); background: rgba(255,255,255,.30); }
         .subbar-nav{ display:flex; flex-direction:column; padding: 10px 0; }
         .subbar-item{ position:relative; display:flex; align-items:center; height:44px; padding: 0 14px 0 20px; text-decoration:none; font-size:13px; font-weight:600; color: var(--primary2); transition: background .12s ease, color .12s ease; }
@@ -741,9 +719,13 @@
 
 <body>
 
+<!--<div id="me"-->
+<!--     style="display:none"-->
+<!--     th:attr="data-emp-no=${(#authentication != null and #authentication.principal != null) ? #authentication.principal.subjectId : ''}">-->
+<!--</div>-->
 <div id="me"
      style="display:none"
-     th:attr="data-emp-no=${(#authentication != null and #authentication.principal != null) ? #authentication.principal.subjectId : ''}">
+     th:attr="data-emp-no=${#authorization.expression('isAuthenticated()') ? #authentication.principal.subjectId : ''}">
 </div>
 
 <div class="app">
@@ -778,8 +760,10 @@
             </form>
         </div>
 
+        <!-- ✅ 순서 변경: (msgStat) (알림) (마이페이지) (로그아웃) -->
         <div class="topbar-right">
 
+            <!-- ✅ 메시지 상태 드롭다운 -->
             <div class="status-dd" id="statusDd">
                 <button class="status-btn" type="button" id="statusBtn"
                         aria-haspopup="menu" aria-expanded="false" onclick="toggleStatusMenu()">
@@ -817,6 +801,7 @@
                 </svg>
             </button>
 
+            <!-- 알림 -->
             <button class="icon-btn" type="button" aria-label="알림" onclick="toggleNoti()">
                 <span id="notiBadge" class="badge" aria-hidden="true">0</span>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
@@ -825,6 +810,7 @@
                 </svg>
             </button>
 
+            <!-- 마이페이지 -->
             <button class="avatar" type="button" id="profileBtn" title="계정"
                     aria-haspopup="dialog" aria-expanded="false"
                     onclick="toggleProfile()">
@@ -837,6 +823,7 @@
                 </span>
             </button>
 
+            <!-- 로그아웃 -->
             <form id="logoutForm" th:action="@{/auth/logout}" method="post" style="display:inline;">
                 <input type="hidden" id="csrfParam" th:if="${_csrf != null}"
                        th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -893,7 +880,7 @@
             </a>
 
             <a class="nav-item" th:href="@{/meeting-rooms/reservation}" href="/meeting-rooms/reservation" aria-label="예약">
-                <div class="nav-ico"><svg viewBox="0 0 24 24"><use href="#bp-meeting-reservation"></use></svg></div>
+                <div class="nav-ico"><svg viewBox="0 0 24 24"><use href="#bp-reservation"></use></svg></div>
                 <div class="nav-label">예약</div>
                 <span class="sr-only">예약</span>
             </a>
@@ -946,6 +933,7 @@
     </footer>
 </div>
 
+<!-- ✅ 프로필(마이페이지) 패널 -->
 <div class="profile-menu" id="profileMenu" role="dialog" aria-label="계정">
     <div class="profile-menu-top">
         <div class="profile-tenant" id="profileComName">Bizportal</div>
@@ -993,8 +981,7 @@
     <div class="noti-head">
         <div class="noti-head-left">
             <span>알림 센터</span>
-            <button type="button" class="read-all-btn" onclick="readAllInIframe()">전체 읽기</button>
-            <button type="button" class="delete-all-btn" onclick="deleteAllInIframe()">전체 삭제</button>
+            <button type="button" class="read-all-btn" onclick="readAllInIframe()">모두 읽기</button>
         </div>
         <button class="noti-close-btn" type="button" onclick="toggleNoti(false)">×</button>
     </div>
@@ -1020,6 +1007,92 @@
 </button>
 
 <script>
+    /* =========================
+     * ✅ Global Fetch Interceptor (Cookie 기반)
+     * - 모든 요청 credentials 포함
+     * - 401이면 POST /refresh → 성공 시 원요청 1회 재시도
+     * ========================= */
+
+    (function () {
+        const originalFetch = window.fetch.bind(window);
+
+        // 1. 리다이렉트 중복 방지 플래그 추가
+        let isRedirecting = false;
+
+        // refresh 동시 호출 1번으로 합치기
+        let refreshPromise = null;
+
+        function redirectToLogin(message) {
+            // 2. 이미 리다이렉트 중이면 함수를 종료하여 alert 중복 방지
+            if (isRedirecting) return;
+            isRedirecting = true;
+
+            alert(message || '세션이 만료되었습니다. 다시 로그인해 주세요.');
+            // ✅ 프로젝트 로그인 경로로 맞추기
+            window.location.href = '/auth/employee/login';
+        }
+
+        async function callRefresh() {
+            const csrfHeaders = (typeof getCsrfHeader === 'function') ? getCsrfHeader() : {};
+
+            const res = await originalFetch('/auth/refresh', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    ...csrfHeaders
+                }
+            });
+
+            // if (!res.ok) throw new Error('REFRESH_FAILED');
+            // return true;
+            return res.ok;
+        }
+
+        // ✅ 외부에서도 SSE에서 재사용할 수 있게 노출
+        window.__callRefreshOnce = async function () {
+            try {
+                if (!refreshPromise) {
+                    refreshPromise = callRefresh().finally(() => (refreshPromise = null));
+                }
+                // await refreshPromise;
+                // return true;
+                return await refreshPromise;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        window.fetch = async function (input, init = {}) {
+            const url = (typeof input === 'string') ? input : (input && input.url) ? input.url : '';
+
+            const options = { ...init };
+            options.credentials = options.credentials || 'include';
+
+            const isRefreshCall = url.includes('/refresh');
+
+            let res = await originalFetch(input, options);
+
+            if (res.status !== 401 && res.status !== 403) return res;
+
+            if (isRefreshCall) {
+                redirectToLogin('세션이 만료되었습니다. 다시 로그인해 주세요.');
+                throw new Error('UNAUTHORIZED_REFRESH');
+            }
+
+            // ✅ 401이면 refresh 시도
+            const ok = await window.__callRefreshOnce();
+            if (!ok) {
+                redirectToLogin('세션이 만료되었습니다. 다시 로그인해 주세요.');
+                // throw new Error('REFRESH_FAILED');
+                return new Promise(() => {});
+            }
+
+            // ✅ refresh 성공 -> 원요청 1회 재시도
+            return originalFetch(input, options);
+        };
+    })();
+
     /* ====== ✅ 공통: CSRF 헤더 얻기 ====== */
     function getCsrfHeader(){
         const csrfParamEl = document.getElementById('csrfParam');
@@ -1030,8 +1103,34 @@
         return {};
     }
 
+    /* ✅ 1. 알림 관련 로직 */
+    function updateNotiBadge(count) {
+        const badge = document.getElementById('notiBadge');
+        if (!badge) return;
+        if (count > 0) {
+            badge.innerText = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
 
-
+    function showNotiToast(message) {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span>🔔</span> <span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 500);
+        }, 6500);
+    }
 
     function toggleNoti(force) {
         const panel = document.getElementById('notiPanel');
@@ -1052,139 +1151,99 @@
         }
     }
 
-    async function deleteAllInIframe() {
-        const iframe = document.getElementById('notiIframe');
-        if (iframe && iframe.contentWindow.deleteAllNotifications) {
-            await iframe.contentWindow.deleteAllNotifications();
-        }
+    /* =========================================================
+     * ✅ SSE(EventSource) 전용: 끊김/401 상황에서 refresh → 재연결
+     * ========================================================= */
+    let _notiES = null;
+    let _sseRetryTimer = null;
+    let _sseRetryMs = 1200;        // 시작 재시도 딜레이
+    const _SSE_MAX_MS = 15000;     // 최대 딜레이
+
+    function closeNotiStream(){
+        try { if (_notiES) _notiES.close(); } catch (e) {}
+        _notiES = null;
     }
 
-    /* ==========================================
-   🚀 알림 시스템 통합 로직 (배지 + 토스트 + 읽음)
-   ========================================== */
+    function scheduleSseReconnect() {
+        // 중복 타이머 방지
+        if (_sseRetryTimer) return;
 
-    /* 1. 알림 배지 UI 업데이트 */
-    function updateNotiBadge(count) {
-        const badge = document.getElementById('notiBadge');
-        if (!badge) return;
+        _sseRetryTimer = setTimeout(async () => {
+            _sseRetryTimer = null;
 
-        const num = parseInt(count);
-        if (num > 0) {
-            badge.innerText = num > 99 ? '99+' : num;
-            badge.style.display = 'flex';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
+            // ✅ refresh 1번 시도 (성공하면 재연결)
+            const ok = (typeof window.__callRefreshOnce === 'function')
+                ? await window.__callRefreshOnce()
+                : false;
 
-    /* 2. 서버에서 안 읽은 알림 개수 직접 가져오기 */
-    async function refreshUnreadCount() {
-        try {
-            const res = await fetch('/api/v1/notifications/unread-count', {
-                credentials: 'include' // 세션 유지를 위해 필수
-            });
-            if (res.ok) {
-                const result = await res.json();
-                // NotificationController 응답 구조(ResponseDto.data)에 맞춰 반영
-                updateNotiBadge(result.data);
-            }
-        } catch (e) {
-            console.error("📌 [Badge] 알림 카운트 로드 실패:", e);
-        }
-    }
-
-    /* 3. 실시간 알림 토스트 표시 및 클릭 시 읽음 처리 */
-    async function showNotiToast(message, url, notiNo) { // ✅ 변수명 notiNo로 통일
-        console.log("📌 [Toast] 수신 - 번호:", notiNo, "URL:", url);
-
-        let container = document.querySelector('.toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'toast-container';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.style.cursor = 'pointer';
-        toast.innerHTML = `<span>🔔</span> <span>${message || '새 알림이 있습니다.'}</span>`;
-
-        // ✅ 토스트 클릭 이벤트 (읽음 처리 후 이동)
-        toast.onclick = async () => {
-            if (notiNo) {
-                try {
-                    // 1. 읽음 처리 API 호출 (notiNo 사용)
-                    await fetch(`/api/v1/notifications/${notiNo}/read`, {
-                        method: 'PATCH',
-                        headers: {
-                            ...getCsrfHeader(),
-                            'Accept': 'application/json'
-                        },
-                        credentials: 'include'
-                    });
-                    // 2. 읽음 처리 성공 후 배지 숫자 갱신
-                    await refreshUnreadCount();
-                } catch (e) {
-                    console.error("📌 [Toast] 읽음 처리 실패:", e);
-                }
+            if (!ok) {
+                alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
+                window.location.href = '/auth/employee/login'; // ✅ 프로젝트 로그인 경로로
+                return;
             }
 
-            // 3. 페이지 이동
-            if (url && url !== '#' && url !== 'null') {
-                location.href = url;
-            } else {
-                toast.remove();
-            }
-        };
+            // refresh 성공 → 재연결
+            connectNotiStream();
+        }, _sseRetryMs);
 
-        container.appendChild(toast);
-        setTimeout(() => { if(toast.parentElement) toast.remove(); }, 5000);
+        // 다음 재시도는 점점 늘리기(백오프)
+        _sseRetryMs = Math.min(Math.floor(_sseRetryMs * 1.6), _SSE_MAX_MS);
     }
 
-    /* 4. SSE 연결 및 실시간 알림 수신 */
-    async function initNotificationSystem() {
-        const meEl = document.getElementById('me');
-        const empId = meEl?.dataset?.empNo;
-        if (!empId) return;
+    function connectNotiStream() {
+        closeNotiStream();
 
-        // 초기 로딩 시 배지 숫자 세팅
-        await refreshUnreadCount();
+        // 연결 시도하면 백오프 초기화(너무 공격적으로는 X)
+        _sseRetryMs = 1200;
 
-        // SSE 연결
-        const eventSource = new EventSource('/api/v1/notifications/stream', { withCredentials: true });
+        const url = '/api/v1/notifications/stream';
+        const es = new EventSource(url, { withCredentials: true });
+        _notiES = es;
 
-        eventSource.addEventListener('notification', (e) => {
+        // 서버에서 보내는 커스텀 이벤트
+        es.addEventListener('notification', (e) => {
             try {
                 const data = JSON.parse(e.data);
-                console.log("📌 [SSE] 수신:", data);
-
-                // 실시간 배지 숫자 업데이트 (서버에서 unreadCount를 같이 보내줄 때)
-                if (data.unreadCount !== undefined) {
-                    updateNotiBadge(data.unreadCount);
-                }
-
-                // 토스트 띄우기 (id 대신 notiNo 사용)
-                if (data.notification) {
-                    showNotiToast(
-                        data.notification.content,
-                        data.notification.url,
-                        data.notification.notiNo // ✅ 서버 필드명에 맞춰 notiNo 사용
-                    );
-                }
+                updateNotiBadge(data.unreadCount);
+                showNotiToast(data.notification.content);
             } catch (err) {
-                console.error("📌 [SSE] 파싱 에러:", err);
+                console.warn('SSE notification parse 실패', err);
             }
         });
 
-        eventSource.onerror = () => { console.warn("📌 [SSE] 연결 끊김, 재연결 시도 중..."); };
+        // ✅ 연결이 열리면(재연결 성공) 백오프 초기화
+        es.onopen = () => {
+            _sseRetryMs = 1200;
+        };
+
+        // ✅ 핵심: SSE 에러/끊김 시 refresh → 재연결
+        es.onerror = () => {
+            console.warn("SSE 연결 끊김/에러, refresh 후 재연결 시도...");
+            // 브라우저가 자동 재연결을 시도하기도 하지만,
+            // 토큰 만료 케이스는 refresh를 한 번 해줘야 살아남음.
+            closeNotiStream();
+            scheduleSseReconnect();
+        };
     }
 
+    async function initNotificationSystem() {
+        const empId = document.getElementById('me')?.dataset?.empNo;
+        if (!empId) return;
 
+        // 초기 unread count
+        try {
+            const res = await fetch('/api/v1/notifications/unread-count');
+            if (res.ok) {
+                const result = await res.json();
+                updateNotiBadge(result.data);
+            }
+        } catch (e) {
+            console.error("초기 알림 카운트 로드 실패", e);
+        }
 
-
-
-
-
+        // ✅ SSE 연결 시작 (만료되면 refresh 후 재연결)
+        connectNotiStream();
+    }
 
     /* ✅ 2. 기존 로직 */
     function toggleChat(force) {
@@ -1396,16 +1455,14 @@
             const json = await res.json();
             const me = json?.data ?? json;
 
-            // atte가 휴가/출장이면 강제 H로 보여주고, 메뉴 비활성 처리(선택은 막음)
-            const atte = me?.atte;   // 예: V/B/C...
-            let code = me?.msgStat;  // 예: C/M/D/X/H
+            const atte = me?.atte;
+            let code = me?.msgStat;
 
             const mustOff = (atte === 'V' || atte === 'B');
             if (mustOff) code = 'H';
 
             applyStatusUI(code);
 
-            // 강제 H면 드롭다운 선택 막기
             const menu = document.getElementById('statusMenu');
             if (menu){
                 const items = Array.from(menu.querySelectorAll('button.status-item'));
@@ -1417,14 +1474,11 @@
     }
 
     async function setMsgStat(code){
-        // H는 로그인 후 선택 불가
         if (code === 'H') return;
 
-        // UI 먼저 반영(낙관적)
         applyStatusUI(code);
         toggleStatusMenu(false);
 
-        // ✅ 너희 실제 API로 바꾸기
         const url = '/api/v1/employees/me/msg-stat';
 
         try{
@@ -1442,7 +1496,6 @@
             });
 
             if (!res.ok){
-                // 실패하면 서버 값으로 재동기화
                 await loadMyStatus();
             }
         }catch(e){
@@ -1450,7 +1503,7 @@
         }
     }
 
-    let chatbotWindow = null; // 열린 창을 저장할 변수
+    let chatbotWindow = null;
 
     function openChatbot() {
         let sessionId = sessionStorage.getItem("MAIN_CHAT_SESSION_ID");
@@ -1461,17 +1514,14 @@
 
         const chatUrl = "/chatbot?sessionId=" + sessionId;
 
-        // 이미 창이 열려 있고 닫히지 않았다면?
         if (chatbotWindow && !chatbotWindow.closed) {
-            chatbotWindow.focus(); // 새로고침 하지 않고 포커스만 줌 (대화 내용 유지)
+            chatbotWindow.focus();
         } else {
-            // 창이 없거나 닫혔다면 새로 엶
             chatbotWindow = window.open(chatUrl, "ChatbotPopup", "width=420,height=740");
         }
     }
 
     window.addEventListener('click', (e) => {
-        // profile
         const menu = document.getElementById('profileMenu');
         const btn = document.getElementById('profileBtn');
         if (menu && btn && menu.classList.contains('open')) {
@@ -1479,7 +1529,6 @@
             if (!inside) toggleProfile(false);
         }
 
-        // status
         const sMenu = document.getElementById('statusMenu');
         const sBtn = document.getElementById('statusBtn');
         const sDd = document.getElementById('statusDd');
@@ -1503,11 +1552,8 @@
         loadProfilePhoto();
         setActiveIconbarMenu();
         initNotificationSystem();
-        loadMyStatus();  // ✅ 상태는 헤더에 바로 표시
+        loadMyStatus();
     });
-
-
-
 </script>
 
 <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">
@@ -1548,6 +1594,7 @@
     </symbol>
 
     <symbol id="bp-cloud" viewBox="0 0 24 24">
+        <!--        <g transform="translate(12, 12) scale(1.15) translate(-12, -13.5)">-->
         <g transform="translate(12, 12) scale(1.15, 1.3) translate(-12, -14)">
             <path d="M9.2 19.5h8.1a4.3 4.3 0 0 0 .4-8.6A6 6 0 0 0 6.7 12.2 3.6 3.6 0 0 0 9.2 19.5z" fill="#000" opacity="0.15"/> <path d="M9.2 19h8.1a4.3 4.3 0 0 0 .4-8.6A6 6 0 0 0 6.7 11.7 3.6 3.6 0 0 0 9.2 19z" fill="url(#blueMedium)"/>
             <path d="M9.2 19h8.1a4.3 4.3 0 0 0 .4-8.6A6 6 0 0 0 6.7 11.7 3.6 3.6 0 0 0 9.2 19z" fill="url(#blueLight)" opacity="0.5"/>
@@ -1571,7 +1618,7 @@
         <rect x="7" y="15" width="7" height="2" rx="1" fill="#fff" opacity="0.6"/>
     </symbol>
 
-    <symbol id="bp-meeting-reservation" viewBox="0 0 24 24">
+    <symbol id="bp-reservation" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" fill="url(#blueMedium)"/>
         <circle cx="12" cy="13" r="7" fill="#000" opacity="0.2"/> <circle cx="12" cy="12" r="7" fill="url(#blueDark)" opacity="0.5"/>
         <path d="M12 7v5l4 2.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
