@@ -62,7 +62,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/notifications/stream", "/api/v1/chatbot/stream").authenticated()
 
-
+                        .requestMatchers("/api/v1/subscriptions").permitAll()
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
                                 "/corporate-cars/**",

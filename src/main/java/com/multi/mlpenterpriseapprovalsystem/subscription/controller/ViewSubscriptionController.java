@@ -14,9 +14,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ViewSubscriptionController {
 
-    @GetMapping("/subscriptions")
+    @GetMapping("/company/subscriptions")
     public String viewSubscriptions() {
         return "subscription/list";
+    }
+
+    @GetMapping("/subscriptions/intro")
+    public String viewSubscriptionsIntro() {
+        return "subscription/intro";
     }
 
 

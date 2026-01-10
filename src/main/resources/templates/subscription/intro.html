@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bizportal - 요금제 안내</title>
+
+    <style>
+        :root{
+            --bg:#f3f3f3;
+            --text:#111;
+            --border:#d7d7d7;
+            --primary:#2f66d7;
+            --white:#ffffff;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+        .page{ min-height:100vh; border:2px solid #222; margin:12px; background:var(--bg); display:flex; flex-direction:column; }
+
+        main{ flex:1; display:flex; flex-direction:column; align-items:center; padding:60px 24px; }
+        .title-section{ text-align:center; margin-bottom:40px; }
+        .title{ font-size:52px; font-weight:900; margin:0; letter-spacing:-1.5px; }
+        .desc{ color:#555; font-weight:600; margin-top:12px; font-size:18px; }
+
+        .tab-wrapper {
+            display: flex;
+            background: #e2e2e2;
+            padding: 5px;
+            border-radius: 12px;
+            margin-bottom: 50px;
+            gap: 5px;
+        }
+        .tab-btn {
+            appearance: none; border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            background: transparent;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .plan-container{
+            display:flex;
+            gap:24px;
+            justify-content:center;
+            align-items: stretch;
+            width: 100%;
+            max-width: 1100px;
+            flex-wrap: wrap;
+        }
+
+        .plan-card{
+            background:var(--white);
+            border:1px solid var(--border);
+            border-radius:4px;
+            padding:40px 30px;
+            width: 320px;
+            display:flex;
+            flex-direction:column;
+            text-align:left;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+        .badge-basic { background: #f0f0f0; color: #666; }
+        .badge-pro { background: #eef3ff; color: var(--primary); }
+        .badge-ultimate { background: #111; color: #fff; }
+
+        .plan-title{ font-size:24px; font-weight:800; color:var(--text); margin-bottom:10px; }
+        .plan-limit{ font-size:14px; color:var(--primary); font-weight:800; margin-bottom:20px; }
+
+        .plan-price{ font-size:38px; font-weight:900; margin-bottom:30px; }
+        .plan-price span{ font-size:16px; font-weight:600; color:#888; }
+
+        .btn-start{
+            appearance:none; border:1px solid var(--primary); background:var(--white); color:var(--primary);
+            padding:14px; font-size:15px; font-weight:800; border-radius:4px; cursor:pointer;
+            margin-bottom:30px; transition: all 0.2s; text-align:center; text-decoration:none;
+        }
+        .btn-start:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(47,102,215,0.2); background: #f8f9ff; }
+
+        .feature-list{ list-style:none; padding:0; margin:0; }
+        .feature-item{ font-size:14px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; color: #555; }
+        .feature-item::before { content: '✓'; color: var(--primary); font-weight: 900; }
+
+        /* ✅ 이용 및 결제 안내 섹션 스타일 업데이트 */
+        .info-section {
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 80px;
+            padding: 40px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            text-align: left;
+        }
+        .info-header {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* 파란색 바 디자인 추가 */
+        .info-header::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+        }
+        .info-list { list-style: none; padding: 0; margin: 0; }
+        .info-item {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #555;
+            margin-bottom: 18px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .info-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--primary);
+            font-weight: 900;
+        }
+        .info-item b { color: #111; font-weight: 800; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div th:replace="~{company/common/company-header :: companyHeader}"></div>
+
+    <main>
+        <section class="title-section">
+            <h1 class="title">요금제 안내</h1>
+            <p class="desc">사원 수 규모에 딱 맞는 요금제를 선택해보세요.</p>
+        </section>
+
+        <div class="tab-wrapper">
+            <button class="tab-btn active" onclick="handleTabClick(30, this)">30인 이하</button>
+            <button class="tab-btn" onclick="handleTabClick(50, this)">50인 이하</button>
+            <button class="tab-btn" onclick="handleTabClick(100, this)">100인 이하</button>
+        </div>
+
+        <div class="plan-container" id="planWrapper">
+            <p style="padding: 100px; color: #888; font-weight: 700;">요금제 정보를 불러오고 있습니다...</p>
+        </div>
+
+        <section class="info-section">
+            <div class="info-header">이용 및 결제 안내</div>
+            <ul class="info-list">
+                <li class="info-item"><b>환불 규정:</b> 서비스 결제는 디지털 상품 특성상 결제 완료 이후 <b>중도 해지 및 환불이 불가능</b>합니다. 결제 전 요금제 구성을 충분히 확인해 주시기 바랍니다.</li>
+                <li class="info-item"><b>예치금 시스템:</b> 요금제 변경 시 현재 요금제의 남은 이용 기간만큼의 가치는 일할 계산되어 <b>예치금으로 즉시 전환</b>됩니다. 전환된 예치금은 다음 유료 결제 시 실제 결제 금액에서 최우선으로 자동 공제됩니다.</li>
+                <li class="info-item"><b>요금제 업그레이드:</b> 현재보다 상위 등급의 요금제나 사원 수 한도가 큰 요금제로 변경하는 경우 <b>즉시 적용</b>됩니다. 이때 발생하는 차액은 보유하신 예치금을 먼저 사용한 후 부족한 금액만 추가 결제됩니다.</li>
+                <li class="info-item"><b>요금제 다운그레이드:</b> 현재보다 하위 등급의 요금제로 변경하는 경우 즉시 적용되지 않고 <b>변경 예약 상태</b>가 됩니다. 현재 요금제의 만료일까지는 기존 기능을 모두 이용하실 수 있으며, 다음 결제일부터 예약된 요금제로 전환됩니다.</li>
+            </ul>
+        </section>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    let allPlans = [];
+    let isAuthenticated = false;
+    const planWrapper = document.getElementById('planWrapper');
+
+    function handleTabClick(limit, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filterAndRender(limit);
+    }
+
+    function filterAndRender(limit) {
+        if (allPlans.length === 0) return;
+        const filtered = allPlans.filter(p => Number(p.subLimit) === Number(limit));
+        renderHtml(filtered);
+    }
+
+    function renderHtml(plans) {
+        const targetUrl = isAuthenticated ? '/company/subscriptions' : '/auth/companies/signup';
+
+        planWrapper.innerHTML = plans.map(plan => {
+            const name = plan.subName.toUpperCase();
+            const isPro = name.includes('PRO');
+            const isUltimate = name.includes('ULTIMATE');
+
+            let badgeClass = 'badge-basic';
+            let badgeText = 'BASIC';
+            if(isPro) { badgeClass = 'badge-pro'; badgeText = 'PRO'; }
+            if(isUltimate) { badgeClass = 'badge-ultimate'; badgeText = 'ULTIMATE'; }
+
+            let features = [plan.subDesc || '기본 서비스 제공'];
+            if(isPro || isUltimate) features.push(`AI 비즈니스 챗봇 지원`);
+            if(isUltimate) features.push(`AI 회의 요약 시스템`);
+            features.push(`연중무휴 기술 지원`);
+
+            return `
+                <div class="plan-card">
+                    <span class="badge ${badgeClass}">${badgeText}</span>
+                    <div class="plan-title">${plan.subName}</div>
+                    <div class="plan-limit">최대 ${plan.subLimit}인 사원 관리</div>
+
+                    <div class="plan-price">
+                        ${plan.subPrice === 0 ? '무료' : '₩' + plan.subPrice.toLocaleString()}
+                        <span>/월</span>
+                    </div>
+
+                    <a href="${targetUrl}" class="btn-start">시작하기</a>
+
+                    <div style="font-weight:800; font-size:13px; margin-bottom:15px; color:#333;">주요 기능</div>
+                    <ul class="feature-list">
+                        ${features.map(f => `<li class="feature-item">${f}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function checkLogin() {
+        try {
+            const res = await fetch('/auth/me', { method: 'GET', credentials: 'include', cache: 'no-store' });
+            if (!res.ok) return;
+            const json = await res.json();
+            const me = json.data || json;
+            isAuthenticated = (me?.authenticated === true || me?.authenticated === 'true');
+        } catch (e) {
+            isAuthenticated = false;
+        }
+    }
+
+    async function init() {
+        try {
+            await checkLogin();
+            const res = await fetch('/api/v1/subscriptions');
+            const json = await res.json();
+            allPlans = json.data || json.result || [];
+            filterAndRender(30);
+        } catch (e) {
+            console.error("초기 로드 실패:", e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

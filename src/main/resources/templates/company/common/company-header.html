@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="companyHeader" id="headerContainer">
+    <style>
+        :root {
+            --header-height: 70px;
+            --dropdown-bg: #ffffff;
+            --primary: #2f66d7;
+            --border: #d7d7d7;
+            --text: #111;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            height: var(--header-height);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            height: 100%;
+        }
+
+        .brand {
+            font-family: Georgia, serif;
+            font-weight: 700;
+            font-size: 32px;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 10px;
+            height: 100%;
+        }
+
+        .nav-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #333;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 0 15px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 화살표 기본 아이콘 */
+        .nav-link::after {
+            content: "";
+            width: 8px;
+            height: 5px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        /* ✅ [1. 마우스 올렸을 때(Hover) & 2. 클릭해서 펼쳐졌을 때(Active)] 공통 파란색 처리 */
+        .nav-item:hover .nav-link,
+        .nav-item.active .nav-link {
+            color: var(--primary);
+        }
+
+        /* ✅ 화살표 색상 파란색 변경 (Hover & Active 공통) */
+        .nav-item:hover .nav-link::after,
+        .nav-item.active .nav-link::after {
+            filter: invert(34%) sepia(85%) saturate(1455%) hue-rotate(206deg) brightness(91%) contrast(90%);
+        }
+
+        /* ✅ 클릭해서 펼쳐졌을 때(Active)만 화살표 180도 회전 */
+        .nav-item.active .nav-link::after {
+            transform: rotate(180deg);
+        }
+
+        .dropdown {
+            position: absolute;
+            top: var(--header-height);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dropdown-bg);
+            border: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            min-width: 180px;
+            padding: 10px 0;
+            display: none;
+            z-index: 1001;
+        }
+
+        /* Active 상태일 때 드롭다운 보임 */
+        .nav-item.active .dropdown {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f4ff;
+            color: var(--primary);
+        }
+
+        .nav-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .auth-only { display: none !important; }
+        .guest-only { display: flex !important; }
+
+        .logged-in .auth-only { display: flex !important; }
+        .logged-in .guest-only { display: none !important; }
+
+        .btn {
+            appearance: none;
+            border: 1px solid var(--border);
+            background: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            color: #222;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn.primary {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+        .who {
+            font-weight: 900;
+            color: #333;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+    </style>
+
+    <header id="mainHeader">
+        <div class="header-left">
+            <a href="/" class="brand">Bizportal</a>
+
+            <nav style="height: 100%;">
+                <ul class="nav-menu">
+                    <li class="nav-item has-dropdown">
+                        <a class="nav-link">제품</a>
+                        <div class="dropdown">
+                            <a href="/products/intro" class="dropdown-item">제품소개</a>
+                        </div>
+                    </li>
+                    <li class="nav-item has-dropdown">
+                        <a class="nav-link">이용요금</a>
+                        <div class="dropdown">
+                            <a href="/subscriptions/intro" class="dropdown-item">이용요금소개</a>
+                        </div>
+                    </li>
+                    <li class="nav-item has-dropdown auth-only">
+                        <a class="nav-link">마이페이지</a>
+                        <div class="dropdown">
+                            <a href="/company/subscriptions" class="dropdown-item">요금제 관리</a>
+                            <a href="/company/payment-methods" class="dropdown-item">결제수단관리</a>
+                            <a href="/company/payment-historys" class="dropdown-item">결제 내역</a>
+                            <a href="/company/profile" class="dropdown-item">회사정보 수정</a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+        <div class="nav-right">
+            <button class="btn guest-only" type="button" onclick="location.href='/auth/companies/login'">회사 로그인</button>
+            <button class="btn primary guest-only" type="button" onclick="location.href='/auth/companies/signup'">회원가입</button>
+
+            <span class="who auth-only" id="headerUsername"></span>
+            <button class="btn primary auth-only" type="button" onclick="location.href='/company'">대시보드</button>
+            <button class="btn auth-only" type="button" id="headerLogoutBtn">로그아웃</button>
+        </div>
+    </header>
+
+    <script>
+        (function() {
+            /** 1. 드롭다운 토글 제어 **/
+            const dropdownItems = document.querySelectorAll('.nav-item.has-dropdown');
+
+            dropdownItems.forEach(item => {
+                const link = item.querySelector('.nav-link');
+
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const isActive = item.classList.contains('active');
+
+                    // 다른 드롭다운 닫기
+                    dropdownItems.forEach(el => el.classList.remove('active'));
+
+                    // 클릭한 메뉴 토글
+                    if (!isActive) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+
+            /** 2. 바깥 영역 클릭 시 닫기 **/
+            document.addEventListener('click', () => {
+                dropdownItems.forEach(item => item.classList.remove('active'));
+            });
+
+            /** 3. 인증 체크 **/
+            function parseBoolean(v) {
+                return v === true || v === 'true' || v === 'TRUE' || v === '1' || v === 'Y' || v === 'YES';
+            }
+
+            async function checkAuth() {
+                try {
+                    const res = await fetch('/auth/me', {
+                        method: 'GET',
+                        cache: 'no-store',
+                        credentials: 'include'
+                    });
+                    if (!res.ok) return;
+                    const json = await res.json();
+                    const me = json.data || json;
+
+                    if (parseBoolean(me?.authenticated) && String(me?.subjectType).toUpperCase().includes('COMPANY')) {
+                        document.getElementById('mainHeader').classList.add('logged-in');
+                        const usernameEl = document.getElementById('headerUsername');
+                        if (usernameEl && me.username) {
+                            usernameEl.textContent = `${me.username}님`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Auth check failed", e);
+                }
+            }
+
+            const logoutBtn = document.getElementById('headerLogoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+                    location.href = '/';
+                });
+            }
+
+            checkAuth();
+        })();
+    </script>
+</div>
+</html>
