@@ -386,25 +386,26 @@
                         if (!attachmentId) return;
 
                         try {
-                            // (버튼 없이) 클릭하면 presigned url을 받고 a[download]로 클릭
-                            // ✅ 너 write.html에서 preview-url을 사용 중이라 동일 엔드포인트를 사용
                             const data = await api('GET', `/api/v1/attachments/${encodeURIComponent(attachmentId)}/preview-url`, { timeoutMs: 8000 });
                             const url = data?.url;
                             if (!url) throw new Error('다운로드 URL이 없습니다.');
 
-                            // 강제 다운로드 시도 (same-origin이면 대부분 동작, cross-origin은 브라우저 정책에 따라 열릴 수 있음)
+                            // 1) 다운로드 시도
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = '';      // filename은 presigned url의 disposition/Key에 의해 결정될 수 있음
+                            a.download = '';     // 강제 다운로드 "시도"
                             a.rel = 'noopener';
                             document.body.appendChild(a);
                             a.click();
                             a.remove();
+
+                            // 2) 브라우저 정책으로 download 무시되는 경우 대비 (필요 시)
+                            // location.href = url;
                         } catch (err) {
                             console.error(err);
                             alert('다운로드에 실패했습니다.');
                         }
-                    }, { once: true });
+                    });
                 }
 
                 // =========================

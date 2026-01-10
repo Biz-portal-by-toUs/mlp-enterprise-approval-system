@@ -364,6 +364,35 @@
         }
         .mw-att-mini.danger:hover{ background: rgba(239,68,68,.10); }
 
+        .mw-dropzone{
+            border:1px dashed rgba(15,23,42,.25);
+            background:#fff;
+            border-radius:12px;
+            padding:14px 14px;
+            cursor:pointer;
+            user-select:none;
+            transition:.15s;
+        }
+        .mw-dropzone:hover{
+            background:#f8fafc;
+            border-color: rgba(44,92,255,.45);
+        }
+        .mw-dropzone.is-drag{
+            background: rgba(44,92,255,.06);
+            border-color: rgba(44,92,255,.65);
+            box-shadow: 0 0 0 4px rgba(44,92,255,.10);
+        }
+        .mw-dropzone-title{
+            font-weight:900;
+            color:var(--fg);
+            margin-bottom:4px;
+        }
+        .mw-dropzone-sub{
+            font-size:12px;
+            font-weight:800;
+            color:var(--mut);
+        }
+
         @media (max-width: 760px) {
             .mw-row { grid-template-columns: 1fr; }
             .mw-k { padding-top: 0; }
@@ -435,12 +464,19 @@
                             <div class="mw-att-note">
                                 첨부 추가 시 임시저장(draft)이 자동 생성됩니다.
                             </div>
-                            <div class="mw-att-note" id="attStatusText"></div>
+                            <div class="mw-att-note"></div>
                         </div>
 
                         <div class="mw-att-upload">
-                            <input id="attachInput" type="file" multiple>
-                            <button type="button" class="mw-btn ghost" id="btnAttachUpload">추가</button>
+                            <!-- ✅ 실제 file input은 숨김 -->
+                            <input id="attachInput" type="file" multiple style="display:none;">
+
+                            <!-- ✅ 클릭/드롭 업로드 영역 -->
+                            <div id="attachDropzone" class="mw-dropzone" role="button" tabindex="0">
+                                <div class="mw-dropzone-title">첨부파일 추가</div>
+                                <div class="mw-dropzone-sub">클릭하거나 파일을 끌어다 놓으면 바로 업로드됩니다.</div>
+                                <div class="mw-dropzone-sub" id="attStatusText"></div>
+                            </div>
                         </div>
 
                         <div id="attachList" class="mw-att-list"></div>
@@ -1276,7 +1312,7 @@
                     if (el) el.value = mailNo || '';
                 }
 
-                async function saveDraft() {
+                async function saveDraft({ allowEmpty = false } = {}) {
                     showErr('');
 
                     const title = (document.getElementById('title').value || '').trim();
@@ -1284,7 +1320,11 @@
                     const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
                     const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
 
-                    if (!title && !text) return showErr('제목 또는 내용을 입력한 후 임시저장하세요.');
+                    // ✅ 첨부용 draft는 빈 값도 허용
+                    if (!allowEmpty) {
+                        if (!title && !text) return showErr('제목 또는 내용을 입력한 후 임시저장하세요.');
+                    }
+
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
                     const plan = buildSendPlan();
@@ -1475,7 +1515,7 @@
 
                     // 첨부는 mailNo 필요 -> 최소 1회 draft 생성
                     setAttStatus('임시저장 생성 중...');
-                    const data = await saveDraft(); // 위에서 정의한 saveDraft 재사용
+                    const data = await saveDraft({ allowEmpty: true }); // 위에서 정의한 saveDraft 재사용
                     const newNo = String(data?.mailNo || '').trim();
                     if (newNo) {
                         document.getElementById('draftMailNo').value = newNo;
@@ -1509,34 +1549,18 @@
                     }
 
                     wrap.innerHTML = items.map(it => `
-                        <div class="mw-att-item">
-                            <div style="min-width:0;">
-                                <div class="mw-att-name">${escapeHtml(it.originalName)}</div>
-                                <div class="mw-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
-                            </div>
-                            <div class="mw-att-actions">
-                                <button type="button" class="mw-att-mini" onclick="previewAttach(${it.attachmentId})">미리보기</button>
-                                <button type="button" class="mw-att-mini danger" onclick="deleteAttach(${it.attachmentId})">삭제</button>
-                            </div>
+                      <div class="mw-att-item mw-att-click" data-id="${it.attachmentId}">
+                        <div style="min-width:0;">
+                          <div class="mw-att-name">${escapeHtml(it.originalName)}</div>
+                          <div class="mw-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
                         </div>
-                    `).join('');
-                }
 
-                async function previewAttach(attachmentId) {
-                    try {
-                        const res = await fetch(`/api/v1/attachments/${attachmentId}/preview-url`, {
-                            credentials: 'include',
-                            headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
-                        });
-                        const json = await res.json().catch(() => null);
-                        if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
-                        const url = json?.data?.url;
-                        if (!url) throw new Error('미리보기 URL이 없습니다.');
-                        window.open(url, '_blank', 'noopener');
-                    } catch (e) {
-                        console.error(e);
-                        showErr(e.message || '미리보기에 실패했습니다.');
-                    }
+                        <!-- ✅ 버튼 최소화: 삭제만 유지 (원하면 이것도 제거 가능) -->
+                        <div class="mw-att-actions" onclick="event.stopPropagation();">
+                          <button type="button" class="mw-att-mini danger" onclick="deleteAttach(${it.attachmentId})">삭제</button>
+                        </div>
+                      </div>
+                    `).join('');
                 }
 
                 async function deleteAttach(attachmentId) {
@@ -1607,22 +1631,64 @@
                     });
                 }
 
-                document.getElementById('btnAttachUpload')?.addEventListener('click', async () => {
+                function bindAttachDownloadClick() {
+                    const wrap = document.getElementById('attachList');
+                    if (!wrap || wrap.__dlBound) return;
+                    wrap.__dlBound = true;
+
+                    wrap.addEventListener('click', async (e) => {
+                        const item = e.target.closest('.mw-att-item');
+                        if (!item) return;
+
+                        const attachmentId = item.dataset.id;
+                        if (!attachmentId) return;
+
+                        try {
+                            showErr('');
+                            const data = await fetchJsonWithDto(`/api/v1/attachments/${encodeURIComponent(attachmentId)}/preview-url`, {
+                                method: 'GET',
+                                credentials: 'include',
+                                headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
+                            });
+
+                            const url = data?.url;
+                            if (!url) throw new Error('다운로드 URL이 없습니다.');
+
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = '';
+                            a.rel = 'noopener';
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+
+                            // 필요하면 fallback:
+                            // location.href = url;
+                        } catch (err) {
+                            console.error(err);
+                            showErr(err.message || '다운로드에 실패했습니다.');
+                        }
+                    });
+                }
+
+                async function uploadFilesNow(files) {
                     try {
                         showErr('');
-
-                        const input = document.getElementById('attachInput');
-                        const files = Array.from(input?.files || []);
-                        if (!files.length) return;
+                        const list = Array.from(files || []).filter(Boolean);
+                        if (!list.length) return;
 
                         const mailNo = await ensureDraftForAttach();
 
-                        setAttStatus('업로드 중...');
-                        for (const f of files) {
+                        setAttStatus(`업로드 중... (0/${list.length})`);
+                        let done = 0;
+
+                        // 순차 업로드(안전). 빠르게 하려면 Promise.all로 병렬도 가능.
+                        for (const f of list) {
                             await uploadOneFile(f, mailNo);
+                            done++;
+                            setAttStatus(`업로드 중... (${done}/${list.length})`);
                         }
 
-                        if (input) input.value = '';
                         setAttStatus('');
                         await refreshAttachList();
                     } catch (e) {
@@ -1630,14 +1696,64 @@
                         setAttStatus('');
                         showErr(e.message || '첨부 업로드에 실패했습니다.');
                     }
-                });
+                }
 
-                window.previewAttach = previewAttach;
+                function bindAttachDropzone() {
+                    const input = document.getElementById('attachInput');
+                    const dz = document.getElementById('attachDropzone');
+                    if (!input || !dz) return;
+                    if (dz.__bound) return;
+                    dz.__bound = true;
+
+                    // 클릭 → 파일 선택창
+                    dz.addEventListener('click', () => input.click());
+                    dz.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            input.click();
+                        }
+                    });
+
+                    // 파일 선택 즉시 업로드
+                    input.addEventListener('change', async () => {
+                        const files = input.files;
+                        if (!files || files.length === 0) return;
+
+                        await uploadFilesNow(files);
+
+                        // 같은 파일 다시 선택 가능하게 초기화
+                        input.value = '';
+                    });
+
+                    // Drag & Drop 지원
+                    dz.addEventListener('dragenter', (e) => {
+                        e.preventDefault();
+                        dz.classList.add('is-drag');
+                    });
+                    dz.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        dz.classList.add('is-drag');
+                    });
+                    dz.addEventListener('dragleave', () => {
+                        dz.classList.remove('is-drag');
+                    });
+                    dz.addEventListener('drop', async (e) => {
+                        e.preventDefault();
+                        dz.classList.remove('is-drag');
+
+                        const files = e.dataTransfer?.files;
+                        if (!files || files.length === 0) return;
+
+                        await uploadFilesNow(files);
+                    });
+                }
                 window.deleteAttach = deleteAttach;
                 window.refreshAttachList = refreshAttachList;
 
                 window.addEventListener('DOMContentLoaded', () => {
                     refreshAttachList().catch(console.error);
+                    bindAttachDownloadClick();
+                    bindAttachDropzone();
                 });
             </script>
 
