@@ -52,3 +52,23 @@ services:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
     volumes:
       - ./weaviate_data:/var/lib/weaviate
+
+
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: my_elasticsearch
+    restart: always
+    # 실행될 때 플러그인을 설치하고 ES를 실행하도록 명령어를 변경
+    command: >
+      sh -c "elasticsearch-plugin install --batch analysis-nori && /usr/local/bin/docker-entrypoint.sh"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./elasticsearch_data:/usr/share/elasticsearch/data

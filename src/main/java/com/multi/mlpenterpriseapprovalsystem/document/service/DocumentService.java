@@ -25,6 +25,8 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
+import com.multi.mlpenterpriseapprovalsystem.search.domain.SearchDocType;
+import com.multi.mlpenterpriseapprovalsystem.search.service.SearchOutboxAppender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
@@ -59,6 +61,7 @@ public class DocumentService {
     private final WebClient documentOpenAiWebClient;
     private final AttendanceService attendanceService;
     private final NotificationService notificationService;
+    private final SearchOutboxAppender searchOutboxAppender;
 
     public DocumentService(
             DocumentRepository documentRepository,
@@ -69,7 +72,8 @@ public class DocumentService {
             TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository,
             DocumentOpenAiConfig documentOpenAiConfig,
             @Qualifier("documentOpenAiWebClient") WebClient documentOpenAiWebClient,
-            AttendanceService attendanceService, NotificationService notificationService
+            AttendanceService attendanceService, NotificationService notificationService,
+            SearchOutboxAppender searchOutboxAppender
     ) {
         this.documentRepository = documentRepository;
         this.approvalLineRepository = approvalLineRepository;
@@ -81,6 +85,7 @@ public class DocumentService {
         this.documentOpenAiWebClient = documentOpenAiWebClient;
         this.attendanceService = attendanceService;
         this.notificationService = notificationService;
+        this.searchOutboxAppender= searchOutboxAppender;
     }
 
 
@@ -632,6 +637,8 @@ public class DocumentService {
             if (allApproved) {
                 String docId = generateDocId(document);
                 document.finalize(docId);
+
+                searchOutboxAppender.enqueueUpsert(comId, SearchDocType.APPROVAL, document.getDocNo());
                 log.info("문서 최종 승인: docNo={}, docId={}", docNo, docId);
 
                 // 문서양식이 휴가 신청서, 출장 신청서이면 호출
