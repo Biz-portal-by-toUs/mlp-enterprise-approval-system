@@ -6,6 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.service.MailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.*;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.*;
@@ -18,6 +19,7 @@ import java.time.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/mails")
+@Slf4j
 public class MailController {
 
     private final MailService mailService;
@@ -35,7 +37,7 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.CREATED, "메일 전송 성공", res));
     }
 
-    // ✅ ✅ ✅ 답신 payload (추가)
+    // 답신 payload (추가)
     @GetMapping("/{mailNo}/reply")
     public ResponseEntity<ResponseDto<ResMailReplyPayloadDto>> replyPayload(
             @PathVariable Long mailNo,

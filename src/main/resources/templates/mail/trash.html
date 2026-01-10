@@ -16,12 +16,24 @@
             --danger:#ef4444;
         }
 
-        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
-
         /* ===== page-only namespace: mt-* (mail trash) ===== */
-        .mt-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
-        .mt-toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .mt-toolbar{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin: 0 0 12px; /* 표 바로 위 */
+        }
+
+        .mt-toolbar-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
         .mt-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+
+        .mt-countPill{
+            font-size:14px;
+            font-weight:900;
+            color:var(--primary);
+            white-space:nowrap;
+        }
 
         .mt-select{
             height:40px;border-radius:8px;border:1px solid var(--line);
@@ -125,10 +137,29 @@
             justify-content:flex-end;
             margin: 6px 0 12px;
         }
+
         .mt-countPill{
             font-size:14px;
             font-weight:900;
             color:var(--primary);
+        }
+
+        .mt-btn.danger{
+            background:#fff;          /* 흰 바탕 */
+            color:#ef4444;            /* 빨간 글씨 */
+            border:1px solid #ef4444; /* 빨간 테두리 */
+        }
+
+        /* hover 시 연분홍 */
+        .mt-btn.danger:hover:not(:disabled){
+            background:#fff1f2;
+            filter:none;
+        }
+
+        .mt-btn.danger:disabled{
+            opacity:.45;
+            cursor:not-allowed;
+            background:#fff;
         }
 
         @media (max-width:760px){
@@ -146,17 +177,14 @@
 
         <main class="page-main">
             <div class="mt-toolbar">
-                <div class="mt-toolbar">
-                    <div class="mt-toolbar-left">
-                        <button class="mt-btn ghost" id="btnBulkRestore" type="button" disabled>복구</button>
-                        <button class="mt-btn ghost danger" id="btnBulkPurge" type="button" disabled>삭제</button>
-                    </div>
-                    <div class="mt-toolbar-right"></div>
+                <div class="mt-toolbar-left">
+                    <button class="mt-btn" id="btnBulkRestore" type="button" disabled>복구</button>
+                    <button class="mt-btn danger" id="btnBulkPurge" type="button" disabled>삭제</button>
                 </div>
 
-            </div>
-            <div class="mt-countBar">
-                <div id="countPill" class="mt-countPill">0건</div>
+                <div class="mt-toolbar-right">
+                    <span id="countPill" class="mt-countPill">0건</span>
+                </div>
             </div>
 
             <section class="mt-tableWrap">
