@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.common.config;
 
+import com.multi.mlpenterpriseapprovalsystem.chat.redis.RedisUtil;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.JwtFilter;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
@@ -34,6 +35,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
     private final TokenProvider tokenProvider;
+    private final RedisUtil redisUtil;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -107,7 +109,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                .addFilterBefore(new JwtFilter(tokenProvider, tokenService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtFilter(tokenProvider, tokenService, redisUtil), UsernamePasswordAuthenticationFilter.class);
         return http.build();
 
     }

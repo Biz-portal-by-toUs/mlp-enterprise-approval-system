@@ -15,10 +15,7 @@ import org.springframework.util.StringUtils;
 import java.security.Key;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +37,7 @@ public class TokenProvider {
     private static final String CLAIM_COM_ID = "comId";
     private static final String CLAIM_TOKEN_KIND = "tokenKind";     // "A" or "R"
     private static final String CLAIM_USERNAME = "username";
+    private static final String CLAIM_JTI = "jti";
 
     // ===== Expire =====
     private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24;  // 1일
@@ -88,6 +86,7 @@ public class TokenProvider {
         }
 
         claims.put(CLAIM_TOKEN_KIND, "A");
+        claims.put(CLAIM_JTI, UUID.randomUUID().toString());
 
         return Jwts.builder()
                 .setIssuer(ISSUER)
@@ -115,6 +114,7 @@ public class TokenProvider {
         if (StringUtils.hasText(comId)) claims.put(CLAIM_COM_ID, comId);
 
         claims.put(CLAIM_TOKEN_KIND, "R");
+        claims.put(CLAIM_JTI, UUID.randomUUID().toString());
 
         return Jwts.builder()
                 .setIssuer(ISSUER)
@@ -148,6 +148,20 @@ public class TokenProvider {
     // 검증/파싱
     // =========================
 
+    public boolean validateTokenSignatureAndExp(String token) {
+        if (!StringUtils.hasText(token) || token.chars().filter(ch -> ch == '.').count() != 2) {
+            return false;
+        }
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(SKEY)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
     /**
      * 유효성 검증(유효하면 true, 아니면 TokenException 던짐)
      */
@@ -157,14 +171,19 @@ public class TokenProvider {
             return false;
         }
         try {
-            if (!StringUtils.hasText(token)) {
-                throw new TokenException("토큰이 비어있습니다.");
-            }
 
-            Jwts.parserBuilder()
+            Jws<Claims> jws = Jwts.parserBuilder()
                     .setSigningKey(SKEY)
                     .build()
                     .parseClaimsJws(token);
+
+            // 2) ✅ 블랙리스트(jti) 체크
+            Claims claims = jws.getBody(); // 여기서는 만료 예외 안 남(이미 위에서 검증됨)
+            Object jtiObj = claims.get(CLAIM_JTI);
+            if (jtiObj == null) return false;
+
+            String jti = String.valueOf(jtiObj);
+            String kind = String.valueOf(claims.get(CLAIM_TOKEN_KIND)); // "A" or "R"
 
             return true;
 
@@ -325,5 +344,37 @@ public class TokenProvider {
     public String getTokenKindFromClaims(Claims claims) {
         Object kind = claims.get(CLAIM_TOKEN_KIND);
         return kind == null ? null : String.valueOf(kind);
+    }
+
+    public String getJti(String token) {
+        Object jti = parseClaims(token).get(CLAIM_JTI);
+        return jti == null ? null : String.valueOf(jti);
+    }
+
+    /** 남은 유효시간(초) - 블랙리스트 TTL로 쓰기 (서명 오류면 0) */
+    public long getRemainingSecondsForBlacklist(String token) {
+        if (!StringUtils.hasText(token)) return 0L;
+
+        try {
+            Claims claims = parseClaims(token); // 서명/형식 오류면 아래에서 예외 가능
+            Date exp = claims.getExpiration();
+            if (exp == null) return 0L;
+
+            long diffMs = exp.getTime() - System.currentTimeMillis();
+            if (diffMs <= 0) return 0L;
+
+            return (diffMs + 999) / 1000L; // ceil
+        } catch (JwtException | IllegalArgumentException e) {
+            return 0L;
+        }
+    }
+
+    /** 블랙리스트 키 생성 */
+    public String blacklistKeyForAccessJti(String jti) {
+        return "bl:at:" + jti;
+    }
+
+    public String blacklistKeyForRefreshJti(String jti) {
+        return "bl:rt:" + jti;
     }
 }

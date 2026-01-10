@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.common.jwt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.multi.mlpenterpriseapprovalsystem.chat.redis.RedisUtil;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ApiExceptionDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.TokenException;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
@@ -37,11 +38,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final TokenProvider tokenProvider;
     private final TokenService tokenService;
+    private final RedisUtil redisUtil;
 
-    public JwtFilter(TokenProvider tokenProvider, TokenService tokenService) {
+    public JwtFilter(TokenProvider tokenProvider, TokenService tokenService, RedisUtil redisUtil) {
 
         this.tokenProvider = tokenProvider;
         this.tokenService = tokenService;
+        this.redisUtil = redisUtil;
     }
 
     private static final String[] EXACT_PATHS = {
@@ -89,6 +92,21 @@ public class JwtFilter extends OncePerRequestFilter {
 
             String jwt = resolveToken(request);
             log.info("[JwtFilter] jwt : {}", jwt);
+
+            // ✅ 0) Access 토큰이 있으면 먼저 블랙리스트 확인 (로그아웃 토큰 차단)
+            if (StringUtils.hasText(jwt)) {
+                if (isAccessBlacklisted(jwt)) {
+                    log.warn("[JwtFilter] AccessToken is blacklisted. deny request. uri={}", requestURI);
+
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    ApiExceptionDto errorResponse = new ApiExceptionDto(HttpStatus.UNAUTHORIZED, "로그아웃된 토큰입니다.");
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.getWriter().write(convertObjectToJson(errorResponse));
+                    response.getWriter().flush();
+                    return; // ✅ 여기서 차단 (refresh 시도도 하지 않음)
+                }
+            }
             // 1. Access Token이 있고 유효한 경우 -> 그대로 진행
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
 
@@ -190,6 +208,13 @@ public class JwtFilter extends OncePerRequestFilter {
                 .map(Cookie::getValue)
                 .filter(v -> v != null && !v.isBlank())
                 .findFirst();
+    }
+
+    private boolean isAccessBlacklisted(String accessToken) {
+        String jti = tokenProvider.getJti(accessToken);
+        if (!StringUtils.hasText(jti)) return false; // jti 없으면 블랙리스트 체크 불가 -> 일단 false
+        String key = tokenProvider.blacklistKeyForAccessJti(jti); // bl:at:{jti}
+        return redisUtil.hasKeyBlackList(key);
     }
 
 }
