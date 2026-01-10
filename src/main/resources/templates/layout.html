@@ -1007,6 +1007,17 @@
 </button>
 
 <script>
+
+    // ✅ deviceId 공통 (layout에서도 필요)
+    const DEVICE_KEY = "deviceId";
+    function getDeviceId() {
+        let id = localStorage.getItem(DEVICE_KEY);
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem(DEVICE_KEY, id);
+        }
+        return id;
+    }
     /* =========================
      * ✅ Global Fetch Interceptor (Cookie 기반)
      * - 모든 요청 credentials 포함
@@ -1197,7 +1208,7 @@
         _sseRetryMs = 1200;
 
         const url = '/api/v1/notifications/stream';
-        const es = new EventSource(url, { withCredentials: true });
+        const es = new EventSource(url);
         _notiES = es;
 
         // 서버에서 보내는 커스텀 이벤트
@@ -1553,6 +1564,72 @@
         setActiveIconbarMenu();
         initNotificationSystem();
         loadMyStatus();
+    });
+
+    let _loginDetectES = null;
+    let _loginDetectRetryTimer = null;
+    let _loginDetectRetryMs = 1200;
+    const _LOGIN_DETECT_MAX_MS = 15000;
+
+    function closeLoginDetectStream() {
+        try { if (_loginDetectES) _loginDetectES.close(); } catch (e) {}
+        _loginDetectES = null;
+    }
+
+    function scheduleLoginDetectReconnect() {
+        if (_loginDetectRetryTimer) return;
+
+        _loginDetectRetryTimer = setTimeout(async () => {
+            _loginDetectRetryTimer = null;
+
+            // ✅ 너 layout.html에 이미 있는 refresh 함수 재사용
+            const ok = (typeof window.__callRefreshOnce === 'function')
+                ? await window.__callRefreshOnce()
+                : false;
+
+            if (!ok) {
+                alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
+                window.location.href = '/auth/employee/login';
+                return;
+            }
+
+            connectLoginDetectStream();
+        }, _loginDetectRetryMs);
+
+        _loginDetectRetryMs = Math.min(Math.floor(_loginDetectRetryMs * 1.6), _LOGIN_DETECT_MAX_MS);
+    }
+
+    function connectLoginDetectStream() {
+        closeLoginDetectStream();
+        _loginDetectRetryMs = 1200;
+
+        const url = `/api/v1/notifications/login-detect-stream?deviceId=${encodeURIComponent(getDeviceId())}`;
+        const es = new EventSource(url);
+        _loginDetectES = es;
+
+        es.addEventListener("new-login", (e) => {
+            let payload = {};
+            try { payload = JSON.parse(e.data); } catch {}
+
+            if (confirm((payload.message || "같은 계정으로 새 로그인이 감지되었습니다.") + "\n\n비밀번호를 변경하시겠습니까?")) {
+                window.location.href = "/auth/employee/password"; // 너 경로 유지
+            }
+        });
+
+        es.onopen = () => {
+            _loginDetectRetryMs = 1200;
+        };
+
+        es.onerror = () => {
+            console.warn("login-detect SSE 끊김/에러 → refresh 후 재연결");
+            closeLoginDetectStream();
+            scheduleLoginDetectReconnect();
+        };
+    }
+
+    // ✅ 페이지가 로드된 뒤 연결 시작 (안전)
+    window.addEventListener('DOMContentLoaded', () => {
+        connectLoginDetectStream();
     });
 </script>
 
