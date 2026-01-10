@@ -278,6 +278,41 @@ WHERE com_id = :comId
             @Param("attachmentId") Long attachmentId
     );
 
+    @Query(value = """
+    SELECT a.object_key
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND a.entity_id IN (:folderNos)
+      AND LOWER(f.scope) = 'dept'
+      AND f.dep_no = :depNo
+""", nativeQuery = true)
+    List<String> findDeptDeletedObjectKeysByFolderNos(
+            @Param("comId") String comId,
+            @Param("depNo") Long depNo,
+            @Param("folderNos") List<Long> folderNos
+    );
+
+    @Modifying
+    @Query(value = """
+    DELETE a
+    FROM attachment a
+    JOIN folder f ON f.folder_no = a.entity_id
+    WHERE a.com_id = :comId
+      AND a.domain = 'CLOUD'
+      AND a.status = 'DELETED'
+      AND a.entity_id IN (:folderNos)
+      AND LOWER(f.scope) = 'dept'
+      AND f.dep_no = :depNo
+""", nativeQuery = true)
+    int hardDeleteDeptDeletedAttachmentsByFolderNos(
+            @Param("comId") String comId,
+            @Param("depNo") Long depNo,
+            @Param("folderNos") List<Long> folderNos
+    );
+
 
 }
 
