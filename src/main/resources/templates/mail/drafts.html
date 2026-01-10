@@ -72,7 +72,12 @@
         .mi-pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
         .mi-pageBtn.active:hover{filter:brightness(0.9);}
 
-        .mi-pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+        .mi-countPill{
+            font-size:14px;
+            font-weight:900;
+            color:var(--primary);
+            white-space:nowrap;
+        }
 
         @media (max-width:760px){
             .mi-pager-status{position:static;margin-left:10px;}
@@ -94,6 +99,10 @@
                     </div>
                     <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                 </div>
+
+                <div class="mi-toolbar-right">
+                    <span id="countPill" class="mi-countPill">0건</span>
+                </div>
             </div>
 
             <section class="mi-tableWrap">
@@ -111,11 +120,6 @@
 
             <div class="mi-pager-wrapper">
                 <div id="pagerControls" class="mi-pager"></div>
-
-                <div class="mi-pager-status">
-                    <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
-                    <span id="pageInfo"  style="font-size:13px; color:var(--mut)">page 1 / 1</span>
-                </div>
             </div>
 
             <script>
@@ -241,14 +245,14 @@
                         tr.innerHTML = `
                             <td class="mi-col-no">${num}</td>
                             <td class="mi-col-title">
-                                <a class="mi-titleLink" href="/mail/write?mailId=${encodeURIComponent(it.mailId)}?box=drafts">${title}</a>
+                                <a class="mi-titleLink" href="/mail/write?mailId=${encodeURIComponent(it.mailId)}&box=drafts">${title}</a>
                             </td>
                             <td class="mi-col-date">${savedAt}</td>
                         `;
 
                         tr.addEventListener('click', (e) => {
                             if (e.target && e.target.tagName === 'A') return;
-                            location.href = `/mail/write?mailId=${encodeURIComponent(it.mailId)}`;
+                            location.href = `/mail/write?mailId=${encodeURIComponent(it.mailId)}&box=drafts`;
                         });
 
                         tb.appendChild(tr);
@@ -266,7 +270,6 @@
                     renderRows(items, pageData?.number ?? st.page, pageData?.size ?? PAGE_SIZE, pageData?.totalElements ?? items.length);
 
                     document.getElementById('countPill').textContent = `${pageData?.totalElements ?? 0}건`;
-                    document.getElementById('pageInfo').textContent = `page ${(pageData?.number ?? 0) + 1} / ${Math.max(pageData?.totalPages ?? 1, 1)}`;
 
                     buildPager(pageData?.number ?? 0, pageData?.totalPages ?? 1, (p) => {
                         setUrlState({ page:p, q:st.q });
