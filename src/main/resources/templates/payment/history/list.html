@@ -24,18 +24,25 @@
             background:var(--bg);
             color:var(--text);
         }
-        .page{ min-height:100vh; border:2px solid #222; margin:12px; background:var(--bg); display:flex; flex-direction:column; }
-        header{ display:flex; align-items:center; justify-content:space-between; padding:26px 28px; }
-        .brand{ font-family: Georgia, serif; font-weight:700; font-size:40px; cursor:pointer; }
+        /* 페이지 외곽 레이아웃 유지 */
+        .page{
+            min-height:100vh;
+            border:2px solid #222;
+            margin:12px;
+            background:var(--bg);
+            display:flex;
+            flex-direction:column;
+        }
+
+        /* ❌ 기존 header 관련 CSS 제거됨 (프래그먼트 스타일 사용) */
 
         main{ flex:1; display:flex; flex-direction:column; align-items:center; padding:40px 24px; }
-        /* 테이블 형태가 아닌 결제수단 관리와 동일한 카드형 리스트를 위해 너비 조정 */
         .container{ width:min(800px, 92vw); }
         .title-section{ text-align:left; margin-bottom:32px; }
         .title{ font-size:42px; font-weight:900; margin:0; letter-spacing:-1px; }
         .desc{ color:#555; font-weight:600; margin-top:8px; }
 
-        /* 리스트 스타일 (결제 수단 관리 디자인 계승) */
+        /* 리스트 스타일 */
         .payment-list{ display:flex; flex-direction:column; gap:16px; margin-bottom:32px; }
         .payment-item{
             background:#fff;
@@ -66,7 +73,7 @@
         .badge-success { background: var(--primary); }
         .badge-fail { background: var(--danger); }
 
-        /* 페이지네이션 (문서 목록 로직 디자인) */
+        /* 페이지네이션 */
         .pager-wrapper {
             display: flex;
             align-items: center;
@@ -103,6 +110,7 @@
         }
         .pager-status { position: absolute; right: 0; font-size: 13px; color: var(--muted); font-weight: 600; }
 
+        /* 공통 버튼 스타일 */
         .btn{
             appearance:none; border:1px solid var(--border); background:#fff;
             padding:10px 18px; border-radius:10px; font-weight:800; cursor:pointer;
@@ -111,16 +119,12 @@
 </head>
 <body>
 <div class="page">
-    <header>
-        <div class="brand" onclick="location.href='/'">Bizportal</div>
-        <button class="btn" onclick="location.href='/company'">대시보드</button>
-    </header>
+    <div th:replace="~{company/common/company-header :: companyHeader}"></div>
 
     <main>
         <div class="container">
             <section class="title-section">
                 <h1 class="title">결제 내역</h1>
-
             </section>
 
             <div class="payment-list" id="paymentList">
@@ -141,25 +145,29 @@
     const API_URL = '/api/v1/company/payment-history';
     let currentPage = 0;
 
-    // 1. 데이터 로드 (문서 목록 페이징 로직 적용)
+    // 데이터 로드
     async function loadData(page) {
         currentPage = page;
         try {
             const res = await fetch(`${API_URL}?page=${page}`);
-            const json = await res.json();
+            if (!res.ok) throw new Error("Fetch failed");
 
-            if (res.ok) {
-                renderHistory(json.data.content);
-                renderPagination(json.data.totalPages, page);
+            const json = await res.json();
+            const data = json.data || json; // 응답 구조에 맞춰 조정
+
+            if (data && data.content) {
+                renderHistory(data.content);
+                renderPagination(data.totalPages, page);
                 document.getElementById('pageInfo').textContent =
-                    `page ${page + 1} / ${Math.max(json.data.totalPages, 1)}`;
+                    `page ${page + 1} / ${Math.max(data.totalPages, 1)}`;
             }
         } catch (e) {
             console.error("내역을 불러오지 못했습니다.", e);
+            listEl.innerHTML = '<p style="text-align:center; padding:60px; color:red; font-weight:600;">데이터 로드 중 오류가 발생했습니다.</p>';
         }
     }
 
-    // 2. 리스트 렌더링 (결제 수단 관리 디자인 스타일)
+    // 리스트 렌더링
     function renderHistory(list) {
         if (!list || list.length === 0) {
             listEl.innerHTML = '<p style="text-align:center; padding:60px; color:#888; font-weight:600;">결제 내역이 없습니다.</p>';
@@ -168,7 +176,7 @@
 
         listEl.innerHTML = list.map(h => {
             const cardDisplay = h.paymentMethodNo
-                ? `${h.cardType} <span class="card-mask">(${h.mask})</span>`
+                ? `${h.cardType || '신용카드'} <span class="card-mask">(${h.mask || '****'})</span>`
                 : '기타/예치금';
 
             return `
@@ -188,7 +196,7 @@
         }).join('');
     }
 
-    // 3. 페이지네이션 (문서 목록 로직 완벽 이식)
+    // 페이지네이션 렌더링
     function renderPagination(totalPages, page) {
         const nav = document.getElementById('pagination-nav');
         if (totalPages <= 1) { nav.innerHTML = ''; return; }
@@ -203,10 +211,8 @@
             return b;
         };
 
-        // 이전 버튼
         nav.appendChild(createBtn('<', page - 1, page === 0));
 
-        // 페이지 번호 블록 (5개 단위)
         const blockSize = 5;
         const startPage = Math.floor(page / blockSize) * blockSize;
         let endPage = startPage + blockSize - 1;
@@ -220,7 +226,6 @@
             nav.appendChild(b);
         }
 
-        // 다음 버튼
         nav.appendChild(createBtn('>', page + 1, page === totalPages - 1));
     }
 
