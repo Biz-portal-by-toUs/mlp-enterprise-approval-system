@@ -20,6 +20,8 @@ import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationTyp
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
+import com.multi.mlpenterpriseapprovalsystem.search.domain.SearchDocType;
+import com.multi.mlpenterpriseapprovalsystem.search.service.SearchOutboxAppender;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +63,8 @@ public class MeetingService {
     private final ApplicationEventPublisher publisher;
 
     private final NotificationService notificationService;
+
+    private final SearchOutboxAppender searchOutboxAppender;
 
     /**
      * [회의 목록 조회]
@@ -388,6 +392,7 @@ public class MeetingService {
         if (!writerIncluded) {
             meetingEmpRepository.save(MeetingEmp.create(meeting, meeting.getWriter()));
         }
+        searchOutboxAppender.enqueueUpsert(meeting.getCompany().getComId(), SearchDocType.MEETING,meetNo);
 
         return meeting.getMeetNo();
     }
@@ -402,6 +407,7 @@ public class MeetingService {
         }
 
         meeting.delete();
+        searchOutboxAppender.enqueueDelete(meeting.getCompany().getComId(), SearchDocType.MEETING,meetNo);
         return meeting.getMeetNo();
     }
 
@@ -444,6 +450,9 @@ public class MeetingService {
 
         meeting.markAiDone(request.getSttText(), request.getAiText());
         meeting.setAudioObjectKey(request.getObjectKey());
+
+        searchOutboxAppender.enqueueUpsert(meeting.getCompany().getComId(), SearchDocType.MEETING,meetNo);
+
 
         List<MeetingEmp> meetingEmps = meetingEmpRepository.findAllByMeeting_MeetNo(meetNo);
 

@@ -16,6 +16,8 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.search.domain.SearchDocType;
+import com.multi.mlpenterpriseapprovalsystem.search.service.SearchOutboxAppender;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +50,7 @@ public class BoardService {
     private final CommentRepository commentRepository;
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
+    private final SearchOutboxAppender searchOutboxAppender;
 
     private static final ObjectMapper om = new ObjectMapper();
 
@@ -130,6 +133,8 @@ public class BoardService {
         Board board = boardRepository.findById(boardNo)
                 .orElseThrow(() -> new IllegalArgumentException("게시판 정보가 없습니다")); // 내가 해봄
         boardRepository.deleteById(boardNo);
+        searchOutboxAppender.enqueueDelete(board.getCompany().getComId(), SearchDocType.BOARD,boardNo);
+
     }
 
     @Transactional
@@ -138,6 +143,7 @@ public class BoardService {
                 .orElseThrow(() -> new IllegalArgumentException("게시판 정보가 없습니다"));
 
         board.update(dto);
+        searchOutboxAppender.enqueueUpsert(board.getCompany().getComId(), SearchDocType.BOARD,boardNo);
     }
 
     @Transactional
@@ -161,6 +167,7 @@ public class BoardService {
                 .build();
 
         Board regiBoard = boardRepository.save(board);
+        searchOutboxAppender.enqueueUpsert(board.getCompany().getComId(), SearchDocType.BOARD,board.getBoardNo());
 
         return BoardResAllDto.builder()
                 .boardNo(regiBoard.getBoardNo())

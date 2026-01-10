@@ -1,6 +1,5 @@
 package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto;
 
-import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.EmpSchedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.Schedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope;
 import lombok.*;
@@ -52,24 +51,6 @@ public class ResScheduleDto {
         return allDay ? endedAt.toLocalDate().minusDays(1) : null;
     }
 
-    public static ResScheduleDto fromPersonal(EmpSchedule s) {
-        boolean allDay = s.isAllDay();
-
-        return ResScheduleDto.builder()
-                .scope(CalendarScope.PERSONAL)
-                .schNo(s.getSchNo())
-                .title(s.getTitle())
-                .content(s.getContent())
-                .startAt(s.getStartAt())
-                .endedAt(s.getEndedAt())
-                .allDay(allDay)
-                .startDate(toStartDateIfAllDay(allDay, s.getStartAt()))
-                .endDate(toEndDateIfAllDay(allDay, s.getEndedAt()))
-                .color(s.getColor())
-                .empId(s.getEmployee().getEmpId())
-                .depNo(null)
-                .build();
-    }
 
     public static ResScheduleDto fromSchedule(CalendarScope scope, Schedule s) {
         boolean allDay = s.isAllDay();

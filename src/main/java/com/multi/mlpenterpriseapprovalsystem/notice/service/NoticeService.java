@@ -14,6 +14,8 @@ import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeListItemResDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeReqDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.dto.NoticeResAllDto;
 import com.multi.mlpenterpriseapprovalsystem.notice.repository.NoticeRepository;
+import com.multi.mlpenterpriseapprovalsystem.search.domain.SearchDocType;
+import com.multi.mlpenterpriseapprovalsystem.search.service.SearchOutboxAppender;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,7 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
+    private final SearchOutboxAppender searchOutboxAppender;
 
     private static final ObjectMapper om = new ObjectMapper();
 
@@ -67,6 +70,7 @@ public class NoticeService {
                 .build();
 
         Notice regiNotice = noticeRepository.save(notice);
+        searchOutboxAppender.enqueueUpsert(company.getComId(), SearchDocType.NOTICE, regiNotice.getNoticeNo());
 
         return NoticeResAllDto.builder()
                 .noticeNo(regiNotice.getNoticeNo())
@@ -166,6 +170,7 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(noticeNo)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항 정보가 없습니다")); // 내가 해봄
         noticeRepository.deleteById(noticeNo);
+        searchOutboxAppender.enqueueDelete(notice.getCompany().getComId(), SearchDocType.NOTICE, noticeNo);
     }
 
     //공지사항 상세 조회
@@ -228,6 +233,7 @@ public class NoticeService {
         System.out.println("dto.getContents() : " + dto.getContents() + "");
         System.out.println("dto : " + dto + "");
         notice.update(dto);
+        searchOutboxAppender.enqueueUpsert(notice.getCompany().getComId(), SearchDocType.NOTICE, id);
     }
 
 

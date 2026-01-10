@@ -23,10 +23,10 @@ public class ReqApprovalLineDto {
     private String approverName; // 결재자 이름
     private String approverId; // 결재자 사원번호
     private String comId;
-    private int seq;
+    private Integer seq;
     private String apprStat;
     private LocalDateTime endedAt;
     private Boolean isActualAppr;
     private String rejReason;
-    private boolean isDelegate;
+    private Boolean isDelegate;
 }
