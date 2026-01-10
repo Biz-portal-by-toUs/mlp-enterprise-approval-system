@@ -385,7 +385,23 @@ public class MailServiceImpl implements MailService {
             throw new CustomException(ErrorCode.MAIL_SELF_ONLY_MODE);
         }
 
+        // 전송 시점에 제목/내용 반영 (요청 값 우선, 없으면 draft 값)
+        String finalTitle = (req != null && req.title() != null) ? req.title().trim() : draft.getTitle();
+        String finalCntt  = (req != null && req.cnttJson() != null) ? req.cnttJson() : draft.getCntt();
+
+        // null 방어
+        finalTitle = (finalTitle == null) ? "" : finalTitle.trim();
+        finalCntt  = (finalCntt == null) ? "{}" : finalCntt;
+
+        // 정책: 전송은 제목/내용 필수로 할 거면 여기서 검증
+        if (finalTitle.isBlank()) throw new CustomException(ErrorCode.MAIL_TITLE_REQUIRED);
+        if (finalCntt.isBlank() || "{}".equals(finalCntt.trim())) throw new CustomException(ErrorCode.MAIL_CONTENT_REQUIRED);
+
+        // draft 엔티티에 최종 값 세팅
+        draft.updateDraft(finalTitle, finalCntt, draft.getDraftReceivers()); // 또는 별도 메서드 추천
+
         // draft -> sent 전환
+        draft.applySendContent(finalTitle, finalCntt);
         draft.clearDraft();
         Mail saved = mailRepository.save(draft);
 

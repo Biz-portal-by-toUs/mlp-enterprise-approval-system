@@ -10,4 +10,8 @@ import java.util.*;
  * @since : 2026-01-07 수요일
  */
 
-public record ReqMailDraftSendDto( List<String> receiverEmpIds ) {}
+public record ReqMailDraftSendDto(
+        String title,
+        String cnttJson,
+        List<String> receiverEmpIds
+) {}
