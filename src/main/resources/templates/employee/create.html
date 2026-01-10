@@ -703,20 +703,6 @@
             }
         });
 
-        // ✅ 입사일은 "오늘 이후(=내일~)"만 허용
-        function applyHireDateMin(){
-            const now = new Date();
-            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-            const minStr = toDateStrLocal(tomorrow);
-
-            $hireDate.min = minStr;
-
-            // 이미 값이 있는데 min보다 작으면 비움
-            if ($hireDate.value && $hireDate.value < minStr){
-                $hireDate.value = "";
-            }
-        }
-
         function validateHireDate(){
             const v = String($hireDate.value || "").trim();
             if (!v){
@@ -725,25 +711,13 @@
                 return false;
             }
 
-            const minStr = String($hireDate.min || "").trim();
-            if (minStr && v < minStr){
-                toast("bad", `입사일은 ${minStr} 이후만 가능해요.`);
-                $hireDate.focus();
-                return false;
-            }
             return true;
         }
 
         // 입력 중에도 즉시 검증/정리
         $hireDate.addEventListener("change", () => {
             clearToast();
-            // min 갱신 후, 규칙 위반이면 비움
-            applyHireDateMin();
-            const minStr = String($hireDate.min || "").trim();
-            if ($hireDate.value && minStr && $hireDate.value < minStr){
-                toast("bad", `입사일은 ${minStr} 이후만 가능해요.`);
-                $hireDate.value = "";
-            }
+
         });
 
         // ✅ 주소 합치기(백엔드가 addr 하나만 받을 때)
@@ -931,8 +905,6 @@
 
         $cancelBtn.addEventListener("click", () => { window.location.href = LIST_URL; });
 
-        // ✅ 페이지 진입 시 바로 min 적용
-        applyHireDateMin();
         // ✅ 페이지 진입 시 바로 max 적용
         applyBirthMax();
     </script>
