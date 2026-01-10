@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.document.dto.req;
 
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,8 @@ public class ReqApprovalLineDto {
     private String apprStat;
     private LocalDateTime endedAt;
     private Boolean isActualAppr;
+
+    @Size(max = 200, message = "반려이유는 최대 200자까지 입력 가능합니다.")
     private String rejReason;
     private Boolean isDelegate;
 }
