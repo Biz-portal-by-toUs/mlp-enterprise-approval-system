@@ -1616,6 +1616,16 @@
             createFolder().catch(e => alert(e.message));
         });
 
+        // ✅ 확장자 추출 유틸
+        function getExt(filename) {
+            const s = String(filename ?? "").trim();
+            const base = s.split("?")[0].split("#")[0];
+            const dot = base.lastIndexOf(".");
+            // ".gitignore" 같이 맨 앞 점만 있는 케이스는 확장자 취급 안 함
+            if (dot <= 0 || dot === base.length - 1) return "";
+            return base.slice(dot + 1).toLowerCase();
+        }
+
         el.ctxRename?.addEventListener("click", () => {
             closeCtxMenu();
 
@@ -1629,13 +1639,25 @@
             if (state.ctxKind === "file" && state.ctxAttachmentId) {
                 (async () => {
                     const oldName = state.ctxOriginalName || "";
+                    const oldExt = getExt(oldName);
+
                     let next = prompt("새 파일명(확장자 포함)", oldName);
                     if (!next) return;
                     next = next.trim();
 
+                    const nextExt = getExt(next);
+
+                    // 확장자를 '바꾼' 경우 경고(confirm)
+                    // - oldExt, nextExt 둘 다 존재하고 서로 다르면 변경으로 판단
+                    if (oldExt && nextExt && oldExt !== nextExt) {
+                        const ok = confirm(
+                            `확장자를 "${oldExt}" → "${nextExt}"로 변경하면 파일이 실행되지 않거나 정상 동작하지 않을 수 있습니다.\n계속하시겠습니까?`
+                        );
+                        if (!ok) return;
+                    }
+
                     // 확장자 안 쓰면 기존 확장자 유지
-                    const oldExt = oldName.includes(".") ? oldName.split(".").pop() : "";
-                    if (oldExt && !next.includes(".")) next = `${next}.${oldExt}`;
+                    if (oldExt && !nextExt) next = `${next}.${oldExt}`;
 
                     await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}/rename`, {
                         method: "PATCH",

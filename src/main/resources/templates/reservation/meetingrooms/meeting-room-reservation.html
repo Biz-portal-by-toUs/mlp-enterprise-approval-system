@@ -386,6 +386,43 @@
             return res;
         }
 
+        function hmToMin(hm){
+            const [h,m] = String(hm).split(":").map(Number);
+            return (h*60) + (m||0);
+        }
+
+        function getResvDate(r){
+            return r.resvDate ?? (r.startedAt ? String(r.startedAt).substring(0,10) : null);
+        }
+        function getResvStartHM(r){
+            return r.startTime ? String(r.startTime).substring(0,5)
+                : (r.startedAt ? String(r.startedAt).substring(11,16) : null);
+        }
+        function getResvEndHM(r){
+            return r.endTime ? String(r.endTime).substring(0,5)
+                : (r.endedAt ? String(r.endedAt).substring(11,16) : null);
+        }
+
+        function hasConflict({ roomNo, dateStr, startTime, endTime }){
+            const s = hmToMin(startTime);
+            const e = hmToMin(endTime);
+
+            return (RESERVATIONS || []).some(r => {
+                if (String(r.roomNo) !== String(roomNo)) return false;
+                if (getResvDate(r) !== dateStr) return false;
+
+                const rs = getResvStartHM(r);
+                const re = getResvEndHM(r);
+                if (!rs || !re) return false;
+
+                const rS = hmToMin(rs);
+                const rE = hmToMin(re);
+
+                // 겹침 조건: !(내끝 <= 상대시작 || 내시작 >= 상대끝)
+                return !(e <= rS || s >= rE);
+            });
+        }
+
         function get(obj, path) {
             return path.split(".").reduce((o, k) => o?.[k], obj);
         }
@@ -729,11 +766,28 @@
                 return;
             }
 
+            const roomNo = Number(modal.dataset.roomNo);
+            const dateStr = currentDate.format("YYYY-MM-DD");
+            const startTime = modal.dataset.start; // "HH:mm"
+            const endTime   = modal.dataset.end;   // "HH:mm"
+
+            // ✅ 1) 예약 직전 최신 데이터로 갱신
+            await loadReservations();
+
+            // ✅ 2) 최신 데이터 기준으로 충돌 체크
+            if (hasConflict({ roomNo, dateStr, startTime, endTime })) {
+                alert("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.");
+                clearSelection();
+                modal.style.display = "none";
+                // 최신 예약이 이미 로드되어 paintReservations()까지 됨
+                return;
+            }
+
             const body = {
-                roomNo: Number(modal.dataset.roomNo),
-                resvDate: currentDate.format("YYYY-MM-DD"),
-                startTime: modal.dataset.start,
-                endTime: modal.dataset.end,
+                roomNo,
+                resvDate: dateStr,
+                startTime,
+                endTime,
                 purp: document.getElementById("purpose").value,
                 attendeeIds: selectedAttendees.map(a => a.empId)
             };
@@ -745,8 +799,16 @@
             });
 
             if (!res.ok) {
-                const msg = await res.text();
-                alert("예약 실패: " + msg);
+                // ✅ 서버가 409 같은 걸로 내려주면 여기서 메시지 분기 가능
+                let err = null;
+                try { err = await res.json(); } catch { err = { message: await res.text() }; }
+
+                // 서버가 아직 500으로 뭉개도 UX는 이렇게 처리 가능
+                const msg = err?.message || "예약 실패";
+                alert(msg.includes("예약") ? msg : "예약에 실패했습니다. (이미 예약되었을 수 있어요)\n새로고침 후 다시 시도해주세요.");
+
+                // ✅ 실패 시 최신화
+                await loadReservations();
                 return;
             }
 
@@ -754,6 +816,16 @@
             clearSelection();
             await loadReservations();
         };
+
+        // 30초마다 예약만 갱신 (원하면 15~60초로)
+        setInterval(() => {
+            loadReservations().catch(()=>{});
+        }, 30000);
+
+        // 탭 다시 활성화되면 갱신
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) loadReservations().catch(()=>{});
+        });
 
         deleteBtn.onclick = async () => {
             const resvNo = modal.dataset.resvNo;

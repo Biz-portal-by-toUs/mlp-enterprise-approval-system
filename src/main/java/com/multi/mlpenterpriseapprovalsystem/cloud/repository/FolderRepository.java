@@ -110,7 +110,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
               a.entity_id AS parentFolderNo,
               f.scope AS scope,
               f.dep_no AS depNo,
-              f.owner_id AS ownerId,
+              a.created_by AS ownerId,
               a.deleted_by AS deletedBy,
               a.deleted_at AS deletedAt,
               a.delete_batch_id AS deleteBatchId,
@@ -287,6 +287,27 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
                 ORDER BY LENGTH(f.path) DESC
             """, nativeQuery = true)
     List<Long> findPrvtDeletedFolderNosInTree(String comId, String ownerId, Long rootId, String prefix);
+
+    @Query(value = """
+    SELECT f.folder_no
+    FROM folder f
+    WHERE f.com_id = :comId
+      AND LOWER(f.scope) = 'dept'
+      AND f.dep_no = :depNo
+      AND f.deleted_at IS NOT NULL
+      AND (
+           f.folder_no = :rootFolderNo
+        OR f.path = :basePath
+        OR f.path LIKE CONCAT(:basePath, '/%')
+      )
+    ORDER BY LENGTH(f.path) DESC
+""", nativeQuery = true)
+    List<Long> findDeptDeletedFolderNosInTree(
+            @Param("comId") String comId,
+            @Param("depNo") Long depNo,
+            @Param("rootFolderNo") Long rootFolderNo,
+            @Param("basePath") String basePath
+    );
 
 
 }

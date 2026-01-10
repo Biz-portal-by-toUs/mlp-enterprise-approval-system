@@ -412,6 +412,9 @@
         console.log("[admin-log] scope(from url):", scope);
 
         const size = 10;  // 페이지당 10개
+        const MAX_PAGES = 5;      // 서버 정책(최대 5페이지)과 맞춤
+        let totalPages = 1;       // 확정된 총 페이지 수(1~5)
+        let lastQueryKey = "";    // 검색조건 바뀌었는지 판별
         let page = 0;     // 0-base page
 
         const el = {
@@ -440,6 +443,117 @@
 
             // ResponseDto { data: ... } 래핑이면 data 언랩
             return json && "data" in json ? json.data : json;
+        }
+
+        function buildQueryKey({ q, from, to }) {
+            return `${scope}|${from}|${to}|${q}`;
+        }
+
+        async function fetchSlice(p, { q, from, to }) {
+            const limit = size;
+            const offset = p * size;
+
+            const url =
+                `/api/v1/cloud/trash/admin-log?scope=${encodeURIComponent(scope)}`
+                + `&limit=${limit}&offset=${offset}`
+                + `&q=${encodeURIComponent(q)}`
+                + `&from=${encodeURIComponent(from)}`
+                + `&to=${encodeURIComponent(to)}`;
+
+            return await apiJson(url); // { items, hasNext, limit, offset }
+        }
+
+        // ✅ 0페이지 기준으로 hasNext를 따라가며 총 페이지(최대 5) 확정
+        async function detectTotalPages(firstSlice, params) {
+            // 결과가 없으면 페이징 없음
+            if (!firstSlice || !Array.isArray(firstSlice.items) || firstSlice.items.length === 0) return 1;
+
+            let total = 1;
+            let cur = firstSlice;
+            let nextPage = 1;
+
+            while (cur.hasNext && total < MAX_PAGES) {
+                const next = await fetchSlice(nextPage, params);
+
+                // 안전: 혹시 서버가 빈 배열을 주면 중단
+                if (!next || !Array.isArray(next.items) || next.items.length === 0) break;
+
+                total++;
+                cur = next;
+                nextPage++;
+            }
+
+            return total;
+        }
+
+        function fmtYMD(d){
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function parseYMD(s){
+            if (!s) return null;
+            // input[type=date]는 YYYY-MM-DD
+            const [y,m,d] = s.split("-").map(Number);
+            if (!y || !m || !d) return null;
+            return new Date(y, m - 1, d); // 로컬 00:00
+        }
+
+        function addMonths(date, months){
+            const d = new Date(date);
+            const day = d.getDate();
+            d.setMonth(d.getMonth() + months);
+
+            // 말일 보정(예: 3/31 -1개월 => 3/03 같은 꼬임 방지)
+            if (d.getDate() !== day) d.setDate(0);
+            return d;
+        }
+
+        // ✅ 날짜 제약 적용: (1) to < from 금지 (2) 기간 3개월 초과 금지
+        function normalizeDateRange({ silent = false } = {}){
+            const from = parseYMD(el.fromDate.value);
+            const to   = parseYMD(el.toDate.value);
+
+            if (!from || !to) return;
+
+            // 1) 역전 방지: to >= from
+            if (to < from) {
+                el.toDate.value = el.fromDate.value;
+                if (!silent) alert("종료 날짜는 시작 날짜보다 빠를 수 없습니다.");
+            }
+
+            // 2) 3개월 제한: from >= (to - 3개월)
+            const to2 = parseYMD(el.toDate.value);
+            const minFrom = addMonths(to2, -3); // to 기준 3개월 전
+            const from2 = parseYMD(el.fromDate.value);
+
+            if (from2 < minFrom) {
+                el.fromDate.value = fmtYMD(minFrom);
+                if (!silent) alert("조회 기간은 최대 3개월까지만 가능합니다.");
+            }
+
+            // date picker 자체 제한도 같이 갱신
+            el.toDate.min = el.fromDate.value;
+            el.fromDate.max = el.toDate.value;
+
+            // 오늘 이후 선택 금지(원하면)
+            const today = new Date();
+            const todayStr = fmtYMD(today);
+            el.fromDate.max = Math.min(el.fromDate.max || todayStr, todayStr);
+            el.toDate.max = todayStr;
+        }
+
+        function bindDateGuards(){
+            // 오늘 이후 선택 금지(원하면 유지)
+            const todayStr = fmtYMD(new Date());
+            el.fromDate.max = todayStr;
+            el.toDate.max = todayStr;
+
+            // 상호 제약
+            el.fromDate.addEventListener("change", () => normalizeDateRange());
+            el.toDate.addEventListener("change", () => normalizeDateRange());
         }
 
         function actionLabel(a) {
@@ -526,8 +640,10 @@
                 return b;
             };
 
+            // 이전
             el.paging.appendChild(mkBtn("‹", () => loadLogs(current - 1), current === 0));
 
+            // total은 1~5로 확정되어 있으니 그대로 보여주면 됨
             const windowSize = 5;
             const start = Math.max(0, current - Math.floor(windowSize / 2));
             const end = Math.min(total - 1, start + windowSize - 1);
@@ -537,36 +653,43 @@
                 el.paging.appendChild(mkBtn(String(p + 1), () => loadLogs(p), false, p === current));
             }
 
+            // 다음
             el.paging.appendChild(mkBtn("›", () => loadLogs(current + 1), current >= total - 1));
         }
 
         async function loadLogs(p = 0) {
             page = p;
 
+            normalizeDateRange({ silent: true });
+
             const q = (el.q?.value || "").trim();
             const from = el.fromDate.value;
             const to = el.toDate.value;
 
-            const limit = size;
-            const offset = page * size;
+            const params = { q, from, to };
+            const key = buildQueryKey(params);
 
-            const url =
-                `/api/v1/cloud/trash/admin-log?scope=${encodeURIComponent(scope)}`
-                + `&limit=${limit}&offset=${offset}`
-                + `&q=${encodeURIComponent(q)}`
-                + `&from=${encodeURIComponent(from)}`
-                + `&to=${encodeURIComponent(to)}`;
+            // ✅ 검색조건이 바뀌면 totalPages를 다시 확정해야 함
+            const queryChanged = (key !== lastQueryKey);
+            if (queryChanged) {
+                lastQueryKey = key;
+                totalPages = 1; // 임시 리셋
+            }
 
-            console.log("[admin-log] request url:", url);
-
-            const slice = await apiJson(url); // { items, hasNext, limit, offset }
+            // 현재 페이지 데이터 로드
+            const slice = await fetchSlice(page, params);
 
             const rows = slice.items;
             render(rows);
 
-            const current = Math.floor((slice.offset || 0) / (slice.limit || size));
-            const total = slice.hasNext ? current + 2 : current + 1;
-            renderPaging(current, Math.min(total, 5));
+            // ✅ 처음 로드/검색조건 변경 시: 0페이지 기준으로 총 페이지 확정(최대 5)
+            if (queryChanged) {
+                // 0페이지부터 계산하는 게 “1페이지에서도 1,2,3이 안정적으로 보이게” 하는 포인트
+                const first = (page === 0) ? slice : await fetchSlice(0, params);
+                totalPages = await detectTotalPages(first, params);
+            }
+
+            renderPaging(page, totalPages);
         }
 
         async function toggleFolderDetail(btn) {
@@ -642,6 +765,9 @@
 
             el.fromDate.value = fmtYMD(weekAgo);
             el.toDate.value = fmtYMD(today);
+
+            bindDateGuards();
+            normalizeDateRange({ silent: true });
 
             loadLogs(0).catch(e => alert(e.message));
         });

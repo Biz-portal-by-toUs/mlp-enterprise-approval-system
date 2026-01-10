@@ -2,6 +2,7 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout}">
 
 <head>
@@ -404,7 +405,9 @@
         <!-- ✅ 휴지통 우클릭 메뉴(기본은 숨김) -->
         <div class="trash-ctx" id="trashCtx" role="menu" aria-label="휴지통 메뉴" style="display:none;">
             <button type="button" class="ctx-btn" id="ctxRestore" role="menuitem">복구</button>
-            <button type="button" class="ctx-btn" id="ctxPurgeDeptFile" role="menuitem" style="display:none;">
+            <button type="button" class="ctx-btn" id="ctxPurgeDeptFile"
+                    role="menuitem" style="display:none;" disabled
+                    title="관리자 또는 파일 권한자만 영구삭제할 수 있습니다.">
                 영구삭제
             </button>
             <button type="button" class="ctx-btn" id="ctxInfoToggle" role="menuitem">삭제 상세 정보</button>
@@ -438,20 +441,30 @@
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
+        /* =========================================================
+           0) CONST / STATE
+        ========================================================= */
+        const IS_ADMIN = /*[[${#authorization.expression(
+        "hasAnyAuthority(" +
+        "'SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN'," +
+        "'ROLE_SYS_ADMIN','ROLE_COM_ADMIN','ROLE_SEC_ADMIN','ROLE_THR_ADMIN'" +
+        ")"
+    )}]]*/ false;
+
+        const CURRENT_USERNAME = /*[[${#authentication?.name}]]*/ "";
         const TRASH_SCOPE = /*[[${trashScope}]]*/ "DEPT"; // "DEPT" | "PRVT"
         const SCOPE = String(TRASH_SCOPE || "DEPT").toUpperCase();
 
-        // ✅ 선택 영구삭제 API (서버에 맞춰 수정!)
-        // 예) "/api/v1/cloud/trash/purge/prvt"
         const PURGE_SELECTED_ENDPOINT = "/api/v1/cloud/trash/purge/prvt";
 
         const state = {
             selectedBatchId: null,
             selectedCardEl: null,
 
-            // ✅ PRVT 멀티선택용
+            // PRVT 멀티선택용
             selectedKeys: new Set(),
             lastClickedIndex: null,
+
             items: [],
             itemByKey: new Map(),
         };
@@ -461,11 +474,10 @@
             empty: document.getElementById("trashEmpty"),
 
             btnReload: document.getElementById("btnReload"),
-            btnEmpty: document.getElementById("btnEmpty"),                 // PRVT 전체 비우기
-            btnPurgeSelected: document.getElementById("btnPurgeSelected"), // PRVT 선택 삭제
+            btnEmpty: document.getElementById("btnEmpty"),
+            btnPurgeSelected: document.getElementById("btnPurgeSelected"),
         };
 
-        // ✅ 우클릭 메뉴 상태
         const ctx = {
             el: document.getElementById("trashCtx"),
             btnRestore: document.getElementById("ctxRestore"),
@@ -486,44 +498,63 @@
 
         ctx.el?.addEventListener("contextmenu", (e) => e.preventDefault(), true);
 
-        function safe(s){ return (s == null) ? "" : String(s); }
+        /* =========================================================
+           1) UTILS
+        ========================================================= */
+        function safe(s) { return (s == null) ? "" : String(s); }
 
-        function fmtDate(dt){
+        function normUser(v) { return safe(v).trim().toLowerCase(); }
+        function isSameUser(a, b) {
+            const aa = normUser(a), bb = normUser(b);
+            return aa.length > 0 && aa === bb;
+        }
+
+        function resolveOwnerId(it) {
+            // ✅ ResTrashItemDto.ownerId 기준
+            return safe(it?.ownerId);
+        }
+
+        function resolveDeletedBy(it) {
+            // deletedBy가 서버에서 내려오는 필드면 그걸 쓰면 됨
+            return safe(it?.deletedBy || it?.deletedByName || it?.deleterName || it?.deletedUserName || it?.deletedUser);
+        }
+
+        function fmtDate(dt) {
             if (!dt) return "";
             const d = new Date(dt);
             if (isNaN(d.getTime())) return String(dt);
             const yyyy = d.getFullYear();
-            const mm = String(d.getMonth()+1).padStart(2,"0");
-            const dd = String(d.getDate()).padStart(2,"0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
             return `${yyyy}-${mm}-${dd}`;
         }
 
-        function isFolder(it){
+        function isFolder(it) {
             return String(it?.type || "").toUpperCase() === "FOLDER";
         }
 
-        function getBatchId(it){
+        function getBatchId(it) {
             const raw =
-                it?.deleteBatchId
-                ?? it?.batchId
-                ?? it?.deletedBatchId
-                ?? it?.delete_batch_id
-                ?? it?.batch
-                ?? it?.extra1;
+                it?.deleteBatchId ??
+                it?.batchId ??
+                it?.deletedBatchId ??
+                it?.delete_batch_id ??
+                it?.batch ??
+                it?.extra1;
 
             return raw == null ? "" : String(raw).trim();
         }
 
-        function humanBytes(n){
+        function humanBytes(n) {
             if (n == null) return "";
             let v = Number(n);
-            const units = ["B","KB","MB","GB","TB"];
+            const units = ["B", "KB", "MB", "GB", "TB"];
             let i = 0;
             while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
             return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
         }
 
-        function resolveFileIcon(it){
+        function resolveFileIcon(it) {
             const ICONS = {
                 word: "/images/icons/word.png",
                 excel: "/images/icons/excel.png",
@@ -536,17 +567,17 @@
             };
 
             const EXT_GROUPS = {
-                word: ["doc","docx"],
-                excel: ["xls","xlsx","csv"],
-                ppt: ["ppt","pptx"],
+                word: ["doc", "docx"],
+                excel: ["xls", "xlsx", "csv"],
+                ppt: ["ppt", "pptx"],
                 pdf: ["pdf"],
-                image: ["png","jpg","jpeg","gif","webp","svg","bmp","tif","tiff","heic"],
-                zip: ["zip","rar","7z","tar","gz","bz2","xz"],
-                code: ["js","ts","jsx","tsx","html","css","scss","less","json","xml","yml","yaml","md","py","java","c","cpp","go","rs","php","rb","kt","swift","sh","sql"],
+                image: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "tif", "tiff", "heic"],
+                zip: ["zip", "rar", "7z", "tar", "gz", "bz2", "xz"],
+                code: ["js", "ts", "jsx", "tsx", "html", "css", "scss", "less", "json", "xml", "yml", "yaml", "md", "py", "java", "c", "cpp", "go", "rs", "php", "rb", "kt", "swift", "sh", "sql"],
             };
 
-            const name = safe(it.originalName || it.name || it.title || "");
-            let ext = safe(it.ext || "").toLowerCase();
+            const name = safe(it?.originalName || it?.name || it?.title || "");
+            let ext = safe(it?.ext || "").toLowerCase();
             if (!ext && name.includes(".")) ext = name.split(".").pop().toLowerCase();
 
             let type = "unknown";
@@ -576,24 +607,51 @@
             return (json && typeof json === "object" && "data" in json) ? json.data : json;
         }
 
-        function closeTrashCtx(){
+        /* =========================================================
+           2) CONTEXT MENU
+        ========================================================= */
+        function closeTrashCtx() {
             if (!ctx.el) return;
             ctx.el.style.display = "none";
             ctx.currentBatchId = null;
             ctx.currentItem = null;
+            ctx.isInfoOpen = false;
+            if (ctx.infoWrap) ctx.infoWrap.style.display = "none";
+            if (ctx.btnInfo) ctx.btnInfo.textContent = "삭제 상세 정보";
         }
 
-        function openTrashCtx(x, y, item, batchId){
+        function positionCtx(x, y) {
+            if (!ctx.el) return;
+            ctx.el.style.left = x + "px";
+            ctx.el.style.top = y + "px";
+            ctx.el.style.display = "block";
+
+            requestAnimationFrame(() => {
+                const rect = ctx.el.getBoundingClientRect();
+                const pad = 8;
+
+                let left = x, top = y;
+                const maxL = window.innerWidth - rect.width - pad;
+                const maxT = window.innerHeight - rect.height - pad;
+
+                if (left > maxL) left = maxL;
+                if (top > maxT) top = maxT;
+
+                ctx.el.style.left = Math.max(pad, left) + "px";
+                ctx.el.style.top = Math.max(pad, top) + "px";
+            });
+        }
+
+        function openTrashCtx(x, y, item, batchId) {
             if (!ctx.el) return;
 
             ctx.openedAt = Date.now();
-            ctx.currentItem = item;
-            ctx.currentBatchId = batchId || null;
+            ctx.currentItem = item || {};
+            ctx.currentBatchId = (String(batchId ?? "").trim() || null);
 
             const name = safe(item?.originalName || item?.name || item?.title || ("item-" + item?.id));
             const deletedAt = fmtDate(item?.deletedAt);
-            const deletedBy =
-                safe(item?.deletedByName || item?.deletedBy || item?.deletedUserName || item?.deletedUser || item?.deleterName) || "-";
+            const deletedBy = resolveDeletedBy(item) || "-";
 
             const folder = isFolder(item);
             const sizeText = folder ? "폴더" : (item?.size != null ? humanBytes(item.size) : "-");
@@ -603,52 +661,45 @@
             ctx.infoDeletedAt && (ctx.infoDeletedAt.textContent = deletedAt || "-");
             ctx.infoDeletedBy && (ctx.infoDeletedBy.textContent = deletedBy || "-");
 
-            const b = String(batchId ?? "").trim();
-            ctx.currentBatchId = b || null;
+            // 복구 버튼: batchId 있으면 가능, 없으면 id 있을 때만(단건복구가 있는 경우 대비)
             const hasId = item && item.id != null;
-            ctx.btnRestore && (ctx.btnRestore.disabled = (b.length === 0 && !hasId));
+            ctx.btnRestore && (ctx.btnRestore.disabled = (!ctx.currentBatchId && !hasId));
 
-            // ✅ DEPT + FILE일 때만 "영구삭제" 버튼 노출
+            // ✅ 영구삭제 버튼 정책(관리자 OR ownerId)
+            const isDept = (SCOPE === "DEPT");
+            const type = String(item?.type || "").toUpperCase();
+            const isTarget = (type === "FILE" || type === "FOLDER");
+            const isOwner = isSameUser(resolveOwnerId(item), CURRENT_USERNAME);
+
+            const canPurge = isDept && isTarget && (IS_ADMIN || isOwner);
+
             if (ctx.btnPurgeDeptFile) {
-                const isDept = (SCOPE === "DEPT");
-                const isFile = String(item?.type || "").toUpperCase() === "FILE";
-                const canShow = isDept && isFile;
+                // DEPT에서만 노출 (FILE/FOLDER 둘 다)
+                ctx.btnPurgeDeptFile.style.display = (isDept && isTarget) ? "block" : "none";
+                ctx.btnPurgeDeptFile.disabled = !(canPurge && item?.id != null);
 
-                ctx.btnPurgeDeptFile.style.display = canShow ? "block" : "none";
-                ctx.btnPurgeDeptFile.disabled = !canShow || item?.id == null;
+                ctx.btnPurgeDeptFile.title = canPurge
+                    ? "영구삭제"
+                    : "관리자 또는 소유자(ownerId)만 영구삭제할 수 있습니다.";
             }
 
+            // 상세정보 닫힌 상태로 시작
             ctx.isInfoOpen = false;
             if (ctx.infoWrap) ctx.infoWrap.style.display = "none";
             if (ctx.btnInfo) ctx.btnInfo.textContent = "삭제 상세 정보";
 
-            ctx.el.style.left = x + "px";
-            ctx.el.style.top  = y + "px";
-            ctx.el.style.display = "block";
-
-            requestAnimationFrame(() => {
-                const rect = ctx.el.getBoundingClientRect();
-                const pad = 8;
-
-                let left = x, top = y;
-                const maxL = window.innerWidth  - rect.width  - pad;
-                const maxT = window.innerHeight - rect.height - pad;
-
-                if (left > maxL) left = maxL;
-                if (top  > maxT) top  = maxT;
-
-                ctx.el.style.left = Math.max(pad, left) + "px";
-                ctx.el.style.top  = Math.max(pad, top)  + "px";
-            });
+            positionCtx(x, y);
         }
 
+        // 상세정보 토글(한 번만 바인딩)
         ctx.btnInfo?.addEventListener("click", () => {
-            if (!ctx.infoWrap) return;
+            if (!ctx.infoWrap || !ctx.el) return;
 
             ctx.isInfoOpen = !ctx.isInfoOpen;
             ctx.infoWrap.style.display = ctx.isInfoOpen ? "block" : "none";
             ctx.btnInfo.textContent = ctx.isInfoOpen ? "삭제 상세 정보 숨기기" : "삭제 상세 정보";
 
+            // 아래로 튀어나오면 위로 올림
             const rect = ctx.el.getBoundingClientRect();
             const pad = 8;
             const overflowBottom = rect.bottom - (window.innerHeight - pad);
@@ -658,7 +709,7 @@
             }
         });
 
-        // ✅ 복구 클릭
+        // 복구 클릭(한 번만 바인딩)
         ctx.btnRestore?.addEventListener("click", async () => {
             const batchId = ctx.currentBatchId;
             const item = ctx.currentItem;
@@ -675,32 +726,38 @@
             }
         });
 
-        async function purgeDeptFileOne(item){
+        async function purgeDeptOne(item) {
+            if (SCOPE !== "DEPT") return;
+
+            const type = String(item?.type || "").toUpperCase();
             const id = item?.id;
-            if (id == null) return alert("삭제할 파일 ID가 없습니다.");
 
-            if (!confirm("이 파일을 영구삭제할까요?\n(되돌릴 수 없습니다)")) return;
+            if (id == null) {
+                return alert(type === "FOLDER" ? "삭제할 폴더 ID가 없습니다." : "삭제할 파일 ID가 없습니다.");
+            }
 
-            await apiJson(`/api/v1/cloud/trash/purge/dept/file/${encodeURIComponent(id)}`, {
-                method: "POST"
-            });
+            const label = (type === "FOLDER") ? "폴더" : "파일";
+            if (!confirm(`${label}을(를) 영구삭제할까요?\n(되돌릴 수 없습니다)`)) return;
 
+            const endpoint =
+                (type === "FOLDER")
+                    ? `/api/v1/cloud/trash/purge/dept/folder/${encodeURIComponent(id)}`
+                    : `/api/v1/cloud/trash/purge/dept/file/${encodeURIComponent(id)}`;
+
+            await apiJson(endpoint, { method: "POST" });
             await loadTrash();
             alert("영구삭제 완료!");
         }
 
+        // 영구삭제 클릭(한 번만 바인딩)
         ctx.btnPurgeDeptFile?.addEventListener("click", async () => {
             const item = ctx.currentItem;
             closeTrashCtx();
-
-            try{
-                await purgeDeptFileOne(item);
-            }catch(e){
-                alert(e.message);
-            }
+            try { await purgeDeptOne(item); }
+            catch (e) { alert(e.message); }
         });
 
-        // ✅ 바깥 클릭/스크롤/ESC 닫기
+        // 바깥 클릭/스크롤/ESC 닫기
         document.addEventListener("pointerdown", (e) => {
             if (!ctx.el || ctx.el.style.display !== "block") return;
             if (e.target.closest("#trashCtx")) return;
@@ -712,22 +769,22 @@
         document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrashCtx(); });
 
         /* =========================================================
-           ✅ PRVT 멀티 선택(선택 삭제 버튼 enable/disable)
+           3) SELECT / RENDER
         ========================================================= */
-        function getItemKey(it){
+        function getItemKey(it) {
             const t = String(it?.type || "ITEM").toUpperCase();
             const id = (it?.id != null) ? String(it.id) : "";
             const b = getBatchId(it);
             return id ? `${t}:${id}` : (b ? `BATCH:${b}` : `TMP:${Math.random().toString(36).slice(2)}`);
         }
 
-        function updateTrashActionButtons(){
+        function updateTrashActionButtons() {
             if (SCOPE !== "PRVT") return;
             if (!el.btnPurgeSelected) return;
             el.btnPurgeSelected.disabled = (state.selectedKeys.size === 0);
         }
 
-        function clearSelection(){
+        function clearSelection() {
             state.selectedBatchId = null;
             if (state.selectedCardEl) state.selectedCardEl.classList.remove("selected");
             state.selectedCardEl = null;
@@ -738,7 +795,7 @@
             updateTrashActionButtons();
         }
 
-        function selectCard(cardEl, batchId){
+        function selectCard(cardEl, batchId) {
             if (state.selectedCardEl) state.selectedCardEl.classList.remove("selected");
             cardEl.classList.add("selected");
             state.selectedCardEl = cardEl;
@@ -747,7 +804,7 @@
             state.selectedBatchId = b || null;
         }
 
-        function render(items){
+        function render(items) {
             state.items = items || [];
             state.itemByKey.clear();
             clearSelection();
@@ -758,14 +815,14 @@
 
             // batch 개수 계산(배지용)
             const batchCount = new Map();
-            for (const it of state.items){
+            for (const it of state.items) {
                 const b = getBatchId(it);
                 if (!b) continue;
                 batchCount.set(b, (batchCount.get(b) || 0) + 1);
             }
 
             // 최신 삭제순
-            const sorted = [...state.items].sort((a,b) => {
+            const sorted = [...state.items].sort((a, b) => {
                 const ta = new Date(a.deletedAt || 0).getTime();
                 const tb = new Date(b.deletedAt || 0).getTime();
                 return tb - ta;
@@ -785,7 +842,7 @@
                 card.dataset.itemId = safe(it?.id || "");
                 card.className = folder ? "folder-card" : "file-card";
 
-                // ✅ 체크박스(hover/selected UI)
+                // 체크 UI
                 const check = document.createElement("div");
                 check.className = "card-check";
                 card.appendChild(check);
@@ -840,7 +897,7 @@
                     card.appendChild(meta);
                 }
 
-                // ✅ 클릭: PRVT면 멀티 선택(Cloud와 동일 UX), DEPT면 배치 단일 선택
+                // 클릭: PRVT 멀티 / DEPT 단일(batch)
                 card.addEventListener("click", (e) => {
                     e.stopPropagation();
 
@@ -852,14 +909,13 @@
                         const isRange = e.shiftKey;
 
                         if (!isToggle && !isRange) {
-                            // 단일 클릭 -> 다른 선택 해제
                             state.selectedKeys.clear();
                             cards.forEach(c => c.classList.remove("selected"));
                         }
 
                         if (isRange && state.lastClickedIndex != null) {
-                            const [a, b] = [state.lastClickedIndex, myIdx].sort((x,y)=>x-y);
-                            for (let i=a; i<=b; i++){
+                            const [a, b] = [state.lastClickedIndex, myIdx].sort((x, y) => x - y);
+                            for (let i = a; i <= b; i++) {
                                 const c = cards[i];
                                 if (!c) continue;
                                 c.classList.add("selected");
@@ -880,11 +936,11 @@
                         return;
                     }
 
-                    // DEPT: 기존처럼 batch 단일 선택
+                    // DEPT: batch 단일 선택
                     selectCard(card, batchId);
                 });
 
-                // DEPT만 더블클릭 복구(선택 UX 충돌 방지)
+                // DEPT만 더블클릭 복구
                 card.addEventListener("dblclick", async () => {
                     if (SCOPE === "PRVT") return;
                     if (!batchId) return;
@@ -897,7 +953,10 @@
             updateTrashActionButtons();
         }
 
-        async function loadTrash(){
+        /* =========================================================
+           4) API ACTIONS
+        ========================================================= */
+        async function loadTrash() {
             const items = await apiJson(`/api/v1/cloud/trash?scope=${encodeURIComponent(SCOPE)}&limit=200&offset=0`);
             const arr =
                 Array.isArray(items) ? items :
@@ -907,7 +966,7 @@
             render(arr);
         }
 
-        async function restoreBatch(batchId){
+        async function restoreBatch(batchId) {
             if (!batchId) return;
             if (!confirm("삭제한 파일을 복구할까요?")) return;
 
@@ -919,16 +978,12 @@
             alert("복구 완료!");
         }
 
-        /* =========================================================
-           ✅ PRVT: 선택 삭제 / 휴지통 비우기
-        ========================================================= */
-        async function purgeSelectedPrvt(){
+        async function purgeSelectedPrvt() {
             if (SCOPE !== "PRVT") return;
 
             const keys = Array.from(state.selectedKeys);
             if (keys.length === 0) return alert("삭제할 항목을 선택해주세요.");
 
-            // 서버로 보낼 payload(기본형): items: [{type, id}]
             const items = keys
                 .map(k => state.itemByKey.get(k))
                 .filter(Boolean)
@@ -939,7 +994,6 @@
 
             if (!confirm(`선택한 ${items.length}개를 영구 삭제할까요?\n(되돌릴 수 없습니다)`)) return;
 
-            // ✅ TODO: 서버 엔드포인트/바디 규격에 맞춰 여기만 수정하면 됨
             await apiJson(PURGE_SELECTED_ENDPOINT, {
                 method: "POST",
                 body: JSON.stringify({ items }),
@@ -949,30 +1003,31 @@
             alert("선택 삭제 완료!");
         }
 
+        /* =========================================================
+           5) BINDINGS
+        ========================================================= */
         el.btnPurgeSelected?.addEventListener("click", () => {
             purgeSelectedPrvt().catch(e => alert(e.message));
         });
 
-        el.btnReload?.addEventListener("click", () => loadTrash().catch(e => alert(e.message)));
+        el.btnReload?.addEventListener("click", () => {
+            loadTrash().catch(e => alert(e.message));
+        });
 
-        // PRVT 비우기
         el.btnEmpty?.addEventListener("click", async () => {
+            if (SCOPE !== "PRVT") return;
             if (!confirm("휴지통을 비울까요?")) return;
-            try{
+
+            try {
                 await apiJson(`/api/v1/cloud/trash/empty/prvt`, { method: "POST" });
                 await loadTrash();
                 alert("휴지통 비우기 완료!");
-            }catch(e){
+            } catch (e) {
                 alert(e.message);
             }
         });
 
-        /* =========================================================
-           ✅ 우클릭(컨텍스트 메뉴) 이벤트 위임
-           - PRVT에서는 우클릭한 카드만 단일 선택으로 맞춤
-           - DEPT는 배치 선택 유지
-        ========================================================= */
-        function bindTrashGridContextMenu(){
+        function bindTrashGridContextMenu() {
             el.grid?.addEventListener("contextmenu", (e) => {
                 const cardEl = e.target.closest(".folder-card, .file-card");
                 if (!cardEl || !el.grid.contains(cardEl)) return;
@@ -981,9 +1036,7 @@
                 e.stopPropagation();
 
                 let batchId = (cardEl.dataset.batchId || "").trim();
-
-                const itemId = (cardEl.dataset.itemId || "").trim();
-                const item = (state.items || []).find(it => String(it?.id ?? "") === itemId) || null;
+                const item = state.itemByKey.get(cardEl.dataset.key) || null;
 
                 if (!batchId && item) {
                     batchId = getBatchId(item);

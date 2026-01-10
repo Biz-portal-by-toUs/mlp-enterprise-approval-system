@@ -361,6 +361,47 @@
             return res;
         }
 
+        function hmToMin(hm){
+            const [h,m] = String(hm).split(":").map(Number);
+            return (h*60) + (m||0);
+        }
+
+        function getResvDate(r){
+            return r.resvDate ?? (r.startedAt ? String(r.startedAt).substring(0,10) : null);
+        }
+
+        function getResvStartHM(r){
+            return r.startTime ? String(r.startTime).substring(0,5)
+                : (r.startedAt ? String(r.startedAt).substring(11,16) : null);
+        }
+
+        function getResvEndHM(r){
+            return r.endTime ? String(r.endTime).substring(0,5)
+                : (r.endedAt ? String(r.endedAt).substring(11,16) : null);
+        }
+
+        // 차량용 충돌 체크
+        function hasConflict({ carNo, dateStr, startTime, endTime }){
+            const s = hmToMin(startTime);
+            const e = hmToMin(endTime);
+
+            return (RESERVATIONS || []).some(r => {
+                const rCarNo = pick(r, ["carNo", "corporateCarNo", "car.carNo"], null);
+                if (String(rCarNo) !== String(carNo)) return false;
+                if (getResvDate(r) !== dateStr) return false;
+
+                const rs = getResvStartHM(r);
+                const re = getResvEndHM(r);
+                if (!rs || !re) return false;
+
+                const rS = hmToMin(rs);
+                const rE = hmToMin(re);
+
+                // 겹침 조건: !(내끝 <= 상대시작 || 내시작 >= 상대끝)
+                return !(e <= rS || s >= rE);
+            });
+        }
+
         function get(obj, path) {
             return path.split(".").reduce((o, k) => o?.[k], obj);
         }
@@ -683,8 +724,19 @@
 
             cancelBtn.innerText = "닫기";
 
-            const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], "-");
-            const plateNo = pick(resv, ["plateNo", "car.plateNo", "carPlateNo"], "-");
+            const carNo = pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null);
+
+            // ✅ fallback 1) 테이블 row에 심어둔 plateNo 사용
+            const row = carNo ? document.querySelector(`.car-row[data-car-no="${carNo}"]`) : null;
+            const fallbackPlate = row?.dataset?.plateNo || "-";
+
+            // ✅ fallback 2) 차량 목록(CARS)에서도 plateNo 가져올 수 있게(있으면 더 정확)
+            const carObj = CARS.find(c => String(pick(c, ["carNo","corporateCarNo","id"], "")) === String(carNo));
+            const fallbackPlate2 = carObj ? pick(carObj, ["plateNo","carPlateNo","plate"], fallbackPlate) : fallbackPlate;
+
+            const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], row?.querySelector(".car-name")?.innerText?.split(" (")?.[0] ?? "-");
+            const plateNo = pick(resv, ["plateNo", "car.plateNo", "carPlateNo"], fallbackPlate2);
+
             const resvDate = pick(resv, ["resvDate", "date"], resv.startedAt ? String(resv.startedAt).substring(0, 10) : "-");
 
             const startRaw = pick(resv, ["startTime"], resv.startedAt ? String(resv.startedAt).substring(11, 19) : null);
@@ -716,16 +768,32 @@
         cancelBtn.onclick = () => { modal.style.display = "none"; };
 
         reserveBtn.onclick = async () => {
+            const carNo = Number(modal.dataset.carNo);
+            const dateStr = currentDate.format("YYYY-MM-DD");
+            const startTime = modal.dataset.start; // "HH:mm"
+            const endTime   = modal.dataset.end;   // "HH:mm"
+
             const body = {
-                carNo: Number(modal.dataset.carNo),
-                resvDate: currentDate.format("YYYY-MM-DD"),
-                startTime: modal.dataset.start,
-                endTime: modal.dataset.end,
+                carNo,
+                resvDate: dateStr,
+                startTime,
+                endTime,
                 purp: document.getElementById("purpose").value
             };
 
             if (!body.carNo) {
                 alert("차량 식별자(carNo)가 없습니다. 차량 목록 응답에 carNo/id가 내려오는지 확인해주세요.");
+                return;
+            }
+
+            // ✅ 1) 예약 직전 최신 데이터로 갱신
+            await loadReservations();
+
+            // ✅ 2) 최신 데이터 기준으로 충돌 체크
+            if (hasConflict({ carNo, dateStr, startTime, endTime })) {
+                alert("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.");
+                clearSelection();
+                modal.style.display = "none";
                 return;
             }
 
@@ -736,8 +804,19 @@
             });
 
             if (!res.ok) {
-                const msg = await res.text();
-                alert("예약 실패: " + msg);
+                // 서버가 text만 주는 경우도 있고 json 주는 경우도 있어서 안전처리
+                let msg = "";
+                try {
+                    const errJson = await res.json();
+                    msg = errJson?.message || JSON.stringify(errJson);
+                } catch {
+                    msg = await res.text();
+                }
+
+                alert("예약 실패: " + (msg || "알 수 없는 오류"));
+
+                // ✅ 실패 시에도 최신화
+                await loadReservations();
                 return;
             }
 
@@ -773,11 +852,11 @@
 
             // ✅ 여기서 이제 row.dataset.carNo가 항상 존재
             const carNo = row.dataset.carNo;
-            if (!carNo) {
+            // ✅ "null"/"undefined"/"" 방지
+            if (!carNo || carNo === "null" || carNo === "undefined") {
                 alert("차량 식별자(carNo)가 없습니다. 차량 목록 응답에 carNo/id가 내려오는지 확인해주세요.");
                 return;
             }
-
             const carLabel = row.querySelector(".car-name").innerText;
 
             const allCells = [...row.querySelectorAll(".time-cell")];
@@ -801,6 +880,14 @@
             modal.dataset.start = idxToTime(startIdx);
             modal.dataset.end = idxToTime(endIdx);
         };
+
+        setInterval(() => {
+            loadReservations().catch(()=>{});
+        }, 30000);
+
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) loadReservations().catch(()=>{});
+        });
 
         async function loadMe() {
             const res = await apiFetch("/api/v1/employees/me");
