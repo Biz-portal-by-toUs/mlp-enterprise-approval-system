@@ -17,7 +17,7 @@
             --card:#fff;
         }
 
-        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
+        /* layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
 
         /* ===== page-only namespace: md-* ===== */
         .md-title{
@@ -167,8 +167,75 @@
             font-weight:900;
         }
 
+        /*  TipTap lockedQuote (답신 원문 블록) - detail 전용 스타일
+           - 접기/펼치기 없음 (항상 블록 형태로 노출)
+           - write 페이지 느낌과 최대한 유사하게 */
+
+        /* wrapper 자체 */
+        .md-content [data-locked-quote="1"]{
+            display:block;
+            margin:14px 0;
+            padding:12px;
+            border:1px solid var(--line);
+            border-left:6px solid #cbd5e1;
+            border-radius:12px;
+            background:#f8fafc;
+        }
+
+        /* wrapper 안 텍스트 톤 정리 (원문 영역은 살짝 약하게) */
+        .md-content [data-locked-quote="1"]{
+            color:var(--fg);
+        }
+
+        /* lockedQuote 안에서 만들어진 메타 그리드(제목/발신자) */
+        .md-content [data-locked-quote="1"] > div:first-child{
+            margin-bottom:10px;
+        }
+
+        /* 본문 박스(white card) */
+        .md-content [data-locked-quote="1"] [data-locked-quote-body="1"]{
+            display:block;
+            background:#fff;
+            border:1px solid rgba(15,23,42,.08);
+            border-radius:10px;
+            padding:10px 12px;
+            line-height:1.7;
+            word-break:break-word;
+            overflow-wrap:anywhere;
+        }
+
+        /* 원문 인용 안에 또 원문 인용이 들어가는 경우(중첩) → 티 안나게 제거 느낌 */
+        .md-content [data-locked-quote="1"] [data-locked-quote="1"]{
+            margin-top:10px;
+            opacity:.85;
+        }
+
+        /* 원문 안의 heading/list 기본 스타일 (필요 최소한) */
+        .md-content [data-locked-quote-body="1"] h1,
+        .md-content [data-locked-quote-body="1"] h2,
+        .md-content [data-locked-quote-body="1"] h3{
+            margin:10px 0 6px;
+            line-height:1.35;
+        }
+
+        .md-content [data-locked-quote-body="1"] ul,
+        .md-content [data-locked-quote-body="1"] ol{
+            padding-left:18px;
+            margin:8px 0;
+        }
+
+        .md-content [data-locked-quote-body="1"] p{
+            margin:6px 0;
+        }
+
         @media (max-width:760px){
             .md-meta{ grid-template-columns:90px 1fr; }
+
+            /* 모바일에서 원문 블록 살짝 촘촘하게 */
+            .md-content [data-locked-quote="1"]{
+                padding:10px;
+                border-left-width:5px;
+            }
         }
     </style>
 </head>
@@ -190,7 +257,7 @@
 
                 <div class="md-content" id="contentBox">로딩 중...</div>
 
-                <!-- ✅ 첨부 섹션 (버튼 없이 클릭 다운로드) -->
+                <!-- 첨부 섹션 (버튼 없이 클릭 다운로드) -->
                 <div class="md-attach" id="attachSection" style="display:none;">
                     <div class="md-attach-head">
                         <div class="md-attach-title">첨부파일</div>
@@ -208,7 +275,7 @@
             </section>
 
             <script type="module">
-                // ===== utils =====
+                // utils
                 function getMailNoFromPath() {
                     const parts = window.location.pathname.split('/').filter(Boolean);
                     const v = parts.length >= 2 ? parts[1] : '';
@@ -246,7 +313,7 @@
                     return {};
                 }
 
-                async function api(method, url, { timeoutMs = 8000 } = {}) {
+                async function api(method, url, { timeoutMs = 8000, headers = {}, body = null } = {}) {
                     const controller = new AbortController();
                     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -254,7 +321,8 @@
                         const res = await fetch(url, {
                             method,
                             credentials: 'include',
-                            headers: { 'Accept': 'application/json', ...getCsrfHeaders() },
+                            headers: { 'Accept': 'application/json', ...getCsrfHeaders(), ...headers },
+                            body,
                             signal: controller.signal,
                         });
 
@@ -272,9 +340,7 @@
 
                         return json?.data;
                     } catch (e) {
-                        if (e?.name === 'AbortError') {
-                            throw new Error('timeout::요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
-                        }
+                        if (e?.name === 'AbortError') throw new Error('timeout::요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
                         throw e;
                     } finally {
                         clearTimeout(timer);
@@ -312,11 +378,6 @@
                         }
                         return ids.join(', ');
                     }
-
-                    if (data.receiverEmpId || data.receiverEmpName) {
-                        return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
-                    }
-
                     return '-';
                 }
 
@@ -348,16 +409,13 @@
                     return `${(kb / 1024).toFixed(1)}MB`;
                 }
 
-                // =========================
-                // Attachments (click -> download)
-                // =========================
+                // attachments (detail)
                 async function loadAttachments(mailNo) {
                     const sec = document.getElementById('attachSection');
                     const list = document.getElementById('attachList');
                     if (!sec || !list) return;
 
-                    // 목록 조회
-                    const items = await api('GET', `/api/v1/attachments?domain=MAIL&entityId=${encodeURIComponent(mailNo)}`, { timeoutMs: 8000 })
+                    const items = await api('GET', `/api/v1/attachments?domain=MAIL&entityId=${encodeURIComponent(mailNo)}`)
                         .catch(() => []);
 
                     if (!items || items.length === 0) {
@@ -368,49 +426,48 @@
 
                     sec.style.display = '';
                     list.innerHTML = items.map(it => `
-                        <div class="md-attach-item" data-id="${it.attachmentId}">
+                          <div class="md-attach-item" data-id="${it.attachmentId}">
                             <div class="md-attach-left">
-                                <div class="md-attach-name">${escapeHtml(it.originalName)}</div>
-                                <div class="md-attach-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
+                              <div class="md-attach-name">${escapeHtml(it.originalName)}</div>
+                              <div class="md-attach-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
                             </div>
                             <div class="md-attach-right">다운로드</div>
-                        </div>
-                    `).join('');
+                          </div>
+                        `).join('');
 
-                    // ✅ 아이템 클릭 시 다운로드 URL 받아서 "강제 다운로드" 시도
-                    list.addEventListener('click', async (e) => {
-                        const item = e.target.closest('.md-attach-item');
-                        if (!item) return;
+                    // click -> preview-url -> download
+                    if (!list.__dlBound) {
+                        list.__dlBound = true;
+                        list.addEventListener('click', async (e) => {
+                            const item = e.target.closest('.md-attach-item');
+                            if (!item) return;
 
-                        const attachmentId = item.dataset.id;
-                        if (!attachmentId) return;
+                            const attachmentId = item.dataset.id;
+                            if (!attachmentId) return;
 
-                        try {
-                            const data = await api('GET', `/api/v1/attachments/${encodeURIComponent(attachmentId)}/preview-url`, { timeoutMs: 8000 });
-                            const url = data?.url;
-                            if (!url) throw new Error('다운로드 URL이 없습니다.');
+                            try {
+                                const data = await api('GET', `/api/v1/attachments/${encodeURIComponent(attachmentId)}/preview-url`);
+                                const url = data?.url;
+                                if (!url) throw new Error('다운로드 URL이 없습니다.');
 
-                            // 1) 다운로드 시도
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = '';     // 강제 다운로드 "시도"
-                            a.rel = 'noopener';
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-
-                            // 2) 브라우저 정책으로 download 무시되는 경우 대비 (필요 시)
-                            // location.href = url;
-                        } catch (err) {
-                            console.error(err);
-                            alert('다운로드에 실패했습니다.');
-                        }
-                    });
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = '';
+                                a.rel = 'noopener';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            } catch (err) {
+                                console.error(err);
+                                alert('다운로드에 실패했습니다.');
+                            }
+                        });
+                    }
                 }
 
-                // =========================
-                // TipTap renderer (detail)
-                // =========================
+                /*  TipTap renderer (detail)
+                 *  - 가장 안전: StarterKit + LockedQuote
+                 *  - 접기/펼치기 없음 */
                 let __tiptapRendererPromise = null;
 
                 function getTiptapRenderer() {
@@ -425,6 +482,7 @@
                             name: "lockedQuote",
                             group: "block",
                             atom: true,
+                            selectable: false,
 
                             addAttributes() {
                                 return {
@@ -434,99 +492,36 @@
                                 };
                             },
 
+                            // 과거(details) 저장본 + 현재(div) 저장본 둘 다 인식
                             parseHTML() {
-                                return [{ tag: 'div[data-locked-quote="1"]' }];
+                                return [
+                                    { tag: 'details[data-locked-quote="1"]' },
+                                    { tag: 'div[data-locked-quote="1"]' },
+                                ];
                             },
 
+                            // 접기/펼치기 없는 블록형
                             renderHTML({ node }) {
                                 const title = String(node.attrs.title || "").trim();
                                 const sender = String(node.attrs.sender || "").trim();
                                 const html = String(node.attrs.html || "").trim();
 
+                                // 최소 방어(스크립트 제거)
                                 const sanitized = html.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
-                                const encoded = encodeURIComponent(sanitized);
 
                                 return [
                                     "div",
                                     {
                                         "data-locked-quote": "1",
-                                        "data-open": "0",
                                         style: [
-                                            "margin:18px 0 0 0",
-                                            "border:1px solid #e2e8f0",
-                                            "border-left:6px solid #cbd5e1",
+                                            "border-left:4px solid #e2e8f0",
                                             "background:#f8fafc",
-                                            "border-radius:14px",
-                                            "padding:14px 14px 12px 14px",
-                                            "box-shadow:0 1px 3px rgba(0,0,0,0.05)"
+                                            "padding:12px",
+                                            "border-radius:10px",
+                                            "margin:12px 0",
                                         ].join(";"),
                                     },
-                                    [
-                                        "div",
-                                        {
-                                            style: [
-                                                "display:flex",
-                                                "align-items:center",
-                                                "justify-content:space-between",
-                                                "gap:10px",
-                                                "margin:0 0 10px 0",
-                                            ].join(";"),
-                                        },
-                                        [
-                                            "div",
-                                            {
-                                                style: [
-                                                    "display:inline-flex",
-                                                    "align-items:center",
-                                                    "gap:8px",
-                                                    "font-weight:900",
-                                                    "font-size:12px",
-                                                    "color:#0f172a",
-                                                ].join(";"),
-                                            },
-                                            [
-                                                "span",
-                                                {
-                                                    style: [
-                                                        "display:inline-flex",
-                                                        "align-items:center",
-                                                        "height:22px",
-                                                        "padding:0 10px",
-                                                        "border-radius:999px",
-                                                        "background:#e2e8f0",
-                                                        "color:#0f172a",
-                                                        "font-weight:900",
-                                                        "font-size:12px",
-                                                    ].join(";"),
-                                                },
-                                                "원문 인용",
-                                            ],
-                                            [
-                                                "span",
-                                                { style: "color:#64748b; font-weight:900; font-size:12px;" },
-                                                "본문과 구분됩니다",
-                                            ],
-                                        ],
-                                        [
-                                            "button",
-                                            {
-                                                type: "button",
-                                                "data-quote-toggle": "1",
-                                                style: [
-                                                    "border:1px solid rgba(15,23,42,.12)",
-                                                    "background:#fff",
-                                                    "border-radius:999px",
-                                                    "padding:6px 12px",
-                                                    "font-size:12px",
-                                                    "font-weight:900",
-                                                    "cursor:pointer",
-                                                    "color:#0f172a",
-                                                    "user-select:none",
-                                                ].join(";"),
-                                            },
-                                            "열기",
-                                        ],
-                                    ],
+
                                     [
                                         "div",
                                         {
@@ -535,12 +530,9 @@
                                                 "grid-template-columns:64px 1fr",
                                                 "row-gap:6px",
                                                 "column-gap:10px",
+                                                "margin-bottom:10px",
                                                 "font-size:12px",
                                                 "font-weight:900",
-                                                "padding:10px 12px",
-                                                "background:#fff",
-                                                "border-radius:12px",
-                                                "border:1px solid rgba(15,23,42,.08)",
                                             ].join(";"),
                                         },
                                         ["div", { style: "color:#64748b" }, "제목:"],
@@ -548,98 +540,91 @@
                                         ["div", { style: "color:#64748b" }, "발신자:"],
                                         ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
                                     ],
-                                    ["div", { style: "height:10px" }, ""],
+
                                     [
                                         "div",
                                         {
-                                            "data-quote-body-wrap": "1",
                                             style: [
                                                 "background:#fff",
-                                                "border-radius:12px",
-                                                "padding:12px",
-                                                "border:1px solid rgba(15,23,42,.08)",
-                                                "display:none",
+                                                "border-radius:10px",
+                                                "padding:10px 12px",
                                             ].join(";"),
                                         },
-                                        ["div", { "data-locked-quote-body": "1", "data-html-enc": encoded }, ""],
+                                        // data-html에 넣어두고, 아래에서 innerHTML 주입
+                                        ["div", { "data-locked-quote-body": "1", "data-html": sanitized }, ""],
                                     ],
                                 ];
                             },
                         });
-
                         return { generateHTML, extensions: [StarterKit, LockedQuote] };
                     })();
 
                     return __tiptapRendererPromise;
                 }
 
-                async function renderTiptapCached(jsonOrString) {
+                async function renderTiptapCached(jsonStr) {
                     const { generateHTML, extensions } = await getTiptapRenderer();
 
-                    let doc = jsonOrString;
+                    const s = String(jsonStr || '').trim();
+                    if (!s) return '';
 
-                    if (typeof jsonOrString === "string") {
-                        const s = jsonOrString.trim();
-                        if (!s) return "";
-                        try { doc = JSON.parse(s); }
-                        catch { return escapeHtml(s); }
-                    }
+                    let doc;
+                    try { doc = JSON.parse(s); }
+                    catch { return escapeHtml(s); }
 
                     const html = generateHTML(doc, extensions);
 
-                    const temp = document.createElement("div");
+                    // lockedQuote body 주입(핵심)
+                    const temp = document.createElement('div');
                     temp.innerHTML = html;
 
-                    temp.querySelectorAll("[data-locked-quote-body]").forEach((el) => {
-                        const enc = el.getAttribute("data-html-enc") || "";
-                        let raw = "";
-                        try { raw = decodeURIComponent(enc); } catch { raw = enc; }
+                    temp.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
+                        const raw = el.getAttribute('data-html') || '';
                         el.innerHTML = raw;
-                        el.removeAttribute("data-html-enc");
+                        el.removeAttribute('data-html');
+                    });
+                    return temp.innerHTML;
+                }
+
+                async function renderTiptapCached(jsonStr) {
+                    const { generateHTML, extensions } = await getTiptapRenderer();
+
+                    const s = String(jsonStr || '').trim();
+                    if (!s) return '';
+
+                    let doc;
+                    try { doc = JSON.parse(s); }
+                    catch { return escapeHtml(s); }
+
+                    const html = generateHTML(doc, extensions);
+
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+
+                    // lockedQuote 안의 data-html 주입
+                    temp.querySelectorAll('[data-locked-quote-body][data-html-b64]').forEach(el => {
+                        try {
+                            const b64 = el.getAttribute('data-html-b64') || '';
+                            const decoded = decodeURIComponent(escape(atob(b64)));
+                            el.innerHTML = decoded;
+                        } catch (e) {
+                            console.error('[detail] lockedQuote decode failed', e);
+                            el.textContent = '(인용 내용을 표시할 수 없습니다)';
+                        } finally {
+                            el.removeAttribute('data-html-b64');
+                        }
                     });
 
-                    temp.querySelectorAll('[data-locked-quote="1"]').forEach(wrap => {
-                        wrap.dataset.open = "0";
-                        const btn = wrap.querySelector('[data-quote-toggle="1"]');
-                        const body = wrap.querySelector('[data-quote-body-wrap="1"]');
-                        if (btn) btn.textContent = "열기";
-                        if (body) body.style.display = "none";
+                    temp.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
+                        const raw = el.getAttribute('data-html') || '';
+                        el.innerHTML = raw;
+                        el.removeAttribute('data-html');
                     });
 
                     return temp.innerHTML;
                 }
 
-                function bindQuoteToggle(containerEl) {
-                    if (!containerEl || containerEl.__quoteToggleBound) return;
-                    containerEl.__quoteToggleBound = true;
-
-                    containerEl.addEventListener("click", (e) => {
-                        const btn = e.target.closest('[data-quote-toggle="1"]');
-                        if (!btn) return;
-
-                        const wrap = btn.closest('[data-locked-quote="1"]');
-                        if (!wrap) return;
-
-                        const body = wrap.querySelector('[data-quote-body-wrap="1"]');
-                        const isOpen = (wrap.dataset.open || "0") === "1";
-
-                        if (!body) return;
-
-                        if (isOpen) {
-                            wrap.dataset.open = "0";
-                            body.style.display = "none";
-                            btn.textContent = "열기";
-                        } else {
-                            wrap.dataset.open = "1";
-                            body.style.display = "";
-                            btn.textContent = "닫기";
-                        }
-                    });
-                }
-
-                // =========================
                 // main
-                // =========================
                 async function loadDetail() {
                     const mailNo = getMailNoFromPath();
                     const box = document.getElementById('contentBox');
@@ -651,7 +636,7 @@
 
                     box.textContent = '로딩 중...';
 
-                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}`, { timeoutMs: 8000 });
+                    const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}`);
 
                     setText('titleTxt', data.title ?? '-');
                     setText('createdAtTxt', fmtDate(data.createdAt));
@@ -663,9 +648,10 @@
                     if (isRecipient) {
                         const btnReply = ensureReplyButton();
                         if (btnReply) {
+                            btnReply.style.display = '';
                             btnReply.onclick = async () => {
                                 try {
-                                    const res = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}/reply`, { timeoutMs: 8000 });
+                                    const res = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}/reply`);
                                     sessionStorage.setItem('mail.reply.payload', JSON.stringify(res));
                                     location.href = '/mail/write';
                                 } catch (e) {
@@ -691,24 +677,27 @@
                         partyTxtEl.textContent = `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
                     }
 
-                    // ✅ 내용 렌더: cnttHtml 우선, 없으면 cnttJson
+                    // 내용 렌더: cnttHtml 우선, 없으면 cnttJson(=cntt)
                     try {
-                        if (data.cnttHtml && String(data.cnttHtml).trim()) {
+                        const hasHtml = !!(data.cnttHtml && String(data.cnttHtml).trim());
+                        const hasJson = !!(data.cnttJson && String(data.cnttJson).trim());
+                        const hasCntt = !!(data.cntt && String(data.cntt).trim());
+
+                        if (hasHtml) {
                             box.innerHTML = String(data.cnttHtml);
-                        } else if (data.cnttJson && String(data.cnttJson).trim()) {
+                        } else if (hasJson) {
                             box.innerHTML = await renderTiptapCached(data.cnttJson);
-                        } else if (data.cntt && String(data.cntt).trim()) {
+                        } else if (hasCntt) {
                             box.innerHTML = await renderTiptapCached(data.cntt);
                         } else {
                             box.textContent = '';
                         }
-                        bindQuoteToggle(box);
                     } catch (e) {
                         console.error(e);
                         box.textContent = '';
                     }
 
-                    // ✅ 첨부 로드 (MAIL + mailNo)
+                    // 첨부 로드
                     loadAttachments(mailNo).catch(console.error);
 
                     // 읽음 처리(비동기)
@@ -729,18 +718,18 @@
 
                     document.getElementById('btnTrash').onclick = async () => {
                         if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`, { timeoutMs: 8000 });
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`);
                         location.href = '/mail/trash';
                     };
 
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`, { timeoutMs: 8000 });
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`);
                         location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
                     };
 
                     document.getElementById('btnPurge').onclick = async () => {
                         if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`, { timeoutMs: 8000 });
+                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`);
                         location.href = '/mail/trash';
                     };
                 }

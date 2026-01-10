@@ -17,8 +17,6 @@
             --card: #fff;
         }
 
-        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
-
         /* ===== page-only namespace: mw-* ===== */
         .mw-card {
             background: var(--card);
@@ -410,7 +408,7 @@
         <main class="page-main">
             <section class="mw-card">
 
-                <!-- ✅ 내 empId 주입 -->
+                <!-- 내 empId 주입 -->
                 <script th:inline="javascript">
                     window.__ME_EMP_ID = /*[[${#authentication.name}]]*/ '';
                 </script>
@@ -456,7 +454,7 @@
                     </div>
                 </div>
 
-                <!-- ✅ 첨부 (A안: domain=MAIL, entityId=mailNo) -->
+                <!-- 첨부 (domain=MAIL, entityId=mailNo) -->
                 <div class="mw-row">
                     <div class="mw-k">첨부</div>
                     <div>
@@ -468,10 +466,10 @@
                         </div>
 
                         <div class="mw-att-upload">
-                            <!-- ✅ 실제 file input은 숨김 -->
+                            <!-- 실제 file input은 숨김 -->
                             <input id="attachInput" type="file" multiple style="display:none;">
 
-                            <!-- ✅ 클릭/드롭 업로드 영역 -->
+                            <!-- 클릭/드롭 업로드 영역 -->
                             <div id="attachDropzone" class="mw-dropzone" role="button" tabindex="0">
                                 <div class="mw-dropzone-title">첨부파일 추가</div>
                                 <div class="mw-dropzone-sub">클릭하거나 파일을 끌어다 놓으면 바로 업로드됩니다.</div>
@@ -525,7 +523,7 @@
 
                         <input type="hidden" id="cnttJson"/>
                         <input type="hidden" id="draftMailId" value="">
-                        <!-- ✅ (추가) 첨부용 mailNo -->
+                        <!-- 첨부용 mailNo -->
                         <input type="hidden" id="draftMailNo" value="">
                     </div>
                 </div>
@@ -539,7 +537,7 @@
                 </div>
             </section>
 
-            <!-- ✅ 공통 유틸(전역) -->
+            <!-- 공통 유틸 -->
             <script>
                 function getCsrfHeaders() {
                     const csrfParamEl = document.getElementById('csrfParam');
@@ -589,7 +587,7 @@
                     return { selfChecked, me, uiReceivers };
                 }
 
-                // ✅ 대기 유틸
+                // 대기 유틸
                 function waitUntil(fn, { interval = 50, timeout = 8000 } = {}) {
                     return new Promise((resolve) => {
                         const start = Date.now();
@@ -602,7 +600,7 @@
                     });
                 }
 
-                // ✅ (중요) 답신→답신에서 원문 합쳐짐 방지: 중첩된 quote 제거 (전역!)
+                // (중요) 답신→답신에서 원문 합쳐짐 방지: 중첩된 quote 제거 (전역!)
                 window.stripNestedQuotesFromHtml = function stripNestedQuotesFromHtml(html) {
                     const s = String(html || '').trim();
                     if (!s) return '';
@@ -610,15 +608,14 @@
                     const temp = document.createElement('div');
                     temp.innerHTML = s;
 
-                    // write/editor에서 생성한 quote wrapper들 제거
+                    // lockedQuote wrapper 제거 (div/details 모두 제거)
                     temp.querySelectorAll('[data-locked-quote]').forEach(el => el.remove());
-                    temp.querySelectorAll('details[data-locked-quote]').forEach(el => el.remove());
 
                     return temp.innerHTML.trim();
                 };
             </script>
 
-            <!-- ✅ TipTap (module) -->
+            <!-- TipTap (module) -->
             <script type="module">
                 const LIMIT = 5000;
 
@@ -640,7 +637,7 @@
 
                 charLimitEl.textContent = String(LIMIT);
 
-                // ✅ lockedQuote: write에서도 "원문 제목/발신자"까지 함께 접힘 (details)
+                // lockedQuote: write에서도 "원문 제목/발신자"까지 함께 접힘 (details)
                 const LockedQuote = Node.create({
                     name: "lockedQuote",
                     group: "block",
@@ -654,19 +651,25 @@
                         };
                     },
 
+                    // 구버전(details) + 신버전(div) 둘 다 파싱 가능하게
                     parseHTML() {
-                        return [{ tag: 'details[data-locked-quote="1"]' }];
+                        return [
+                            { tag: 'details[data-locked-quote="1"]' }, // 과거 저장본 호환
+                            { tag: 'div[data-locked-quote="1"]' },     // 앞으로 저장될 형태
+                        ];
                     },
 
+                    // "열기/닫기" 없이 바로 통으로 렌더링
                     renderHTML({ node }) {
                         const title = String(node.attrs.title || "").trim();
                         const sender = String(node.attrs.sender || "").trim();
                         const html = String(node.attrs.html || "").trim();
 
+                        // 최소 방어 (스크립트 제거)
                         const sanitized = html.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 
                         return [
-                            "details",
+                            "div",
                             {
                                 "data-locked-quote": "1",
                                 style: [
@@ -678,71 +681,31 @@
                                 ].join(";"),
                             },
 
-                            [
-                                "summary",
-                                {
-                                    style: [
-                                        "list-style:none",
-                                        "cursor:pointer",
-                                        "outline:none",
-                                    ].join(";"),
-                                },
-
-                                [
-                                    "div",
-                                    {
-                                        style: [
-                                            "display:grid",
-                                            "grid-template-columns:64px 1fr",
-                                            "row-gap:6px",
-                                            "column-gap:10px",
-                                            "margin-bottom:10px",
-                                            "font-size:12px",
-                                            "font-weight:900",
-                                        ].join(";"),
-                                    },
-                                    ["div", { style: "color:#64748b" }, "제목:"],
-                                    ["div", { style: "color:#0f172a; word-break:break-word" }, title || "-"],
-                                    ["div", { style: "color:#64748b" }, "발신자:"],
-                                    ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
-                                ],
-
-                                [
-                                    "div",
-                                    {
-                                        style: [
-                                            "display:flex",
-                                            "align-items:center",
-                                            "justify-content:space-between",
-                                            "gap:10px",
-                                            "margin:6px 0 0 0",
-                                        ].join(";"),
-                                    },
-                                    ["div", { style: "color:#64748b; font-weight:900; font-size:12px" }, "원문"],
-                                    [
-                                        "span",
-                                        {
-                                            style: [
-                                                "border:1px solid rgba(15,23,42,.12)",
-                                                "background:#fff",
-                                                "border-radius:999px",
-                                                "padding:6px 10px",
-                                                "font-size:12px",
-                                                "font-weight:900",
-                                                "color:#0f172a",
-                                                "user-select:none",
-                                            ].join(";"),
-                                        },
-                                        "열기/닫기",
-                                    ],
-                                ],
-                            ],
-
+                            // 상단 메타(제목/발신자)
                             [
                                 "div",
                                 {
                                     style: [
-                                        "margin-top:10px",
+                                        "display:grid",
+                                        "grid-template-columns:64px 1fr",
+                                        "row-gap:6px",
+                                        "column-gap:10px",
+                                        "margin-bottom:10px",
+                                        "font-size:12px",
+                                        "font-weight:900",
+                                    ].join(";"),
+                                },
+                                ["div", { style: "color:#64748b" }, "제목:"],
+                                ["div", { style: "color:#0f172a; word-break:break-word" }, title || "-"],
+                                ["div", { style: "color:#64748b" }, "발신자:"],
+                                ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
+                            ],
+
+                            // 원문 본문(통으로)
+                            [
+                                "div",
+                                {
+                                    style: [
                                         "background:#fff",
                                         "border-radius:10px",
                                         "padding:10px 12px",
@@ -867,7 +830,7 @@
                     }
                 };
 
-                // ✅ JSON → HTML (원문 HTML 만들기용)
+                // JSON → HTML (원문 HTML 만들기용)
                 window.__mailQuoteJsonToHtml = (quoteCnttJson) => {
                     try {
                         const s = String(quoteCnttJson || "").trim();
@@ -881,7 +844,7 @@
                     }
                 };
 
-                // ✅ 답신 템플릿: 본문 빈 문단 + lockedQuote 1개
+                // 답신 템플릿: 본문 빈 문단 + lockedQuote 1개
                 window.__mailEditorApplyReplyTemplate = ({ quoteTitle = '', quoteSender = '', quoteHtml = '' } = {}) => {
                     const safeTitle = String(quoteTitle || '').trim();
                     const safeSender = String(quoteSender || '').trim();
@@ -1320,7 +1283,7 @@
                     const text = (window.__mailEditorGetText ? window.__mailEditorGetText() : '').trim();
                     const count = window.__mailEditorGetCount ? window.__mailEditorGetCount() : 0;
 
-                    // ✅ 첨부용 draft는 빈 값도 허용
+                    // 첨부용 draft는 빈 값도 허용
                     if (!allowEmpty) {
                         if (!title && !text) return showErr('제목 또는 내용을 입력한 후 임시저장하세요.');
                     }
@@ -1476,7 +1439,7 @@
                             if (typeof applySelfWriteToggle === 'function') applySelfWriteToggle();
                         }
 
-                        // ✅ draft 로드되면 첨부 목록 갱신
+                        // draft 로드되면 첨부 목록 갱신
                         if (typeof refreshAttachList === 'function') {
                             refreshAttachList().catch(console.error);
                         }
@@ -1491,7 +1454,7 @@
                 });
             </script>
 
-            <!-- ✅ 첨부 로직 (A안: MAIL + mailNo) -->
+            <!-- 첨부 로직 (A안: MAIL + mailNo) -->
             <script>
                 function setAttStatus(msg) {
                     const el = document.getElementById('attStatusText');
@@ -1559,7 +1522,7 @@
                           <div class="mw-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
                         </div>
 
-                        <!-- ✅ 버튼 최소화: 삭제만 유지 (원하면 이것도 제거 가능) -->
+                        <!-- 버튼 최소화: 삭제만 유지 (원하면 이것도 제거 가능) -->
                         <div class="mw-att-actions" onclick="event.stopPropagation();">
                           <button type="button" class="mw-att-mini danger" onclick="deleteAttach(${it.attachmentId})">삭제</button>
                         </div>
