@@ -113,11 +113,45 @@
             .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
             .ProseMirror table td, .ProseMirror table th { border: 1px solid #dee2e6; padding: 8px; min-width: 50px; }
 
-            /* 첨부파일 */
-            .file-attachments { padding: 12px; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; }
-            .file-item { display: flex; flex-direction: column; align-items: center; padding: 14px 16px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; cursor: pointer; min-width: 120px; }
+            /* ✅ 첨부파일 스타일 수정: 가로길이 통일 및 생략 처리 */
+            .file-attachments {
+                padding: 12px;
+                display: flex;
+                gap: 10px;
+                overflow: hidden; /* 가로 스크롤 완전 방지 */
+                flex-wrap: nowrap; /* 한 줄 고정 */
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .file-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                padding: 14px 10px;
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                transition: all 0.2s;
+                cursor: pointer;
+                flex: 1;           /* 가로 공간을 균등하게 차지 */
+                min-width: 0;      /* ellipsis(말줄임표) 작동을 위한 필수 설정 */
+                max-width: 160px;  /* 가로 너비 상한값 */
+            }
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
-            .file-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: center; }
+
+            .file-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: #333;
+                overflow: hidden;
+                text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
+                white-space: nowrap;     /* 줄바꿈 금지 */
+                width: 100%;
+                text-align: center;
+            }
+            .file-meta { font-size: 11px; color: #868e96; }
 
             /* AI 요약 */
             .ai-card { background: linear-gradient(135deg, #f3f0ff 0%, #fff 100%); border: 1px solid #d0bfff; border-radius: 10px; padding: 25px; }
@@ -238,7 +272,7 @@
                 <div class="modal-content">
                     <div class="modal-title" style="font-weight:bold; font-size:20px; margin-bottom:12px;">결재 반려</div>
                     <div class="modal-message" style="color:#666; margin-bottom:15px;">반려 사유를 입력해주세요.</div>
-                    <textarea class="reject-textarea" id="reject-reason-input" placeholder="상세 사유를 입력하세요" maxlength="500"></textarea>
+                    <textarea class="reject-textarea" id="reject-reason-input" placeholder="상세 사유를 입력하세요..." maxlength="500"></textarea>
                     <div id="reject-char-count" style="text-align: right; font-size: 12px; color: #868e96; margin-top: -15px; margin-bottom: 15px;">0 / 500</div>
                     <div class="modal-buttons">
                         <button class="modal-btn" style="background:#dc2626; color:white;" onclick="showRejectConfirmModal()">반려</button>
@@ -278,7 +312,6 @@
 
             if (rejectInput && charCountDisplay) {
                 rejectInput.addEventListener('input', function() {
-                    // 한글 등 특수 케이스에서 maxlength가 무시되는 경우를 대비해 직접 절단
                     if (this.value.length > 500) {
                         this.value = this.value.substring(0, 500);
                     }
@@ -340,12 +373,13 @@
             } catch (error) { console.error('첨부파일 로드 오류', error); }
         }
 
+        /* ✅ 개선된 첨부파일 렌더링: 가로 너비 통일 및 정보 정렬 */
         function renderAttachments(attachments) {
             const container = document.getElementById('file-attachments');
             if (attachments.length === 0) { container.innerHTML = '<div class="no-files">첨부된 파일이 없습니다.</div>'; return; }
             container.innerHTML = attachments.map(file => `
                 <div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')">
-                    <div class="file-info">
+                    <div class="file-info" style="width: 100%; display: flex; flex-direction: column; align-items: center; min-width: 0;">
                         <div class="file-name" title="${file.originalName}">${file.originalName}</div>
                         <div class="file-meta">${formatFileSize(file.size)}</div>
                     </div>

@@ -111,15 +111,47 @@
             .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
             .ProseMirror table td, .ProseMirror table th { border: 1px solid #dee2e6; padding: 8px; min-width: 50px; }
 
-            /* 첨부파일 스타일 */
-            .file-attachments { padding: 12px; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; }
+            /* ✅ 첨부파일 스타일: 가로 너비 직접 조정 및 균등 배분 */
+            .file-attachments {
+                padding: 12px;
+                display: flex;
+                gap: 10px;
+                overflow: hidden; /* 가로 스크롤 완전 방지 */
+                flex-wrap: nowrap; /* 한 줄 고정 */
+                width: 100%;
+                box-sizing: border-box;
+            }
             .file-item {
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                gap: 8px; padding: 14px 16px; background: #f8f9fa; border: 1px solid #e9ecef;
-                border-radius: 8px; transition: all 0.2s; cursor: pointer; min-width: 120px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                padding: 14px 10px;
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                transition: all 0.2s;
+                cursor: pointer;
+                flex: 1;           /* 가로 공간을 균등하게 차지 */
+                min-width: 0;      /* ellipsis(말줄임표) 작동을 위한 필수 설정 */
+
+                /* 🔍 테스트 포인트: 아래 max-width 값을 조절하며 가로 길이를 테스트해보세요! */
+                max-width: 160px;
             }
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
-            .file-name { font-size: 13px; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: center; }
+
+            .file-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: #333;
+                overflow: hidden;
+                text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
+                white-space: nowrap;     /* 줄바꿈 금지 */
+                width: 100%;
+                text-align: center;
+            }
+            .file-meta { font-size: 11px; color: #868e96; }
 
             /* 반려 정보 */
             .reject-card { background: linear-gradient(135deg, #fff5f5 0%, #fff 100%); border: 1px solid #ffc9c9; border-radius: 10px; padding: 20px; }
@@ -278,7 +310,14 @@
         function renderAttachments(attachments) {
             const container = document.getElementById('file-attachments');
             if (attachments.length === 0) { container.innerHTML = '<div class="no-files">첨부된 파일이 없습니다.</div>'; return; }
-            container.innerHTML = attachments.map(file => `<div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')"><div class="file-info"><div class="file-name" title="${file.originalName}">${file.originalName}</div><div class="file-meta">${formatFileSize(file.size)}</div></div></div>`).join('');
+            container.innerHTML = attachments.map(file => `
+                <div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')">
+                    <div class="file-info" style="width: 100%; display: flex; flex-direction: column; align-items: center; min-width: 0;">
+                        <div class="file-name" title="${file.originalName}">${file.originalName}</div>
+                        <div class="file-meta">${formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function downloadFile(atchNo, originalName) {
@@ -290,20 +329,17 @@
             } catch (error) { console.error('파일 다운로드 오류', error); }
         }
 
-        /* ✅ 개선된 결재라인 렌더링 함수 (대직자 정보 포함) */
         function renderApprovalLine(lines) {
             const container = document.getElementById('approval-line');
             container.innerHTML = '';
             if (!lines || lines.length === 0) return;
 
-            // 1. seq별로 그룹화
             const lineBySeq = {};
             lines.forEach(line => {
                 if (!lineBySeq[line.seq]) lineBySeq[line.seq] = [];
                 lineBySeq[line.seq].push(line);
             });
 
-            // 2. 각 순번에서 보여줄 결재자 선별
             const sortedSeqs = Object.keys(lineBySeq).sort((a, b) => a - b);
             const displayLines = [];
 
@@ -318,12 +354,10 @@
                 }
             });
 
-            // 3. 선별된 결재자 렌더링
             displayLines.forEach((line, index) => {
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
 
-                // ✅ 수정: 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
                 const isDelegateAppr = line.isDelegate && line.isActualAppr;
                 const delegateLabel = isDelegateAppr ? `-대직(${line.targetApproverName || ''})-` : '';
 

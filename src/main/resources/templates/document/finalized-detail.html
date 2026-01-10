@@ -111,14 +111,45 @@
             .ProseMirror table td, .ProseMirror table th { border: 1px solid #dee2e6; padding: 8px; min-width: 50px; vertical-align: top; }
             .ProseMirror table th { background: #f8f9fa; font-weight: 600; }
 
-            /* 첨부파일 스타일 */
-            .file-attachments { padding: 12px; display: flex; gap: 10px; overflow-x: auto; }
+            /* ✅ 첨부파일 스타일 수정: 가로 너비 통일 및 말줄임표 처리 */
+            .file-attachments {
+                padding: 12px;
+                display: flex;
+                gap: 10px;
+                overflow: hidden; /* 가로 스크롤 완전 방지 */
+                flex-wrap: nowrap; /* 한 줄 고정 */
+                width: 100%;
+                box-sizing: border-box;
+            }
             .file-item {
-                display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 16px;
-                background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; cursor: pointer; min-width: 120px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                padding: 14px 10px;
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                transition: all 0.2s;
+                cursor: pointer;
+                flex: 1;           /* 가로 공간을 균등하게 차지 */
+                min-width: 0;      /* ellipsis(말줄임표) 작동을 위한 필수 설정 */
+                max-width: 160px;  /* 가로 너비 상한값 */
             }
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
-            .file-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: center; }
+
+            .file-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: #333;
+                overflow: hidden;
+                text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
+                white-space: nowrap;     /* 줄바꿈 금지 */
+                width: 100%;
+                text-align: center;
+            }
+            .file-meta { font-size: 11px; color: #868e96; }
             .no-files { color: #adb5bd; font-size: 13px; text-align: center; padding: 20px; width: 100%; }
 
             /* AI 요약 */
@@ -280,7 +311,7 @@
             if (attachments.length === 0) { container.innerHTML = '<div class="no-files">첨부된 파일이 없습니다.</div>'; return; }
             container.innerHTML = attachments.map(file => `
                 <div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')">
-                    <div class="file-info">
+                    <div class="file-info" style="width: 100%; display: flex; flex-direction: column; align-items: center; min-width: 0;">
                         <div class="file-name" title="${file.originalName}">${file.originalName}</div>
                         <div class="file-meta">${formatFileSize(file.size)}</div>
                     </div>
@@ -330,7 +361,7 @@
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
 
-                // ✅ 수정: 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
+                // ✅ 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
                 const isDelegateAppr = line.isDelegate && line.isActualAppr;
                 const delegateLabel = isDelegateAppr ? `-대직(${line.targetApproverName || ''})-` : '';
 
@@ -362,7 +393,6 @@
         function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
         function formatDateTime(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
-        function escapeHtml(text) { return text ? text.replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
     </script>
 </th:block>
 </body>
