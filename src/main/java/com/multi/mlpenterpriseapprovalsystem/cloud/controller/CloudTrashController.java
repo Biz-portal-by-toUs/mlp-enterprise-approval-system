@@ -121,4 +121,13 @@ public class CloudTrashController {
         cloudTrashService.purgeDeptFile(user, attachmentId);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "부서 파일 영구삭제 성공", null));
     }
+
+    @PostMapping("/purge/dept/folder/{folderNo}")
+    public ResponseEntity<ResponseDto<Void>> purgeDeptFolder(
+            @PathVariable Long folderNo,
+            @AuthenticationPrincipal CustomUser user
+    ){
+        cloudTrashService.purgeDeptFolder(user, folderNo);
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "부서 폴더 영구삭제 성공", null));
+    }
 }
