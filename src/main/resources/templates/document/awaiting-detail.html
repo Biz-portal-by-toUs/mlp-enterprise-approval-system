@@ -238,7 +238,8 @@
                 <div class="modal-content">
                     <div class="modal-title" style="font-weight:bold; font-size:20px; margin-bottom:12px;">결재 반려</div>
                     <div class="modal-message" style="color:#666; margin-bottom:15px;">반려 사유를 입력해주세요.</div>
-                    <textarea class="reject-textarea" id="reject-reason-input" placeholder="상세 사유를 입력하세요..."></textarea>
+                    <textarea class="reject-textarea" id="reject-reason-input" placeholder="상세 사유를 입력하세요" maxlength="500"></textarea>
+                    <div id="reject-char-count" style="text-align: right; font-size: 12px; color: #868e96; margin-top: -15px; margin-bottom: 15px;">0 / 500</div>
                     <div class="modal-buttons">
                         <button class="modal-btn" style="background:#dc2626; color:white;" onclick="showRejectConfirmModal()">반려</button>
                         <button class="modal-btn" style="background:#f3f4f6; color:#4b5563;" onclick="hideRejectModal()">취소</button>
@@ -270,6 +271,20 @@
             const pathParts = window.location.pathname.split('/');
             currentDocNo = pathParts[pathParts.length - 1];
             loadDocumentDetail(currentDocNo);
+
+            // 📌 반려 사유 입력 실시간 제약 및 글자수 표시 로직
+            const rejectInput = document.getElementById('reject-reason-input');
+            const charCountDisplay = document.getElementById('reject-char-count');
+
+            if (rejectInput && charCountDisplay) {
+                rejectInput.addEventListener('input', function() {
+                    // 한글 등 특수 케이스에서 maxlength가 무시되는 경우를 대비해 직접 절단
+                    if (this.value.length > 500) {
+                        this.value = this.value.substring(0, 500);
+                    }
+                    charCountDisplay.textContent = `${this.value.length} / 500`;
+                });
+            }
         });
 
         async function loadDocumentDetail(docNo) {
@@ -426,7 +441,11 @@
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
         function showApproveModal() { document.getElementById('approve-modal').classList.add('show'); }
         function hideApproveModal() { document.getElementById('approve-modal').classList.remove('show'); }
-        function showRejectModal() { document.getElementById('reject-reason-input').value = ''; document.getElementById('reject-modal').classList.add('show'); }
+        function showRejectModal() {
+            document.getElementById('reject-reason-input').value = '';
+            document.getElementById('reject-char-count').textContent = '0 / 500';
+            document.getElementById('reject-modal').classList.add('show');
+        }
         function hideRejectModal() { document.getElementById('reject-modal').classList.remove('show'); }
         function showRejectConfirmModal() { if (!document.getElementById('reject-reason-input').value.trim()) { showToast('반려 사유를 입력해주세요.', 'error'); return; } hideRejectModal(); document.getElementById('reject-confirm-modal').classList.add('show'); }
         function hideRejectConfirmModal() { document.getElementById('reject-confirm-modal').classList.remove('show'); }
