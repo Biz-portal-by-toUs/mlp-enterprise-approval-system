@@ -484,11 +484,17 @@
                 const row = document.createElement("div");
                 row.className = "eq-row";
 
-                // ✅ 예약 매칭은 resv.eqNo로 하므로 eqNo는 유지
-                row.dataset.eqNo = eq.eqNo;
+                // 1) eqNo 먼저 (예약 매칭에도 쓰니까)
+                const eqNo = pick(eq, ["eqNo", "sharedEquipmentNo", "equipmentNo"], null);
+                row.dataset.eqNo = eqNo ?? "";
 
-                // ✅ 표시용 설비번호(eqId) - API에 따라 eqId/id/eqNo 중 하나일 수 있어 안전하게
-                const eqId = pick(eq, ["eqId", "equipmentId", "id", "eqNo"], "-");
+                // 2) eqId는 eqNo를 fallback으로 (절대 eqId 자기 자신 쓰지 말기)
+                const eqId = pick(eq, ["eqId", "equipmentId", "id"], eqNo ?? "-");
+                row.dataset.eqId = eqId;
+
+                // 3) 이름도 안전하게
+                const eqName = pick(eq, ["eqName", "name"], "-");
+                row.dataset.eqName = eqName;
 
                 // ✅ 왼쪽 라벨: 설비명 + 설비번호(eqId)
                 row.innerHTML = `<div class="eq-name">${eq.eqName} (${eqId})</div>`;
@@ -692,8 +698,14 @@
 
             cancelBtn.innerText = "닫기";
 
-            const eqName = pick(resv, ["eqName", "sharedEquipmentName", "eq.eqName"], "-");
-            const eqId   = pick(resv, ["eqId", "equipmentId", "eq.eqId", "eqNo", "sharedEquipmentNo", "eq.eqNo"], "-"); // ✅
+            const eqNo = pick(resv, ["eqNo", "sharedEquipmentNo", "eq.eqNo"], null);
+
+            const row = eqNo ? document.querySelector(`.eq-row[data-eq-no="${eqNo}"]`) : null;
+            const fallbackEqId = row?.dataset?.eqId
+                ?? pick(EQUIPMENT.find(e => String(e.eqNo) === String(eqNo)) || {}, ["eqId","equipmentId","id"], "-");
+
+            const eqName = pick(resv, ["eqName", "sharedEquipmentName", "eq.eqName"], row?.dataset?.eqName ?? "-");
+            const eqId   = pick(resv, ["eqId", "equipmentId", "eq.eqId"], fallbackEqId);
             const resvDate = pick(resv, ["resvDate", "date"], resv.startedAt ? String(resv.startedAt).substring(0, 10) : "-");
 
             const startRaw = pick(resv, ["startTime"], resv.startedAt ? String(resv.startedAt).substring(11, 19) : null);
@@ -727,13 +739,37 @@
         cancelBtn.onclick = () => { modal.style.display = "none"; };
 
         reserveBtn.onclick = async () => {
+            const eqNoRaw = modal.dataset.eqNo;     // 문자열 그대로
+            const start = modal.dataset.start;
+            const end = modal.dataset.end;
+
+            if (!eqNoRaw) {
+                alert("설비 식별자(eqNo)가 없습니다. 설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.");
+                return;
+            }
+            if (!start || !end) {
+                alert("예약 시간이 설정되지 않았습니다. 시간을 다시 선택해주세요.");
+                return;
+            }
+
+            // ✅ 숫자면 Number로, 아니면 문자열 그대로
+            const eqNoVal = /^\d+$/.test(eqNoRaw) ? Number(eqNoRaw) : eqNoRaw;
+
+            // (추가 안전장치) 숫자로 변환했는데 NaN이면 막기
+            if (typeof eqNoVal === "number" && Number.isNaN(eqNoVal)) {
+                alert("설비 식별자(eqNo)가 올바르지 않습니다: " + eqNoRaw);
+                return;
+            }
+
             const body = {
-                eqNo: Number(modal.dataset.eqNo),
+                eqNo: eqNoVal,                               // ✅ 여기!
                 resvDate: currentDate.format("YYYY-MM-DD"),
-                startTime: modal.dataset.start,
-                endTime: modal.dataset.end,
+                startTime: start,                            // ✅ 변수 사용
+                endTime: end,                                // ✅ 변수 사용
                 purp: document.getElementById("purpose").value
             };
+
+            console.log("RESERVE BODY:", body); // 디버깅용
 
             const res = await apiFetch("/api/v1/shared-equipment-reservations", {
                 method: "POST",
