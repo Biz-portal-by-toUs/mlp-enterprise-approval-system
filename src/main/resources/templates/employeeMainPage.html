@@ -596,24 +596,6 @@
             vertical-align: top;
         }
 
-        /*!* 4. 일정 바 스타일: 투명도 핵심 *!*/
-        /*.cal-event.bar-style {*/
-        /* position: relative;*/
-        /* z-index: 10; !* 선보다 위에 떠 있게 함 *!*/
-        /* margin: 2px 0;*/
-        /* padding: 4px 8px;*/
-        /* font-size: 12px;*/
-        /* border-radius: 4px;*/
-
-        /* !* 텍스트가 넘치면 말줄임표 *!*/
-        /* white-space: nowrap;*/
-        /* overflow: hidden;*/
-        /* text-overflow: ellipsis;*/
-
-        /* !* 왼쪽 포인트 선만 진하게 *!*/
-        /* border-left: 4px solid currentColor;*/
-        /*}*/
-
         /* 2. 일정 바 스타일 (이어져 보이게) */
         .cal-event.bar-style {
             display: flex;             /* 시간 양쪽 배치를 위해 Flex 사용 */
@@ -675,7 +657,7 @@
         /* 4. 브레이크포인트 조정 (반응형 시점) */
         @media (max-width: 1400px) { /* 1300px에서 1400px로 상향 조정 */
             .portal-grid {
-                grid-template-columns: 1fr; /* 화면이 작아지면 한 줄로 쌓기 */
+                grid-template-columns: minmax(300px, 380px) 1fr minmax(300px, 380px);
             }
         }
     </style>
@@ -923,15 +905,25 @@
                 return;
             }
 
-            target.innerHTML = data.map(doc => `
-        <a href="/documents/${doc.docNo}?status=${viewStatus}" class="appr-row">
-            <span class="arrow">▶</span>
-            <div class="appr-info">
-                <div class="title">${doc.title}</div>
-                <div class="meta">${doc.docStatName || ''} | ${doc.writerDepName || ''} ${formatDate(doc.createdAt)}</div>
-            </div>
-        </a>
-    `).join('');
+            // ✅ 수정: 제목 옆 (AW) 제거 및 하단 메타 정보(작성자, 사번, 상신일 시:분까지) 명확히 표시
+            target.innerHTML = data.map(doc => {
+                const cleanTitle = (doc.title || '').replace(' (AW)', '');
+
+                // ✅ 수정: DTO에 있는 submittedAt을 사용 (없을 경우 createdAt 사용)
+                const dateSource = doc.submittedAt || doc.createdAt;
+                const d = new Date(dateSource);
+                const formattedDateTime = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+                // ✅ 수정: 작성자 명칭 및 포맷 (ResDocumentDto 필드 매칭: doc.writer(이름), doc.writerId(사번))
+                return `
+                <a href="/documents/${doc.docNo}?status=${viewStatus}" class="appr-row">
+                    <span class="arrow">▶</span>
+                    <div class="appr-info">
+                        <div class="title">${cleanTitle}</div>
+                        <div class="meta">작성자:${doc.writer || ''} (${doc.writerId || ''}) | 상신일: ${formattedDateTime}</div>
+                    </div>
+                </a>
+            `}).join('');
         }
 
         /**
@@ -970,7 +962,7 @@
 
         function bindApprovalTabs() {
             const tabs = document.querySelectorAll('.appr-tab');
-            const types = ['AWAITING', 'SUBMITTED', 'REJECTED']; // ✅ REJECTED의 위치 변경 가능성에 맞춰 types 배열 수정
+            const types = ['AWAITING', 'SUBMITTED', 'REJECTED'];
 
             tabs.forEach((tab, index) => {
                 tab.addEventListener('click', function() {
