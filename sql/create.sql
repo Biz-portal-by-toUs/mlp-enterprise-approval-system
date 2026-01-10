@@ -1135,6 +1135,33 @@ CREATE TABLE cloud_trash_log (
                                  INDEX idx_log_name (item_name)
 );
 
+DROP TABLE IF EXISTS search_outbox;
+
+CREATE TABLE search_outbox (
+                               outbox_id      BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                               company_id     VARCHAR(20)  NOT NULL,
+                               doc_type       VARCHAR(30)  NOT NULL,
+                               source_id      VARCHAR(64)  NOT NULL,
+                               op             VARCHAR(10)  NOT NULL,
+
+                               schema_ver     INT          NOT NULL DEFAULT 1,
+
+                               status         VARCHAR(12)  NOT NULL DEFAULT 'PENDING',
+                               retry_count    INT          NOT NULL DEFAULT 0,
+                               next_retry_at  DATETIME     NULL,
+                               last_error     MEDIUMTEXT   NULL,
+
+                               occurred_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                               processed_at   DATETIME     NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX ix_outbox_pick
+    ON search_outbox (status, next_retry_at, occurred_at);
+
+CREATE INDEX ix_outbox_doc
+    ON search_outbox (company_id, doc_type, source_id);
+
 -- 여기까지 해주세요!!
 # 사원 추가 변경
 ALTER TABLE employee
