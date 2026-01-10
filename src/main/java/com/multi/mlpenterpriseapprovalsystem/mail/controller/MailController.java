@@ -6,6 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.mail.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.mail.service.MailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.*;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.*;
@@ -15,22 +16,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.*;
 
-/**
- * 메일 Rest API 컨트롤러
- *
- * @author : 정종원
- * @filename : MailController
- * @since : 2026-01-05 월요일
- */
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/mails")
+@Slf4j
 public class MailController {
 
     private final MailService mailService;
 
-    // 메일 전송 (발신자 empId는 서버 인증에서 획득)
     @PostMapping
     public ResponseEntity<ResponseDto<ResMailSendDto>> sendMail(
             @RequestBody ReqMailSendDto req,
@@ -42,6 +35,20 @@ public class MailController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto<>(HttpStatus.CREATED, "메일 전송 성공", res));
+    }
+
+    // 답신 payload (추가)
+    @GetMapping("/{mailNo}/reply")
+    public ResponseEntity<ResponseDto<ResMailReplyPayloadDto>> replyPayload(
+            @PathVariable Long mailNo,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        ResMailReplyPayloadDto res = mailService.getReplyPayload(mailNo, empId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ResponseDto<>(HttpStatus.OK, "답신 payload 조회 성공", res));
     }
 
     // 받은 메일함
@@ -63,7 +70,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "받은 메일함 조회 성공", res));
     }
 
-    // 보낸 메일함
     @GetMapping("/sent")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> sent(
             @RequestParam(name = "keyword", required = false) String keyword,
@@ -82,7 +88,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "보낸 메일함 조회 성공", res));
     }
 
-    // 휴지통 조회
     @GetMapping("/trash")
     public ResponseEntity<ResponseDto<Page<ResMailListDto>>> trash(
             @PageableDefault(size = 10) Pageable pageable,
@@ -96,7 +101,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 조회 성공", res));
     }
 
-    // 메일 상세 조회 (mailNo 기준)
     @GetMapping("/{mailNo}")
     public ResponseEntity<ResponseDto<ResMailDetailDto>> detail(
             @PathVariable Long mailNo,
@@ -110,7 +114,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "메일 상세 조회 성공", res));
     }
 
-    // 읽음 처리 (mailNo 기준)
     @PatchMapping("/{mailNo}/read")
     public ResponseEntity<ResponseDto<Void>> markRead(
             @PathVariable Long mailNo,
@@ -124,7 +127,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "읽음 처리 성공", null));
     }
 
-    // 휴지통 이동 (mailNo 기준)
     @PatchMapping("/{mailNo}/trash")
     public ResponseEntity<ResponseDto<Void>> moveToTrash(
             @PathVariable Long mailNo,
@@ -138,7 +140,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 이동 성공", null));
     }
 
-    // 휴지통 복원 (mailNo 기준)
     @PatchMapping("/{mailNo}/restore")
     public ResponseEntity<ResponseDto<Void>> restore(
             @PathVariable Long mailNo,
@@ -152,7 +153,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "휴지통 복원 성공", null));
     }
 
-    // 완전 삭제 (mailNo 기준)
     @DeleteMapping("/{mailNo}/purge")
     public ResponseEntity<ResponseDto<Void>> purge(
             @PathVariable Long mailNo,
@@ -166,7 +166,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "완전 삭제 성공", null));
     }
 
-    // 중요 메일 설정 (mailNo 기준)
     @PatchMapping("/{mailNo}/prior")
     public ResponseEntity<ResponseDto<Void>> setPrior(
             @PathVariable Long mailNo,
@@ -181,7 +180,6 @@ public class MailController {
                 .body(new ResponseDto<>(HttpStatus.OK, "중요 메일 설정 성공", null));
     }
 
-    // 중요 메일 토글 (mailNo 기준)
     @PatchMapping("/{mailNo}/prior/toggle")
     public ResponseEntity<ResponseDto<Void>> togglePrior(
             @PathVariable Long mailNo,

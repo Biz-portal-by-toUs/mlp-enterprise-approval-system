@@ -7,6 +7,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeReposit
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.Notifications;
 import com.multi.mlpenterpriseapprovalsystem.notification.dto.ResNotificationDto;
 import com.multi.mlpenterpriseapprovalsystem.notification.repository.NotificationsRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -25,6 +26,7 @@ import java.util.Map;
  * @since : 2026. 1. 6. 화요일
  */
 @Component
+@Slf4j
 public class RedisNotificationSubscriber implements MessageListener {
     private final ObjectMapper objectMapper;
     private final NotificationsRepository notificationsRepository;
@@ -53,6 +55,7 @@ public class RedisNotificationSubscriber implements MessageListener {
     public void onMessage(Message message, byte[] pattern) {
         System.out.println("[NOTI SUB] hit");
         String raw = new String(message.getBody(), StandardCharsets.UTF_8);
+        log.info("raw={}", raw);
 
         final NotificationRedisMessage msg;
         try {

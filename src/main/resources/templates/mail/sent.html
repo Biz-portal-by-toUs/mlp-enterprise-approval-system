@@ -16,7 +16,6 @@
             --danger:#ef4444;
         }
 
-        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
         /* ===== page-only namespace: ms-* (mail sent) ===== */
 
         /* ===== toolbar ===== */
@@ -103,8 +102,14 @@
         .ms-pageBtn.active:hover{filter:brightness(0.9);}
 
         /* ===== count pill (메일쓰기 밑) ===== */
+        .ms-countBar{
+            display:flex;
+            justify-content:flex-end;
+            margin: 6px 0 12px;
+        }
+
         .ms-countPill{
-            margin-top:6px;
+            margin-top:0; /* 기존 6px이면 0으로 */
             text-align:right;
             font-size:14px;
             font-weight:800;
@@ -141,14 +146,17 @@
                     </div>
 
                     <button class="ms-btn ghost" id="btnSearch" type="button">조회</button>
+                    <button class="ms-btn ghost" id="btnReset" type="button" disabled>초기화</button>
                 </div>
 
                 <div class="ms-toolbar-right">
                     <button class="ms-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
 
                     <button class="ms-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
-                    <div id="countPill" class="ms-countPill">0건</div>
                 </div>
+            </div>
+            <div class="ms-countBar">
+                <div id="countPill" class="ms-countPill">0건</div>
             </div>
 
             <section class="ms-tableWrap">
@@ -284,6 +292,15 @@
                     document.getElementById('btnBulkTrash').disabled = selected.length === 0;
                 }
 
+                function syncResetBtn(){
+                    const hasFilter =
+                        document.getElementById('keyword').value ||
+                        document.getElementById('from').value ||
+                        document.getElementById('to').value;
+
+                    document.getElementById('btnReset').disabled = !hasFilter;
+                }
+
                 // ===== pager =====
                 function buildPager(page, totalPages, onGo){
                     const pager = document.getElementById('pagerControls');
@@ -413,7 +430,7 @@
                                 e.target.tagName === 'A' ||
                                 e.target.closest('.rowCheck')
                             )) return;
-                            location.href = `/mail/${encodeURIComponent(it.mailNo)}`;
+                            location.href = `/mail/${encodeURIComponent(it.mailNo)}?box=sent`;
                         });
 
                         // checkbox select -> row highlight + ui sync
@@ -475,26 +492,30 @@
 
                 // ===== main load =====
                 async function load(){
-                    const st = getState();
+                    try {
+                        const st = getState();
 
-                    document.getElementById('keyword').value = clampKeyword(st.keyword);
-                    document.getElementById('from').value = st.from;
-                    document.getElementById('to').value = st.to;
+                        document.getElementById('keyword').value = clampKeyword(st.keyword);
+                        document.getElementById('from').value = st.from;
+                        document.getElementById('to').value = st.to;
 
-                    syncDateConstraints();
+                        syncDateConstraints();
 
-                    const url = buildSentApiUrl(st);
-                    const data = await fetchJson(url);
+                        const url = buildSentApiUrl(st);
+                        const data = await fetchJson(url);
 
-                    const items = data.content || [];
-                    renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
+                        const items = data.content || [];
+                        renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
 
-                    document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
+                        document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
 
-                    buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                        setUrlState({ page:p, keyword:st.keyword, from:st.from, to:st.to });
-                        load().catch(console.error);
-                    });
+                        buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
+                            setUrlState({page: p, keyword: st.keyword, from: st.from, to: st.to});
+                            load().catch(console.error);
+                        });
+                    } finally {
+                        syncResetBtn();
+                    }
                 }
 
                 // ===== events =====
@@ -510,6 +531,18 @@
                     load().catch(console.error);
                 });
 
+                document.getElementById('btnReset').addEventListener('click', () => {
+                    document.getElementById('keyword').value = '';
+                    document.getElementById('from').value = '';
+                    document.getElementById('to').value = '';
+                    document.getElementById('to').max = todayYmd();
+
+                    syncDateConstraints();
+                    setUrlState({ page: 0, keyword: '', from: '', to: '' });
+
+                    load().catch(console.error);
+                });
+
                 document.getElementById('keyword').addEventListener('keydown', (e) => {
                     if (e.key === 'Enter'){
                         e.preventDefault();
@@ -521,14 +554,17 @@
                     const el = document.getElementById('keyword');
                     const v = clampKeyword(el.value);
                     if (el.value !== v) el.value = v;
+                    syncResetBtn();
                 });
 
                 document.getElementById('from').addEventListener('change', () => {
                     syncDateConstraints();
+                    syncResetBtn();
                 });
 
                 document.getElementById('to').addEventListener('change', () => {
                     syncDateConstraints();
+                    syncResetBtn();
                 });
 
                 document.getElementById('checkAll').addEventListener('change', (e) => {
@@ -564,6 +600,7 @@
                         console.error(err);
                         document.getElementById('tbody').innerHTML =
                             `<tr><td colspan="5" style="padding:18px; color:#ef4444; font-weight:900;">조회 실패</td></tr>`;
+                        document.getElementById('countPill').textContent = `0건`;
                     });
                 });
             </script>

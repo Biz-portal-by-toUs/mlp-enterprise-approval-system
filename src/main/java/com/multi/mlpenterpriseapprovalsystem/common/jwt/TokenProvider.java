@@ -42,8 +42,11 @@ public class TokenProvider {
     private static final String CLAIM_USERNAME = "username";
 
     // ===== Expire =====
-    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24;  // 3분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24 * 7; // 5분 (원하면 늘려)
+    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24;  // 1일
+    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24 * 7; // 7일 (원하면 늘려)
+    // 테스트용: Access 1분, Refresh 3분
+//    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS  = 1000L * 60 * 1;  // 1분
+//    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 3;  // 3분
 
     private final Key SKEY;
     private final String ISSUER;
@@ -149,6 +152,10 @@ public class TokenProvider {
      * 유효성 검증(유효하면 true, 아니면 TokenException 던짐)
      */
     public boolean validateToken(String token) {
+        if (!StringUtils.hasText(token) || token.chars().filter(ch -> ch == '.').count() != 2) {
+            log.error("유효하지 않은 JWT 형식입니다. (점 개수 부족)");
+            return false;
+        }
         try {
             if (!StringUtils.hasText(token)) {
                 throw new TokenException("토큰이 비어있습니다.");
@@ -202,6 +209,11 @@ public class TokenProvider {
     public Authentication getAuthentication(String token) {
 
         Claims claims = parseClaims(token);
+
+        // ✅ 이 로그를 꼭 찍어보세요!
+        log.info("[JwtProvider] 토큰에서 읽어온 전체 클레임: {}", claims);
+        log.info("[JwtProvider] CLAIM_AUTH 상수값: {}", CLAIM_AUTH);
+        log.info("[JwtProvider] 실제 추출된 authStr: {}", claims.get(CLAIM_AUTH));
 
         String subjectIdStr = claims.getSubject();
         String subjectTypeStr = (String) claims.get(CLAIM_SUBJECT_TYPE);
@@ -274,6 +286,44 @@ public class TokenProvider {
 
     public String getTokenKind(String token) {
         Object kind = parseClaims(token).get(CLAIM_TOKEN_KIND);
+        return kind == null ? null : String.valueOf(kind);
+    }
+
+    // TokenProvider.java
+
+    /** Claims 객체에서 subject(ID) 추출 */
+    public Long getSubjectIdFromClaims(Claims claims) {
+        return Long.valueOf(claims.getSubject());
+    }
+
+    /** Claims 객체에서 사용자 유형 추출 */
+    public TokenSubjectType getSubjectTypeFromClaims(Claims claims) {
+        String v = (String) claims.get(CLAIM_SUBJECT_TYPE);
+        return TokenSubjectType.valueOf(v);
+    }
+
+    /** Claims 객체에서 회사 ID 추출 */
+    public String getComIdFromClaims(Claims claims) {
+        return (String) claims.get(CLAIM_COM_ID);
+    }
+
+    /** Claims 객체에서 사용자 이름 추출 */
+    public String getUsernameFromClaims(Claims claims) {
+        return (String) claims.get(CLAIM_USERNAME);
+    }
+
+    /** Claims 객체에서 권한 목록 추출 */
+    public List<String> getRolesFromClaims(Claims claims) {
+        String auth = (String) claims.get(CLAIM_AUTH);
+        if (!StringUtils.hasText(auth)) return List.of();
+        return Arrays.stream(auth.split(","))
+                .filter(StringUtils::hasText)
+                .toList();
+    }
+
+    /** Claims 객체에서 토큰 종류(A/R) 추출 */
+    public String getTokenKindFromClaims(Claims claims) {
+        Object kind = claims.get(CLAIM_TOKEN_KIND);
         return kind == null ? null : String.valueOf(kind);
     }
 }

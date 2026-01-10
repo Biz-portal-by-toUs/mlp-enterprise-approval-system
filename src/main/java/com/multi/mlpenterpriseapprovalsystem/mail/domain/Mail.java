@@ -92,4 +92,9 @@ public class Mail extends BaseEntity {
         this.savedAt = null;
         this.draftReceivers = null;
     }
+
+    public void applySendContent(String title, String cnttJson) {
+        this.title = title;
+        this.cntt = cnttJson;
+    }
 }

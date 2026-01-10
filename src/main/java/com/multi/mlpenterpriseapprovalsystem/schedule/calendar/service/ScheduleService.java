@@ -1,5 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
@@ -19,15 +21,22 @@ import com.multi.mlpenterpriseapprovalsystem.search.domain.SearchDocType;
 import com.multi.mlpenterpriseapprovalsystem.search.service.SearchOutboxAppender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 일정 관련 서비스 (통합 버전)
@@ -48,9 +57,12 @@ public class ScheduleService {
     private final NotificationService notificationService;
     private final SearchOutboxAppender searchOutboxAppender;
 
-    /**
-     * 일정 목록 조회
-     */
+    @Value("${holiday.service-key}")
+    private String serviceKey;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final Map<String, List<HolidayDto>> cache = new ConcurrentHashMap<>();
+
     public ResScheduleListDto getItems(CustomUser user, ReqScheduleDto req) {
         Range range = resolveRange(req);
 
@@ -340,4 +352,81 @@ public class ScheduleService {
                 .map(a -> a.getAuthority())
                 .anyMatch(allowed::contains);
     }
+    public List<HolidayDto> getHolidays(int year, int month) {
+        String key = year + "-" + String.format("%02d", month);
+        return cache.computeIfAbsent(key, k -> fetch(year, month));
+    }
+
+
+
+    private List<HolidayDto> fetch(int year, int month) {
+        String url = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo"
+                + "?serviceKey=" + UriUtils.encodeQueryParam(serviceKey, StandardCharsets.UTF_8)
+                + "&solYear=" + year
+                + "&solMonth=" + String.format("%02d", month)
+                + "&numOfRows=100"
+                + "&pageNo=1"
+                + "&_type=json"; // ✅ JSON 고정
+
+        String body = restTemplate.getForObject(url, String.class);
+        if (body == null || body.isBlank()) return List.of();
+
+        String s = body.trim();
+        if (!s.isEmpty() && s.charAt(0) == '\uFEFF') s = s.substring(1).trim(); // BOM 제거
+
+        try {
+            ObjectMapper om = new ObjectMapper();
+            JsonNode root = om.readTree(s);
+
+            JsonNode header = root.path("response").path("header");
+            String resultCode = header.path("resultCode").asText();
+            String resultMsg  = header.path("resultMsg").asText();
+
+            JsonNode bodyNode = root.path("response").path("body");
+            int totalCount = bodyNode.path("totalCount").asInt(0);
+
+            System.out.println("[HOLIDAY] resultCode=" + resultCode + ", resultMsg=" + resultMsg + ", totalCount=" + totalCount);
+
+            // 정상 응답 아니면 빈값
+            if (!"00".equals(resultCode)) return List.of();
+
+            JsonNode itemNode = bodyNode.path("items").path("item");
+            if (itemNode.isMissingNode() || itemNode.isNull()) return List.of();
+
+            List<HolidayDto> out = new ArrayList<>();
+
+            // ✅ item이 배열일 수도 / 단일 객체일 수도 있음
+            if (itemNode.isArray()) {
+                for (JsonNode it : itemNode) addHoliday(it, out);
+            } else {
+                addHoliday(itemNode, out);
+            }
+
+            System.out.println("[HOLIDAY] parsed items=" + out.size());
+            return out;
+
+        } catch (Exception e) {
+            System.out.println("[HOLIDAY] JSON parse failed: " + e.getMessage());
+            return List.of();
+        }
+    }
+
+    private void addHoliday(JsonNode it, List<HolidayDto> out) {
+        String name = it.path("dateName").asText(null);
+        String isHoliday = it.path("isHoliday").asText(null);
+
+        // locdate가 숫자(20260101)로 올 수 있음
+        String locdate = it.path("locdate").isNumber()
+                ? String.valueOf(it.path("locdate").asLong())
+                : it.path("locdate").asText(null);
+
+        if (locdate == null || locdate.length() != 8) return;
+
+        // 공휴일만 쓰고 싶으면 Y만
+        if (isHoliday != null && !isHoliday.isBlank() && !"Y".equalsIgnoreCase(isHoliday)) return;
+
+        String date = locdate.substring(0, 4) + "-" + locdate.substring(4, 6) + "-" + locdate.substring(6, 8);
+        out.add(new HolidayDto(date, name));
+    }
+
 }

@@ -8,6 +8,9 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
+import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
+import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import io.jsonwebtoken.Claims;
@@ -39,6 +42,7 @@ import java.util.Optional;
 @Transactional
 public class TokenService {
 
+    private final CompanyRepository companyRepository;
     // 운영 https면 true, 로컬 http면 false
     @Value("${app.cookie.secure:false}")
     private boolean cookieSecure;
@@ -188,26 +192,71 @@ public class TokenService {
     public void logout(HttpServletRequest request, HttpServletResponse response) {
 
         try {
-            // 1) refreshToken 쿠키가 없으면 = 이미 로그아웃 상태로 보고 UNAUTHORIZED
-            String refreshToken = extractCookie(request, "refreshToken")
-                    .orElse(null);
+            // 1) refreshToken 쿠키 추출
+            String refreshToken = extractCookie(request, "refreshToken").orElse(null);
 
-            // 2) RT 서명/만료 검증
-            if (refreshToken != null && tokenProvider.validateToken(refreshToken)) {
-                Claims rtClaims = tokenProvider.parseClaims(refreshToken);
-                Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
-                TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
+            // ✅ 형식이 JWT가 아니면(= '.' 2개가 아니면) revoke/파싱 자체를 하지 않고 종료
+            if (refreshToken == null || refreshToken.isBlank()
+                    || refreshToken.chars().filter(ch -> ch == '.').count() != 2) {
+                log.warn("[LOGOUT] skip revoke. invalid token format token={}", refreshToken);
+                return; // 여기서 끝(=로그아웃 성공 취급)
+            }
 
-                // ✅ 0) 직원 로그아웃이면 msgStat = "H"
+            // 2) RT 서명/만료 검증 (✅ validateToken 자체가 throw 할 수도 있으니 catch)
+            boolean valid;
+            try {
+                valid = tokenProvider.validateToken(refreshToken);
+            } catch (Exception e) {
+                log.warn("[LOGOUT] validateToken threw exception. skip revoke. token={}", refreshToken, e);
+                return; // 쿠키는 finally에서 삭제됨
+            }
+
+            if (!valid) {
+                log.info("[LOGOUT] refreshToken not valid. skip revoke.");
+                return;
+            }
+
+            // 3) Claims 파싱 (✅ parseClaims도 throw 가능)
+            Claims rtClaims;
+            try {
+                rtClaims = tokenProvider.parseClaims(refreshToken);
+            } catch (Exception e) {
+                log.warn("[LOGOUT] parseClaims failed. skip revoke. token={}", refreshToken, e);
+                return;
+            }
+
+            // 4) subject / type 파싱도 안전하게
+            Long subjectId;
+            TokenSubjectType subjectType;
+            try {
+                subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
+                subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
+            } catch (Exception e) {
+                log.warn("[LOGOUT] subject parsing failed. skip revoke. subject={}", rtClaims.getSubject(), e);
+                return;
+            }
+
+            // ✅ 직원 로그아웃이면 msgStat OFF 처리 (이것도 실패해도 로그아웃 실패로 만들지 않음)
+            try {
                 if (subjectType == TokenSubjectType.EMPLOYEE) {
                     employeeRepository.updateMsgStatByEmpNo(subjectId, MsgStat.OFF);
                 }
+            } catch (Exception e) {
+                log.warn("[LOGOUT] updateMsgStat failed. continue logout. subjectId={}", subjectId, e);
+            }
 
+            // 5) DB에 저장된 RT revoke (이것도 실패해도 쿠키삭제는 진행)
+            try {
                 var stored = refreshTokenRepository
                         .findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
-
                 stored.forEach(RefreshToken::revoke);
+            } catch (Exception e) {
+                log.warn("[LOGOUT] revoke stored refresh tokens failed. continue logout. subjectId={}", subjectId, e);
             }
+
+        } catch (Exception e) {
+            // ✅ logout은 어떤 예외가 와도 500으로 터지면 UX 최악이라 "먹고" 쿠키만 지우게 한다
+            log.warn("[LOGOUT] unexpected error. force clear cookies. ", e);
 
         } finally {
             // ✅ 성공/실패 상관없이 쿠키는 무조건 삭제
@@ -237,6 +286,7 @@ public class TokenService {
     // =========================================================
     // ✅ 여기부터: AccessToken 재발급 (RefreshToken 기반)
     // =========================================================
+
     /**
      * ✅ AccessToken 재발급 (새 AccessToken만 발급)
      * - 만료된 accessToken(Authorization 헤더)에서 subject 정보 추출
@@ -247,20 +297,50 @@ public class TokenService {
         String refreshToken = extractCookie(request, "refreshToken")
                 .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
-        // 1) 클라이언트 RT 서명/만료 검증
+        //1) 클라이언트 RT 서명/만료 검증
+        Claims rtClaims = tokenProvider.parseClaims(refreshToken);
+
+        // ✅ 여기서부터: AT 헤더 없이 RT claims로 subject 정보 추출
+        Long subjectId = tokenProvider.getSubjectIdFromClaims(rtClaims);
+        TokenSubjectType subjectType = tokenProvider.getSubjectTypeFromClaims(rtClaims);
+
+        String comId;
+        String username;
+        List<String> roles;
+
+        if(subjectType == TokenSubjectType.EMPLOYEE) {
+            Employee emp = employeeRepository.findById(subjectId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+
+            comId = emp.getCompany().getComId();
+            username = emp.getEmpId();
+//            roles = List.of(emp.getRole().name());
+
+            // ✅ 여기서 로그를 찍어보세요!
+            log.info("[Refresh] DB에서 조회된 사원명: {}", emp.getEmpName());
+            log.info("[Refresh] DB에서 조회된 Role 값: {}", emp.getRole()); // Enum이 null인지 확인
+
+            if (emp.getRole() == null) {
+                log.error("[Refresh] 에러: 사원번호 {}의 권한(Role) 정보가 DB에 없습니다!", subjectId);
+            }
+
+            roles = List.of("ROLE_" + emp.getRole().name());
+        } else if(subjectType == TokenSubjectType.COMPANY) {
+            Company com = companyRepository.findById(subjectId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+
+            comId = com.getComId();
+            username = com.getEmail();
+//            roles = List.of(com.getRole().name());
+            roles = List.of("ROLE_" + com.getRole().name());
+        } else {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
         if (!tokenProvider.validateToken(refreshToken)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 2) RT에서 Claims 추출 (RT는 유효하니 그대로 파싱하면 됨)
-        Claims rtClaims = tokenProvider.parseClaims(refreshToken);
-
-        // ✅ 여기서부터: AT 헤더 없이 RT claims로 subject 정보 추출
-        Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
-        TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
-        String comId = tokenProvider.getComId(rtClaims.getSubject());
-        String username = tokenProvider.getUsername(rtClaims.getSubject());
-        List<String> roles = tokenProvider.getRoles(rtClaims.getSubject());
 
         // 3) DB에서 현재 유효 RT(최신 revoked=false) 조회
         RefreshToken dbRT = refreshTokenRepository
@@ -288,7 +368,7 @@ public class TokenService {
         // ✅ 쿠키만 쓸 거면 accessToken을 바디로 굳이 안 내려도 됨
         // (호환/디버깅용으로 남겨도 되고, 없애고 싶으면 null로)
         return ResTokenDto.builder()
-                .accessToken(null) // 또는 newAccessToken (원하면 유지)
+                .accessToken(newAccessToken)
                 .expiresInSeconds(tokenProvider.getAccessExpSeconds())
                 .subjectType(subjectType.name())
                 .role(roles.isEmpty() ? null : roles.get(0))

@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.subscription.domain;
 
+import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -18,7 +19,7 @@ import java.math.BigDecimal;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "subscription")
-public class Subscription {
+public class Subscription extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer subNo;
 

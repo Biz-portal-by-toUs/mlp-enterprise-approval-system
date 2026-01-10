@@ -129,11 +129,45 @@
             .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
             .ProseMirror table td, .ProseMirror table th { border: 1px solid #dee2e6; padding: 8px; min-width: 50px; }
 
-            /* 첨부파일 */
-            .file-attachments { padding: 12px; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; }
-            .file-item { display: flex; flex-direction: column; align-items: center; padding: 14px 16px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; cursor: pointer; min-width: 120px; }
+            /* ✅ 첨부파일 스타일: 가로 너비 직접 조정 및 균등 배분 */
+            .file-attachments {
+                padding: 12px;
+                display: flex;
+                gap: 10px;
+                overflow: hidden; /* 가로 스크롤 완전 방지 */
+                flex-wrap: nowrap; /* 한 줄 고정 */
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .file-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                padding: 14px 10px;
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                transition: all 0.2s;
+                cursor: pointer;
+                flex: 1;           /* 가로 공간을 균등하게 차지 */
+                min-width: 0;      /* ellipsis(말줄임표) 작동을 위한 필수 설정 */
+                max-width: 160px;  /* 가로 너비 고정 */
+            }
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
-            .file-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: center; }
+
+            .file-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: #333;
+                overflow: hidden;
+                text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
+                white-space: nowrap;     /* 줄바꿈 금지 */
+                width: 100%;
+                text-align: center;
+            }
+            .file-meta { font-size: 11px; color: #868e96; }
 
             /* 반려 정보 */
             .reject-card { background: linear-gradient(135deg, #fff5f5 0%, #fff 100%); border: 1px solid #ffc9c9; border-radius: 10px; padding: 20px; }
@@ -302,7 +336,6 @@
             }
         }
 
-        // 유틸리티 및 기타 로직
         function formatDateTime(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 
@@ -329,7 +362,14 @@
         function renderAttachments(attachments) {
             const container = document.getElementById('file-attachments');
             if (attachments.length === 0) { container.innerHTML = '<div class="no-files">첨부된 파일이 없습니다.</div>'; return; }
-            container.innerHTML = attachments.map(file => `<div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')"><div class="file-info"><div class="file-name" title="${file.originalName}">${file.originalName}</div><div class="file-meta">${formatFileSize(file.size)}</div></div></div>`).join('');
+            container.innerHTML = attachments.map(file => `
+                <div class="file-item" onclick="downloadFile(${file.attachmentId}, '${file.originalName}')">
+                    <div class="file-info" style="width: 100%; display: flex; flex-direction: column; align-items: center; min-width: 0;">
+                        <div class="file-name" title="${file.originalName}">${file.originalName}</div>
+                        <div class="file-meta">${formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function downloadFile(atchNo, originalName) {
@@ -370,7 +410,6 @@
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
 
-                // ✅ 수정: 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
                 const isDelegateAppr = line.isDelegate && line.isActualAppr;
                 const delegateLabel = isDelegateAppr ? `-대직(${line.targetApproverName || ''})-` : '';
 
@@ -416,52 +455,27 @@
             const cancelBtn = document.getElementById('btn-cancel-submit');
             banner.style.display = 'none'; banner.innerHTML = ''; cancelBtn.style.display = 'none';
 
-            // 1. 재상신된 문서가 있는 반려 문서인 경우
             if (doc.docStat === 'RJ' && doc.isResubmitted && doc.resubmittedForDocNo) {
                 banner.className = 'resubmit-banner';
-
-                // ✅ 재상신한 대상 문서가 임시저장(temp) 상태면 UNSUBMITTED(작성폼), 아니면 SUBMITTED(상세)로 이동
                 const targetStatus = doc.resubmittedForTemp ? 'UNSUBMITTED' : 'SUBMITTED';
                 const btnText = doc.resubmittedForTemp ? '작성 중인 문서로 이동 →' : '재상신한 문서로 이동 →';
                 const infoMsg = doc.resubmittedForTemp ? '현재 임시저장된 재작성 문서가 있습니다.' : '새로운 문서에서 수정된 내용을 확인하세요';
-
-                banner.innerHTML = `
-                    <div class="resubmit-banner-content">
-                        <h4>⚠️ 이 문서는 재작성되었습니다</h4>
-                        <p>${infoMsg}</p>
-                    </div>
-                    <button class="btn-navigate-doc" onclick="location.href='/documents/${doc.resubmittedForDocNo}?status=${targetStatus}'">${btnText}</button>
-                `;
+                banner.innerHTML = `<div class="resubmit-banner-content"><h4>⚠️ 이 문서는 재작성되었습니다</h4><p>${infoMsg}</p></div><button class="btn-navigate-doc" onclick="location.href='/documents/${doc.resubmittedForDocNo}?status=${targetStatus}'">${btnText}</button>`;
                 banner.style.display = 'flex'; return;
             }
 
-            // 2. 재상신을 통해 만들어진 새 문서인 경우 (원본 보기)
             if (doc.resubmittedByDocNo) {
                 banner.className = 'resubmit-banner new-doc';
-                banner.innerHTML = `
-                    <div class="resubmit-banner-content">
-                        <h4>📝 재상신된 문서입니다</h4>
-                        <p>원본 반려 문서를 확인하려면 클릭하세요</p>
-                    </div>
-                    <button class="btn-navigate-doc new-doc" onclick="location.href='/documents/${doc.resubmittedByDocNo}?status=SUBMITTED'">← 원본 문서 보기</button>
-                `;
+                banner.innerHTML = `<div class="resubmit-banner-content"><h4>📝 재상신된 문서입니다</h4><p>원본 반려 문서를 확인하려면 클릭하세요</p></div><button class="btn-navigate-doc new-doc" onclick="location.href='/documents/${doc.resubmittedByDocNo}?status=SUBMITTED'">← 원본 문서 보기</button>`;
                 banner.style.display = 'flex';
             }
 
-            // 3. 반려되었으나 아직 재상신 조치를 하지 않은 경우
             if (doc.docStat === 'RJ' && !doc.isResubmitted) {
                 banner.className = 'resubmit-banner';
-                banner.innerHTML = `
-                    <div class="resubmit-banner-content">
-                        <h4>❌ 반려된 문서입니다</h4>
-                        <p>문서를 수정하여 다시 상신하세요</p>
-                    </div>
-                    <button class="btn-navigate-doc" onclick="location.href='/documents/${currentDocNo}/rejected/rewrite'">재작성 →</button>
-                `;
+                banner.innerHTML = `<div class="resubmit-banner-content"><h4>❌ 반려된 문서입니다</h4><p>문서를 수정하여 다시 상신하세요</p></div><button class="btn-navigate-doc" onclick="location.href='/documents/${currentDocNo}/rejected/rewrite'">재작성 →</button>`;
                 banner.style.display = 'flex'; return;
             }
 
-            // 4. 결재 대기 중 상신 취소 가능 여부 확인
             if (doc.docStat === 'AW') {
                 const lines = doc.resApprovalLineDtos || [];
                 if (!lines.some(line => line.apprStat === 'A' || line.apprStat === 'R' || line.endedAt)) cancelBtn.style.display = 'block';

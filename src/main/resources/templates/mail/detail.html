@@ -17,8 +17,6 @@
             --card:#fff;
         }
 
-        /* ✅ layout 공통(.page-with-subbar / .page-main)은 건드리지 않음 */
-
         /* ===== page-only namespace: md-* ===== */
         .md-title{
             margin:0 0 14px 0;
@@ -100,8 +98,142 @@
 
         .md-btn.danger{ background:var(--danger); }
 
+        /* ===== attachments (detail) ===== */
+        .md-attach{
+            margin-top:16px;
+            border-top:1px solid var(--line);
+            padding-top:14px;
+        }
+        .md-attach-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            margin-bottom:8px;
+        }
+        .md-attach-title{
+            font-size:14px;
+            font-weight:900;
+            color:var(--fg);
+        }
+        .md-attach-note{
+            font-size:12px;
+            font-weight:800;
+            color:var(--mut);
+        }
+        .md-attach-list{
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+        }
+        .md-attach-item{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:10px 12px;
+            border:1px solid var(--line);
+            border-radius:12px;
+            background:#fff;
+            cursor:pointer;
+            user-select:none;
+        }
+        .md-attach-item:hover{
+            background:#f8fafc;
+            border-color: rgba(44,92,255,.25);
+        }
+        .md-attach-left{
+            min-width:0;
+            display:flex;
+            flex-direction:column;
+            gap:2px;
+        }
+        .md-attach-name{
+            font-weight:900;
+            color:var(--fg);
+            word-break:break-word;
+        }
+        .md-attach-meta{
+            font-size:12px;
+            font-weight:800;
+            color:var(--mut);
+        }
+        .md-attach-right{
+            flex:0 0 auto;
+            color:var(--mut);
+            font-size:12px;
+            font-weight:900;
+        }
+
+        /*  TipTap lockedQuote (답신 원문 블록) - detail 전용 스타일
+           - 접기/펼치기 없음 (항상 블록 형태로 노출)
+           - write 페이지 느낌과 최대한 유사하게 */
+
+        /* wrapper 자체 */
+        .md-content [data-locked-quote="1"]{
+            display:block;
+            margin:14px 0;
+            padding:12px;
+            border:1px solid var(--line);
+            border-left:6px solid #cbd5e1;
+            border-radius:12px;
+            background:#f8fafc;
+        }
+
+        /* wrapper 안 텍스트 톤 정리 (원문 영역은 살짝 약하게) */
+        .md-content [data-locked-quote="1"]{
+            color:var(--fg);
+        }
+
+        /* lockedQuote 안에서 만들어진 메타 그리드(제목/발신자) */
+        .md-content [data-locked-quote="1"] > div:first-child{
+            margin-bottom:10px;
+        }
+
+        /* 본문 박스(white card) */
+        .md-content [data-locked-quote="1"] [data-locked-quote-body="1"]{
+            display:block;
+            background:#fff;
+            border:1px solid rgba(15,23,42,.08);
+            border-radius:10px;
+            padding:10px 12px;
+            line-height:1.7;
+            word-break:break-word;
+            overflow-wrap:anywhere;
+        }
+
+        /* 원문 인용 안에 또 원문 인용이 들어가는 경우(중첩) → 티 안나게 제거 느낌 */
+        .md-content [data-locked-quote="1"] [data-locked-quote="1"]{
+            margin-top:10px;
+            opacity:.85;
+        }
+
+        /* 원문 안의 heading/list 기본 스타일 (필요 최소한) */
+        .md-content [data-locked-quote-body="1"] h1,
+        .md-content [data-locked-quote-body="1"] h2,
+        .md-content [data-locked-quote-body="1"] h3{
+            margin:10px 0 6px;
+            line-height:1.35;
+        }
+
+        .md-content [data-locked-quote-body="1"] ul,
+        .md-content [data-locked-quote-body="1"] ol{
+            padding-left:18px;
+            margin:8px 0;
+        }
+
+        .md-content [data-locked-quote-body="1"] p{
+            margin:6px 0;
+        }
+
         @media (max-width:760px){
             .md-meta{ grid-template-columns:90px 1fr; }
+
+            /* 모바일에서 원문 블록 살짝 촘촘하게 */
+            .md-content [data-locked-quote="1"]{
+                padding:10px;
+                border-left-width:5px;
+            }
         }
     </style>
 </head>
@@ -115,15 +247,25 @@
             <h2 class="md-title">메일 상세</h2>
 
             <section class="md-card">
+                <script th:inline="javascript">
+                    window.__ME_EMP_ID = /*[[${#authentication.name}]]*/ '';
+                </script>
                 <div class="md-meta">
                     <div class="md-k">제목</div><div class="md-v" id="titleTxt">-</div>
-
                     <div class="md-k" id="partyLabel">-</div><div class="md-v" id="partyTxt">-</div>
-
                     <div class="md-k">수신/발신일</div><div class="md-v" id="createdAtTxt">-</div>
                 </div>
 
                 <div class="md-content" id="contentBox">로딩 중...</div>
+
+                <!-- 첨부 섹션 (버튼 없이 클릭 다운로드) -->
+                <div class="md-attach" id="attachSection" style="display:none;">
+                    <div class="md-attach-head">
+                        <div class="md-attach-title">첨부파일</div>
+                        <div class="md-attach-note">파일을 클릭하면 다운로드됩니다.</div>
+                    </div>
+                    <div class="md-attach-list" id="attachList"></div>
+                </div>
 
                 <div class="md-actions">
                     <button class="md-btn ghost" type="button" id="btnBack">목록</button>
@@ -134,7 +276,7 @@
             </section>
 
             <script type="module">
-                // ===== utils =====
+                // utils
                 function getMailNoFromPath() {
                     const parts = window.location.pathname.split('/').filter(Boolean);
                     const v = parts.length >= 2 ? parts[1] : '';
@@ -165,37 +307,48 @@
                     el.style.display = on ? '' : 'none';
                 }
 
-                function getCsrfHeaders(){
+                function getCsrfHeaders() {
                     const csrfParamEl = document.getElementById('csrfParam');
                     const csrfHeaderEl = document.getElementById('csrfHeader');
                     if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
                     return {};
                 }
 
-                async function api(method, url) {
-                    const res = await fetch(url, {
-                        method,
-                        credentials: 'include',
-                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
-                    });
+                async function api(method, url, { timeoutMs = 8000, headers = {}, body = null } = {}) {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-                    if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
-                    if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
+                    try {
+                        const res = await fetch(url, {
+                            method,
+                            credentials: 'include',
+                            headers: { 'Accept': 'application/json', ...getCsrfHeaders(), ...headers },
+                            body,
+                            signal: controller.signal,
+                        });
 
-                    if (res.status === 204) return null;
+                        if (res.status === 401) throw new Error('401::로그인이 필요하거나 세션이 만료되었습니다.');
+                        if (res.status === 403) throw new Error('403::해당 메일에 대한 권한이 없습니다.');
+                        if (res.status === 204) return null;
 
-                    const json = await res.json().catch(() => null);
+                        const text = await res.text();
+                        const json = text ? (() => { try { return JSON.parse(text); } catch { return null; } })() : null;
 
-                    if (!res.ok) {
-                        const msg = json?.message || `HTTP ${res.status}`;
-                        throw new Error(`HTTP ${res.status} ${msg}`);
+                        if (!res.ok) {
+                            const msg = json?.message || text || `HTTP ${res.status}`;
+                            throw new Error(`HTTP ${res.status} ${msg}`);
+                        }
+
+                        return json?.data;
+                    } catch (e) {
+                        if (e?.name === 'AbortError') throw new Error('timeout::요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+                        throw e;
+                    } finally {
+                        clearTimeout(timer);
                     }
-
-                    return json?.data;
                 }
 
-                // (선택) 상세에서 active를 바꾸고 싶을 때만 사용. sidebar 구조가 다르면 조용히 무시됨.
-                function setSidebarActive(key){
+                function setSidebarActive(key) {
                     const nav = document.getElementById('mailNav');
                     if (!nav) return;
                     nav.dataset.active = key;
@@ -205,39 +358,238 @@
                     });
                 }
 
-                // Tiptap JSON -> HTML 렌더러
-                async function renderTiptap(jsonOrString) {
-                    // ✅ 다른 페이지와 버전 통일하고 싶으면 2.11.5로 바꿔도 됨
-                    const { generateHTML } = await import('https://esm.sh/@tiptap/html@2.11.2');
-                    const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@2.11.2')).default;
-
-                    const doc = (typeof jsonOrString === 'string')
-                        ? JSON.parse(jsonOrString)
-                        : jsonOrString;
-
-                    return generateHTML(doc, [StarterKit]);
+                function escapeHtml(str) {
+                    return String(str ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#039;');
                 }
 
-                function buildReceiversText(data){
+                function buildReceiversText(data) {
                     if (data.receivers && String(data.receivers).trim()) return String(data.receivers).trim();
 
                     const ids = Array.isArray(data.receiverEmpIds) ? data.receiverEmpIds : null;
-                    const names = Array.isArray(data.receiverEmpNames) ? data.receiverEmpNames : null;
+                    const names = Array.isArray(data.receiverNames) ? data.receiverNames : null;
 
-                    if (ids && ids.length){
-                        if (names && names.length === ids.length){
+                    if (ids && ids.length) {
+                        if (names && names.length === ids.length) {
                             return ids.map((id, i) => `${names[i] ?? ''} (${id ?? ''})`.trim()).join(', ');
                         }
                         return ids.join(', ');
                     }
-
-                    if (data.receiverEmpId || data.receiverEmpName){
-                        return `${data.receiverEmpName ?? ''} (${data.receiverEmpId ?? ''})`.trim();
-                    }
-
                     return '-';
                 }
 
+                function ensureReplyButton() {
+                    let btn = document.getElementById('btnReply');
+                    if (btn) return btn;
+
+                    const actions = document.querySelector('.md-actions');
+                    if (!actions) return null;
+
+                    btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.id = 'btnReply';
+                    btn.className = 'md-btn ghost';
+                    btn.textContent = '답신';
+
+                    const backBtn = document.getElementById('btnBack');
+                    if (backBtn && backBtn.nextSibling) actions.insertBefore(btn, backBtn.nextSibling);
+                    else actions.prepend(btn);
+
+                    return btn;
+                }
+
+                function formatBytes(bytes) {
+                    const n = Number(bytes || 0);
+                    if (!n) return '0B';
+                    const kb = n / 1024;
+                    if (kb < 1024) return `${Math.ceil(kb)}KB`;
+                    return `${(kb / 1024).toFixed(1)}MB`;
+                }
+
+                // attachments (detail)
+                async function loadAttachments(mailNo) {
+                    const sec = document.getElementById('attachSection');
+                    const list = document.getElementById('attachList');
+                    if (!sec || !list) return;
+
+                    const items = await api('GET', `/api/v1/attachments?domain=MAIL&entityId=${encodeURIComponent(mailNo)}`)
+                        .catch(() => []);
+
+                    if (!items || items.length === 0) {
+                        sec.style.display = 'none';
+                        list.innerHTML = '';
+                        return;
+                    }
+
+                    sec.style.display = '';
+                    list.innerHTML = items.map(it => `
+                          <div class="md-attach-item" data-id="${it.attachmentId}">
+                            <div class="md-attach-left">
+                              <div class="md-attach-name">${escapeHtml(it.originalName)}</div>
+                              <div class="md-attach-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
+                            </div>
+                            <div class="md-attach-right">다운로드</div>
+                          </div>
+                        `).join('');
+
+                    // click -> preview-url -> download
+                    if (!list.__dlBound) {
+                        list.__dlBound = true;
+                        list.addEventListener('click', async (e) => {
+                            const item = e.target.closest('.md-attach-item');
+                            if (!item) return;
+
+                            const attachmentId = item.dataset.id;
+                            if (!attachmentId) return;
+
+                            try {
+                                const data = await api('GET', `/api/v1/attachments/${encodeURIComponent(attachmentId)}/preview-url`);
+                                const url = data?.url;
+                                if (!url) throw new Error('다운로드 URL이 없습니다.');
+
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = '';
+                                a.rel = 'noopener';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            } catch (err) {
+                                console.error(err);
+                                alert('다운로드에 실패했습니다.');
+                            }
+                        });
+                    }
+                }
+
+                /*  TipTap renderer (detail)
+                 *  - 가장 안전: StarterKit + LockedQuote
+                 *  - 접기/펼치기 없음 */
+                let __tiptapRendererPromise = null;
+
+                function getTiptapRenderer() {
+                    if (__tiptapRendererPromise) return __tiptapRendererPromise;
+
+                    __tiptapRendererPromise = (async () => {
+                        const { generateHTML } = await import("https://esm.sh/@tiptap/html@2.11.5");
+                        const StarterKit = (await import("https://esm.sh/@tiptap/starter-kit@2.11.5")).default;
+                        const { Node } = await import("https://esm.sh/@tiptap/core@2.11.5");
+
+                        const LockedQuote = Node.create({
+                            name: "lockedQuote",
+                            group: "block",
+                            atom: true,
+                            selectable: false,
+
+                            addAttributes() {
+                                return {
+                                    title: { default: "" },
+                                    sender: { default: "" },
+                                    html: { default: "" },
+                                };
+                            },
+
+                            // 과거(details) 저장본 + 현재(div) 저장본 둘 다 인식
+                            parseHTML() {
+                                return [
+                                    { tag: 'details[data-locked-quote="1"]' },
+                                    { tag: 'div[data-locked-quote="1"]' },
+                                ];
+                            },
+
+                            // 접기/펼치기 없는 블록형
+                            renderHTML({ node }) {
+                                const title = String(node.attrs.title || "").trim();
+                                const sender = String(node.attrs.sender || "").trim();
+                                const html = String(node.attrs.html || "").trim();
+
+                                // 최소 방어(스크립트 제거)
+                                const sanitized = html.replaceAll(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+
+                                return [
+                                    "div",
+                                    {
+                                        "data-locked-quote": "1",
+                                        style: [
+                                            "border-left:4px solid #e2e8f0",
+                                            "background:#f8fafc",
+                                            "padding:12px",
+                                            "border-radius:10px",
+                                            "margin:12px 0",
+                                        ].join(";"),
+                                    },
+
+                                    [
+                                        "div",
+                                        {
+                                            style: [
+                                                "display:grid",
+                                                "grid-template-columns:64px 1fr",
+                                                "row-gap:6px",
+                                                "column-gap:10px",
+                                                "margin-bottom:10px",
+                                                "font-size:12px",
+                                                "font-weight:900",
+                                            ].join(";"),
+                                        },
+                                        ["div", { style: "color:#64748b" }, "제목:"],
+                                        ["div", { style: "color:#0f172a; word-break:break-word" }, title || "-"],
+                                        ["div", { style: "color:#64748b" }, "발신자:"],
+                                        ["div", { style: "color:#0f172a; word-break:break-word" }, sender || "-"],
+                                    ],
+
+                                    [
+                                        "div",
+                                        {
+                                            style: [
+                                                "background:#fff",
+                                                "border-radius:10px",
+                                                "padding:10px 12px",
+                                            ].join(";"),
+                                        },
+                                        // data-html에 넣어두고, 아래에서 innerHTML 주입
+                                        ["div", { "data-locked-quote-body": "1", "data-html": sanitized }, ""],
+                                    ],
+                                ];
+                            },
+                        });
+                        return { generateHTML, extensions: [StarterKit, LockedQuote] };
+                    })();
+
+                    return __tiptapRendererPromise;
+                }
+
+                async function renderTiptapCached(jsonStr) {
+                    const { generateHTML, extensions } = await getTiptapRenderer();
+
+                    const s = String(jsonStr || '').trim();
+                    if (!s) return '';
+
+                    let doc;
+                    try { doc = JSON.parse(s); }
+                    catch { return escapeHtml(s); }
+
+                    const html = generateHTML(doc, extensions);
+
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+
+                    // lockedQuote body 주입
+                    temp.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
+                        const raw = el.getAttribute('data-html') || '';
+                        el.innerHTML = raw;
+                        el.removeAttribute('data-html');
+                    });
+
+                    return temp.innerHTML;
+                }
+
+
+                // main
                 async function loadDetail() {
                     const mailNo = getMailNoFromPath();
                     const box = document.getElementById('contentBox');
@@ -247,6 +599,8 @@
                         return;
                     }
 
+                    box.textContent = '로딩 중...';
+
                     const data = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}`);
 
                     setText('titleTxt', data.title ?? '-');
@@ -254,7 +608,29 @@
 
                     const role = String(data.role || '').toUpperCase();
 
-                    // 라벨/값 동적 변경
+                    // ===== 답신 버튼 =====
+                    const isRecipient = (role === 'RECIPIENT' || role === 'RECEIVER');
+                    if (isRecipient) {
+                        const btnReply = ensureReplyButton();
+                        if (btnReply) {
+                            btnReply.style.display = '';
+                            btnReply.onclick = async () => {
+                                try {
+                                    const res = await api('GET', `/api/v1/mails/${encodeURIComponent(mailNo)}/reply`);
+                                    sessionStorage.setItem('mail.reply.payload', JSON.stringify(res));
+                                    location.href = '/mail/write';
+                                } catch (e) {
+                                    console.error(e);
+                                    alert('답신 payload 조회 중 오류가 발생했습니다.');
+                                }
+                            };
+                        }
+                    } else {
+                        const btnReply = document.getElementById('btnReply');
+                        if (btnReply) btnReply.style.display = 'none';
+                    }
+
+                    // 라벨/값
                     const partyLabelEl = document.getElementById('partyLabel');
                     const partyTxtEl = document.getElementById('partyTxt');
 
@@ -263,38 +639,85 @@
                         partyTxtEl.textContent = buildReceiversText(data);
                     } else {
                         partyLabelEl.textContent = '발신인';
-                        partyTxtEl.textContent =
-                            `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
+                        partyTxtEl.textContent = `${data.senderEmpName ?? ''} (${data.senderEmpId ?? ''})`.trim() || '-';
                     }
 
-                    // 내용 렌더
+                    // 내용 렌더: cnttHtml 우선, 없으면 cnttJson(=cntt)
                     try {
-                        if (data.cnttHtml && String(data.cnttHtml).trim()) {
-                            box.innerHTML = data.cnttHtml;
-                        } else if (data.cnttJson && String(data.cnttJson).trim()) {
-                            box.innerHTML = await renderTiptap(data.cnttJson);
+                        const hasHtml = !!(data.cnttHtml && String(data.cnttHtml).trim());
+                        const hasJson = !!(data.cnttJson && String(data.cnttJson).trim());
+                        const hasCntt = !!(data.cntt && String(data.cntt).trim());
+
+                        if (hasHtml) {
+                            box.innerHTML = String(data.cnttHtml);
+                        } else if (hasJson) {
+                            box.innerHTML = await renderTiptapCached(data.cnttJson);
+                        } else if (hasCntt) {
+                            box.innerHTML = await renderTiptapCached(data.cntt);
                         } else {
                             box.textContent = '';
                         }
                     } catch (e) {
                         console.error(e);
-                        box.textContent = data.cnttJson ?? '';
+                        box.textContent = '';
                     }
 
-                    // 읽음 처리(실패해도 무시)
-                    try { await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/read`); } catch (e) {}
+                    // 첨부 로드
+                    loadAttachments(mailNo).catch(console.error);
+
+                    // 읽음 처리(비동기)
+                    api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/read`, { timeoutMs: 4000 }).catch(() => {});
 
                     const isTrashed = !!data.deletedAt;
+                    const boxParam = (new URLSearchParams(location.search).get('box') || '').trim().toLowerCase();
 
-                    if (isTrashed) setSidebarActive('trash');
-                    else if (role === 'SENDER') setSidebarActive('sent');
-                    else setSidebarActive('received');
+                    const me = (window.__ME_EMP_ID || '').trim();
+                    const senderId = String(data.senderEmpId || '').trim();
+
+                    const recvIds = Array.isArray(data.receiverEmpIds)
+                        ? data.receiverEmpIds.map(v => String(v || '').trim()).filter(Boolean)
+                        : [];
+
+                    const isSelfByData =
+                        !!me &&
+                        senderId === me &&
+                        (
+                            recvIds.length === 0 ||
+                            (recvIds.length === 1 && recvIds[0] === me)
+                        );
+
+                    let sidebarKey;
+
+                    if (isTrashed) {
+                        sidebarKey = 'trash';
+                    }
+                    else if (['received', 'sent', 'self', 'drafts'].includes(boxParam)) {
+                        sidebarKey = boxParam;
+                    }
+                    else if (role === 'SENDER') {
+                        sidebarKey = 'sent';
+                    } else if (isSelfByData) {
+                        sidebarKey = 'self';
+                    } else {
+                        sidebarKey = 'received';
+                    }
+
+                    // 사이드바 활성화
+                    setSidebarActive(sidebarKey);
 
                     show('btnRestore', isTrashed);
                     show('btnPurge', isTrashed);
                     show('btnTrash', !isTrashed);
 
-                    const backUrl = isTrashed ? '/mail/trash' : (role === 'SENDER' ? '/mail/sent' : '/mail/received');
+                    const backUrlMap = {
+                        received: '/mail/received',
+                        sent: '/mail/sent',
+                        self: '/mail/self',
+                        drafts: '/mail/drafts',
+                        trash: '/mail/trash',
+                    };
+
+                    const backUrl = backUrlMap[sidebarKey] || '/mail/received';
                     document.getElementById('btnBack').onclick = () => location.href = backUrl;
 
                     document.getElementById('btnTrash').onclick = async () => {
@@ -304,8 +727,9 @@
                     };
 
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`);
-                        location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`, { timeoutMs: 8000 });
+                        const restoreTarget = (['received','sent','self','drafts'].includes(boxParam) ? boxParam : sidebarKey);
+                        location.href = backUrlMap[restoreTarget] || '/mail/received';
                     };
 
                     document.getElementById('btnPurge').onclick = async () => {
@@ -325,6 +749,11 @@
                             box.textContent = msg.split('::')[1];
                             return;
                         }
+                        if (msg.startsWith('timeout::')) {
+                            box.textContent = msg.split('::')[1];
+                            return;
+                        }
+
                         box.textContent = '메일 상세 조회에 실패했습니다.';
                     });
                 });

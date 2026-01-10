@@ -865,6 +865,14 @@
 
         document.getElementById('write-date').value = new Date().toLocaleDateString();
 
+        // 제목 글자수 제한 (100자) - IME 대응
+        const docTitleInput = document.getElementById('doc-title');
+        docTitleInput.addEventListener('input', (e) => {
+            if (e.target.value.length > 100) {
+                e.target.value = e.target.value.substring(0, 100);
+            }
+        });
+
         await fetchMyEmployeeInfo();
         await loadOriginalDocumentData();
         initApproverSearch();
@@ -1613,6 +1621,7 @@
                     const { selection } = state;
                     const { $from } = selection;
 
+                    // 1. 기존 비활성 셀 보호 로직
                     for (let depth = $from.depth; depth > 0; depth--) {
                         const node = $from.node(depth);
                         if (node.type.name === 'tableCell' && node.attrs.editable === false) {
@@ -1622,9 +1631,19 @@
                             }
                         }
                     }
+
+                    // 2. 글자 수 제한 로직 (1000자) - 키 입력 차단
+                    const currentLength = state.doc.textContent.length;
+                    const isControlKey = event.ctrlKey || event.metaKey || event.altKey;
+                    const allowedFunctionalKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape'];
+
+                    if (currentLength >= 1000 && !isControlKey && !allowedFunctionalKeys.includes(event.key)) {
+                        return true;
+                    }
+
                     return false;
                 },
-                handlePaste: (view) => {
+                handlePaste: (view, event, slice) => {
                     const { state } = view;
                     const { selection } = state;
                     const { $from } = selection;
@@ -1634,6 +1653,19 @@
                         if (node.type.name === 'tableCell' && node.attrs.editable === false) {
                             return true;
                         }
+                    }
+
+                    // 내용 1,000자 제한
+                    const currentLength = state.doc.textContent.length;
+                    const pasteText = slice.content.textBetween(0, slice.content.size);
+                    if (currentLength + pasteText.length > 1000) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: '입력 제한',
+                            text: '내용은 최대 1000자까지만 입력할 수 있습니다.',
+                            confirmButtonColor: '#339af0'
+                        });
+                        return true;
                     }
                     return false;
                 },
@@ -1652,6 +1684,12 @@
                 },
             },
             onUpdate: ({ editor }) => {
+                // 한글 입력 등으로 1000자 초과 시 강제 절단
+                const text = editor.getText();
+                if (text.length > 1000) {
+                    const overLength = text.length - 1000;
+                    editor.commands.deleteRange({ from: editor.state.selection.from - overLength, to: editor.state.selection.from });
+                }
                 updateCharCounter();
                 updateToolbarButtons();
             },
@@ -1756,14 +1794,18 @@
         if (url) { tiptapEditor.chain().focus().setImage({ src: url }).run(); }
     }
 
+    // ✅ 파일 처리 로직 (기존 활성 파일 + 새 파일 합쳐서 최대 5개)
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
         const maxCount = 5;
-        const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
+
+        // 현재 유지되고 있는 기존 파일의 개수 (삭제 목록에 없는 것들)
+        const activeExistingCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length;
 
         for (let file of files) {
-            if (currentCount + newFiles.length >= maxCount) {
+            // (기존 파일 개수 + 이미 추가된 새 파일 개수) 가 5개 이상이면 중단
+            if (activeExistingCount + newFiles.length >= maxCount) {
                 Swal.fire({
                     icon: 'warning',
                     title: '첨부 제한',
@@ -1772,6 +1814,7 @@
                 });
                 break;
             }
+
             if (file.size > maxSize) {
                 Swal.fire({
                     icon: 'warning',
@@ -1781,6 +1824,7 @@
                 });
                 continue;
             }
+
             if (newFiles.some(f => f.name === file.name && f.size === file.size)) {
                 Swal.fire({
                     icon: 'info',
@@ -1870,11 +1914,12 @@
         const html = tiptapEditor.getHTML();
         const text = tiptapEditor.getText().trim();
 
+        // 내용 100자 이상 조건
         if (text.length < 100) {
             return Swal.fire({
                 icon: 'warning',
                 title: 'AI 요약 오류',
-                text: '내용이 너무 짧아 요약할 수 없습니다.\n최소 100자 이상 입력해주세요.',
+                text: '요약을 진행하려면 내용을 최소 100자 이상 입력해주세요.',
                 confirmButtonColor: '#339af0'
             });
         }
@@ -1917,6 +1962,31 @@
         const contentHtml = tiptapEditor.getHTML();
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
+
+        // 상신 시 필수 벨리데이션
+        if (!isTemp) {
+            if (!title) {
+                Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '제목을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (!checkedRadio) {
+                Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '카테고리를 선택해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (selectedApprovers.length === 0) {
+                Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '최소 한 명 이상의 결재자를 지정해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (!contentText) {
+                Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '내용을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+        } else {
+            if (!title) {
+                Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+        }
 
         let startDate = null;
         let endDate = null;
@@ -1971,13 +2041,6 @@
         const includeAiSummary = document.getElementById('include-ai-summ').checked;
         const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
 
-        if (!title) return Swal.fire({
-            icon: 'warning',
-            title: '입력 오류',
-            text: '제목을 입력하세요.',
-            confirmButtonColor: '#339af0'
-        });
-
         if (title.length > 100) return Swal.fire({
             icon: 'warning',
             title: '입력 오류',
@@ -1985,31 +2048,10 @@
             confirmButtonColor: '#339af0'
         });
 
-        if (!contentText) return Swal.fire({
-            icon: 'warning',
-            title: '입력 오류',
-            text: '내용을 입력하세요.',
-            confirmButtonColor: '#339af0'
-        });
-
         if (contentText.length > 1000) return Swal.fire({
             icon: 'warning',
             title: '입력 오류',
             text: '내용은 1000자 이내로 입력하세요.',
-            confirmButtonColor: '#339af0'
-        });
-
-        if (!checkedRadio) return Swal.fire({
-            icon: 'warning',
-            title: '입력 오류',
-            text: '카테고리를 선택하세요.',
-            confirmButtonColor: '#339af0'
-        });
-
-        if (!isTemp && selectedApprovers.length === 0) return Swal.fire({
-            icon: 'warning',
-            title: '입력 오류',
-            text: '결재선을 최소 1명 지정하세요.',
             confirmButtonColor: '#339af0'
         });
 
@@ -2272,11 +2314,16 @@
     function initApproverSearch() {
         const searchInput = document.getElementById('approver-search');
         const searchResults = document.getElementById('search-results');
-        searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
+
         searchInput.addEventListener('input', (e) => {
+            if (e.target.value.length > 20) {
+                e.target.value = e.target.value.substring(0, 20);
+            }
             if (searchTimeout) clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => searchEmployees(e.target.value), 300);
         });
+
+        searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
         document.addEventListener('click', (e) => {
             if (!document.querySelector('.search-container').contains(e.target)) {
                 searchResults.innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
@@ -2435,7 +2482,6 @@
             const isLowerThanSelected = emp.posOrder > highestSelectedPosOrder;
             const isDisabled = isAdded || isSameOrLowerRank || hasSameRank || isLowerThanSelected;
 
-            // ✅ 대직자 정보 표시 (이름 오른쪽에 가로 배치)
             let delegateHtml = '';
             if (emp.delegateName) {
                 const isMe = emp.delegateId === myInfo.empId;
@@ -2462,7 +2508,6 @@
         }).join('');
     }
 
-    // ✅ 대직자 본인 확인 후 추가 함수 (SweetAlert2 컨펌 추가)
     function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) {
         if (delegateId === myInfo.empId) {
             Swal.fire({

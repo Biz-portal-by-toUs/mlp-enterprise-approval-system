@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.reservation.myreservation.dto;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 내 예약 조회 응답 DTO
@@ -22,14 +23,24 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Builder
 public class ResMyReservationDto {
-    private String target;     // 예약대상 (회의실/법인차량/공유설비 등)
-    private LocalDate date;    // 예약일자
-    private String time;  // 9:00~10:00
-    private String purpose;    // 사용 목적
-    private String location;      // 장소
-    private String status;     // 사용 예정/사용 완료 등
+    private LocalDate date;
+    private String time;
+    private String status;
+    private String domain;
+    private Long resvNo;
 
-    private String domain;    // (MEETING_ROOM / CORPORATE_CAR / SHARED_EQUIPMENT)
-    private Long resvNo;      // 예약 PK
+    // 회의실
+    private String roomName;
+    private String hostName;
+    private List<String> attendeeNames;
+
+    // 차량
+    private String carName;
+    private String plateNo;
+    private String purp;
+
+    // 설비
+    private String eqName;
+    private String eqId;
 }
 

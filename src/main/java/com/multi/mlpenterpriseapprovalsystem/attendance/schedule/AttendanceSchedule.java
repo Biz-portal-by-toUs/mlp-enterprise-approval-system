@@ -42,7 +42,7 @@ public class AttendanceSchedule {
     private final ApprovalLineRepository approvalLineRepository;
     private final NotificationService notificationService;
 
-    @Scheduled(cron = "0 1 0 * * *")
+    @Scheduled(cron = "0 3 0 * * *", zone = "Asia/Seoul")
     public void updateEmployeeDelegates() {
         updateDelegatesSchedule();
     }

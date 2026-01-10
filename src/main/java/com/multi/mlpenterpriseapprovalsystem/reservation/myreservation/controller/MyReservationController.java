@@ -37,9 +37,9 @@ public class MyReservationController {
 
     @GetMapping("/my-reservations")
     public ResponseEntity<ResponseDto<List<ResMyReservationDto>>> getMyReservations(
-            @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam("to")   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(value = "domain", required = false, defaultValue = "ALL") String domain,
+            @RequestParam(value="from", required=false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(value="to",   required=false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(value="domain", required=false, defaultValue="MEETING_ROOM") String domain,
             @AuthenticationPrincipal CustomUser user
     ) {
         List<ResMyReservationDto> rows = myReservationService.getMyReservations(user, startDate, endDate, domain);

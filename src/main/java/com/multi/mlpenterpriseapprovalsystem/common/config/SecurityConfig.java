@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.common.config;
 
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.JwtFilter;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.TokenProvider;
+import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,7 +41,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, TokenService tokenService) throws Exception {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -64,16 +65,33 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/**",
                                 "/meeting-rooms/**",
+                                "/corporate-cars/**",
+                                "/my-reservations",
+                                "/shared-equipment/**",
                                 "/admin/**",
                                 "/attachment-test",
                                 "/schedule/**",
-                                "/org-chart/**").permitAll()
-                        .requestMatchers(
+                                "/org-chart/**",
                                 "/uploads/**",
                                 "/images/**",
                                 "/css/**",
                                 "/js/**",
-                                "/favicon.ico").permitAll()
+                                "/favicon.ico",
+                                "/employees/**",
+                                "/meeting/**",
+                                "/attendances/**",
+                                "/board/**",
+                                "/chatbot",
+                                "/cloud/**",
+                                "/documents/**",
+                                "/document-forms",
+                                "/form/**",
+                                "/mail/**",
+                                "/notice/**",
+                                "/notifications",
+                                "/payment-methods/**",
+                                "/payment-historys",
+                                "/subscriptions").permitAll()
                         .requestMatchers("/api/v1/**").hasAnyRole("SYS_ADMIN",
                                 "COM_ADMIN",
                                 "SEC_ADMIN",
@@ -89,7 +107,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                .addFilterBefore(new JwtFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtFilter(tokenProvider, tokenService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
 
     }

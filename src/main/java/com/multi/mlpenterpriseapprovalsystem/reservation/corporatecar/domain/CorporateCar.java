@@ -27,7 +27,7 @@ public class CorporateCar {
     @Column(length = 20)
     private String carType;
 
-    @Column(length = 20, nullable = false)
+    @Column(length = 8, nullable = false)
     private String plateNo;
 
     @Column(nullable = false)

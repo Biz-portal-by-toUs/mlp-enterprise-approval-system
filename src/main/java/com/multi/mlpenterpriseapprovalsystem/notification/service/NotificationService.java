@@ -11,6 +11,7 @@ import com.multi.mlpenterpriseapprovalsystem.notification.dto.ResNotificationDto
 import com.multi.mlpenterpriseapprovalsystem.notification.redis.RedisNotificationPublisher;
 import com.multi.mlpenterpriseapprovalsystem.notification.repository.NotificationsRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
     private final NotificationsRepository notificationsRepository;
     private final SseManager sseManager;
@@ -134,4 +136,14 @@ public class NotificationService {
 
         notificationsRepository.deleteAllByEmpId(empId);
     }
+
+    public SseEmitter connectLoginDetectStream(String empId, String deviceId) {
+        return sseManager.connectDeviceScoped(empId, deviceId);
+    }
+
+    public void publishNewLoginDetected(String empId, String deviceId, String ip) {
+        log.info("[LOGIN-DETECT PUB] empId={}, deviceId={}, ip={}", empId, deviceId, ip);
+        redisNotificationPublisher.publishNewLogin(empId, deviceId, ip);
+    }
+
 }

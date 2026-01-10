@@ -23,6 +23,11 @@ public class SseManager {
     // 유저당 여러 탭 연결 지원
     private final Map<String, CopyOnWriteArrayList<SseEmitter>> userEmitters = new ConcurrentHashMap<>();
 
+    // ✅로그인 감지(new-login)용 (empId -> (deviceId -> emitters))
+    private final Map<String, Map<String, CopyOnWriteArrayList<SseEmitter>>> deviceScopedEmitters
+            = new ConcurrentHashMap<>();
+
+
     public SseEmitter createEmitter(String empId) {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
         userEmitters.computeIfAbsent(empId, k -> new CopyOnWriteArrayList<>()).add(emitter);
@@ -71,6 +76,64 @@ public class SseManager {
         }
 
         return emitter;
+    }
+
+    // =========================
+    // ✅로그인 감지(new-login) 전용 흐름
+    // =========================
+
+    /** new-login용 SSE 연결: empId + deviceId 로 등록 */
+    public SseEmitter connectDeviceScoped(String empId, String deviceId) {
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+
+        deviceScopedEmitters
+                .computeIfAbsent(empId, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(deviceId, k -> new CopyOnWriteArrayList<>())
+                .add(emitter);
+
+        emitter.onCompletion(() -> removeDeviceScopedEmitter(empId, deviceId, emitter));
+        emitter.onTimeout(() -> removeDeviceScopedEmitter(empId, deviceId, emitter));
+        emitter.onError(ex -> removeDeviceScopedEmitter(empId, deviceId, emitter));
+
+        try {
+            emitter.send(SseEmitter.event().name("connected").data(Map.of("ok", true)));
+        } catch (IOException | IllegalStateException e) {
+            removeDeviceScopedEmitter(empId, deviceId, emitter);
+        }
+
+        return emitter;
+    }
+
+    /** new-login 이벤트: 현재 deviceId 제외하고 다른 deviceId에게만 전송 */
+    public void sendToOtherDevices(String empId, String excludeDeviceId, String eventName, Object data) {
+        Map<String, CopyOnWriteArrayList<SseEmitter>> deviceMap = deviceScopedEmitters.get(empId);
+        if (deviceMap == null || deviceMap.isEmpty()) return;
+
+        deviceMap.forEach((deviceId, list) -> {
+            if (deviceId.equals(excludeDeviceId)) return;
+
+            for (SseEmitter emitter : list) {
+                try {
+                    emitter.send(SseEmitter.event().name(eventName).data(data));
+                } catch (IOException | IllegalStateException e) {
+                    removeDeviceScopedEmitter(empId, deviceId, emitter);
+                }
+            }
+        });
+    }
+
+    private void removeDeviceScopedEmitter(String empId, String deviceId, SseEmitter emitter) {
+        Map<String, CopyOnWriteArrayList<SseEmitter>> deviceMap = deviceScopedEmitters.get(empId);
+        if (deviceMap == null) return;
+
+        CopyOnWriteArrayList<SseEmitter> list = deviceMap.get(deviceId);
+        if (list != null) {
+            list.remove(emitter);
+            if (list.isEmpty()) deviceMap.remove(deviceId);
+        }
+        if (deviceMap.isEmpty()) deviceScopedEmitters.remove(empId);
+
+        try { emitter.complete(); } catch (Exception ignore) {}
     }
 
 

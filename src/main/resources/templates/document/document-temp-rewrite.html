@@ -862,6 +862,14 @@
         originalDocNo = pathParts[2];
         document.getElementById('write-date').value = new Date().toLocaleDateString();
 
+        // 제목 글자수 제한 (100자) - IME 대응
+        const docTitleInput = document.getElementById('doc-title');
+        docTitleInput.addEventListener('input', (e) => {
+            if (e.target.value.length > 100) {
+                e.target.value = e.target.value.substring(0, 100);
+            }
+        });
+
         await fetchMyEmployeeInfo();
         await loadOriginalDocumentData();
         initApproverSearch();
@@ -1431,7 +1439,33 @@
             content: initialContent,
             editable: true,
             autofocus: true,
-            onUpdate: () => { updateCharCounter(); updateToolbarButtons(); },
+            editorProps: {
+                handleKeyDown: (view, event) => {
+                    const { state } = view; const { selection } = state; const { $from } = selection;
+                    for (let depth = $from.depth; depth > 0; depth--) { const node = $from.node(depth); if (node.type.name === 'tableCell' && node.attrs.editable === false) { const blockedKeys = ['Backspace', 'Delete', 'Enter']; if (event.key.length === 1 || blockedKeys.includes(event.key)) return true; } }
+
+                    // 내용 1,000자 제한
+                    const currentLength = state.doc.textContent.length;
+                    const isControlKey = event.ctrlKey || event.metaKey || event.altKey;
+                    const allowedFunctionalKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape'];
+                    if (currentLength >= 1000 && !isControlKey && !allowedFunctionalKeys.includes(event.key)) return true;
+                    return false;
+                },
+                handlePaste: (view, event, slice) => {
+                    const { state } = view; const { selection } = state; const { $from } = selection;
+                    for (let depth = $from.depth; depth > 0; depth--) { const node = $from.node(depth); if (node.type.name === 'tableCell' && node.attrs.editable === false) return true; }
+                    const currentLength = state.doc.textContent.length;
+                    const pasteText = slice.content.textBetween(0, slice.content.size);
+                    if (currentLength + pasteText.length > 1000) { Swal.fire({ icon: 'warning', title: '입력 제한', text: '내용은 최대 1000자까지만 입력할 수 있습니다.', confirmButtonColor: '#339af0' }); return true; }
+                    return false;
+                },
+                handleDrop: (view, event, slice, moved) => { const { state } = view; const { selection } = state; const { $from } = selection; for (let depth = $from.depth; depth > 0; depth--) { const node = $from.node(depth); if (node.type.name === 'tableCell' && node.attrs.editable === false) return true; } return false; }
+            },
+            onUpdate: ({ editor }) => {
+                const text = editor.getText();
+                if (text.length > 1000) { const overLength = text.length - 1000; editor.commands.deleteRange({ from: editor.state.selection.from - overLength, to: editor.state.selection.from }); }
+                updateCharCounter(); updateToolbarButtons();
+            },
             onSelectionUpdate: () => updateToolbarButtons()
         });
         updateCharCounter();
@@ -1446,15 +1480,7 @@
         counter.style.fontWeight = length >= 900 ? 'bold' : 'normal';
     }
 
-    function updateToolbarButtons() {
-        if (!tiptapEditor) return;
-        const buttons = { 'btn-bold': 'bold', 'btn-italic': 'italic', 'btn-underline': 'underline', 'btn-strike': 'strike', 'btn-bullet': 'bulletList', 'btn-ordered': 'orderedList', 'btn-blockquote': 'blockquote', 'btn-align-left': { textAlign: 'left' }, 'btn-align-center': { textAlign: 'center' }, 'btn-align-right': { textAlign: 'right' } };
-        Object.entries(buttons).forEach(([btnId, format]) => {
-            const btn = document.getElementById(btnId);
-            if (btn) btn.classList.toggle('is-active', tiptapEditor.isActive(format));
-        });
-    }
-
+    function updateToolbarButtons() { if (!tiptapEditor) return; const buttons = { 'btn-bold': 'bold', 'btn-italic': 'italic', 'btn-underline': 'underline', 'btn-strike': 'strike', 'btn-bullet': 'bulletList', 'btn-ordered': 'orderedList', 'btn-blockquote': 'blockquote', 'btn-align-left': { textAlign: 'left' }, 'btn-align-center': { textAlign: 'center' }, 'btn-align-right': { textAlign: 'right' } }; Object.entries(buttons).forEach(([btnId, format]) => { const btn = document.getElementById(btnId); if (btn) btn.classList.toggle('is-active', tiptapEditor.isActive(format)); }); }
     function toggleBold() { tiptapEditor.chain().focus().toggleBold().run(); }
     function toggleItalic() { tiptapEditor.chain().focus().toggleItalic().run(); }
     function toggleUnderline() { tiptapEditor.chain().focus().toggleUnderline().run(); }
@@ -1464,42 +1490,26 @@
     function toggleBulletList() { tiptapEditor.chain().focus().toggleBulletList().run(); }
     function toggleOrderedList() { tiptapEditor.chain().focus().toggleOrderedList().run(); }
     function toggleBlockquote() { tiptapEditor.chain().focus().toggleBlockquote().run(); }
-    function insertTable() {
-        const rows = prompt('행(row) 수를 입력하세요:', '3');
-        const cols = prompt('열(column) 수를 입력하세요:', '3');
-        if (rows > 0 && cols > 0) tiptapEditor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: false }).run();
-    }
+    function insertTable() { const rows = prompt('행(row) 수를 입력하세요:', '3'); const cols = prompt('열(column) 수를 입력하세요:', '3'); if (rows > 0 && cols > 0) tiptapEditor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: false }).run(); }
     function deleteTable() { tiptapEditor.chain().focus().deleteTable().run(); }
     function insertLink() { const url = prompt('링크 URL을 입력하세요:'); if (url) tiptapEditor.chain().focus().setLink({ href: url }).run(); }
     function insertImage() { const url = prompt('이미지 URL을 입력하세요:'); if (url) tiptapEditor.chain().focus().setImage({ src: url }).run(); }
 
     function handleFileSelect(event) {
-        const files = Array.from(event.target.files);
-        const maxSize = 10 * 1024 * 1024;
-        const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
+        const files = Array.from(event.target.files); const maxSize = 10 * 1024 * 1024; const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
         for (let file of files) {
-            if (currentCount >= 5) { Swal.fire({ icon: 'warning', title: '첨부 제한', text: '최대 5개까지만 첨부할 수 있습니다.', confirmButtonColor: '#339af0' }); break; }
+            if (currentCount >= 5) { Swal.fire({ icon: 'warning', title: '첨부 제한', text: '최대 5개까지입니다.', confirmButtonColor: '#339af0' }); break; }
             if (file.size > maxSize) { Swal.fire({ icon: 'warning', title: '파일 크기 초과', text: `${file.name}은(는) 10MB를 초과합니다.`, confirmButtonColor: '#339af0' }); continue; }
             newFiles.push(file);
         }
-        event.target.value = '';
-        renderFileList();
+        event.target.value = ''; renderFileList();
     }
 
     function renderFileList() {
-        const container = document.getElementById('file-list');
-        const activeExisting = existingFiles.filter(file => !filesToDelete.includes(file.attachmentId));
+        const container = document.getElementById('file-list'); const activeExisting = existingFiles.filter(file => !filesToDelete.includes(file.attachmentId));
         if (activeExisting.length + newFiles.length === 0) { container.innerHTML = '<div style="color: #adb5bd; font-size: 12px; padding: 10px;">첨부된 파일이 없습니다.</div>'; return; }
-        let html = activeExisting.map(file => `
-            <div class="file-item" style="background: #f0f8ff;">
-                <div class="file-item-info"><span>📄</span><div><div class="file-item-name">${file.originalName}</div><div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존)</span></div></div></div>
-                <span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span>
-            </div>`).join('');
-        html += newFiles.map((file, index) => `
-            <div class="file-item">
-                <div class="file-item-info"><span>📄</span><div><div class="file-item-name">${file.name}</div><div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div></div></div>
-                <span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span>
-            </div>`).join('');
+        let html = activeExisting.map(file => `<div class="file-item" style="background: #f0f8ff;"><div class="file-item-info"><span>📄</span><div><div class="file-item-name">${file.originalName}</div><div class="file-item-size">${formatFileSize(file.size)} <span style="color: #339af0;">(기존)</span></div></div></div><span class="file-remove-btn" onclick="removeExistingFile(${file.attachmentId})">✕</span></div>`).join('');
+        html += newFiles.map((file, index) => `<div class="file-item"><div class="file-item-info"><span>📄</span><div><div class="file-item-name">${file.name}</div><div class="file-item-size">${formatFileSize(file.size)} <span style="color: #40c057;">(새 파일)</span></div></div></div><span class="file-remove-btn" onclick="removeNewFile(${index})">✕</span></div>`).join('');
         container.innerHTML = html;
     }
 
@@ -1511,19 +1521,12 @@
     async function generateAiSummary() {
         const text = tiptapEditor.getText().trim();
         if (text.length < 100) return Swal.fire({ icon: 'warning', title: 'AI 요약 오류', text: '내용이 100자 이상이어야 합니다.', confirmButtonColor: '#339af0' });
-        const summaryBox = document.getElementById('ai-summary-box');
-        const summaryText = document.getElementById('ai-summary-text');
-        summaryBox.style.display = 'block';
-        summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
+        const summaryBox = document.getElementById('ai-summary-box'); summaryBox.style.display = 'block'; document.getElementById('ai-summary-text').innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
         try {
             const response = await fetch('/api/v1/documents/ai-summary', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: tiptapEditor.getHTML() }) });
             const result = await response.json();
-            if (result.data) summaryText.innerText = result.data;
-            else throw new Error();
-        } catch (e) {
-            summaryBox.style.display = 'none';
-            Swal.fire({ icon: 'error', title: 'AI 요약 실패', text: '잠시 후 다시 시도해주세요.', confirmButtonColor: '#339af0' });
-        }
+            if (result.data) document.getElementById('ai-summary-text').innerText = result.data; else throw new Error();
+        } catch (e) { summaryBox.style.display = 'none'; Swal.fire({ icon: 'error', title: 'AI 요약 실패', text: '잠시 후 다시 시도해주세요.', confirmButtonColor: '#339af0' }); }
     }
 
     async function saveDocument(isTemp) {
@@ -1533,23 +1536,22 @@
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
 
-        if (!title || !contentText || !checkedRadio) return Swal.fire({ icon: 'warning', title: '입력 오류', text: '제목, 내용, 카테고리를 확인하세요.', confirmButtonColor: '#339af0' });
-        if (!isTemp && selectedApprovers.length === 0) return Swal.fire({ icon: 'warning', title: '결재선 미지정', text: '결재선을 최소 1명 지정해야 합니다.', confirmButtonColor: '#339af0' });
+        // 상신 시 벨리데이션 체크 강화
+        if (!isTemp) {
+            if (!title) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '제목을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
+            if (selectedApprovers.length === 0) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '최소 한 명 이상의 결재자를 지정해주세요.', confirmButtonColor: '#339af0' }); return; }
+            if (contentText.length === 0) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '내용을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
+            if (!checkedRadio) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '카테고리를 선택해주세요.', confirmButtonColor: '#339af0' }); return; }
+        } else {
+            if (!title) { Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
+        }
 
         if (normalized.includes('휴가') || normalized.includes('출장')) {
-            const start = document.getElementById('startDate').value;
-            const end = document.getElementById('endDate').value;
+            const start = document.getElementById('startDate').value; const end = document.getElementById('endDate').value;
             if (!isTemp && (!start || !end)) return Swal.fire({ icon: 'warning', title: '날짜 미입력', text: '기간을 입력하세요.', confirmButtonColor: '#339af0' });
             contentJson.attendanceInfo = { startDate: start, endDate: end };
-
-            // ✅ 기존 근태 식별자 유지
-            if (window.targetAtteNo) {
-                contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
-            }
-
-            if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) {
-                contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName, posName: selectedDelegate.posName, depName: selectedDelegate.depName };
-            }
+            if (window.targetAtteNo) contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
+            if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName, posName: selectedDelegate.posName, depName: selectedDelegate.depName };
         }
 
         const aiSummaryText = document.getElementById('ai-summary-text').innerText;
@@ -1571,9 +1573,7 @@
                 const err = await response.json().catch(() => ({}));
                 Swal.fire({ icon: 'error', title: '처리 실패', text: err.message || "오류가 발생했습니다.", confirmButtonColor: '#339af0' });
             }
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: '통신 오류', text: '서버와의 통신에 실패했습니다.', confirmButtonColor: '#339af0' });
-        }
+        } catch (e) { Swal.fire({ icon: 'error', title: '통신 오류', text: '서버와의 통신에 실패했습니다.', confirmButtonColor: '#339af0' }); }
     }
 
     async function registerDelegate(docNo, delegateEmpId) { try { await fetch('/api/v1/delegates', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId }) }); } catch (e) {} }
@@ -1597,152 +1597,48 @@
             const result = await response.json();
             if (response.ok && result.data) {
                 myInfo = { empId: result.data.empId, comId: result.data.comId || "C01", posOrder: result.data.position?.posOrder || 999 };
-                document.getElementById('writer-name').value = result.data.empName;
-                document.getElementById('writer-dept').value = result.data.department?.depName || "총무팀";
-                document.getElementById('writer-phone').value = result.data.workPhone || "-";
+                document.getElementById('writer-name').value = result.data.empName; document.getElementById('writer-dept').value = result.data.department?.depName || "총무팀"; document.getElementById('writer-phone').value = result.data.workPhone || "-";
             }
         } catch (e) {}
     }
 
     async function searchEmployees(keyword = '') {
         try {
-            let url = `/api/v1/employees?size=20&excludeMe=true`;
-            if (keyword.trim()) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
-            const result = await (await fetch(url, { credentials: 'include' })).json();
-            renderSearchResults(result.data?.items || []);
+            let url = `/api/v1/employees?size=20&excludeMe=true`; if (keyword.trim()) url += `&keyword=${encodeURIComponent(keyword.trim())}`;
+            const result = await (await fetch(url, { credentials: 'include' })).json(); renderSearchResults(result.data?.items || []);
         } catch (e) { renderSearchResults([]); }
     }
 
     function initApproverSearch() {
         const searchInput = document.getElementById('approver-search');
+        // 결재선 검색 입력 제한 (20자)
+        searchInput.addEventListener('input', (e) => {
+            if (e.target.value.length > 20) e.target.value = e.target.value.substring(0, 20);
+            clearTimeout(searchTimeout); searchTimeout = setTimeout(() => searchEmployees(e.target.value), 300);
+        });
         searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => searchEmployees(e.target.value), 300);
-        });
-        document.addEventListener('click', (e) => {
-            if (!document.querySelector('.search-container').contains(e.target)) document.getElementById('search-results').innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
-        });
+        document.addEventListener('click', (e) => { if (!document.querySelector('.search-container').contains(e.target)) document.getElementById('search-results').innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>'; });
     }
 
-    function initDelegateSearch() {
-        const searchInput = document.getElementById('delegate-search');
-        const results = document.getElementById('delegate-search-results');
-        searchInput.addEventListener('focus', () => { searchDelegates(searchInput.value); results.classList.add('show'); });
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(delegateSearchTimeout);
-            delegateSearchTimeout = setTimeout(() => { searchDelegates(e.target.value); results.classList.add('show'); }, 300);
-        });
-        document.addEventListener('click', (e) => { if (!e.target.closest('.delegate-search-wrapper')) results.classList.remove('show'); });
-    }
-
-    async function searchDelegates(keyword = '') {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        if (!startDate || !endDate) return;
-        try {
-            const res = await fetch(`/api/v1/delegates/available?startAt=${startDate}T00:00:00&endAt=${endDate}T23:59:59`, { credentials: 'include' });
-            const result = await res.json();
-            let employees = result.data || [];
-            if (keyword.trim()) {
-                const k = keyword.toLowerCase();
-                employees = employees.filter(emp => emp.empName.toLowerCase().includes(k) || emp.empId.toLowerCase().includes(k));
-            }
-            renderDelegateResults(employees);
-        } catch (e) { renderDelegateResults([]); }
-    }
-
-    function renderDelegateResults(employees) {
-        const container = document.getElementById('delegate-search-results');
-        if (employees.length === 0) { container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">조회된 대직자가 없습니다.</div>'; return; }
-        container.innerHTML = employees.map(emp => {
-            const isSelected = selectedDelegate?.empId === emp.empId;
-            const isAvailable = emp.available !== false;
-            const statusMessage = emp.statusMessage || "휴가";
-            const isDisabled = isSelected || !isAvailable;
-            let statusHtml = isSelected ? '<span style="float: right; color: #40c057;">✓ 선택됨</span>' : (!isAvailable ? `<span style="float: right; color: #fa5252; font-size: 11px;">${statusMessage}</span>` : '');
-            return `
-            <div class="delegate-result-item" onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}" style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}">
-                <strong>${emp.empName}</strong> | ${emp.posName || '사원'}<br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>${statusHtml}
-            </div>`;
-        }).join('');
-    }
-
-    function selectDelegate(empId, empName, posName, depName, posOrder) {
-        selectedDelegate = { empId, empName, posName, depName, posOrder };
-        renderSelectedDelegate();
-        updateTableDelegate();
-        document.getElementById('delegate-search').value = '';
-        document.getElementById('delegate-search-results').classList.remove('show');
-    }
-
-    function renderSelectedDelegate() {
-        const container = document.getElementById('selected-delegate-display');
-        const section = document.getElementById('selected-delegate-section');
-        if (!selectedDelegate) { container.innerHTML = ''; section.style.display = 'none'; return; }
-        section.style.display = 'flex';
-        container.innerHTML = `<div class="selected-delegate"><span class="delegate-icon">👤</span><div class="delegate-info"><span class="delegate-name">${selectedDelegate.empName} | ${selectedDelegate.posName}</span><span class="delegate-detail">${selectedDelegate.depName} | ${selectedDelegate.empId}</span></div><span class="delegate-remove" onclick="removeDelegate()">×</span></div>`;
-    }
-
+    function initDelegateSearch() { const searchInput = document.getElementById('delegate-search'); const results = document.getElementById('delegate-search-results'); searchInput.addEventListener('focus', () => { searchDelegates(searchInput.value); results.classList.add('show'); }); searchInput.addEventListener('input', (e) => { clearTimeout(delegateSearchTimeout); delegateSearchTimeout = setTimeout(() => { searchDelegates(e.target.value); results.classList.add('show'); }, 300); }); document.addEventListener('click', (e) => { if (!e.target.closest('.delegate-search-wrapper')) results.classList.remove('show'); }); }
+    async function searchDelegates(keyword = '') { const startDate = document.getElementById('startDate').value; const endDate = document.getElementById('endDate').value; if (!startDate || !endDate) return; try { const res = await fetch(`/api/v1/delegates/available?startAt=${startDate}T00:00:00&endAt=${endDate}T23:59:59`, { credentials: 'include' }); const result = await res.json(); let employees = result.data || []; if (keyword.trim()) { const k = keyword.toLowerCase(); employees = employees.filter(emp => emp.empName.toLowerCase().includes(k) || emp.empId.toLowerCase().includes(k)); } renderDelegateResults(employees); } catch (e) { renderDelegateResults([]); } }
+    function renderDelegateResults(employees) { const container = document.getElementById('delegate-search-results'); if (employees.length === 0) { container.innerHTML = '<div class="delegate-result-item" style="color: #adb5bd; cursor: default;">조회된 대직자가 없습니다.</div>'; return; } container.innerHTML = employees.map(emp => { const isSelected = selectedDelegate?.empId === emp.empId; const isAvailable = emp.available !== false; const statusMessage = emp.statusMessage || "휴가"; const isDisabled = isSelected || !isAvailable; let statusHtml = isSelected ? '<span style="float: right; color: #40c057;">✓ 선택됨</span>' : (!isAvailable ? `<span style="float: right; color: #fa5252; font-size: 11px;">${statusMessage}</span>` : ''); return `<div class="delegate-result-item" onclick="${isDisabled ? '' : `selectDelegate('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder})`}" style="${isDisabled ? 'opacity: 0.5; cursor: not-allowed; background: #f8f9fa;' : ''}"><strong>${emp.empName}</strong> | ${emp.posName || '사원'}<br><small style="color: #868e96;">${emp.depName || '-'} | ${emp.empId}</small>${statusHtml}</div>`; }).join(''); }
+    function selectDelegate(empId, empName, posName, depName, posOrder) { selectedDelegate = { empId, empName, posName, depName, posOrder }; renderSelectedDelegate(); updateTableDelegate(); document.getElementById('delegate-search').value = ''; document.getElementById('delegate-search-results').classList.remove('show'); }
+    function renderSelectedDelegate() { const container = document.getElementById('selected-delegate-display'); const section = document.getElementById('selected-delegate-section'); if (!selectedDelegate) { container.innerHTML = ''; section.style.display = 'none'; return; } section.style.display = 'flex'; container.innerHTML = `<div class="selected-delegate"><span class="delegate-icon">👤</span><div class="delegate-info"><span class="delegate-name">${selectedDelegate.empName} | ${selectedDelegate.posName}</span><span class="delegate-detail">${selectedDelegate.depName} | ${selectedDelegate.empId}</span></div><span class="delegate-remove" onclick="removeDelegate()">×</span></div>`; }
     function removeDelegate() { selectedDelegate = null; renderSelectedDelegate(); updateTableDelegate(); }
 
     function renderSearchResults(employees) {
-        const container = document.getElementById('search-results');
-        if (employees.length === 0) { container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>'; return; }
+        const container = document.getElementById('search-results'); if (employees.length === 0) { container.innerHTML = '<div style="padding:20px; text-align:center; font-size:12px; color:#adb5bd;">검색 결과 없음</div>'; return; }
         const highestOrder = selectedApprovers.length > 0 ? Math.min(...selectedApprovers.map(a => a.posOrder)) : Infinity;
         container.innerHTML = employees.map(emp => {
-            const isAdded = selectedApprovers.some(a => a.approverId === emp.empId);
-            const isSameOrLower = emp.posOrder >= myInfo.posOrder;
-            const isDupRank = selectedApprovers.some(a => a.posOrder === emp.posOrder);
-            const isLowerThanSelected = emp.posOrder > highestOrder;
-            const isDisabled = isAdded || isSameOrLower || isDupRank || isLowerThanSelected;
-
-            // ✅ 대직자 정보 가로 배치 로직
-            let delegateHtml = '';
-            if (emp.delegateName) {
-                const isMe = emp.delegateId === myInfo.empId;
-                const color = isMe ? '#339af0' : '#868e96';
-                delegateHtml = `<span style="color: ${color}; font-weight: ${isMe ? 'bold' : 'normal'}; font-size: 11px; margin-left: 8px;">
-                    (대직자: ${isMe ? '본인' : emp.delegateName})
-                </span>`;
-            }
-
+            const isAdded = selectedApprovers.some(a => a.approverId === emp.empId); const isSameOrLower = emp.posOrder >= myInfo.posOrder; const isDupRank = selectedApprovers.some(a => a.posOrder === emp.posOrder); const isLowerThanSelected = emp.posOrder > highestOrder; const isDisabled = isAdded || isSameOrLower || isDupRank || isLowerThanSelected;
+            let delegateHtml = emp.delegateName ? `<span style="color: ${emp.delegateId === myInfo.empId ? '#339af0' : '#868e96'}; font-weight: ${emp.delegateId === myInfo.empId ? 'bold' : 'normal'}; font-size: 11px; margin-left: 8px;">(대직자: ${emp.delegateId === myInfo.empId ? '본인' : emp.delegateName})</span>` : '';
             let statusText = isAdded ? '추가됨' : (isSameOrLower ? '직급낮음' : (isDupRank ? '중복직급' : (isLowerThanSelected ? '순서오류' : '+')));
-            return `
-            <div class="result-item" onclick="${isDisabled ? '' : `checkAndAddApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder}, '${emp.delegateId || ''}')`}" style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}">
-                <div>
-                    <strong>${emp.empName}</strong> | ${emp.posName || '사원'}
-                    ${delegateHtml}
-                    <br><small>${emp.depName || '-'} | ${emp.empId}</small>
-                </div>
-                <div style="color:${statusText === '+' ? 'var(--primary-color)' : '#fa5252'}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div>
-            </div>`;
+            return `<div class="result-item" onclick="${isDisabled ? '' : `checkAndAddApprover('${emp.empId}', '${emp.empName}', '${emp.posName || '사원'}', '${emp.depName || ''}', ${emp.posOrder}, '${emp.delegateId || ''}')`}" style="${isDisabled ? 'opacity:0.5; cursor:not-allowed; background:#f8f9fa;' : ''}"><div><strong>${emp.empName}</strong> | ${emp.posName || '사원'}${delegateHtml}<br><small>${emp.depName || '-'} | ${emp.empId}</small></div><div style="color:${statusText === '+' ? 'var(--primary-color)' : '#fa5252'}; font-weight:bold; font-size:${statusText === '+' ? '20px' : '11px'};">${statusText}</div></div>`;
         }).join('');
     }
 
-    // ✅ 대직자 본인 확인 함수 추가
-    function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) {
-        if (delegateId === myInfo.empId) {
-            Swal.fire({
-                title: '대직자 확인',
-                html: `선택하신 <b>${name} ${pos}</b>님의 현재 대직자는 <b style="color:#339af0;">본인</b>입니다.<br>정말 결재자로 지정하시겠습니까?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#339af0',
-                cancelButtonColor: '#adb5bd',
-                confirmButtonText: '네, 지정합니다',
-                cancelButtonText: '취소',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    addApprover(id, name, pos, dept, posOrder);
-                }
-            });
-        } else {
-            addApprover(id, name, pos, dept, posOrder);
-        }
-    }
-
+    function checkAndAddApprover(id, name, pos, dept, posOrder, delegateId) { if (delegateId === myInfo.empId) { Swal.fire({ title: '대직자 확인', html: `선택하신 <b>${name} ${pos}</b>님의 현재 대직자는 <b style="color:#339af0;">본인</b>입니다.<br>정말 결재자로 지정하시겠습니까?`, icon: 'question', showCancelButton: true, confirmButtonColor: '#339af0', cancelButtonColor: '#adb5bd', confirmButtonText: '네, 지정합니다', cancelButtonText: '취소', reverseButtons: true }).then((result) => { if (result.isConfirmed) addApprover(id, name, pos, dept, posOrder); }); } else addApprover(id, name, pos, dept, posOrder); }
     function addApprover(id, name, pos, dept, posOrder) {
         if (selectedApprovers.length >= 5) return Swal.fire({ icon: 'warning', title: '최대 인원 초과', text: '결재선은 최대 5명까지입니다.', confirmButtonColor: '#339af0' });
         if (posOrder >= myInfo.posOrder) return Swal.fire({ icon: 'warning', title: '직급 제한', text: '자신보다 높은 직급만 지정 가능합니다.', confirmButtonColor: '#339af0' });
@@ -1752,17 +1648,7 @@
         renderSelectedTags();
         searchEmployees(document.getElementById('approver-search').value);
     }
-
-    function renderSelectedTags() {
-        const container = document.getElementById('selected-list');
-        if (selectedApprovers.length === 0) { container.innerHTML = '<span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>'; return; }
-        container.innerHTML = selectedApprovers.map((a, i) => `
-            <span class="approver-tag">
-                <span class="seq-badge">${i + 1}</span><span class="info"><span class="name-pos">${a.approverName} | ${a.posName}</span><span class="dept-id">${a.depName} | ${a.approverId}</span></span>
-                <span class="remove-btn" onclick="removeApprover('${a.approverId}')">×</span>
-            </span>`).join('');
-    }
-
+    function renderSelectedTags() { const container = document.getElementById('selected-list'); if (selectedApprovers.length === 0) { container.innerHTML = '<span style="color: #adb5bd; font-size: 12px;">지정된 결재자가 없습니다.</span>'; return; } container.innerHTML = selectedApprovers.map((a, i) => `<span class="approver-tag"><span class="seq-badge">${i + 1}</span><span class="info"><span class="name-pos">${a.approverName} | ${a.posName}</span><span class="dept-id">${a.depName} | ${a.approverId}</span></span><span class="remove-btn" onclick="removeApprover('${a.approverId}')">×</span></span>`).join(''); }
     function removeApprover(id) { selectedApprovers = selectedApprovers.filter(a => a.approverId !== id); renderSelectedTags(); searchEmployees(document.getElementById('approver-search').value); }
 </script>
 </body>

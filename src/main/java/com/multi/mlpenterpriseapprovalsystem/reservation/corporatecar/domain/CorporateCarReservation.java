@@ -37,6 +37,8 @@ public class CorporateCarReservation {
     @JoinColumn(name = "car_no")
     private CorporateCar corporateCar;
 
+    private String plateNo;
+
     private LocalDateTime startedAt;
 
     private LocalDateTime endedAt;
@@ -53,6 +55,7 @@ public class CorporateCarReservation {
     public CorporateCarReservation(
             Company company,
             CorporateCar corporateCar,
+            String plateNo,
             Employee resvEmp,
             LocalDateTime startedAt,
             LocalDateTime endedAt,
@@ -60,6 +63,7 @@ public class CorporateCarReservation {
     ) {
         this.company = company;
         this.corporateCar = corporateCar;
+        this.plateNo = plateNo;
         this.resvEmp = resvEmp;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
