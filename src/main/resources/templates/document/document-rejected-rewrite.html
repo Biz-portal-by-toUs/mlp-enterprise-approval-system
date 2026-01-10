@@ -1988,6 +1988,16 @@
             }
         }
 
+        // ✅ 1. 로딩 인디케이터 시작 (중복 클릭 방지)
+        Swal.fire({
+            title: isTemp ? '임시 저장 중...' : '문서 재상신 중...',
+            text: '잠시만 기다려 주세요.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         let startDate = null;
         let endDate = null;
 
@@ -2000,6 +2010,7 @@
 
             if (!isTemp) {
                 if (!startDate || !endDate) {
+                    Swal.close();
                     return Swal.fire({
                         icon: 'warning',
                         title: '입력 오류',
@@ -2008,6 +2019,7 @@
                     });
                 }
                 if (startDate > endDate) {
+                    Swal.close();
                     return Swal.fire({
                         icon: 'warning',
                         title: '입력 오류',
@@ -2041,21 +2053,28 @@
         const includeAiSummary = document.getElementById('include-ai-summ').checked;
         const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
 
-        if (title.length > 100) return Swal.fire({
-            icon: 'warning',
-            title: '입력 오류',
-            text: '제목은 100자 이내로 입력하세요.',
-            confirmButtonColor: '#339af0'
-        });
+        if (title.length > 100) {
+            Swal.close();
+            return Swal.fire({
+                icon: 'warning',
+                title: '입력 오류',
+                text: '제목은 100자 이내로 입력하세요.',
+                confirmButtonColor: '#339af0'
+            });
+        }
 
-        if (contentText.length > 1000) return Swal.fire({
-            icon: 'warning',
-            title: '입력 오류',
-            text: '내용은 1000자 이내로 입력하세요.',
-            confirmButtonColor: '#339af0'
-        });
+        if (contentText.length > 1000) {
+            Swal.close();
+            return Swal.fire({
+                icon: 'warning',
+                title: '입력 오류',
+                text: '내용은 1000자 이내로 입력하세요.',
+                confirmButtonColor: '#339af0'
+            });
+        }
 
         if (!isTemp && includeAiSummary && !hasAiSummary) {
+            Swal.close();
             return Swal.fire({
                 icon: 'warning',
                 title: 'AI 요약 오류',
@@ -2100,22 +2119,29 @@
                 const result = await response.json();
                 const newDocNo = result.data?.docNo || result.data;
 
+                // ✅ 2. 병렬 처리 태스크 생성
+                const uploadTasks = [];
+
                 const activeExistingFiles = existingFiles.filter(file =>
                     !filesToDelete.includes(file.attachmentId)
                 );
 
                 if (activeExistingFiles.length > 0) {
-                    await copyExistingFiles(activeExistingFiles, newDocNo);
+                    uploadTasks.push(copyExistingFiles(activeExistingFiles, newDocNo));
                 }
 
                 if (newFiles.length > 0) {
-                    await uploadFiles(newDocNo);
+                    uploadTasks.push(uploadFiles(newDocNo));
                 }
 
                 if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate && newDocNo) {
-                    await registerDelegate(newDocNo, selectedDelegate.empId);
+                    uploadTasks.push(registerDelegate(newDocNo, selectedDelegate.empId));
                 }
 
+                // 모든 태스크 완료 대기
+                await Promise.all(uploadTasks);
+
+                Swal.close();
                 const successMessage = isTemp ? "임시 저장되었습니다." : "문서가 재상신되었습니다.";
                 const targetUrl = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
 
@@ -2128,19 +2154,14 @@
                     location.href = targetUrl;
                 });
             } else {
-                const err = await response.json().catch(() => ({}));
-                Swal.fire({
-                    icon: 'error',
-                    title: '오류 발생',
-                    text: err.message || "처리 실패",
-                    confirmButtonColor: '#339af0'
-                });
+                throw new Error('문서 저장 실패');
             }
         } catch (e) {
+            Swal.close();
             Swal.fire({
                 icon: 'error',
-                title: '통신 오류',
-                text: '서버와의 통신에 실패했습니다.\n잠시 후 다시 시도해주세요.',
+                title: '오류 발생',
+                text: e.message || '처리 중 문제가 발생했습니다.',
                 confirmButtonColor: '#339af0'
             });
         }
@@ -2162,22 +2183,23 @@
         }
     }
 
+    // ✅ 기존 파일 복사 병렬 처리 수정
     async function copyExistingFiles(files, newDocNo) {
-        for (const file of files) {
+        const tasks = files.map(async (file) => {
             try {
                 const fileId = file.attachmentId;
-                if (!fileId) continue;
+                if (!fileId) return;
 
                 const downloadUrlRes = await fetch(`/api/v1/attachments/${fileId}/download-url`, {
                     credentials: 'include'
                 });
-                if (!downloadUrlRes.ok) continue;
+                if (!downloadUrlRes.ok) return;
 
                 const downloadUrlData = await downloadUrlRes.json();
                 const downloadUrl = downloadUrlData.data.url;
 
                 const downloadRes = await fetch(downloadUrl);
-                if (!downloadRes.ok) continue;
+                if (!downloadRes.ok) return;
 
                 const blob = await downloadRes.blob();
 
@@ -2194,7 +2216,7 @@
                         size: file.size
                     })
                 });
-                if (!presignRes.ok) continue;
+                if (!presignRes.ok) return;
 
                 const presignData = await presignRes.json();
                 const { objectKey, uploadUrl } = presignData.data;
@@ -2204,7 +2226,7 @@
                     headers: { 'Content-Type': file.contentType },
                     body: blob
                 });
-                if (!uploadRes.ok) continue;
+                if (!uploadRes.ok) return;
 
                 const etag = uploadRes.headers.get('ETag');
 
@@ -2225,12 +2247,15 @@
                 });
             } catch (e) {
                 console.error('파일 복사 오류:', e);
+                throw e;
             }
-        }
+        });
+        await Promise.all(tasks);
     }
 
+    // ✅ 신규 파일 업로드 병렬 처리 수정
     async function uploadFiles(docNo) {
-        for (const file of newFiles) {
+        const tasks = newFiles.map(async (file) => {
             try {
                 const presignRes = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
@@ -2245,7 +2270,7 @@
                         size: file.size
                     })
                 });
-                if (!presignRes.ok) continue;
+                if (!presignRes.ok) return;
 
                 const presignData = await presignRes.json();
                 const { objectKey, uploadUrl } = presignData.data;
@@ -2255,7 +2280,7 @@
                     headers: { 'Content-Type': file.type },
                     body: file
                 });
-                if (!uploadRes.ok) continue;
+                if (!uploadRes.ok) return;
 
                 const etag = uploadRes.headers.get('ETag');
 
@@ -2276,8 +2301,10 @@
                 });
             } catch (e) {
                 console.error('파일 업로드 오류:', e);
+                throw e;
             }
-        }
+        });
+        await Promise.all(tasks);
     }
 
     async function fetchMyEmployeeInfo() {

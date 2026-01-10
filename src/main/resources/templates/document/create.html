@@ -924,18 +924,6 @@
         }
     }
 
-    // ✅ 대직 예정 기간 정보 API 호출
-    // async function fetchMyDelegatePeriods() {
-    //     try {
-    //         const res = await fetch('/api/v1/attendances/me/delegate-periods', { credentials: 'include' });
-    //         const result = await res.json();
-    //         myDelegatePeriods = result.data || [];
-    //         console.log('✅ 내 대직 예정 기간 로드 완료:', myDelegatePeriods);
-    //     } catch (e) {
-    //         console.error('❌ 대직 기간 로드 실패:', e);
-    //     }
-    // }
-
     // ✅ 대직 기간 중복 체크 로직 (본인이 이미 대직자인 경우 휴가 신청 차단)
     function checkOverlapWithMyDelegateJob(newStart, newEnd) {
         if (!newStart || !newEnd) return true;
@@ -2435,6 +2423,16 @@
             }
         }
 
+        // ✅ 1. 로딩 인디케이터 시작 (중복 클릭 방지)
+        Swal.fire({
+            title: isTemp ? '임시저장 중...' : '문서 상신 중...',
+            text: '잠시만 기다려 주세요.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         if (normalized.includes('휴가') || normalized.includes('출장')) {
             const start = document.getElementById('startDate').value;
             const end = document.getElementById('endDate').value;
@@ -2471,22 +2469,37 @@
                 const result = await response.json();
                 const docNo = result.data?.docNo || result.data;
 
-                // ✅ 기존 파일 복사 (물리적 업로드)
+                // ✅ 2. 병렬 비동기 처리 실행 (기존 파일 복사 + 새 파일 업로드)
+                const uploadTasks = [];
+
                 const activeExisting = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId));
-                if (activeExisting.length > 0) await copyExistingFiles(activeExisting, docNo);
+                if (activeExisting.length > 0) {
+                    uploadTasks.push(copyExistingFiles(activeExisting, docNo));
+                }
 
-                // ✅ 신규 파일 업로드
-                if (newFiles.length > 0) await uploadFiles(docNo);
+                if (newFiles.length > 0) {
+                    uploadTasks.push(uploadFiles(docNo));
+                }
 
-                Swal.fire({ icon: 'success', title: '완료' }).then(() => {
+                // 모든 파일 관련 작업이 완료될 때까지 대기
+                await Promise.all(uploadTasks);
+
+                Swal.close();
+                Swal.fire({ icon: 'success', title: '완료', confirmButtonColor: '#339af0' }).then(() => {
                     location.href = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED";
                 });
+            } else {
+                throw new Error('문서 저장 실패');
             }
-        } catch (e) {}
+        } catch (e) {
+            Swal.close();
+            Swal.fire({ icon: 'error', title: '오류 발생', text: '처리 중 문제가 발생했습니다.', confirmButtonColor: '#339af0' });
+        }
     }
 
+    // ✅ 기존 파일 복사 병렬 처리 수정
     async function copyExistingFiles(files, newDocNo) {
-        for (const file of files) {
+        const tasks = files.map(async (file) => {
             try {
                 const resUrl = await fetch(`/api/v1/attachments/${file.attachmentId}/download-url`, { credentials: 'include' });
                 const dataUrl = await resUrl.json();
@@ -2513,12 +2526,17 @@
                         contentType: file.contentType, size: file.size, etag: upload.headers.get('ETag')?.replace(/"/g, '')
                     })
                 });
-            } catch (e) { console.error('기존 파일 복사 오류', e); }
-        }
+            } catch (e) {
+                console.error('기존 파일 복사 오류', e);
+                throw e;
+            }
+        });
+        await Promise.all(tasks);
     }
 
+    // ✅ 신규 파일 업로드 병렬 처리 수정
     async function uploadFiles(docNo) {
-        for (const file of newFiles) {
+        const tasks = newFiles.map(async (file) => {
             try {
                 const presign = await fetch('/api/v1/attachments/presign', {
                     method: 'POST',
@@ -2534,8 +2552,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), objectKey: presignData.data.objectKey, originalName: file.name, contentType: file.type, size: file.size, etag: upload.headers.get('ETag')?.replace(/"/g, '') })
                 });
-            } catch (e) {}
-        }
+            } catch (e) {
+                console.error('신규 파일 업로드 오류', e);
+                throw e;
+            }
+        });
+        await Promise.all(tasks);
     }
 </script>
 </body>
