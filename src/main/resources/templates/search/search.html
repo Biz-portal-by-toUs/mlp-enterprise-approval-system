@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>통합검색 - Bizportal</title>
+
+    <th:block layout:fragment="pageStyles">
+        <style>
+            .search-container { max-width: 1100px; margin: 20px auto; font-family: 'Pretendard', sans-serif; }
+
+            /* 1. 상단 글로벌 섹션 탭 */
+            .global-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; margin-bottom: 20px; gap: 4px; }
+            .global-tab { flex: 1; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; font-weight: 700; color: #64748b; transition: 0.2s; }
+            .global-tab:hover { background: #e2e8f0; }
+            .global-tab.active { background: #003366; color: #fff; }
+
+            /* 2. 필터 상태바 */
+            .filter-info-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 2px solid #334155; margin-bottom: 10px; }
+            .filter-info-bar .search-term { font-size: 18px; font-weight: 700; }
+            .term-text { color: #e11d48; font-weight: 700; }
+
+            /* 3. 전체 탭 - 섹션별 헤더 */
+            .total-section-header {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 15px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; margin-top: 30px;
+            }
+            .total-section-header:first-child { margin-top: 0; }
+            .total-section-title { font-size: 18px; font-weight: 800; color: #1e293b; }
+            .btn-more {
+                padding: 6px 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px;
+                font-size: 13px; font-weight: 700; color: #475569; cursor: pointer;
+            }
+            .btn-more:hover { background: #f1f5f9; }
+
+            /* 4. 결과 아이템 공통 스타일 */
+            .result-item { display: flex; flex-direction: column; padding: 20px 10px; border-bottom: 1px solid #f1f5f9; }
+            .result-top { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 8px; }
+            .result-category { color: #2563eb; font-weight: 700; font-size: 14px; min-width: 100px; }
+            .result-title { font-size: 17px; font-weight: 700; flex: 1; }
+            .result-title a { color: #1e293b; text-decoration: none; }
+            .result-title a:hover { text-decoration: underline; }
+
+            .result-snippet { color: #64748b; font-size: 14px; line-height: 1.6; margin-left: 115px; }
+            .result-snippet em, .result-title em { color: #e11d48; font-style: normal; font-weight: 700; background: transparent; }
+
+            .result-bottom { margin-top: 10px; margin-left: 115px; display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; }
+
+            /* 5. 페이징/서브탭 */
+            .sub-tabs { display: flex; gap: 10px; padding: 15px 10px; border-bottom: 1px solid #e2e8f0; }
+            .sub-tab { font-weight: 800; color: #475569; cursor: pointer; padding: 4px 8px; }
+            .sub-tab.active { color: #003366; text-decoration: underline; text-underline-offset: 4px; }
+
+            .pager { display: flex; justify-content: center; padding: 30px 0; gap: 5px; }
+            .page-btn { border: 1px solid #e2e8f0; background: #fff; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-weight: 700; }
+            .page-btn.active { background: #003366; color: #fff; border-color: #003366; }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="search-container">
+        <div class="global-tabs" id="globalTabs"></div>
+
+        <div class="filter-info-bar">
+            <div class="search-term">
+                적용된 검색어 '<span class="term-text" id="termDisplay"></span>' /
+                <span id="currentSectionTitle">전체</span> (<span id="currentCountDisplay">0</span>건)
+            </div>
+        </div>
+
+        <div class="search-results-wrap" id="searchResultArea"></div>
+    </div>
+</div>
+
+<th:block layout:fragment="pageScripts">
+    <script>
+        const PAGE_SIZE = 10;
+
+        // ✅ 변경된 메뉴 구성 반영 (A~E)
+        const MENU_TYPES = {
+            A: ['NOTICE'],
+            B: ['BOARD'],
+            C: ['SCHEDULE'],
+            D: ['APPROVAL'],
+            E: ['MEETING']
+        };
+
+        // ✅ 일정(C)에만 서브 탭 존재
+        const MENU_TABS = {
+            C: [
+                { key: 'COMPANY',    label: '회사 일정' },
+                { key: 'DEPARTMENT', label: '부서 일정' },
+                { key: 'PERSONAL',   label: '개인 일정' }
+            ]
+        };
+
+        let lastSearchData = null;
+        let currentMenuKey = 'TOTAL';
+        const state = {
+            subKey: { C: 'COMPANY' }, // 일정용 서브키
+            page: { A: 0, B: 0, C: 0, D: 0, E: 0 }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q') || '';
+            document.getElementById('termDisplay').innerText = query;
+            executeSearch(query);
+        });
+
+        async function executeSearch(q) {
+            try {
+                const response = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
+                const result = await response.json();
+                if (response.ok && result.data) {
+                    lastSearchData = result.data;
+                    renderGlobalTabs(result.data.sections);
+                    showSection('TOTAL');
+                }
+            } catch (error) { console.error('Search failed:', error); }
+        }
+
+        function renderGlobalTabs(sections) {
+            const container = document.getElementById('globalTabs');
+            const totalCount = sections.reduce((acc, s) => acc + (s.count || 0), 0);
+
+            let html = `<div class="global-tab ${currentMenuKey === 'TOTAL' ? 'active' : ''}" onclick="showSection('TOTAL')">전체 (${totalCount})</div>`;
+            html += sections.map(sec => `
+                <div class="global-tab ${sec.menuKey === currentMenuKey ? 'active' : ''}" onclick="showSection('${sec.menuKey}', {autoPickSubTab: true})">
+                    ${escapeHtml(sec.title)} (${sec.count ?? 0})
+                </div>
+            `).join('');
+            container.innerHTML = html;
+        }
+
+        async function showSection(menuKey, opt = {}) {
+            currentMenuKey = menuKey;
+            const resultArea = document.getElementById('searchResultArea');
+            renderGlobalTabs(lastSearchData.sections);
+
+            if (menuKey === 'TOTAL') {
+                document.getElementById('currentSectionTitle').innerText = '전체';
+                document.getElementById('currentCountDisplay').innerText = lastSearchData.sections.reduce((acc, s) => acc + (s.count || 0), 0);
+                renderTotalView();
+                return;
+            }
+
+            const section = lastSearchData.sections.find(s => s.menuKey === menuKey);
+            document.getElementById('currentSectionTitle').innerText = section?.title;
+            document.getElementById('currentCountDisplay').innerText = section?.count ?? 0;
+
+            // ✅ 일정(C)만 서브 탭 처리, 나머지는 단순 페이징
+            if (menuKey === 'C') {
+                if (opt.autoPickSubTab) { state.subKey.C = 'COMPANY'; state.page.C = 0; }
+                await loadAndRenderPageWithSubTabs('C');
+            } else {
+                await loadAndRenderSimple(menuKey);
+            }
+        }
+
+        function renderTotalView() {
+            const resultArea = document.getElementById('searchResultArea');
+            let html = '';
+
+            lastSearchData.sections.forEach(sec => {
+                if (sec.count > 0) {
+                    html += `
+                        <div class="total-section-header">
+                            <div class="total-section-title">${escapeHtml(sec.title)} (${sec.count}건)</div>
+                            <button class="btn-more" onclick="showSection('${sec.menuKey}', {autoPickSubTab: true})">더보기 ></button>
+                        </div>
+                        <div class="total-section-body">
+                            ${sec.items.map(it => renderResultItem(it)).join('')}
+                        </div>
+                    `;
+                }
+            });
+            resultArea.innerHTML = html || '<div style="padding:50px; text-align:center; color:#94a3b8;">검색 결과가 없습니다.</div>';
+        }
+
+        async function fetchPageForCurrent() {
+            const q = new URLSearchParams(window.location.search).get('q') || '';
+            const page = state.page[currentMenuKey] ?? 0;
+            let types = MENU_TYPES[currentMenuKey] || [];
+            let scope = (currentMenuKey === 'C') ? state.subKey.C : null;
+
+            const url = new URL('/api/v1/search/page', window.location.origin);
+            url.searchParams.set('q', q);
+            url.searchParams.set('page', String(page));
+            url.searchParams.set('size', String(PAGE_SIZE));
+            types.forEach(t => url.searchParams.append('types', t));
+            if (scope) url.searchParams.set('scope', scope);
+
+            const resp = await fetch(url.toString());
+            const json = await resp.json();
+            return json.data;
+        }
+
+        // ✅ 서브 탭이 있는 페이지 렌더링 (현재 C: 일정 전용)
+        async function loadAndRenderPageWithSubTabs(menuKey) {
+            const data = await fetchPageForCurrent();
+            const resultArea = document.getElementById('searchResultArea');
+            const tabsHtml = renderSubTabsHtml(menuKey);
+            const listHtml = data?.items?.length ? data.items.map(it => renderResultItem(it)).join('') : '<p style="padding:20px; text-align:center;">결과가 없습니다.</p>';
+            resultArea.innerHTML = tabsHtml + listHtml + renderPagerHtml(data.total, data.page, data.size, (p) => `goPageWithSubTabs('${menuKey}', ${p})`);
+        }
+
+        // ✅ 서브 탭 없는 단순 카테고리 렌더링 (A, B, D, E)
+        async function loadAndRenderSimple(menuKey) {
+            const data = await fetchPageForCurrent();
+            const resultArea = document.getElementById('searchResultArea');
+            const listHtml = data?.items?.length ? data.items.map(it => renderResultItem(it)).join('') : '<p style="padding:20px; text-align:center;">결과가 없습니다.</p>';
+            resultArea.innerHTML = listHtml + renderPagerHtml(data.total, data.page, data.size, (p) => `goPageSimple('${menuKey}', ${p})`);
+        }
+
+        function renderSubTabsHtml(menuKey) {
+            const tabs = MENU_TABS[menuKey] || [];
+            const active = state.subKey[menuKey];
+            return `<div class="sub-tabs">${tabs.map(t => `<div class="sub-tab ${t.key === active ? 'active' : ''}" onclick="switchSubTab('${menuKey}', '${t.key}')">${t.label}</div>`).join('')}</div>`;
+        }
+
+        function renderResultItem(it) {
+            const dateStr = formatDate(it.createdAt);
+
+            // 기본 카테고리 맵
+            const categoryMap = {
+                'NOTICE': '공지사항',
+                'BOARD': '게시판',
+                'APPROVAL': '전자결재',
+                'MEETING': '회의'
+            };
+
+            // 라벨 결정 로직
+            let label = categoryMap[it.type] || it.type;
+
+            if (it.type === 'SCHEDULE') {
+                if (it.scope === 'PERSONAL') label = '개인일정';
+                else if (it.scope === 'DEPARTMENT') label = '부서일정';
+                else if (it.scope === 'COMPANY') label = '회사일정';
+                else label = '일정';
+            }
+
+            return `
+        <div class="result-item">
+            <div class="result-top">
+                <div class="result-category">${escapeHtml(label)}</div>
+                <div class="result-title"><a href="${escapeAttr(it.url)}">${pickBestTitle(it)}</a></div>
+            </div>
+            <div class="result-snippet">${pickBestSnippet(it)}</div>
+            <div class="result-bottom">
+                <span>작성일 : ${dateStr}</span>
+            </div>
+        </div>
+    `;
+        }
+
+        /* 핸들러 */
+        async function switchSubTab(menuKey, subKey) {
+            state.subKey[menuKey] = subKey;
+            state.page[menuKey] = 0;
+            await loadAndRenderPageWithSubTabs(menuKey);
+        }
+        async function goPageWithSubTabs(menuKey, p) {
+            state.page[menuKey] = p;
+            await loadAndRenderPageWithSubTabs(menuKey);
+        }
+        async function goPageSimple(m, p) {
+            state.page[m] = p;
+            await loadAndRenderSimple(m);
+        }
+
+        function renderPagerHtml(total, page, size, onClickExprBuilder) {
+            const totalPages = Math.ceil((total || 0) / (size || PAGE_SIZE));
+            if (totalPages <= 1) return '';
+            let nums = '';
+            for (let p = 0; p < totalPages; p++) {
+                nums += `<button class="page-btn ${p === page ? 'active' : ''}" onclick="${onClickExprBuilder(p)}">${p + 1}</button>`;
+            }
+            return `<div class="pager">${nums}</div>`;
+        }
+
+        function pickBestTitle(item) { return item.highlight?.title?.[0] || escapeHtml(item.title || '제목 없음'); }
+        function pickBestSnippet(item) {
+            const hl = item.highlight;
+            return hl?.contentText?.[0] || hl?.content?.[0] || hl?.summary?.[0] || escapeHtml(trimText(item.summary || item.contentText || '', 160));
+        }
+        function trimText(s, l) { return s.length > l ? s.substring(0, l) + '...' : s; }
+        function formatDate(v) { if(!v) return '-'; const d = new Date(v); return d.toLocaleDateString(); }
+        function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+    </script>
+</th:block>
+</body>
+</html>
