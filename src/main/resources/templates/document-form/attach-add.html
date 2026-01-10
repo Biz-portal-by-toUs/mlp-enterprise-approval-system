@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}"
+      th:classappend="${perm_isEmployee == true} ? 'role-employee' : ''"
+      th:attr="data-is-employee=${perm_isEmployee}, data-can-create=${perm_canCreateAttach}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>첨부문서 등록</title>
+
+    <style layout:fragment="pageStyles">
+        :root{
+            --fg:#0f172a;
+            --mut:#64748b;
+            --line:#e2e8f0;
+            --danger:#ef4444;
+            --card:#fff;
+        }
+
+        /* ===== page-only namespace: aa-* (attach-add) ===== */
+        .aa-title{ margin:0 0 14px 0; font-size:18px; font-weight:900; }
+
+        .aa-card{
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:14px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            padding:18px;
+        }
+
+        /* attach-detail과 동일한 표 느낌 */
+        .aa-grid{
+            width:100%;
+            border:1px solid var(--line);
+            border-radius:12px;
+            overflow:hidden;
+            background:#fff;
+        }
+        .aa-row{
+            display:grid;
+            grid-template-columns: 140px 1fr 140px 1fr;
+        }
+        .aa-row.full{
+            grid-template-columns: 140px 1fr;
+        }
+
+        .aa-th{
+            background:#f9fafb;
+            border-right:1px solid var(--line);
+            border-bottom:1px solid var(--line);
+            padding:12px 14px;
+            font-size:13px;
+            font-weight:900;
+            color:var(--fg);
+            display:flex;
+            align-items:center;
+            min-height:46px;
+        }
+        .aa-td{
+            border-bottom:1px solid var(--line);
+            padding:12px 14px;
+            font-size:14px;
+            font-weight:800;
+            color:var(--fg);
+            display:flex;
+            align-items:center;
+            min-height:46px;
+            min-width:0;
+        }
+        /* 오른쪽 th/td의 세로선 */
+        .aa-row .aa-td:nth-child(2){ border-right:1px solid var(--line); }
+
+        .aa-td.multiline{
+            align-items:flex-start;
+            white-space:normal;
+            overflow:visible;
+            word-break:break-word;
+        }
+
+        .aa-input{
+            width:100%;
+            border:1px solid var(--line);
+            border-radius:10px;
+            padding:10px 12px;
+            font-size:14px;
+            font-weight:800;
+            outline:none;
+            background:#fff;
+        }
+        .aa-input:focus{
+            border-color: rgba(44, 92, 255, .55);
+            box-shadow: 0 0 0 4px rgba(44, 92, 255, .10);
+        }
+        .aa-textarea{
+            width:100%;
+            border:1px solid var(--line);
+            border-radius:10px;
+            padding:10px 12px;
+            font-size:14px;
+            font-weight:800;
+            outline:none;
+            background:#fff;
+            resize:vertical;
+            min-height:90px;
+        }
+        .aa-textarea:focus{
+            border-color: rgba(44, 92, 255, .55);
+            box-shadow: 0 0 0 4px rgba(44, 92, 255, .10);
+        }
+
+        /* ===== attachments UI (write.html 참고) ===== */
+        .aa-att-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            margin-bottom:8px;
+            width:100%;
+        }
+        .aa-att-note{
+            color:var(--mut);
+            font-size:12px;
+            font-weight:800;
+        }
+        .aa-att-upload{
+            display:flex;
+            gap:8px;
+            align-items:center;
+            flex-wrap:wrap;
+            width:100%;
+        }
+        .aa-dropzone{
+            width:100%;
+            border:1px dashed rgba(15,23,42,.25);
+            background:#fff;
+            border-radius:12px;
+            padding:14px 14px;
+            cursor:pointer;
+            user-select:none;
+            transition:.15s;
+        }
+        .aa-dropzone:hover{
+            background:#f8fafc;
+            border-color: rgba(44,92,255,.45);
+        }
+        .aa-dropzone.is-drag{
+            background: rgba(44,92,255,.06);
+            border-color: rgba(44,92,255,.65);
+            box-shadow: 0 0 0 4px rgba(44,92,255,.10);
+        }
+        .aa-dropzone-title{
+            font-weight:900;
+            color:var(--fg);
+            margin-bottom:4px;
+        }
+        .aa-dropzone-sub{
+            font-size:12px;
+            font-weight:800;
+            color:var(--mut);
+        }
+
+        .aa-att-list{
+            margin-top:10px;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            width:100%;
+        }
+        .aa-att-item{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:10px 12px;
+            border:1px solid var(--line);
+            border-radius:12px;
+            background:#fff;
+        }
+        .aa-att-name{
+            font-weight:900;
+            word-break:break-word;
+        }
+        .aa-att-meta{
+            color:var(--mut);
+            font-weight:800;
+            font-size:12px;
+            margin-top:2px;
+        }
+        .aa-att-actions{
+            display:flex;
+            gap:8px;
+            flex:0 0 auto;
+        }
+        .aa-att-mini{
+            height:32px;
+            padding:0 12px;
+            border-radius:10px;
+            font-size:13px;
+            font-weight:900;
+            cursor:pointer;
+            border:1px solid var(--line);
+            background:#fff;
+            color:var(--fg);
+        }
+        .aa-att-mini:hover{ background:#f8fafc; }
+        .aa-att-mini.danger{
+            border-color: rgba(239,68,68,.35);
+            background: rgba(239,68,68,.06);
+            color:#ef4444;
+        }
+        .aa-att-mini.danger:hover{ background: rgba(239,68,68,.10); }
+
+        /* actions */
+        .aa-actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top:14px;
+        }
+        .aa-btn{
+            height:40px;
+            padding:0 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:900;
+            cursor:pointer;
+            border:none;
+            background:var(--primary);
+            color:#fff;
+            transition:0.15s;
+        }
+        .aa-btn:hover{ filter:brightness(0.92); }
+        .aa-btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+        .aa-btn.ghost:hover{ background:#f8fafc; filter:none; }
+
+        .aa-err{
+            color:var(--danger);
+            font-weight:900;
+            margin-top:10px;
+            display:none;
+        }
+
+        @media (max-width:760px){
+            .aa-row{ grid-template-columns: 110px 1fr; }
+            .aa-row .aa-th:nth-child(3),
+            .aa-row .aa-td:nth-child(4){ display:none; }
+            .aa-row.full{ grid-template-columns: 110px 1fr; }
+            .aa-att-item{ align-items:flex-start; flex-direction:column; }
+            .aa-att-actions{ width:100%; justify-content:flex-end; }
+        }
+    </style>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/form-sidebar :: formSidebar('attaches')}"></div>
+
+        <main class="page-main">
+            <h2 class="aa-title">첨부문서 등록</h2>
+
+            <section class="aa-card">
+                <div class="aa-grid">
+                    <!-- 제목 / (우측은 비워둠: detail과 동일한 그리드 유지) -->
+                    <div class="aa-row">
+                        <div class="aa-th">제목</div>
+                        <div class="aa-td">
+                            <input id="title" class="aa-input" type="text" placeholder="제목 입력" maxlength="50">
+                        </div>
+
+                        <div class="aa-th"></div>
+                        <div class="aa-td"></div>
+                    </div>
+
+                    <!-- 설명 -->
+                    <div class="aa-row full">
+                        <div class="aa-th">설명</div>
+                        <div class="aa-td multiline" style="width:100%;">
+                            <textarea id="dscp" class="aa-textarea" placeholder="설명 입력 (선택)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 첨부파일 (write.html 방식) -->
+                    <div class="aa-row full">
+                        <div class="aa-th">첨부파일</div>
+                        <div class="aa-td multiline" style="width:100%;">
+                            <div class="aa-att-head">
+                                <div class="aa-att-note">클릭하거나 파일을 끌어다 놓으면 바로 업로드됩니다.</div>
+                                <div class="aa-att-note" id="attStatusText"></div>
+                            </div>
+
+                            <div class="aa-att-upload">
+                                <input id="attachInput" type="file" multiple style="display:none;">
+
+                                <div id="attachDropzone" class="aa-dropzone" role="button" tabindex="0">
+                                    <div class="aa-dropzone-title">첨부파일 추가</div>
+                                    <div class="aa-dropzone-sub">업로드 완료 후 아래 목록에 표시됩니다.</div>
+                                </div>
+                            </div>
+
+                            <div id="attachList" class="aa-att-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="err" class="aa-err"></div>
+
+                <div class="aa-actions">
+                    <button class="aa-btn ghost" type="button" id="btnCancel">취소</button>
+                    <button class="aa-btn" type="button" id="btnSave">저장</button>
+                </div>
+            </section>
+
+            <script>
+                // ===== routes =====
+                const ROUTES = {
+                    LIST_VIEW: '/attach/attaches'
+                };
+
+                // ===== API =====
+                // attach-box: 메타데이터 생성(attachNo 발급)
+                // attachments: 실제 파일 업/다운 (domain/entityId 사용)
+                const API = {
+                    CREATE_META: () => '/api/v1/attach-box',
+                    DELETE_META: (attachNo) => `/api/v1/attach-box/${encodeURIComponent(attachNo)}`,
+
+                    LIST_FILES: (attachNo) =>
+                        `/api/v1/attachments?domain=DOC_FORM&entityId=${encodeURIComponent(attachNo)}`,
+                    PRESIGN: () => '/api/v1/attachments/presign',
+                    COMPLETE: () => '/api/v1/attachments/complete',
+                    PREVIEW_URL: (attachmentId) =>
+                        `/api/v1/attachments/${encodeURIComponent(attachmentId)}/preview-url`,
+                    DELETE_FILE: (attachmentId) =>
+                        `/api/v1/attachments/${encodeURIComponent(attachmentId)}`
+                };
+
+                // ===== state =====
+                const state = {
+                    attachNo: null
+                };
+
+                // ===== utils =====
+                function getCsrfHeaders() {
+                    const csrfParamEl = document.getElementById('csrfParam');
+                    const csrfHeaderEl = document.getElementById('csrfHeader');
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
+
+                async function fetchDto(url, options) {
+                    const res = await fetch(url, {
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders(), ...(options?.headers || {}) },
+                        ...options
+                    });
+
+                    const json = await res.json().catch(() => null);
+
+                    if (!res.ok) {
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(msg);
+                    }
+
+                    // 공통 응답 { data: ... } 형태 가정
+                    return json?.data;
+                }
+
+                function showErr(msg) {
+                    const el = document.getElementById('err');
+                    if (!el) return;
+                    el.style.display = msg ? 'block' : 'none';
+                    el.textContent = msg || '';
+                }
+
+                function setAttStatus(msg) {
+                    const el = document.getElementById('attStatusText');
+                    if (el) el.textContent = msg || '';
+                }
+
+                function escapeHtml(str) {
+                    return String(str ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#039;');
+                }
+
+                function inferFileType(mime) {
+                    const m = String(mime || '').toLowerCase();
+                    if (m.startsWith('image/')) return 'IMAGE';
+                    if (m.startsWith('audio/')) return 'AUDIO';
+                    return 'DOC';
+                }
+
+                function formatBytes(bytes) {
+                    const n = Number(bytes || 0);
+                    if (!n) return '0B';
+                    const kb = n / 1024;
+                    if (kb < 1024) return `${Math.ceil(kb)}KB`;
+                    return `${(kb / 1024).toFixed(1)}MB`;
+                }
+
+                // ===== 메타(attachNo) 먼저 생성 =====
+                async function ensureAttachMeta() {
+                    if (state.attachNo) return state.attachNo;
+
+                    const title = (document.getElementById('title')?.value || '').trim();
+                    const dscp = (document.getElementById('dscp')?.value || '').trim();
+
+                    if (!title) throw new Error('제목을 입력하세요.');
+
+                    // ✅ Dto 해결했다고 했으니, 여기 body는 "attach-box 생성 API"에 맞게 유지
+                    // (필드가 더 필요하면 여기에 추가하면 됨)
+                    const body = {
+                        title,
+                        dscp: dscp || null
+                    };
+
+                    const attachNo = await fetchDto(API.CREATE_META(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+
+                    // attachNo가 숫자든 문자열(UUID 등)이든 그대로 들고감
+                    state.attachNo = attachNo;
+                    return attachNo;
+                }
+
+                // ===== 첨부 업로드 =====
+                async function uploadOneFile(file, attachNo) {
+                    // 1) presign
+                    const presign = await fetchDto(API.PRESIGN(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            domain: 'DOC_FORM',
+                            entityId: String(attachNo),
+                            fileType: inferFileType(file.type),
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size
+                        })
+                    });
+
+                    // 2) PUT to S3
+                    // ✅ presign 시 SignedHeaders에 content-type이 들어가면 PUT에서도 동일하게 맞춰야 하고,
+                    //    반대로 presign이 UNSIGNED-PAYLOAD/헤더 최소로 만들어졌으면 헤더를 빼야 함.
+                    //    지금 너는 "헤더 제거" 방향으로 서버 presign을 만든 것 같아서 헤더를 넣지 않는다.
+                    const putRes = await fetch(presign.uploadUrl, {
+                        method: 'PUT',
+                        // ✅ S3로는 쿠키/인증정보 절대 보내지 않기
+                        credentials: 'omit',
+                        // presign에서 content-type을 서명에 넣었으면 PUT도 동일하게 넣어야 함
+                        headers: {
+                            'Content-Type': file.type || 'application/octet-stream'
+                        },
+                        body: file
+                    });
+
+                    if (!putRes.ok) {
+                        throw new Error(`S3 업로드 실패 (HTTP ${putRes.status})`);
+                    }
+
+                    // 3) etag
+                    let etag = putRes.headers.get('ETag') || putRes.headers.get('etag') || null;
+                    if (etag) etag = etag.replaceAll('"', '');
+
+                    // 4) complete
+                    await fetchDto(API.COMPLETE(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            domain: 'DOC_FORM',
+                            entityId: String(attachNo),
+                            fileType: inferFileType(file.type),
+                            objectKey: presign.objectKey,
+                            originalName: file.name,
+                            contentType: file.type || 'application/octet-stream',
+                            size: file.size,
+                            etag
+                        })
+                    });
+                }
+
+                async function uploadFilesNow(files) {
+                    try {
+                        showErr('');
+                        const list = Array.from(files || []).filter(Boolean);
+                        if (!list.length) return;
+
+                        // 업로드 전에 메타 생성(attachNo 필요)
+                        const attachNo = await ensureAttachMeta();
+
+                        setAttStatus(`업로드 중... (0/${list.length})`);
+                        let done = 0;
+
+                        for (const f of list) {
+                            await uploadOneFile(f, attachNo);
+                            done++;
+                            setAttStatus(`업로드 중... (${done}/${list.length})`);
+                        }
+
+                        setAttStatus('');
+                        await refreshAttachList();
+                    } catch (e) {
+                        console.error(e);
+                        setAttStatus('');
+                        showErr(e.message || '첨부 업로드에 실패했습니다.');
+                    }
+                }
+
+                // ===== 목록 렌더 =====
+                async function refreshAttachList() {
+                    const wrap = document.getElementById('attachList');
+                    if (!wrap) return;
+
+                    if (!state.attachNo) {
+                        wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
+                        return;
+                    }
+
+                    const items = await fetchDto(API.LIST_FILES(state.attachNo), { method: 'GET' }).catch(() => []);
+
+                    if (!items || items.length === 0) {
+                        wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
+                        return;
+                    }
+
+                    wrap.innerHTML = items.map(it => `
+      <div class="aa-att-item" data-id="${it.attachmentId}">
+        <div style="min-width:0;">
+          <div class="aa-att-name">${escapeHtml(it.originalName)}</div>
+          <div class="aa-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
+        </div>
+
+        <div class="aa-att-actions" onclick="event.stopPropagation();">
+          <button type="button" class="aa-att-mini" onclick="downloadAttach(${it.attachmentId})">다운로드</button>
+          <button type="button" class="aa-att-mini danger" onclick="deleteAttach(${it.attachmentId})">삭제</button>
+        </div>
+      </div>
+    `).join('');
+                }
+
+                async function deleteAttach(attachmentId) {
+                    showErr('');
+                    await fetchDto(API.DELETE_FILE(attachmentId), { method: 'DELETE' });
+                    await refreshAttachList();
+                }
+
+                async function downloadAttach(attachmentId) {
+                    try {
+                        showErr('');
+                        const data = await fetchDto(API.PREVIEW_URL(attachmentId), { method: 'GET' });
+                        const url = data?.url;
+                        if (!url) throw new Error('다운로드 URL이 없습니다.');
+
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = '';
+                        a.rel = 'noopener';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } catch (e) {
+                        console.error(e);
+                        showErr(e.message || '다운로드에 실패했습니다.');
+                    }
+                }
+
+                // 인라인 onclick에서 접근 가능하도록 노출
+                window.deleteAttach = deleteAttach;
+                window.downloadAttach = downloadAttach;
+
+                // ===== UI 바인딩 =====
+                function bindAttachDropzone() {
+                    const input = document.getElementById('attachInput');
+                    const dz = document.getElementById('attachDropzone');
+                    if (!input || !dz) return;
+                    if (dz.__bound) return;
+                    dz.__bound = true;
+
+                    dz.addEventListener('click', () => input.click());
+                    dz.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            input.click();
+                        }
+                    });
+
+                    input.addEventListener('change', async () => {
+                        const files = input.files;
+                        if (!files || files.length === 0) return;
+
+                        await uploadFilesNow(files);
+                        input.value = '';
+                    });
+
+                    dz.addEventListener('dragenter', (e) => { e.preventDefault(); dz.classList.add('is-drag'); });
+                    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('is-drag'); });
+                    dz.addEventListener('dragleave', () => dz.classList.remove('is-drag'));
+                    dz.addEventListener('drop', async (e) => {
+                        e.preventDefault();
+                        dz.classList.remove('is-drag');
+
+                        const files = e.dataTransfer?.files;
+                        if (!files || files.length === 0) return;
+
+                        await uploadFilesNow(files);
+                    });
+                }
+
+                function bindActions() {
+                    document.getElementById('btnCancel')?.addEventListener('click', () => {
+                        location.href = ROUTES.LIST_VIEW;
+                    });
+
+                    document.getElementById('btnSave')?.addEventListener('click', async () => {
+                        // 저장 = 메타 생성 보장
+                        try {
+                            showErr('');
+                            await ensureAttachMeta();
+                            location.href = ROUTES.LIST_VIEW;
+                        } catch (e) {
+                            console.error(e);
+                            showErr(e.message || '저장에 실패했습니다.');
+                        }
+                    });
+                }
+
+                window.addEventListener('DOMContentLoaded', () => {
+                    bindAttachDropzone();
+                    bindActions();
+                    refreshAttachList().catch(console.error);
+                });
+            </script>
+        </main>
+    </div>
+</div>
+</body>
+</html>

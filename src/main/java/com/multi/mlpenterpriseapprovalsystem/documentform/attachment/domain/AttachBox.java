@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
  * @filename : AttachBox
  * @since : 2025. 12. 16. 화요일
  */
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,4 +31,22 @@ public class AttachBox {
     private String dscp;
     private String path;
     private Long size;
+
+    public static AttachBox create(
+            Company company,
+            String uploader,
+            String title,
+            String dscp,
+            String path,
+            Long size
+    ) {
+        AttachBox a = new AttachBox();
+        a.company = company;
+        a.uploader = uploader;
+        a.title = title;
+        a.dscp = dscp;
+        a.path = path;
+        a.size = size;
+        return a;
+    }
 }

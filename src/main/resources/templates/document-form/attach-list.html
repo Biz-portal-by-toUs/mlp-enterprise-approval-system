@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}"
+      th:classappend="${perm_isEmployee == true} ? 'role-employee' : ''"
+      th:attr="data-is-employee=${perm_isEmployee}, data-can-create=${perm_canCreateAttach}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>첨부문서함</title>
+
+    <style layout:fragment="pageStyles">
+        :root{
+            --fg:#0f172a; --mut:#64748b; --line:#e2e8f0; --bg:#f1f5f9;
+            --card:#ffffff; --danger:#ef4444;
+        }
+        .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+        .toolbar-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+        .toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .searchWrap{flex:1;max-width:420px;display:flex;align-items:center;height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:0 14px;min-width:0;}
+        .searchInput{border:0;outline:none;width:100%;font-size:14px;background:transparent;}
+
+        .btn{height:40px;padding:0 20px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;border:none;background:var(--primary);color:#fff;white-space:nowrap;transition:0.15s;}
+        .btn:hover{filter:brightness(0.9);}
+        .btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
+        .btn.ghost:hover{background:#f8fafc;filter:none;}
+
+        .tableWrap{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+        table.formTable{width:100%;border-collapse:collapse;table-layout:fixed;}
+        table.formTable thead th{background:#f9fafb;border-bottom:1px solid var(--line);text-align:center;padding:14px 10px;font-size:14px;color:var(--mut);font-weight:700;}
+        table.formTable tbody td{border-bottom:1px solid var(--line);text-align:center;padding:12px 10px;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        table.formTable tbody tr:hover td{background:#fcfdfe;cursor:pointer;}
+
+        td.col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
+        .titleLink{color:var(--primary);text-decoration:none;display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900;}
+
+        th.col-no, td.col-no{width:120px;}
+        th.col-uploader, td.col-uploader{width:180px;}
+        th.col-size, td.col-size{width:140px;}
+
+        .pager-wrapper{display:flex;align-items:center;justify-content:center;position:relative;margin-top:16px;}
+        .pager{display:flex;align-items:center;gap:4px;}
+        .pageBtn{min-width:36px;height:36px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:0.15s;}
+        .pageBtn:hover:not(.active):not(:disabled){background:#f1f5f9;}
+        .pageBtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .pageBtn.active:hover{filter:brightness(0.9);}
+        .pager-status{position:absolute;right:0;display:flex;gap:12px;align-items:center;}
+
+        .emptyRow td{padding:22px 10px;color:var(--mut);font-weight:800;}
+    </style>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <!-- active 통일 -->
+        <div th:replace="~{sidebar/form-sidebar :: formSidebar('attaches')}"></div>
+
+        <main class="page-main">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="searchWrap">
+                        <input id="keyword" class="searchInput" type="text" placeholder="제목 검색" maxlength="50"/>
+                    </div>
+                    <button class="btn ghost" id="btnSearch" type="button">조회</button>
+                </div>
+
+                <button class="btn" id="btnNew" type="button" th:if="${perm_canCreateAttach}">
+                    + 새 첨부
+                </button>
+            </div>
+
+            <section class="tableWrap">
+                <table class="formTable">
+                    <thead>
+                    <tr>
+                        <th class="col-no">번호</th>
+                        <th>제목</th>
+                        <th class="col-uploader">업로더</th>
+                        <th class="col-size">크기</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </section>
+
+            <div class="pager-wrapper">
+                <div id="pagerControls" class="pager"></div>
+
+                <div class="pager-status">
+                    <span id="countPill" style="font-size:14px; font-weight:800; color:var(--primary)">0건</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--mut)">page 1 / 1</span>
+                </div>
+            </div>
+
+            <script>
+                // ===== constants =====
+                const PAGE_SIZE = 10;
+                const KEYWORD_MAX = 50;
+
+                // ===== csrf =====
+                function getCsrfHeaders() {
+                    const csrfParamEl = document.getElementById('csrfParam');
+                    const csrfHeaderEl = document.getElementById('csrfHeader');
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
+
+                // ===== utils =====
+                function escapeHtml(str) {
+                    return String(str ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#039;');
+                }
+
+                function formatBytes(bytes) {
+                    const n = Number(bytes || 0);
+                    if (!n) return '0B';
+                    const kb = n / 1024;
+                    if (kb < 1024) return `${Math.ceil(kb)}KB`;
+                    return `${(kb / 1024).toFixed(1)}MB`;
+                }
+
+                function clampKeyword(s) {
+                    const v = (s || '').trim();
+                    return v.length > KEYWORD_MAX ? v.slice(0, KEYWORD_MAX) : v;
+                }
+
+                async function fetchDto(url, options) {
+                    const res = await fetch(url, {
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders(), ...(options?.headers || {}) },
+                        ...options
+                    });
+                    const json = await res.json().catch(() => null);
+                    if (!res.ok) {
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(msg);
+                    }
+                    return json?.data;
+                }
+
+                // ===== state =====
+                const state = { page: 0, totalPages: 1, totalElements: 0, keyword: '' };
+
+                function syncFromUrl() {
+                    const sp = new URLSearchParams(location.search);
+                    state.keyword = clampKeyword(sp.get('keyword') || '');
+                    const page = parseInt(sp.get('page') || '0', 10);
+                    state.page = Number.isFinite(page) && page >= 0 ? page : 0;
+
+                    const input = document.getElementById('keyword');
+                    if (input) input.value = state.keyword;
+                }
+
+                function pushUrl() {
+                    const sp = new URLSearchParams();
+                    if (state.keyword) sp.set('keyword', state.keyword);
+                    if (state.page) sp.set('page', String(state.page));
+                    const next = sp.toString() ? `${location.pathname}?${sp.toString()}` : location.pathname;
+                    history.replaceState(null, '', next);
+                }
+
+                // ===== render =====
+                function renderEmpty() {
+                    const tbody = document.getElementById('tbody');
+                    tbody.innerHTML = `
+                        <tr class="emptyRow">
+                            <td colspan="4">첨부파일이 없습니다.</td>
+                        </tr>
+                    `;
+                }
+
+                function renderRows(items) {
+                    const tbody = document.getElementById('tbody');
+                    if (!items || items.length === 0) return renderEmpty();
+
+                    tbody.innerHTML = items.map(it => {
+                        const attachNo = it.attachNo;
+                        const title = it.title ?? '';
+                        const uploader = it.uploader ?? '-';
+                        const size = formatBytes(it.size);
+
+                        const href = `/attach/${encodeURIComponent(String(attachNo))}`;
+
+                        return `
+                          <tr data-href="${href}">
+                            <td class="col-no">${escapeHtml(attachNo)}</td>
+                            <td class="col-title">
+                              <a class="titleLink" href="${href}" onclick="event.preventDefault(); location.href='${href}'">
+                                ${escapeHtml(title)}
+                              </a>
+                            </td>
+                            <td class="col-uploader">${escapeHtml(uploader)}</td>
+                            <td class="col-size">${escapeHtml(size)}</td>
+                          </tr>
+                        `;
+                    }).join('');
+
+                    tbody.querySelectorAll('tr[data-href]').forEach(tr => {
+                        tr.addEventListener('click', () => {
+                            const href = tr.getAttribute('data-href');
+                            if (href) location.href = href;
+                        });
+                    });
+                }
+
+                function renderPager() {
+                    const pager = document.getElementById('pagerControls');
+                    pager.innerHTML = '';
+
+                    const totalPages = Math.max(1, state.totalPages || 1);
+                    const cur = Math.min(state.page, totalPages - 1);
+
+                    const mk = (label, page, { disabled = false, active = false } = {}) => {
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'pageBtn' + (active ? ' active' : '');
+                        b.textContent = label;
+                        b.disabled = !!disabled;
+                        b.onclick = () => { state.page = page; pushUrl(); load().catch(console.error); };
+                        return b;
+                    };
+
+                    pager.appendChild(mk('‹', cur - 1, { disabled: cur <= 0 }));
+
+                    const windowSize = 5;
+                    const start = Math.max(0, cur - Math.floor(windowSize / 2));
+                    const end = Math.min(totalPages - 1, start + windowSize - 1);
+                    const start2 = Math.max(0, end - windowSize + 1);
+
+                    for (let p = start2; p <= end; p++) {
+                        pager.appendChild(mk(String(p + 1), p, { active: p === cur }));
+                    }
+
+                    pager.appendChild(mk('›', cur + 1, { disabled: cur >= totalPages - 1 }));
+
+                    const countPill = document.getElementById('countPill');
+                    const pageInfo = document.getElementById('pageInfo');
+                    if (countPill) countPill.textContent = `${state.totalElements || 0}건`;
+                    if (pageInfo) pageInfo.textContent = `page ${cur + 1} / ${totalPages}`;
+                }
+
+                // ===== loader =====
+                async function load() {
+                    // input 보정(혹시 URL에 50자 넘게 들어온 경우)
+                    state.keyword = clampKeyword(state.keyword);
+                    const input = document.getElementById('keyword');
+                    if (input) input.value = state.keyword;
+
+                    const qs = new URLSearchParams();
+                    qs.set('page', String(state.page));
+                    qs.set('size', String(PAGE_SIZE));
+                    if (state.keyword) qs.set('keyword', state.keyword);
+
+                    const data = await fetchDto(`/api/v1/attach-box?${qs.toString()}`, { method: 'GET' });
+
+                    const content = data?.content || [];
+                    state.totalPages = data?.totalPages ?? 1;
+                    state.totalElements = data?.totalElements ?? 0;
+                    state.page = data?.number ?? state.page;
+
+                    renderRows(content);
+                    renderPager();
+                }
+
+                // ===== bind =====
+                function bind() {
+                    const keywordEl = document.getElementById('keyword');
+
+                    // 50자 제한: input + paste 방어 (received.html처럼 clamp)
+                    keywordEl?.addEventListener('input', () => {
+                        const v = clampKeyword(keywordEl.value);
+                        if (keywordEl.value !== v) keywordEl.value = v;
+                    });
+                    keywordEl?.addEventListener('paste', () => {
+                        setTimeout(() => {
+                            const v = clampKeyword(keywordEl.value);
+                            if (keywordEl.value !== v) keywordEl.value = v;
+                        }, 0);
+                    });
+
+                    document.getElementById('btnNew')?.addEventListener('click', () => {
+                        location.href = '/attach/create';
+                    });
+
+                    document.getElementById('btnSearch')?.addEventListener('click', () => {
+                        const v = clampKeyword(keywordEl?.value || '');
+                        if (keywordEl) keywordEl.value = v;
+
+                        state.keyword = v;
+                        state.page = 0;
+                        pushUrl();
+                        load().catch(console.error);
+                    });
+
+                    keywordEl?.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.getElementById('btnSearch')?.click();
+                        }
+                    });
+                }
+
+                // ===== boot =====
+                window.addEventListener('DOMContentLoaded', () => {
+                    syncFromUrl();
+                    bind();
+                    load().catch(err => {
+                        console.error(err);
+                        const tbody = document.getElementById('tbody');
+                        if (tbody) tbody.innerHTML =
+                            `<tr class="emptyRow"><td colspan="4" style="color:#ef4444;">조회 실패</td></tr>`;
+                        const countPill = document.getElementById('countPill');
+                        if (countPill) countPill.textContent = `0건`;
+                    });
+                });
+            </script>
+        </main>
+    </div>
+</div>
+</body>
+</html>
