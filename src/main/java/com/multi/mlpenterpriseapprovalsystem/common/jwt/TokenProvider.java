@@ -42,11 +42,11 @@ public class TokenProvider {
     private static final String CLAIM_USERNAME = "username";
 
     // ===== Expire =====
-//    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24;  // 1일
-//    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24 * 7; // 7일 (원하면 늘려)
+    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24;  // 1일
+    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 60 * 24 * 7; // 7일 (원하면 늘려)
     // 테스트용: Access 1분, Refresh 3분
-    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS  = 1000L * 60 * 1;  // 1분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 3;  // 3분
+//    private static final long ACCESS_TOKEN_EXPIRE_TIME_MS  = 1000L * 60 * 1;  // 1분
+//    private static final long REFRESH_TOKEN_EXPIRE_TIME_MS = 1000L * 60 * 3;  // 3분
 
     private final Key SKEY;
     private final String ISSUER;
