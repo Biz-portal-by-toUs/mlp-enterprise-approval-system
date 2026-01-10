@@ -35,7 +35,7 @@ public class CompanySubscriptionScheduler {
     private final PortoneService portoneService;
     private final SubscriptionRepository subscriptionRepository;
 
-    @Scheduled(cron = "0 0 2 * * *")
+    @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Seoul")
     public void processSubscriptionBilling() {
         LocalDateTime now = LocalDateTime.now();
         List<CompanySubscription> targets = companySubscriptionRepository
