@@ -48,7 +48,7 @@
         }
         .toolbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
         .main-title{
-            font-size:28px; font-weight:900; margin:0; white-space:nowrap;
+            font-size:28px; font-weight:800; margin:0; white-space:nowrap;
             cursor:pointer; user-select:none;
         }
         .main-title:hover{ text-decoration: underline; text-underline-offset: 6px; }
@@ -156,7 +156,7 @@
             border-top:1px solid rgba(17,24,39,.08);
             gap:10px;
         }
-        .tag{ display:flex; align-items:center; gap:10px; font-weight:900; color:#0f172a; }
+        .tag{ display:flex; align-items:center; gap:10px; font-weight:700; color:#0f172a; }
         .dot{ width:10px; height:10px; border-radius:999px; display:inline-block; }
 
         .switch{
@@ -185,6 +185,7 @@
         .fc .fc-timegrid-slot{ height:46px; }
         .fc .fc-day-today{ background:rgba(59,130,246,.08) !important; }
 
+
         /* ===== 이벤트 디자인(배경/바 통일) ===== */
         .fc .fc-event,
         .fc .fc-event-main,
@@ -194,6 +195,8 @@
             border-radius:0 !important;
             background:transparent !important;
             box-shadow:none !important;
+            margin-left: 1px !important;
+            margin-right: 1px !important;
         }
         .bp-event{
             height:100%;
@@ -212,24 +215,97 @@
             white-space:normal;
             word-break:break-word;
             line-height:1.2;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .bp-evt-time{ display:none; }
+        /* ✅ 5분 같은 "짧은 일정" 글자 잘림 방지 (timeGrid만 적용) */
+        /* ✅ 메인 달력 요일 헤더 (Mon, Tue...) 색상 */
+        #calendar .fc-day-sun .fc-col-header-cell-cushion {
+            color: #ef4444 !important; /* 일요일 빨간색 */
+        }
+        #calendar .fc-day-sat .fc-col-header-cell-cushion {
+            color: #3b82f6 !important; /* 토요일 파란색 */
+        }
+
+        /* ✅ 요일 헤더 밑줄 제거 및 폰트 설정 */
+        #calendar .fc-col-header-cell-cushion {
+            text-decoration: none !important;
+            font-weight: 800;
+        }
+
+        /* ✅ 월간 뷰(Monthly) 날짜 숫자 색상 */
+        #calendar .fc-day-sun .fc-daygrid-day-top {
+            color: #ef4444;
+        }
+        #calendar .fc-day-sat .fc-daygrid-day-top {
+            color: #3b82f6;
+        }
+
+        /* ✅ 주간 뷰(Weekly) 날짜 숫자 색상 */
+        #calendar .fc-timegrid-col.fc-day-sun .fc-timegrid-col-frame {
+            /* 필요시 주간 뷰 배경색 등 추가 */
+        }
+
+        /*#calendar .fc-timegrid-event-harness{*/
+        /*    min-height: 18px; !* 너무 작으면 20~22로 올려도 됨 *!*/
+        /*    margin: 0px;*/
+        /*}*/
+        /* 1. 타임그리드 이벤트 컨테이너가 오른쪽 끝까지 가도록 설정 */
+        #calendar .fc-timegrid-event-harness {
+            right: 0 !important; /* 오른쪽 여백 강제 제거 */
+            margin-right: 0 !important;
+        }
+
+        /* 2. 이벤트 바 자체의 마진과 너비 조정 */
+        #calendar .fc-timegrid-event {
+            margin: 0 !important;      /* 기본 마진 제거 */
+            width: 100% !important;    /* 너비를 100%로 확장 */
+            left: 0 !important;        /* 왼쪽 밀착 */
+            right: 0 !important;       /* 오른쪽 밀착 */
+        }
+        /* 3. 내부 커스텀 요소(.bp-event)가 꽉 차도록 확인 */
+        #calendar .bp-event {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            /* 만약 테두리가 필요 없다면 border-radius를 0으로 주면 더 꽉 차 보입니다 */
+            border-radius: 0 !important;
+        }
+
+
+        #calendar .fc-timegrid-event .bp-event{
+            padding: 2px 8px 2px 10px;   /* 기존 6px → 2px로 줄여서 안 잘리게 */
+            display: flex;
+            align-items: center;          /* 글자를 세로 가운데로 */
+        }
+
+        #calendar .fc-timegrid-event .bp-evt-title{
+            white-space: nowrap;          /* timeGrid는 1줄로 */
+            overflow: hidden;
+            text-overflow: ellipsis;      /* 길면 ... */
+            line-height: 1.1;
+        }
 
         /* +n more 링크 */
         #calendar .fc-scroller-harness,
         #calendar .fc-scroller{
             overflow: auto !important;
         }
-        #calendar .fc-daygrid-day-frame{ position:relative; }
+        #calendar .fc-daygrid-day-frame{ position:relative; min-height: 100%;}
+        .fc-daygrid-day-events {
+            padding-bottom: 20px !important; /* ✅ 링크가 들어갈 공간 확보 */
+        }
         #calendar .fc-daygrid .fc-more-link,
         #calendar .fc-daygrid .fc-daygrid-more-link{
-            position:absolute;
-            right:8px;
-            bottom:6px;
-            background:transparent !important;
-            padding:0 !important;
-            border-radius:0 !important;
-            border:0 !important;
+            display: block;      /* 한 줄을 다 차지하게 함 */
+            text-align: right;   /* 오른쪽 정렬 */
+            margin-top: 2px;     /* 일정 바와의 간격 */
+            margin-right: 8px;
+            z-index: 100 !important;         /* ✅ 클릭 우선순위 확보 */
+            position: relative;  /* 다른 요소보다 위에 오도록 설정 */
         }
         .fc .fc-more-link{
             display:inline-block;
@@ -258,7 +334,41 @@
         }
 
         /* ===== Mini calendar dots (✅ scope별 dot 1개씩) ===== */
-        #miniCalendar .fc-daygrid-day-frame{ position:relative; }
+        #miniCalendar .fc-daygrid-day-frame{
+            position:relative;
+            min-height: 70px !important; /* 기존보다 훨씬 짧게 설정 */
+            height: 70px !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; }
+        #miniCalendar .fc-daygrid-day-top {
+            justify-content: right !important;
+            flex-direction: row !important;
+        }
+        /* 미니 달력 요일 헤더 정렬 */
+        #miniCalendar .fc-col-header-cell {
+            border: none !important;
+            /*padding: 10px 0 6px !important; !* 위아래 여백 조절 *!*/
+        }
+
+        /* 요일 텍스트 스타일 (Mon, Tue, Wed...) */
+        #miniCalendar .fc-col-header-cell-cushion {
+            display: block !important;
+            text-align: center !important;
+            width: 100%;
+            font-size: 10px; /* 3글자이므로 크기를 살짝 줄임 */
+            font-weight: 800;
+            letter-spacing: 0.5px; /* 가독성을 위해 자간 추가 */
+            color: #64748b; /* 조금 더 선명한 회색 */
+            text-transform: uppercase;
+            text-decoration: none !important;
+        }
+
+        /* 주말 색상 포인트 (기존 스타일 유지 및 보정) */
+        #miniCalendar .fc-day-sun .fc-col-header-cell-cushion { color: #ef4444; } /* 일요일 빨강 */
+        #miniCalendar .fc-day-sat .fc-col-header-cell-cushion { color: #3b82f6; } /* 토요일 파랑 */
+
+
         #miniCalendar .mini-dots{
             position:absolute;
             left:50%;
@@ -559,7 +669,7 @@
         }
 
         .todo-text{
-            font-weight:700;
+            font-weight:600;
             font-size:14px;
             color:#0f172a;
             line-height:1.25;
@@ -640,6 +750,119 @@
 
         .dt-line{ display:flex; gap:8px; align-items:center; }
         .dt-line select, .dt-line input[type="date"]{ width:100%; }
+
+        /* =========================
+   ✅ Toast
+========================= */
+        .toast-wrap{
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 20000;
+            display: grid;
+            gap: 10px;
+        }
+
+        .toast{
+            width: min(360px, 92vw);
+            background: rgba(255,255,255,.92);          /* ✅ 흰색 */
+            color: #0f172a;                              /* ✅ 글자 검정 */
+            border: 1px solid rgba(15,23,42,.10);
+            border-radius: 14px;
+            padding: 12px 14px;
+            box-shadow: 0 18px 50px rgba(0,0,0,.16);
+            backdrop-filter: blur(10px);
+            font-weight: 900;
+            display:flex;
+            align-items:flex-start;
+            gap:10px;
+            transform: translateY(8px);
+            opacity: 0;
+            transition: .18s ease;
+        }
+        .toast.show{
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast .ico{
+            width: 18px; height: 18px;
+            border-radius: 999px;
+            background: rgba(37,99,235,.12);            /* ✅ 아이콘 배경만 살짝 */
+            color: #2563eb;                              /* ✅ 아이콘 컬러 */
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            flex:0 0 auto;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .toast .msg{
+            font-weight: 800;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        /* ✅ 타입별 색상 무시하고 전부 흰색 유지 */
+        .toast.info,
+        .toast.warn,
+        .toast.error{
+            background: rgba(255,255,255,.92);
+            color: #0f172a;
+        }
+        /* 공휴일 배경 이벤트에서 혹시 모를 모든 테두리(바) 제거 */
+        .fc-bg-event.fc-holiday-event,
+        .fc-bg-event[data-event-id*="HOLIDAY"] {
+            border: none !important;
+            border-left: none !important;
+            opacity: 1; /* 색상을 진하게 보고 싶다면 1, 투명하게는 0.3 등 조절 */
+        }
+
+        /* 칸 전체 배경색을 더 진하게 하고 싶다면 아래 색상을 수정하세요 */
+        .fc-day-holiday {
+            background-color: #ffe3e3 !important;
+        }
+
+        /* ✅ 공휴일 라벨: 왼쪽 바 제거 및 배경 꽉 채우기 */
+        .holiday-label {
+            border-left: none !important;
+            padding-left: 8px !important;
+            /*margin: 1px 2px !important;*/
+        }
+
+        /* 주간 뷰 상단 올데이 칸 내부의 일정 간격 조정 */
+        .fc-timegrid-event-harness > .fc-timegrid-event {
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        /* 월간 뷰 배경으로 나올 때의 투명도 */
+        .fc-bg-event[data-event-id*="HOLIDAY"] {
+            background-color: #ff0000 !important;
+            opacity: 0.15 !important;
+        }
+
+        /* ✅ timeGrid 이벤트 좌/우 여백(인셋) 제거: all-day처럼 1px만 */
+        #calendar .fc-timegrid-col-events{
+            margin: 0 !important;
+        }
+
+        #calendar .fc-timegrid-event-harness,
+        #calendar .fc-timegrid-event-harness-inset{
+            left: 1px !important;
+            right: 1px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        #calendar .fc-timegrid-event{
+            margin: 0 !important;
+        }
+
+        .req{ color:#ef4444; font-weight:900; margin-left:4px; }
+
+        #fixedColorField{ display:none !important; }
     </style>
 </th:block>
 
@@ -687,7 +910,6 @@
                 <div class="todo-top">
                     <div>
                         <div class="todo-title">
-                            <span class="todo-title-badge"></span>
                             <span>ToDo List</span>
                         </div>
                         <div class="todo-count" id="todoCountLabel">0개</div>
@@ -781,7 +1003,7 @@
 
         <div class="pop-body">
             <div class="field">
-                <label>scope</label>
+                <label>scope<span class="req">*</span></label>
                 <select id="scopeSelect">
                     <option value="PERSONAL">PERSONAL</option>
                     <option value="DEPARTMENT">DEPARTMENT</option>
@@ -790,25 +1012,25 @@
             </div>
 
             <div class="field">
-                <label>title</label>
-                <input type="text" id="titleInput" placeholder="제목(필수입력)"/>
+                <label>제목<span class="req">*</span></label>
+                <input type="text" id="titleInput" placeholder="제목(필수입력)" maxlength="50"/>
             </div>
 
             <div class="field">
-                <label>content</label>
-                <textarea id="contentInput" placeholder="메모"></textarea>
+                <label>내용</label>
+                <textarea id="contentInput" placeholder="메모" maxlength="255"></textarea>
             </div>
 
             <div class="row">
                 <div class="field">
-                    <label>allDay</label>
+                    <label>allDay<span class="req">*</span></label>
                     <select id="allDaySelect">
                         <option value="false" selected>false</option>
                         <option value="true">true</option>
                     </select>
                 </div>
 
-                <div class="field">
+                <div class="field" id="fixedColorField">
                     <label>color (fixed)</label>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span class="dot" id="fixedColorDot" style="width:14px;height:14px;background:#f59e0b;"></span>
@@ -820,7 +1042,7 @@
             <!-- ✅ datetime-local 제거 / 분은 00,30만 -->
             <div class="row" id="timeRow">
                 <div class="field">
-                    <label>start</label>
+                    <label>start<span class="req">*</span></label>
                     <div class="dt-line">
                         <input type="date" id="startDayInput"/>
                         <select id="startHourSelect"></select>
@@ -828,7 +1050,7 @@
                     </div>
                 </div>
                 <div class="field">
-                    <label>end</label>
+                    <label>end<span class="req">*</span></label>
                     <div class="dt-line">
                         <input type="date" id="endDayInput"/>
                         <select id="endHourSelect"></select>
@@ -839,11 +1061,11 @@
 
             <div class="row hidden" id="dateRow">
                 <div class="field">
-                    <label>startDate</label>
+                    <label>startDate<span class="req">*</span></label>
                     <input type="date" id="startDateInput"/>
                 </div>
                 <div class="field">
-                    <label>endDate</label>
+                    <label>endDate<span class="req">*</span></label>
                     <input type="date" id="endDateInput"/>
                 </div>
             </div>
@@ -909,17 +1131,103 @@
             <button class="btn" type="button" id="moreOk">확인</button>
         </div>
     </div>
+    <div class="toast-wrap" id="toastWrap"></div>
 
 </div>
+
 
 <th:block layout:fragment="pageScripts">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
     <script>
+        const toastWrap = document.getElementById('toastWrap');
+
+        function toast(message, type='warn', ms=2200){
+            if (!toastWrap) return;
+
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+
+            const ico = document.createElement('div');
+            ico.className = 'ico';
+            ico.textContent = type === 'error' ? '!' : type === 'info' ? 'i' : '⚠';
+
+            const msg = document.createElement('div');
+            msg.className = 'msg';
+            msg.textContent = String(message || '');
+
+            el.appendChild(ico);
+            el.appendChild(msg);
+
+            toastWrap.appendChild(el);
+
+            // next tick show
+            requestAnimationFrame(() => el.classList.add('show'));
+
+            const remove = () => {
+                el.classList.remove('show');
+                setTimeout(() => el.remove(), 180);
+            };
+
+            const t = setTimeout(remove, ms);
+            el.addEventListener('click', () => { clearTimeout(t); remove(); });
+        }
+        // ✅ 스티키(1개만 유지) 토스트 (lazy toastWrap)
+        const STICKY = new Map();
+
+        function getToastWrapEl(){
+            return document.getElementById('toastWrap'); // ✅ lazy
+        }
+
+        function showStickyToast(key, message, type='warn'){
+            const wrap = getToastWrapEl();
+            if (!wrap) return false;
+
+            let el = STICKY.get(key);
+            if (!el){
+                el = document.createElement('div');
+                el.className = `toast ${type}`;
+
+                const ico = document.createElement('div');
+                ico.className = 'ico';
+
+                const msg = document.createElement('div');
+                msg.className = 'msg';
+
+                el.appendChild(ico);
+                el.appendChild(msg);
+
+                wrap.appendChild(el);
+                requestAnimationFrame(() => el.classList.add('show'));
+
+                el.addEventListener('click', () => hideStickyToast(key));
+                STICKY.set(key, el);
+            }
+
+            el.className = `toast ${type} show`;
+            const ico = el.querySelector('.ico');
+            const msg = el.querySelector('.msg');
+            if (ico) ico.textContent = type === 'error' ? '!' : type === 'info' ? 'i' : '⚠';
+            if (msg) msg.textContent = String(message || '');
+
+            return true;
+        }
+
+        function hideStickyToast(key){
+            const el = STICKY.get(key);
+            if (!el) return;
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 180);
+            STICKY.delete(key);
+        }
         /* =========================
            API
         ========================= */
         const API_BASE = '/api/v1/calendar';
+        /* =========================
+   ✅ Holiday API (공휴일)
+========================= */
+        const HOLIDAY_API = (year, month) => `${API_BASE}/holidays?year=${year}&month=${month}`;
         const API_DELETE = (schNo, scope) => {
             const params = new URLSearchParams();
             params.set('scope', String(scope || 'PERSONAL').toUpperCase());
@@ -983,7 +1291,8 @@
         const SCOPE_COLOR = {
             COMPANY: '#2563EB',
             DEPARTMENT: '#16A34A',
-            PERSONAL: '#f59e0b'
+            PERSONAL: '#f59e0b',
+            HOLIDAY: '#ff0000'
         };
         function scopeColor(scope){
             const s = String(scope || '').toUpperCase();
@@ -1043,41 +1352,26 @@
         function toDatetimeLocalValue(d) {
             return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         }
-        function addDays(date, days) {
-            const d = new Date(date);
+        function addDays(input, days){
+            // input: Date or "YYYY-MM-DD"
+            const d = (input instanceof Date)
+                ? new Date(input.getTime())
+                : new Date(String(input) + "T00:00:00");
+
+            if (Number.isNaN(d.getTime())) {
+                throw new Error("addDays: invalid date input = " + input);
+            }
+
             d.setDate(d.getDate() + days);
-            return d;
+            return d.toISOString().slice(0,10); // 항상 YYYY-MM-DD로 반환
         }
         function formatNice(dtStr){
             if (!dtStr) return '';
             return String(dtStr).replace('T',' ').replace(/(\.\d+)?Z?$/,'');
         }
 
-        /* =========================
-           ✅ 주간 캘린더 선택 허용 시간(08~22)
-        ========================= */
-        const WORK_START_HOUR = 8;
-        const WORK_END_HOUR = 22;
-
-        function overlapsWorkHours(start, end, allDay){
-            if (allDay) return true;
-            if (!start || !end) return false;
-
-            const s = new Date(start);
-            const e = new Date(end);
-            if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return false;
-            if (e.getTime() <= s.getTime()) return false;
-
-            const sMin = s.getHours()*60 + s.getMinutes();
-            const eMin = e.getHours()*60 + e.getMinutes();
-
-            const workStart = WORK_START_HOUR * 60;
-            const workEnd   = WORK_END_HOUR   * 60;
-
-            if (toDateKey(s) !== toDateKey(e)) return true;
-            return (eMin > workStart) && (sMin < workEnd);
-        }
-
+        // ✅ 5분 단위로 바꿀 기준
+        const STEP_MINUTES = 5;
         /* =========================
            ✅ ToDo List state
         ========================= */
@@ -1569,6 +1863,53 @@
         const fixedColorDot = document.getElementById('fixedColorDot');
         const fixedColorText = document.getElementById('fixedColorText');
 
+        const TITLE_MAX = 50;
+        const CONTENT_MAX = 255;
+
+        // ✅ 혹시 HTML에 maxlength 못 넣었어도 JS로 한 번 더 걸기
+        titleInput?.setAttribute('maxlength', String(TITLE_MAX));
+        contentInput?.setAttribute('maxlength', String(CONTENT_MAX));
+
+        // ✅ 붙여넣기 등으로 넘어가는 케이스 방지(초과 시 잘라내기)
+        function clampLen(el, max, key, label){
+            if (!el) return;
+            el.dataset.overMax = '0';
+
+            const willInsert = (e) => String(e.inputType || '').startsWith('insert');
+
+            // ✅ maxlength가 있어도 "넘기려는 시도"를 잡아냄
+            el.addEventListener('beforeinput', (e) => {
+                if (!willInsert(e)) return;
+
+                const cur = el.value ?? '';
+                const s = (el.selectionStart ?? cur.length);
+                const t = (el.selectionEnd ?? cur.length);
+                const replacing = Math.max(0, t - s);
+
+                // 선택 영역을 대체하는 경우는 그만큼 길이가 줄어드는 효과
+                const effectiveLen = cur.length - replacing;
+
+                if (effectiveLen >= max){
+                    // ✅ 토스트 1개만 유지
+                    showStickyToast(key, `${label}은(는) 최대 ${max}자까지 입력 가능해요.`, 'warn');
+                    el.dataset.overMax = '1';
+                }
+            });
+
+            // ✅ 정상 길이로 돌아오면 토스트 숨김
+            el.addEventListener('input', () => {
+                const v = el.value ?? '';
+                if (v.length < max){
+                    hideStickyToast(key);
+                    el.dataset.overMax = '0';
+                }
+            });
+        }
+
+        // ✅ 바인딩
+        clampLen(titleInput, TITLE_MAX, 'max-title', '제목');
+        clampLen(contentInput, CONTENT_MAX, 'max-content', '내용');
+
         function toggleAllDayUI(isAllDay){
             if (isAllDay){
                 timeRow.classList.add('hidden');
@@ -1623,7 +1964,7 @@
 
         function initTimeSelects(){
             const hours = Array.from({length:24}, (_,i)=> String(i).padStart(2,'0'));
-            const mins = ['00','30'];
+            const mins = Array.from({length: 60/STEP_MINUTES}, (_,k)=> String(k*STEP_MINUTES).padStart(2,'0')); // ✅ 00,05,10...
 
             fillSelect(startHourSelect, hours, '시');
             fillSelect(endHourSelect, hours, '시');
@@ -1652,7 +1993,19 @@
             const day = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
             dayEl.value = day;
             hourEl.value = pad(d.getHours());
-            minEl.value = (d.getMinutes() >= 30) ? '30' : '00';
+
+            // ✅ 5분 단위로 맞추기 (가까운 5분)
+            const m = d.getMinutes();
+            const rounded = Math.round(m / STEP_MINUTES) * STEP_MINUTES;
+
+            if (rounded >= 60){
+                d.setHours(d.getHours() + 1);
+                d.setMinutes(0,0,0);
+                hourEl.value = pad(d.getHours());
+                minEl.value = '00';
+            } else {
+                minEl.value = pad(rounded);
+            }
         }
 
         function setDTValue(str, dayEl, hourEl, minEl){
@@ -1660,14 +2013,16 @@
             const d = new Date(String(str));
             if (Number.isNaN(d.getTime())) return;
 
+            d.setSeconds(0,0);
+
             const m = d.getMinutes();
-            if (m >= 45){
+            const rounded = Math.round(m / STEP_MINUTES) * STEP_MINUTES;
+
+            if (rounded >= 60){
                 d.setHours(d.getHours()+1);
                 d.setMinutes(0,0,0);
-            }else if (m >= 15){
-                d.setMinutes(30,0,0);
             }else{
-                d.setMinutes(0,0,0);
+                d.setMinutes(rounded,0,0);
             }
 
             setControlsFromDate(d, dayEl, hourEl, minEl);
@@ -1764,7 +2119,7 @@
 
             // start가 완성된 경우: end는 start+30분 이후만(같은 날짜일 때 시간 옵션 제한)
             if (s && endDayInput.value){
-                const earliest = new Date(s.getTime() + 30*60*1000);
+                const earliest = new Date(s.getTime() + STEP_MINUTES*60*1000);
 
                 if (endDayInput.value === startDayInput.value){
                     const eh = earliest.getHours();
@@ -1785,7 +2140,7 @@
 
             // end가 완성된 경우: start는 end-30분 이전만(같은 날짜일 때 시간 옵션 제한)
             if (e && startDayInput.value){
-                const latest = new Date(e.getTime() - 30*60*1000);
+                const latest = new Date(e.getTime() - STEP_MINUTES*60*1000);
 
                 if (endDayInput.value === startDayInput.value){
                     const lh = latest.getHours();
@@ -1804,28 +2159,72 @@
 
         // ✅ start/end 서로 앞뒤 못 뒤집게 자동 보정 (30분 최소)
         let lastChanged = null; // 'start' | 'end'
+        let lastValidRange = null;
+
+        function captureRange(){
+            return {
+                sDay: startDayInput.value,
+                sH: startHourSelect.value,
+                sM: startMinSelect.value,
+                eDay: endDayInput.value,
+                eH: endHourSelect.value,
+                eM: endMinSelect.value
+            };
+        }
+
+        function restoreRange(side, snap){
+            if (!snap) return;
+
+            if (side === 'start'){
+                startDayInput.value = snap.sDay || '';
+                startHourSelect.value = snap.sH || '';
+                startMinSelect.value = snap.sM || '';
+            } else {
+                endDayInput.value = snap.eDay || '';
+                endHourSelect.value = snap.eH || '';
+                endMinSelect.value = snap.eM || '';
+            }
+
+            syncDayMinMax();
+            updateTimeOptionConstraints();
+        }
         function enforceRange(){
+            syncDayMinMax();
+            updateTimeOptionConstraints();
+
             const s = toLocalDateFromParts(startDayInput.value, startHourSelect.value, startMinSelect.value);
             const e = toLocalDateFromParts(endDayInput.value, endHourSelect.value, endMinSelect.value);
 
-            syncDayMinMax();
-
-            // 둘 다 완성 전이면 옵션 제한만 갱신
-            updateTimeOptionConstraints();
-
-            if (!s || !e) return;
-
-            if (e.getTime() <= s.getTime()){
-                if (lastChanged === 'end'){
-                    const prev = new Date(e.getTime() - 30*60*1000);
-                    setControlsFromDate(prev, startDayInput, startHourSelect, startMinSelect);
-                }else{
-                    const next = new Date(s.getTime() + 30*60*1000);
-                    setControlsFromDate(next, endDayInput, endHourSelect, endMinSelect);
-                }
-                syncDayMinMax();
-                updateTimeOptionConstraints();
+            // 아직 start/end가 완성 전이면 저장만 하지 말고 종료
+            if (!s || !e){
+                // 둘 다 완성된 상태에서만 lastValidRange를 업데이트하는게 안전
+                return;
             }
+
+            // ✅ 규칙: end는 start보다 최소 STEP_MINUTES 이후
+            const minEnd = new Date(s.getTime() + STEP_MINUTES * 60 * 1000);
+
+            // ❌ invalid면: 사용자가 바꾼 쪽을 "이전 정상값"으로 되돌림
+            if (e.getTime() < minEnd.getTime()){
+                // end를 바꾸다가 문제가 생기는 케이스가 많으니 기본은 end 되돌림
+                const side = (lastChanged === 'start') ? 'start' : 'end';
+
+                if (lastValidRange){
+                    restoreRange(side, lastValidRange);
+                    toast(`종료는 시작보다 최소 ${STEP_MINUTES}분 이후여야 해요.`, 'warn');
+                } else {
+                    // 예외: 정상값이 없으면(거의 없음) end를 최소값으로 보정
+                    setControlsFromDate(minEnd, endDayInput, endHourSelect, endMinSelect);
+                    syncDayMinMax();
+                    updateTimeOptionConstraints();
+                    lastValidRange = captureRange();
+                    toast(`종료는 시작보다 최소 ${STEP_MINUTES}분 이후여야 해요.`, 'warn');
+                }
+                return;
+            }
+
+            // ✅ valid면 마지막 정상값 업데이트
+            lastValidRange = captureRange();
         }
 
         function bindRangeControls(){
@@ -1893,6 +2292,12 @@
             // ✅ 옵션 제한 초기화
             updateTimeOptionConstraints();
             syncAllDayMinMax();
+
+            // ✅ 스티키 토스트/상태 리셋
+            hideStickyToast('max-title');
+            hideStickyToast('max-content');
+            if (titleInput) titleInput.dataset.overMax = '0';
+            if (contentInput) contentInput.dataset.overMax = '0';
         }
 
         function openCreate({ anchorRect=null, center=false, prefill=null, mode='create' } = {}){
@@ -1919,6 +2324,7 @@
                 if (prefill?.endedAt) setDTValue(prefill.endedAt, endDayInput, endHourSelect, endMinSelect);
 
                 enforceRange();
+                lastValidRange = captureRange();
             }
 
             if (mode === 'edit'){
@@ -1932,7 +2338,11 @@
             openPop(createPop, { anchorRect, center });
         }
 
-        function closeCreate(){ closePop(createPop); }
+        function closeCreate(){
+            SAVE_IN_PROGRESS = false;
+            setSaveLoading(false);
+            closePop(createPop);
+        }
         document.getElementById('createClose').addEventListener('click', safeClick(closeCreate));
         document.getElementById('createCancel').addEventListener('click', safeClick(closeCreate));
 
@@ -2009,7 +2419,7 @@
                 delBtn.className = 'btn danger';
                 delBtn.textContent = '삭제';
                 delBtn.onclick = safeClick(async () => {
-                    if (!confirm('삭제할까?')) return;
+                    if (!confirm('삭제할까?말까?')) return;
                     try{
                         await apiDelete(data.schNo, data.scope);
                         closePop(detailPop);
@@ -2157,16 +2567,113 @@
             return await res.json();
         }
 
+        function ymListBetween(start, end){
+            // start/end는 Date
+            const out = [];
+            const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+            const last = new Date(end.getFullYear(), end.getMonth(), 1);
+            while (cur <= last){
+                out.push({ y: cur.getFullYear(), m: cur.getMonth()+1 });
+                cur.setMonth(cur.getMonth()+1);
+            }
+            return out;
+        }
+        /* =========================
+   ✅ Holiday fetch (FullCalendar event source)
+========================= */
+
+        // Date 객체에 days 더하기 (네 addDays는 문자열용이라 별도)
+        function addDaysDate(dateObj, days){
+            const d = new Date(dateObj);
+            d.setDate(d.getDate() + days);
+            return d;
+        }
+
+        // 'YYYYMMDD' 또는 'YYYY-MM-DD' → 'YYYY-MM-DD'
+        function normalizeHolidayDate(v){
+            const s = String(v || '').trim();
+            if (/^\d{8}$/.test(s)){
+                return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8);
+            }
+            return s.slice(0,10);
+        }
+
+        async function fetchHolidays(info, success, fail) {
+            console.log('[HOLIDAY] fetchHolidays called', info.startStr, info.endStr);
+            try {
+                const months = ymListBetween(info.start, addDaysDate(info.end, -1));
+                const results = await Promise.allSettled(
+                    months.map(({y,m}) =>
+                        fetch(HOLIDAY_API(y, m), { method:'GET', credentials:'include' })
+                            .then(res => res.json())
+                            .then(json => safeData(json) || [])
+                    )
+                );
+
+                const items = results
+                    .filter(r => r.status === 'fulfilled')
+                    .flatMap(r => Array.isArray(r.value) ? r.value : []);
+
+                // ✅ 현재 뷰가 월간인지 확인
+                const isMonthView = currentViewType === 'dayGridMonth';
+
+                const events = items.map(h => {
+                    const title = h.name ?? h.title ?? h.holidayName ?? '공휴일';
+                    const date  = h.date ?? h.locdate ?? h.holidayDate;
+                    const yyyyMmDd = normalizeHolidayDate(date);
+
+                    return {
+                        id: `HOLIDAY-${yyyyMmDd}`,
+                        title: title,
+                        start: yyyyMmDd,
+                        allDay: true,
+                        // ✅ 월간이면 'background', 주간이면 'auto'(일반 일정 형태)
+                        display: isMonthView ? 'background' : 'auto',
+                        extendedProps: {
+                            isHoliday: true,
+                            scope: 'HOLIDAY',
+                            color: SCOPE_COLOR.HOLIDAY // '#ff0000'
+                        }
+                    };
+                });
+                success(events);
+            } catch(e) { fail(e); }
+        }
+
         /* =========================
            Fetch events
         ========================= */
-        async function fetchEvents(info, success, fail){
-            try{
-                const baseDate = toDateKey(mainCalendar.getDate());
-                const scopes = getSelectedScopes();
-                const view = currentViewType;
+        async function fetchEvents(info, success, fail) {
+            try {
+                let baseDate;
 
-                const calls = scopes.map(s => apiGetItems({ scope:s, view, baseDate, weekStart }));
+                // ✅ info.view.type 대신 이미 선언된 currentViewType을 사용합니다.
+                // currentViewType은 'WEEK' 또는 'MONTH' 값을 가집니다.
+                if (currentViewType === 'MONTH') {
+                    // ✅ 월간 뷰: info.start 기준 10일 뒤 날짜로 baseDate 설정 (현재 월 보장)
+                    const midDate = new Date(info.start);
+                    midDate.setDate(midDate.getDate() + 10);
+                    baseDate = toDateKey(midDate);
+                } else {
+                    // ✅ 주간 뷰: 시작일 그대로 사용
+                    baseDate = toDateKey(info.start);
+                }
+
+                // 2. 현재 뷰 정보 (API 파라미터용)
+                // 위에서 분기처리를 했으므로 그대로 사용하거나, 기존처럼 logic 유지
+                const view = (currentViewType === 'MONTH') ? 'MONTH' : 'WEEK';
+                const scopes = getSelectedScopes();
+
+                console.log(`[API 요청] baseDate: ${baseDate}, view: ${view}`);
+
+                // API 호출
+                const calls = scopes.map(s => apiGetItems({
+                    scope: s,
+                    view: view,
+                    baseDate: baseDate,
+                    weekStart: weekStart
+                }));
+
                 const results = await Promise.all(calls);
                 const raw = results.flat();
 
@@ -2180,7 +2687,6 @@
                     .map(it => {
                         const scope = String(it.scope || 'PERSONAL').toUpperCase();
                         const id = scope + '-' + String(it.schNo);
-
                         const color = it.color || scopeColor(scope);
 
                         const startAtNorm = normalizeApiDatetime(it.startAt);
@@ -2190,11 +2696,11 @@
                         let end = endedAtNorm;
                         let allDay = !!it.allDay;
 
-                        if (allDay){
-                            const sd = it.startDate || (it.startAt ? String(it.startAt).slice(0,10) : null);
-                            const ed = it.endDate || (it.endedAt ? String(it.endedAt).slice(0,10) : sd);
+                        if (allDay) {
+                            const sd = it.startDate || (it.startAt ? String(it.startAt).slice(0, 10) : null);
+                            const ed = it.endDate || (it.endedAt ? String(it.endedAt).slice(0, 10) : sd);
                             start = sd;
-                            end = ed ? toDateKey(addDays(ed, 1)) : (sd ? toDateKey(addDays(sd, 1)) : null);
+                            end = ed ? addDays(ed, 1) : (sd ? addDays(sd, 1) : null);
                         }
 
                         return {
@@ -2204,23 +2710,17 @@
                             end,
                             allDay,
                             extendedProps: {
+                                ...it,
                                 id,
-                                schNo: it.schNo,
-                                scope,
-                                title: it.title,
-                                content: it.content,
                                 startAt: startAtNorm,
                                 endedAt: endedAtNorm,
-                                allDay,
-                                startDate: it.startDate,
-                                endDate: it.endDate,
                                 color
                             }
                         };
                     });
 
                 success(events);
-            }catch(e){
+            } catch (e) {
                 console.error(e);
                 fail(e);
             }
@@ -2258,17 +2758,20 @@
                 // slotDuration: "00:30:00",
                 // snapDuration: "00:30:00",
 
-                height: 1240,
+                height: 1040,
                 expandRows: true,
+                fixedWeekCount: true,
                 handleWindowResize: true,
                 scrollTime: "08:00:00",
 
-                events: fetchEvents,
+                eventSources: [
+                    { events: fetchEvents },   // 기존 일정
+                    { events: fetchHolidays }  // ✅ 공휴일
+                ],
 
                 dayMaxEvents: 3,
                 slotEventOverlap: false,
                 eventMaxStack: 2,
-                allDayMaxEventRows: false,
 
                 datesSet: function(){ updateTitles(); },
 
@@ -2359,12 +2862,27 @@
                     return 'none';
                 },
 
-                eventContent: function(arg){
+                eventContent: function(arg) {
                     const ext = arg.event.extendedProps || {};
-                    const bar = (ext.color || scopeColor(ext.scope));
-                    const bg  = hexToRgba(bar, 0.14);
-                    const title = (arg.event.title || '');
-                    return { html: `<div class="bp-event" style="--bpColor:${bar};--bpBg:${bg};"><div class="bp-evt-title">${title}</div></div>` };
+                    const isHoliday = !!ext.isHoliday;
+                    const isMonthView = arg.view.type === 'dayGridMonth';
+
+                    const color = '#ff0000'; // 빨간색 고정
+                    const bgColor = isHoliday ? 'rgba(255, 0, 0, 0.1)' : hexToRgba(ext.color || '#f59e0b', 0.14);
+
+                    // ✅ 공휴일이면 왼쪽 바 색상을 투명하게 처리
+                    const barColor = isHoliday ? 'transparent' : (ext.color || '#f59e0b');
+
+                    return {
+                        html: `
+            <div class="bp-event ${isHoliday ? 'holiday-label' : ''}"
+                 style="--bpColor:${barColor}; --bpBg:${bgColor}; border:none;">
+                <div class="bp-evt-title"
+                     style="color:${isHoliday ? '#d32f2f' : 'inherit'}; font-weight:${isHoliday ? '900' : 'normal'}">
+                    ${arg.event.title}
+                </div>
+            </div>`
+                    };
                 },
 
                 eventDidMount: function(arg){
@@ -2380,56 +2898,97 @@
         /* =========================
            Save (create/edit)
         ========================= */
+
+        let SAVE_IN_PROGRESS = false;
+
+        function setSaveLoading(isLoading){
+            const btn = document.getElementById('createSave');
+            const cancel = document.getElementById('createCancel');
+            const close = document.getElementById('createClose');
+
+            btn.disabled = isLoading;
+            cancel.disabled = isLoading;
+            close.disabled = isLoading;
+
+            btn.textContent = isLoading
+                ? (editing ? '수정 중...' : '저장 중...')
+                : (editing ? '수정' : 'Save');
+        }
+
         async function onSave(){
-            const title = titleInput.value.trim();
-            if (!title) return alert('title은 필수야');
+            if (SAVE_IN_PROGRESS) return;
 
-            const scope = String(scopeSelect.value).toUpperCase();
-            const allDay = allDaySelect.value === 'true';
+            SAVE_IN_PROGRESS = true;
+            setSaveLoading(true);
+            try {
+                const title = titleInput.value.trim();
 
-            if (scope === 'COMPANY' && !isCompanyAdmin()){
-                return alert('회사 일정은 관리자만 등록/수정할 수 있어요.');
-            }
+                if (!title) return alert('제목은 필수입니다.');
+                if (title.length > TITLE_MAX){
+                    toast(`제목은 최대 ${TITLE_MAX}자까지예요.`, 'warn');
+                    return;
+                }
 
-            const payload = {
-                scope,
-                title,
-                content: (contentInput.value || '').trim() || null,
-                allDay
-            };
+                const contentTrim = (contentInput.value || '').trim();
+                if (contentTrim.length > CONTENT_MAX){
+                    toast(`내용 최대 ${CONTENT_MAX}자까지예요.`, 'warn');
+                    return;
+                }
 
-            if (allDay){
-                const sd = startDateInput.value;
-                const ed = endDateInput.value || sd;
-                if (!sd) return alert('startDate는 필수입니다');
-                if (ed < sd) return alert('endDate는 startDate 이후여야 합니다');
-                payload.startDate = sd;
-                payload.endDate = ed;
-            }else{
-                const sa = getDTValue(startDayInput, startHourSelect, startMinSelect);
-                const ea = getDTValue(endDayInput, endHourSelect, endMinSelect);
+                const scope = String(scopeSelect.value).toUpperCase();
+                const allDay = allDaySelect.value === 'true';
 
-                if (!sa || !ea) return alert('start/end 시간은 필수입니다');
+                if (scope === 'COMPANY' && !isCompanyAdmin()){
+                    return alert('회사 일정은 관리자만 등록/수정할 수 있어요.');
+                }
 
-                // 최종 안전장치
-                const s = new Date(sa);
-                const e = new Date(ea);
-                if (e.getTime() <= s.getTime()) return alert('end는 start 이후만 가능합니다');
+                const payload = {
+                    scope,
+                    title,
+                    content: (contentInput.value || '').trim() || null,
+                    allDay
+                };
 
-                payload.startAt = sa;
-                payload.endedAt = ea;
-            }
+                if (allDay){
+                    const sd = startDateInput.value;
+                    const ed = endDateInput.value || sd;
+                    if (!sd) return alert('시작 일시는 필수입니다');
+                    if (ed < sd) return alert('종료 일시는 시작 일시 이후여야 합니다');
+                    payload.startDate = sd;
+                    payload.endDate = ed;
+                }else{
+                    const sa = getDTValue(startDayInput, startHourSelect, startMinSelect);
+                    const ea = getDTValue(endDayInput, endHourSelect, endMinSelect);
 
-            try{
-                if (editing) await apiUpdate(editing.schNo, payload);
-                else await apiCreate(payload);
+                    if (!sa || !ea) return alert('start/end 시간은 필수입니다');
 
-                closeCreate();
-                mainCalendar.refetchEvents();
-                refreshMiniDots();
+                    // 최종 안전장치
+                    const s = new Date(sa);
+                    const e = new Date(ea);
+                    if (e.getTime() <= s.getTime()) return alert('end는 start 이후만 가능합니다');
+
+                    payload.startAt = sa;
+                    payload.endedAt = ea;
+                }
+
+                try{
+                    if (editing) await apiUpdate(editing.schNo, payload);
+                    else await apiCreate(payload);
+
+                    closeCreate();
+                    mainCalendar.refetchEvents();
+                    refreshMiniDots();
+                }catch(e){
+                    console.error(e);
+                    alert(e.message);
+                }
             }catch(e){
                 console.error(e);
                 alert(e.message);
+            }finally{
+                // ✅ 어떤 경우든 버튼/상태 복구
+                SAVE_IN_PROGRESS = false;
+                setSaveLoading(false);
             }
         }
         document.getElementById('createSave').addEventListener('click', safeClick(onSave));
@@ -2557,6 +3116,8 @@
                 fixedWeekCount: false,
                 firstDay: (weekStart === 'SUNDAY') ? 0 : 1,
 
+                dayHeaderFormat: { weekday: 'short' },
+
                 datesSet: function(){
                     setMiniTitle();
                     refreshMiniDots();
@@ -2622,6 +3183,13 @@
             buildMiniCalendar();
 
             setActiveView('WEEK');
+            // ✅ 첫 로딩 후 이벤트 받아온 다음 상세 오픈 시도 (몇 번 재시도)
+            let tries = 0;
+            const t = setInterval(() => {
+                tries++;
+                const ok = openDetailFromQueryWithGoto();
+                if (ok || tries >= 10) clearInterval(t);
+            }, 200);
 
             setSwitch(tgCompany, true);
             setSwitch(tgDept, true);
@@ -2636,6 +3204,88 @@
                 console.warn('Todo init failed:', e);
             }
         })();
+        function getQueryParams(){
+            const p = new URLSearchParams(location.search);
+            return {
+                open: p.get('open'),
+                schNo: p.get('schNo'),
+                scope: (p.get('scope') || '').toUpperCase()
+            };
+        }
+
+        // ✅ 현재 화면에서 events를 한 번 읽어서 schNo/scope 매칭되는 이벤트 찾아 상세 오픈
+        function getQueryParams(){
+            const p = new URLSearchParams(location.search);
+            return {
+                open: p.get('open'),
+                schNo: p.get('schNo'),
+                scope: (p.get('scope') || '').toUpperCase()
+            };
+        }
+
+        function centerRect(){
+            const x = window.innerWidth/2, y = window.innerHeight/2;
+            return { left:x, right:x, top:y, bottom:y };
+        }
+
+        function getEventStartKey(ext){
+            // allDay면 startDate 우선, 아니면 startAt
+            const s = ext.allDay
+                ? (ext.startDate || (ext.startAt ? String(ext.startAt).slice(0,10) : null))
+                : (ext.startAt || null);
+
+            if (!s) return null;
+            // 'YYYY-MM-DD' 또는 'YYYY-MM-DDTHH:mm'
+            return String(s).slice(0,10);
+        }
+
+        // ✅ schNo/scope 이벤트 찾기
+        function findEventByQuery(q){
+            const events = mainCalendar?.getEvents?.() || [];
+            const targetScope = q.scope || null;
+
+            return events.find(ev => {
+                const ext = ev.extendedProps || {};
+                const schNoOk = String(ext.schNo) === String(q.schNo);
+                const scopeOk = !targetScope || String(ext.scope || '').toUpperCase() === targetScope;
+                return schNoOk && scopeOk;
+            }) || null;
+        }
+
+        // ✅ 날짜 이동 + 상세 열기 (1회 성공하면 URL 정리)
+        function openDetailFromQueryWithGoto(){
+            const q = getQueryParams();
+            if (q.open !== '1' || !q.schNo) return false;
+
+            const found = findEventByQuery(q);
+            if (!found) return false;
+
+            const ext = found.extendedProps || {};
+            const dateKey = getEventStartKey(ext);
+
+            // 1) 해당 날짜로 이동
+            if (dateKey){
+                mainCalendar.gotoDate(dateKey);
+            }
+
+            // 2) 이동 후 events가 바뀔 수 있으니 한 번 refetch하고 다시 찾아서 상세 오픈
+            mainCalendar.refetchEvents();
+
+            setTimeout(() => {
+                const again = findEventByQuery(q) || found;
+                const ext2 = again.extendedProps || ext;
+                openDetail({ anchorRect: centerRect(), data: ext2 });
+
+                // ✅ 새로고침 시 또 열리는 거 방지: 파라미터 제거
+                const url = new URL(location.href);
+                url.searchParams.delete('open');
+                url.searchParams.delete('schNo');
+                url.searchParams.delete('scope');
+                history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''));
+            }, 250);
+
+            return true;
+        }
     </script>
 </th:block>
 
