@@ -29,41 +29,8 @@
             display:flex;
             flex-direction:column;
         }
-        header{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            padding:26px 28px;
-            gap:12px;
-            flex-wrap:wrap;
-        }
-        .brand{
-            font-family: Georgia, "Times New Roman", Times, serif;
-            font-weight:700;
-            font-size:40px;
-            letter-spacing:-0.5px;
-        }
-        .nav-right{
-            display:flex;
-            gap:14px;
-            align-items:center;
-            flex-wrap:wrap;
-        }
-        .btn{
-            appearance:none;
-            border:1px solid var(--border);
-            background:#fff;
-            padding:10px 18px;
-            border-radius:10px;
-            font-weight:800;
-            cursor:pointer;
-            color:#222;
-        }
-        .btn.primary{
-            border-color:var(--primary);
-            background:var(--primary);
-            color:#fff;
-        }
+
+        /* 메인 영역 스타일 */
         main{
             flex:1;
             display:flex;
@@ -98,6 +65,24 @@
             padding:14px 18px;
             border-radius:12px;
         }
+
+        /* 공통 버튼 스타일 (헤더와 공유) */
+        .btn{
+            appearance:none;
+            border:1px solid var(--border);
+            background:#fff;
+            padding:10px 18px;
+            border-radius:10px;
+            font-weight:800;
+            cursor:pointer;
+            color:#222;
+            transition: all 0.2s;
+        }
+        .btn.primary{
+            border-color:var(--primary);
+            background:var(--primary);
+            color:#fff;
+        }
         .who{
             font-weight:900;
             color:#333;
@@ -107,6 +92,7 @@
             border-radius:10px;
         }
 
+        /* 토스트 알림 */
         .toast{
             position:fixed;
             left:50%;
@@ -148,17 +134,13 @@
         }
 
         @media (max-width:768px){
-            .brand{font-size:32px}
             .title{font-size:40px}
         }
     </style>
 </head>
 <body>
 <div class="page">
-    <header>
-        <div class="brand">Bizportal</div>
-        <div class="nav-right" id="navRight"></div>
-    </header>
+    <div th:replace="~{company/common/company-header :: companyHeader}"></div>
 
     <main>
         <section class="card">
@@ -172,17 +154,19 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    const navRight = document.getElementById('navRight');
+    // 전역 요소 참조 (헤더 navRight는 프래그먼트 내부에서 제어하므로 제외)
     const mainActions = document.getElementById('mainActions');
     const mainTitle = document.getElementById('mainTitle');
     const mainDesc = document.getElementById('mainDesc');
     const toastEl = document.getElementById('toast');
 
+    // 이동 함수들
     function goCompanyLogin()  { window.location.href = '/auth/companies/login'; }
     function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
     function goCompanySignup() { window.location.href = '/auth/companies/signup'; }
     function goCompanyDashboard(){ window.location.href = '/company'; }
 
+    // 토스트 표시 함수
     function showToast(message, type = 'success', ms = 1000) {
         toastEl.textContent = message;
         toastEl.classList.remove('success');
@@ -191,6 +175,7 @@
         window.setTimeout(() => toastEl.classList.remove('show'), ms);
     }
 
+    // 로그아웃 처리
     async function doLogout() {
         try {
             await fetch('/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' });
@@ -202,10 +187,10 @@
         }
     }
 
+    // 데이터 파싱 유틸리티
     function toStr(v){ return (v == null) ? '' : String(v).trim(); }
     function toUpper(v){ return toStr(v).toUpperCase(); }
 
-    // ✅ boolean/문자열 모두 처리
     function parseBoolean(v){
         if (v === true) return true;
         if (v === false || v == null) return false;
@@ -218,16 +203,8 @@
         return t === 'COMPANY' || t.includes('COMPANY') || t.startsWith('COM');
     }
 
+    // ✅ 로그아웃 상태일 때 메인 카드 렌더링
     function renderLoggedOut() {
-        navRight.innerHTML = `
-            <button class="btn primary" type="button" id="btnCompanyHeader">회사 로그인</button>
-            <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
-            <button class="btn" type="button" id="btnCompanySignupHeader">회원가입</button>
-        `;
-        document.getElementById('btnCompanyHeader').addEventListener('click', goCompanyLogin);
-        document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
-        document.getElementById('btnCompanySignupHeader').addEventListener('click', goCompanySignup);
-
         mainTitle.textContent = 'Welcome';
         mainDesc.textContent = 'Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.';
         mainActions.innerHTML = `
@@ -240,18 +217,9 @@
         document.getElementById('btnCompanySignupMain').addEventListener('click', goCompanySignup);
     }
 
+    // ✅ 회사 로그인 상태일 때 메인 카드 렌더링
     function renderCompanyLoggedIn(username) {
         const whoLine = username ? `${username}이 로그인했습니다.` : '회사 계정이 로그인했습니다.';
-
-        navRight.innerHTML = `
-            <button class="btn" type="button" id="btnEmployeeHeader">사원 로그인</button>
-            <span class="who">${whoLine}</span>
-            <button class="btn primary" type="button" id="btnDashboard">대시보드</button>
-            <button class="btn" type="button" id="btnLogout">로그아웃</button>
-        `;
-        document.getElementById('btnEmployeeHeader').addEventListener('click', goEmployeeLogin);
-        document.getElementById('btnDashboard').addEventListener('click', goCompanyDashboard);
-        document.getElementById('btnLogout').addEventListener('click', doLogout);
 
         mainTitle.textContent = 'Hello';
         mainDesc.textContent = whoLine + ' 계속 진행해 주세요.';
@@ -265,38 +233,41 @@
         document.getElementById('btnLogoutMain').addEventListener('click', doLogout);
     }
 
+    // API 응답 데이터 추출
     function extractData(json){
         if (!json || typeof json !== 'object') return null;
-        // 네 응답 구조: { data: {...}, message, status }
         return json.data ?? json.result ?? json.body ?? json.response ?? null;
     }
 
+    // 내 정보 조회 API 호출
     async function fetchMe() {
-        const res = await fetch('/auth/me', {
-            method: 'GET',
-            credentials: 'include',
-            cache: 'no-store'
-        });
-        if (!res.ok) return null;
+        try {
+            const res = await fetch('/auth/me', {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'no-store'
+            });
+            if (!res.ok) return null;
 
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.includes('application/json')) return null;
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) return null;
 
-        const json = await res.json().catch(() => null);
-        return extractData(json);
+            const json = await res.json().catch(() => null);
+            return extractData(json);
+        } catch (e) {
+            return null;
+        }
     }
 
+    // 초기 구동 함수
     async function boot() {
         try {
             const me = await fetchMe();
-
-            // ✅ 여기! 네 응답은 authenticated로 내려옴
             const authenticated = parseBoolean(me?.authenticated);
-
             const subjectType = me?.subjectType;
             const username = me?.username;
 
-            // ✅ 회사 로그인만 표시
+            // 회사 타입의 로그인인 경우에만 로그인 상태 UI 적용
             if (authenticated && isCompanySubjectType(subjectType)) {
                 renderCompanyLoggedIn(username);
             } else {
@@ -308,6 +279,7 @@
         }
     }
 
+    // DOM 로드 완료 후 실행
     document.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
