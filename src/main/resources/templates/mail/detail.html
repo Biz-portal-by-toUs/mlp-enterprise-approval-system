@@ -247,6 +247,9 @@
             <h2 class="md-title">메일 상세</h2>
 
             <section class="md-card">
+                <script th:inline="javascript">
+                    window.__ME_EMP_ID = /*[[${#authentication.name}]]*/ '';
+                </script>
                 <div class="md-meta">
                     <div class="md-k">제목</div><div class="md-v" id="titleTxt">-</div>
                     <div class="md-k" id="partyLabel">-</div><div class="md-v" id="partyTxt">-</div>
@@ -572,47 +575,10 @@
 
                     const html = generateHTML(doc, extensions);
 
-                    // lockedQuote body 주입(핵심)
                     const temp = document.createElement('div');
                     temp.innerHTML = html;
 
-                    temp.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
-                        const raw = el.getAttribute('data-html') || '';
-                        el.innerHTML = raw;
-                        el.removeAttribute('data-html');
-                    });
-                    return temp.innerHTML;
-                }
-
-                async function renderTiptapCached(jsonStr) {
-                    const { generateHTML, extensions } = await getTiptapRenderer();
-
-                    const s = String(jsonStr || '').trim();
-                    if (!s) return '';
-
-                    let doc;
-                    try { doc = JSON.parse(s); }
-                    catch { return escapeHtml(s); }
-
-                    const html = generateHTML(doc, extensions);
-
-                    const temp = document.createElement('div');
-                    temp.innerHTML = html;
-
-                    // lockedQuote 안의 data-html 주입
-                    temp.querySelectorAll('[data-locked-quote-body][data-html-b64]').forEach(el => {
-                        try {
-                            const b64 = el.getAttribute('data-html-b64') || '';
-                            const decoded = decodeURIComponent(escape(atob(b64)));
-                            el.innerHTML = decoded;
-                        } catch (e) {
-                            console.error('[detail] lockedQuote decode failed', e);
-                            el.textContent = '(인용 내용을 표시할 수 없습니다)';
-                        } finally {
-                            el.removeAttribute('data-html-b64');
-                        }
-                    });
-
+                    // lockedQuote body 주입
                     temp.querySelectorAll('[data-locked-quote-body][data-html]').forEach(el => {
                         const raw = el.getAttribute('data-html') || '';
                         el.innerHTML = raw;
@@ -621,6 +587,7 @@
 
                     return temp.innerHTML;
                 }
+
 
                 // main
                 async function loadDetail() {
@@ -702,16 +669,55 @@
                     api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/read`, { timeoutMs: 4000 }).catch(() => {});
 
                     const isTrashed = !!data.deletedAt;
+                    const boxParam = (new URLSearchParams(location.search).get('box') || '').trim().toLowerCase();
 
-                    if (isTrashed) setSidebarActive('trash');
-                    else if (role === 'SENDER') setSidebarActive('sent');
-                    else setSidebarActive('received');
+                    const me = (window.__ME_EMP_ID || '').trim();
+                    const senderId = String(data.senderEmpId || '').trim();
+
+                    const recvIds = Array.isArray(data.receiverEmpIds)
+                        ? data.receiverEmpIds.map(v => String(v || '').trim()).filter(Boolean)
+                        : [];
+
+                    const isSelfByData =
+                        !!me &&
+                        senderId === me &&
+                        (
+                            recvIds.length === 0 ||
+                            (recvIds.length === 1 && recvIds[0] === me)
+                        );
+
+                    let sidebarKey;
+
+                    if (isTrashed) {
+                        sidebarKey = 'trash';
+                    }
+                    else if (['received', 'sent', 'self', 'drafts'].includes(boxParam)) {
+                        sidebarKey = boxParam;
+                    }
+                    else if (role === 'SENDER') {
+                        sidebarKey = 'sent';
+                    } else if (isSelfByData) {
+                        sidebarKey = 'self';
+                    } else {
+                        sidebarKey = 'received';
+                    }
+
+                    // 사이드바 활성화
+                    setSidebarActive(sidebarKey);
 
                     show('btnRestore', isTrashed);
                     show('btnPurge', isTrashed);
                     show('btnTrash', !isTrashed);
 
-                    const backUrl = isTrashed ? '/mail/trash' : (role === 'SENDER' ? '/mail/sent' : '/mail/received');
+                    const backUrlMap = {
+                        received: '/mail/received',
+                        sent: '/mail/sent',
+                        self: '/mail/self',
+                        drafts: '/mail/drafts',
+                        trash: '/mail/trash',
+                    };
+
+                    const backUrl = backUrlMap[sidebarKey] || '/mail/received';
                     document.getElementById('btnBack').onclick = () => location.href = backUrl;
 
                     document.getElementById('btnTrash').onclick = async () => {
@@ -721,8 +727,9 @@
                     };
 
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`);
-                        location.href = (role === 'SENDER') ? '/mail/sent' : '/mail/received';
+                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`, { timeoutMs: 8000 });
+                        const restoreTarget = (['received','sent','self','drafts'].includes(boxParam) ? boxParam : sidebarKey);
+                        location.href = backUrlMap[restoreTarget] || '/mail/received';
                     };
 
                     document.getElementById('btnPurge').onclick = async () => {
