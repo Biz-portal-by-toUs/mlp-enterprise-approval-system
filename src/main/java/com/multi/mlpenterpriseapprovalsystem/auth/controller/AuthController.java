@@ -12,6 +12,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeIdentityVerifyDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ReqEmployeeLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.employee.dto.ResAdminEmployeeCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -41,6 +42,7 @@ public class AuthController {
     private final AuthService authService;
     private final TokenService tokenService;
     private final PasswordService passwordService;
+    private final NotificationService notificationService;
 
     @PostMapping(value = "/companies/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResponseDto<ResAdminEmployeeCreateDto>> signUpCompany(
@@ -88,8 +90,15 @@ public class AuthController {
     }
 
     @PostMapping("/employee/login")
-    public ResponseEntity<ResponseDto<ResTokenDto>> loginEmployee(@RequestBody ReqEmployeeLoginDto reqEmployeeLoginDto, HttpServletResponse response) {
+    public ResponseEntity<ResponseDto<ResTokenDto>> loginEmployee(@RequestBody ReqEmployeeLoginDto reqEmployeeLoginDto, HttpServletResponse response, HttpServletRequest request) {
         ResTokenDto token = authService.loginEmployee(reqEmployeeLoginDto, response);
+
+        // ✅ (추가) 멀티 서버용: 로그인 감지 publish
+        notificationService.publishNewLoginDetected(
+                reqEmployeeLoginDto.getEmpId(),
+                reqEmployeeLoginDto.getDeviceId(),
+                request.getRemoteAddr()
+        );
 
         return ResponseEntity
                 .status(HttpStatus.OK)

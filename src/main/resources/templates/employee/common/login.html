@@ -223,6 +223,17 @@
 </div>
 
 <script>
+
+    const DEVICE_KEY = "deviceId";
+
+    function getDeviceId() {
+        let id = localStorage.getItem(DEVICE_KEY);
+        if (!id) {
+            id = crypto.randomUUID();      // 브라우저 내장 UUID
+            localStorage.setItem(DEVICE_KEY, id);
+        }
+        return id;
+    }
     // ✅ 비밀번호 보기/숨기기
     document.querySelectorAll('.eye-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -262,7 +273,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ empId, password })
+                body: JSON.stringify({ empId, password, deviceId: getDeviceId() })
             });
 
             const result = await safeJson(res);
@@ -289,6 +300,7 @@
             serverError.style.display = 'block';
         }
     });
+
 </script>
 </body>
 </html>

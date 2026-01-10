@@ -16,4 +16,5 @@ public class ReqEmployeeLoginDto {
 
     private String empId;
     private String password;
+    private String deviceId;
 }

@@ -192,26 +192,71 @@ public class TokenService {
     public void logout(HttpServletRequest request, HttpServletResponse response) {
 
         try {
-            // 1) refreshToken 쿠키가 없으면 = 이미 로그아웃 상태로 보고 UNAUTHORIZED
-            String refreshToken = extractCookie(request, "refreshToken")
-                    .orElse(null);
+            // 1) refreshToken 쿠키 추출
+            String refreshToken = extractCookie(request, "refreshToken").orElse(null);
 
-            // 2) RT 서명/만료 검증
-            if (refreshToken != null && tokenProvider.validateToken(refreshToken)) {
-                Claims rtClaims = tokenProvider.parseClaims(refreshToken);
-                Long subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
-                TokenSubjectType subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
+            // ✅ 형식이 JWT가 아니면(= '.' 2개가 아니면) revoke/파싱 자체를 하지 않고 종료
+            if (refreshToken == null || refreshToken.isBlank()
+                    || refreshToken.chars().filter(ch -> ch == '.').count() != 2) {
+                log.warn("[LOGOUT] skip revoke. invalid token format token={}", refreshToken);
+                return; // 여기서 끝(=로그아웃 성공 취급)
+            }
 
-                // ✅ 0) 직원 로그아웃이면 msgStat = "H"
+            // 2) RT 서명/만료 검증 (✅ validateToken 자체가 throw 할 수도 있으니 catch)
+            boolean valid;
+            try {
+                valid = tokenProvider.validateToken(refreshToken);
+            } catch (Exception e) {
+                log.warn("[LOGOUT] validateToken threw exception. skip revoke. token={}", refreshToken, e);
+                return; // 쿠키는 finally에서 삭제됨
+            }
+
+            if (!valid) {
+                log.info("[LOGOUT] refreshToken not valid. skip revoke.");
+                return;
+            }
+
+            // 3) Claims 파싱 (✅ parseClaims도 throw 가능)
+            Claims rtClaims;
+            try {
+                rtClaims = tokenProvider.parseClaims(refreshToken);
+            } catch (Exception e) {
+                log.warn("[LOGOUT] parseClaims failed. skip revoke. token={}", refreshToken, e);
+                return;
+            }
+
+            // 4) subject / type 파싱도 안전하게
+            Long subjectId;
+            TokenSubjectType subjectType;
+            try {
+                subjectId = tokenProvider.getSubjectId(rtClaims.getSubject());
+                subjectType = tokenProvider.getSubjectType(rtClaims.getSubject());
+            } catch (Exception e) {
+                log.warn("[LOGOUT] subject parsing failed. skip revoke. subject={}", rtClaims.getSubject(), e);
+                return;
+            }
+
+            // ✅ 직원 로그아웃이면 msgStat OFF 처리 (이것도 실패해도 로그아웃 실패로 만들지 않음)
+            try {
                 if (subjectType == TokenSubjectType.EMPLOYEE) {
                     employeeRepository.updateMsgStatByEmpNo(subjectId, MsgStat.OFF);
                 }
+            } catch (Exception e) {
+                log.warn("[LOGOUT] updateMsgStat failed. continue logout. subjectId={}", subjectId, e);
+            }
 
+            // 5) DB에 저장된 RT revoke (이것도 실패해도 쿠키삭제는 진행)
+            try {
                 var stored = refreshTokenRepository
                         .findAllBySubjectTypeAndSubjectIdAndRevokedFalse(subjectType, subjectId);
-
                 stored.forEach(RefreshToken::revoke);
+            } catch (Exception e) {
+                log.warn("[LOGOUT] revoke stored refresh tokens failed. continue logout. subjectId={}", subjectId, e);
             }
+
+        } catch (Exception e) {
+            // ✅ logout은 어떤 예외가 와도 500으로 터지면 UX 최악이라 "먹고" 쿠키만 지우게 한다
+            log.warn("[LOGOUT] unexpected error. force clear cookies. ", e);
 
         } finally {
             // ✅ 성공/실패 상관없이 쿠키는 무조건 삭제
