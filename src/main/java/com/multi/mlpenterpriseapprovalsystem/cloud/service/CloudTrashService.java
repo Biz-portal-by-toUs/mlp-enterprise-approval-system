@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.s3.S3Client;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 
@@ -109,11 +111,8 @@ public class CloudTrashService {
         String actor = user.getUsername();
 
         if (scope == FolderScope.DEPT) {
-            // ✅ DEPT는 관리자만
-            if (!isAdmin(user)) throw new CustomException(ErrorCode.TRASH_RESTORE_FORBIDDEN);
 
             Long depNo = resolveDepNo(user);
-            if (depNo == null) throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
 
             // ✅ RESTORE 로그 적재 (복구 UPDATE 전에)
             cloudTrashLogRepository.insertRestoreLogsForDeptFoldersByBatch(comId, depNo, batchId, actor);
@@ -230,6 +229,19 @@ public class CloudTrashService {
 
         String comId = user.getComId();
         Long depNo = resolveDepNo(user);
+
+        LocalDate f = LocalDate.parse(from);
+        LocalDate t = LocalDate.parse(to);
+
+        if (t.isBefore(f)) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // 최대 3개월(대략 92일) 제한 - 팀 기준에 맞게 90/92 조절
+        long days = ChronoUnit.DAYS.between(f, t);
+        if (days > 92) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
 
         // ✅ 정책 방어: 10개씩
         int safeLimit = Math.min(Math.max(limit, 1), 10);
@@ -477,6 +489,65 @@ public class CloudTrashService {
 
         int deleted = attachmentRepository.hardDeleteDeletedCloudAttachmentById(comId, attachmentId);
         if (deleted == 0) throw new CustomException(ErrorCode.TRASH_ITEM_NOT_FOUND);
+    }
+
+    @Transactional
+    public void purgeDeptFolder(CustomUser user, Long folderNo) {
+        authCheck(user);
+
+        String comId = user.getComId();
+        String actor = user.getUsername();
+        Long depNo = resolveDepNo(user);
+
+        // 1) 루트 폴더 조회
+        Folder root = folderRepository.findByFolderNoAndComId(folderNo, comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FOLDER_NOT_FOUND));
+
+        // 2) DEPT + 같은 부서인지
+        if (root.getScope() != FolderScope.DEPT || !depNo.equals(root.getDepNo())) {
+            throw new CustomException(ErrorCode.TRASH_PURGE_FORBIDDEN);
+        }
+
+        // 3) 휴지통(삭제됨)인지
+        if (root.getDeletedAt() == null) {
+            throw new CustomException(ErrorCode.TRASH_ITEM_NOT_FOUND);
+        }
+
+        // 4) 권한: 관리자 OR 소유자(ownerId)
+        boolean isOwner = (actor != null && actor.equals(root.getOwnerId())); // Folder에 ownerId 필드가 있어야 함
+        if (!isAdmin(user) && !isOwner) {
+            throw new CustomException(ErrorCode.TRASH_PURGE_FORBIDDEN);
+        }
+
+        // 5) 트리(루트 포함) 폴더 번호들(자식부터) 확보
+        String basePath = normalizeBasePath(root.getPath(), root.getFolderNo());
+        List<Long> folderNosToDelete = folderRepository.findDeptDeletedFolderNosInTree(
+                comId, depNo, folderNo, basePath
+        );
+        if (folderNosToDelete == null || folderNosToDelete.isEmpty()) {
+            throw new CustomException(ErrorCode.TRASH_ITEM_NOT_FOUND);
+        }
+
+        // 6) 트리 내 (삭제된) 파일들의 S3 objectKey 모아서 삭제
+        List<String> keys = attachmentRepository.findDeptDeletedObjectKeysByFolderNos(
+                comId, depNo, folderNosToDelete
+        );
+        deleteObjectsFromS3(keys);
+
+        // 7) (선택) 감사 로그(원하면)
+        // cloudTrashLogRepository.insertManualPurgeLogForDeptFolder(comId, depNo, actor, root.getDeleteBatchId(), root.getFolderNo(), root.getFolderName());
+
+        // 8) DB 물리 삭제 (파일 → 폴더)
+        attachmentRepository.hardDeleteDeptDeletedAttachmentsByFolderNos(comId, depNo, folderNosToDelete);
+        folderRepository.hardDeleteFoldersByNos(comId, folderNosToDelete);
+    }
+
+    /** path가 null이어도 안전하게 prefix 만들기 */
+    private String normalizeBasePath(String path, Long folderNo) {
+        String p = (path == null || path.isBlank()) ? ("/" + folderNo) : path.trim();
+        if (!p.startsWith("/")) p = "/" + p;
+        while (p.endsWith("/") && p.length() > 1) p = p.substring(0, p.length() - 1);
+        return p;
     }
 
 
