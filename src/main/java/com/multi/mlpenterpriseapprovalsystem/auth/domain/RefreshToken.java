@@ -46,21 +46,17 @@ public class RefreshToken extends BaseEntity {
     @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
     @Column(name = "revoked", nullable = false)
     private boolean revoked;
 
 
     @Builder
     public RefreshToken(TokenSubjectType subjectType, Long subjectId, String token,
-                        LocalDateTime expiredAt, LocalDateTime createdAt) {
+                        LocalDateTime expiredAt) {
         this.subjectType = subjectType;
         this.subjectId = subjectId;
         this.token = token;
         this.expiredAt = expiredAt;
-        this.createdAt = createdAt;
         this.revoked = false;
     }
 
