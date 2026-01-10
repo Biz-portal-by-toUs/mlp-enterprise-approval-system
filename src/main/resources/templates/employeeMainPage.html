@@ -7,10 +7,6 @@
 <th:block layout:fragment="pageStyles">
     <div class="notice-popup-scope">
 
-        <!-- =========================
-        ✅ 공지 팝업 (기존 유지)
-        ========================== -->
-
         <style>
             .popup-overlay{
                 position: fixed;
@@ -233,7 +229,6 @@
             </div>
         </div>
 
-        <!-- TipTap viewer -->
         <script type="module">
             import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
             import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
@@ -413,7 +408,6 @@
                 renderPopup(currentIndex);
             }
             function nextPopup() {
-                for (let i = currentIndex + 1; i < popupList.length; i--) {}
                 for (let i = currentIndex + 1; i < popupList.length; i++) {
                     currentIndex = i;
                     renderPopup(currentIndex);
@@ -604,20 +598,20 @@
 
         /*!* 4. 일정 바 스타일: 투명도 핵심 *!*/
         /*.cal-event.bar-style {*/
-        /*    position: relative;*/
-        /*    z-index: 10; !* 선보다 위에 떠 있게 함 *!*/
-        /*    margin: 2px 0;*/
-        /*    padding: 4px 8px;*/
-        /*    font-size: 12px;*/
-        /*    border-radius: 4px;*/
+        /* position: relative;*/
+        /* z-index: 10; !* 선보다 위에 떠 있게 함 *!*/
+        /* margin: 2px 0;*/
+        /* padding: 4px 8px;*/
+        /* font-size: 12px;*/
+        /* border-radius: 4px;*/
 
-        /*    !* 텍스트가 넘치면 말줄임표 *!*/
-        /*    white-space: nowrap;*/
-        /*    overflow: hidden;*/
-        /*    text-overflow: ellipsis;*/
+        /* !* 텍스트가 넘치면 말줄임표 *!*/
+        /* white-space: nowrap;*/
+        /* overflow: hidden;*/
+        /* text-overflow: ellipsis;*/
 
-        /*    !* 왼쪽 포인트 선만 진하게 *!*/
-        /*    border-left: 4px solid currentColor;*/
+        /* !* 왼쪽 포인트 선만 진하게 *!*/
+        /* border-left: 4px solid currentColor;*/
         /*}*/
 
         /* 2. 일정 바 스타일 (이어져 보이게) */
@@ -706,7 +700,7 @@
                                 <div class="summary-icon">📄</div>
                                 <div class="summary-label">결재</div>
                                 <div class="summary-content">
-                                    <a href="/approvals/inbox" class="summary-item">결재할 문서<span class="count" id="needApprove" style="color:#bbb;">-</span></a>
+                                    <a href="/documents/me?status=AWAITING" class="summary-item">결재할 문서<span class="count" id="needApprove" style="color:#bbb;">-</span></a>
                                 </div>
                             </div>
                         </div>
@@ -843,12 +837,17 @@
             const summary = await apiGet('/api/v1/dashboard/summary');
             if (summary) {
                 document.getElementById('mailNew').textContent = summary.newMail || 0;
-                document.getElementById('needApprove').textContent = summary.newApproval || 0;
+            }
+
+            // ✅ 수정: 결재할 문서 개수 - Page 객체의 totalElements 활용
+            const awaitingResult = await apiGet('/api/v1/documents/me?status=AWAITING');
+            if (awaitingResult && awaitingResult.totalElements !== undefined) {
+                document.getElementById('needApprove').textContent = awaitingResult.totalElements;
             }
 
             // 2. 메일 목록 (Inbox - Page 객체라면 .content 사용 필요 확인)
             const mailResult = await apiGet('/api/v1/mails/inbox');
-            const mails = mailResult.content ? mailResult.content : mailResult; // Page 대응
+            const mails = mailResult && mailResult.content ? mailResult.content : mailResult; // Page 대응
             renderList('mailList', mails, (item) => `
         <a href="/mail/${item.mailNo}" class="simple-list-item">
             <span>${item.title}</span> <span class="date">${formatDate(item.createdAt)}</span>
@@ -860,7 +859,7 @@
 
             // 4. 공지사항 (Page 객체라면 .content 사용)
             const noticeResult = await apiGet('/api/v1/notices-all');
-            const notices = noticeResult.content ? noticeResult.content : noticeResult;
+            const notices = noticeResult && noticeResult.content ? noticeResult.content : noticeResult;
             renderList('noticeList', notices, (item) => `
         <a href="/notice/${item.noticeNo}" class="simple-list-item">
             <span>${item.title}</span> <span class="date">${formatDate(item.createdAt)}</span>
@@ -898,15 +897,26 @@
 
             target.innerHTML = '<div style="text-align:center; padding:20px; color:#bbb;">불러오는 중...</div>';
 
-            const apiStatus = (type === 'REJECTED') ? 'SUBMITTED' : type;
-            const result = await apiGet(`/api/v1/documents/me?status=${apiStatus}`);
+            // ✅ 수정: 백엔드 컨트롤러 사양에 맞춘 엔드포인트 및 상세 페이지 이동용 status 설정
+            let endpoint = '';
+            let viewStatus = '';
+
+            if (type === 'AWAITING') {
+                endpoint = '/api/v1/documents/me?status=AWAITING';
+                viewStatus = 'AWAITING';
+            } else if (type === 'SUBMITTED') {
+                endpoint = '/api/v1/documents/me?status=SUBMITTED';
+                viewStatus = 'SUBMITTED';
+            } else if (type === 'REJECTED') {
+                // 반려된 문서는 내가 상신한 문서(SUBMITTED) 목록 중 docStat이 RJ인 것만 요청
+                endpoint = '/api/v1/documents/me?status=SUBMITTED&docStat=RJ';
+                viewStatus = 'SUBMITTED';
+            }
+
+            const result = await apiGet(endpoint);
 
             // ✅ Page 객체의 content 배열을 가져옴
             let data = (result && result.content) ? result.content : (Array.isArray(result) ? result : []);
-
-            if (type === 'REJECTED') {
-                data = data.filter(doc => doc.docStat === 'RJ');
-            }
 
             if (data.length === 0) {
                 target.innerHTML = '<div style="text-align:center; padding:20px; color:#bbb;">문서가 없습니다.</div>';
@@ -914,11 +924,11 @@
             }
 
             target.innerHTML = data.map(doc => `
-        <a href="/documents/${doc.docNo}" class="appr-row">
+        <a href="/documents/${doc.docNo}?status=${viewStatus}" class="appr-row">
             <span class="arrow">▶</span>
             <div class="appr-info">
                 <div class="title">${doc.title}</div>
-                <div class="meta">${doc.statusName || type} | ${doc.writerDept || ''} ${formatDate(doc.createdAt)}</div>
+                <div class="meta">${doc.docStatName || ''} | ${doc.writerDepName || ''} ${formatDate(doc.createdAt)}</div>
             </div>
         </a>
     `).join('');
@@ -960,7 +970,7 @@
 
         function bindApprovalTabs() {
             const tabs = document.querySelectorAll('.appr-tab');
-            const types = ['AWAITING', 'REJECTED', 'SUBMITTED'];
+            const types = ['AWAITING', 'SUBMITTED', 'REJECTED']; // ✅ REJECTED의 위치 변경 가능성에 맞춰 types 배열 수정
 
             tabs.forEach((tab, index) => {
                 tab.addEventListener('click', function() {
