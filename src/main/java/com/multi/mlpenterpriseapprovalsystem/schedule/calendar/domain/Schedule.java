@@ -1,8 +1,10 @@
 package com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain;
 
+import com.multi.mlpenterpriseapprovalsystem.common.domain.BaseEntity;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
+import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope; // 추가
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -10,39 +12,38 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * Please explain the class!!!
- *
- * @author : 김승기
- * @filename : Schedule
- * @since : 2025. 12. 16. 화요일
- */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "schedule")
-public class Schedule {
+public class Schedule extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="sch_no")
     private Long schNo;
 
+    // 일정의 범위 (PERSONAL, DEPARTMENT, COMPANY)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CalendarScope scope;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
 
-    // [변경 반영] dep_no 참조
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dep_no")
     private Department department;
 
     @Column(nullable = false)
     private String title;
-    @Column
+
+    @Column(columnDefinition = "TEXT") // 내용이 길 수 있으므로 TEXT 권장
     private String content;
 
     @Column(name="start_at", nullable = false)
     private LocalDateTime startAt;
+
     @Column(name="ended_at", nullable = false)
     private LocalDateTime endedAt;
 
@@ -56,10 +57,12 @@ public class Schedule {
     @JoinColumn(name = "reg_emp", referencedColumnName = "emp_id")
     private Employee register;
 
-    private Schedule(Company company, Department department, Employee register,
+    // 생성자 수정
+    private Schedule(CalendarScope scope, Company company, Department department, Employee register,
                      String title, String content,
                      LocalDateTime startAt, LocalDateTime endedAt,
                      boolean allDay, String color) {
+        this.scope = scope; // ✅ 추가
         this.company = company;
         this.department = department;
         this.register = register;
@@ -71,11 +74,12 @@ public class Schedule {
         this.color = color;
     }
 
-    public static Schedule create(Company company, Department department, Employee register,
+    // 정적 팩토리 메서드 수정
+    public static Schedule create(CalendarScope scope, Company company, Department department, Employee register,
                                   String title, String content,
                                   LocalDateTime startAt, LocalDateTime endedAt,
                                   boolean allDay, String color) {
-        return new Schedule(company, department, register, title, content, startAt, endedAt, allDay, color);
+        return new Schedule(scope, company, department, register, title, content, startAt, endedAt, allDay, color);
     }
 
     public void update (String title, String content, LocalDateTime startAt, LocalDateTime endedAt,

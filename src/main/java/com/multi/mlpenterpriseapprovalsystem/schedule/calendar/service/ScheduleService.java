@@ -10,13 +10,13 @@ import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeReposit
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
-import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.EmpSchedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.domain.Schedule;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarScope;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.enums.CalendarViewType;
-import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.repository.EmpScheduleRepository;
 import com.multi.mlpenterpriseapprovalsystem.schedule.calendar.repository.ScheduleRepository;
+import com.multi.mlpenterpriseapprovalsystem.search.domain.SearchDocType;
+import com.multi.mlpenterpriseapprovalsystem.search.service.SearchOutboxAppender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,10 +30,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 일정 관련 서비스
+ * 일정 관련 서비스 (통합 버전)
  *
- * @author : 권지영
- * @filename : EmpScheduleService
+ * @author : 권지영, 김승기
+ * @filename : ScheduleService
  * @since : 2025. 12. 30. 화요일
  */
 @Service
@@ -42,12 +42,15 @@ import java.util.Set;
 @Slf4j
 public class ScheduleService {
 
-    private final EmpScheduleRepository empScheduleRepository;
-    private final ScheduleRepository scheduleRepository;
+    private final ScheduleRepository scheduleRepository; // EmpScheduleRepository 제거됨
     private final EmployeeRepository employeeRepository;
     private final CompanyRepository companyRepository;
     private final NotificationService notificationService;
+    private final SearchOutboxAppender searchOutboxAppender;
 
+    /**
+     * 일정 목록 조회
+     */
     public ResScheduleListDto getItems(CustomUser user, ReqScheduleDto req) {
         Range range = resolveRange(req);
 
@@ -65,21 +68,20 @@ public class ScheduleService {
     }
 
     private List<ResScheduleDto> getPersonalItems(CustomUser user, Range range) {
-        // ✅ 로그인 사용자 empId는 토큰의 username(예: E000001) 기준으로 조회
-        // repository는 emp_id(사번) 기준으로 겹치는 일정 조회한다고 가정
-        List<EmpSchedule> rows = empScheduleRepository.findOverlapping(
+        // ✅ Schedule 테이블에서 scope=PERSONAL 이고 등록자가 본인인 일정 조회
+        List<Schedule> rows = scheduleRepository.findPersonalOverlapping(
                 user.getUsername(),
                 range.fromInclusive,
                 range.toExclusive
         );
 
         return rows.stream()
-                .map(ResScheduleDto::fromPersonal)
+                .map(s -> ResScheduleDto.fromSchedule(CalendarScope.PERSONAL, s))
                 .toList();
     }
 
     private List<ResScheduleDto> getCompanyItems(CustomUser user, Range range) {
-        // ✅ 회사 일정: department is null + 회사 com_id 필터
+        // ✅ 회사 전체 일정 조회 (scope=COMPANY)
         List<Schedule> rows = scheduleRepository.findCompanyOverlapping(
                 user.getComId(),
                 range.fromInclusive,
@@ -95,10 +97,9 @@ public class ScheduleService {
         Employee employee = employeeRepository.findByEmpId(user.getUsername())
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        log.info("조회>>>>>>>>>>>>>" + employee.getEmpId());
-
         Long depNo = employee.getDepartment().getDepNo();
 
+        // ✅ 부서 일정 조회 (scope=DEPARTMENT)
         List<Schedule> rows = scheduleRepository.findDepartmentOverlapping(
                 user.getComId(),
                 depNo,
@@ -112,165 +113,82 @@ public class ScheduleService {
     }
 
     /**
-     * WEEK/MONTH 조회 범위 계산
-     * - WEEK: weekStart 기준 주 시작 00:00 ~ +7일 00:00
-     * - MONTH:
-     *   - includeAdjacentInMonth=false: 해당 월 1일 00:00 ~ 다음달 1일 00:00
-     *   - includeAdjacentInMonth=true: 달력 그리드 전체(앞/뒤 인접일 포함)
+     * 일정 삭제
      */
-    private Range resolveRange(ReqScheduleDto req) {
-        if (req.getBaseDate() == null) {
-            throw new IllegalArgumentException("baseDate는 필수입니다.");
-        }
-        if (req.getView() == null) {
-            throw new IllegalArgumentException("view(WEEK/MONTH)는 필수입니다.");
-        }
-
-        LocalDate base = req.getBaseDate();
-        DayOfWeek weekStart = (req.getWeekStart() == null) ? DayOfWeek.MONDAY : req.getWeekStart();
-
-        if (req.getView() == CalendarViewType.WEEK) {
-            LocalDate start = startOfWeek(base, weekStart);
-            return new Range(start.atStartOfDay(), start.plusDays(7).atStartOfDay());
-        }
-
-        // MONTH
-        LocalDate firstOfMonth = base.withDayOfMonth(1);
-        LocalDate firstOfNextMonth = firstOfMonth.plusMonths(1);
-
-        if (!req.isIncludeAdjacentInMonth()) {
-            return new Range(firstOfMonth.atStartOfDay(), firstOfNextMonth.atStartOfDay());
-        }
-
-        // 인접일 포함(달력 grid)
-        LocalDate gridStart = startOfWeek(firstOfMonth, weekStart);
-        LocalDate lastOfMonth = firstOfMonth.with(TemporalAdjusters.lastDayOfMonth());
-        LocalDate gridEndExclusive = startOfWeek(lastOfMonth, weekStart).plusDays(7);
-
-        return new Range(gridStart.atStartOfDay(), gridEndExclusive.atStartOfDay());
-    }
-
-    private LocalDate startOfWeek(LocalDate date, DayOfWeek weekStart) {
-        int current = date.getDayOfWeek().getValue(); // MON=1..SUN=7
-        int start = weekStart.getValue();
-        int diff = (current - start + 7) % 7;
-        return date.minusDays(diff);
-    }
-
     @Transactional
     public void deleteItem(CustomUser user, Long schNo, ReqDeleteScheduleDto req) {
+        Schedule schedule = scheduleRepository.findById(schNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        if(req.getScope() == CalendarScope.PERSONAL) {
-
-            EmpSchedule empSchedule = empScheduleRepository.findById(schNo)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-            if(!empSchedule.getEmployee().getEmpId().equals(user.getUsername())) {
+        // 권한 체크
+        if (req.getScope() == CalendarScope.PERSONAL || req.getScope() == CalendarScope.DEPARTMENT) {
+            // 개인/부서 일정은 등록자 본인만 삭제 가능
+            if (!schedule.getRegister().getEmpId().equals(user.getUsername())) {
                 throw new CustomException(ErrorCode.NOT_REGISTER);
             }
-
-            empScheduleRepository.delete(empSchedule);
-        } else if(req.getScope() == CalendarScope.DEPARTMENT) {
-            Schedule schedule = scheduleRepository.findById(schNo)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-            if(!schedule.getRegister().getEmpId().equals(user.getUsername())) {
-                throw new CustomException(ErrorCode.NOT_REGISTER);
-            }
-
-            scheduleRepository.delete(schedule);
-        } else if(req.getScope() == CalendarScope.COMPANY) {
-            Schedule schedule = scheduleRepository.findById(schNo)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-            if(!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
-                throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
-            }
-            scheduleRepository.delete(schedule);
-        }
-
-
-
-    }
-    private boolean hasAnyRole(CustomUser user, Set<String> allowed) {
-        return user.getAuthorities().stream()
-                .map(a -> a.getAuthority())
-                .anyMatch(allowed::contains);
-    }
-
-    @Transactional
-    public void updateItem(CustomUser user, Long schNo, ReqCreateScheduleDto req) {
-
-        Employee employee = employeeRepository.findByEmpId(user.getUsername())
-                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-
-        // ✅ 여기서 검증 + 정규화 한 번에 끝
-        TimeBundle time = resolveTime(req);
-
-        if (req.getScope() == CalendarScope.PERSONAL) {
-            EmpSchedule s = empScheduleRepository.findById(schNo)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-            if (!s.getEmployee().getEmpId().equals(user.getUsername())) {
-                throw new CustomException(ErrorCode.NOT_REGISTER);
-            }
-
-            s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
-
-
-            return;
-        }
-
-        if (req.getScope() == CalendarScope.DEPARTMENT) {
-            Schedule s = scheduleRepository.findById(schNo)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-            if (!s.getRegister().getEmpId().equals(user.getUsername())) {
-                throw new CustomException(ErrorCode.NOT_REGISTER);
-            }
-
-            s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
-
-            List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(employee.getDepartment().getDepNo());
-            for(Employee emp : emps) {
-                notificationService.sendNotification(emp, NotificationType.CALENDER, "부서 일정", "\""+req.getTitle()+"\" 부서 일정이 수정 되었습니다.","/schedule/calendar");
-            }
-            return;
-        }
-
-        if (req.getScope() == CalendarScope.COMPANY) {
-            Schedule s = scheduleRepository.findById(schNo)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
+        } else if (req.getScope() == CalendarScope.COMPANY) {
+            // 회사 일정은 관리자만 삭제 가능
             if (!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
                 throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
             }
-
-            s.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
-
-            List<Employee> emps = employeeRepository.findAllByCompany_ComId(user.getComId());
-            for(Employee emp : emps) {
-                notificationService.sendNotification(emp, NotificationType.CALENDER, "회사 일정", "\""+req.getTitle()+"\" 회사 일정이 수정 되었습니다.","/schedule/calendar");
-            }
-            return;
         }
 
-        throw new CustomException(ErrorCode.FORBIDDEN);
+        scheduleRepository.delete(schedule);
+
+        // 검색 아웃박스 동기화 (삭제)
+        searchOutboxAppender.enqueueDelete(user.getComId(), SearchDocType.SCHEDULE, schNo);
     }
 
+    /**
+     * 일정 수정
+     */
+    @Transactional
+    public void updateItem(CustomUser user, Long schNo, ReqCreateScheduleDto req) {
+        Schedule schedule = scheduleRepository.findById(schNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-    private record Range(LocalDateTime fromInclusive, LocalDateTime toExclusive) {}
+        TimeBundle time = resolveTime(req);
 
+        // 권한 체크
+        if (req.getScope() == CalendarScope.PERSONAL || req.getScope() == CalendarScope.DEPARTMENT) {
+            if (!schedule.getRegister().getEmpId().equals(user.getUsername())) {
+                throw new CustomException(ErrorCode.NOT_REGISTER);
+            }
+        } else if (req.getScope() == CalendarScope.COMPANY) {
+            if (!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
+                throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
+            }
+        }
+
+        // 데이터 업데이트
+        schedule.update(req.getTitle(), req.getContent(), time.startAt, time.endedAt, time.allDay);
+
+        // 알림 전송 로직
+        if (req.getScope() == CalendarScope.DEPARTMENT) {
+            List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(schedule.getDepartment().getDepNo());
+            for (Employee emp : emps) {
+                notificationService.sendNotification(emp, NotificationType.CALENDER, "부서 일정", "\"" + req.getTitle() + "\" 부서 일정이 수정 되었습니다.", "/schedule/calendar");
+            }
+        } else if (req.getScope() == CalendarScope.COMPANY) {
+            List<Employee> emps = employeeRepository.findAllByCompany_ComId(user.getComId());
+            for (Employee emp : emps) {
+                notificationService.sendNotification(emp, NotificationType.CALENDER, "회사 일정", "\"" + req.getTitle() + "\" 회사 일정이 수정 되었습니다.", "/schedule/calendar");
+            }
+        }
+
+        // 검색 아웃박스 동기화 (수정/업서트)
+        searchOutboxAppender.enqueueUpsert(user.getComId(), SearchDocType.SCHEDULE, schNo);
+    }
+
+    /**
+     * 일정 생성
+     */
     @Transactional
     public ResScheduleDto createItem(CustomUser user, ReqCreateScheduleDto req) {
-
-        String empId = user.getUsername();
-        Employee employee = employeeRepository.findByEmpId(empId)
+        Employee employee = employeeRepository.findByEmpId(user.getUsername())
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        log.info("등록>>>>>>>>>>>>>" + employee.getEmpId());
         String comId = user.getComId();
-
         TimeBundle time = resolveTime(req);
 
         return switch (req.getScope()) {
@@ -280,40 +198,18 @@ public class ScheduleService {
         };
     }
 
-    private record TimeBundle(LocalDateTime startAt, LocalDateTime endedAt, boolean allDay) {}
-
-    private TimeBundle resolveTime(ReqCreateScheduleDto req) {
-        if (req.isAllDay()) {
-            if (req.getStartDate() == null) {
-                throw new CustomException(ErrorCode.MUST_STARTDATE_IF_ALLDAY_TRUE);
-            }
-            LocalDate end = (req.getEndDate() != null) ? req.getEndDate() : req.getStartDate();
-            if (end.isBefore(req.getStartDate())) {
-                throw new CustomException(ErrorCode.START_MUST_BEFORE_END);
-            }
-
-            LocalDateTime startAt = req.getStartDate().atStartOfDay();
-            LocalDateTime endedAt = end.plusDays(1).atStartOfDay(); // ✅ end는 exclusive
-            return new TimeBundle(startAt, endedAt, true);
-        }
-
-        if (req.getStartAt() == null || req.getEndedAt() == null) {
-            throw new CustomException(ErrorCode.MUST_STARTAT_ENDEDAT);
-        }
-        if (!req.getEndedAt().isAfter(req.getStartAt())) {
-            throw new CustomException(ErrorCode.START_MUST_BEFORE_END);
-        }
-        return new TimeBundle(req.getStartAt(), req.getEndedAt(), false);
-    }
-
     private ResScheduleDto createPersonal(Employee employee, TimeBundle time, ReqCreateScheduleDto req) {
-
         String finalColor = ScheduleColorPolicy.resolve(req.getScope());
 
-        EmpSchedule saved = empScheduleRepository.save(
-                EmpSchedule.create(employee, req.getTitle(), req.getContent(),
+        // ✅ Schedule 엔티티로 생성 (scope = PERSONAL)
+        Schedule saved = scheduleRepository.save(
+                Schedule.create(CalendarScope.PERSONAL, employee.getCompany(), null, employee,
+                        req.getTitle(), req.getContent(),
                         time.startAt, time.endedAt, time.allDay, finalColor)
         );
+
+        // 개인 일정도 검색 대상이라면 추가
+        searchOutboxAppender.enqueueUpsert(employee.getCompany().getComId(), SearchDocType.SCHEDULE, saved.getSchNo());
 
         return ResScheduleDto.builder()
                 .schNo(saved.getSchNo())
@@ -330,23 +226,24 @@ public class ScheduleService {
         Company company = companyRepository.findByComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
-        String finalColor = ScheduleColorPolicy.resolve(req.getScope());
-
         if (!hasAnyRole(user, Set.of("ROLE_COM_ADMIN", "ROLE_SEC_ADMIN", "ROLE_THR_ADMIN"))) {
             throw new CustomException(ErrorCode.SCHEDULE_NOT_AUTH);
         }
 
-        List<Employee> emps = employeeRepository.findAllByCompany_ComId(comId);
-        for(Employee emp : emps) {
-            notificationService.sendNotification(emp, NotificationType.CALENDER, "회사 일정", "\""+req.getTitle()+"\" 회사 일정이 추가 되었습니다.","/schedule/calendar");
-        }
-
+        String finalColor = ScheduleColorPolicy.resolve(req.getScope());
 
         Schedule saved = scheduleRepository.save(
-                Schedule.create(company, null, register,
+                Schedule.create(CalendarScope.COMPANY, company, null, register,
                         req.getTitle(), req.getContent(),
                         time.startAt, time.endedAt, time.allDay, finalColor)
         );
+
+        List<Employee> emps = employeeRepository.findAllByCompany_ComId(comId);
+        for (Employee emp : emps) {
+            notificationService.sendNotification(emp, NotificationType.CALENDER, "회사 일정", "\"" + req.getTitle() + "\" 회사 일정이 추가 되었습니다.", "/schedule/calendar");
+        }
+
+        searchOutboxAppender.enqueueUpsert(comId, SearchDocType.SCHEDULE, saved.getSchNo());
 
         return ResScheduleDto.builder()
                 .schNo(saved.getSchNo())
@@ -364,20 +261,20 @@ public class ScheduleService {
                 .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
 
         Department department = register.getDepartment();
-
         String finalColor = ScheduleColorPolicy.resolve(req.getScope());
 
-
         Schedule saved = scheduleRepository.save(
-                Schedule.create(company, department, register,
+                Schedule.create(CalendarScope.DEPARTMENT, company, department, register,
                         req.getTitle(), req.getContent(),
                         time.startAt, time.endedAt, time.allDay, finalColor)
         );
 
         List<Employee> emps = employeeRepository.findAllByDepartment_DepNo(department.getDepNo());
-        for(Employee emp : emps) {
-            notificationService.sendNotification(emp, NotificationType.CALENDER, "부서 일정", "\""+req.getTitle()+"\" 부서 일정이 추가 되었습니다.","/schedule/calendar");
+        for (Employee emp : emps) {
+            notificationService.sendNotification(emp, NotificationType.CALENDER, "부서 일정", "\"" + req.getTitle() + "\" 부서 일정이 추가 되었습니다.", "/schedule/calendar");
         }
+
+        searchOutboxAppender.enqueueUpsert(comId, SearchDocType.SCHEDULE, saved.getSchNo());
 
         return ResScheduleDto.builder()
                 .schNo(saved.getSchNo())
@@ -388,5 +285,59 @@ public class ScheduleService {
                 .endedAt(saved.getEndedAt())
                 .color(saved.getColor())
                 .build();
+    }
+
+    // --- 내부 헬퍼 메서드 및 레코드 ---
+
+    private record Range(LocalDateTime fromInclusive, LocalDateTime toExclusive) {}
+    private record TimeBundle(LocalDateTime startAt, LocalDateTime endedAt, boolean allDay) {}
+
+    private Range resolveRange(ReqScheduleDto req) {
+        if (req.getBaseDate() == null) throw new IllegalArgumentException("baseDate는 필수입니다.");
+        if (req.getView() == null) throw new IllegalArgumentException("view(WEEK/MONTH)는 필수입니다.");
+
+        LocalDate base = req.getBaseDate();
+        DayOfWeek weekStart = (req.getWeekStart() == null) ? DayOfWeek.MONDAY : req.getWeekStart();
+
+        if (req.getView() == CalendarViewType.WEEK) {
+            LocalDate start = startOfWeek(base, weekStart);
+            return new Range(start.atStartOfDay(), start.plusDays(7).atStartOfDay());
+        }
+
+        LocalDate firstOfMonth = base.withDayOfMonth(1);
+        if (!req.isIncludeAdjacentInMonth()) {
+            return new Range(firstOfMonth.atStartOfDay(), firstOfMonth.plusMonths(1).atStartOfDay());
+        }
+
+        LocalDate gridStart = startOfWeek(firstOfMonth, weekStart);
+        LocalDate lastOfMonth = firstOfMonth.with(TemporalAdjusters.lastDayOfMonth());
+        LocalDate gridEndExclusive = startOfWeek(lastOfMonth, weekStart).plusDays(7);
+
+        return new Range(gridStart.atStartOfDay(), gridEndExclusive.atStartOfDay());
+    }
+
+    private LocalDate startOfWeek(LocalDate date, DayOfWeek weekStart) {
+        int current = date.getDayOfWeek().getValue();
+        int start = weekStart.getValue();
+        int diff = (current - start + 7) % 7;
+        return date.minusDays(diff);
+    }
+
+    private TimeBundle resolveTime(ReqCreateScheduleDto req) {
+        if (req.isAllDay()) {
+            if (req.getStartDate() == null) throw new CustomException(ErrorCode.MUST_STARTDATE_IF_ALLDAY_TRUE);
+            LocalDate end = (req.getEndDate() != null) ? req.getEndDate() : req.getStartDate();
+            if (end.isBefore(req.getStartDate())) throw new CustomException(ErrorCode.START_MUST_BEFORE_END);
+            return new TimeBundle(req.getStartDate().atStartOfDay(), end.plusDays(1).atStartOfDay(), true);
+        }
+        if (req.getStartAt() == null || req.getEndedAt() == null) throw new CustomException(ErrorCode.MUST_STARTAT_ENDEDAT);
+        if (!req.getEndedAt().isAfter(req.getStartAt())) throw new CustomException(ErrorCode.START_MUST_BEFORE_END);
+        return new TimeBundle(req.getStartAt(), req.getEndedAt(), false);
+    }
+
+    private boolean hasAnyRole(CustomUser user, Set<String> allowed) {
+        return user.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(allowed::contains);
     }
 }
