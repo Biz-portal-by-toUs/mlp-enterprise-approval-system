@@ -809,8 +809,8 @@
                     <button onclick="deleteTable()">표 삭제</button>
 
                     <button onclick="toggleBlockquote()" id="btn-blockquote">인용</button>
-                    <button onclick="insertLink()">링크</button>
-                    <button onclick="insertImage()">이미지</button>
+                    <button onclick="insertLink()" id="btn-link">링크</button>
+                    <button onclick="insertImage()" id="btn-image">이미지</button>
                 </div>
                 <div id="editor-container"></div>
             </div>
@@ -887,8 +887,13 @@
         initApproverSearch();
         initDelegateSearch();
 
-        // ✅ 내가 대직자로 지정된 기간 목록 미리 로드
-        await fetchMyDelegatePeriods();
+        // 제목 글자수 제한 (100자) - IME 대응을 위한 자바스크립트 강제 처리
+        const docTitleInput = document.getElementById('doc-title');
+        docTitleInput.addEventListener('input', (e) => {
+            if (e.target.value.length > 100) {
+                e.target.value = e.target.value.substring(0, 100);
+            }
+        });
 
         await fetchFormDetails();
 
@@ -920,16 +925,16 @@
     }
 
     // ✅ 대직 예정 기간 정보 API 호출
-    async function fetchMyDelegatePeriods() {
-        try {
-            const res = await fetch('/api/v1/attendances/me/delegate-periods', { credentials: 'include' });
-            const result = await res.json();
-            myDelegatePeriods = result.data || [];
-            console.log('✅ 내 대직 예정 기간 로드 완료:', myDelegatePeriods);
-        } catch (e) {
-            console.error('❌ 대직 기간 로드 실패:', e);
-        }
-    }
+    // async function fetchMyDelegatePeriods() {
+    //     try {
+    //         const res = await fetch('/api/v1/attendances/me/delegate-periods', { credentials: 'include' });
+    //         const result = await res.json();
+    //         myDelegatePeriods = result.data || [];
+    //         console.log('✅ 내 대직 예정 기간 로드 완료:', myDelegatePeriods);
+    //     } catch (e) {
+    //         console.error('❌ 대직 기간 로드 실패:', e);
+    //     }
+    // }
 
     // ✅ 대직 기간 중복 체크 로직 (본인이 이미 대직자인 경우 휴가 신청 차단)
     function checkOverlapWithMyDelegateJob(newStart, newEnd) {
@@ -1022,13 +1027,14 @@
 
             const result = await response.json();
             const attendance = result.data;
+            window.originalAttendanceData = attendance;
 
             console.log('✅ 근태 정보 로드:', attendance);
 
             document.getElementById('startDate').value = attendance.startAt.split('T')[0];
             document.getElementById('endDate').value = attendance.endAt.split('T')[0];
 
-            if (category === '휴가수정신청' && attendance.delegateEmpId) {
+            if (category === '휴가취소신청' && attendance.delegateEmpId) {
                 selectedDelegate = {
                     empId: attendance.delegateEmpId,
                     empName: attendance.delegateEmpName,
@@ -1036,7 +1042,6 @@
                     depName: attendance.delegateDepName || '',
                     posOrder: attendance.delegatePosOrder || 999
                 };
-                renderSelectedDelegate();
             }
 
             const categoryRadios = document.querySelectorAll('input[name="docfoCatNo"]');
@@ -1305,10 +1310,29 @@
 
         attendanceSection.style.display = 'block';
 
-        document.getElementById('startDate').value = '';
-        document.getElementById('endDate').value = '';
+        // ✅ 카테고리 복구 로직: 관리 페이지에서 진입 시 정보 다시 채우기
+        if (window.targetAtteNo && window.originalAttendanceData) {
+            document.getElementById('startDate').value = window.originalAttendanceData.startAt.split('T')[0];
+            document.getElementById('endDate').value = window.originalAttendanceData.endAt.split('T')[0];
 
-        selectedDelegate = null;
+            // 휴가취소신청일 때만 기존 대직자 복구
+            if (categoryName === '휴가취소신청' && window.originalAttendanceData.delegateEmpId) {
+                selectedDelegate = {
+                    empId: window.originalAttendanceData.delegateEmpId,
+                    empName: window.originalAttendanceData.delegateEmpName,
+                    posName: window.originalAttendanceData.delegatePosName || '사원',
+                    depName: window.originalAttendanceData.delegateDepName || '',
+                    posOrder: window.originalAttendanceData.delegatePosOrder || 999
+                };
+            } else {
+                selectedDelegate = null;
+            }
+        } else {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            selectedDelegate = null;
+        }
+
         renderSelectedDelegate();
 
         // ✅ 카테고리 변경 시 대직자 검색창 상태 초기화
@@ -1499,12 +1523,18 @@
                 row.content.forEach(cell => {
                     if (cell.attrs && cell.attrs['data-field'] === 'delegate') {
                         if (selectedDelegate) {
+                            let delegateText = "";
+                            if (currentCategoryName === '휴가취소신청') {
+                                delegateText = `${selectedDelegate.empName} / ${selectedDelegate.empId}`;
+                            } else {
+                                delegateText = `${selectedDelegate.empName} (${selectedDelegate.posName} / ${selectedDelegate.depName})`;
+                            }
                             cell.content = [{
                                 type: 'paragraph',
                                 attrs: { textAlign: 'center' },
                                 content: [{
                                     type: 'text',
-                                    text: `${selectedDelegate.empName} (${selectedDelegate.posName} / ${selectedDelegate.depName})`
+                                    text: delegateText
                                 }]
                             }];
                         } else {
@@ -1551,6 +1581,8 @@
 
     async function fetchFormDetails() {
         const container = document.getElementById('category-radio-group');
+        const urlParams = new URLSearchParams(window.location.search);
+        const isUpdateMode = !!urlParams.get('atteNo'); // atteNo가 있으면 수정/취소 모드
 
         try {
             const response = await fetch(`/api/v1/temp/documentForms/${currentDocfoNo}`, {
@@ -1598,8 +1630,10 @@
 
                 if (categories.length > 0) {
                     container.innerHTML = categories.map((cat, index) => `
-                        <label class="cat-item">
-                            <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}" ${index === 0 ? 'checked' : ''}>
+                        <label class="cat-item" ${isUpdateMode ? 'style="cursor: not-allowed; opacity: 0.8;"' : ''}>
+                            <input type="radio" name="docfoCatNo" value="${cat.docfoCatNo}"
+                                ${index === 0 ? 'checked' : ''}
+                                ${isUpdateMode ? 'disabled' : ''}>
                             <span>${cat.docfoCatName}</span>
                         </label>`).join('');
 
@@ -1661,11 +1695,18 @@
     function initApproverSearch() {
         const searchInput = document.getElementById('approver-search');
         const searchResults = document.getElementById('search-results');
-        searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
+
+        // 검색창 입력 길이 제한 (20자) 처리 강화
         searchInput.addEventListener('input', (e) => {
+            if (e.target.value.length > 20) {
+                e.target.value = e.target.value.substring(0, 20);
+            }
             if (searchTimeout) clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => searchEmployees(e.target.value), 300);
         });
+
+        searchInput.addEventListener('focus', () => searchEmployees(searchInput.value));
+
         document.addEventListener('click', (e) => {
             if (!document.querySelector('.search-container').contains(e.target)) {
                 searchResults.innerHTML = '<div style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">검색창을 클릭하면 전체 사원이 조회됩니다.</div>';
@@ -1895,6 +1936,7 @@
                     const { selection } = state;
                     const { $from } = selection;
 
+                    // 1. 기존 비활성 셀 보호 로직
                     for (let depth = $from.depth; depth > 0; depth--) {
                         const node = $from.node(depth);
                         if (node.type.name === 'tableCell' && node.attrs.editable === false) {
@@ -1904,18 +1946,42 @@
                             }
                         }
                     }
+
+                    // 2. 글자 수 제한 로직 (1000자) - 키 입력 차단
+                    const currentLength = state.doc.textContent.length;
+                    const isControlKey = event.ctrlKey || event.metaKey || event.altKey;
+                    const allowedFunctionalKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape'];
+
+                    if (currentLength >= 1000 && !isControlKey && !allowedFunctionalKeys.includes(event.key)) {
+                        return true;
+                    }
+
                     return false;
                 },
-                handlePaste: (view) => {
+                handlePaste: (view, event, slice) => {
                     const { state } = view;
                     const { selection } = state;
                     const { $from } = selection;
 
+                    // 1. 기존 비활성 셀 보호 로직
                     for (let depth = $from.depth; depth > 0; depth--) {
                         const node = $from.node(depth);
                         if (node.type.name === 'tableCell' && node.attrs.editable === false) {
                             return true;
                         }
+                    }
+
+                    // 2. 붙여넣기 시 글자 수 제한 로직
+                    const currentLength = state.doc.textContent.length;
+                    const pasteText = slice.content.textBetween(0, slice.content.size);
+                    if (currentLength + pasteText.length > 1000) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: '입력 제한',
+                            text: '내용은 최대 1000자까지만 입력할 수 있습니다.',
+                            confirmButtonColor: '#339af0'
+                        });
+                        return true;
                     }
                     return false;
                 },
@@ -1934,6 +2000,12 @@
                 },
             },
             onUpdate: ({ editor }) => {
+                // 3. IME(한글) 입력 등으로 1000자 초과 시 강제 절단 로직 추가
+                const text = editor.getText();
+                if (text.length > 1000) {
+                    const overLength = text.length - 1000;
+                    editor.commands.deleteRange({ from: editor.state.selection.from - overLength, to: editor.state.selection.from });
+                }
                 updateCharCounter();
                 updateToolbarButtons();
             },
@@ -1965,9 +2037,23 @@
             })
                 .then(response => response.json())
                 .then(result => {
+                    const att = result.data;
+                    // ✅ 수정: 휴가취소신청일 때만 기존 대직자 정보를 selectedDelegate에 자동 세팅
+                    if (currentCategoryName === '휴가취소신청' && att.delegateEmpId) {
+                        selectedDelegate = {
+                            empId: att.delegateEmpId,
+                            empName: att.delegateEmpName,
+                            posName: att.delegatePosName || '사원',
+                            depName: att.delegateDepName || '',
+                            posOrder: att.delegatePosOrder || 999
+                        };
+                    } else {
+                        // 휴가수정신청 등 그 외의 경우는 null로 유지하여 사용자가 직접 선택하게 함
+                        selectedDelegate = null;
+                    }
                     updateTableDates();
                     updateTableDelegate();
-                    updateTableTargetAttendance(result.data);
+                    updateTableTargetAttendance(att);
                 })
                 .catch(error => {
                     console.error('❌ 표 업데이트 실패:', error);
@@ -2146,6 +2232,7 @@
             });
             return;
         }
+        if (selectedApprovers.some(a => a.approverId === id)) return;
         if (selectedApprovers.some(a => a.posOrder === posOrder)) {
             Swal.fire({
                 icon: 'warning',
@@ -2218,10 +2305,12 @@
     function handleFileSelect(event) {
         const files = Array.from(event.target.files);
         const maxSize = 10 * 1024 * 1024;
-        const currentCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length + newFiles.length;
+        // 수정: 기존 활성 파일 수 계산
+        const activeExistingCount = existingFiles.filter(f => !filesToDelete.includes(f.attachmentId)).length;
 
         for (let file of files) {
-            if (currentCount + newFiles.length >= 5) {
+            // 중복 계산 방지: (기존 활성 파일 + 현재 이미 추가된 새 파일)이 5개 이상인지 체크
+            if (activeExistingCount + newFiles.length >= 5) {
                 Swal.fire({ icon: 'warning', title: '제한', text: '최대 5개입니다.' });
                 break;
             }
@@ -2282,6 +2371,18 @@
     function getFileType(mime) { return mime.startsWith('image/') ? 'IMAGE' : (mime.startsWith('audio/') ? 'AUDIO' : 'DOC'); }
 
     async function generateAiSummary() {
+        // AI 요약 시 최소 100자 이상 조건 체크
+        const textContent = tiptapEditor.getText().trim();
+        if (textContent.length < 100) {
+            Swal.fire({
+                icon: 'warning',
+                title: '내용 부족',
+                text: '요약을 진행하려면 내용을 최소 100자 이상 입력해주세요.',
+                confirmButtonColor: '#339af0'
+            });
+            return;
+        }
+
         const summaryBox = document.getElementById('ai-summary-box');
         const summaryText = document.getElementById('ai-summary-text');
         summaryBox.style.display = 'block';
@@ -2301,12 +2402,38 @@
     }
 
     async function saveDocument(isTemp) {
-        const title = document.getElementById('doc-title').value.trim();
+        const titleInput = document.getElementById('doc-title');
+        const title = titleInput.value.trim();
         const contentJson = tiptapEditor.getJSON();
+        const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
 
-        if (!title || !checkedRadio) return;
+        // 📌 상신(isTemp === false)일 경우 필수 입력값 검증 강화
+        if (!isTemp) {
+            if (!title) {
+                Swal.fire({ icon: 'warning', title: '제목 미입력', text: '문서 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (!checkedRadio) {
+                Swal.fire({ icon: 'warning', title: '카테고리 미선택', text: '문서 카테고리를 선택해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (selectedApprovers.length === 0) {
+                Swal.fire({ icon: 'warning', title: '결재선 미지정', text: '최소 1명 이상의 결재자를 지정해야 합니다.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (contentText.length === 0) {
+                Swal.fire({ icon: 'warning', title: '내용 미입력', text: '문서 내용을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+        } else {
+            // 임시저장의 경우 최소한 제목은 있어야 함
+            if (!title) {
+                Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+        }
 
         if (normalized.includes('휴가') || normalized.includes('출장')) {
             const start = document.getElementById('startDate').value;
@@ -2320,7 +2447,7 @@
                 comId: myInfo.comId,
                 writerId: myInfo.empId,
                 docfoNo: currentDocfoNo,
-                docfoCatNo: parseInt(checkedRadio.value, 10),
+                docfoCatNo: parseInt(checkedRadio ? checkedRadio.value : formCategories[0]?.docfoCatNo, 10),
                 title: title,
                 content: JSON.stringify(contentJson),
                 cnttHtml: tiptapEditor.getHTML(),
