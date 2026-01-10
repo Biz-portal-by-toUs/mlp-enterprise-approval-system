@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}"
+      th:classappend="${perm_isEmployee == true} ? 'role-employee' : ''"
+      th:attr="data-is-employee=${perm_isEmployee}, data-can-create=${perm_canCreateAttach}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>첨부문서 상세</title>
+
+    <style layout:fragment="pageStyles">
+        :root{
+            --fg:#0f172a;
+            --mut:#64748b;
+            --line:#e2e8f0;
+            --danger:#ef4444;
+            --card:#fff;
+        }
+
+        /* ===== page-only namespace: ad-* ===== */
+        .ad-title{ margin:0 0 14px 0; font-size:18px; font-weight:900; }
+
+        .ad-card{
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:14px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            padding:18px;
+        }
+
+        /* 표 느낌(이미지처럼) */
+        .ad-grid{
+            width:100%;
+            border:1px solid var(--line);
+            border-radius:12px;
+            overflow:hidden;
+            background:#fff;
+        }
+
+        .ad-row{
+            display:grid;
+            grid-template-columns: 140px 1fr 140px 1fr;
+        }
+
+        .ad-row.full{
+            grid-template-columns: 140px 1fr;
+        }
+
+        .ad-th{
+            background:#f9fafb;
+            border-right:1px solid var(--line);
+            border-bottom:1px solid var(--line);
+            padding:12px 14px;
+            font-size:13px;
+            font-weight:900;
+            color:var(--fg);
+            display:flex;
+            align-items:center;
+            min-height:46px;
+        }
+
+        .ad-td{
+            border-bottom:1px solid var(--line);
+            padding:12px 14px;
+            font-size:14px;
+            font-weight:800;
+            color:var(--fg);
+            display:flex;
+            align-items:center;
+            min-height:46px;
+            min-width:0;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        /* 오른쪽 th/td의 세로선 */
+        .ad-row .ad-td:nth-child(2){ border-right:1px solid var(--line); }
+
+        .ad-td.multiline{
+            align-items:flex-start;
+            white-space:normal;
+            overflow:visible;
+            text-overflow:clip;
+            word-break:break-word;
+        }
+
+        /* 첨부 리스트(클릭 다운로드) */
+        .ad-attach-list{
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            width:100%;
+        }
+
+        .ad-attach-item{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:10px 12px;
+            border:1px solid var(--line);
+            border-radius:12px;
+            background:#fff;
+            cursor:pointer;
+            user-select:none;
+        }
+        .ad-attach-item:hover{
+            background:#f8fafc;
+            border-color: rgba(44,92,255,.25);
+        }
+        .ad-attach-name{
+            font-weight:900;
+            color:var(--primary);
+            text-decoration:underline;
+            word-break:break-word;
+        }
+        .ad-attach-meta{
+            flex:0 0 auto;
+            font-size:12px;
+            font-weight:900;
+            color:var(--mut);
+            white-space:nowrap;
+        }
+
+        /* actions */
+        .ad-actions{
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-top:14px;
+        }
+        .ad-btn{
+            height:40px;
+            padding:0 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:900;
+            cursor:pointer;
+            border:none;
+            background:var(--primary);
+            color:#fff;
+            transition:0.15s;
+        }
+        .ad-btn:hover{ filter:brightness(0.92); }
+        .ad-btn.ghost{
+            background:#fff;
+            color:var(--fg);
+            border:1px solid var(--line);
+        }
+        .ad-btn.ghost:hover{ background:#f8fafc; filter:none; }
+
+        /* ✅ 삭제 버튼(빨간 테두리/흰 바탕/빨간 글씨, hover 반전) */
+        .ad-btn.danger-outline{
+            background:#fff;
+            color:var(--danger);
+            border:1px solid var(--danger);
+        }
+        .ad-btn.danger-outline:hover{
+            background:var(--danger);
+            color:#fff;
+            filter:none;
+        }
+
+        @media (max-width:760px){
+            .ad-row{ grid-template-columns: 110px 1fr; }
+            .ad-row .ad-th:nth-child(3),
+            .ad-row .ad-td:nth-child(4){ display:none; }
+            .ad-row.full{ grid-template-columns: 110px 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="page-with-subbar">
+        <div th:replace="~{sidebar/form-sidebar :: formSidebar('attaches')}"></div>
+
+        <main class="page-main">
+            <h2 class="ad-title">첨부문서 상세</h2>
+
+            <section class="ad-card">
+                <div class="ad-grid">
+                    <!-- 제목 / 작성자 -->
+                    <div class="ad-row">
+                        <div class="ad-th">제목</div>
+                        <div class="ad-td" id="titleTxt"></div>
+
+                        <div class="ad-th">작성자</div>
+                        <div class="ad-td" id="uploaderTxt"></div>
+                    </div>
+
+                    <!-- 설명 -->
+                    <div class="ad-row full">
+                        <div class="ad-th">설명</div>
+                        <div class="ad-td multiline" id="dscpTxt"></div>
+                    </div>
+
+                    <!-- 첨부파일 -->
+                    <div class="ad-row full">
+                        <div class="ad-th">첨부파일</div>
+                        <div class="ad-td multiline">
+                            <div class="ad-attach-list" id="attachList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ad-actions">
+                    <button class="ad-btn ghost" type="button" id="btnBack">목록</button>
+
+                    <!-- ✅ EMPLOYEE가 아닐 때만 보이는 삭제 버튼 -->
+                    <button class="ad-btn danger-outline" type="button" id="btnDelete"
+                            th:if="${perm_isEmployee != true}">
+                        삭제
+                    </button>
+                </div>
+            </section>
+
+            <script>
+                // ===== routes (화면 컨트롤러 기준) =====
+                const ROUTES = {
+                    LIST_VIEW: '/attach/attaches'
+                };
+
+                // ===== API endpoints (컨트롤러/enum 기준으로 정확히 매칭) =====
+                const API = {
+                    // AttachBoxController.detail
+                    DETAIL: (attachNo) => `/api/v1/attach-box/${encodeURIComponent(attachNo)}`,
+
+                    // AttachmentController.list
+                    // ✅ domain = DOC_FORM (enum 존재)
+                    // ✅ entityId = attachNo (첨부문서함 글 PK에 묶기)
+                    FILE_LIST: (attachNo) => `/api/v1/attachments?domain=DOC_FORM&entityId=${encodeURIComponent(attachNo)}`,
+
+                    // AttachmentController.downloadUrl (다운로드 방식)
+                    DOWNLOAD_URL: (attachmentId) => `/api/v1/attachments/${encodeURIComponent(attachmentId)}/download-url`,
+
+                    // AttachBoxController.delete
+                    DELETE: (attachNo) => `/api/v1/attach-box/${encodeURIComponent(attachNo)}`
+                };
+
+                // ===== utils =====
+                function escapeHtml(str){
+                    return String(str ?? '')
+                        .replaceAll('&','&amp;')
+                        .replaceAll('<','&lt;')
+                        .replaceAll('>','&gt;')
+                        .replaceAll('"','&quot;')
+                        .replaceAll("'","&#039;");
+                }
+
+                function setText(id, v){
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    // ✅ 설명 없으면 빈칸 그대로
+                    el.textContent = (v == null) ? '' : String(v);
+                }
+
+                function formatBytes(bytes){
+                    const n = Number(bytes || 0);
+                    if (!n) return '0B';
+                    const kb = n / 1024;
+                    if (kb < 1024) return `${Math.ceil(kb)}KB`;
+                    return `${(kb / 1024).toFixed(1)}MB`;
+                }
+
+                function getCsrfHeaders(){
+                    const csrfParamEl = document.getElementById('csrfParam');
+                    const csrfHeaderEl = document.getElementById('csrfHeader');
+                    if (csrfParamEl && csrfHeaderEl) return { [csrfHeaderEl.value]: csrfParamEl.value };
+                    return {};
+                }
+
+                async function api(method, url, { headers = {}, body = null } = {}){
+                    const res = await fetch(url, {
+                        method,
+                        credentials: 'include',
+                        headers: { 'Accept':'application/json', ...getCsrfHeaders(), ...headers },
+                        body
+                    });
+                    if (res.status === 204) return null;
+
+                    const json = await res.json().catch(()=> null);
+                    if(!res.ok){
+                        const msg = json?.message || `HTTP ${res.status}`;
+                        throw new Error(msg);
+                    }
+                    return json?.data;
+                }
+
+                function getAttachNoFromPath(){
+                    // /attach/{attachNo}
+                    const parts = location.pathname.split('/').filter(Boolean);
+                    const v = parts.length >= 2 ? parts[1] : '';
+                    const n = Number(v);
+                    return Number.isFinite(n) ? n : null;
+                }
+
+                // ===== attachments: list + click download =====
+                async function loadFiles(attachNo){
+                    const list = document.getElementById('attachList');
+                    if (!list) return;
+
+                    list.innerHTML = `<div style="color:var(--mut); font-weight:900;">로딩 중...</div>`;
+
+                    const items = await api('GET', API.FILE_LIST(attachNo)).catch(()=> []);
+
+                    if (!items || items.length === 0){
+                        list.innerHTML = `<div style="color:var(--mut); font-weight:900;">첨부파일이 없습니다.</div>`;
+                        return;
+                    }
+
+                    // path는 표시하지 않음
+                    list.innerHTML = items.map(it => `
+                        <div class="ad-attach-item" data-id="${escapeHtml(it.attachmentId)}">
+                          <div class="ad-attach-name">${escapeHtml(it.originalName)} (${escapeHtml(formatBytes(it.size))})</div>
+                          <div class="ad-attach-meta">다운로드</div>
+                        </div>
+                      `).join('');
+
+                    if (!list.__dlBound){
+                        list.__dlBound = true;
+                        list.addEventListener('click', async (e) => {
+                            const item = e.target.closest('.ad-attach-item');
+                            if (!item) return;
+
+                            const attachmentId = item.dataset.id;
+                            if (!attachmentId) return;
+
+                            try{
+                                const data = await api('GET', API.DOWNLOAD_URL(attachmentId));
+                                const url = data?.url;
+                                if (!url) throw new Error('다운로드 URL이 없습니다.');
+
+                                // 새 창 X, 그냥 다운로드 트리거
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = '';
+                                a.rel = 'noopener';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            }catch(err){
+                                console.error(err);
+                                alert('다운로드에 실패했습니다.');
+                            }
+                        });
+                    }
+                }
+
+                // ===== main =====
+                async function loadDetail(){
+                    const attachNo = getAttachNoFromPath();
+
+                    if (!attachNo){
+                        setText('titleTxt', '');
+                        setText('uploaderTxt', '');
+                        setText('dscpTxt', '');
+                        const list = document.getElementById('attachList');
+                        if (list) list.innerHTML = `<div style="color:#ef4444; font-weight:900;">attachNo가 없습니다.</div>`;
+                        return;
+                    }
+
+                    // 상세(ResAttachDetailDto)
+                    const data = await api('GET', API.DETAIL(attachNo));
+
+                    setText('titleTxt', data?.title ?? '');
+                    // ✅ 작성자: "이름(사번)" 형식으로 내려온 문자열을 그대로 표시
+                    setText('uploaderTxt', data?.uploader ?? '');
+                    // ✅ 설명: 없으면 빈칸
+                    setText('dscpTxt', data?.dscp ?? '');
+
+                    await loadFiles(attachNo);
+
+                    // 목록
+                    const back = document.getElementById('btnBack');
+                    if (back) back.onclick = () => location.href = ROUTES.LIST_VIEW;
+
+                    // 삭제(EMPLOYEE 아닌 경우에만 버튼 존재)
+                    const btnDelete = document.getElementById('btnDelete');
+                    if (btnDelete){
+                        btnDelete.onclick = async () => {
+                            if (!confirm('이 첨부문서를 삭제할까요?')) return;
+                            try{
+                                await api('DELETE', API.DELETE(attachNo));
+                                location.href = ROUTES.LIST_VIEW;
+                            }catch(err){
+                                console.error(err);
+                                alert('삭제에 실패했습니다.');
+                            }
+                        };
+                    }
+                }
+
+                window.addEventListener('DOMContentLoaded', () => {
+                    loadDetail().catch(err => {
+                        console.error(err);
+                        setText('titleTxt', '');
+                        setText('uploaderTxt', '');
+                        setText('dscpTxt', '');
+                        const list = document.getElementById('attachList');
+                        if (list) list.innerHTML =
+                            `<div style="color:#ef4444; font-weight:900;">상세 조회에 실패했습니다.</div>`;
+                    });
+                });
+            </script>
+        </main>
+    </div>
+</div>
+</body>
+</html>
