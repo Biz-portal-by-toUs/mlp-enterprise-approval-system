@@ -16,15 +16,19 @@ USE bizportal;
 
 -- 1) 요금제
 CREATE TABLE IF NOT EXISTS subscription (
-                                            sub_no      INT           NOT NULL AUTO_INCREMENT,
-                                            sub_name    VARCHAR(20)   NOT NULL,
-                                            sub_desc    TEXT          NULL,
-                                            sub_price   DECIMAL(8,0)  NOT NULL,
+                                            sub_no      INT           NOT NULL AUTO_INCREMENT COMMENT '요금제 식별자',
+                                            sub_name    VARCHAR(20)   NOT NULL COMMENT '요금제 이름',
+                                            sub_desc    TEXT          NULL     COMMENT '요금제 설명',
+                                            sub_price   DECIMAL(8,0)  NOT NULL COMMENT '요금제 가격',
+                                            sub_limit   INT           NOT NULL COMMENT '요금제별 인원 제한',
+
+    -- BaseEntity 공통 컬럼
+                                            created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                                            updated_at  TIMESTAMP     NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
                                             CONSTRAINT pk_subscription PRIMARY KEY (sub_no),
-                                            CONSTRAINT uk_subscription_name UNIQUE (sub_name),
-                                            CONSTRAINT ck_subscription_name CHECK (sub_name IN ('basic','pro','ultimate'))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-ALTER TABLE subscription DROP CONSTRAINT ck_subscription_name;
+                                            CONSTRAINT uk_subscription_name UNIQUE (sub_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 2) 회사 (✅ role 컬럼 반영)
 CREATE TABLE IF NOT EXISTS company (
@@ -817,6 +821,25 @@ CREATE TABLE IF NOT EXISTS payment_history (
                                                        ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS company_subscription (
+                                                    com_sub_no        BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                                    com_id            VARCHAR(3) NOT NULL,
+                                                    sub_no            INT NOT NULL,
+                                                    paym_no           BIGINT NULL,
+                                                    next_billing_date DATETIME NULL,
+                                                    auto_renewal      BOOLEAN NOT NULL DEFAULT TRUE,
+                                                    sub_stat          VARCHAR(20) NOT NULL, -- ACTIVE, CANCELED, FREE 등 (SubStatus enum)
+                                                    pending_sub_no    INT NULL,
+                                                    credit_balance    DECIMAL(8,0) NOT NULL DEFAULT 0.00,
+                                                    created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                    updated_at        TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+                                                    CONSTRAINT fk_comsub_company FOREIGN KEY (com_id) REFERENCES company(com_id),
+                                                    CONSTRAINT fk_comsub_subscription FOREIGN KEY (sub_no) REFERENCES subscription(sub_no),
+                                                    CONSTRAINT fk_comsub_payment_method FOREIGN KEY (paym_no) REFERENCES payment_method(paym_no),
+                                                    CONSTRAINT fk_comsub_pending_sub FOREIGN KEY (pending_sub_no) REFERENCES subscription(sub_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS attendance (
                                           atte_no     BIGINT        NOT NULL AUTO_INCREMENT,
                                           com_id      VARCHAR(3)    NOT NULL,
@@ -827,6 +850,7 @@ CREATE TABLE IF NOT EXISTS attendance (
                                           delegate    VARCHAR(7)    NULL,
                                           start_at    datetime      not null,
                                           end_at      DATETIME      NOT NULL,
+                                          is_deleted  BOOLEAN       not null default false,
 
                                           created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                           updated_at  TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
