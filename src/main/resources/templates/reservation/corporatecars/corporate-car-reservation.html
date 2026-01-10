@@ -683,8 +683,19 @@
 
             cancelBtn.innerText = "닫기";
 
-            const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], "-");
-            const plateNo = pick(resv, ["plateNo", "car.plateNo", "carPlateNo"], "-");
+            const carNo = pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null);
+
+            // ✅ fallback 1) 테이블 row에 심어둔 plateNo 사용
+            const row = carNo ? document.querySelector(`.car-row[data-car-no="${carNo}"]`) : null;
+            const fallbackPlate = row?.dataset?.plateNo || "-";
+
+            // ✅ fallback 2) 차량 목록(CARS)에서도 plateNo 가져올 수 있게(있으면 더 정확)
+            const carObj = CARS.find(c => String(pick(c, ["carNo","corporateCarNo","id"], "")) === String(carNo));
+            const fallbackPlate2 = carObj ? pick(carObj, ["plateNo","carPlateNo","plate"], fallbackPlate) : fallbackPlate;
+
+            const carName = pick(resv, ["carName", "corporateCarName", "car.carName"], row?.querySelector(".car-name")?.innerText?.split(" (")?.[0] ?? "-");
+            const plateNo = pick(resv, ["plateNo", "car.plateNo", "carPlateNo"], fallbackPlate2);
+
             const resvDate = pick(resv, ["resvDate", "date"], resv.startedAt ? String(resv.startedAt).substring(0, 10) : "-");
 
             const startRaw = pick(resv, ["startTime"], resv.startedAt ? String(resv.startedAt).substring(11, 19) : null);
