@@ -373,6 +373,51 @@
             return res;
         }
 
+        function hmToMin(hm){
+            const [h,m] = String(hm).split(":").map(Number);
+            return (h * 60) + (m || 0);
+        }
+
+        function getResvDate(r){
+            return r.resvDate ?? (r.startedAt ? String(r.startedAt).substring(0, 10) : null);
+        }
+
+        function getResvStartHM(r){
+            return r.startTime ? String(r.startTime).substring(0, 5)
+                : (r.startedAt ? String(r.startedAt).substring(11, 16) : null);
+        }
+
+        function getResvEndHM(r){
+            return r.endTime ? String(r.endTime).substring(0, 5)
+                : (r.endedAt ? String(r.endedAt).substring(11, 16) : null);
+        }
+
+        function getEqNoFrom(obj){
+            return pick(obj, ["eqNo", "sharedEquipmentNo", "equipmentNo", "eq.eqNo"], null);
+        }
+
+        // ✅ 설비용 충돌 체크
+        function hasConflict({ eqNo, dateStr, startTime, endTime }){
+            const s = hmToMin(startTime);
+            const e = hmToMin(endTime);
+
+            return (RESERVATIONS || []).some(r => {
+                const rEqNo = getEqNoFrom(r);
+                if (String(rEqNo) !== String(eqNo)) return false;
+                if (getResvDate(r) !== dateStr) return false;
+
+                const rs = getResvStartHM(r);
+                const re = getResvEndHM(r);
+                if (!rs || !re) return false;
+
+                const rS = hmToMin(rs);
+                const rE = hmToMin(re);
+
+                // 겹침 조건: !(내끝 <= 상대시작 || 내시작 >= 상대끝)
+                return !(e <= rS || s >= rE);
+            });
+        }
+
         function get(obj, path) {
             return path.split(".").reduce((o, k) => o?.[k], obj);
         }
@@ -739,37 +784,42 @@
         cancelBtn.onclick = () => { modal.style.display = "none"; };
 
         reserveBtn.onclick = async () => {
-            const eqNoRaw = modal.dataset.eqNo;     // 문자열 그대로
-            const start = modal.dataset.start;
-            const end = modal.dataset.end;
+            const eqNoRaw = modal.dataset.eqNo;     // 문자열
+            const dateStr = currentDate.format("YYYY-MM-DD");
+            const startTime = modal.dataset.start;  // "HH:mm"
+            const endTime   = modal.dataset.end;    // "HH:mm"
 
-            if (!eqNoRaw) {
+            // ✅ "null"/"undefined"/"" 방지
+            if (!eqNoRaw || eqNoRaw === "null" || eqNoRaw === "undefined") {
                 alert("설비 식별자(eqNo)가 없습니다. 설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.");
                 return;
             }
-            if (!start || !end) {
+            if (!startTime || !endTime) {
                 alert("예약 시간이 설정되지 않았습니다. 시간을 다시 선택해주세요.");
                 return;
             }
 
-            // ✅ 숫자면 Number로, 아니면 문자열 그대로
-            const eqNoVal = /^\d+$/.test(eqNoRaw) ? Number(eqNoRaw) : eqNoRaw;
+            // ✅ 1) 예약 직전 최신 데이터로 갱신
+            await loadReservations();
 
-            // (추가 안전장치) 숫자로 변환했는데 NaN이면 막기
-            if (typeof eqNoVal === "number" && Number.isNaN(eqNoVal)) {
-                alert("설비 식별자(eqNo)가 올바르지 않습니다: " + eqNoRaw);
+            // ✅ 2) 최신 데이터 기준으로 충돌 체크
+            if (hasConflict({ eqNo: eqNoRaw, dateStr, startTime, endTime })) {
+                alert("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.");
+                clearSelection();
+                modal.style.display = "none";
                 return;
             }
 
+            // ✅ 서버로 보낼 eqNo는 숫자면 Number로(백엔드가 숫자 기대하는 경우 대비)
+            const eqNoVal = /^\d+$/.test(eqNoRaw) ? Number(eqNoRaw) : eqNoRaw;
+
             const body = {
-                eqNo: eqNoVal,                               // ✅ 여기!
-                resvDate: currentDate.format("YYYY-MM-DD"),
-                startTime: start,                            // ✅ 변수 사용
-                endTime: end,                                // ✅ 변수 사용
+                eqNo: eqNoVal,
+                resvDate: dateStr,
+                startTime,
+                endTime,
                 purp: document.getElementById("purpose").value
             };
-
-            console.log("RESERVE BODY:", body); // 디버깅용
 
             const res = await apiFetch("/api/v1/shared-equipment-reservations", {
                 method: "POST",
@@ -778,8 +828,19 @@
             });
 
             if (!res.ok) {
-                const msg = await res.text();
-                alert("예약 실패: " + msg);
+                // ✅ text/json 둘 다 안전처리
+                let msg = "";
+                try {
+                    const errJson = await res.json();
+                    msg = errJson?.message || JSON.stringify(errJson);
+                } catch {
+                    msg = await res.text();
+                }
+
+                alert("예약 실패: " + (msg || "알 수 없는 오류"));
+
+                // ✅ 실패 시에도 최신화
+                await loadReservations();
                 return;
             }
 
@@ -816,6 +877,12 @@
             const row = dragCells[0].closest(".eq-row");
             const eqNo = row.dataset.eqNo;
 
+            // ✅ "null"/"undefined"/"" 방지
+            if (!eqNo || eqNo === "null" || eqNo === "undefined") {
+                alert("설비 식별자(eqNo)가 없습니다. 설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.");
+                return;
+            }
+
             // ✅ 왼쪽 라벨이 "설비명 (설비번호)"라서 그대로 쓰면 모달에도 같이 들어감
             const eqLabel = row.querySelector(".eq-name").innerText;
 
@@ -841,6 +908,16 @@
             modal.dataset.start = idxToTime(startIdx);
             modal.dataset.end = idxToTime(endIdx);
         };
+
+        // 30초마다 예약만 갱신
+        setInterval(() => {
+            loadReservations().catch(()=>{});
+        }, 30000);
+
+        // 탭 다시 활성화되면 갱신
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) loadReservations().catch(()=>{});
+        });
 
         /* ===== ME ===== */
         async function loadMe() {
