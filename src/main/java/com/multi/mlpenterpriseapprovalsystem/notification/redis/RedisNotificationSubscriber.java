@@ -72,16 +72,18 @@ public class RedisNotificationSubscriber implements MessageListener {
         boolean focus = employeeRepository.findByEmpId(empId)
                 .map(emp -> emp.getMsgStat() == MsgStat.FOCUS)
                 .orElse(false);
-        if (focus) return;
 
-        Notifications noti = notificationsRepository.findById(notiNo).orElse(null);
-        if (noti == null) return;
 
         long unreadCount = notificationsRepository.countByReceiver_EmpIdAndIsReadFalse(empId);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("notification", ResNotificationDto.fromEntity(noti));
         data.put("unreadCount", unreadCount);
+        if (!focus) {
+            Notifications noti = notificationsRepository.findById(notiNo).orElse(null);
+            if (noti != null) {
+                data.put("notification", ResNotificationDto.fromEntity(noti));
+            }
+        }
 
         sseManager.sendToUser(empId, "notification", data);
     }
