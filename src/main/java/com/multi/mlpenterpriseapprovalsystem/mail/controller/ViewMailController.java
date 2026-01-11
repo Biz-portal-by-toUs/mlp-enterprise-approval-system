@@ -60,7 +60,7 @@ public class ViewMailController {
     // 상세
     @GetMapping("/{mailNo}")
     public String detail(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @RequestParam(name = "box", required = false) String box,
             Model model
     ) {
