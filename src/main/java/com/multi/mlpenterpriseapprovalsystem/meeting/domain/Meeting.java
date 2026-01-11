@@ -123,9 +123,10 @@ public class Meeting extends BaseEntity {
         this.aiStatus = AiStatus.PROCESSING;
     }
 
-    public void markAiFailed(String errorMessage) {
+    public void markAiFailed(String errorMessage, String sttText) {
         this.aiStatus = AiStatus.FAILED;
         this.aiText = errorMessage;
+        this.sttText = sttText;
     }
 
     public void markAiDone(@NotBlank String sttText, @NotBlank String aiText) {
