@@ -327,12 +327,10 @@ async function deleteForm(docfoNo, stat) {
 // ===== UI perms apply =====
 function applyPermsUI({ stat }) {
     const s = String(stat ?? '').trim().toUpperCase()
-
-    // ✅ 임시(T)는 상세에서 "결재/수정" 의미가 없으니 숨기는 편이 UX 좋음(원하면 유지 가능)
     const isTemp = (s === 'T')
 
     // 수정
-    if (!PERM.canEdit || isTemp) {
+    if (!PERM.canEdit) {
         btnEdit.style.display = 'none'
         btnEdit.disabled = true
     } else {
