@@ -685,8 +685,18 @@
             border:0;
         }
 
-        .content-wrap{ padding:22px 26px; position:relative; }
-        .content-surface{ min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px); }
+        /* ====== ✅ 사이드바 바닥 닿기 해결 핵심 CSS ====== */
+        .content-wrap{
+            padding:22px 26px;
+            position:relative;
+            display: flex;          /* 자식이 높이를 꽉 채울 수 있게 flex 설정 */
+            flex-direction: column;
+        }
+        .content-surface{
+            flex: 1;                /* 남은 공간을 모두 차지하도록 변경 */
+            display: flex;
+            flex-direction: column;
+        }
         .content-wrap:has(.page-with-subbar){ padding: 0; }
 
         .footer{ background:#fff; border-top:1px solid var(--line); padding:14px 18px; }
@@ -716,9 +726,21 @@
             .status-label{ display:none; } /* 좁으면 글자 숨김 */
         }
 
-        /* ====== 서브 사이드바 ====== */
-        .page-with-subbar{ display:grid; grid-template-columns: 220px 1fr; gap:0; align-items: stretch; min-height: calc(100vh - var(--topbar-h) - var(--footer-h) - 44px); transition: grid-template-columns .18s ease; }
-        .subbar{ height:100%; background: rgba(59,130,246,.08); overflow:hidden; transition: opacity .18s ease; }
+        /* ====== 서브 사이드바 높이 해결 ====== */
+        .page-with-subbar{
+            display:grid;
+            grid-template-columns: 220px 1fr;
+            gap:0;
+            align-items: stretch;   /* 내부 아이템들이 높이를 맞추도록 stretch 설정 */
+            flex: 1;                /* 부모의 높이를 가득 채우게 flex 설정 */
+            transition: grid-template-columns .18s ease;
+        }
+        .subbar{
+            height:100%;
+            background: rgba(59,130,246,.08);
+            overflow:hidden;
+            transition: opacity .18s ease;
+        }
         .subbar-title{ font-weight:700; font-size:12px; color: rgba(31,41,55,.72); padding: 12px 14px 10px; border-bottom: 1px solid rgba(59,130,246,.14); background: rgba(255,255,255,.30); }
         .subbar-nav{ display:flex; flex-direction:column; padding: 10px 0; }
         .subbar-item{ position:relative; display:flex; align-items:center; height:44px; padding: 0 14px 0 20px; text-decoration:none; font-size:13px; font-weight:600; color: var(--primary2); transition: background .12s ease, color .12s ease; }
