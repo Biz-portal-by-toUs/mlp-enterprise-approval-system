@@ -9,6 +9,7 @@
 
     <th:block layout:fragment="pageStyles">
         <script th:src="@{/js/jiheon-temp-origin/tiptap.min.js}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <style>
             /* ✅ 여백 최적화: 고정 너비를 제거하여 화면에 가득 차게 설정 */
@@ -169,7 +170,7 @@
             /* ✅ 레이아웃 상속 시 패딩 정의 (목록 페이지와 일치) */
             .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
 
-            /* 모달 및 토스트 */
+            /* 모달 및 토스트 (SweetAlert 사용으로 더이상 필요 없으나 원본 유지) */
             .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
             .modal-overlay.show { display: flex; }
             .modal-content { background: white; padding: 35px 45px; border-radius: 16px; text-align: center; max-width: 450px; width: 90%; animation: modalIn 0.3s ease; }
@@ -196,12 +197,11 @@
             <div id="doc-detail" style="display: none;" class="detail-content-area">
                 <div class="page-header">
                     <div class="header-left-buttons">
+                        <button class="btn-close" onclick="history.back()">뒤로가기</button>
                         <button class="btn-cancel-submit" id="btn-cancel-submit" style="display: none;" onclick="showCancelModal()">상신취소</button>
                     </div>
                     <div class="page-title" id="form-title">문서 상세</div>
                     <div class="header-right-buttons">
-                        <button class="btn-close" onclick="location.href='/documents/me?status=AWAITING'">목록으로</button>
-                        <button class="btn-close" onclick="history.back()">닫기</button>
                     </div>
                 </div>
 
@@ -473,33 +473,116 @@
         function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
         function formatDateTime(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
-        function showApproveModal() { document.getElementById('approve-modal').classList.add('show'); }
-        function hideApproveModal() { document.getElementById('approve-modal').classList.remove('show'); }
-        function showRejectModal() {
-            document.getElementById('reject-reason-input').value = '';
-            document.getElementById('reject-char-count').textContent = '0 / 200';
-            document.getElementById('reject-modal').classList.add('show');
+
+        /* ✅ SweetAlert2 적용: 승인 모달 */
+        function showApproveModal() {
+            Swal.fire({
+                title: '결재 승인',
+                text: "이 문서를 승인하시겠습니까? 승인 후에는 취소할 수 없습니다.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#6e7881', // ✅ 가독성을 위해 표준 회색으로 수정
+                confirmButtonText: '승인',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    confirmApprove();
+                }
+            });
         }
+
+        function hideApproveModal() { document.getElementById('approve-modal').classList.remove('show'); }
+
+        /* ✅ SweetAlert2 적용: 반려 모달 (사유 입력 포함) */
+        function showRejectModal() {
+            Swal.fire({
+                title: '결재 반려',
+                text: '반려 사유를 입력해주세요.',
+                input: 'textarea',
+                inputPlaceholder: '상세 사유를 입력하세요 (최대 200자)',
+                inputAttributes: {
+                    maxlength: 200
+                },
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6e7881', // ✅ 가독성을 위해 표준 회색으로 수정
+                confirmButtonText: '반려',
+                cancelButtonText: '취소',
+                reverseButtons: true,
+                preConfirm: (value) => {
+                    if (!value || !value.trim()) {
+                        Swal.showValidationMessage('반려 사유를 입력해주세요.');
+                    }
+                    return value;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    confirmReject(result.value);
+                }
+            });
+        }
+
         function hideRejectModal() { document.getElementById('reject-modal').classList.remove('show'); }
         function showRejectConfirmModal() { if (!document.getElementById('reject-reason-input').value.trim()) { showToast('반려 사유를 입력해주세요.', 'error'); return; } hideRejectModal(); document.getElementById('reject-confirm-modal').classList.add('show'); }
         function hideRejectConfirmModal() { document.getElementById('reject-confirm-modal').classList.remove('show'); }
 
+        /* ✅ SweetAlert2 적용: 승인 처리 및 결과 알림 */
         async function confirmApprove() {
-            hideApproveModal();
             try {
-                const response = await fetch(`/api/v1/documents/${currentDocNo}/process`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apprStat: 'A' }) });
-                if (response.ok) { showToast('승인되었습니다.', 'success'); setTimeout(() => location.href = '/documents/me?status=AWAITING', 500); }
-                else { showToast('승인 실패', 'error'); }
-            } catch (error) { showToast('통신 오류', 'error'); }
+                const response = await fetch(`/api/v1/documents/${currentDocNo}/process`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apprStat: 'A' })
+                });
+
+                if (response.ok) {
+                    Swal.fire({
+                        title: '승인 완료',
+                        text: '문서가 성공적으로 승인되었습니다.',
+                        icon: 'success',
+                        confirmButtonColor: '#2563eb'
+                    }).then(() => {
+                        location.href = '/documents/me?status=AWAITING';
+                    });
+                } else {
+                    Swal.fire('승인 실패', '승인 처리 중 오류가 발생했습니다.', 'error');
+                }
+            } catch (error) {
+                Swal.fire('통신 오류', '서버와의 통신 중 오류가 발생했습니다.', 'error');
+            }
         }
 
-        async function confirmReject() {
-            hideRejectConfirmModal();
+        /* ✅ SweetAlert2 적용: 반려 처리 및 결과 알림 */
+        async function confirmReject(reason) {
             try {
-                const response = await fetch(`/api/v1/documents/${currentDocNo}/process`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apprStat: 'R', rejReason: document.getElementById('reject-reason-input').value.trim() }) });
-                if (response.ok) { showToast('반려되었습니다.', 'success'); setTimeout(() => location.href = '/documents/me?status=AWAITING', 500); }
-                else { showToast('반려 실패', 'error'); }
-            } catch (error) { showToast('통신 오류', 'error'); }
+                const response = await fetch(`/api/v1/documents/${currentDocNo}/process`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        apprStat: 'R',
+                        rejReason: reason
+                    })
+                });
+
+                if (response.ok) {
+                    Swal.fire({
+                        title: '반려 완료',
+                        text: '문서가 반려되었습니다.',
+                        icon: 'success',
+                        confirmButtonColor: '#dc2626'
+                    }).then(() => {
+                        location.href = '/documents/me?status=AWAITING';
+                    });
+                } else {
+                    Swal.fire('반려 실패', '반려 처리 중 오류가 발생했습니다.', 'error');
+                }
+            } catch (error) {
+                Swal.fire('통신 오류', '서버와의 통신 중 오류가 발생했습니다.', 'error');
+            }
         }
 
         function showToast(m, t) { const toast = document.getElementById('toast'); toast.textContent = m; toast.className = `toast ${t} show`; setTimeout(() => toast.classList.remove('show'), 3000); }

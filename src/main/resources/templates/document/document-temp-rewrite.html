@@ -802,8 +802,8 @@
                     <button onclick="deleteTable()">표 삭제</button>
 
                     <button onclick="toggleBlockquote()" id="btn-blockquote">인용</button>
-                    <button onclick="insertLink()">링크</button>
-                    <button onclick="insertImage()">이미지</button>
+                    <button onclick="insertLink()" id="btn-link">링크</button>
+                    <button onclick="insertImage()" id="btn-image">이미지</button>
                 </div>
                 <div id="editor-container"></div>
             </div>
@@ -1546,9 +1546,19 @@
             if (!title) { Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
         }
 
+        // ✅ 1. 로딩 시작 (중복 클릭 방지)
+        Swal.fire({
+            title: isTemp ? '임시저장 중...' : '문서 상신 중...',
+            text: '잠시만 기다려 주세요.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         if (normalized.includes('휴가') || normalized.includes('출장')) {
             const start = document.getElementById('startDate').value; const end = document.getElementById('endDate').value;
-            if (!isTemp && (!start || !end)) return Swal.fire({ icon: 'warning', title: '날짜 미입력', text: '기간을 입력하세요.', confirmButtonColor: '#339af0' });
+            if (!isTemp && (!start || !end)) { Swal.close(); return Swal.fire({ icon: 'warning', title: '날짜 미입력', text: '기간을 입력하세요.', confirmButtonColor: '#339af0' }); }
             contentJson.attendanceInfo = { startDate: start, endDate: end };
             if (window.targetAtteNo) contentJson.attendanceInfo.targetAtteNo = window.targetAtteNo;
             if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName, posName: selectedDelegate.posName, depName: selectedDelegate.depName };
@@ -1563,32 +1573,50 @@
             const response = await fetch(`/api/v1/documents/${originalDocNo}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
             if (response.ok) {
-                if (filesToDelete.length > 0) await deleteFiles(filesToDelete);
-                if (newFiles.length > 0) await uploadFiles(originalDocNo);
-                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) await registerDelegate(originalDocNo, selectedDelegate.empId);
+                // ✅ 2. 병렬 비동기 처리 실행
+                const tasks = [];
+                if (filesToDelete.length > 0) tasks.push(deleteFiles(filesToDelete));
+                if (newFiles.length > 0) tasks.push(uploadFiles(originalDocNo));
+                if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) tasks.push(registerDelegate(originalDocNo, selectedDelegate.empId));
 
+                await Promise.all(tasks);
+
+                Swal.close();
                 Swal.fire({ icon: 'success', title: '완료', text: isTemp ? "임시 저장되었습니다." : "문서가 상신되었습니다.", confirmButtonColor: '#339af0' })
                     .then(() => location.href = isTemp ? "/documents/me?status=UNSUBMITTED" : "/documents/me?status=SUBMITTED");
             } else {
-                const err = await response.json().catch(() => ({}));
-                Swal.fire({ icon: 'error', title: '처리 실패', text: err.message || "오류가 발생했습니다.", confirmButtonColor: '#339af0' });
+                throw new Error('문서 저장 실패');
             }
-        } catch (e) { Swal.fire({ icon: 'error', title: '통신 오류', text: '서버와의 통신에 실패했습니다.', confirmButtonColor: '#339af0' }); }
+        } catch (e) {
+            Swal.close();
+            Swal.fire({ icon: 'error', title: '오류 발생', text: e.message || '처리 중 문제가 발생했습니다.', confirmButtonColor: '#339af0' });
+        }
     }
 
     async function registerDelegate(docNo, delegateEmpId) { try { await fetch('/api/v1/delegates', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ docNo: docNo, delegateEmpId: delegateEmpId }) }); } catch (e) {} }
-    async function deleteFiles(ids) { for (const id of ids) { try { await fetch(`/api/v1/attachments/${id}`, { method: 'DELETE', credentials: 'include' }); } catch (e) {} } }
+
+    // ✅ 파일 삭제 병렬 처리
+    async function deleteFiles(ids) {
+        const tasks = ids.map(id => fetch(`/api/v1/attachments/${id}`, { method: 'DELETE', credentials: 'include' }));
+        return Promise.all(tasks);
+    }
+
+    // ✅ 파일 업로드 병렬 처리
     async function uploadFiles(docNo) {
-        for (const file of newFiles) {
+        const tasks = newFiles.map(async (file) => {
             try {
                 const presignRes = await fetch('/api/v1/attachments/presign', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), originalName: file.name, contentType: file.type, size: file.size }) });
-                if (!presignRes.ok) continue;
+                if (!presignRes.ok) return;
                 const { objectKey, uploadUrl } = (await presignRes.json()).data;
                 const uploadRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-                if (!uploadRes.ok) continue;
+                if (!uploadRes.ok) return;
                 await fetch('/api/v1/attachments/complete', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: 'APPROVAL', entityId: docNo, fileType: getFileType(file.type), objectKey: objectKey, originalName: file.name, contentType: file.type, size: file.size, etag: uploadRes.headers.get('ETag')?.replace(/"/g, '') }) });
-            } catch (e) {}
-        }
+            } catch (e) {
+                console.error('파일 업로드 오류:', e);
+                throw e;
+            }
+        });
+        return Promise.all(tasks);
     }
 
     async function fetchMyEmployeeInfo() {
