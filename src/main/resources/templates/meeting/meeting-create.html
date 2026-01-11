@@ -8,15 +8,24 @@
     <title>새 회의 생성 - Bizportal</title>
     <style>
         .container-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
-        .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; height: 100%; }
+
+        /* 카드 디자인 유지 및 높이 유연화 */
+        .card {
+            background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;
+            height: auto; min-height: 100%; box-sizing: border-box;
+        }
+
         .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 18px; font-weight: 800; color: var(--primary2); }
         .field { margin-bottom: 14px; }
         label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 5px; }
         input, select { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #f8fafc; padding: 10px 14px; font-size: 14px; transition: 0.2s; outline: none; }
         input:focus, select:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px var(--blueSoft); }
+
         .recording-section { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); }
         .rec-controls { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
         #recTimer { font-family: 'Pretendard', sans-serif; font-size: 22px; font-weight: 200; color: #000; min-width: 90px; }
+
         .btn-group { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .btn { height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s ease; }
         .btn:hover:not(:disabled) { filter: brightness(0.92); }
@@ -25,21 +34,47 @@
         .btn.danger { background: var(--danger); color: #fff; border: none; }
         .btn.primary { background: var(--primary); color: #fff; border: none; width: 100%; height: 52px; font-size: 15px; margin-top: 15px; }
         .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* ✅ [추가] 파일 업로드 영역 - 독립 레이어 및 SVG 점선 적용 */
+        .file-upload-area {
+            position: relative;
+            margin-top: 15px;
+            padding: 16px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            box-sizing: border-box;
+            background: transparent;
+        }
+
+        .file-upload-area::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1;
+            /* 점선 잘림 방지 SVG */
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='8%2c 8' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        .upload-label-text { position: relative; z-index: 2; font-size: 13px; font-weight: 800; color: #64748b; margin: 0; }
+        #audioFileInput { display: none; }
+        .custom-file-btn {
+            position: relative; z-index: 2;
+            background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;
+            padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700;
+            cursor: pointer; transition: 0.2s; white-space: nowrap;
+        }
+        .custom-file-btn:hover { background: #e2e8f0; }
+        #fileStatusText { position: relative; z-index: 2; font-size: 12px; color: var(--primary); font-weight: 600; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
         .selected-box { min-height: 52px; padding: 8px; background: #f8fafc; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
         .pill { background: #fff; border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
         .pill button { border: none; background: none; color: var(--danger); cursor: pointer; font-size: 14px; }
-        .list-container {
-            flex: 1 1 0;
-            min-height: 200px;
-            overflow-y: auto;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            background: #fff;
-        }
-
-        .container-grid > .card:last-child {
-            min-height: 0;
-        }
+        .list-container { flex: 1 1 0; min-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+        .container-grid > .card:last-child { min-height: 0; }
         .emp-row { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         progress { width: 100%; height: 4px; border-radius: 2px; overflow: hidden; margin-top: 10px; appearance: none; }
         progress::-webkit-progress-bar { background: var(--line); }
@@ -91,7 +126,17 @@
                                 <button id="recEndBtn" class="btn danger" disabled>종료</button>
                             </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid var(--line); margin-bottom:8px;">
+
+                        <div class="file-upload-area">
+                            <span class="upload-label-text">또는 음성 파일 업로드</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="fileStatusText"></span>
+                                <label for="audioFileInput" class="custom-file-btn">파일 선택</label>
+                                <input type="file" id="audioFileInput" accept="audio/*" />
+                            </div>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid var(--line); margin-top:12px; margin-bottom:8px;">
                             <span style="font-size:12px; font-weight:700; color:var(--muted)">상태: <b id="recState" style="color:var(--primary)">대기</b></span>
                             <button id="clearAudioBtn" class="btn" style="height:26px; font-size:11px; border:none; background:none; color:var(--danger)">초기화</button>
                         </div>
@@ -238,10 +283,7 @@
         let isRecording = false;
 
         const preventExit = (e) => {
-            if (isRecording) {
-                e.preventDefault();
-                e.returnValue = ""; // 브라우저 표준 확인 창 활성화
-            }
+            if (isRecording) { e.preventDefault(); e.returnValue = ""; }
         };
 
         function formatTimer(s) { const h = String(Math.floor(s/3600)).padStart(2,'0'); const m = String(Math.floor((s%3600)/60)).padStart(2,'0'); const sc = String(s%60).padStart(2,'0'); return `${h}:${m}:${sc}`; }
@@ -264,6 +306,32 @@
             $("recEndBtn").disabled = true;
         }
 
+        // ✅ [기능 추가] 파일 업로드 변경 이벤트
+        $("audioFileInput").onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            $("fileStatusText").textContent = file.name;
+
+            if (isRecording) {
+                if(!confirm("현재 녹음 중인 데이터가 사라집니다. 파일을 업로드하시겠습니까?")) {
+                    e.target.value = ""; $("fileStatusText").textContent = ""; return;
+                }
+                if (mediaRecorder) mediaRecorder.stop();
+                await clearDB();
+            }
+
+            audioFile = file;
+            if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+            audioBlobUrl = URL.createObjectURL(file);
+
+            $("audioPreview").src = audioBlobUrl;
+            $("audioPreview").style.display = "block";
+            $("fileInfo").textContent = `업로드됨: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            $("recState").textContent = "파일 준비됨";
+            $("recState").style.color = "var(--success)";
+        };
+
         $("recStartBtn").onclick = async () => {
             try {
                 if (mediaRecorder && mediaRecorder.state === "paused") {
@@ -273,14 +341,15 @@
                 }
                 else {
                     chunks = [];
-                    await clearDB(); // ✅ 녹음 시작 시 이전 임시 데이터 삭제
+                    await clearDB();
+                    $("audioFileInput").value = ""; $("fileStatusText").textContent = ""; // 녹음 시작 시 파일 리셋
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
 
                     mediaRecorder.ondataavailable = (e) => {
                         if(e.data.size > 0) {
                             chunks.push(e.data);
-                            saveChunkToDB(e.data); // ✅ 3초마다 DB에 조각 저장
+                            saveChunkToDB(e.data);
                         }
                     };
 
@@ -293,18 +362,18 @@
                         $("audioPreview").style.display = "block";
                         $("fileInfo").textContent = `준비됨: ${(audioFile.size/1024).toFixed(1)} KB`;
 
-                        isRecording = false; // ✅ 녹음 종료 상태
-                        window.removeEventListener("beforeunload", preventExit); // ✅ 이탈 방지 해제
+                        isRecording = false;
+                        window.removeEventListener("beforeunload", preventExit);
                         resetRecordingUI();
                     };
 
-                    mediaRecorder.start(3000); // ✅ 3초마다 조각 생성 (ondataavailable 호출)
+                    mediaRecorder.start(3000);
                     startTimer();
                     $("recState").textContent = "녹음중";
                 }
 
-                isRecording = true; // ✅ 녹음 중 상태
-                window.addEventListener("beforeunload", preventExit); // ✅ 이탈 방지 활성화
+                isRecording = true;
+                window.addEventListener("beforeunload", preventExit);
 
                 $("recState").style.color = "var(--danger)";
                 $("recStartBtn").disabled = true;
@@ -329,11 +398,12 @@
 
         $("clearAudioBtn").onclick = async () => {
             audioFile = null;
+            $("audioFileInput").value = ""; $("fileStatusText").textContent = "";
             chunks = [];
             if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
             $("audioPreview").style.display = "none";
             $("fileInfo").textContent = "선택된 파일 없음";
-            await clearDB(); // ✅ 초기화 시 DB도 비움
+            await clearDB();
             resetRecordingUI();
         };
 
@@ -362,7 +432,7 @@
                     await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/ai-request`, fetchOptions("POST", { objectKey, size: audioFile.size, contentType: audioFile.type, originalName: audioFile.name, title: $("title").value.trim() }));
                 }
 
-                await clearDB(); // ✅ 최종 성공 시 임시 DB 비우기
+                await clearDB();
                 progEl.value = 100; updateStatus("🎉 완료되었습니다!");
                 setTimeout(() => { if(confirm("등록 완료! 목록으로 이동할까요?")) location.href = "/meeting"; }, 500);
             } catch (e) { alert("오류: " + e.message); $("createBtn").disabled = false; }
@@ -389,9 +459,7 @@
                     $("audioPreview").style.display = "block";
                     $("fileInfo").textContent = `복구됨: ${(audioFile.size/1024).toFixed(1)} KB`;
                     updateStatus("💡 녹음 데이터가 성공적으로 복구되었습니다.");
-                } else {
-                    await clearDB();
-                }
+                } else { await clearDB(); }
             }
 
             loadDepartments(); loadMoreEmp();

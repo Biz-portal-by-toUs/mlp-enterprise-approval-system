@@ -427,6 +427,7 @@ public class MeetingService {
 
         meeting.markAiProcessing();
         meeting.updateTexts("음성을 텍스트로 변환중입니다...", "회의 요약중입니다...");
+        meeting.setAudioObjectKey(req.getObjectKey());
 
         publisher.publishEvent(new MeetingAiRequestedEvent(meetNo, req.getObjectKey(), req.getTitle()));
     }
@@ -444,7 +445,7 @@ public class MeetingService {
                 request.getStatus());
 
         if ("FAILED".equalsIgnoreCase(status)) {
-            meeting.markAiFailed(request.getErrorMessage());
+            meeting.markAiFailed(request.getErrorMessage(), request.getSttText());
             return meeting.getMeetNo();
         }
 
@@ -497,7 +498,7 @@ public class MeetingService {
         Meeting meeting = meetingRepository.findByMeetNoAndIsDeletedFalse(meetNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEETING_NOT_FOUND));
 
-        meeting.markAiFailed(errorMessage);
+        meeting.markAiFailed("요약이 실패하였습니다.","녹음본을 텍스트로 변환하는 과정에서 에러가 났습니다.");
 
         log.info("[AI STATUS UPDATED TO FAILED] meetNo={}", meetNo);
     }
