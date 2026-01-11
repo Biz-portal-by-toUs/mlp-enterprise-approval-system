@@ -90,16 +90,19 @@ function readPerms() {
 const PERM = readPerms()
 
 function markFormListDirty() {
+    // temp-list / forms-list 등 "목록 화면"들이 공통으로 감지할 키
     try {
-        localStorage.setItem('documentForm:dirty', String(Date.now()))
+        localStorage.setItem('documentForm:listDirty', 'true');
+        localStorage.setItem('documentForm:listDirty:ts', String(Date.now())); // 같은 탭에서도 변경 보장
     } catch (_) {}
 
+    // opener(목록창) 즉시 갱신 유도(같은 origin일 때만)
     try {
         if (window.opener && !window.opener.closed) {
             window.opener.postMessage(
-                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
+                { type: 'DOCUMENT_FORM_LIST_DIRTY', at: Date.now() },
                 window.location.origin
-            )
+            );
         }
     } catch (_) {}
 }
