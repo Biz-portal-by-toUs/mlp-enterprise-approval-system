@@ -123,8 +123,9 @@
     <div class="tab-item" data-type="OTHER">기타</div>
 </div>
 
-<div id="notiList" class="noti-list"></div>
-<div id="sentinel"></div>
+<div id="notiList" class="noti-list">
+    <div id="sentinel" style="height: 10px;"></div> </div>
+
 
 <script>
     let lastAt = null, lastId = null, isLast = false, isLoading = false, type = 'ALL';
@@ -152,7 +153,6 @@
             items.forEach(it => {
                 const card = document.createElement('div');
                 card.id = `noti-${it.notiNo}`;
-                // Jackson 필드명 규칙 반영 (it.read)
                 card.className = `noti-card ${it.read ? '' : 'unread'}`;
                 card.innerHTML = `
                         <div class="noti-icon">${iconMap[it.type] || '🔔'}</div>
@@ -163,7 +163,8 @@
                         </div>
                         <button class="noti-close" onclick="event.stopPropagation(); deleteNoti(${it.notiNo}, this)">×</button>
                     `;
-                document.getElementById('notiList').appendChild(card);
+                // document.getElementById('notiList').appendChild(card); // ❌ 기존 코드
+                document.getElementById('sentinel').before(card); // ✅ sentinel 바로 앞에 추가
             });
 
             const last = items[items.length - 1];
@@ -291,9 +292,14 @@
         }
     }
 
-    new IntersectionObserver(e => {
+    // 1. 관찰자(Observer) 객체를 변수에 담아 선언합니다.
+    const observer = new IntersectionObserver(e => {
         if(e[0].isIntersecting && !isLoading && !isLast) load();
-    }, { threshold: 0.1 }).observe(document.getElementById('sentinel'));
+    }, { threshold: 0.1 });
+
+    // 2. 처음 실행 시 sentinel을 감시합니다.
+    const initialSentinel = document.getElementById('sentinel');
+    if (initialSentinel) observer.observe(initialSentinel);
 
     document.querySelectorAll('.tab-item').forEach(tab => {
         tab.onclick = () => {
@@ -302,7 +308,15 @@
             tab.classList.add('active');
 
             type = tab.dataset.type;
-            document.getElementById('notiList').innerHTML = '';
+
+            // 기존 목록을 비우고 sentinel만 남깁니다.
+            document.getElementById('notiList').innerHTML = '<div id="sentinel" style="height: 10px;"></div>';
+
+            // ⚠️ 여기서 아까 선언한 observer 변수를 사용합니다.
+            const newSentinel = document.getElementById('sentinel');
+            observer.observe(newSentinel);
+
+            // 상태값 초기화 후 로드
             lastAt = null;
             lastId = null;
             isLast = false;
