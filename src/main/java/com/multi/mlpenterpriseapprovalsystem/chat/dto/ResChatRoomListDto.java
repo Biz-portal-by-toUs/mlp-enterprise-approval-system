@@ -1,10 +1,12 @@
 package com.multi.mlpenterpriseapprovalsystem.chat.dto;
+
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoom;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.ChatRoomMember;
 import com.multi.mlpenterpriseapprovalsystem.chat.domain.RoomType;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.List;
  * @since : 2025. 12. 17. 수요일
  */
 @Getter
+@Setter
 @AllArgsConstructor
 public class ResChatRoomListDto {
 

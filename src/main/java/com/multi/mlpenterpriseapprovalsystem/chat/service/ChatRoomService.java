@@ -133,11 +133,33 @@ public class ChatRoomService {
      * 내 채팅방 목록 조회 (무한 스크롤)
      *
      */
+// ChatRoomService.java 수정 제안
+
     @Transactional(readOnly = true)
     public List<ResChatRoomListDto> getMyRooms(String keyword, LocalDateTime cursor, Pageable pageable, String empId) {
         return chatRoomRepository.findMyRooms(empId, keyword, cursor, pageable)
                 .stream()
-                .map(room -> ResChatRoomListDto.from(room, empId))
+                .map(room -> {
+                    // 1. 현재 사용자의 멤버 정보(입장 시간 포함)를 가져옴
+                    ChatRoomMember me = room.getMembers().stream()
+                            .filter(m -> m.getEmployee().getEmpId().equals(empId))
+                            .findFirst()
+                            .orElse(null);
+
+                    ResChatRoomListDto dto = ResChatRoomListDto.from(room, empId);
+
+                    // 2. 방의 마지막 메시지 시간이 나의 재입장(joinedAt) 시간보다 이전이라면?
+                    // (주의: ChatRoomMember에 입장 시간 필드명이 joinedAt이라고 가정)
+                    if (me != null && room.getLastMessageAt() != null &&
+                            room.getLastMessageAt().isBefore(me.getJoinedAt())) {
+
+                        // 목록에 표시될 메시지 내용을 초기화
+                        dto.setLastMessage("새로운 대화를 시작해보세요.");
+                        dto.setLastMessageAt(null);
+                        dto.setUnreadCount(0);
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
