@@ -422,7 +422,12 @@ public class PortoneService {
                     .status("DEPOSIT_ONLY")
                     .build();
         } else {
+            // 결제 수단 확인: 결제가 필요한데 결제 수단 정보가 없으면 예외 발생
             PaymentMethod paymentMethod = sub.getPaymentMethod();
+            if (paymentMethod == null || paymentMethod.getBillingKey() == null) {
+                throw new CustomException(ErrorCode.PAYMENT_METHOD_NOT_FOUND);
+            }
+
             String merchantUid = "UPGRADE_" + comId + "_" + System.currentTimeMillis();
             Map<String, Object> response = requestrecurrentPayment(paymentMethod.getBillingKey(), amountToPay, merchantUid, targetPlan.getSubName());
 
