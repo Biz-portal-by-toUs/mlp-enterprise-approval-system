@@ -42,6 +42,21 @@
         .ms-btn.ghost:hover{background:#f8fafc;filter:none;}
         .ms-btn:disabled{opacity:.6;cursor:not-allowed;}
 
+        /* ✅ 중요메일 only 토글(★) 버튼 */
+        .ms-btn.icon{
+            width:40px;
+            padding:0;
+            font-size:18px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .ms-btn.icon.is-on{
+            background: rgba(44,92,255,.10);
+            border-color: rgba(44,92,255,.35);
+            color: var(--primary);
+        }
+
         /* ===== table ===== */
         .ms-tableWrap{
             width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
@@ -147,14 +162,18 @@
 
                     <button class="ms-btn ghost" id="btnSearch" type="button">조회</button>
                     <button class="ms-btn ghost" id="btnReset" type="button" disabled>초기화</button>
+
+                    <!-- ✅ 중요메일만 보기(같은 페이지 내 필터) -->
+                    <button class="ms-btn ghost icon" id="btnPriorOnly" type="button"
+                            aria-pressed="false" title="중요메일만 보기">☆</button>
                 </div>
 
                 <div class="ms-toolbar-right">
                     <button class="ms-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
-
                     <button class="ms-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
                 </div>
             </div>
+
             <div class="ms-countBar">
                 <div id="countPill" class="ms-countPill">0건</div>
             </div>
@@ -227,18 +246,6 @@
                     return isPrior ? '⭐' : '☆';
                 }
 
-                async function patchNoBody(url){
-                    const res = await fetch(url, {
-                        method: 'PATCH',
-                        credentials: 'include',
-                        headers: { ...getCsrfHeaders() }
-                    });
-                    if(!res.ok){
-                        const t = await res.text().catch(()=> '');
-                        throw new Error(`HTTP ${res.status} ${t}`);
-                    }
-                }
-
                 function fmtDate(iso){
                     if (!iso) return '-';
                     try{
@@ -261,6 +268,27 @@
                         .replaceAll('>','&gt;')
                         .replaceAll('"','&quot;')
                         .replaceAll("'","&#039;");
+                }
+
+                async function patchNoBody(url){
+                    const res = await fetch(url, {
+                        method: 'PATCH',
+                        credentials: 'include',
+                        headers: { ...getCsrfHeaders() }
+                    });
+                    if(!res.ok){
+                        const t = await res.text().catch(()=> '');
+                        throw new Error(`HTTP ${res.status} ${t}`);
+                    }
+                }
+
+                // ✅ 중요메일 only 버튼 UI 동기화
+                function syncPriorBtn(priorOnly){
+                    const b = document.getElementById('btnPriorOnly');
+                    if (!b) return;
+                    b.classList.toggle('is-on', !!priorOnly);
+                    b.setAttribute('aria-pressed', priorOnly ? 'true' : 'false');
+                    b.textContent = priorOnly ? '★' : '☆';
                 }
 
                 // ===== selection (bulk) =====
@@ -354,7 +382,8 @@
                         size: PAGE_SIZE,
                         keyword: clampKeyword(params.get('keyword') || ''),
                         from: (params.get('from') || '').trim(),
-                        to: (params.get('to') || '').trim()
+                        to: (params.get('to') || '').trim(),
+                        priorOnly: params.get('priorOnly') === 'true' // ✅ 추가
                     };
                 }
 
@@ -367,6 +396,9 @@
                     params.set('from', (next.from || '').trim());
                     params.set('to', (next.to || '').trim());
 
+                    // ✅ 중요메일 only
+                    if (next.priorOnly) params.set('priorOnly', 'true');
+
                     if (!params.get('keyword')) params.delete('keyword');
                     if (!params.get('from')) params.delete('from');
                     if (!params.get('to')) params.delete('to');
@@ -375,7 +407,7 @@
                 }
 
                 // ===== render =====
-                function renderRows(items, page, size, totalElements){
+                function renderRows(items){
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
@@ -391,8 +423,7 @@
                         return;
                     }
 
-                    items.forEach((it, idx) => {
-                        // (번호는 제거했지만, 기존 로직 유지용 변수 필요하면 남겨도 됨)
+                    items.forEach((it) => {
                         const title = escapeHtml(it.title);
                         const receivers = escapeHtml(it.receivers);
                         const createdAt = fmtDate(it.createdAt);
@@ -423,7 +454,6 @@
                             <td class="ms-col-date">${createdAt}</td>
                         `;
 
-                        // row click (checkbox / star / a 제외)
                         tr.addEventListener('click', (e) => {
                             if (e.target && (
                                 e.target.closest('.ms-starBtn') ||
@@ -433,7 +463,6 @@
                             location.href = `/mail/${encodeURIComponent(it.mailNo)}?box=sent`;
                         });
 
-                        // checkbox select -> row highlight + ui sync
                         const rowCb = tr.querySelector('.rowCheck');
                         rowCb.addEventListener('change', () => {
                             tr.classList.toggle('is-selected', rowCb.checked);
@@ -441,7 +470,6 @@
                             syncBulkUi();
                         });
 
-                        // star toggle
                         const starBtn = tr.querySelector('.ms-starBtn');
                         starBtn.addEventListener('click', async (e) => {
                             e.preventDefault();
@@ -480,6 +508,7 @@
                     if (st.keyword) params.set('keyword', st.keyword);
                     if (st.from) params.set('from', st.from);
                     if (st.to) params.set('to', st.to);
+                    if (st.priorOnly) params.set('priorOnly', 'true'); // ✅ 추가
                     return `/api/v1/mails/sent?${params.toString()}`;
                 }
 
@@ -499,18 +528,21 @@
                         document.getElementById('from').value = st.from;
                         document.getElementById('to').value = st.to;
 
+                        // ✅ 중요메일 only 버튼 UI 반영
+                        syncPriorBtn(!!st.priorOnly);
+
                         syncDateConstraints();
 
                         const url = buildSentApiUrl(st);
                         const data = await fetchJson(url);
 
                         const items = data.content || [];
-                        renderRows(items, data.number ?? st.page, data.size ?? PAGE_SIZE, data.totalElements ?? items.length);
+                        renderRows(items);
 
                         document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
 
-                        buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                            setUrlState({page: p, keyword: st.keyword, from: st.from, to: st.to});
+                        buildPager(data.number ?? st.page, data.totalPages ?? 1, (p) => {
+                            setUrlState({page: p, keyword: st.keyword, from: st.from, to: st.to, priorOnly: st.priorOnly});
                             load().catch(console.error);
                         });
                     } finally {
@@ -522,23 +554,40 @@
                 document.getElementById('btnSearch').addEventListener('click', () => {
                     syncDateConstraints();
 
+                    const st = getState();
                     const keyword = clampKeyword(document.getElementById('keyword').value);
                     document.getElementById('keyword').value = keyword;
                     const from = (document.getElementById('from').value || '').trim();
                     const to = (document.getElementById('to').value || '').trim();
 
-                    setUrlState({ page:0, keyword, from, to });
+                    setUrlState({ page:0, keyword, from, to, priorOnly: st.priorOnly });
+                    load().catch(console.error);
+                });
+
+                // ✅ 중요메일 only 토글
+                document.getElementById('btnPriorOnly')?.addEventListener('click', () => {
+                    const st = getState();
+                    const nextPrior = !st.priorOnly;
+
+                    setUrlState({ page:0, keyword: st.keyword, from: st.from, to: st.to, priorOnly: nextPrior });
                     load().catch(console.error);
                 });
 
                 document.getElementById('btnReset').addEventListener('click', () => {
+                    const st = getState(); // ✅ priorOnly 유지(인박스랑 동일)
+
                     document.getElementById('keyword').value = '';
                     document.getElementById('from').value = '';
                     document.getElementById('to').value = '';
                     document.getElementById('to').max = todayYmd();
 
                     syncDateConstraints();
-                    setUrlState({ page: 0, keyword: '', from: '', to: '' });
+
+                    // ✅ priorOnly 유지
+                    setUrlState({ page: 0, keyword: '', from: '', to: '', priorOnly: st.priorOnly });
+
+                    // 만약 "초기화 시 중요만 보기 해제"가 원하면 ↓ 이렇게:
+                    // setUrlState({ page: 0, keyword: '', from: '', to: '', priorOnly: false });
 
                     load().catch(console.error);
                 });

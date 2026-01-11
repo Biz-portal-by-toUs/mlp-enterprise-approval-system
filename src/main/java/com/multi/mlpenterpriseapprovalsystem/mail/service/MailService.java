@@ -47,4 +47,10 @@ public interface MailService {
     ResMailReplyPayloadDto getReplyPayload(Long mailNo, String viewerEmpId);
 
     long countUnreadInbox(String empId);
+
+    Page<ResMailListDto> getPriorInbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
+
+    Page<ResMailListDto> getPriorSent(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
+
+    Page<ResMailListDto> getPriorSelfMailbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
 }

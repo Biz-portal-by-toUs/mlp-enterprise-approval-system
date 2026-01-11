@@ -44,6 +44,21 @@
         .mi-btn.ghost{background:#fff;color:var(--fg);border:1px solid var(--line);}
         .mi-btn.ghost:hover{background:#f8fafc;filter:none;}
 
+        /* 중요메일 only 토글(★) 버튼 */
+        .mi-btn.icon{
+            width:40px;
+            padding:0;
+            font-size:18px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .mi-btn.icon.is-on{
+            background: rgba(44,92,255,.10);
+            border-color: rgba(44,92,255,.35);
+            color: var(--primary);
+        }
+
         /* ===== table ===== */
         .mi-tableWrap{
             width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
@@ -156,6 +171,10 @@
                     </div>
                     <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                     <button class="mi-btn ghost" id="btnReset" type="button">초기화</button>
+
+                    <!-- 중요메일만 보기(같은 페이지 내 필터) -->
+                    <button class="mi-btn ghost icon" id="btnPriorOnly" type="button"
+                            aria-pressed="false" title="중요메일만 보기">☆</button>
                 </div>
 
                 <div class="mi-toolbar-right">
@@ -330,7 +349,8 @@
                         size: PAGE_SIZE,
                         keyword: clampKeyword(params.get('keyword') || ''),
                         from: (params.get('from') || '').trim(),
-                        to: (params.get('to') || '').trim()
+                        to: (params.get('to') || '').trim(),
+                        priorOnly: params.get('priorOnly') === 'true' // 추가
                     };
                 }
 
@@ -342,6 +362,9 @@
                     params.set('keyword', (next.keyword || '').trim());
                     params.set('from', (next.from || '').trim());
                     params.set('to', (next.to || '').trim());
+
+                    // 중요메일 only
+                    if (next.priorOnly) params.set('priorOnly', 'true');
 
                     if (!params.get('keyword')) params.delete('keyword');
                     if (!params.get('from')) params.delete('from');
@@ -357,7 +380,17 @@
                     if (st.keyword) params.set('keyword', st.keyword);
                     if (st.from) params.set('from', st.from);
                     if (st.to) params.set('to', st.to);
+                    if (st.priorOnly) params.set('priorOnly', 'true'); // 추가
                     return `/api/v1/mails/inbox?${params.toString()}`;
+                }
+
+                // 중요메일 only 버튼 UI 동기화
+                function syncPriorBtn(priorOnly){
+                    const b = document.getElementById('btnPriorOnly');
+                    if (!b) return;
+                    b.classList.toggle('is-on', !!priorOnly);
+                    b.setAttribute('aria-pressed', priorOnly ? 'true' : 'false');
+                    b.textContent = priorOnly ? '★' : '☆';
                 }
 
                 // ===== UI builders =====
@@ -510,6 +543,9 @@
                         document.getElementById('from').value = st.from;
                         document.getElementById('to').value = st.to;
 
+                        // 중요메일 only 버튼 UI 반영
+                        syncPriorBtn(!!st.priorOnly);
+
                         syncDateConstraints();
 
                         const url = buildInboxApiUrl(st);
@@ -521,7 +557,7 @@
                         document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
 
                         buildPager(data.number ?? 0, data.totalPages ?? 1, (p) => {
-                            setUrlState({page: p, keyword: st.keyword, from: st.from, to: st.to});
+                            setUrlState({page: p, keyword: st.keyword, from: st.from, to: st.to, priorOnly: st.priorOnly});
                             load().catch(console.error);
                         });
                     } finally {
@@ -533,12 +569,21 @@
                 document.getElementById('btnSearch').addEventListener('click', () => {
                     syncDateConstraints();
 
+                    const st = getState();
                     const keyword = clampKeyword(document.getElementById('keyword').value);
                     document.getElementById('keyword').value = keyword;
                     const from = (document.getElementById('from').value || '').trim();
                     const to = (document.getElementById('to').value || '').trim();
 
-                    setUrlState({ page:0, keyword, from, to });
+                    setUrlState({ page:0, keyword, from, to, priorOnly: st.priorOnly });
+                    load().catch(console.error);
+                });
+
+                document.getElementById('btnPriorOnly')?.addEventListener('click', () => {
+                    const st = getState();
+                    const nextPrior = !st.priorOnly;
+
+                    setUrlState({ page:0, keyword: st.keyword, from: st.from, to: st.to, priorOnly: nextPrior });
                     load().catch(console.error);
                 });
 
@@ -576,13 +621,14 @@
                 });
 
                 document.getElementById('btnReset').addEventListener('click', () => {
+                    const st = getState(); // priorOnly 유지(원하면 여기서 false로 내려도 됨)
                     document.getElementById('keyword').value = '';
                     document.getElementById('from').value = '';
                     document.getElementById('to').value = '';
                     document.getElementById('to').max = todayYmd();
 
                     syncDateConstraints();
-                    setUrlState({ page: 0, keyword: '', from: '', to: '' });
+                    setUrlState({ page: 0, keyword: '', from: '', to: '', priorOnly: st.priorOnly });
 
                     load().catch(console.error);
                 });

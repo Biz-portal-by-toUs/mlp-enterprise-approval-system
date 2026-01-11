@@ -42,6 +42,21 @@
         .mi-btn.ghost:hover{background:#f8fafc;filter:none;}
         .mi-btn:disabled{opacity:.6;cursor:not-allowed;}
 
+        /* 중요메일 only 토글(★) 버튼 */
+        .mi-btn.icon{
+            width:40px;
+            padding:0;
+            font-size:18px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .mi-btn.icon.is-on{
+            background: rgba(44,92,255,.10);
+            border-color: rgba(44,92,255,.35);
+            color: var(--primary);
+        }
+
         /* ===== table ===== */
         .mi-tableWrap{
             width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
@@ -144,14 +159,18 @@
                     </div>
                     <button class="mi-btn ghost" id="btnSearch" type="button">조회</button>
                     <button class="mi-btn ghost" id="btnReset" type="button" disabled>초기화</button>
+
+                    <!-- 중요메일만 보기(같은 페이지 내 필터) -->
+                    <button class="mi-btn ghost icon" id="btnPriorOnly" type="button"
+                            aria-pressed="false" title="중요메일만 보기">☆</button>
                 </div>
 
                 <div class="mi-toolbar-right">
                     <button class="mi-btn ghost" id="btnBulkTrash" type="button" disabled>삭제</button>
-
                     <button class="mi-btn" type="button" onclick="location.href='/mail/write'">+ 메일쓰기</button>
                 </div>
             </div>
+
             <div class="mi-countBar">
                 <div id="countPill" class="mi-countPill">0건</div>
             </div>
@@ -224,6 +243,15 @@
                     return isPrior ? '⭐' : '☆';
                 }
 
+                // 중요메일 only 버튼 UI 동기화
+                function syncPriorBtn(priorOnly){
+                    const b = document.getElementById('btnPriorOnly');
+                    if (!b) return;
+                    b.classList.toggle('is-on', !!priorOnly);
+                    b.setAttribute('aria-pressed', priorOnly ? 'true' : 'false');
+                    b.textContent = priorOnly ? '★' : '☆';
+                }
+
                 // ===== selection (bulk) =====
                 function getSelectedMailNos(){
                     return Array.from(document.querySelectorAll('.rowCheck:checked'))
@@ -253,9 +281,7 @@
                 }
 
                 function syncResetBtn(){
-                    const hasFilter =
-                        document.getElementById('keyword').value;
-
+                    const hasFilter = document.getElementById('keyword').value;
                     document.getElementById('btnReset').disabled = !hasFilter;
                 }
 
@@ -288,7 +314,8 @@
                     return {
                         page: Math.max(parseInt(params.get('page') || '0', 10), 0),
                         size: PAGE_SIZE,
-                        keyword: clampKeyword(params.get('keyword') || '')
+                        keyword: clampKeyword(params.get('keyword') || ''),
+                        priorOnly: params.get('priorOnly') === 'true' // 추가
                     };
                 }
 
@@ -297,6 +324,9 @@
                     params.set('page', String(next.page ?? 0));
                     params.set('size', String(PAGE_SIZE));
                     params.set('keyword', (next.keyword || '').trim());
+
+                    // 중요메일 only
+                    if (next.priorOnly) params.set('priorOnly', 'true');
 
                     if (!params.get('keyword')) params.delete('keyword');
 
@@ -308,6 +338,7 @@
                     params.set('page', String(st.page));
                     params.set('size', String(PAGE_SIZE));
                     if (st.keyword) params.set('keyword', st.keyword);
+                    if (st.priorOnly) params.set('priorOnly', 'true'); // 추가
                     return `/api/v1/mails/self?${params.toString()}`;
                 }
 
@@ -347,7 +378,6 @@
                     const tb = document.getElementById('tbody');
                     tb.innerHTML = '';
 
-                    // 페이지 바뀔 때 선택 초기화
                     const checkAll = document.getElementById('checkAll');
                     checkAll.checked = false;
                     checkAll.indeterminate = false;
@@ -397,7 +427,6 @@
                             <td class="mi-col-date">${createdAt}</td>
                         `;
 
-                        // row click (checkbox / star / a 제외)
                         tr.addEventListener('click', (e) => {
                             if (e.target && (
                                 e.target.closest('.mi-starBtn') ||
@@ -407,7 +436,6 @@
                             location.href = `/mail/${encodeURIComponent(it.mailNo)}?box=self`;
                         });
 
-                        // checkbox -> highlight + sync
                         const rowCb = tr.querySelector('.rowCheck');
                         rowCb.addEventListener('change', () => {
                             tr.classList.toggle('is-selected', rowCb.checked);
@@ -415,7 +443,6 @@
                             syncBulkUi();
                         });
 
-                        // star toggle
                         const starBtn = tr.querySelector('.mi-starBtn');
                         starBtn.addEventListener('click', async (e) => {
                             e.preventDefault();
@@ -460,6 +487,9 @@
 
                         document.getElementById('keyword').value = clampKeyword(st.keyword);
 
+                        // 중요메일 only 버튼 UI 반영
+                        syncPriorBtn(!!st.priorOnly);
+
                         const url = buildSelfApiUrl(st);
                         const data = await fetchJson(url);
 
@@ -469,7 +499,7 @@
                         document.getElementById('countPill').textContent = `${data.totalElements ?? 0}건`;
 
                         buildPager(data.number ?? st.page, data.totalPages ?? 1, (p) => {
-                            setUrlState({page: p, keyword: st.keyword});
+                            setUrlState({page: p, keyword: st.keyword, priorOnly: st.priorOnly});
                             load().catch(console.error);
                         });
                     } finally {
@@ -479,16 +509,34 @@
 
                 // ===== events =====
                 document.getElementById('btnSearch').addEventListener('click', () => {
+                    const st = getState();
                     const keyword = clampKeyword(document.getElementById('keyword').value);
                     document.getElementById('keyword').value = keyword;
 
-                    setUrlState({ page:0, keyword });
+                    setUrlState({ page:0, keyword, priorOnly: st.priorOnly });
+                    load().catch(console.error);
+                });
+
+                // 중요메일 only 토글
+                document.getElementById('btnPriorOnly')?.addEventListener('click', () => {
+                    const st = getState();
+                    const nextPrior = !st.priorOnly;
+
+                    setUrlState({ page:0, keyword: st.keyword, priorOnly: nextPrior });
                     load().catch(console.error);
                 });
 
                 document.getElementById('btnReset').addEventListener('click', () => {
+                    const st = getState(); // priorOnly 유지(인박스와 동일)
+
                     document.getElementById('keyword').value = '';
-                    setUrlState({ page: 0, keyword: '' });
+
+                    // priorOnly 유지
+                    setUrlState({ page: 0, keyword: '', priorOnly: st.priorOnly });
+
+                    // 만약 "초기화 시 중요만 보기 해제"가 원하면 ↓ 이렇게:
+                    // setUrlState({ page: 0, keyword: '', priorOnly: false });
+
                     load().catch(console.error);
                 });
 

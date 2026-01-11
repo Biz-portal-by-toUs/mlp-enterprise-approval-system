@@ -59,15 +59,23 @@ public class MailController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(name = "priorOnly", required = false) Boolean priorOnly,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getInbox(empId, keyword, from, to, pageable);
+
+        Page<ResMailListDto> res = Boolean.TRUE.equals(priorOnly)
+                ? mailService.getPriorInbox(empId, keyword, from, to, pageable)
+                : mailService.getInbox(empId, keyword, from, to, pageable);
+
+        String msg = Boolean.TRUE.equals(priorOnly)
+                ? "중요 받은 메일함 조회 성공"
+                : "받은 메일함 조회 성공";
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "받은 메일함 조회 성공", res));
+                .body(new ResponseDto<>(HttpStatus.OK, msg, res));
     }
 
     @GetMapping("/sent")
@@ -77,15 +85,23 @@ public class MailController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(name = "priorOnly", required = false) Boolean priorOnly,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getSent(empId, keyword, from, to, pageable);
+
+        Page<ResMailListDto> res = Boolean.TRUE.equals(priorOnly)
+                ? mailService.getPriorSent(empId, keyword, from, to, pageable)
+                : mailService.getSent(empId, keyword, from, to, pageable);
+
+        String msg = Boolean.TRUE.equals(priorOnly)
+                ? "중요 보낸 메일함 조회 성공"
+                : "보낸 메일함 조회 성공";
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "보낸 메일함 조회 성공", res));
+                .body(new ResponseDto<>(HttpStatus.OK, msg, res));
     }
 
     @GetMapping("/trash")
@@ -273,14 +289,22 @@ public class MailController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name = "to", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(name = "priorOnly", required = false) Boolean priorOnly,
             @PageableDefault(size = 10) Pageable pageable,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
-        Page<ResMailListDto> res = mailService.getSelfMailbox(empId, keyword, from, to, pageable);
+
+        Page<ResMailListDto> res = Boolean.TRUE.equals(priorOnly)
+                ? mailService.getPriorSelfMailbox(empId, keyword, from, to, pageable)
+                : mailService.getSelfMailbox(empId, keyword, from, to, pageable);
+
+        String msg = Boolean.TRUE.equals(priorOnly)
+                ? "중요 내게쓴메일함 조회 성공"
+                : "내게쓴메일함 조회 성공";
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(new ResponseDto<>(HttpStatus.OK, "내게쓴메일함 조회 성공", res));
+                .body(new ResponseDto<>(HttpStatus.OK, msg, res));
     }
 }
