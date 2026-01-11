@@ -61,29 +61,44 @@ public class DashboardService {
      * 대시보드용 통합 일정 조회
      * 회사(COMPANY), 부서(DEPARTMENT), 개인(PERSONAL) 일정을 모두 가져와 합칩니다.
      */
-    public List<ResScheduleDto> getCombinedSchedules(CustomUser user, LocalDate baseDate) {
+    public List<ResScheduleDto> getCombinedSchedules(CustomUser user, LocalDate baseDate, int startDay) {
         List<ResScheduleDto> combinedItems = new ArrayList<>();
         CalendarScope[] scopes = {CalendarScope.COMPANY, CalendarScope.DEPARTMENT, CalendarScope.PERSONAL};
+
+        // ✅ startDay 기준으로 "그 주의 시작일"을 계산해서 scheduleService에 넣어줌
+        LocalDate weekStart = calcWeekStart(baseDate, startDay);
 
         for (CalendarScope scope : scopes) {
             ReqScheduleDto request = new ReqScheduleDto();
             request.setScope(scope);
-            request.setView(CalendarViewType.WEEK); // 혹은 MONTH
-            request.setBaseDate(baseDate);
+            request.setView(CalendarViewType.WEEK);
+            request.setBaseDate(weekStart); // ✅ 여기 핵심: 기준일을 주 시작일로 통일
 
             try {
-                // 기존 서비스 호출
                 ResScheduleListDto result = scheduleService.getItems(user, request);
-
-                // ✅ 결과 객체와 내부 리스트가 null이 아닌지 엄격히 확인
                 if (result != null && result.getItems() != null) {
                     combinedItems.addAll(result.getItems());
                 }
             } catch (Exception e) {
-                // 특정 스코프 조회 실패 시 로그를 남기고 다음 스코프로 진행 (500 에러 방지)
                 log.error("대시보드 일정 조회 실패 [영역: {}]: {}", scope, e.getMessage());
             }
         }
         return combinedItems;
+    }
+
+    private LocalDate calcWeekStart(LocalDate date, int startDay){
+        // startDay: 1=월요일 시작, 0=일요일 시작
+        // DayOfWeek: MONDAY=1 ... SUNDAY=7
+        int dow = date.getDayOfWeek().getValue();
+
+        if (startDay == 1) { // 월요일 시작
+            // 월(1) -> 0, 화(2) -> 1, ... 일(7) -> 6
+            int diff = dow - 1;
+            return date.minusDays(diff);
+        } else { // 일요일 시작
+            // 일(7) -> 0, 월(1) -> 1, ... 토(6) -> 6
+            int diff = (dow == 7) ? 0 : dow;
+            return date.minusDays(diff);
+        }
     }
 }
