@@ -1139,6 +1139,8 @@ ALTER TABLE folder
     ADD INDEX idx_folder_batch (delete_batch_id);
 -- 여기까지 해주기
 
+Drop table if exists cloud_trash_log;
+
 CREATE TABLE cloud_trash_log (
                                  log_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
                                  com_id       VARCHAR(3)  NOT NULL,
@@ -1194,10 +1196,10 @@ ALTER TABLE employee
     MODIFY COLUMN birth DATE NULL;
 
 ALTER TABLE mail
-    ADD COLUMN saved_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP;
+    add COLUMN saved_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP;
 
 ALTER TABLE mail
-    ADD COLUMN draft_receivers text NULL;
+    add COLUMN draft_receivers text NULL;
 
 ALTER TABLE mail
     MODIFY COLUMN saved_at TIMESTAMP NULL DEFAULT NULL;
