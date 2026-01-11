@@ -122,7 +122,7 @@ public class ViewDocumentFormController {
 
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN','EMPLOYEE')")
     @GetMapping("/{docfoNo}")
-    public String formDetail(@PathVariable Long docfoNo, Model model) {
+    public String formDetail(@PathVariable(name = "docfoNo") Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
         return "document-form/detail";
     }
@@ -135,7 +135,7 @@ public class ViewDocumentFormController {
 
     @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
     @GetMapping("/{docfoNo}/edit")
-    public String updateForm(@PathVariable Long docfoNo, Model model) {
+    public String updateForm(@PathVariable(name = "docfoNo") Long docfoNo, Model model) {
         model.addAttribute("docfoNo", docfoNo);
         return "document-form/update-form";
     }

@@ -92,7 +92,7 @@ public class ViewAttachBoxController {
     @GetMapping("/{attachNo}")
     public String attachDetail(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long attachNo,
+            @PathVariable(name = "attachNo") Long attachNo,
             Model model
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
