@@ -48,12 +48,12 @@ public class DashboardController {
     public ResponseEntity<ResponseDto<List<ResScheduleDto>>> getDashboardCalendar(
             @AuthenticationPrincipal CustomUser user,
             @RequestParam(name = "baseDate", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate baseDate) {
-
-        // baseDate가 없으면 오늘 날짜 기준
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate baseDate,
+            @RequestParam(name = "startDay", required = false, defaultValue = "1") int startDay // 1=월, 0=일
+    ) {
         LocalDate targetDate = (baseDate != null) ? baseDate : LocalDate.now();
 
-        List<ResScheduleDto> schedules = dashboardService.getCombinedSchedules(user, targetDate);
+        List<ResScheduleDto> schedules = dashboardService.getCombinedSchedules(user, targetDate, startDay);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
