@@ -92,15 +92,15 @@ const PERM = readPerms()
 function markFormListDirty() {
     // temp-list / forms-list 등 "목록 화면"들이 공통으로 감지할 키
     try {
-        localStorage.setItem('documentForm:listDirty', 'true');
-        localStorage.setItem('documentForm:listDirty:ts', String(Date.now())); // 같은 탭에서도 변경 보장
+        localStorage.setItem('list:dirty', 'true');
+        localStorage.setItem('list:dirty:ts', String(Date.now())); // 같은 탭에서도 변경 보장
     } catch (_) {}
 
     // opener(목록창) 즉시 갱신 유도(같은 origin일 때만)
     try {
         if (window.opener && !window.opener.closed) {
             window.opener.postMessage(
-                { type: 'DOCUMENT_FORM_LIST_DIRTY', at: Date.now() },
+                { type: 'LIST_DIRTY', at: Date.now() },
                 window.location.origin
             );
         }
@@ -418,7 +418,7 @@ function applyPermsUI({ stat }) {
 
             const s = String(stat).toUpperCase()
 
-            // ✅ confirm 문구도 상태에 따라 다르게
+            // confirm 문구도 상태에 따라 다르게
             const msg = (s === 'T')
                 ? '임시 문서를 완전히 삭제할까요? (복구 불가)'
                 : '정말 삭제할까요? (삭제요청 상태로 변경됩니다)'

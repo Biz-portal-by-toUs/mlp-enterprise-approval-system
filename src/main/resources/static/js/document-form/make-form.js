@@ -56,7 +56,23 @@ function getDocfoNoFromServerInjected() {
 }
 
 function markFormListDirty() {
-    try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
+    const ts = String(Date.now());
+
+    // temp-list.js가 보는 키
+    try {
+        localStorage.setItem('list:dirty', 'true');
+        localStorage.setItem('list:dirty:ts', ts); // 같은 탭 storage 이벤트 보완
+    } catch (_) {}
+
+    // opener가 있으면 즉시 갱신 신호
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(
+                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
+                window.location.origin
+            );
+        }
+    } catch (_) {}
 }
 
 function isResponseDto(obj) {
