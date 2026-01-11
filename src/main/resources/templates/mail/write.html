@@ -279,7 +279,7 @@
 
         .mw-rx-dd{
             position:absolute;
-            top:52px;
+            top:70px;
             left:0;
             right:0;
             z-index:60;
@@ -1339,6 +1339,12 @@
                     });
                 }
 
+                function getAfterSendRedirectUrl() {
+                    const plan = buildSendPlan();
+                    if (plan.selfChecked) return '/mail/self';
+                    return '/mail/sent';
+                }
+
                 document.getElementById('btnSend')?.addEventListener('click', async () => {
                     showErr('');
 
@@ -1375,12 +1381,12 @@
                                 })
                             });
 
-                            location.href = '/mail/sent';
+                            location.href = getAfterSendRedirectUrl();
                             return;
                         }
 
                         await sendMailOnce({ title, cnttJson, receiverEmpIds: plan.uiReceivers });
-                        location.href = '/mail/sent';
+                        location.href = getAfterSendRedirectUrl();
                     } catch (e) {
                         console.error(e);
                         showErr(e.message || '메일 전송에 실패했습니다.');

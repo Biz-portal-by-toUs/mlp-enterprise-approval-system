@@ -171,4 +171,101 @@ where mus.user.empId = :empId
         order by mus.user.empName asc
     """)
     List<String> findRecipientEmpIdsByMailNo(@Param("mailNo") Long mailNo);
+
+    @Query(
+            value = """
+        select mus
+        from MailUserState mus
+        join fetch mus.mail m
+        join fetch m.sender s
+        where mus.user.empId = :userEmpId
+          and mus.role = :role
+          and mus.deletedAt is null
+          and mus.isPrior = true
+          and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+          and (:fromDt is null or m.createdAt >= :fromDt)
+          and (:toDt   is null or m.createdAt <= :toDt)
+          and exists (
+              select 1
+              from MailUserState x
+              where x.mail.mailNo = m.mailNo
+                and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+          )
+        order by m.mailNo desc
+    """,
+            countQuery = """
+        select count(mus)
+        from MailUserState mus
+        join mus.mail m
+        where mus.user.empId = :userEmpId
+          and mus.role = :role
+          and mus.deletedAt is null
+          and mus.isPrior = true
+          and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+          and (:fromDt is null or m.createdAt >= :fromDt)
+          and (:toDt   is null or m.createdAt <= :toDt)
+          and exists (
+              select 1
+              from MailUserState x
+              where x.mail.mailNo = m.mailNo
+                and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+          )
+    """
+    )
+    Page<MailUserState> findPriorMailbox(
+            @Param("userEmpId") String userEmpId,
+            @Param("role") MailRole role,
+            @Param("keyword") String keyword,
+            @Param("fromDt") LocalDateTime fromDt,
+            @Param("toDt") LocalDateTime toDt,
+            Pageable pageable
+    );
+
+    @Query(
+            value = """
+        select mus
+        from MailUserState mus
+        join fetch mus.mail m
+        join fetch m.sender s
+        where mus.user.empId = :userEmpId
+          and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
+          and mus.deletedAt is null
+          and mus.isPrior = true
+          and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+          and (:fromDt is null or m.createdAt >= :fromDt)
+          and (:toDt   is null or m.createdAt <= :toDt)
+          and not exists (
+              select 1
+              from MailUserState x
+              where x.mail.mailNo = m.mailNo
+                and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+          )
+        order by m.mailNo desc
+    """,
+            countQuery = """
+        select count(mus)
+        from MailUserState mus
+        join mus.mail m
+        where mus.user.empId = :userEmpId
+          and mus.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.RECIPIENT
+          and mus.deletedAt is null
+          and mus.isPrior = true
+          and (:keyword is null or :keyword = '' or m.title like concat('%', :keyword, '%'))
+          and (:fromDt is null or m.createdAt >= :fromDt)
+          and (:toDt   is null or m.createdAt <= :toDt)
+          and not exists (
+              select 1
+              from MailUserState x
+              where x.mail.mailNo = m.mailNo
+                and x.role = com.multi.mlpenterpriseapprovalsystem.mail.enums.MailRole.SENDER
+          )
+    """
+    )
+    Page<MailUserState> findPriorSelfMailbox(
+            @Param("userEmpId") String userEmpId,
+            @Param("keyword") String keyword,
+            @Param("fromDt") LocalDateTime fromDt,
+            @Param("toDt") LocalDateTime toDt,
+            Pageable pageable
+    );
 }

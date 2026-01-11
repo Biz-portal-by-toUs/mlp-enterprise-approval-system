@@ -56,7 +56,23 @@ function getDocfoNoFromServerInjected() {
 }
 
 function markFormListDirty() {
-    try { localStorage.setItem('list:dirty', 'true') } catch (_) {}
+    const ts = String(Date.now());
+
+    // temp-list.js가 보는 키
+    try {
+        localStorage.setItem('list:dirty', 'true');
+        localStorage.setItem('list:dirty:ts', ts); // 같은 탭 storage 이벤트 보완
+    } catch (_) {}
+
+    // opener가 있으면 즉시 갱신 신호
+    try {
+        if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(
+                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
+                window.location.origin
+            );
+        }
+    } catch (_) {}
 }
 
 function isResponseDto(obj) {
@@ -1023,71 +1039,96 @@ function markEditablePolicyForTemplate(json) {
 
 function wireSave(editor) {
     async function submit(mode) {
-        const docTitle = (elDocTitle?.value || '').trim()
+        const docTitle = (elDocTitle?.value || '').trim();
 
-        const rawJson = editor.getJSON()
-        const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE)
-        const templateJson = markEditablePolicyForTemplate(withTableFont)
+        const rawJson = editor.getJSON();
+        const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE);
+        const templateJson = markEditablePolicyForTemplate(withTableFont);
 
-        const categories = getCategoriesFromRadios()
-        const cnttJson = JSON.stringify(templateJson)
-        const bodyHtml = editor.getHTML()
+        const categories = getCategoriesFromRadios();
+        const cnttJson = JSON.stringify(templateJson);
+        const bodyHtml = editor.getHTML();
 
-        const headerHtml = extractHeaderHtmlFromTemplates()
-        const cnttHtml = buildFullHtml({ docfoName: docTitle, categories, headerHtml, bodyHtml })
+        const headerHtml = extractHeaderHtmlFromTemplates();
+        const cnttHtml = buildFullHtml({ docfoName: docTitle, categories, headerHtml, bodyHtml });
 
-        const payload = { docfoName: docTitle, cnttJson, cnttHtml, categories }
+        const payload = { docfoName: docTitle, cnttJson, cnttHtml, categories };
 
-        const docfoNo = getDocfoNoFromServerInjected()
-        const isEdit = Boolean(docfoNo)
+        const docfoNo = getDocfoNoFromServerInjected();
+        const isEdit = Boolean(docfoNo);
 
-        // ✅ 여기서만 분기
-        let url, method
+        let url, method;
 
         if (mode === 'TEMP') {
-            if (isEdit) { url = `/api/v1/forms/${encodeURIComponent(docfoNo)}/temp`; method = 'PUT' }
-            else { url = `/api/v1/forms/temp`; method = 'POST' }
+            if (isEdit) { url = `/api/v1/forms/${encodeURIComponent(docfoNo)}/temp`; method = 'PUT'; }
+            else { url = `/api/v1/forms/temp`; method = 'POST'; }
         } else { // mode === 'SAVE'
-            if (isEdit) { url = `/api/v1/forms/${encodeURIComponent(docfoNo)}`; method = 'PUT' }
-            else { url = `/api/v1/forms`; method = 'POST' }
+            if (isEdit) { url = `/api/v1/forms/${encodeURIComponent(docfoNo)}`; method = 'PUT'; }
+            else { url = `/api/v1/forms`; method = 'POST'; }
         }
 
         const res = await apiFetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-        })
+        });
 
         if (!res.ok) {
-            const t = await res.text().catch(() => '')
-            alert((mode === 'TEMP' ? '임시저장 실패: ' : '저장 실패: ') + res.status + '\n' + t)
-            return null
+            const t = await res.text().catch(() => '');
+            alert((mode === 'TEMP' ? '임시저장 실패: ' : '저장 실패: ') + res.status + '\n' + t);
+            return null;
         }
 
-        // 응답이 createTemp는 Long, saveTemp는 no content라 상황별 처리
+        // POST는 id가 올 수 있음
         if (method === 'POST') {
-            const id = await unwrapJson(res)
-            return id
+            const id = await unwrapJson(res);
+            return id;
         }
-        return true
+        return true;
     }
 
-    // 정식 저장 버튼
+    // 등록 버튼: 성공 시 pending 페이지로 이동
     elSaveBtn?.addEventListener('click', async () => {
-        const ok = await submit('SAVE')
-        if (!ok) return
-        markFormListDirty()
-        window.close()
-    })
+        const ok = await submit('SAVE');
+        if (!ok) return;
 
-    // 임시저장 버튼
-    const elTempBtn = document.getElementById('tempSaveBtn')
+        markFormListDirty();
+
+        const targetUrl = '/form/pending';
+
+        try {
+            if (window.opener && !window.opener.closed) {
+                window.opener.location.href = targetUrl;
+                window.opener.focus?.();
+                window.close();
+                return;
+            }
+        } catch (_) {}
+
+        location.href = targetUrl;
+    });
+
+    // 임시저장 버튼: 성공 시 temp 페이지로 이동
+    const elTempBtn = document.getElementById('tempSaveBtn');
     elTempBtn?.addEventListener('click', async () => {
-        const ok = await submit('TEMP')
-        if (!ok) return
-        alert('임시저장 완료')
-        markFormListDirty()
-    })
+        const ok = await submit('TEMP');
+        if (!ok) return;
+
+        markFormListDirty();
+
+        const targetUrl = '/form/temp';
+
+        try {
+            if (window.opener && !window.opener.closed) {
+                window.opener.location.href = targetUrl;
+                window.opener.focus?.();
+                window.close();
+                return;
+            }
+        } catch (_) {}
+
+        location.href = targetUrl;
+    });
 }
 
 // ---------- table helpers ----------

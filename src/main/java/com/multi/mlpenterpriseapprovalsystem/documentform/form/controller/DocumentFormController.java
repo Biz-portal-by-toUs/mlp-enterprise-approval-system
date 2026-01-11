@@ -86,6 +86,9 @@ public class DocumentFormController {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (docfoNo == null || docfoNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
+        // 임시(T) 문서는 이 엔드포인트로 삭제요청 금지
+        documentFormService.assertNotTemp(docfoNo, customUser.getComId());
+
         documentFormService.requestDelete(docfoNo, customUser.getComId(), customUser);
 
         return ResponseEntity

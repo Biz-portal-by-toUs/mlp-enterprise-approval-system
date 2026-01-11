@@ -90,16 +90,17 @@ function readPerms() {
 const PERM = readPerms()
 
 function markFormListDirty() {
-    // localStorage flag (다른 탭/창도 공유)
+    // temp-list / forms-list 등 "목록 화면"들이 공통으로 감지할 키
     try {
-        localStorage.setItem('documentForm:dirty', String(Date.now())); // timestamp로 매번 변경 보장
+        localStorage.setItem('list:dirty', 'true');
+        localStorage.setItem('list:dirty:ts', String(Date.now())); // 같은 탭에서도 변경 보장
     } catch (_) {}
 
-    // opener로 즉시 신호(같은 출처일 때만)
+    // opener(목록창) 즉시 갱신 유도(같은 origin일 때만)
     try {
         if (window.opener && !window.opener.closed) {
             window.opener.postMessage(
-                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
+                { type: 'LIST_DIRTY', at: Date.now() },
                 window.location.origin
             );
         }
@@ -108,7 +109,6 @@ function markFormListDirty() {
 
 // ✅ 쿠키 기반 fetch (Authorization/localStorage 사용 X)
 async function refreshAccessTokenIfPossible() {
-    // 너희 AuthController에 이미 /auth/refresh 있음
     const res = await fetch('/auth/refresh', {
         method: 'POST',
         credentials: 'same-origin',
@@ -167,16 +167,13 @@ function safeParseJsonMaybe(v) {
 }
 
 function getDocfoNo() {
-    // 1) ViewController 상세 경로: /form/{docfoNo}
     const pathParts = location.pathname.split('/').filter(Boolean)
     const last = pathParts[pathParts.length - 1]
     if (/^\d+$/.test(last)) return last
 
-    // 2) meta 주입값
     const meta = document.querySelector('meta[name="template-id"]')
     if (meta?.content) return String(meta.content).trim()
 
-    // 3) querystring
     const sp = new URLSearchParams(location.search)
     const q = sp.get('docfoNo')
     return q ? String(q).trim() : ''
@@ -290,7 +287,6 @@ function isResponseDto(obj) {
 }
 
 async function unwrapResponseDto(res) {
-    // res.json() 결과를 받아서 ResponseDto면 data만 반환
     const body = await res.json().catch(() => null)
     if (!body) return null
     return isResponseDto(body) ? body.data : body
@@ -303,14 +299,23 @@ async function fetchDetail(docfoNo) {
         throw new Error(`상세 조회 실패: HTTP ${res.status} ${t}`)
     }
 
-    // ResponseDto 언랩
     const detail = await unwrapResponseDto(res)
     if (!detail) throw new Error('상세 조회 응답이 비어있습니다.')
     return detail
 }
 
-async function deleteForm(docfoNo) {
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' })
+/**
+ * ✅ 삭제 동작 분기
+ * - 임시(T): DELETE /api/v1/forms/temp/{docfoNo}  (행 삭제 = 물리삭제)
+ * - 그 외 : DELETE /api/v1/forms/{docfoNo}       (삭제요청 플로우)
+ */
+async function deleteForm(docfoNo, stat) {
+    const s = String(stat ?? '').trim().toUpperCase()
+    const url = (s === 'T')
+        ? `${API_BASE}/temp/${encodeURIComponent(docfoNo)}`
+        : `${API_BASE}/${encodeURIComponent(docfoNo)}`
+
+    const res = await apiFetch(url, { method: 'DELETE' })
     if (!res.ok) {
         const t = await res.text().catch(() => '')
         throw new Error(`삭제 실패: HTTP ${res.status} ${t}`)
@@ -321,7 +326,10 @@ async function deleteForm(docfoNo) {
 
 // ===== UI perms apply =====
 function applyPermsUI({ stat }) {
-    // 수정/삭제는 그대로
+    const s = String(stat ?? '').trim().toUpperCase()
+    const isTemp = (s === 'T')
+
+    // 수정
     if (!PERM.canEdit) {
         btnEdit.style.display = 'none'
         btnEdit.disabled = true
@@ -330,6 +338,7 @@ function applyPermsUI({ stat }) {
         btnEdit.disabled = false
     }
 
+    // 삭제
     if (!PERM.canDelete) {
         btnDelete.style.display = 'none'
         btnDelete.disabled = true
@@ -338,8 +347,8 @@ function applyPermsUI({ stat }) {
         btnDelete.disabled = false
     }
 
-    // 결재(문서작성 이동) 버튼: 권한이 아니라 상태만
-    const canGoWriteDoc = (stat === 'A' || stat === 'X')
+    // 결재 버튼: 승인된(A) 또는 (X) 상태에서만 + 임시는 숨김
+    const canGoWriteDoc = !isTemp && (s === 'A' || s === 'X')
 
     btnApprove.style.display = canGoWriteDoc ? '' : 'none'
     btnApprove.disabled = !canGoWriteDoc
@@ -394,18 +403,30 @@ function applyPermsUI({ stat }) {
         // ===== 수정/삭제 =====
         btnEdit.addEventListener('click', () => {
             if (!PERM.canEdit) { alert('권한이 없습니다.'); return }
+            // 임시(T)는 버튼 숨김 처리했지만 혹시 남아있을 경우 대비
+            if (String(stat).toUpperCase() === 'T') {
+                alert('임시 문서는 수정 화면으로 이동하지 않습니다.')
+                return
+            }
             location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}/edit`
         })
 
         btnDelete.addEventListener('click', async () => {
             if (!PERM.canDelete) { alert('권한이 없습니다.'); return }
 
-            const ok = confirm('정말 삭제할까요?')
+            const s = String(stat).toUpperCase()
+
+            // confirm 문구도 상태에 따라 다르게
+            const msg = (s === 'T')
+                ? '임시 문서를 완전히 삭제할까요? (복구 불가)'
+                : '정말 삭제할까요? (삭제요청 상태로 변경됩니다)'
+
+            const ok = confirm(msg)
             if (!ok) return
 
             try {
                 btnDelete.disabled = true
-                await deleteForm(docfoNo)
+                await deleteForm(docfoNo, s)
                 markFormListDirty()
                 alert('삭제되었습니다.')
                 closeOrBack()

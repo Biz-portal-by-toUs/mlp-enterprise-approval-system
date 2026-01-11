@@ -524,6 +524,39 @@ public class MailServiceImpl implements MailService {
         return mailUserStateRepository.countUnreadInboxOnly(empId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResMailListDto> getPriorInbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+        LocalDateTime fromDt = (from == null) ? null : from.atStartOfDay();
+        LocalDateTime toDt   = (to == null) ? null : to.atTime(LocalTime.MAX);
+
+        return mailUserStateRepository.findPriorMailbox(userEmpId, MailRole.RECIPIENT, keyword, fromDt, toDt, pageable)
+                .map(this::toListDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResMailListDto> getPriorSent(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+        LocalDateTime fromDt = (from == null) ? null : from.atStartOfDay();
+        LocalDateTime toDt   = (to == null) ? null : to.atTime(LocalTime.MAX);
+
+        return mailUserStateRepository.findPriorMailbox(userEmpId, MailRole.SENDER, keyword, fromDt, toDt, pageable)
+                .map(this::toListDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ResMailListDto> getPriorSelfMailbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable) {
+        String keyword = (q == null) ? null : q.trim();
+        LocalDateTime fromDt = (from == null) ? null : from.atStartOfDay();
+        LocalDateTime toDt   = (to == null) ? null : to.atTime(LocalTime.MAX);
+
+        return mailUserStateRepository.findPriorSelfMailbox(userEmpId, keyword, fromDt, toDt, pageable)
+                .map(this::toListDto);
+    }
+
     // helpers
     private String generateMailId(String senderEmpId) {
         return "MAIL_" + Instant.now().toEpochMilli() + "_" + senderEmpId;

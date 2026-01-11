@@ -60,14 +60,6 @@
             .replaceAll("'", '&#39;');
     }
 
-    function markFormListDirty() {
-        try {
-            localStorage.setItem("list:dirty", "true");
-            // storage 이벤트가 같은 탭에서는 안 떠서, timestamp도 같이 써주면 더 확실
-            localStorage.setItem("list:dirty:ts", String(Date.now()));
-        } catch (_) {}
-    }
-
     function openDetail(docfoNo) {
         if (docfoNo == null) return;
         const id = String(docfoNo).trim();
@@ -291,9 +283,9 @@
 
     function consumeDirtyAndReload() {
         try {
-            const dirty = localStorage.getItem("list:dirty");
-            if (dirty === "true") {
-                localStorage.setItem("list:dirty", "false");
+            const dirty = localStorage.getItem('list:dirty');
+            if (dirty === 'true') {
+                localStorage.setItem('list:dirty', 'false');
                 load();
             }
         } catch (_) {}
@@ -307,6 +299,13 @@
     // (2) 다른 탭/창에서 localStorage 변경되면 즉시 반영
     window.addEventListener("storage", (e) => {
         if (e.key === "list:dirty" || e.key === "list:dirty:ts") {
+            consumeDirtyAndReload();
+        }
+    });
+
+    window.addEventListener("message", (e) => {
+        if (e.origin !== window.location.origin) return;
+        if (e.data?.type === "LIST_DIRTY") {
             consumeDirtyAndReload();
         }
     });

@@ -465,4 +465,16 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
         return s;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void assertNotTemp(Long docfoNo, String comId) {
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
+        validateCompany(form, comId);
+
+        if (form.getDocfoStat() == DocumentFormStats.T) {
+            throw new CustomException(ErrorCode.DOCUMENT_FORM_TEMP_ONLY_DELETE_ENDPOINT);
+        }
+    }
 }

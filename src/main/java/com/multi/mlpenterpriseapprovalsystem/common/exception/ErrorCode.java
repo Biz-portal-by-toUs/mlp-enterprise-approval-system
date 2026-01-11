@@ -90,6 +90,7 @@ public enum ErrorCode {
 
     // 문서 양식 내 카테고리 관련
     DOCUMENT_FORM_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_FORM_CATEGORY_NOT_FOUND", "문서 양식 카테고리를 찾을 수 없습니다"),
+    DOCUMENT_FORM_TEMP_ONLY_DELETE_ENDPOINT(HttpStatus.BAD_REQUEST,"DOCUMENT_FORM_TEMP_ONLY_DELETE_ENDPOINT", "임시저장 양식은 삭제요청을 보내지 않습니다."),
 
     // 회사 관련
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUNT", "회사를 찾을 수 없습니다"),
