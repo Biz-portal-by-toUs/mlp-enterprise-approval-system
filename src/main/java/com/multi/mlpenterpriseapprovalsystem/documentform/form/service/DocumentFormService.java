@@ -56,4 +56,6 @@ public interface DocumentFormService {
     );
 
     void deleteTemp(Long docfoNo, String comId, String writerId);
+
+    void assertNotTemp(Long docfoNo, String comId);
 }
