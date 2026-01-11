@@ -40,7 +40,7 @@ public class MailController {
     // 답신 payload (추가)
     @GetMapping("/{mailNo}/reply")
     public ResponseEntity<ResponseDto<ResMailReplyPayloadDto>> replyPayload(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -119,7 +119,7 @@ public class MailController {
 
     @GetMapping("/{mailNo}")
     public ResponseEntity<ResponseDto<ResMailDetailDto>> detail(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -132,7 +132,7 @@ public class MailController {
 
     @PatchMapping("/{mailNo}/read")
     public ResponseEntity<ResponseDto<Void>> markRead(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -145,7 +145,7 @@ public class MailController {
 
     @PatchMapping("/{mailNo}/trash")
     public ResponseEntity<ResponseDto<Void>> moveToTrash(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -158,7 +158,7 @@ public class MailController {
 
     @PatchMapping("/{mailNo}/restore")
     public ResponseEntity<ResponseDto<Void>> restore(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -171,7 +171,7 @@ public class MailController {
 
     @DeleteMapping("/{mailNo}/purge")
     public ResponseEntity<ResponseDto<Void>> purge(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
@@ -184,7 +184,7 @@ public class MailController {
 
     @PatchMapping("/{mailNo}/prior")
     public ResponseEntity<ResponseDto<Void>> setPrior(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @RequestParam("prior") boolean prior,
             @AuthenticationPrincipal CustomUser user
     ) {
@@ -198,7 +198,7 @@ public class MailController {
 
     @PatchMapping("/{mailNo}/prior/toggle")
     public ResponseEntity<ResponseDto<Void>> togglePrior(
-            @PathVariable Long mailNo,
+            @PathVariable(name = "mailNo") Long mailNo,
             @AuthenticationPrincipal CustomUser user
     ) {
         String empId = user.getUsername();
