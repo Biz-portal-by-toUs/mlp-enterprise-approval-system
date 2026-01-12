@@ -58,6 +58,8 @@ public class TokenService {
 
     private final RedisUtil redisUtil;
 
+    private final org.springframework.beans.factory.ObjectProvider<TokenService> selfProvider;
+
     /**
      * 로그인 성공 시 호출: access + refresh 발급
      * - refresh는 DB에서 기존 토큰 재사용(만료/폐기면 재발급)
@@ -299,7 +301,7 @@ public class TokenService {
         try {
             // 0) 쿠키 추출
             refreshToken = extractCookie(request, "refreshToken").orElse(null);
-            accessToken  = extractCookie(request, "accessToken").orElse(null);
+            accessToken = extractCookie(request, "accessToken").orElse(null);
 
             // 0-1) 유입 확인 로그 (쿠키/헤더/길이)
             log.info("[LOGOUT] ===== START =====");
@@ -600,6 +602,27 @@ public class TokenService {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
+        // [Step 6, 7까지는 동일하게 진행하여 comId, username, roles 정보를 미리 준비해둡니다]
+
+        String lockKey = (subjectType.name() + ":" + subjectId).intern();
+        synchronized (lockKey) {
+            return selfProvider.getObject().proceedRefresh(refreshToken, rtBlKey, subjectId, subjectType, comId, username, roles, response);
+        }
+    }
+
+    private Optional<String> extractCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return Optional.empty();
+
+        return Arrays.stream(cookies)
+                .filter(c -> name.equals(c.getName()))
+                .map(Cookie::getValue)
+                .filter(v -> v != null && !v.isBlank())
+                .findFirst();
+    }
+
+    @Transactional
+    public ResTokenDto proceedRefresh(String refreshToken, String rtBlKey, Long subjectId, TokenSubjectType subjectType, String comId, String username, List<String> roles, HttpServletResponse response) {
         // 4) DB에서 현재 유효 RT(최신 revoked=false) 조회
         RefreshToken dbRT = refreshTokenRepository
                 .findTopBySubjectTypeAndSubjectIdAndRevokedFalseOrderByRefNoDesc(subjectType, subjectId)
@@ -627,26 +650,43 @@ public class TokenService {
         boolean equals = dbRT.getToken().equals(refreshToken);
         log.info("[Refresh] step10: tokenEquals={}", equals);
 
+        // =====================================================================
+        // 🚀 [여기서부터 사용자님의 요청대로 '이해하기 쉽게' 추가된 핵심 로직]
+        // =====================================================================
         if (!equals) {
-            log.warn("[Refresh] step10-1: token mismatch -> revoke dbRT");
-            dbRT.revoke();
-            refreshTokenRepository.save(dbRT);
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+            // 💡 [해설] 락(Lock) 때문에 줄 서있다가 들어왔는데, DB 토큰이 내가 가져온 토큰과 다르다?
+            // -> "이미 내 앞의 요청(Thread)이 토큰을 새걸로 바꿔치기 완료했다!"는 뜻입니다.
+            log.info("[Refresh] step10-A: 이미 다른 요청에 의해 갱신된 토큰 발견. 최신 토큰을 재사용합니다.");
+
+            // 1등이 만들어둔 따끈따끈한 새 토큰(dbRT)을 내 쿠키에도 똑같이 구워줍니다.
+            setRefreshCookie(response, dbRT.getToken());
+            String currentAt = tokenProvider.createAccessToken(subjectId, subjectType, comId, username, roles);
+            setAccessCookie(response, currentAt);
+
+            log.info("[Refresh] step10-B: 재사용 응답 완료 SUCCESS subjectId={}", subjectId);
+
+            return ResTokenDto.builder()
+                    .accessToken(currentAt)
+                    .expiresInSeconds(tokenProvider.getAccessExpSeconds())
+                    .subjectType(subjectType.name())
+                    .role(roles.isEmpty() ? null : roles.get(0))
+                    .build();
+            // ⚠️ 여기서 바로 리턴하여 아래의 "기존 토큰 폐기 및 새로 만들기" 로직을 건너뜁니다.
         }
+        // =====================================================================
 
         // ==============================
-        // ✅ 여기부터가 "로테이션" 핵심
+        // ✅ 여기부터가 "진짜 1등"만 수행하는 로테이션 핵심 (기존 로그/로직 100% 유지)
         // ==============================
 
         // 5) 기존 RT를 즉시 폐기 (재사용 방지)
         log.info("[Refresh] step11: revoke old dbRT refNo={}", dbRT.getRefNo());
         dbRT.revoke();
-        refreshTokenRepository.save(dbRT);
+        refreshTokenRepository.saveAndFlush(dbRT); // 💡 Flush를 해서 뒷사람들이 바로 알게 함
 
         // 5-1) 기존 RT도 Redis 블랙리스트에 넣기
         long oldRtTtl = tokenProvider.getRemainingSecondsForBlacklist(refreshToken);
         log.info("[Refresh] step12: put old RT to blacklist key={}, ttl={}", rtBlKey, oldRtTtl);
-
         if (oldRtTtl > 0) {
             redisUtil.setBlackListSeconds(rtBlKey, "rotated", oldRtTtl);
         }
@@ -688,17 +728,6 @@ public class TokenService {
                 .subjectType(subjectType.name())
                 .role(roles.isEmpty() ? null : roles.get(0))
                 .build();
-    }
-
-    private Optional<String> extractCookie(HttpServletRequest request, String name) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) return Optional.empty();
-
-        return Arrays.stream(cookies)
-                .filter(c -> name.equals(c.getName()))
-                .map(Cookie::getValue)
-                .filter(v -> v != null && !v.isBlank())
-                .findFirst();
     }
 
 }

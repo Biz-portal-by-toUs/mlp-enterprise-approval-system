@@ -754,8 +754,7 @@
         /* =========================
    ✅ Toast
 ========================= */
-        /* 수정 전: .toast-wrap -> 수정 후: .cal-toast-wrap */
-        .cal-toast-wrap {
+        .toast-wrap{
             position: fixed;
             right: 18px;
             bottom: 18px;
@@ -764,11 +763,10 @@
             gap: 10px;
         }
 
-        /* 수정 전: .toast -> 수정 후: .cal-toast */
-        .cal-toast {
+        .toast{
             width: min(360px, 92vw);
-            background: rgba(255,255,255,.92);
-            color: #0f172a;
+            background: rgba(255,255,255,.92);          /* ✅ 흰색 */
+            color: #0f172a;                              /* ✅ 글자 검정 */
             border: 1px solid rgba(15,23,42,.10);
             border-radius: 14px;
             padding: 12px 14px;
@@ -782,15 +780,34 @@
             opacity: 0;
             transition: .18s ease;
         }
-        .cal-toast.show {
+        .toast.show{
             transform: translateY(0);
             opacity: 1;
         }
 
-        /* 하단 타입별 색상도 변경 */
-        .cal-toast.info,
-        .cal-toast.warn,
-        .cal-toast.error {
+        .toast .ico{
+            width: 18px; height: 18px;
+            border-radius: 999px;
+            background: rgba(37,99,235,.12);            /* ✅ 아이콘 배경만 살짝 */
+            color: #2563eb;                              /* ✅ 아이콘 컬러 */
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            flex:0 0 auto;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .toast .msg{
+            font-weight: 800;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        /* ✅ 타입별 색상 무시하고 전부 흰색 유지 */
+        .toast.info,
+        .toast.warn,
+        .toast.error{
             background: rgba(255,255,255,.92);
             color: #0f172a;
         }
@@ -1114,7 +1131,7 @@
             <button class="btn" type="button" id="moreOk">확인</button>
         </div>
     </div>
-    <div class="cal-toast-wrap" id="toastWrap"></div>
+    <div class="toast-wrap" id="toastWrap"></div>
 
 </div>
 
@@ -1129,7 +1146,7 @@
             if (!toastWrap) return;
 
             const el = document.createElement('div');
-            el.className = `cal-toast ${type}`;
+            el.className = `toast ${type}`;
 
             const ico = document.createElement('div');
             ico.className = 'ico';
@@ -1169,7 +1186,7 @@
             let el = STICKY.get(key);
             if (!el){
                 el = document.createElement('div');
-                el.className = `cal-toast ${type}`;
+                el.className = `toast ${type}`;
 
                 const ico = document.createElement('div');
                 ico.className = 'ico';
@@ -1187,7 +1204,7 @@
                 STICKY.set(key, el);
             }
 
-            el.className = `cal-toast ${type} show`;
+            el.className = `toast ${type} show`;
             const ico = el.querySelector('.ico');
             const msg = el.querySelector('.msg');
             if (ico) ico.textContent = type === 'error' ? '!' : type === 'info' ? 'i' : '⚠';
@@ -2598,7 +2615,7 @@
                     .flatMap(r => Array.isArray(r.value) ? r.value : []);
 
                 // ✅ 현재 뷰가 월간인지 확인
-                const isMonthView = currentViewType === 'dayGridMonth';
+                const isMonthView = currentViewType === 'MONTH';
 
                 const events = items.map(h => {
                     const title = h.name ?? h.title ?? h.holidayName ?? '공휴일';
@@ -3157,16 +3174,19 @@
             await loadMe();
 
             initTimeSelects();
-            bindRangeControls();   // ✅ 중요: 시간/날짜 제한 이벤트 바인딩
+            bindRangeControls(); // ✅ 중요: 시간/날짜 제한 이벤트 바인딩
             bindAllDayRangeControls();
 
             resetCreateForm();
 
             buildMainCalendar();
+            setTimeout(() => {
+                buildMiniCalendar();
+            }, 200);
             buildMiniCalendar();
 
             setActiveView('WEEK');
-            // ✅ 첫 로딩 후 이벤트 받아온 다음 상세 오픈 시도 (몇 번 재시도)
+// ✅ 첫 로딩 후 이벤트 받아온 다음 상세 오픈 시도 (몇 번 재시도)
             let tries = 0;
             const t = setInterval(() => {
                 tries++;
@@ -3187,15 +3207,6 @@
                 console.warn('Todo init failed:', e);
             }
         })();
-        function getQueryParams(){
-            const p = new URLSearchParams(location.search);
-            return {
-                open: p.get('open'),
-                schNo: p.get('schNo'),
-                scope: (p.get('scope') || '').toUpperCase()
-            };
-        }
-
         // ✅ 현재 화면에서 events를 한 번 읽어서 schNo/scope 매칭되는 이벤트 찾아 상세 오픈
         function getQueryParams(){
             const p = new URLSearchParams(location.search);

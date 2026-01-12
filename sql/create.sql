@@ -952,8 +952,6 @@ CREATE INDEX idx_schedule_dep        ON schedule(dep_no);
 CREATE INDEX idx_schedule_reg        ON schedule(reg_emp);
 CREATE INDEX idx_emp_schedule_emp    ON emp_schedule(emp_id);
 CREATE INDEX idx_todo_emp            ON todo_list(emp_id);
-CREATE INDEX idx_folder_com_id       ON folder(com_id);
-CREATE INDEX idx_file_folder_no      ON `file`(folder_no);
 
 -- ========================================================
 -- [설정] 외래키 검사 재활성화
@@ -1021,7 +1019,7 @@ UPDATE employee SET birth = '2000-01-01' WHERE birth IS NULL;
 -- 3) 마지막에 NOT NULL로 변경
 ALTER TABLE employee MODIFY birth DATE NOT NULL;
 
-ALTER TABLE employee MODIFY COLUMN object_key VARCHAR(255) NULL;
+ALTER TABLE employee add COLUMN object_key VARCHAR(255) NULL;
 
 
 
