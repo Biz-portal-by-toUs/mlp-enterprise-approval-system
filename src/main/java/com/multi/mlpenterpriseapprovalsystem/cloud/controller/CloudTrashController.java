@@ -104,8 +104,8 @@ public class CloudTrashController {
     @GetMapping("/admin-log/children")
     public ResponseEntity<ResponseDto<List<ResAdminTrashLogDto>>> adminLogChildren(
             @AuthenticationPrincipal CustomUser user,
-            @RequestParam String batchId,
-            @RequestParam Long folderNo
+            @RequestParam(name = "batchId") String batchId,
+            @RequestParam(name = "folderNo") Long folderNo
     ){
         List<ResAdminTrashLogDto> result =
                 cloudTrashService.listAdminLogChildren(user, batchId, folderNo);
@@ -115,7 +115,7 @@ public class CloudTrashController {
 
     @PostMapping("/purge/dept/file/{attachmentId}")
     public ResponseEntity<ResponseDto<Void>> purgeDeptFile(
-            @PathVariable Long attachmentId,
+            @PathVariable(name = "attachmentId") Long attachmentId,
             @AuthenticationPrincipal CustomUser user
     ){
         cloudTrashService.purgeDeptFile(user, attachmentId);
@@ -124,7 +124,7 @@ public class CloudTrashController {
 
     @PostMapping("/purge/dept/folder/{folderNo}")
     public ResponseEntity<ResponseDto<Void>> purgeDeptFolder(
-            @PathVariable Long folderNo,
+            @PathVariable(name = "folderNo") Long folderNo,
             @AuthenticationPrincipal CustomUser user
     ){
         cloudTrashService.purgeDeptFolder(user, folderNo);
