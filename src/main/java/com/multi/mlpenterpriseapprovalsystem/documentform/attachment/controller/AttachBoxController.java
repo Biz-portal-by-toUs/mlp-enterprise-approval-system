@@ -98,12 +98,13 @@ public class AttachBoxController {
     @PostMapping("/{attachNo}/commit")
     public ResponseEntity<ResponseDto<Void>> commit(
             @AuthenticationPrincipal CustomUser customUser,
-            @PathVariable Long attachNo
+            @PathVariable(name = "attachNo") Long attachNo,
+            @RequestBody(required = false) ReqAttachCommitDto req
     ) {
         if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
         if (attachNo == null || attachNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
-        attachBoxService.commit(attachNo, customUser);
+        attachBoxService.commit(attachNo, req, customUser);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "첨부 확정 성공", null));
     }
 }

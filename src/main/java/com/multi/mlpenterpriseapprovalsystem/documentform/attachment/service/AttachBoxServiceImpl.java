@@ -131,15 +131,15 @@ public class AttachBoxServiceImpl implements AttachBoxService {
         attachBoxRepository.deleteByCommittedFalseAndCreatedAtBefore(threshold);
     }
 
-    @Override
     @Transactional
-    public void commit(Long attachNo, CustomUser user) {
+    public void commit(Long attachNo, ReqAttachCommitDto req, CustomUser user) {
         String comId = requireComId(user);
 
         AttachBox a = attachBoxRepository
                 .findByAttachNoAndCompany_ComId(attachNo, comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ATTACHMENT_NOT_FOUND));
 
-        a.commit(); // committed=true
+        if (req != null) a.updateSize(req.size());
+        a.commit();
     }
 }

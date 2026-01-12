@@ -23,5 +23,5 @@ public interface AttachBoxService {
 
     ResAttachDelDto delete(Long attachNo, CustomUser user);
 
-    void commit(Long attachNo, CustomUser user);
+    void commit(Long attachNo, ReqAttachCommitDto req, CustomUser user);
 }

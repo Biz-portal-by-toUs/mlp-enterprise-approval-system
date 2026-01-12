@@ -403,7 +403,8 @@
                 const state = {
                     attachNo: null,
                     isCommitted: false,
-                    cleanupSent: false
+                    cleanupSent: false,
+                    totalSize: 0
                 };
 
                 // ===== utils =====
@@ -583,6 +584,8 @@
                     const wrap = document.getElementById('attachList');
                     if (!wrap) return;
 
+                    state.totalSize = 0;
+
                     if (!state.attachNo) {
                         wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
                         return;
@@ -594,7 +597,7 @@
                         wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
                         return;
                     }
-
+                    state.totalSize = items.reduce((sum, it) => sum + (Number(it.size) || 0), 0);
                     wrap.innerHTML = items.map(it => `
       <div class="aa-att-item" data-id="${it.attachmentId}" onclick="downloadAttach(${it.attachmentId})">
         <div style="min-width:0;">
@@ -702,7 +705,12 @@
                         try {
                             showErr('');
                             const attachNo = await ensureAttachMeta();
-                            await fetchDto(`/api/v1/attach-box/${encodeURIComponent(attachNo)}/commit`, { method: 'POST' });
+                            await refreshAttachList();
+                            await fetchDto(`/api/v1/attach-box/${encodeURIComponent(attachNo)}/commit`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ size: state.totalSize })
+                            });
                             state.isCommitted = true;
                             location.href = ROUTES.LIST_VIEW;
                         } catch (e) {

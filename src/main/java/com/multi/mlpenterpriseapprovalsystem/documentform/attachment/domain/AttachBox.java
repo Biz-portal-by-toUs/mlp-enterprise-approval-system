@@ -65,4 +65,8 @@ public class AttachBox {
         this.createdAt = LocalDateTime.now();
         this.committed = false;
     }
+
+    public void updateSize(Long size){
+        this.size = (size == null || size < 0) ? 0L : size;
+    }
 }
