@@ -42,7 +42,7 @@ public class EmbeddingClient {
                 .bodyValue(req)
                 .retrieve()
                 .toBodilessEntity()
-                .block();
+                .block(Duration.ofMinutes(1));
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.meeting.repository;
 
+import com.multi.mlpenterpriseapprovalsystem.meeting.domain.AiStatus;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.Meeting;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -20,6 +22,8 @@ import java.util.Optional;
 public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
     Optional<Meeting> findByMeetNoAndIsDeletedFalse(Long meetNo);
+    // Meeting 엔티티의 aiStatus와 updatedAt(BaseEntity 등에 포함된 수정시간) 기준
+    List<Meeting> findAllByAiStatusAndUpdatedAtBefore(AiStatus aiStatus, LocalDateTime threshold);
 
     /**
      * [전체회의 탭]

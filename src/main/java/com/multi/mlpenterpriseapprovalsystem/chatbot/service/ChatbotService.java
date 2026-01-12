@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.chatbot.service;
 
 import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.AgentActionId;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.ChatbotMessage;
+import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.ChatbotRequestFailedEvent;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotCallbackDto;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ReqChatbotMessageDto;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.dto.ResChatbotMessageCreatedDto;
@@ -9,6 +10,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.client.ChatbotAiClient;
 import com.multi.mlpenterpriseapprovalsystem.common.sse.SseManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -207,5 +209,25 @@ public class ChatbotService {
                 break;
             }
         }
+    }
+
+    @EventListener
+    public void handleInstantFailure(ChatbotRequestFailedEvent event) {
+        String msgId = event.messageId(); // 이벤트에서 msgId 추출
+
+        String empId = extractEmpIdFromMessageId(msgId);
+        String sessionId = extractSessionIdFromMessageId(msgId);
+        String connectionKey = empId + ":" + sessionId;
+
+        // 1. SSE로 유저에게 즉시 에러 전송
+        sseManager.sendToUser(connectionKey, "error", Map.of(
+                "messageId", msgId,
+                "message", "AI 서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요."
+        ));
+
+        // 2. Redis에 남은 불완전한 데이터 정리 및 실패 메시지 기록
+        updateMessageInRedis(sessionId, msgId, "답변을 생성할 수 없습니다. (AI 서버 연결 실패)");
+
+        log.info("[CHATBOT ERROR HANDLED] messageId={} 에러 처리 완료", msgId);
     }
 }

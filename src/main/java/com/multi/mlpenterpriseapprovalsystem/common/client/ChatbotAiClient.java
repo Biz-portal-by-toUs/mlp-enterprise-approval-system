@@ -1,12 +1,15 @@
 package com.multi.mlpenterpriseapprovalsystem.common.client;
 
+import com.multi.mlpenterpriseapprovalsystem.chatbot.domain.ChatbotRequestFailedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +26,11 @@ import java.util.Map;
 public class ChatbotAiClient {
 
     private final WebClient fastApiWebClient;
+    private final ApplicationEventPublisher publisher;
 
-    public ChatbotAiClient(@Qualifier("fastApiWebClient") WebClient fastApiWebClient) {
+    public ChatbotAiClient(@Qualifier("fastApiWebClient") WebClient fastApiWebClient, ApplicationEventPublisher publisher) {
         this.fastApiWebClient = fastApiWebClient;
+        this.publisher = publisher;
     }
 
     @Value("${internal.ai.chatbot.callback-url}")
@@ -71,8 +76,12 @@ public class ChatbotAiClient {
                 .bodyValue(body)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnNext(res -> log.info("[AI][CHATBOT] Request success. res={}", res))
-                .doOnError(e -> log.error("[AI][CHATBOT] Request failed. messageId={}, error={}", assistantMessageId, e.getMessage()))
-                .subscribe(); // 비동기 실행
+                .timeout(Duration.ofMinutes(1)) // ✅ 1분 타임아웃
+                .doOnNext(res -> log.info("[AI][CHATBOT] 성공: {}", res))
+                .doOnError(e -> {
+                    log.error("[AI][CHATBOT] 요청 실패 messageId={}: {}", assistantMessageId, e.getMessage());
+                    publisher.publishEvent(new ChatbotRequestFailedEvent(assistantMessageId, e.getMessage()));
+                })
+                .subscribe();
     }
 }

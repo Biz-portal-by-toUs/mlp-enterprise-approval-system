@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 /**
  * 사내 규정 repository
  *
@@ -15,6 +18,8 @@ import org.springframework.data.repository.query.Param;
  * @since : 2025. 12. 29. 월요일
  */
 public interface ProvDocumentRepository extends JpaRepository<ProvDocument, Long> {
+    // ProvDocument 엔티티의 procStat와 updatedAt 기준
+    List<ProvDocument> findAllByProcStatAndUpdatedAtBefore(String procStat, LocalDateTime threshold);
     @Query("""
         SELECT d FROM ProvDocument d
         WHERE d.company.comId = :comId
