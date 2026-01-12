@@ -118,8 +118,9 @@
                 }
 
                 function formatBytes(bytes) {
-                    const n = Number(bytes || 0);
-                    if (!n) return '0B';
+                    if (bytes == null) return '-';
+                    const n = Number(bytes);
+                    if (!Number.isFinite(n) || n <= 0) return '-';
                     const kb = n / 1024;
                     if (kb < 1024) return `${Math.ceil(kb)}KB`;
                     return `${(kb / 1024).toFixed(1)}MB`;
@@ -179,7 +180,10 @@
                     const tbody = document.getElementById('tbody');
                     if (!items || items.length === 0) return renderEmpty();
 
-                    tbody.innerHTML = items.map(it => {
+                    tbody.innerHTML = items.map((it, idx) => {
+                        // 🔥 프론트 번호 계산 (1부터)
+                        const rowNo = state.page * PAGE_SIZE + idx + 1;
+
                         const attachNo = it.attachNo;
                         const title = it.title ?? '';
                         const uploader = it.uploader ?? '-';
@@ -188,18 +192,18 @@
                         const href = `/attach/${encodeURIComponent(String(attachNo))}`;
 
                         return `
-                          <tr data-href="${href}">
-                            <td class="col-no">${escapeHtml(attachNo)}</td>
-                            <td class="col-title">
-                              <a class="titleLink" href="${href}" onclick="event.preventDefault(); location.href='${href}'">
-                                ${escapeHtml(title)}
-                              </a>
-                            </td>
-                            <td class="col-uploader">${escapeHtml(uploader)}</td>
-                            <td class="col-size">${escapeHtml(size)}</td>
-                          </tr>
-                        `;
-                    }).join('');
+                              <tr data-href="${href}">
+                                <td class="col-no">${rowNo}</td>
+                                <td class="col-title">
+                                  <a class="titleLink" href="${href}" onclick="event.preventDefault(); location.href='${href}'">
+                                    ${escapeHtml(title)}
+                                  </a>
+                                </td>
+                                <td class="col-uploader">${escapeHtml(uploader)}</td>
+                                <td class="col-size">${escapeHtml(size)}</td>
+                              </tr>
+                            `;
+                        }).join('');
 
                     tbody.querySelectorAll('tr[data-href]').forEach(tr => {
                         tr.addEventListener('click', () => {
