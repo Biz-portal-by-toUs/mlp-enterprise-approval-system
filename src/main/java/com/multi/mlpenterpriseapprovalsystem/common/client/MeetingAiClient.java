@@ -51,6 +51,6 @@ public class MeetingAiClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .doOnNext(res -> log.info("[AI] requested meetNo={}, res={}", meetNo, res))
-                .block(Duration.ofSeconds(10));
+                .block(Duration.ofMinutes(1));
     }
 }
