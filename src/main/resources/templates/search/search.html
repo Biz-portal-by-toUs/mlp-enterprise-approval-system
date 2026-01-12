@@ -7,7 +7,7 @@
 
     <th:block layout:fragment="pageStyles">
         <style>
-            .search-container { max-width: 1100px; margin: 20px auto; font-family: 'Pretendard', sans-serif; }
+            .search-container { width: 1100px; margin: 20px auto; font-family: 'Pretendard', sans-serif; }
 
             /* 1. 상단 글로벌 섹션 탭 */
             .global-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; margin-bottom: 20px; gap: 4px; }
@@ -34,17 +34,66 @@
             .btn-more:hover { background: #f1f5f9; }
 
             /* 4. 결과 아이템 공통 스타일 */
-            .result-item { display: flex; flex-direction: column; padding: 20px 10px; border-bottom: 1px solid #f1f5f9; }
-            .result-top { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 8px; }
-            .result-category { color: #2563eb; font-weight: 700; font-size: 14px; min-width: 100px; }
-            .result-title { font-size: 17px; font-weight: 700; flex: 1; }
+            .result-item {
+                display: flex;
+                flex-direction: column;
+                padding: 20px 10px;
+                border-bottom: 1px solid #f1f5f9;
+                /* 폭을 100%로 고정하고 박스 모델 설정 */
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .result-top {
+                display: flex;
+                align-items: flex-start;
+                gap: 15px;
+                margin-bottom: 8px;
+                width: 100%; /* 상단 영역 전체 너비 사용 */
+            }
+
+            .result-category {
+                color: #2563eb;
+                font-weight: 700;
+                font-size: 14px;
+                /* min-width 대신 고정 너비를 주면 정렬이 더 깔끔합니다 */
+                width: 100px;
+                flex-shrink: 0; /* 카테고리 영역이 줄어들지 않도록 고정 */
+            }
+
+            .result-title {
+                font-size: 17px;
+                font-weight: 700;
+                flex: 1;
+                /* 제목이 너무 길 경우 줄바꿈 처리 */
+                word-break: break-all;
+                overflow: hidden;
+                padding-left: 10px;
+            }
             .result-title a { color: #1e293b; text-decoration: none; }
             .result-title a:hover { text-decoration: underline; }
 
-            .result-snippet { color: #64748b; font-size: 14px; line-height: 1.6; margin-left: 115px; }
+            .result-snippet {
+                color: #64748b;
+                font-size: 14px;
+                line-height: 1.6;
+                margin-left: 135px;
+
+                /* [핵심] 폭 고정 및 텍스트 처리 */
+                word-break: break-all; /* 영문/숫자 길어도 강제 줄바꿈 */
+                display: block;
+                width: auto; /* margin-left를 제외한 나머지 공간 채움 */
+            }
             .result-snippet em, .result-title em { color: #e11d48; font-style: normal; font-weight: 700; background: transparent; }
 
-            .result-bottom { margin-top: 10px; margin-left: 115px; display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; }
+            .result-bottom {
+                margin-top: 10px;
+                margin-left: 135px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                color: #94a3b8;
+            }
 
             /* 5. 페이징/서브탭 */
             .sub-tabs { display: flex; gap: 10px; padding: 15px 10px; border-bottom: 1px solid #e2e8f0; }
@@ -203,7 +252,7 @@
             const data = await fetchPageForCurrent();
             const resultArea = document.getElementById('searchResultArea');
             const tabsHtml = renderSubTabsHtml(menuKey);
-            const listHtml = data?.items?.length ? data.items.map(it => renderResultItem(it)).join('') : '<p style="padding:20px; text-align:center;">결과가 없습니다.</p>';
+            const listHtml = data?.items?.length ? data.items.map(it => renderResultItem(it)).join('') : '<div style="padding:50px; text-align:center; color:#94a3b8;">검색 결과가 없습니다.</div>';
             resultArea.innerHTML = tabsHtml + listHtml + renderPagerHtml(data.total, data.page, data.size, (p) => `goPageWithSubTabs('${menuKey}', ${p})`);
         }
 
@@ -211,7 +260,7 @@
         async function loadAndRenderSimple(menuKey) {
             const data = await fetchPageForCurrent();
             const resultArea = document.getElementById('searchResultArea');
-            const listHtml = data?.items?.length ? data.items.map(it => renderResultItem(it)).join('') : '<p style="padding:20px; text-align:center;">결과가 없습니다.</p>';
+            const listHtml = data?.items?.length ? data.items.map(it => renderResultItem(it)).join('') : '<div style="padding:50px; text-align:center; color:#94a3b8;">검색 결과가 없습니다.</div>';
             resultArea.innerHTML = listHtml + renderPagerHtml(data.total, data.page, data.size, (p) => `goPageSimple('${menuKey}', ${p})`);
         }
 
