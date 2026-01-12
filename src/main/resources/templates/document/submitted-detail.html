@@ -24,7 +24,7 @@
             .page-header { display: flex; justify-content: center; align-items: center; margin-bottom: 35px; position: relative; }
             .page-title { font-size: 28px; font-weight: bold; color: #333; }
 
-            /* 왼쪽 버튼 그룹 (뒤로가기) */
+            /* 왼쪽 버튼 그룹 (뒤로가기, 인쇄) */
             .header-left-buttons { position: absolute; left: 0; display: flex; gap: 10px; }
             .btn-back {
                 padding: 10px 24px; background: #fff; color: #495057;
@@ -32,6 +32,23 @@
                 transition: all 0.2s;
             }
             .btn-back:hover { background: #f8f9fa; border-color: #adb5bd; }
+
+            /* ✅ 인쇄 버튼 스타일 */
+            .btn-print {
+                padding: 10px 20px;
+                background: #339af0;
+                color: #fff;
+                border: 1px solid #339af0;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.2s;
+            }
+            .btn-print:hover {
+                background: #228be6;
+                border-color: #228be6;
+            }
 
             /* 오른쪽 버튼 그룹 (상신취소) */
             .header-right-buttons { position: absolute; right: 0; }
@@ -129,13 +146,13 @@
             .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
             .ProseMirror table td, .ProseMirror table th { border: 1px solid #dee2e6; padding: 8px; min-width: 50px; }
 
-            /* ✅ 첨부파일 스타일: 가로 너비 직접 조정 및 균등 배분 */
+            /* ✅ 첨부파일 스타일 */
             .file-attachments {
                 padding: 12px;
                 display: flex;
                 gap: 10px;
-                overflow: hidden; /* 가로 스크롤 완전 방지 */
-                flex-wrap: nowrap; /* 한 줄 고정 */
+                overflow: hidden;
+                flex-wrap: nowrap;
                 width: 100%;
                 box-sizing: border-box;
             }
@@ -151,9 +168,9 @@
                 border-radius: 8px;
                 transition: all 0.2s;
                 cursor: pointer;
-                flex: 1;           /* 가로 공간을 균등하게 차지 */
-                min-width: 0;      /* ellipsis(말줄임표) 작동을 위한 필수 설정 */
-                max-width: 160px;  /* 가로 너비 고정 */
+                flex: 1;
+                min-width: 0;
+                max-width: 160px;
             }
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
 
@@ -162,8 +179,8 @@
                 font-weight: 500;
                 color: #333;
                 overflow: hidden;
-                text-overflow: ellipsis; /* 글자가 길면 ... 처리 */
-                white-space: nowrap;     /* 줄바꿈 금지 */
+                text-overflow: ellipsis;
+                white-space: nowrap;
                 width: 100%;
                 text-align: center;
             }
@@ -208,6 +225,14 @@
                 <div class="page-header">
                     <div class="header-left-buttons">
                         <button class="btn-back" onclick="history.back()">뒤로가기</button>
+                        <!-- ✅ 인쇄 버튼 추가 -->
+                        <button class="btn-print" onclick="openPrintPage()">
+                            <svg style="display: inline-block; vertical-align: middle; margin-right: 5px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                <rect x="6" y="14" width="12" height="8"/>
+                            </svg>
+                            인쇄
+                        </button>
                     </div>
                     <div class="page-title" id="form-title">문서 상세</div>
                     <div class="header-right-buttons">
@@ -439,6 +464,13 @@
         }
 
         function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
+
+        /* ✅ 인쇄 페이지 열기 함수 */
+        function openPrintPage() {
+            const status = new URLSearchParams(window.location.search).get('status') || 'SUBMITTED';
+            window.open(`/documents/${currentDocNo}/print?status=${status}`, '_blank');
+        }
+
         function showCancelModal() { document.getElementById('cancel-modal').classList.add('show'); }
         function hideCancelModal() { document.getElementById('cancel-modal').classList.remove('show'); }
         async function confirmCancelSubmit() {

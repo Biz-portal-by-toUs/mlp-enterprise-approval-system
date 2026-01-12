@@ -34,6 +34,23 @@
             }
             .btn-action:hover { background: #f8f9fa; border-color: #adb5bd; }
 
+            /* ✅ 인쇄 버튼 스타일 추가 */
+            .btn-print {
+                padding: 10px 20px;
+                background: #339af0;
+                color: #fff;
+                border: 1px solid #339af0;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.2s;
+            }
+            .btn-print:hover {
+                background: #228be6;
+                border-color: #228be6;
+            }
+
             /* 섹션 공통 */
             .section { margin-bottom: 25px; }
             .section-title {
@@ -55,7 +72,7 @@
             .info-value { font-size: 14px; color: #333; font-weight: 500; }
             .doc-id { font-size: 15px; font-weight: bold; color: #339af0; }
 
-            /* ✅ 개선된 결재라인 디자인 */
+            /* 결재라인 디자인 */
             .approval-section-title { font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 12px; padding-left: 10px; border-left: 3px solid #339af0; }
             .approval-card-container { display: flex; gap: 10px; flex-wrap: nowrap; align-items: stretch; }
             .approval-card {
@@ -112,7 +129,7 @@
             .ProseMirror { outline: none; }
             .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
             .ProseMirror table td, .ProseMirror table th { border: 1px solid #dee2e6; padding: 8px; min-width: 50px; vertical-align: top; }
-            .ProseMirror table th { background: #f8f9fa; font-weight: 600; }
+            .ProseMirror table th { background: #f8f8ffa; font-weight: 600; }
 
             /* ✅ 첨부파일 스타일 수정: 가로 너비 통일 및 말줄임표 처리 */
             .file-attachments {
@@ -164,6 +181,13 @@
                 <div class="page-header">
                     <div class="header-left-buttons">
                         <button class="btn-action" onclick="history.back()">뒤로가기</button>
+                        <button class="btn-print" onclick="openPrintPage()">
+                            <svg style="display: inline-block; vertical-align: middle; margin-right: 5px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                <rect x="6" y="14" width="12" height="8"/>
+                            </svg>
+                            인쇄
+                        </button>
                     </div>
                     <div class="page-title" id="form-title">문서 상세</div>
                 </div>
@@ -223,12 +247,13 @@
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
         let docData = null;
+        let currentDocNo = null;
         let tiptapViewer = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             const pathParts = window.location.pathname.split('/');
-            const docNo = pathParts[pathParts.length - 1];
-            loadDocumentDetail(docNo);
+            currentDocNo = pathParts[pathParts.length - 1];
+            loadDocumentDetail(currentDocNo);
         });
 
         async function loadDocumentDetail(docNo) {
@@ -317,14 +342,12 @@
             container.innerHTML = '';
             if (!lines || lines.length === 0) return;
 
-            // 1. seq별로 그룹화
             const lineBySeq = {};
             lines.forEach(line => {
                 if (!lineBySeq[line.seq]) lineBySeq[line.seq] = [];
                 lineBySeq[line.seq].push(line);
             });
 
-            // 2. 각 순번에서 보여줄 결재자 선별
             const sortedSeqs = Object.keys(lineBySeq).sort((a, b) => a - b);
             const displayLines = [];
 
@@ -339,12 +362,10 @@
                 }
             });
 
-            // 3. 선별된 결재자 렌더링
             displayLines.forEach((line, index) => {
                 const card = document.createElement('div');
                 card.className = 'approval-card ' + (line.apprStat === 'A' ? 'approved' : (line.apprStat === 'I' ? 'current' : (line.apprStat === 'R' ? 'rejected' : 'waiting')));
 
-                // ✅ 실제 결재자가 대직자인 경우 누구를 대신했는지 표시
                 const isDelegateAppr = line.isDelegate && line.isActualAppr;
                 const delegateLabel = isDelegateAppr ? `-대직(${line.targetApproverName || ''})-` : '';
 
@@ -371,6 +392,12 @@
                     container.appendChild(arrow);
                 }
             });
+        }
+
+        /* ✅ 인쇄 페이지 열기 함수 추가 */
+        function openPrintPage() {
+            const status = new URLSearchParams(window.location.search).get('status') || 'FINALIZED';
+            window.open(`/documents/${currentDocNo}/print?status=${status}`, '_blank');
         }
 
         function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }

@@ -23,12 +23,33 @@
             /* 헤더 */
             .page-header { display: flex; justify-content: center; align-items: center; margin-bottom: 35px; position: relative; }
             .page-title { font-size: 28px; font-weight: bold; color: #333; }
+
+            /* 왼쪽 버튼 그룹 (뒤로가기, 인쇄) */
+            .header-left-buttons { position: absolute; left: 0; display: flex; gap: 10px; }
+
             .btn-close {
-                position: absolute; left: 0; padding: 10px 24px; background: #fff; color: #495057;
+                padding: 10px 24px; background: #fff; color: #495057;
                 border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; font-size: 14px;
                 transition: all 0.2s;
             }
             .btn-close:hover { background: #f8f9fa; border-color: #adb5bd; }
+
+            /* ✅ 인쇄 버튼 스타일 추가 */
+            .btn-print {
+                padding: 10px 20px;
+                background: #339af0;
+                color: #fff;
+                border: 1px solid #339af0;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.2s;
+            }
+            .btn-print:hover {
+                background: #228be6;
+                border-color: #228be6;
+            }
 
             /* 섹션 공통 */
             .section { margin-bottom: 25px; }
@@ -194,7 +215,16 @@
 
             <div id="doc-detail" style="display: none;" class="detail-content-area">
                 <div class="page-header">
-                    <button class="btn-close" onclick="history.back()">뒤로가기</button>
+                    <div class="header-left-buttons">
+                        <button class="btn-close" onclick="history.back()">뒤로가기</button>
+                        <button class="btn-print" onclick="openPrintPage()">
+                            <svg style="display: inline-block; vertical-align: middle; margin-right: 5px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                <rect x="6" y="14" width="12" height="8"/>
+                            </svg>
+                            인쇄
+                        </button>
+                    </div>
                     <div class="page-title" id="form-title">문서 상세</div>
                 </div>
 
@@ -255,12 +285,12 @@
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
-        let docData = null; let tiptapViewer = null;
+        let docData = null; let currentDocNo = null; let tiptapViewer = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             const pathParts = window.location.pathname.split('/');
-            const docNo = pathParts[pathParts.length - 1];
-            loadDocumentDetail(docNo);
+            currentDocNo = pathParts[pathParts.length - 1];
+            loadDocumentDetail(currentDocNo);
         });
 
         async function loadDocumentDetail(docNo) {
@@ -409,6 +439,12 @@
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
         function handleApprove() { if (confirm('이 문서를 승인하시겠습니까?')) alert('기능 구현 중입니다.'); }
         function handleReject() { const reason = prompt('반려 사유를 입력해주세요:'); if (reason) alert('기능 구현 중입니다.'); }
+
+        /* ✅ 인쇄 페이지 열기 함수 추가 */
+        function openPrintPage() {
+            const status = new URLSearchParams(window.location.search).get('status') || 'PROCESSED';
+            window.open(`/documents/${currentDocNo}/print?status=${status}`, '_blank');
+        }
     </script>
 </th:block>
 </body>

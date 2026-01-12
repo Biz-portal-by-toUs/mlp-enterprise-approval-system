@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>문서 인쇄</title>
+  <script th:src="@{/js/jiheon-temp-origin/tiptap.min.js}"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .print-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* 인쇄 버튼 */
+    .print-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .btn-print {
+      padding: 10px 25px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-print:hover {
+      background: #1976D2;
+    }
+
+    /* 문서 헤더: 날짜 부분 제거 */
+    .doc-header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #000;
+    }
+
+    .doc-title {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 3px;
+    }
+
+    /* 상단 영역 레이아웃 */
+    .info-approval-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      margin-bottom: 15px;
+      gap: 10px;
+    }
+
+    /* 문서 정보 테이블: 220px로 최적화 축소 */
+    .info-table {
+      width: 220px;
+      flex-shrink: 0;
+      border-collapse: collapse;
+      border: 1px solid #000;
+    }
+
+    .info-table th,
+    .info-table td {
+      border: 1px solid #999;
+      padding: 7px 8px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .info-table th {
+      background: #f8f8f8;
+      font-weight: 600;
+      text-align: center;
+      width: 70px;
+    }
+
+    /* 결재라인 영역: 5인 대응 유연한 너비 */
+    .approval-table-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .approval-label {
+      writing-mode: vertical-rl;
+      background: #f8f8f8;
+      border: 1px solid #000;
+      border-right: none;
+      padding: 5px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 35px;
+    }
+
+    .approval-table {
+      flex: 1;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      table-layout: fixed;
+    }
+
+    .approval-table th,
+    .approval-table td {
+      border: 1px solid #999;
+      padding: 4px;
+      text-align: center;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .approval-table th {
+      background: #ebebeb;
+      font-weight: 600;
+      height: 25px;
+    }
+
+    .approval-name {
+      font-weight: bold;
+      font-size: 13px;
+      height: 35px;
+    }
+
+    .approval-info {
+      font-size: 11px;
+      color: #333;
+      height: 45px;
+      line-height: 1.3;
+    }
+
+    .approval-date {
+      font-size: 10px;
+      color: #666;
+      height: 30px;
+      border-top: 1px solid #ccc;
+    }
+
+    .approval-approved { background: #e8f5e9 !important; }
+    .approval-current { background: #e3f2fd !important; }
+    .approval-rejected { background: #ffebee !important; }
+
+    /* 문서 본문 테이블 */
+    .content-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      margin-top: -1px;
+    }
+
+    .content-table th,
+    .content-table td {
+      border: 1px solid #999;
+      padding: 9px 12px;
+      font-size: 13px;
+    }
+
+    .content-table th {
+      background: #f8f8f8;
+      font-weight: 600;
+      text-align: center;
+      width: 100px;
+    }
+
+    .content-body {
+      padding: 18px;
+      line-height: 1.8;
+      vertical-align: top;
+    }
+
+    .ProseMirror {
+      outline: none;
+    }
+
+    .ProseMirror table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+    }
+
+    .ProseMirror table td,
+    .ProseMirror table th {
+      border: 1px solid #666;
+      padding: 6px;
+    }
+
+    /* 첨부파일 */
+    .file-list {
+      padding: 0;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-icon {
+      width: 14px;
+      height: 14px;
+      color: #666;
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .file-size {
+      font-size: 11px;
+      color: #999;
+    }
+
+    /* 정보 박스 */
+    .info-box {
+      margin-top: 20px;
+      border: 2px solid #ccc;
+      padding: 12px;
+      background: #fafafa;
+    }
+
+    .info-box-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 100px;
+      color: #999;
+    }
+
+    /* 인쇄 스타일 */
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .print-container {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+
+      .print-header {
+        display: none !important;
+      }
+
+      .content-body {
+        min-height: auto !important;
+      }
+
+      table {
+        page-break-inside: auto !important;
+      }
+
+      tr {
+        page-break-inside: auto !important;
+      }
+
+      td {
+        page-break-inside: auto !important;
+      }
+
+      .info-box {
+        page-break-inside: avoid;
+      }
+
+      @page {
+        margin: 1.5cm;
+        size: A4;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="loading" class="loading">문서를 불러오는 중...</div>
+
+<div id="print-content" class="print-container" style="display: none;">
+  <div class="print-header">
+    <div style="font-size: 13px; color: #666; font-weight: 600;">📄 인쇄 미리보기</div>
+    <button class="btn-print" onclick="window.print()">
+      인쇄 / PDF 저장
+    </button>
+  </div>
+
+  <div class="doc-header">
+    <div class="doc-title" id="doc-form-name">문서</div>
+  </div>
+
+  <div class="main-content">
+    <div class="info-approval-wrapper">
+      <table class="info-table">
+        <tr>
+          <th>문서번호</th>
+          <td id="info-docId">-</td>
+        </tr>
+        <tr>
+          <th>상신일자</th>
+          <td id="info-createdAt">-</td>
+        </tr>
+        <tr>
+          <th>작성부서</th>
+          <td id="info-dept">-</td>
+        </tr>
+        <tr>
+          <th>작성자</th>
+          <td id="info-writer">-</td>
+        </tr>
+        <tr>
+          <th>전화번호</th>
+          <td id="info-phone">-</td>
+        </tr>
+      </table>
+
+      <div class="approval-table-wrapper">
+        <div class="approval-label">결재라인</div>
+        <table class="approval-table">
+          <thead>
+          <tr id="approval-headers"></tr>
+          </thead>
+          <tbody>
+          <tr id="approval-names"></tr>
+          <tr id="approval-ids"></tr>
+          <tr id="approval-depts"></tr>
+          <tr id="approval-dates"></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <table class="content-table">
+      <tr>
+        <th>제목</th>
+        <td colspan="3" id="doc-title">-</td>
+      </tr>
+      <tr>
+        <th>카테고리</th>
+        <td colspan="3" id="doc-category">-</td>
+      </tr>
+      <tr>
+        <td colspan="4" class="content-body">
+          <div id="doc-content"></div>
+        </td>
+      </tr>
+      <tr>
+        <th>첨부파일</th>
+        <td colspan="3">
+          <div class="file-list" id="file-list">
+            <div style="padding: 8px; color: #999; font-size: 12px;">첨부된 파일이 없습니다.</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="info-box" id="reject-section" style="display: none; border-color: #f44336;">
+    <div class="info-box-title" style="color: #f44336;">❌ 반려 정보</div>
+    <div style="margin-bottom: 8px; font-size: 12px;">
+      <strong>반려자:</strong> <span id="reject-approver">-</span> &nbsp;&nbsp;
+      <strong>반려일자:</strong> <span id="reject-date">-</span>
+    </div>
+    <div id="reject-reason" style="padding: 8px; background: white; border: 1px solid #ffcdd2; border-radius: 3px; font-size: 12px; line-height: 1.6;">-</div>
+  </div>
+
+  <div class="info-box" id="ai-section" style="display: none; border-color: #9c27b0;">
+    <div class="info-box-title" style="color: #9c27b0;">🤖 AI 문서 요약</div>
+    <div id="ai-content" style="font-size: 12px; line-height: 1.6;"></div>
+  </div>
+</div>
+
+<script>
+  let docData = null;
+  let tiptapViewer = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const pathParts = window.location.pathname.split('/');
+    const docNo = pathParts[pathParts.length - 2];
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status') || 'SUBMITTED';
+    loadDocument(docNo, status);
+  });
+
+  async function loadDocument(docNo, status) {
+    try {
+      const response = await fetch(`/api/v1/documents/${docNo}?status=${status}`, { credentials: 'include' });
+      const result = await response.json();
+      if (result.status === 200) {
+        docData = result.data;
+        renderDocument(docData);
+        await loadAttachments(docNo);
+      } else {
+        alert('문서를 불러올 수 없습니다.');
+        window.close();
+      }
+    } catch (error) {
+      alert('문서 조회 중 오류가 발생했습니다.');
+    }
+  }
+
+  function renderDocument(doc) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('print-content').style.display = 'block';
+
+    document.getElementById('doc-form-name').textContent = doc.docFormName || '문서';
+    document.title = `${doc.docFormName || '문서'} - ${doc.docId || ''}`;
+
+    document.getElementById('info-docId').textContent = doc.docId || '-';
+    document.getElementById('info-createdAt').textContent = formatDateTime(doc.submittedAt);
+    document.getElementById('info-dept').textContent = doc.writerDepName || '-';
+    document.getElementById('info-writer').textContent = doc.writerId ? `${doc.writer} (${doc.writerId})` : (doc.writer || '-');
+    document.getElementById('info-phone').textContent = doc.writerWorkPhone || '-';
+
+    renderApprovalLine(doc.resApprovalLineDtos);
+
+    document.getElementById('doc-title').textContent = doc.title || '-';
+    document.getElementById('doc-category').textContent = doc.docFormCatName || '-';
+    initViewer(doc.content);
+
+    renderReject(doc.resApprovalLineDtos, doc.docStat);
+
+    if (doc.aiSumm) {
+      document.getElementById('ai-section').style.display = 'block';
+      document.getElementById('ai-content').textContent = doc.aiSumm;
+    }
+  }
+
+  function renderApprovalLine(lines) {
+    if (!lines || lines.length === 0) return;
+
+    const lineBySeq = {};
+    lines.forEach(line => {
+      if (!lineBySeq[line.seq]) lineBySeq[line.seq] = [];
+      lineBySeq[line.seq].push(line);
+    });
+
+    const sortedSeqs = Object.keys(lineBySeq).sort((a, b) => a - b);
+    const displayLines = [];
+
+    sortedSeqs.forEach(seq => {
+      const stepLines = lineBySeq[seq];
+      const actualApprover = stepLines.find(l => l.isActualAppr === true);
+      displayLines.push(actualApprover || stepLines.find(l => !l.isDelegate) || stepLines[0]);
+    });
+
+    const headers = document.getElementById('approval-headers');
+    const names = document.getElementById('approval-names');
+    const ids = document.getElementById('approval-ids');
+    const depts = document.getElementById('approval-depts');
+    const dates = document.getElementById('approval-dates');
+
+    headers.innerHTML = ''; names.innerHTML = ''; ids.innerHTML = ''; depts.innerHTML = ''; dates.innerHTML = '';
+
+    displayLines.forEach(line => {
+      const statusClass = line.apprStat === 'A' ? 'approval-approved' :
+              line.apprStat === 'I' ? 'approval-current' :
+                      line.apprStat === 'R' ? 'approval-rejected' : '';
+
+      const delegate = (line.isDelegate && line.isActualAppr) ?
+              `<br><span style="font-size:10px;color:#f44336;font-weight:bold;">대직(${line.targetApproverName})</span>` : '';
+
+      let statusText = '대기';
+      if (line.apprStat === 'A') statusText = '승인';
+      else if (line.apprStat === 'R') statusText = '반려';
+      else if (line.apprStat === 'I') statusText = '결재중';
+
+      headers.innerHTML += `<th>결재자 ${line.seq}</th>`;
+      names.innerHTML += `<td class="approval-name ${statusClass}">${line.approverName || '-'}<br>(${line.approverId || ''})</td>`;
+      ids.innerHTML += `<td class="approval-info">${line.approverDepName || '-'}<br>${line.approverPosName || ''}${delegate}</td>`;
+      depts.innerHTML += `<td class="approval-info" style="font-weight:bold;">${statusText}</td>`;
+      dates.innerHTML += `<td class="approval-date">${line.endedAt ? formatDateTimeShort(line.endedAt) : '-'}</td>`;
+    });
+  }
+
+  function initViewer(contentJson) {
+    const { Editor, StarterKit, Table, TableRow, TableCell, TableHeader, TextAlign, TextStyle, Color, FontFamily, Highlight, Image, Link, Underline } = window.TipTap;
+    let content = '<p>내용이 없습니다.</p>';
+    if (contentJson) {
+      try { content = (typeof contentJson === 'string') ? JSON.parse(contentJson) : contentJson; }
+      catch (e) { content = contentJson; }
+    }
+    tiptapViewer = new Editor({
+      element: document.querySelector('#doc-content'),
+      extensions: [StarterKit, Table.configure({ resizable: false }), TableRow, TableCell, TableHeader, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontFamily, Highlight, Image, Link.configure({ openOnClick: false }), Underline],
+      content: content,
+      editable: false
+    });
+  }
+
+  async function loadAttachments(docNo) {
+    try {
+      const response = await fetch(`/api/v1/attachments?domain=APPROVAL&entityId=${docNo}`, { credentials: 'include' });
+      if (!response.ok) return;
+      const result = await response.json();
+      let attachments = Array.isArray(result.data) ? result.data : (result.data?.items || result.data?.content || []);
+      renderAttachments(attachments);
+    } catch (error) {}
+  }
+
+  function renderAttachments(attachments) {
+    const container = document.getElementById('file-list');
+    if (attachments.length === 0) {
+      container.innerHTML = '<div style="padding: 8px; color: #999; font-size: 12px;">첨부된 파일이 없습니다.</div>';
+      return;
+    }
+    container.innerHTML = attachments.map(file => `
+                <div class="file-item">
+                    <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                        <polyline points="13 2 13 9 20 9"/>
+                    </svg>
+                    <span class="file-name">${file.originalName}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                </div>
+            `).join('');
+  }
+
+  function renderReject(lines, docStat) {
+    const rejectedLine = lines.find(line => line.apprStat === 'R');
+    if (rejectedLine || docStat === 'RJ') {
+      document.getElementById('reject-section').style.display = 'block';
+      if (rejectedLine) {
+        document.getElementById('reject-approver').textContent = rejectedLine.approverName || '-';
+        document.getElementById('reject-date').textContent = formatDateTime(rejectedLine.endedAt);
+      }
+      document.getElementById('reject-reason').textContent = rejectedLine?.rejReason || '반려 사유가 입력되지 않았습니다.';
+    }
+  }
+
+  function formatDate(str) {
+    if (!str) return '';
+    const d = new Date(str);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function formatDateTime(str) {
+    if (!str) return '-';
+    const d = new Date(str);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`;
+  }
+
+  function formatDateTimeShort(str) {
+    if (!str) return '-';
+    const d = new Date(str);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}<br>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+</script>
+</body>
+</html>
