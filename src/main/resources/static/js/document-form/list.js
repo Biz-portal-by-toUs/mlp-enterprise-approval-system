@@ -7,7 +7,7 @@
 
     // 승인된 것만 보이게(원하면 false로)
     const ONLY_APPROVED = true;
-    const APPROVED_STATS = ['A', 'X'];
+    const APPROVED_STATS = ['A', 'X', 'W'];
 
     // ===== DOM =====
     const elTbody = document.getElementById('tbody');

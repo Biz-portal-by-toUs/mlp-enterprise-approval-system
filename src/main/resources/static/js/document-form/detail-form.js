@@ -336,6 +336,7 @@ function applyPermsUI({ stat }) {
     } else {
         btnEdit.style.display = ''
         btnEdit.disabled = false
+        btnEdit.textContent = isTemp ? '계속 작성' : '수정'
     }
 
     // 삭제
@@ -403,11 +404,6 @@ function applyPermsUI({ stat }) {
         // ===== 수정/삭제 =====
         btnEdit.addEventListener('click', () => {
             if (!PERM.canEdit) { alert('권한이 없습니다.'); return }
-            // 임시(T)는 버튼 숨김 처리했지만 혹시 남아있을 경우 대비
-            if (String(stat).toUpperCase() === 'T') {
-                alert('임시 문서는 수정 화면으로 이동하지 않습니다.')
-                return
-            }
             location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}/edit`
         })
 

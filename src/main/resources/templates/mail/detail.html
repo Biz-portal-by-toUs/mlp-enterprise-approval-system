@@ -425,9 +425,30 @@
                         return;
                     }
 
+                    async function forceDownloadFromUrl(url, filename) {
+                        const res = await fetch(url, { method: 'GET', credentials: 'omit' }); // presigned는 보통 omit
+                        if (!res.ok) throw new Error(`다운로드 실패 (HTTP ${res.status})`);
+
+                        const blob = await res.blob();
+                        const objUrl = URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = objUrl;
+                        a.download = filename || 'download';
+                        a.rel = 'noopener';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+
+                        // 메모리 정리
+                        setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+                    }
+
                     sec.style.display = '';
                     list.innerHTML = items.map(it => `
-                          <div class="md-attach-item" data-id="${it.attachmentId}">
+                          <div class="md-attach-item"
+                               data-id="${it.attachmentId}"
+                               data-name="${escapeHtml(it.originalName)}">
                             <div class="md-attach-left">
                               <div class="md-attach-name">${escapeHtml(it.originalName)}</div>
                               <div class="md-attach-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
@@ -444,6 +465,8 @@
                             if (!item) return;
 
                             const attachmentId = item.dataset.id;
+                            const filename = item.dataset.name || 'download';
+
                             if (!attachmentId) return;
 
                             try {
@@ -451,13 +474,7 @@
                                 const url = data?.url;
                                 if (!url) throw new Error('다운로드 URL이 없습니다.');
 
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = '';
-                                a.rel = 'noopener';
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
+                                await forceDownloadFromUrl(url, filename);
                             } catch (err) {
                                 console.error(err);
                                 alert('다운로드에 실패했습니다.');

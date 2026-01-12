@@ -7,8 +7,11 @@ import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentFormCategory;
-import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.*;
-import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.*;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.ReqDocumentFormCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.ReqDocumentFormTempDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormCategoryNameDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormDetailDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.repository.DocumentFormCategoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.repository.DocumentFormRepository;
@@ -20,7 +23,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -30,7 +32,6 @@ import java.util.List;
  * @filename : DocumentFormServiceImpl
  * @since : 2025-12-22 월요일
  */
-
 @Service
 @RequiredArgsConstructor
 public class DocumentFormServiceImpl implements DocumentFormService {
@@ -40,6 +41,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
 
+    // 조회
     @Override
     @Transactional(readOnly = true)
     public Page<ResDocumentFormListDto> findListByStatuses(
@@ -95,10 +97,10 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         );
     }
 
+    // 생성 / 수정
     @Override
     @Transactional
     public Long createDocumentForm(ReqDocumentFormCreateDto req, String comId, String writerId) {
-
         validateDocfoNameForbidden(req.docfoName());
 
         Company company = companyRepository.findByComId(comId)
@@ -116,65 +118,89 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         );
 
         DocumentForm saved = documentFormRepository.save(form);
-
-        if (req.categories() != null && !req.categories().isEmpty()) {
-            List<DocumentFormCategory> categories =
-                    req.categories().stream()
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .distinct()
-                            .map(name -> DocumentFormCategory.create(company, saved, name))
-                            .toList();
-
-            documentFormCategoryRepository.saveAll(categories);
-        }
+        saveCategoriesIfPresent(req.categories(), company, saved);
 
         return saved.getDocfoNo();
     }
 
+    /**
+     * 수정 정책
+     * - A(승인): 수정본을 새로 생성(originDocfoNo=원본 docfoNo), 원본은 유지
+     * - T/R/P: 자기 자신을 updateDraft 로 갱신 (상태는 그대로 유지)
+     * - W/X/D: 수정 불가
+     */
     @Override
     @Transactional
     public Long updateDocumentForm(Long docfoNo, ReqDocumentFormCreateDto req, String comId, String empId) {
-
         validateDocfoNameForbidden(req.docfoName());
 
-        DocumentForm origin = documentFormRepository.findById(docfoNo)
+        DocumentForm target = documentFormRepository.findById(docfoNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
 
-        validateCompany(origin, comId);
+        validateCompany(target, comId);
 
-        // 기존 문서 삭제 처리(논리삭제)
-        documentFormRepository.updateStatusAndReason(origin.getDocfoNo(), DocumentFormStats.D, null);
+        DocumentFormStats cur = target.getDocfoStat();
 
-        Employee writer = employeeRepository.findByEmpId(empId)
-                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-
-        DocumentForm newForm = DocumentForm.create(
-                origin.getCompany(),
-                writer,
-                req.docfoName(),
-                ensureJsonString(req.cnttJson()),
-                req.cnttHtml()
-        );
-
-        DocumentForm saved = documentFormRepository.save(newForm);
-
-        if (req.categories() != null && !req.categories().isEmpty()) {
-            List<DocumentFormCategory> categories =
-                    req.categories().stream()
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .distinct()
-                            .map(name -> DocumentFormCategory.create(origin.getCompany(), saved, name))
-                            .toList();
-
-            documentFormCategoryRepository.saveAll(categories);
+        // 수정 불가
+        if (cur == DocumentFormStats.D || cur == DocumentFormStats.W || cur == DocumentFormStats.P) {
+            throw new CustomException(ErrorCode.DOCUMENT_FORM_INVALID_NEXT_STATUS);
         }
 
-        return saved.getDocfoNo();
+        // A/X 편집: 복사본 생성 -> P
+        if (cur == DocumentFormStats.A || cur == DocumentFormStats.X) {
+
+            // 진행중 수정본(P) 1개만 허용 (원하면 R 포함 등으로 확장)
+            boolean existsPendingCopy = documentFormRepository
+                    .existsByCompany_ComIdAndOriginDocfoNoAndDocfoStatIn(
+                            comId,
+                            target.getDocfoNo(),
+                            List.of(DocumentFormStats.P)
+                    );
+
+            if (existsPendingCopy) {
+                throw new CustomException(ErrorCode.DOCUMENT_FORM_EDIT_ALREADY_EXISTS);
+            }
+
+            Employee writer = employeeRepository.findByEmpId(empId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+            DocumentForm copied = DocumentForm.create(
+                    target.getCompany(),
+                    writer,
+                    req.docfoName(),
+                    ensureJsonString(req.cnttJson()),
+                    req.cnttHtml()
+            );
+
+            copied.setOriginDocfoNo(target.getDocfoNo());
+            copied.setDocfoStat(DocumentFormStats.P);
+
+            DocumentForm saved = documentFormRepository.save(copied);
+
+            // 카테고리(복사본 기준)
+            saveCategoriesIfPresent(req.categories(), target.getCompany(), saved);
+
+            return saved.getDocfoNo();
+        }
+
+        if (cur == DocumentFormStats.T || cur == DocumentFormStats.R) {
+            documentFormRepository.updateDraft(
+                    docfoNo,
+                    req.docfoName().trim(),
+                    ensureJsonString(req.cnttJson()),
+                    req.cnttHtml(),
+                    DocumentFormStats.P
+            );
+
+            documentFormCategoryRepository.deleteByDocfoNo(docfoNo);
+            saveCategoriesIfPresent(req.categories(), target.getCompany(), target);
+
+            return docfoNo;
+        }
+        throw new CustomException(ErrorCode.DOCUMENT_FORM_INVALID_NEXT_STATUS);
     }
 
-    // 승인/반려(A/R) 전용
+    // 상태 변경 (승인/반려)
     @Override
     @Transactional
     public void changeApproveOrReject(Long docfoNo, String comId, DocumentFormStats next, String rejectReason) {
@@ -188,15 +214,63 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         validateCompany(form, comId);
 
         DocumentFormStats cur = form.getDocfoStat();
-        if (cur == DocumentFormStats.D || cur == DocumentFormStats.W || cur == DocumentFormStats.X) {
+
+        // 승인/반려는 P에서만 처리
+        if (cur != DocumentFormStats.P) {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_INVALID_NEXT_STATUS);
         }
 
-        String normalized = normalizeRejectReason(next, rejectReason);
-        documentFormRepository.updateStatusAndReason(docfoNo, next, normalized);
+        // 승인(A)
+        if (next == DocumentFormStats.A) {
+            // 수정본이면 원본을 D로 내림
+            if (form.getOriginDocfoNo() != null) {
+                Long originDocfoNo = form.getOriginDocfoNo();
+
+                // 원본이 A 또는 X 인 경우에만 D로
+                int updated = documentFormRepository.updateStatusForOrigin(
+                        originDocfoNo,
+                        comId,
+                        DocumentFormStats.A,
+                        DocumentFormStats.D
+                );
+
+                if (updated == 0) {
+                    updated = documentFormRepository.updateStatusForOrigin(
+                            originDocfoNo,
+                            comId,
+                            DocumentFormStats.X,
+                            DocumentFormStats.D
+                    );
+                }
+
+                if (updated == 0) {
+                    throw new CustomException(ErrorCode.DOCUMENT_FORM_INVALID_NEXT_STATUS);
+                }
+            }
+
+            // 현재 문서는 A로
+            documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.A, null);
+            return;
+        }
+
+        // 반려(R): 원본은 건드리지 않고 현재만 R
+        String normalized = normalizeRejectReason(DocumentFormStats.R, rejectReason);
+        documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.R, normalized);
     }
 
     // 삭제 플로우
+    @Override
+    @Transactional(readOnly = true)
+    public void assertNotTemp(Long docfoNo, String comId) {
+        DocumentForm form = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
+        validateCompany(form, comId);
+
+        if (form.getDocfoStat() == DocumentFormStats.T) {
+            throw new CustomException(ErrorCode.DOCUMENT_FORM_TEMP_ONLY_DELETE_ENDPOINT);
+        }
+    }
+
     @Override
     @Transactional
     public void requestDelete(Long docfoNo, String comId, CustomUser requester) {
@@ -255,10 +329,10 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.X, normalized);
     }
 
+    // 임시저장
     @Override
     @Transactional
     public Long createTemp(ReqDocumentFormTempDto req, String comId, String writerId) {
-
         validateDocfoNameForbidden(req.docfoName());
 
         Company company = companyRepository.findByComId(comId)
@@ -277,18 +351,9 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
         DocumentForm saved = documentFormRepository.save(form);
 
-        if (req.categories() != null && !req.categories().isEmpty()) {
-            List<DocumentFormCategory> categories =
-                    req.categories().stream()
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .distinct()
-                            .map(name -> DocumentFormCategory.create(company, saved, name))
-                            .toList();
+        saveCategoriesIfPresent(req.categories(), company, saved);
 
-            documentFormCategoryRepository.saveAll(categories);
-        }
-
+        // 임시저장 상태로 전환
         documentFormRepository.updateDraft(
                 saved.getDocfoNo(),
                 saved.getDocfoName(),
@@ -303,7 +368,6 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     @Override
     @Transactional
     public void saveTemp(Long docfoNo, ReqDocumentFormTempDto req, String comId, String writerId) {
-
         validateDocfoNameForbidden(req.docfoName());
 
         DocumentForm form = documentFormRepository.findById(docfoNo)
@@ -326,15 +390,16 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 req.cnttHtml(),
                 DocumentFormStats.T
         );
+
+        // temp도 카테고리 갱신 정책 동일하게 적용하고 싶으면 아래 주석 해제
+        // documentFormCategoryRepository.deleteByDocfoNo(docfoNo);
+        // saveCategoriesIfPresent(req.categories(), form.getCompany(), form);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ResDocumentFormListDto> findMyTempList(
-            String comId,
-            String writerId,
-            String keyword,
-            Pageable pageable
+            String comId, String writerId, String keyword, Pageable pageable
     ) {
         Page<DocumentForm> page;
 
@@ -362,7 +427,7 @@ public class DocumentFormServiceImpl implements DocumentFormService {
     @Transactional
     public void deleteTemp(Long docfoNo, String comId, String writerId) {
         if (docfoNo == null || docfoNo <= 0) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE); // 기존 enum 재사용
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         DocumentForm form = documentFormRepository.findById(docfoNo)
@@ -389,12 +454,28 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         }
     }
 
-    // ===== 공통 유틸 =====
+    // 공통 유틸/헬퍼
+    private void saveCategoriesIfPresent(List<String> categoryNames, Company company, DocumentForm saved) {
+        if (categoryNames == null || categoryNames.isEmpty()) return;
+
+        List<DocumentFormCategory> categories =
+                categoryNames.stream()
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .distinct()
+                        .map(name -> DocumentFormCategory.create(company, saved, name))
+                        .toList();
+
+        documentFormCategoryRepository.saveAll(categories);
+    }
+
     private String ensureJsonString(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_CNTT_JSON_EMPTY);
         }
+
         String s = raw.trim();
+
         if (s.startsWith("<")) {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_CNTT_JSON_MUST_BE_JSON);
         }
@@ -434,47 +515,8 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         List<String> forbidden = List.of("휴가", "출장");
         for (String w : forbidden) {
             if (name.contains(w)) {
-                // 금칙어 종류까지 메시지에 넣고 싶으면 CustomException이 message override 지원할 때만!
                 throw new CustomException(ErrorCode.DOCUMENT_FORM_TITLE_FORBIDDEN);
             }
-        }
-    }
-
-    private void validateTempUpdatableStatus(DocumentFormStats cur) {
-        if (cur == DocumentFormStats.T || cur == DocumentFormStats.R) return;
-        throw new CustomException(ErrorCode.DOCUMENT_FORM_TEMP_ONLY_T);
-    }
-
-    private String normalizeTempDocfoName(String incoming, String origin) {
-        if (incoming == null || incoming.trim().isEmpty()) {
-            if (origin == null || origin.isBlank()) return "임시 문서";
-            return origin;
-        }
-        return incoming.trim();
-    }
-
-    private String normalizeTempJson(String raw) {
-        if (raw == null || raw.trim().isEmpty()) return "{}";
-
-        String s = raw.trim();
-        if (s.startsWith("<")) throw new CustomException(ErrorCode.DOCUMENT_FORM_CNTT_JSON_MUST_BE_JSON);
-
-        boolean isObj = s.startsWith("{") && s.endsWith("}");
-        boolean isArr = s.startsWith("[") && s.endsWith("]");
-        if (!isObj && !isArr) throw new CustomException(ErrorCode.DOCUMENT_FORM_CNTT_JSON_MUST_BE_JSON);
-
-        return s;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public void assertNotTemp(Long docfoNo, String comId) {
-        DocumentForm form = documentFormRepository.findById(docfoNo)
-                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
-        validateCompany(form, comId);
-
-        if (form.getDocfoStat() == DocumentFormStats.T) {
-            throw new CustomException(ErrorCode.DOCUMENT_FORM_TEMP_ONLY_DELETE_ENDPOINT);
         }
     }
 }

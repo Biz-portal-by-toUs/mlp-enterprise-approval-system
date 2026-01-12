@@ -246,6 +246,63 @@
             display:none;
         }
 
+        /* ===== attachments: photo-like layout ===== */
+        .aa-att-wrap{
+            width:100%;
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        }
+
+        /* 큰 사각형(기존 dropzone 디자인 활용 + 높이만 크게) */
+        .aa-dropzone.aa-dropzone-big{
+            padding:18px 16px;
+            border-radius:14px;
+            min-height:86px;
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+        }
+
+        /* 상태 텍스트를 드롭존 아래로 */
+        .aa-att-status{
+            margin-top:6px;
+            font-size:12px;
+            font-weight:900;
+            color:var(--mut);
+            min-height:16px; /* 없을 때도 레이아웃 흔들림 방지 */
+        }
+
+        /* 아래 파일 블록(사진의 "파일 1" 같은 바) */
+        .aa-att-list.aa-att-list-below{
+            margin-top:0;
+            gap:10px;
+        }
+
+        /* 기존 aa-att-item을 "긴 한 줄 바" 형태로 */
+        .aa-att-item{
+            padding:12px 14px;
+            border-radius:12px;
+        }
+
+        /* 메타는 사진엔 없으니: 기본은 숨기고 싶으면 아래 주석 해제 */
+        /* .aa-att-meta{ display:none; } */
+
+        /* 오른쪽 버튼들은 “필요하면” 보이되, 사진처럼 깔끔하게 */
+        .aa-att-actions{
+            gap:8px;
+        }
+
+        /* 버튼을 좀 더 미니멀하게 */
+        .aa-att-mini{
+            height:30px;
+            padding:0 10px;
+            border-radius:10px;
+            font-size:12px;
+        }
+        .aa-att-item .aa-att-actions{ display:none; }
+        .aa-att-item{ cursor:pointer; }
+
         @media (max-width:760px){
             .aa-row{ grid-template-columns: 110px 1fr; }
             .aa-row .aa-th:nth-child(3),
@@ -286,25 +343,27 @@
                         </div>
                     </div>
 
-                    <!-- 첨부파일 (write.html 방식) -->
+                    <!-- 첨부파일 -->
                     <div class="aa-row full">
                         <div class="aa-th">첨부파일</div>
                         <div class="aa-td multiline" style="width:100%;">
-                            <div class="aa-att-head">
-                                <div class="aa-att-note">클릭하거나 파일을 끌어다 놓으면 바로 업로드됩니다.</div>
-                                <div class="aa-att-note" id="attStatusText"></div>
-                            </div>
-
-                            <div class="aa-att-upload">
+                            <!-- 큰 드롭존(위) + 파일리스트(아래) -->
+                            <div class="aa-att-wrap">
                                 <input id="attachInput" type="file" multiple style="display:none;">
 
-                                <div id="attachDropzone" class="aa-dropzone" role="button" tabindex="0">
-                                    <div class="aa-dropzone-title">첨부파일 추가</div>
-                                    <div class="aa-dropzone-sub">업로드 완료 후 아래 목록에 표시됩니다.</div>
-                                </div>
-                            </div>
+                                <div class="aa-att-top">
+                                    <div id="attachDropzone" class="aa-dropzone aa-dropzone-big" role="button" tabindex="0">
+                                        <div class="aa-dropzone-title">첨부파일 추가</div>
+                                        <div class="aa-dropzone-sub">클릭하거나 파일을 끌어다 놓으면 바로 업로드됩니다.</div>
+                                    </div>
 
-                            <div id="attachList" class="aa-att-list"></div>
+                                    <!-- 업로드 상태는 드롭존 아래 작은 텍스트로 -->
+                                    <div class="aa-att-status" id="attStatusText"></div>
+                                </div>
+
+                                <!-- 원래 오른쪽에 뜨던 리스트를 "아래"로 -->
+                                <div id="attachList" class="aa-att-list aa-att-list-below"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -342,7 +401,10 @@
 
                 // ===== state =====
                 const state = {
-                    attachNo: null
+                    attachNo: null,
+                    isCommitted: false,
+                    cleanupSent: false,
+                    totalSize: 0
                 };
 
                 // ===== utils =====
@@ -522,6 +584,8 @@
                     const wrap = document.getElementById('attachList');
                     if (!wrap) return;
 
+                    state.totalSize = 0;
+
                     if (!state.attachNo) {
                         wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
                         return;
@@ -533,9 +597,9 @@
                         wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
                         return;
                     }
-
+                    state.totalSize = items.reduce((sum, it) => sum + (Number(it.size) || 0), 0);
                     wrap.innerHTML = items.map(it => `
-      <div class="aa-att-item" data-id="${it.attachmentId}">
+      <div class="aa-att-item" data-id="${it.attachmentId}" onclick="downloadAttach(${it.attachmentId})">
         <div style="min-width:0;">
           <div class="aa-att-name">${escapeHtml(it.originalName)}</div>
           <div class="aa-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
@@ -618,15 +682,36 @@
                 }
 
                 function bindActions() {
-                    document.getElementById('btnCancel')?.addEventListener('click', () => {
-                        location.href = ROUTES.LIST_VIEW;
+                    document.getElementById('btnCancel')?.addEventListener('click', async () => {
+                        // ✅ 취소 = 이미 생성된 메타(attachNo)가 있으면 삭제하고 나가기
+                        try {
+                            showErr('');
+
+                            if (state.attachNo) {
+                                // 서버에서 attach-box 삭제 시, 관련 attachments도 함께 정리되게 구현되어 있어야 가장 깔끔함
+                                await fetchDto(API.DELETE_META(state.attachNo), { method: 'DELETE' });
+                                state.attachNo = null;
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            // 실패해도 일단 나가게(사용자 경험 우선)
+                            // 원하면 여기서 showErr로 안내해도 됨.
+                        } finally {
+                            location.href = ROUTES.LIST_VIEW;
+                        }
                     });
 
                     document.getElementById('btnSave')?.addEventListener('click', async () => {
-                        // 저장 = 메타 생성 보장
                         try {
                             showErr('');
-                            await ensureAttachMeta();
+                            const attachNo = await ensureAttachMeta();
+                            await refreshAttachList();
+                            await fetchDto(`/api/v1/attach-box/${encodeURIComponent(attachNo)}/commit`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ size: state.totalSize })
+                            });
+                            state.isCommitted = true;
                             location.href = ROUTES.LIST_VIEW;
                         } catch (e) {
                             console.error(e);
@@ -635,9 +720,42 @@
                     });
                 }
 
+                function tryCleanupOnLeave() {
+                    if (state.cleanupSent) return;
+                    if (state.isCommitted) return;
+                    if (!state.attachNo) return;
+
+                    state.cleanupSent = true;
+
+                    // 이미 "취소"에서 성공하는 DELETE를 그대로 사용
+                    fetch(API.DELETE_META(state.attachNo), {
+                        method: 'DELETE',
+                        credentials: 'include',
+                        keepalive: true, // 페이지 이탈에서도 보내려고 시도
+                        headers: {
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
+                        }
+                    }).catch(() => {});
+                }
+
+                function bindLeaveCleanup() {
+                    window.addEventListener('pagehide', tryCleanupOnLeave);
+                    // window.addEventListener('beforeunload', tryCleanupOnLeave);
+
+                    document.addEventListener('click', (e) => {
+                        const a = e.target.closest('a[href]');
+                        if (!a) return;
+                        tryCleanupOnLeave();
+                    }, { capture: true });
+
+                    window.addEventListener('popstate', tryCleanupOnLeave);
+                }
+
                 window.addEventListener('DOMContentLoaded', () => {
                     bindAttachDropzone();
                     bindActions();
+                    bindLeaveCleanup();
                     refreshAttachList().catch(console.error);
                 });
             </script>

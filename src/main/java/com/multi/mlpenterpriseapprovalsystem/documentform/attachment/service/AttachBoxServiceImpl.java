@@ -10,9 +10,11 @@ import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.res.*;
 import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.repository.*;
 import lombok.*;
 import org.springframework.data.domain.*;
+import org.springframework.scheduling.annotation.*;
 import org.springframework.stereotype.*;
 import org.springframework.transaction.annotation.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -61,7 +63,7 @@ public class AttachBoxServiceImpl implements AttachBoxService {
         String comId = requireComId(user);
 
         return attachBoxRepository
-                .findByCompany_ComIdOrderByAttachNoDesc(comId, pageable)
+                .findByCompany_ComIdAndCommittedTrueOrderByAttachNoDesc(comId, pageable)
                 .map(a -> new ResAttachListDto(
                         a.getAttachNo(),
                         a.getTitle(),
@@ -120,5 +122,24 @@ public class AttachBoxServiceImpl implements AttachBoxService {
             throw new RuntimeException("업로더 정보(username)가 없습니다.");
         }
         return uploader.trim();
+    }
+
+    @Scheduled(cron = "0 */3 * * * *") // 3분마다
+    @Transactional
+    public void cleanupUncommitted() {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(30);
+        attachBoxRepository.deleteByCommittedFalseAndCreatedAtBefore(threshold);
+    }
+
+    @Transactional
+    public void commit(Long attachNo, ReqAttachCommitDto req, CustomUser user) {
+        String comId = requireComId(user);
+
+        AttachBox a = attachBoxRepository
+                .findByAttachNoAndCompany_ComId(attachNo, comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ATTACHMENT_NOT_FOUND));
+
+        if (req != null) a.updateSize(req.size());
+        a.commit();
     }
 }
