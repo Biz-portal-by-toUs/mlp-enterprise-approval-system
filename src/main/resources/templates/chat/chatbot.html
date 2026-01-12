@@ -185,6 +185,21 @@
             transition: all 0.2s;
         }
         .send-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+        /* 에러 메시지 전용 버블 스타일 */
+        /* 에러 메시지 스타일 */
+        .msg-group.bot.error-msg .bubble {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        /* 에러 발생 시 입력창을 완전히 막는 스타일 */
+        .input-wrapper.fatal-error {
+            opacity: 0.5;
+            pointer-events: none; /* 클릭 불가 */
+            background-color: #f3f4f6;
+        }
     </style>
 </head>
 
@@ -363,6 +378,42 @@
                 document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
             }
         });
+        // 서버에서 보낸 에러 이벤트 처리
+        es.addEventListener("error", (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                const ref = msgDomMap.get(data.messageId);
+
+                if (ref) {
+                    if (ref.avatarEl) ref.avatarEl.classList.remove("thinking");
+
+                    // 1. 에러 메시지 표시
+                    ref.bubbleEl.parentElement.parentElement.classList.add("error-msg");
+                    ref.bubbleEl.innerText = data.message || "AI 서버와 연결할 수 없습니다.";
+
+                    // 2. 입력창 영구 차단
+                    const input = document.getElementById("messageInput");
+                    const wrapper = document.getElementById("inputWrapper");
+
+                    input.disabled = true;
+                    input.placeholder = "서비스 점검 중입니다. 페이지를 새로고침 해주세요.";
+                    wrapper.classList.add("fatal-error");
+
+                    // 3. 버튼을 '새로고침' 용도로 변경하거나 별도 버튼 표시
+                    const actionArea = document.createElement("div");
+                    actionArea.className = "action-area";
+                    actionArea.innerHTML = `
+                <button class="action-btn" onclick="location.reload()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>새로고침하여 다시 시도하기</span>
+                </button>`;
+                    ref.bubbleEl.appendChild(actionArea);
+                }
+            } catch (err) {
+                console.error("에러 처리 중 오류:", err);
+            }
+            // setIsUpdating(false); // ✅ 이 줄을 삭제하거나 주석 처리하여 입력창 활성화를 막습니다!
+        });
 
         es.addEventListener("action", (e) => {
             const data = JSON.parse(e.data);
@@ -388,7 +439,9 @@
             setIsUpdating(false);
         });
 
-        es.onerror = () => { setIsUpdating(false); };
+        es.onerror = () => { setIsUpdating(false);
+            document.getElementById("statusText").innerText = "오프라인";
+            document.getElementById("connDot").classList.remove("on");};
     }
 
     window.addEventListener("load", () => {
