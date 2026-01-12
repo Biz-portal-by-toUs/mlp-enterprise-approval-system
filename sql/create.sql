@@ -1214,3 +1214,9 @@ ALTER TABLE attach_box
 ALTER TABLE attach_box
     ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ADD COLUMN committed TINYINT(1) NOT NULL DEFAULT 0;
+
+ALTER TABLE document_form
+    ADD COLUMN origin_docfo_no BIGINT NULL AFTER docfo_no,
+    ADD INDEX idx_document_form_origin (origin_docfo_no),
+    ADD CONSTRAINT fk_document_form_origin
+        FOREIGN KEY (origin_docfo_no) REFERENCES document_form(docfo_no);

@@ -56,12 +56,17 @@ public class DocumentForm {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Setter
     @Column(name = "docfo_stat", nullable = false, columnDefinition = "char(1)")
     @Convert(converter = DocumentFormStatsConverter.class)
     private DocumentFormStats docfoStat;
 
     @Column(name = "reject_reason")
     private String rejectReason;
+
+    @Setter
+    @Column(name = "origin_docfo_no")
+    private Long originDocfoNo;
 
     public static DocumentForm create(
             Company company,
