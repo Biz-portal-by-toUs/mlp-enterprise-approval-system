@@ -5,6 +5,7 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.*;
 
+import java.time.*;
 import java.util.*;
 
 /**
@@ -17,7 +18,7 @@ import java.util.*;
 public interface AttachBoxRepository extends JpaRepository<AttachBox, Long> {
 
     // 목록 조회
-    Page<AttachBox> findByCompany_ComIdOrderByAttachNoDesc(String comId, Pageable pageable);
+    Page<AttachBox> findByCompany_ComIdAndCommittedTrueOrderByAttachNoDesc(String comId, Pageable pageable);
 
     // 단건 조회
     Optional<AttachBox> findByAttachNoAndCompany_ComId(Long attachNo, String comId);
@@ -33,4 +34,7 @@ public interface AttachBoxRepository extends JpaRepository<AttachBox, Long> {
             @Param("attachNo") Long attachNo,
             @Param("comId") String comId
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    int deleteByCommittedFalseAndCreatedAtBefore(LocalDateTime threshold);
 }

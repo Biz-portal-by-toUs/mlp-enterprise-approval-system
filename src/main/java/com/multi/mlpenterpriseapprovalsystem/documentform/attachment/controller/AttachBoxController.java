@@ -93,4 +93,17 @@ public class AttachBoxController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "첨부 삭제 성공", res));
     }
+
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PostMapping("/{attachNo}/commit")
+    public ResponseEntity<ResponseDto<Void>> commit(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable Long attachNo
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+        if (attachNo == null || attachNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        attachBoxService.commit(attachNo, customUser);
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "첨부 확정 성공", null));
+    }
 }

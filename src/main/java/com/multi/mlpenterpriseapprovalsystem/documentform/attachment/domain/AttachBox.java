@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.*;
+
 /**
  * Please explain the class!!!
  *
@@ -25,6 +27,12 @@ public class AttachBox {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "com_id", referencedColumnName = "com_id")
     private Company company;
+
+    @Column(nullable = false)
+    private boolean committed;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     private String uploader;
     private String title;
@@ -48,5 +56,13 @@ public class AttachBox {
         a.path = path;
         a.size = size;
         return a;
+    }
+
+    public void commit() { this.committed = true; }
+
+    @PrePersist
+    void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.committed = false;
     }
 }
