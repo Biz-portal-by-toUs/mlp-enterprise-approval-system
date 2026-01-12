@@ -59,7 +59,7 @@ public class ViewCloudController {
     /** ✅ 휴지통 */
     @GetMapping("/cloud/trash")
     public String trash(
-            @RequestParam(defaultValue = "DEPT") FolderScope scope,
+            @RequestParam(defaultValue = "DEPT", name = "scope") FolderScope scope,
             Model model,
             @AuthenticationPrincipal CustomUser user
     ) {
