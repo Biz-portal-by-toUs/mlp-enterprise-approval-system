@@ -7,7 +7,7 @@ pipeline {
         AWS_REGION       = "us-west-1"
         AWS_DEFAULT_REGION = "us-west-1"
 
-        ECR_REPO_URI     = "118320467932.dkr.us-west-1.amazonaws.com/terraform-ecr"
+        ECR_REPO_URI     = "118320467932.dkr.ecr.us-west-1.amazonaws.com/terraform-ecr"
         IMAGE_TAG        = "${BUILD_NUMBER}"
 
         EKS_CLUSTER_NAME = "terraform-eks-cluster"
