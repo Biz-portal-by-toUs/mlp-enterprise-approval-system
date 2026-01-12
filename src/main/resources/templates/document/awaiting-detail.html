@@ -34,6 +34,23 @@
             }
             .btn-cancel-submit:hover { background: #fff5f5; border-color: #fa5252; }
 
+            /* ✅ 인쇄 버튼 스타일 */
+            .btn-print {
+                padding: 10px 20px;
+                background: #339af0;
+                color: #fff;
+                border: 1px solid #339af0;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.2s;
+            }
+            .btn-print:hover {
+                background: #228be6;
+                border-color: #228be6;
+            }
+
             /* 오른쪽 버튼 그룹 (목록가기) */
             .header-right-buttons { position: absolute; right: 0; display: flex; gap: 8px; }
             .btn-close {
@@ -198,6 +215,13 @@
                 <div class="page-header">
                     <div class="header-left-buttons">
                         <button class="btn-close" onclick="history.back()">뒤로가기</button>
+                        <button class="btn-print" onclick="openPrintPage()">
+                            <svg style="display: inline-block; vertical-align: middle; margin-right: 5px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                <rect x="6" y="14" width="12" height="8"/>
+                            </svg>
+                            인쇄
+                        </button>
                         <button class="btn-cancel-submit" id="btn-cancel-submit" style="display: none;" onclick="showCancelModal()">상신취소</button>
                     </div>
                     <div class="page-title" id="form-title">문서 상세</div>
@@ -473,6 +497,12 @@
         function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
         function formatDateTime(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+        /* ✅ 인쇄 페이지 열기 함수 */
+        function openPrintPage() {
+            const status = new URLSearchParams(window.location.search).get('status') || 'AWAITING';
+            window.open(`/documents/${currentDocNo}/print?status=${status}`, '_blank');
+        }
 
         /* ✅ SweetAlert2 적용: 승인 모달 */
         function showApproveModal() {

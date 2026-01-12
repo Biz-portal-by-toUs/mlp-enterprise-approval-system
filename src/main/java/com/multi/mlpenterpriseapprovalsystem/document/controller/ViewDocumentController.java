@@ -101,4 +101,12 @@ public class ViewDocumentController {
             throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
         }
     }
+
+    // ✅ 문서 인쇄 전용 페이지
+    @GetMapping("/documents/{docNo}/print")
+    public String viewDocumentPrint(@PathVariable(name = "docNo") Long docNo,
+                                    @RequestParam(name = "status", defaultValue = "SUBMITTED") String status) {
+        // 모든 상태의 문서에 대해 동일한 인쇄 페이지 반환
+        return "document/print";
+    }
 }
