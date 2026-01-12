@@ -565,6 +565,76 @@
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">
+        // ✅ 공유함 페이지 단위 fetch 관리
+        const PAGE = {
+            alive: true,
+            ac: new AbortController()
+        };
+
+        // 페이지를 떠나는 순간: 진행중 요청 취소
+        window.addEventListener('pagehide', () => {
+            PAGE.alive = false;
+            try { PAGE.ac.abort(); } catch(e) {}
+        });
+
+        // fetch 래퍼
+        function pageFetch(url, opts = {}) {
+            return fetch(url, { ...opts, signal: PAGE.ac.signal });
+        }
+
+        // 이동/취소로 생기는 에러면 무시
+        function isAbortLike(err){
+            if (!err) return false;
+            if (err.name === 'AbortError') return true;
+            const msg = String(err.message || '');
+            return !PAGE.alive && (
+                msg.includes('Failed to fetch') ||
+                msg.includes('Load failed') ||
+                msg.includes('NetworkError') ||
+                msg.includes('The operation was aborted')
+            );
+        }
+
+        /* ==========================================================
+           ✅ 1) 이 페이지에서만 fetch를 자동으로 PAGE.ac.signal에 묶기
+              - try/catch 없는 기존 fetch들도 자동으로 abort됨
+           ========================================================== */
+        (() => {
+            const _fetch = window.fetch.bind(window);
+
+            window.fetch = (input, init = {}) => {
+                // 이미 signal 있으면 존중
+                if (init && init.signal) return _fetch(input, init);
+
+                // 이 페이지의 AbortController signal 주입
+                return _fetch(input, { ...init, signal: PAGE.ac.signal });
+            };
+        })();
+
+        /* ==========================================================
+           ✅ 2) try/catch 없는 fetch에서 터지는 unhandled rejection 처리
+              - "페이지 떠나는 중 abort성 실패"만 조용히 무시
+              - 진짜 오류는 그대로 남김(알림/콘솔 유지)
+           ========================================================== */
+        window.addEventListener('unhandledrejection', (ev) => {
+            const err = ev.reason;
+            if (isAbortLike(err)) {
+                ev.preventDefault(); // 콘솔에 Uncaught(…)/Failed to fetch 뜨는거 방지
+                return;
+            }
+            // ✅ 여기서 alert까지 강제로 띄우면 "진짜 오류"가 중복 알림될 수 있어.
+            // 필요하면 아래 주석을 풀어.
+            // alert(err?.message || '요청 중 오류가 발생했습니다.');
+        });
+
+        window.addEventListener('error', (ev) => {
+            // 일부 브라우저는 네트워크 실패를 error 이벤트로도 던짐
+            const msg = String(ev.message || '');
+            if (!PAGE.alive && (msg.includes('Failed to fetch') || msg.includes('Load failed'))) {
+                ev.preventDefault();
+            }
+        }, true);
+
         /** ====== 상태 ====== */
         const state = {
             scope: /*[[${scope}]]*/ "dept",
