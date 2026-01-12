@@ -59,7 +59,7 @@ public class SearchOutbox {
     private LocalDateTime nextRetryAt;
 
     @Lob
-    @Column(name = "last_error")
+    @Column(name = "last_error",columnDefinition = "text")
     private String lastError;
 
     @Column(name = "occurred_at", nullable = false)
