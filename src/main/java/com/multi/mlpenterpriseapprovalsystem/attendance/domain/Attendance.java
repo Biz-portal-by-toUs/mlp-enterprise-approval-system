@@ -16,6 +16,7 @@ import java.util.List;
 /**
  * 근태 엔티티
  * 휴가, 출장만 관리
+ *
  * @author : 이지헌
  * @filename : Attendance
  * @since : 2025. 12. 16. 화요일

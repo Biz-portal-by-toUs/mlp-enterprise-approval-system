@@ -23,7 +23,7 @@ import java.util.List;
  */
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    // 전체 조회 (삭제 제외)
+    // 회사 전체 근태 조회 (삭제 제외)
     @EntityGraph(attributePaths = {"employee", "employee.department", "document", "delegate"})
     Page<Attendance> findByCompany_ComIdAndIsDeletedFalseOrderByStartAtDesc(String comId, Pageable pageable);
 
@@ -40,7 +40,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("yesterday") LocalDate yesterday
     );
 
-    // 중복 체크 (삭제된 데이터는 무시해야 함)
+    // 근태 중복 체크 (삭제된 데이터는 무시해야 함)
     @Query("SELECT COUNT(a) > 0 FROM Attendance a " +
             "WHERE a.isDeleted = false AND a.employee = :employee " +
             "AND a.startAt <= :endAt AND a.endAt >= :startAt")
@@ -59,7 +59,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("endAt") LocalDateTime endAt,
             @Param("type") AtteType type
     );
-
 
     // 수정 시 중복 체크 (본인 제외 + 삭제 제외)
     @Query("SELECT COUNT(a) > 0 FROM Attendance a " +
@@ -122,13 +121,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("endAt") LocalDateTime endAt
     );
 
-
+    // 나를 대직자로 설정한 사람들의 근태 목록 조회
     List<Attendance> findAllByDelegateAndIsDeletedFalse(Employee delegate);
 
-
-    /**
-     * 1. 신규 신청 시: 본인의 기존 근태 중복 목록 조회
-     */
+    // 신규 신청 시: 본인의 기존 근태 중복 목록 조회
     @Query("SELECT a FROM Attendance a " +
             "WHERE a.isDeleted = false AND a.employee = :employee " +
             "AND a.startAt <= :endAt AND a.endAt >= :startAt")
@@ -137,9 +133,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt);
 
-    /**
-     * 2. 수정 시: 본인 제외 및 기존 근태 중복 목록 조회
-     */
+
+    // 수정 시: 본인 제외 및 기존 근태 중복 목록 조회
     @Query("SELECT a FROM Attendance a " +
             "WHERE a.isDeleted = false AND a.employee = :employee " +
             "AND a.atteNo != :excludeAtteNo " +
@@ -149,6 +144,5 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt,
             @Param("excludeAtteNo") Long excludeAtteNo);
-
 
 }

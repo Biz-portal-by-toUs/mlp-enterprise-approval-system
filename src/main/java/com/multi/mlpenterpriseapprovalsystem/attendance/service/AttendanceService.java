@@ -16,7 +16,6 @@ import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
-import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
@@ -45,34 +44,18 @@ public class AttendanceService {
     private final EmployeeRepository employeeRepository;
     private final ObjectMapper objectMapper;
     private final AttendanceSchedule attendanceSchedule;
-    private final DepartmentRepository departmentRepository;
     private final NotificationService notificationService;
 
     public AttendanceService(AttendanceRepository attendanceRepository,
                              EmployeeRepository employeeRepository,
                              @Qualifier("objectMapper") ObjectMapper objectMapper,
-                             AttendanceSchedule attendanceSchedule, DepartmentRepository departmentRepository, NotificationService notificationService) {
+                             AttendanceSchedule attendanceSchedule, NotificationService notificationService) {
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
         this.objectMapper = objectMapper;
         this.attendanceSchedule = attendanceSchedule;
-        this.departmentRepository = departmentRepository;
         this.notificationService = notificationService;
     }
-
-    // 근태 식별자로 근태 조회
-    public ResAttendanceDto getAttendanceByAtteNo(String comId, String empId, Long atteNo) {
-        Attendance attendance = attendanceRepository.findById(atteNo)
-                .orElseThrow(() -> new CustomException(ErrorCode.ATTENDANCE_NOT_FOUND));
-
-        // 회사 확인
-        if (!attendance.getEmployee().getCompany().getComId().equals(comId)) {
-            throw new CustomException(ErrorCode.COMPANY_MISMATCH);
-        }
-
-        return ResAttendanceDto.toDto(attendance);
-    }
-
 
     /*
     * 문서 최종승인 시 근태 처리
@@ -137,9 +120,6 @@ public class AttendanceService {
             throw new CustomException(ErrorCode.END_DATE_BEFORE_START_DATE);
         }
 
-        // 상호 대직 및 데드락 방지 검증 (추가)
-        //validateAttendanceIntegrity(writer, info.getStartAt(), info.getEndAt());
-
         // 등록할 근태가 이미 등록된 다른 근태와 날짜가 겹치는지 체크
         if (attendanceRepository.existsByEmployeeAndDateOverlapAndIsDeletedFalse(writer, info.getStartAt(), info.getEndAt())) {
             throw new CustomException(ErrorCode.ATTENDANCE_ALREADY_EXISTS_IN_PERIOD);
@@ -157,7 +137,7 @@ public class AttendanceService {
 
         // 휴가이면서 대직자가 있는 경우
         if(delegate != null && document.getDocumentForm().getDocfoName().equals("휴가 신청서")) {
-            // 휴가중인 사람은 대직자로 선택 불가능
+            // 휴가중인 사람은 대직자로 선택 불가능 todo: 주석풀어야하는지 체크
 //            if(delegate.getAtte().equals("V")){
 //                throw new CustomException(ErrorCode.DELEGATE_IS_ON_VACATION);
 //            }
@@ -188,27 +168,13 @@ public class AttendanceService {
         attendanceRepository.save(attendance);
         document.linkAttendance(attendance); // 문서와 근태 연결 (이력 생성)
 
-        // ✅ 대직자 알림 추가
+        // 대직자 알림 추가
         if (delegate != null) {
             notifyDelegate(writer, delegate, document, "[대직 지정]", "님의 대직자로 지정되었습니다.");
         }
 
         log.info("근태 등록 완료: empId={}, type={}, period={} ~ {}, days={}",
                 writer.getEmpId(), type, info.getStartAt(), info.getEndAt(), days);
-
-        // 휴가이면서 시작일 = 오늘
-        // 휴가 시작일이 오늘이어서 스케쥴러를 거치지 않고 바로 휴가자의 대직자 갱신, 결재라인에 대직자 추가
-//        if (document.getDocumentForm().getDocfoName().equals("휴가 신청서") &&
-//                info.getStartAt().toLocalDate().isEqual(LocalDate.now())) {
-//
-//            if(delegate == null){ // 대직자 없으면 휴가자의 대직자를 null로 변경
-//                writer.updateDelegate(null);
-//            }
-//            else { // 대직자 있으면 휴가자의 대직자 설정 -> 결재라인에 대직자 추가
-//                writer.updateDelegate(delegate);
-//                attendanceSchedule.addDelegateToApprovalLines(writer, delegate);
-//            }
-//        }
 
         if (info.getStartAt().toLocalDate().isEqual(LocalDate.now())) {
             String atteType = (type == AtteType.V) ? "V" : "B";
@@ -254,9 +220,6 @@ public class AttendanceService {
             throw new CustomException(ErrorCode.ATTENDANCE_ACCESS_DENIED);
         }
 
-        // ✅ 상호 대직 및 데드락 방지 검증 (추가)
-        //validateAttendanceIntegrity(targetAttendance.getEmployee(), info.getStartAt(), info.getEndAt());
-
         // 날짜 검증
         validateModification(targetAttendance, info.getStartAt(), info.getEndAt());
 
@@ -283,7 +246,7 @@ public class AttendanceService {
         }
 
         if (newDelegate != null) {
-            // 휴가 중인 사람은 대직자로 선택 불가능
+            // 휴가 중인 사람은 대직자로 선택 불가능 todo: 주석풀어야할지 체크
 //            if ("V".equals(newDelegate.getAtte())) {
 //                throw new CustomException(ErrorCode.DELEGATE_IS_ON_VACATION);
 //            }
@@ -315,7 +278,7 @@ public class AttendanceService {
         targetAttendance.updateRecentDocument(document); // 근태 엔티티의 '최근 문서' 필드도 현재의 수정 문서로 교체
 
 
-        // ✅ 대직자 변경 알림 추가
+        // 대직자 변경 알림 추가
         if (!java.util.Objects.equals(oldDelegate, newDelegate)) {
             // 기존 대직자에게 해제 알림
             if (oldDelegate != null) {
@@ -384,31 +347,6 @@ public class AttendanceService {
                 }
             }
         }
-
-//        log.info("근태 수정 완료: atteNo={}, 기간={} ~ {}, 일수={}",
-//                targetAttendance.getAtteNo(), info.getStartAt(), info.getEndAt(), newDays);
-//
-//        // 대직자가 변경되었고, 휴가가 이미 시작된 경우 처리
-//        if (targetAttendance.getType() == AtteType.V &&
-//                targetAttendance.getStartAt().toLocalDate().isBefore(LocalDate.now().plusDays(1))) {
-//
-//            // 기존 대직자 제거
-//            if (oldDelegate != null) {
-//                writer.updateDelegate(null);
-//                attendanceSchedule.removeDelegateFromApprovalLines(writer, oldDelegate);
-//            }
-//
-//            // 새 대직자 추가
-//            if (newDelegate != null) {
-//                writer.updateDelegate(newDelegate);
-//                attendanceSchedule.addDelegateToApprovalLines(writer, newDelegate);
-//            }
-//
-//            log.info("휴가 진행 중 대직자 변경: 휴가자={}, 기존대직자={}, 새대직자={}",
-//                    writer.getEmpId(),
-//                    oldDelegate != null ? oldDelegate.getEmpId() : "없음",
-//                    newDelegate != null ? newDelegate.getEmpId() : "없음");
-//        }
     }
 
     /*
@@ -446,7 +384,7 @@ public class AttendanceService {
         // 대직자
         Employee delegate = targetAttendance.getDelegate();
 
-        // ✅ 대직자 해제 알림 추가
+        // 대직자 해제 알림 추가
         if (delegate != null) {
             notifyDelegate(writer, delegate, document, "[대직 해제]", "님의 근태 취소로 대직 지정이 해제되었습니다.");
         }
@@ -573,7 +511,7 @@ public class AttendanceService {
                 }
             }
 
-            // ✅ targetAtteNo 파싱 (수정/취소 시에만 존재)
+            // targetAtteNo 파싱 (수정/취소 시에만 존재)
             Long targetAtteNo = null;
             if (attendanceNode.has("targetAtteNo")) {
                 targetAtteNo = attendanceNode.get("targetAtteNo").asLong();
@@ -587,15 +525,19 @@ public class AttendanceService {
         }
     }
 
-    // 내 근태 정보 조회
-//    @Transactional(readOnly = true)
-//    public List<ResAttendanceDto> getMyAttendances(String comId, String myEmpId) {
-//        List<Attendance> attendances = attendanceRepository.findByEmployee_EmpIdAndCompany_ComIdOrderByStartAtDesc(myEmpId, comId);
-//
-//        return attendances.stream()
-//                .map(ResAttendanceDto::toDto)
-//                .toList();
-//    }
+    // 근태 식별자로 근태 조회
+    @Transactional(readOnly = true)
+    public ResAttendanceDto getAttendanceByAtteNo(String comId, String empId, Long atteNo) {
+        Attendance attendance = attendanceRepository.findById(atteNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.ATTENDANCE_NOT_FOUND));
+
+        // 회사 확인
+        if (!attendance.getEmployee().getCompany().getComId().equals(comId)) {
+            throw new CustomException(ErrorCode.COMPANY_MISMATCH);
+        }
+
+        return ResAttendanceDto.toDto(attendance);
+    }
 
     // 내 휴가 정보 조회
     @Transactional(readOnly = true)
@@ -647,9 +589,7 @@ public class AttendanceService {
     }
 
 
-    /**
-     * 상호 대직 및 데드락 방지 통합 검증 (추가)
-     */
+    // 상호 대직 및 데드락 방지 통합 검증
     private void validateAttendanceIntegrity(Employee writer, LocalDateTime start, LocalDateTime end) {
         // 내가 누군가의 대직자로 활동해야 하는 기간과 겹치는지 체크 (역방향 체크)
         if (attendanceRepository.existsByDelegateAndDateOverlap(writer, start, end)) {
@@ -657,9 +597,7 @@ public class AttendanceService {
         }
     }
 
-    /**
-     * 나를 대직자로 설정한 사람들의 근태 기간 목록 조회 (프론트 방어용 추가)
-     */
+    // 나를 대직자로 설정한 사람들의 근태 목록 조회
     @Transactional(readOnly = true)
     public List<ResAttendanceDto> getPeriodsWhereIAmDelegate(String myEmpId) {
         Employee me = employeeRepository.findByEmpId(myEmpId)
@@ -672,9 +610,7 @@ public class AttendanceService {
                 .toList();
     }
 
-    /**
-     * 내 근태 중복 여부 체크 (API용)
-     */
+    // 내 근태 중복 여부 체크
     @Transactional(readOnly = true)
     public List<ResAttendanceDto> getMyAttendanceOverlapList(String comId, String empId, LocalDateTime start, LocalDateTime end, Long excludeAtteNo) {
         Employee employee = employeeRepository.findByEmpId(empId).orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
@@ -691,9 +627,7 @@ public class AttendanceService {
     }
 
 
-    /**
-     * 대직자에게 알림 전송 (지정/해제)
-     */
+    // 대직자에게 알림 전송 (지정/해제)
     private void notifyDelegate(Employee writer, Employee delegate, Document document, String title, String messageSuffix) {
         if (delegate == null) return;
 

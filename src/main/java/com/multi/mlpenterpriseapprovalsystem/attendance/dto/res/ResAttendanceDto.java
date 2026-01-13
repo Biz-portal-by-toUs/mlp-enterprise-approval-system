@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 근태 응답 DTO
  *
  * @author : 이지헌
  * @filename : ResAttendanceDto
