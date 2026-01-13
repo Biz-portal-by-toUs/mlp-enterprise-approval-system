@@ -1,13 +1,95 @@
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: elasticsearch-pvc
+#  namespace: bizportal
+#spec:
+#  accessModes: ["ReadWriteOnce"]
+#  resources:
+#    requests:
+#      storage: 20Gi
+#---
+#apiVersion: apps/v1
+#kind: StatefulSet
+#metadata:
+#  name: elasticsearch
+#  namespace: bizportal
+#spec:
+#  serviceName: elasticsearch
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: elasticsearch
+#  template:
+#    metadata:
+#      labels:
+#        app: elasticsearch
+#    spec:
+#      containers:
+#        - name: elasticsearch
+#          image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+#          ports:
+#            - containerPort: 9200
+#            - containerPort: 9300
+#          env:
+#            - name: discovery.type
+#              value: single-node
+#            - name: xpack.security.enabled
+#              value: "false"
+#            - name: ES_JAVA_OPTS
+#              value: "-Xms512m -Xmx512m"
+#          volumeMounts:
+#            - name: data
+#              mountPath: /usr/share/elasticsearch/data
+#          readinessProbe:
+#            httpGet:
+#              path: /
+#              port: 9200
+#            initialDelaySeconds: 30
+#            periodSeconds: 10
+#          livenessProbe:
+#            httpGet:
+#              path: /
+#              port: 9200
+#            initialDelaySeconds: 60
+#            periodSeconds: 20
+#      volumes:
+#        - name: data
+#          persistentVolumeClaim:
+#            claimName: elasticsearch-pvc
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: elasticsearch
+#  namespace: bizportal
+#spec:
+#  selector:
+#    app: elasticsearch
+#  ports:
+#    - name: http
+#      port: 9200
+#      targetPort: 9200
+#    - name: transport
+#      port: 9300
+#      targetPort: 9300
+#  type: ClusterIP
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: elasticsearch-pvc
+  name: elasticsearch
   namespace: bizportal
 spec:
-  accessModes: ["ReadWriteOnce"]
-  resources:
-    requests:
-      storage: 20Gi
+  clusterIP: None
+  selector:
+    app: elasticsearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+    - name: transport
+      port: 9300
+      targetPort: 9300
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -27,10 +109,12 @@ spec:
     spec:
       containers:
         - name: elasticsearch
-          image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
           ports:
             - containerPort: 9200
+              name: http
             - containerPort: 9300
+              name: transport
           env:
             - name: discovery.type
               value: single-node
@@ -45,32 +129,25 @@ spec:
             httpGet:
               path: /
               port: 9200
-            initialDelaySeconds: 30
+            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /
-              port: 9200
+            tcpSocket: { port: 9200 }
             initialDelaySeconds: 60
             periodSeconds: 20
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: elasticsearch-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: elasticsearch
-  namespace: bizportal
-spec:
-  selector:
-    app: elasticsearch
-  ports:
-    - name: http
-      port: 9200
-      targetPort: 9200
-    - name: transport
-      port: 9300
-      targetPort: 9300
-  type: ClusterIP
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp2
+        resources:
+          requests:
+            storage: 20Gi
