@@ -1,6 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.provdocument.repository;
 
 import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvProcStat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,7 +20,7 @@ import java.util.List;
  */
 public interface ProvDocumentRepository extends JpaRepository<ProvDocument, Long> {
     // ProvDocument 엔티티의 procStat와 updatedAt 기준
-    List<ProvDocument> findAllByProcStatAndUpdatedAtBefore(String procStat, LocalDateTime threshold);
+    List<ProvDocument> findAllByProcStatAndUpdatedAtBefore(ProvProcStat procStat, LocalDateTime threshold);
     @Query("""
         SELECT d FROM ProvDocument d
         WHERE d.company.comId = :comId

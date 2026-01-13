@@ -3,6 +3,7 @@ package com.multi.mlpenterpriseapprovalsystem.common.scheduler;
 import com.multi.mlpenterpriseapprovalsystem.meeting.domain.AiStatus;
 import com.multi.mlpenterpriseapprovalsystem.meeting.repository.MeetingRepository;
 import com.multi.mlpenterpriseapprovalsystem.meeting.service.MeetingService;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvProcStat;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.repository.ProvDocumentRepository;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.service.ProvDocumentService;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +47,7 @@ public class AiTaskCleanupScheduler {
                 });
 
         // 2. 임베딩 작업 정리
-        provDocumentRepository.findAllByProcStatAndUpdatedAtBefore("PROCESSING", limitTime)
+        provDocumentRepository.findAllByProcStatAndUpdatedAtBefore(ProvProcStat.PROCESSING, limitTime)
                 .forEach(doc -> {
                     log.warn("[STUCK TASK] 임베딩 강제 종료 - provNo: {}", doc.getProvNo());
                     provDocumentService.handleEmbeddingFailure(doc.getProvNo(), "임베딩 처리 시간 초과 (서버 응답 없음)");
