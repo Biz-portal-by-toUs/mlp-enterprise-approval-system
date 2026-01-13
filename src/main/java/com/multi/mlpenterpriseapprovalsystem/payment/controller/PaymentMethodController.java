@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 결제 수단 처리 컨트롤러
+ * 결제수단 컨트롤러
  *
  * @author : 이지헌
  * @filename : PaymentController

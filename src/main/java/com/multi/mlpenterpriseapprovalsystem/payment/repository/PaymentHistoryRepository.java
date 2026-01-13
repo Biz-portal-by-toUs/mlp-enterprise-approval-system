@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * 결제내역 레포지토리
+ * 결제내역 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : PaymentHistoryRepository

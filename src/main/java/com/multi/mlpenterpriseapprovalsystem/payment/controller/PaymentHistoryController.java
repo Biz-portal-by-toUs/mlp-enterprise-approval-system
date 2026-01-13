@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 결제내역 관리 controller
+ * 결제내역 컨트롤러
  *
  * @author : 이지헌
  * @filename : PaymentHistoryController

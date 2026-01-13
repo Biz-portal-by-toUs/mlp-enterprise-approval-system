@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 회사구독정보 레포지토리
+ * 회사요금제정보 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : CompanySubscriptionRepository

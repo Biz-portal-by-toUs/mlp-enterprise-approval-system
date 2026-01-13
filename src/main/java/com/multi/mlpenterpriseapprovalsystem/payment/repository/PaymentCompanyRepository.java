@@ -6,8 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 /**
- * 임시 파일
- * 지영님이 merge하면 삭제 예정
+ * 임시 회사 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : CompanyRepository

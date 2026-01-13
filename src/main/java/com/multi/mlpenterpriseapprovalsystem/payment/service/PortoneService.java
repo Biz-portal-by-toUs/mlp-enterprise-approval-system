@@ -8,7 +8,7 @@ import com.multi.mlpenterpriseapprovalsystem.payment.dto.res.ResPortonePaymentIn
 import com.multi.mlpenterpriseapprovalsystem.payment.repository.PaymentHistoryRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.CompanySubscription;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResSubscriptionResultDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.res.ResSubscriptionResultDto;
 import com.multi.mlpenterpriseapprovalsystem.subscription.enums.SubStatus;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.CompanySubscriptionRepository;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.SubscriptionRepository;
@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * 포트원서버에 API요청하는 파일
+ * 포트원서버에 API요청 관리 서비스
  *
  * accessToken발급 API:
  * https://api.iamport.kr/users/getToken
@@ -114,239 +114,6 @@ public class PortoneService {
 
         return dto;
     }
-
-
-//    public void subscribeProPlan(String comId, Long subNo) {
-//        CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-//        Subscription targetPlan = subscriptionRepository.findById(subNo)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PLAN_NOT_FOUND));
-//
-//        // 1. 중복 요청 체크
-//        if (sub.getPendingSubscription() != null && sub.getPendingSubscription().getSubNo().equals(targetPlan.getSubNo())) {
-//            throw new CustomException(ErrorCode.ALREADY_PENDING_PLAN);
-//        }
-//
-//        // 2. [핵심] 계층(Level) 기반 업그레이드 판단
-//        int currentLevel = getPlanLevel(sub.getSubscription().getSubNo());
-//        int targetLevel = getPlanLevel(targetPlan.getSubNo());
-//
-//        // 타겟 레벨이 현재보다 낮으면 -> 다운그레이드 (예약 처리)
-//        if (targetLevel < currentLevel) {
-//            log.info("[다운그레이드 예약] {} (L{}) -> {} (L{})",
-//                    sub.getSubscription().getSubName(), currentLevel, targetPlan.getSubName(), targetLevel);
-//            sub.reservePlanChange(targetPlan);
-//            return;
-//        }
-//
-//        // --- 여기서부터는 즉시 업그레이드(전환) 로직 ---
-//
-//        // 3. 기존 요금제의 잔여 가치를 예치금으로 전환
-//        if (sub.getNextBillingDate() != null && sub.getStatus() != SubStatus.FREE) {
-//            long remainingDays = java.time.Duration.between(LocalDateTime.now(), sub.getNextBillingDate()).toDays();
-//            remainingDays = Math.max(0, remainingDays);
-//
-//            if (remainingDays > 0) {
-//                // 1일당 가치 계산 (소수점 2자리까지 유지하여 계산 정확도 확보)
-//                BigDecimal dayValue = sub.getSubscription().getSubPrice().divide(new BigDecimal("30"), 2, RoundingMode.HALF_UP);
-//
-//                // [수정 포인트] 최종 적립 금액 계산 시 정수로 반올림(setScale(0)) 처리
-//                BigDecimal remainingValue = dayValue.multiply(new BigDecimal(remainingDays))
-//                        .setScale(0, RoundingMode.HALF_UP);
-//
-//                sub.addCredit(remainingValue);
-//                log.info("[예치금 적립] 소수점 제거된 정수 금액: {}", remainingValue);
-//            }
-//        }
-//
-//        // 4. 새 요금제 결제액 계산 (새 가격 - 현재 보유 예치금)
-//        BigDecimal targetPrice = targetPlan.getSubPrice();
-//        BigDecimal amountToPay = targetPrice.subtract(sub.getCreditBalance()).max(BigDecimal.ZERO);
-//
-//        // 5. 예치금 차감 (새 가격만큼 소진)
-//        sub.useCredit(targetPrice);
-//
-//        // 6. 실행 (결제 또는 예치금 100% 처리)
-//        if (amountToPay.compareTo(BigDecimal.ZERO) == 0) {
-//            log.info("[즉시 업그레이드] 예치금 전액 처리 완료");
-//            sub.updatePlan(targetPlan);
-//            sub.renew(LocalDateTime.now().plusMonths(1));
-//            sub.clearPendingPlan();
-//        } else {
-//            PaymentMethod paymentMethod = sub.getPaymentMethod();
-//            String merchantUid = "UPGRADE_" + comId + "_" + System.currentTimeMillis();
-//            Map<String, Object> response = requestrecurrentPayment(paymentMethod.getBillingKey(), amountToPay, merchantUid, targetPlan.getSubName());
-//
-//            if ((Integer) response.get("code") == 0) {
-//                sub.updatePlan(targetPlan);
-//                sub.renew(LocalDateTime.now().plusMonths(1));
-//                sub.clearPendingPlan();
-//                paymentHistoryRepository.save(new PaymentHistory(sub.getCompany(), amountToPay, true, paymentMethod));
-//            } else {
-//                throw new CustomException(ErrorCode.PAYMENT_FAILED);
-//            }
-//        }
-//    }
-
-//    public BigDecimal subscribeProPlan(String comId, Long subNo) {
-//        CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-//        Subscription targetPlan = subscriptionRepository.findById(subNo)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PLAN_NOT_FOUND));
-//
-//        // 1. 중복 요청 체크
-//        if (sub.getPendingSubscription() != null && sub.getPendingSubscription().getSubNo().equals(targetPlan.getSubNo())) {
-//            throw new CustomException(ErrorCode.ALREADY_PENDING_PLAN);
-//        }
-//
-//        // 2. [핵심] 계층(Level) 기반 업그레이드 판단
-//        int currentLevel = getPlanLevel(sub.getSubscription().getSubNo());
-//        int targetLevel = getPlanLevel(targetPlan.getSubNo());
-//
-//        // 타겟 레벨이 현재보다 낮으면 -> 다운그레이드 (예약 처리)
-//        if (targetLevel < currentLevel) {
-//            log.info("[다운그레이드 예약] {} (L{}) -> {} (L{})",
-//                    sub.getSubscription().getSubName(), currentLevel, targetPlan.getSubName(), targetLevel);
-//            sub.reservePlanChange(targetPlan);
-//            return BigDecimal.ZERO; // 예약 시 결제 금액 0원 반환
-//        }
-//
-//        // --- 여기서부터는 즉시 업그레이드(전환) 로직 ---
-//
-//        // 3. 기존 요금제의 잔여 가치를 예치금으로 전환
-//        if (sub.getNextBillingDate() != null && sub.getStatus() != SubStatus.FREE) {
-//            long remainingDays = java.time.Duration.between(LocalDateTime.now(), sub.getNextBillingDate()).toDays();
-//            remainingDays = Math.max(0, remainingDays);
-//
-//            if (remainingDays > 0) {
-//                // 1일당 가치 계산 (소수점 2자리까지 유지하여 계산 정확도 확보)
-//                BigDecimal dayValue = sub.getSubscription().getSubPrice().divide(new BigDecimal("30"), 2, RoundingMode.HALF_UP);
-//
-//                // [수정 포인트] 최종 적립 금액 계산 시 정수로 반올림(setScale(0)) 처리
-//                BigDecimal remainingValue = dayValue.multiply(new BigDecimal(remainingDays))
-//                        .setScale(0, RoundingMode.HALF_UP);
-//
-//                sub.addCredit(remainingValue);
-//                log.info("[예치금 적립] 소수점 제거된 정수 금액: {}", remainingValue);
-//            }
-//        }
-//
-//        // 4. 새 요금제 결제액 계산 (새 가격 - 현재 보유 예치금)
-//        BigDecimal targetPrice = targetPlan.getSubPrice();
-//        BigDecimal amountToPay = targetPrice.subtract(sub.getCreditBalance()).max(BigDecimal.ZERO);
-//
-//        // 5. 예치금 차감 (새 가격만큼 소진)
-//        sub.useCredit(targetPrice);
-//
-//        // 6. 실행 (결제 또는 예치금 100% 처리)
-//        if (amountToPay.compareTo(BigDecimal.ZERO) == 0) {
-//            log.info("[즉시 업그레이드] 예치금 전액 처리 완료");
-//            sub.updatePlan(targetPlan);
-//            sub.renew(LocalDateTime.now().plusMonths(1));
-//            sub.clearPendingPlan();
-//            return BigDecimal.ZERO; // 예치금 전액 처리 시 결제 금액 0원 반환
-//        } else {
-//            PaymentMethod paymentMethod = sub.getPaymentMethod();
-//            String merchantUid = "UPGRADE_" + comId + "_" + System.currentTimeMillis();
-//            Map<String, Object> response = requestrecurrentPayment(paymentMethod.getBillingKey(), amountToPay, merchantUid, targetPlan.getSubName());
-//
-//            if ((Integer) response.get("code") == 0) {
-//                sub.updatePlan(targetPlan);
-//                sub.renew(LocalDateTime.now().plusMonths(1));
-//                sub.clearPendingPlan();
-//                paymentHistoryRepository.save(new PaymentHistory(sub.getCompany(), amountToPay, true, paymentMethod));
-//                return amountToPay; // 실제 결제 성공한 금액 반환
-//            } else {
-//                throw new CustomException(ErrorCode.PAYMENT_FAILED);
-//            }
-//        }
-//    }
-
-//    public ResSubscriptionResultDto subscribeProPlan(String comId, Long subNo) {
-//        CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-//        Subscription targetPlan = subscriptionRepository.findById(subNo)
-//                .orElseThrow(() -> new CustomException(ErrorCode.PLAN_NOT_FOUND));
-//
-//        // 1. 중복 요청 체크
-//        if (sub.getPendingSubscription() != null && sub.getPendingSubscription().getSubNo().equals(targetPlan.getSubNo())) {
-//            throw new CustomException(ErrorCode.ALREADY_PENDING_PLAN);
-//        }
-//
-//        // 2. [핵심] 계층(Level) 기반 업그레이드 판단
-//        int currentLevel = getPlanLevel(sub.getSubscription().getSubNo());
-//        int targetLevel = getPlanLevel(targetPlan.getSubNo());
-//
-//        // 타겟 레벨이 현재보다 낮으면 -> 다운그레이드 (예약 처리)
-//        if (targetLevel < currentLevel) {
-//            log.info("[다운그레이드 예약] {} (L{}) -> {} (L{})",
-//                    sub.getSubscription().getSubName(), currentLevel, targetPlan.getSubName(), targetLevel);
-//            sub.reservePlanChange(targetPlan);
-//
-//            return ResSubscriptionResultDto.builder()
-//                    .paidAmount(BigDecimal.ZERO)
-//                    .status("RESERVATION_COMPLETED")
-//                    .build();
-//        }
-//
-//        // --- 여기서부터는 즉시 업그레이드(전환) 로직 ---
-//
-//        // 3. 기존 요금제의 잔여 가치를 예치금으로 전환
-//        if (sub.getNextBillingDate() != null && sub.getStatus() != SubStatus.FREE) {
-//            long remainingDays = java.time.Duration.between(LocalDateTime.now(), sub.getNextBillingDate()).toDays();
-//            remainingDays = Math.max(0, remainingDays);
-//
-//            if (remainingDays > 0) {
-//                // 1일당 가치 계산 (소수점 2자리까지 유지하여 계산 정확도 확보)
-//                BigDecimal dayValue = sub.getSubscription().getSubPrice().divide(new BigDecimal("30"), 2, RoundingMode.HALF_UP);
-//
-//                // [수정 포인트] 최종 적립 금액 계산 시 정수로 반올림(setScale(0)) 처리
-//                BigDecimal remainingValue = dayValue.multiply(new BigDecimal(remainingDays))
-//                        .setScale(0, RoundingMode.HALF_UP);
-//
-//                sub.addCredit(remainingValue);
-//                log.info("[예치금 적립] 소수점 제거된 정수 금액: {}", remainingValue);
-//            }
-//        }
-//
-//        // 4. 새 요금제 결제액 계산 (새 가격 - 현재 보유 예치금)
-//        BigDecimal targetPrice = targetPlan.getSubPrice();
-//        BigDecimal amountToPay = targetPrice.subtract(sub.getCreditBalance()).max(BigDecimal.ZERO);
-//
-//        // 5. 예치금 차감 (새 가격만큼 소진)
-//        sub.useCredit(targetPrice);
-//
-//        // 6. 실행 (결제 또는 예치금 100% 처리)
-//        if (amountToPay.compareTo(BigDecimal.ZERO) == 0) {
-//            log.info("[즉시 업그레이드] 예치금 전액 처리 완료");
-//            sub.updatePlan(targetPlan);
-//            sub.renew(LocalDateTime.now().plusMonths(1));
-//            sub.clearPendingPlan();
-//
-//            return ResSubscriptionResultDto.builder()
-//                    .paidAmount(BigDecimal.ZERO)
-//                    .status("DEPOSIT_ONLY")
-//                    .build();
-//        } else {
-//            PaymentMethod paymentMethod = sub.getPaymentMethod();
-//            String merchantUid = "UPGRADE_" + comId + "_" + System.currentTimeMillis();
-//            Map<String, Object> response = requestrecurrentPayment(paymentMethod.getBillingKey(), amountToPay, merchantUid, targetPlan.getSubName());
-//
-//            if ((Integer) response.get("code") == 0) {
-//                sub.updatePlan(targetPlan);
-//                sub.renew(LocalDateTime.now().plusMonths(1));
-//                sub.clearPendingPlan();
-//                paymentHistoryRepository.save(new PaymentHistory(sub.getCompany(), amountToPay, true, paymentMethod));
-//
-//                return ResSubscriptionResultDto.builder()
-//                        .paidAmount(amountToPay)
-//                        .status("PAYMENT_COMPLETED")
-//                        .build();
-//            } else {
-//                throw new CustomException(ErrorCode.PAYMENT_FAILED);
-//            }
-//        }
-//    }
 
     public ResSubscriptionResultDto subscribeProPlan(String comId, Long subNo) {
         CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
@@ -486,28 +253,6 @@ public class PortoneService {
                 .block();
     }
 
-    /**
-     * 구독 해지 예약 (자동 갱신 취소)
-     */
-//    public void cancelSubscription(String comId) {
-//        // 1. 해당 회사의 구독 정보 조회
-//        CompanySubscription companySub = companySubscriptionRepository.findByCompany_ComId(comId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
-//
-//        // 2. 이미 FREE 상태이거나 이미 취소된 경우 체크
-//        if (companySub.getStatus() == SubStatus.FREE) {
-//            throw new CustomException(ErrorCode.ALREADY_FREE_PLAN); // "이미 무료 요금제 사용 중입니다"
-//        }
-//
-//        if (!companySub.isAutoRenewal() || companySub.getStatus() == SubStatus.CANCELED) {
-//            throw new CustomException(ErrorCode.ALREADY_CANCELED_SUBSCRIPTION); // "이미 해지 예약된 상태입니다"
-//        }
-//
-//        // 3. 엔티티의 해지 로직 호출 (autoRenewal = false, status = CANCELED)
-//        companySub.cancelSubscription();
-//
-//        log.info("[구독 해지 예약 완료] 회사: {}, 만료 예정일: {}", comId, companySub.getNextBillingDate());
-//    }
     /**
      * 구독 해지 예약 (자동 갱신 취소 및 무료 전환 예약)
      */

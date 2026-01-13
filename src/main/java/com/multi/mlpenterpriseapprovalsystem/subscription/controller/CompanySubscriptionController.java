@@ -3,8 +3,8 @@ package com.multi.mlpenterpriseapprovalsystem.subscription.controller;
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.payment.service.PortoneService;
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResCompanySubscriptionDto;
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResSubscriptionResultDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.res.ResCompanySubscriptionDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.res.ResSubscriptionResultDto;
 import com.multi.mlpenterpriseapprovalsystem.subscription.service.CompanySubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 
 /**
- * 회사구독정보 컨트롤러
+ * 회사요금제정보 컨트롤러
  *
  * @author : 이지헌
  * @filename : CompanySubscriptionController

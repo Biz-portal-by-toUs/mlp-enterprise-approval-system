@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 결제 내역 엔티티
+ * 결제내역 엔티티
  *
  * @author : 이지헌
  * @filename : PaymentHistory

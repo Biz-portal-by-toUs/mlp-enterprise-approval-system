@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 결제 내역 반환 dto
+ * 결제내역 응답 Dto
  *
  * @author : 이지헌
  * @filename : ResPaymentHistoryDto

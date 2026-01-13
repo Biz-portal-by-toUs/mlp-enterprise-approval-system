@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.subscription.service;
 
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResSubscriptionDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.res.ResSubscriptionDto;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

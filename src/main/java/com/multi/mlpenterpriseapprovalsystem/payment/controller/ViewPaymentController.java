@@ -5,7 +5,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * 화면전환용 결제수단 컨트롤러
+ * 결제 화면용 컨트롤러
  *
  * @author : 이지헌
  * @filename : ViewPaymentMethodController

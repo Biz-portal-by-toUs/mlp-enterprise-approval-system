@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Please explain the class!!!
+ * 결제수단 응답 Dto
  *
  * @author : 이지헌
  * @filename : ResPaymentMethodDto

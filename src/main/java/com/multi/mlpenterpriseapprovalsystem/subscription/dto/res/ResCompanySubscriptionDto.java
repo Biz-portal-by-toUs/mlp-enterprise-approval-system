@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.subscription.dto.response;
+package com.multi.mlpenterpriseapprovalsystem.subscription.dto.res;
 
 import com.multi.mlpenterpriseapprovalsystem.subscription.enums.SubStatus;
 import lombok.AllArgsConstructor;
@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 회사의 요금제 정보 응답 dto
+ * 회사요금제정보 응답 Dto
  *
  * @author : 이지헌
  * @filename : ResCompanySubscriptionDto

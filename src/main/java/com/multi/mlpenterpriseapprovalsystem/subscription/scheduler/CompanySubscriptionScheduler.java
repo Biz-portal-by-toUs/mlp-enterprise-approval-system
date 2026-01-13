@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Please explain the class!!!
+ * 회사요금제정보로 자동결제 스케쥴러
  *
  * @author : 이지헌
  * @filename : CompanySubscriptionSchedule

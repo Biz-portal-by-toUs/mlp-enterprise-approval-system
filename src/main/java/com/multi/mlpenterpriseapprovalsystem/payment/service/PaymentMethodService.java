@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 결제 수단 서비스 관리 파일
+ * 결제수단 관리 서비스
  * 
  * @filename    : PaymentService
  * @author      : 이지헌
