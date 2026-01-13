@@ -114,15 +114,6 @@
                 width: 100%;
                 line-height: 1.4;
             }
-            .approval-date {
-                font-size: 10px;
-                color: #adb5bd;
-                margin-top: auto;
-                padding-top: 8px;
-                border-top: 1px solid #f1f3f5;
-                width: 100%;
-                line-height: 1.4;
-            }
             .approval-arrow { display: flex; align-items: center; color: #dee2e6; font-size: 16px; flex-shrink: 0; padding: 0 2px; }
 
             /* 문서 내용 */
@@ -165,8 +156,6 @@
                 cursor: pointer;
                 flex: 1;           /* 가로 공간을 균등하게 차지 */
                 min-width: 0;      /* ellipsis(말줄임표) 작동을 위한 필수 설정 */
-
-                /* 🔍 테스트 포인트: 아래 max-width 값을 조절하며 가로 길이를 테스트해보세요! */
                 max-width: 160px;
             }
             .file-item:hover { background: #e7f5ff; border-color: #339af0; transform: translateY(-2px); }
@@ -195,11 +184,6 @@
 
             /* 레이아웃 상속 시 패딩 정의 */
             .page-with-subbar > div:last-child { background: #f6f7fb; padding: 22px 26px; }
-
-            /* 버튼 그룹 */
-            .btn-group { display: flex; justify-content: center; gap: 15px; margin-top: 35px; }
-            .btn-approve { padding: 14px 50px; background: linear-gradient(135deg, #339af0 0%, #228be6 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
-            .btn-reject { padding: 14px 50px; background: linear-gradient(135deg, #ff6b6b 0%, #fa5252 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
         </style>
     </th:block>
 </head>
@@ -273,11 +257,6 @@
                 <div class="section" id="ai-summary-section" style="display: none;">
                     <div class="ai-card"><div class="ai-title">🤖 AI 요약</div><div class="ai-content" id="ai-summary-content" style="font-size: 14px; line-height: 1.8; color: #495057;"></div></div>
                 </div>
-
-                <div class="btn-group" id="btn-group" style="display: none;">
-                    <button class="btn-approve" onclick="handleApprove()">승인</button>
-                    <button class="btn-reject" onclick="handleReject()">반려</button>
-                </div>
             </div>
         </div>
     </section>
@@ -318,7 +297,6 @@
             initTipTapViewer(doc.content);
             renderRejectInfo(doc.resApprovalLineDtos, doc.docStat);
             if (doc.aiSumm) { document.getElementById('ai-summary-section').style.display = 'block'; document.getElementById('ai-summary-content').textContent = doc.aiSumm; }
-            if (doc.myApprStat === 'I') document.getElementById('btn-group').style.display = 'flex';
         }
 
         function initTipTapViewer(contentJson) {
@@ -437,8 +415,6 @@
         function formatFileSize(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
         function formatDateTime(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시 ${String(d.getMinutes()).padStart(2,'0')}분`; }
         function formatDateTimeInline(str) { if (!str) return '-'; const d = new Date(str); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
-        function handleApprove() { if (confirm('이 문서를 승인하시겠습니까?')) alert('기능 구현 중입니다.'); }
-        function handleReject() { const reason = prompt('반려 사유를 입력해주세요:'); if (reason) alert('기능 구현 중입니다.'); }
 
         /* ✅ 인쇄 페이지 열기 함수 추가 */
         function openPrintPage() {
