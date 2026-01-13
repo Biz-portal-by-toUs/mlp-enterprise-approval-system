@@ -42,24 +42,24 @@
                 display:flex;
                 flex-direction:column;
                 align-items:flex-end;
-                gap:10px;
+                gap:12px;
                 min-width: 320px;
             }
 
-            /* ===== 링크 탭(회의실/법인차량/공유설비) ===== */
+            /* ===== ✅ 링크 탭(회의실/법인차량/공유설비) 글씨 키움 ===== */
             .domain-tabs{
                 display:flex;
                 align-items:center;
-                gap:14px;
+                gap:18px;
                 flex-wrap:wrap;
             }
             .domain-link{
-                font-size:14px;
-                font-weight:800;
+                font-size:16px;          /* 🔥 키움 */
+                font-weight:900;         /* 🔥 더 진하게 */
                 color:#666;
                 text-decoration:none;
                 cursor:pointer;
-                padding: 2px 0;
+                padding: 3px 0;
                 border-bottom:2px solid transparent;
                 transition: .15s;
             }
@@ -89,7 +89,7 @@
             }
             .btn:hover{ filter: brightness(0.9); }
 
-            /* ===== 테이블(회의 목록 화면 느낌) ===== */
+            /* ===== 테이블 ===== */
             .tableWrap{
                 background: #fff;
                 border: 1px solid var(--line);
@@ -100,26 +100,29 @@
             table{
                 width:100%;
                 border-collapse:collapse;
-                table-layout: fixed; /* ✅ 고정 레이아웃 */
+                table-layout: fixed;
             }
+
+            /* ✅ 헤더 글씨 키움 */
             thead th{
                 background:#f9fafb;
                 border-bottom: 1px solid var(--line);
                 text-align:center;
                 padding: 14px 10px;
-                font-size: 14px;
+                font-size: 16px;       /* 🔥 키움 */
                 color: var(--muted);
-                font-weight: 600;
+                font-weight: 800;      /* 🔥 더 진하게 */
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+
             tbody td{
                 border-bottom: 1px solid var(--line);
                 text-align:center;
                 padding: 12px 10px;
                 font-size: 15px;
-                font-weight: 500;
+                font-weight: 600;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -135,15 +138,22 @@
             }
 
             /* 좌측정렬이 필요한 컬럼 */
-            .ta-left{ text-align:left !important; padding-left:20px !important; }
+            .ta-left{ text-align:left !important; padding-left:14px !important; } /* 🔥 기존 20px -> 14px */
 
-            /* 목적/참가자 폭 비슷하게 */
-            .col-purpose, .col-attendees{
-                width: 260px;
-                max-width: 260px;
+            /* ✅ 차량번호/설비번호는 더 "붙어 보이게" (패딩/정렬) */
+            .code-cell{
+                text-align:left !important;
+                padding-left:10px !important;
             }
 
-            /* 참가자: 기본 2줄 클램프 + 더보기(전체 펼치기) */
+            /* ✅ 목적: 남는 공간의 “가운데”에 오게 */
+            .purpose-cell{
+                text-align:center !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+
+            /* 참가자: 2줄 클램프 + 더보기 */
             .attendees-cell{
                 white-space: normal !important;
                 overflow: visible !important;
@@ -165,13 +175,13 @@
                 display:inline-block;
                 margin-top:6px;
                 font-size:13px;
-                font-weight:800;
+                font-weight:900;
                 color: var(--primary);
                 cursor:pointer;
                 user-select:none;
             }
 
-            /* ===== 페이징(회의 목록 느낌) ===== */
+            /* ===== 페이징 ===== */
             .pager-wrapper{
                 display:flex;
                 align-items:center;
@@ -186,7 +196,7 @@
                 border:1px solid var(--line);
                 background:#fff;
                 font-size:14px;
-                font-weight:600;
+                font-weight:700;
                 cursor:pointer;
                 transition:.15s;
             }
@@ -211,7 +221,12 @@
                 .controls-row{ justify-content:flex-start; }
                 .right-tools{ align-items:flex-start; width:100%; }
                 .pager-status{ position: static; margin-left: 12px; }
-                .col-purpose, .col-attendees{ width: 180px; max-width: 180px; }
+
+                /* 모바일에서 탭 글씨 살짝만 줄이기 */
+                .domain-link{ font-size:15px; }
+
+                thead th{ font-size:15px; }
+                tbody td{ font-size:14px; }
             }
         </style>
     </th:block>
@@ -225,11 +240,9 @@
         <div class="my-reservation-page">
             <div class="timetable-section">
 
-                <!-- ✅ 1) 제목은 회의실 조회처럼 맨 위에 -->
                 <div class="top-area">
                     <h2>내 예약 조회</h2>
 
-                    <!-- ✅ 2) 오른쪽 컨트롤은 "제목 아래" 줄에 위치 -->
                     <div class="controls-row">
                         <div class="right-tools">
                             <div class="domain-tabs" aria-label="예약 카테고리">
@@ -241,7 +254,7 @@
                             <div class="toolbar">
                                 <div class="date-filter">
                                     <input id="fromDate" class="select" type="date" />
-                                    <span style="font-weight: 600; color: var(--muted);">~</span>
+                                    <span style="font-weight: 700; color: var(--muted);">~</span>
                                     <input id="toDate" class="select" type="date" />
                                 </div>
                                 <button id="btnSearch" class="btn" type="button">조회</button>
@@ -263,7 +276,7 @@
                 <div class="pager-wrapper">
                     <div id="pager" class="pager"></div>
                     <div class="pager-status">
-                        <span id="countPill" style="font-size:14px; display: none !important; font-weight:600; color:var(--primary)">0건</span>
+                        <span id="countPill" style="font-size:14px; display: none !important; font-weight:700; color:var(--primary)">0건</span>
                         <span id="pageInfo" style="font-size:13px; display: none !important; color:var(--muted)">page 1 / 1</span>
                     </div>
                 </div>
@@ -289,7 +302,7 @@
             const pagerEl = document.getElementById("pager");
             const countPillEl = document.getElementById("countPill");
             const pageInfoEl = document.getElementById("pageInfo");
-
+            const tableEl = document.querySelector(".tableWrap table");
             const tabEls = Array.from(document.querySelectorAll(".domain-link[data-domain]"));
 
             let currentDomain = "MEETING_ROOM";
@@ -437,84 +450,102 @@
 
             function normalizeAttendees(r){
                 if (Array.isArray(r.attendeeNames)) return r.attendeeNames.filter(Boolean).map(String);
-                const v = r.attendees ?? r.attendee ?? "";
+                const v = r.attendees ?? r.attendee ?? r.attendeeName ?? "";
                 if (!v) return [];
                 if (Array.isArray(v)) return v.filter(Boolean).map(String);
                 return String(v).split(",").map(s => s.trim()).filter(Boolean);
             }
 
+            /* ✅ colgroup: 목적(col-purpose)은 width를 안 주고 <col /> 로 둬서 남는 공간을 다 먹게 함 */
             function renderColgroup(domain){
                 if (domain === "MEETING_ROOM") {
                     colgroupEl.innerHTML = `
-                      <col style="width:140px" />
-                      <col style="width:160px" />
-                      <col style="width:220px" />
-                      <col style="width:260px" />
-                      <col style="width:260px" />
-                      <col style="width:140px" />
-                      <col style="width:120px" />
-                    `;
+            <col style="width:140px" />
+            <col style="width:160px" />
+            <col style="width:190px" />
+            <col /> <!-- ✅ 예약 목적(남는 너비 전부) -->
+            <col style="width:220px" />
+            <col style="width:140px" />
+            <col style="width:120px" />
+          `;
                     return;
                 }
+
                 if (domain === "CORPORATE_CAR") {
                     colgroupEl.innerHTML = `
-                      <col style="width:140px" />
-                      <col style="width:160px" />
-                      <col style="width:220px" />
-                      <col style="width:160px" />
-                      <col style="width:260px" />
-                      <col style="width:120px" />
-                    `;
+            <col style="width:140px" />
+            <col style="width:160px" />
+            <col style="width:200px" />  <!-- 차량명 -->
+            <col style="width:150px" />  <!-- 차량번호(조금 좁게) -->
+            <col />                      <!-- ✅ 예약 목적(남는 너비 전부) -->
+            <col style="width:120px" />
+          `;
                     return;
                 }
+
+                // SHARED_EQUIPMENT
                 colgroupEl.innerHTML = `
-                  <col style="width:140px" />
-                  <col style="width:160px" />
-                  <col style="width:220px" />
-                  <col style="width:160px" />
-                  <col style="width:260px" />
-                  <col style="width:120px" />
-                `;
+          <col style="width:140px" />
+          <col style="width:160px" />
+          <col style="width:200px" />  <!-- 설비명 -->
+          <col style="width:150px" />  <!-- 설비번호(조금 좁게) -->
+          <col />                      <!-- ✅ 예약 목적(남는 너비 전부) -->
+          <col style="width:120px" />
+        `;
             }
 
             function renderHeader(domain){
                 if (domain === "MEETING_ROOM") {
                     theadEl.innerHTML = `
-                      <tr>
-                        <th>예약일자</th>
-                        <th>예약시간</th>
-                        <th class="ta-left">회의실명</th>
-                        <th class="ta-left col-purpose">예약 목적</th>
-                        <th class="ta-left col-attendees">참가자</th>
-                        <th>예약자</th>
-                        <th>예약상태</th>
-                      </tr>
-                    `;
+            <tr>
+              <th>예약일자</th>
+              <th>예약시간</th>
+              <th class="ta-left">회의실명</th>
+              <th>예약 목적</th>
+              <th>참가자</th>
+              <th>예약자</th>
+              <th>예약상태</th>
+            </tr>
+          `;
                     return;
                 }
                 if (domain === "CORPORATE_CAR") {
                     theadEl.innerHTML = `
-                      <tr>
-                        <th>예약일자</th>
-                        <th>예약시간</th>
-                        <th class="ta-left">차량명</th>
-                        <th>차량번호</th>
-                        <th class="ta-left col-purpose">예약 목적</th>
-                        <th>예약상태</th>
-                      </tr>
-                    `;
+            <tr>
+              <th>예약일자</th>
+              <th>예약시간</th>
+              <th class="ta-left">차량명</th>
+              <th>차량번호</th>
+              <th>예약 목적</th>
+              <th>예약상태</th>
+            </tr>
+          `;
                     return;
                 }
                 theadEl.innerHTML = `
-                  <tr>
-                    <th>예약일자</th>
-                    <th>예약시간</th>
-                    <th class="ta-left">설비명</th>
-                    <th>설비번호</th>
-                    <th class="ta-left col-purpose">예약 목적</th>
-                    <th>예약상태</th>
-                  </tr>
-                `;
+          <tr>
+            <th>예약일자</th>
+            <th>예약시간</th>
+            <th class="ta-left">설비명</th>
+            <th>설비번호</th>
+            <th>예약 목적</th>
+            <th>예약상태</th>
+          </tr>
+        `;
+            }
+
+            /* ✅ 목적 필드 fallback을 좀 더 넓게 잡아둠(회의실에서 목적 안 뜨는 케이스 대비) */
+            function pickPurpose(r){
+                return (
+                    r.purpose ??
+                    r.purp ??
+                    r.resvPurpose ??
+                    r.reservationPurpose ??
+                    r.reservePurpose ??
+                    r.purposeName ??
+                    r.purposeText ??
+                    "-"
+                );
             }
 
             function renderBody(domain, rows){
@@ -530,7 +561,7 @@
                         const statusText = computeStatus(r);
 
                         const roomName = r.roomName ?? r.meetingRoomName ?? r.target ?? "-";
-                        const purpose  = r.purpose ?? r.purp ?? "-";
+                        const purpose  = pickPurpose(r);
                         const hostName = r.hostName ?? r.resvEmpName ?? r.host ?? "-";
 
                         const attendeesArr = normalizeAttendees(r);
@@ -538,19 +569,24 @@
                         const shouldShowMore = attendeesArr.length >= 4 || attendeesFull.length >= 35;
 
                         return `
-                          <tr>
-                            <td>${escapeHtml(r.date ?? "-")}</td>
-                            <td>${escapeHtml(r.time ?? "-")}</td>
-                            <td class="ta-left" title="${escapeHtml(roomName)}">${escapeHtml(roomName)}</td>
-                            <td class="ta-left col-purpose" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
-                            <td class="ta-left col-attendees attendees-cell">
-                              <div class="attendees-text" data-row="${idx}" title="${escapeHtml(attendeesFull)}">${escapeHtml(attendeesFull)}</div>
-                              ${shouldShowMore ? `<span class="attendees-more" data-action="toggle-attendees" data-row="${idx}">더보기</span>` : ``}
-                            </td>
-                            <td>${escapeHtml(hostName)}</td>
-                            <td>${escapeHtml(statusText)}</td>
-                          </tr>
-                        `;
+              <tr>
+                <td>${escapeHtml(r.date ?? "-")}</td>
+                <td>${escapeHtml(r.time ?? "-")}</td>
+                <td class="ta-left" title="${escapeHtml(roomName)}">${escapeHtml(roomName)}</td>
+
+                <!-- ✅ 목적: 가운데 정렬 + 남는 너비 -->
+                <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+
+                <!-- ✅ 참가자(예약자 옆에 붙어있게: colgroup에서 오른쪽 3개 폭 고정) -->
+                <td class="ta-left attendees-cell">
+                  <div class="attendees-text" data-row="${idx}" title="${escapeHtml(attendeesFull)}">${escapeHtml(attendeesFull)}</div>
+                  ${shouldShowMore ? `<span class="attendees-more" data-action="toggle-attendees" data-row="${idx}">더보기</span>` : ``}
+                </td>
+
+                <td>${escapeHtml(hostName)}</td>
+                <td>${escapeHtml(statusText)}</td>
+              </tr>
+            `;
                     }).join("");
                     return;
                 }
@@ -560,40 +596,51 @@
                         const statusText = computeStatus(r);
 
                         const carName = r.carName ?? r.target ?? "-";
-                        const plateNo   = r.plateNo ?? r.plateNo ?? "-";
-                        const purpose = r.purpose ?? r.purp ?? "-";
+                        const plateNo = r.plateNo ?? r.carNo ?? r.carNumber ?? "-";
+                        const purpose = pickPurpose(r);
 
                         return `
-                          <tr>
-                            <td>${escapeHtml(r.date ?? "-")}</td>
-                            <td>${escapeHtml(r.time ?? "-")}</td>
-                            <td class="ta-left" title="${escapeHtml(carName)}">${escapeHtml(carName)}</td>
-                            <td title="${escapeHtml(plateNo)}">${escapeHtml(plateNo)}</td>
-                            <td class="ta-left col-purpose" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
-                            <td>${escapeHtml(statusText)}</td>
-                          </tr>
-                        `;
+              <tr>
+                <td>${escapeHtml(r.date ?? "-")}</td>
+                <td>${escapeHtml(r.time ?? "-")}</td>
+                <td class="ta-left" title="${escapeHtml(carName)}">${escapeHtml(carName)}</td>
+
+                <!-- ✅ 차량번호: 왼쪽정렬+패딩줄여서 차량명과 가까워 보이게 -->
+                <td class="code-cell" title="${escapeHtml(plateNo)}">${escapeHtml(plateNo)}</td>
+
+                <!-- ✅ 목적: 가운데 + 남는 너비 -->
+                <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+
+                <td>${escapeHtml(statusText)}</td>
+              </tr>
+            `;
                     }).join("");
                     return;
                 }
 
+                // SHARED_EQUIPMENT
                 tbodyEl.innerHTML = rows.map(r => {
                     const statusText = computeStatus(r);
 
                     const eqName = r.eqName ?? r.equipmentName ?? r.target ?? "-";
-                    const eqId   = r.eqId ?? r.eqNumber ?? r.eqId ?? r.serialNo ?? "-";
-                    const purpose = r.purpose ?? r.purp ?? "-";
+                    const eqId   = r.eqId ?? r.eqNumber ?? r.serialNo ?? "-";
+                    const purpose = pickPurpose(r);
 
                     return `
-                      <tr>
-                        <td>${escapeHtml(r.date ?? "-")}</td>
-                        <td>${escapeHtml(r.time ?? "-")}</td>
-                        <td class="ta-left" title="${escapeHtml(eqName)}">${escapeHtml(eqName)}</td>
-                        <td title="${escapeHtml(eqId)}">${escapeHtml(eqId)}</td>
-                        <td class="ta-left col-purpose" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
-                        <td>${escapeHtml(statusText)}</td>
-                      </tr>
-                    `;
+            <tr>
+              <td>${escapeHtml(r.date ?? "-")}</td>
+              <td>${escapeHtml(r.time ?? "-")}</td>
+              <td class="ta-left" title="${escapeHtml(eqName)}">${escapeHtml(eqName)}</td>
+
+              <!-- ✅ 설비번호: 왼쪽정렬+패딩줄여서 설비명과 가까워 보이게 -->
+              <td class="code-cell" title="${escapeHtml(eqId)}">${escapeHtml(eqId)}</td>
+
+              <!-- ✅ 목적: 가운데 + 남는 너비 -->
+              <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+
+              <td>${escapeHtml(statusText)}</td>
+            </tr>
+          `;
                 }).join("");
             }
 
@@ -649,9 +696,9 @@
                 renderColgroup(currentDomain);
                 renderHeader(currentDomain);
                 renderBody(currentDomain, pageRows);
-
                 renderPager(currentPage, totalPages);
 
+                tableEl.dataset.domain = currentDomain;
                 countPillEl.textContent = `${total}건`;
                 pageInfoEl.textContent = `page ${currentPage + 1} / ${totalPages}`;
             }
@@ -691,7 +738,7 @@
                     if (!d) return;
                     currentDomain = d;
                     setActiveTab(d);
-                    search(); // 탭 클릭 즉시 갱신
+                    search();
                 });
             });
 
