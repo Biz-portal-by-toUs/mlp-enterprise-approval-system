@@ -7,7 +7,6 @@ import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRepository;
-import com.multi.mlpenterpriseapprovalsystem.document.service.ApprovalLineService;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
@@ -38,7 +37,6 @@ import java.util.Set;
 @Service
 public class AttendanceSchedule {
 
-    private final ApprovalLineService approvalLineService;
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final ApprovalLineRepository approvalLineRepository;
