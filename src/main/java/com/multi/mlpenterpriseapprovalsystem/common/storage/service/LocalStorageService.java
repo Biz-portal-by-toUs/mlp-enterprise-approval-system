@@ -2,7 +2,6 @@ package com.multi.mlpenterpriseapprovalsystem.common.storage.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.StoredFile;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,7 +19,7 @@ import java.util.UUID;
  * @filename : LocalStorageSerivce
  * @since : 2025. 12. 19. 금요일
  */
-@Service
+//@Service
 public class LocalStorageService implements StorageService {
 
     private final Path rootDir;
