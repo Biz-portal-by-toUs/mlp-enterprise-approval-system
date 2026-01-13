@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 /**
- * Please explain the class!!!
+ * 결재라인 요청 Dto
  *
  * @author : 이지헌
  * @filename : ReqApprovalLineDto

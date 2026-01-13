@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.CompanySubscription;
 import com.multi.mlpenterpriseapprovalsystem.subscription.domain.Subscription;
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResCompanySubscriptionDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.res.ResCompanySubscriptionDto;
 import com.multi.mlpenterpriseapprovalsystem.subscription.repository.CompanySubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 /**
- * Please explain the class!!!
+ * 회사요금제정보 관리 서비스
  *
  * @author : 이지헌
  * @filename : CompanySubscriptionService
@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 public class CompanySubscriptionService {
     private final CompanySubscriptionRepository companySubscriptionRepository;
 
+    // 회사요금제정보 조회
     public ResCompanySubscriptionDto getCurrentSubscription(String comId) {
         CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
@@ -48,6 +49,7 @@ public class CompanySubscriptionService {
                 .build();
     }
 
+    // 예치금 조회
     public BigDecimal getCreditBalance(String comId) {
         CompanySubscription sub = companySubscriptionRepository.findByCompany_ComId(comId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SUBSCRIPTION_NOT_FOUND));

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 문서 테이블 관리 repository
+ * 문서 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : DocumentRepository

@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.subscription.enums;
 
 /**
- * Please explain the class!!!
+ * 회사의 요금제 상태 관리 enum
  *
  * @author : 이지헌
  * @filename : SubStatus

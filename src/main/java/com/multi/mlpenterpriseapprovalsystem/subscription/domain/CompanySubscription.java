@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 회사의 구독정보 엔티티
+ * 회사요금제정보 엔티티
  *
  * @author : 이지헌
  * @filename : CompanySubscription

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * 문서 관련 화면용 컨트롤러
+ * 문서 화면용 컨트롤러
  *
  * @author : 이지헌
  * @filename : ViewDocumentController
@@ -102,7 +102,7 @@ public class ViewDocumentController {
         }
     }
 
-    // ✅ 문서 인쇄 전용 페이지
+    // 문서 인쇄 전용 페이지
     @GetMapping("/documents/{docNo}/print")
     public String viewDocumentPrint(@PathVariable(name = "docNo") Long docNo,
                                     @RequestParam(name = "status", defaultValue = "SUBMITTED") String status) {

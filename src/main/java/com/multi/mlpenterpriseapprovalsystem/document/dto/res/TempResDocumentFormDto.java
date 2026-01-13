@@ -7,7 +7,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 임시 문서양식 응답 Dto
  *
  * @author : 이지헌
  * @filename : TempResDocumentFormDto

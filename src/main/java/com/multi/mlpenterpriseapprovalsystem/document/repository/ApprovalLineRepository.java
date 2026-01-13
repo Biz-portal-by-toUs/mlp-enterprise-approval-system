@@ -13,7 +13,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 /**
- * 결재라인 테이블 관리 repository
+ * 결재라인 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : ApprovalLineRepository

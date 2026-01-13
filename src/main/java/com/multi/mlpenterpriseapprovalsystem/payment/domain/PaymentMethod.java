@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * 결제 수단 엔티티
+ * 결제수단 엔티티
  *
  * @author : 이지헌
  * @filename : PaymentMethod

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 문서 요청 Dto
  *
  * @author : 이지헌
  * @filename : ReqDocumentDto

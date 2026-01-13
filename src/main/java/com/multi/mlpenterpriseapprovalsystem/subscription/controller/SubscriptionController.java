@@ -1,7 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.subscription.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
-import com.multi.mlpenterpriseapprovalsystem.subscription.dto.response.ResSubscriptionDto;
+import com.multi.mlpenterpriseapprovalsystem.subscription.dto.res.ResSubscriptionDto;
 import com.multi.mlpenterpriseapprovalsystem.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 요금제 정보를 RestApi를 통해 관리하는 RestController
+ * 요금제 컨트롤러
  *
  * @author : 이지헌
  * @filename : SubscriptionController

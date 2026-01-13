@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 결제 수단 테이블 접근용 repository
+ * 결제수단 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : PaymentMethodRepository

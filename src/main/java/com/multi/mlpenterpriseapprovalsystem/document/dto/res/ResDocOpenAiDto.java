@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * OpenAi에 문서내용 요약 응답 Dto
  *
  * @author : 이지헌
  * @filename : DocumentOpenAiResponse
@@ -14,7 +14,7 @@ import java.util.List;
  */
 @Getter
 @NoArgsConstructor
-public class DocumentOpenAiResponse {
+public class ResDocOpenAiDto {
 
     private List<Choice> choices;
 

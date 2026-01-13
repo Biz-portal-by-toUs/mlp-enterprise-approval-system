@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 문서 상태 정리
+ * 문서 상태 관리 enum
  *
  * @author : 이지헌
  * @filename : DocStat

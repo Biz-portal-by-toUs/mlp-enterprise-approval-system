@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.subscription.dto.response;
+package com.multi.mlpenterpriseapprovalsystem.subscription.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.*;
@@ -6,7 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 /**
- * 응답용 SubscriptionDto
+ * 요금제 응답 Dto
  *
  * @author : 이지헌
  * @filename : SubscriptionDto

@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * Please explain the class!!!
+ * 임시 문서양식 내 카테고리 응답 Dto
  *
  * @author : 이지헌
  * @filename : TempResDocumentFormCategoryDto

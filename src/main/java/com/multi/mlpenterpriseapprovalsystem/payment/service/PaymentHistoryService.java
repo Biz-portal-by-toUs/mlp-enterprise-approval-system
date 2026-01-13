@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 결제내역 관리 service
+ * 결제내역 관리 서비스
  *
  * @author : 이지헌
  * @filename : PaymentHistoryService

@@ -10,7 +10,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 /**
- * 결재 라인 엔티티
+ * 결재라인 엔티티
  *
  * @author : 이지헌
  * @filename : ApprovalLine

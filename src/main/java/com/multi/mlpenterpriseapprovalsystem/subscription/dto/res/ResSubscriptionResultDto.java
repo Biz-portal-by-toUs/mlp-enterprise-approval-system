@@ -1,4 +1,4 @@
-package com.multi.mlpenterpriseapprovalsystem.subscription.dto.response;
+package com.multi.mlpenterpriseapprovalsystem.subscription.dto.res;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * Please explain the class!!!
+ * 요금제 결제 결과 응답 Dto
  *
  * @author : 이지헌
  * @filename : ResSubscriptionResultDto
