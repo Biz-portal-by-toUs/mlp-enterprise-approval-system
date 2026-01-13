@@ -787,15 +787,13 @@
         </div>
 
         <div class="topbar-center">
-            <div class="topbar-center">
-                <form class="search" action="/search" method="get">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <circle cx="11" cy="11" r="7" stroke-width="2"/>
-                        <path d="M20 20L17 17" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    <input type="text" name="q" placeholder="통합 검색" autocomplete="off"/>
-                </form>
-            </div>
+            <form class="search" action="/search" method="get" onsubmit="return handleSearchSubmit(this)">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="11" cy="11" r="7" stroke-width="2"/>
+                    <path d="M20 20L17 17" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <input type="text" name="q" placeholder="통합 검색" autocomplete="off"/>
+            </form>
         </div>
 
         <div class="topbar-right">
@@ -1380,6 +1378,19 @@
         X: '자리 비움',
         H: '출근 안함'
     };
+
+    /* ====== 상단 검색창 유효성 검사 ====== */
+    function handleSearchSubmit(form) {
+        const query = form.q.value.trim();
+
+        if (!query) {
+            alert("검색어를 입력해주세요.");
+            form.q.focus();
+            return false;
+        }
+
+        return true;
+    }
 
     function applyStatusUI(code){
         const dot = document.getElementById('statusDot');

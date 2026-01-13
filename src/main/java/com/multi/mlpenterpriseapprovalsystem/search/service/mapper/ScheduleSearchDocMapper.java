@@ -61,8 +61,6 @@ public class ScheduleSearchDocMapper implements SearchDocMapper {
                     String title = nvl(s.getTitle());
                     String content = nvl(s.getContent());
 
-                    // ✅ 검색 품질: title + content 합쳐서 인덱싱
-                    String contentText = buildContentText(title, content);
 
                     // ✅ 요약
                     String summary = makeSummary(content, 80);
@@ -75,7 +73,7 @@ public class ScheduleSearchDocMapper implements SearchDocMapper {
                                     .sourceId(sourceId)
                                     .title(title)
                                     .content(content)
-                                    .contentText(contentText)
+                                    .contentText(content)
                                     .summary(summary)
                                     .url("/schedule/calendar?open=1&schNo=" + sourceId + "&scope=" + scope.name())
                                     .createdAt(toEpochMillis(s.getCreatedAt()))

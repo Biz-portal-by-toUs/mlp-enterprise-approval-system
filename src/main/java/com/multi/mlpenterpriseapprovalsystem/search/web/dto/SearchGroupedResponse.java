@@ -59,9 +59,23 @@ public class SearchGroupedResponse {
         SearchGroupedResponse out = new SearchGroupedResponse();
         out.setQuery(extractQuery(es));
 
+// 1. 전체 aggregations null 체크
         Map<String, Object> aggs = (Map<String, Object>) es.get("aggregations");
+        if (aggs == null) {
+            return out; // 데이터가 없으면 빈 섹션 리스트를 가진 객체 반환
+        }
+
+        // 2. menus null 체크
         Map<String, Object> menus = (Map<String, Object>) aggs.get("menus");
+        if (menus == null) {
+            return out;
+        }
+
+        // 3. buckets null 체크
         Map<String, Object> buckets = (Map<String, Object>) menus.get("buckets");
+        if (buckets == null) {
+            return out;
+        }
 
         // 메뉴 순서대로 섹션 생성
         cfg.getMenus().stream()

@@ -77,7 +77,7 @@
                 color: #64748b;
                 font-size: 14px;
                 line-height: 1.6;
-                margin-left: 135px;
+                margin-left: 125px;
 
                 /* [핵심] 폭 고정 및 텍스트 처리 */
                 word-break: break-all; /* 영문/숫자 길어도 강제 줄바꿈 */
@@ -154,12 +154,22 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const query = urlParams.get('q') || '';
+            const query = (urlParams.get('q') || '').trim(); // 앞뒤 공백 제거
+
+            if (!query) {
+                alert("검색어를 입력해주세요.");
+                return;
+            }
+
             document.getElementById('termDisplay').innerText = query;
             executeSearch(query);
         });
 
         async function executeSearch(q) {
+            if (!q || q.trim() === '') {
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
                 const result = await response.json();
@@ -168,7 +178,25 @@
                     renderGlobalTabs(result.data.sections);
                     showSection('TOTAL');
                 }
-            } catch (error) { console.error('Search failed:', error); }
+            } catch (error) {
+                console.error('Search failed:', error);
+            }
+        }
+        function renderEmptyState(message) {
+            const resultArea = document.getElementById('searchResultArea');
+            const tabArea = document.getElementById('globalTabs');
+
+            // 탭 영역 비우기
+            if (tabArea) tabArea.innerHTML = '';
+
+            // 결과 영역에 메시지 표시
+            resultArea.innerHTML = `
+                <div style="padding:100px 0; text-align:center; color:#94a3b8; font-size:16px;">
+                    ${message}
+                </div>`;
+
+            // 상단 카운트 초기화
+            document.getElementById('currentCountDisplay').innerText = '0';
         }
 
         function renderGlobalTabs(sections) {
@@ -333,7 +361,27 @@
         function pickBestTitle(item) { return item.highlight?.title?.[0] || escapeHtml(item.title || '제목 없음'); }
         function pickBestSnippet(item) {
             const hl = item.highlight;
-            return hl?.contentText?.[0] || hl?.content?.[0] || hl?.summary?.[0] || escapeHtml(trimText(item.summary || item.contentText || '', 160));
+            const title = item.title || ''; // 원본 제목 (비교용)
+
+            // 1. 하이라이트된 내용 중 우선순위대로 선택
+            let snippet = hl?.contentText?.[0] || hl?.content?.[0] || hl?.summary?.[0];
+
+            // 2. 하이라이트가 없으면 원본 필드에서 선택
+            if (!snippet) {
+                snippet = item.summary || item.contentText || '';
+            }
+
+            // [핵심 로직] 내용이 제목으로 시작하는 경우, 제목 부분을 제거
+            // <em> 태그 등이 섞여 있을 수 있으므로 정규식으로 태그를 제거한 텍스트로 비교하거나,
+            // 단순하게 원본 제목 문자열을 앞에서 지워줍니다.
+            if (snippet && title && snippet.startsWith(title)) {
+                snippet = snippet.substring(title.length).trim();
+            }
+
+            // 3. 결과 반환 (글자 수 제한 및 HTML 이스케이프)
+            // 하이라이트 태그(<em>)를 살려야 하므로, 전체를 escapeHtml 하기보다
+            // 이미 하이라이트된 문자열인지 확인 후 처리하는 것이 좋습니다.
+            return trimText(snippet || '', 160);
         }
         function trimText(s, l) { return s.length > l ? s.substring(0, l) + '...' : s; }
         function formatDate(v) { if(!v) return '-'; const d = new Date(v); return d.toLocaleDateString(); }

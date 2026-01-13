@@ -21,6 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MenuConfig {
     private List<Menu> menus = new ArrayList<>();
+    private long updatedAt;
 
     @Getter
     @Setter
