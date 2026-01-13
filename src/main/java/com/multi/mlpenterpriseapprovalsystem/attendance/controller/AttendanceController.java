@@ -33,17 +33,6 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
-    // 내 모든 근태 정보 조회
-//    @GetMapping("/me")
-//    public ResponseEntity<ResponseDto<List<ResAttendanceDto>>> getMyAttendances(@AuthenticationPrincipal CustomUser customUser) {
-//
-//        List<ResAttendanceDto> resAttendanceDtos = attendanceService.getMyAttendances(customUser.getComId(), customUser.getUsername());
-//
-//        return ResponseEntity
-//                .ok()
-//                .body(new ResponseDto<>(HttpStatus.OK, "내 근태 정보 조회 성공", resAttendanceDtos));
-//    }
-
     // 내 휴가 정보 조회
     @GetMapping("/me/vacations")
     public ResponseEntity<ResponseDto<List<ResAttendanceDto>>> getMyVacations(@AuthenticationPrincipal CustomUser customUser) {
@@ -153,9 +142,6 @@ public class AttendanceController {
 
         LocalDateTime normalizedStart = startAt.toLocalDate().atStartOfDay();
         LocalDateTime normalizedEnd = endAt.toLocalDate().atTime(23, 59, 59);
-
-//        LocalDateTime start = LocalDateTime.parse(startAt);
-//        LocalDateTime end = LocalDateTime.parse(endAt);
 
         List<ResAttendanceDto> overlaps = attendanceService.getMyAttendanceOverlapList(
                 customUser.getComId(),
