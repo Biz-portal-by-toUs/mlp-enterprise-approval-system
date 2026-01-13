@@ -404,10 +404,15 @@
         }
 
         function renderRejectInfo(lines, docStat) {
-            const rejectedLine = lines.find(line => line.apprStat === 'R');
+            // ✅ [수정]: 반려 데이터 중 실제 반려를 수행한(isActualAppr === true) 사람을 찾습니다.
+            const rejectedLine = lines.find(line => line.apprStat === 'R' && line.isActualAppr === true);
+
             if (rejectedLine || docStat === 'RJ') {
                 document.getElementById('reject-section').style.display = 'block';
-                if (rejectedLine) { document.getElementById('reject-approver').textContent = rejectedLine.approverName || '-'; document.getElementById('reject-date').textContent = formatDateTime(rejectedLine.endedAt); }
+                if (rejectedLine) {
+                    document.getElementById('reject-approver').textContent = rejectedLine.approverName || '-';
+                    document.getElementById('reject-date').textContent = formatDateTime(rejectedLine.endedAt);
+                }
                 document.getElementById('reject-reason').textContent = rejectedLine?.rejReason || '-';
             }
         }
