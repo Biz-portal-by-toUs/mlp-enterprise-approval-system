@@ -117,6 +117,9 @@ public class MyReservationService {
         for (MeetingRoomReservation r : unique.values()) {
             Long resvNo = r.getMeetingResvNo();
 
+            // ✅ 목적도 내려줘야 프론트 목적 칼럼이 채워짐
+            String purp = nvl(r.getPurp(), "-");
+
             rows.add(ResMyReservationDto.builder()
                     .domain("MEETING_ROOM")
                     .resvNo(resvNo)
@@ -126,6 +129,7 @@ public class MyReservationService {
                     .roomName(nvl(r.getMeetingRoom() == null ? null : r.getMeetingRoom().getRoomName(), "-"))
                     .hostName(nvl(r.getResvEmp() == null ? null : r.getResvEmp().getEmpName(), "-"))
                     .attendeeNames(attendeeNamesByResvNo.getOrDefault(resvNo, List.of()))
+                    .purp(purp)
                     .build());
         }
     }
@@ -183,6 +187,9 @@ public class MyReservationService {
                             ? "-"
                             : nvl(r.getSharedEquipment().getEqId(), "-");
 
+            // ✅ 목적도 내려줘야 프론트 목적 칼럼이 채워짐
+            String purp = nvl(r.getPurp(), "-");
+
             rows.add(ResMyReservationDto.builder()
                     .domain("SHARED_EQUIPMENT")
                     .resvNo(r.getEqResvNo())
@@ -191,7 +198,7 @@ public class MyReservationService {
                     .status(statusOf(r.getEndedAt()))
                     .eqName(eqName)
                     .eqId(eqId)
-                    .purp(r.getPurp())
+                    .purp(purp)
                     .build());
         }
     }
