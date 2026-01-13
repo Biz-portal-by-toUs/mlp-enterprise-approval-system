@@ -7,7 +7,7 @@
 <th:block layout:fragment="pageStyles">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root{
             --card:#ffffff;
@@ -929,7 +929,21 @@
         // 기존 삭제(서버)
         async function deleteExisting(attachmentId){
             if (!attachmentId) return;
-            if (!confirm("기존 첨부파일을 삭제할까요?")) return;
+            //if (!confirm("기존 첨부파일을 삭제할까요?")) return;
+            const result = await Swal.fire({
+                title: '첨부파일 삭제 ',
+                text: '정말 삭제하시겠습니까?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '삭제',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            });
+
+            // 🔴 취소 / ESC / 바깥 클릭 → 즉시 종료
+            if (!result.isConfirmed) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/v1/attachments/${attachmentId}`, {
@@ -1096,7 +1110,13 @@
             // ✅ [추가] 팝업 기간 validation
             if (isPopup === "true" && startedDate && endedDate) {
                 if (startedDate > endedDate) {
-                    alert("팝업 시작일은 종료일보다 클 수 없습니다.");
+                    //alert("팝업 시작일은 종료일보다 클 수 없습니다.");
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: '팝업 날짜 오류',
+                        text: '종료일이 시작일보다 빠를 수 없습니다.\n시작일과 종료일을 다시 선택해주세요.',
+                        confirmButtonColor: '#339af0'
+                    });
                     submitBtn.disabled = false;
                     return;
                 }
@@ -1127,7 +1147,17 @@
                 // 신규만 업로드
                 await uploadNewFiles(noticeNo);
 
-                alert('공지사항이 수정되었습니다.');
+                // ✅ 성공 메시지 확실히 보여준 뒤 이동
+                await Swal.fire({
+                    icon: 'success',
+                    title: '공지사항',
+                    text: '공지사항 수정 성공!',
+                    confirmButtonColor: '#339af0',
+                    timer: 1000,
+                    showConfirmButton: false
+                });
+
+                //alert('공지사항이 수정되었습니다.');
                 window.location.href = '/notice/list';
             } catch (error) {
                 console.error('Error updating notice:', error);
