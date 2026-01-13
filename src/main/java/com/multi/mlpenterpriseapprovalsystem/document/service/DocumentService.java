@@ -229,7 +229,7 @@ public class DocumentService {
         );
 
         // 해당 문서에 대한 나의 결재상태(결재중, 결재대기중)를 DTO에 매핑하여 반환
-        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId));
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId, "AWAITING"));
     }
 
     // 내 회사의 문서 중 내가 결재한 문서 조회. 결재자, 대직자 둘 다에게 보여야함
@@ -284,7 +284,7 @@ public class DocumentService {
         );
 
         // 해당 문서에 대한 나의 결재상태(승인, 반려)를 DTO에 매핑하여 반환
-        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId));
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId, "PROCESSED"));
     }
 
     // 내 회사의 최종승인문서 조회

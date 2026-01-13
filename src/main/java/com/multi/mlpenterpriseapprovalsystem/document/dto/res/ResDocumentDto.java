@@ -130,24 +130,64 @@ public class ResDocumentDto {
                         document.getResubmittedBy().getDocNo() : null)
                 .build();
 
-        // ✅ 수정된 로직: 본인이 원결재자이거나, 원결재자의 현재 대직자인 경우 상태 추출
+        // 2. ✅ 나의 대표 결재 상태 결정 (다중 순번 대응)
         if (empId != null && document.getApprovalLines() != null) {
-            for (ApprovalLine line : document.getApprovalLines()) {
-                // 1. 내가 원결재자인지 확인
-                boolean isApprover = line.getApprover().getEmpId().equals(empId);
+            // 내 사번이 포함된 모든 결재 라인의 상태 추출
+            List<ApprStat> myStats = document.getApprovalLines().stream()
+                    .filter(line -> line.getApprover().getEmpId().equals(empId))
+                    .map(ApprovalLine::getApprStat)
+                    .toList();
 
-                // 2. 내가 원결재자의 현재 대직자인지 확인 (Employee 테이블의 관계 확인)
-                boolean isCurrentDelegate = line.getApprover().getDelegate() != null &&
-                        line.getApprover().getDelegate().getEmpId().equals(empId);
-
-                if (isApprover || isCurrentDelegate) {
-                    // 원결재자든 대직자든, 해당 결재 순번의 상태(I/W/A/R)를 내 상태로 취급
-                    resDocumentDto.setMyApprStat(line.getApprStat());
-                    break;
-                }
+            // 우선순위 결정: I(진행중) > W(대기중) > R(반려) > A(승인)
+            ApprStat representativeStat = null;
+            if (myStats.contains(ApprStat.I)) {
+                representativeStat = ApprStat.I;
+            } else if (myStats.contains(ApprStat.W)) {
+                representativeStat = ApprStat.W;
+            } else if (myStats.contains(ApprStat.R)) {
+                representativeStat = ApprStat.R;
+            } else if (myStats.contains(ApprStat.A)) {
+                representativeStat = ApprStat.A;
             }
+
+            resDocumentDto.setMyApprStat(representativeStat);
         }
 
         return resDocumentDto;
+    }
+
+    public static ResDocumentDto toDto(Document document, String empId, String contextStatus) {
+        ResDocumentDto dto = toDto(document, empId); // 기존 기본 매핑 로직 호출 (빌더 부분)
+
+        if (empId != null && document.getApprovalLines() != null) {
+            List<ApprStat> myStats = document.getApprovalLines().stream()
+                    .filter(line -> line.getApprover().getEmpId().equals(empId))
+                    .map(ApprovalLine::getApprStat)
+                    .toList();
+
+            ApprStat representativeStat = null;
+
+            // ✅ 상황에 따른 우선순위 결정
+            if ("PROCESSED".equals(contextStatus)) {
+                // 결재한 문서 목록에서는 승인(A)이나 반려(R)를 우선 표시
+                representativeStat = myStats.contains(ApprStat.R) ? ApprStat.R :
+                        (myStats.contains(ApprStat.A) ? ApprStat.A : null);
+            } else if ("AWAITING".equals(contextStatus)) {
+                // 결재할 문서 목록에서는 내 순서(I)나 대기(W)를 우선 표시
+                representativeStat = myStats.contains(ApprStat.I) ? ApprStat.I :
+                        (myStats.contains(ApprStat.W) ? ApprStat.W : null);
+            }
+
+            // 만약 위 조건으로 못 찾았다면 전체 우선순위(I > W > R > A) 적용
+            if (representativeStat == null) {
+                if (myStats.contains(ApprStat.I)) representativeStat = ApprStat.I;
+                else if (myStats.contains(ApprStat.W)) representativeStat = ApprStat.W;
+                else if (myStats.contains(ApprStat.R)) representativeStat = ApprStat.R;
+                else if (myStats.contains(ApprStat.A)) representativeStat = ApprStat.A;
+            }
+
+            dto.setMyApprStat(representativeStat);
+        }
+        return dto;
     }
 }

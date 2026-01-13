@@ -225,7 +225,6 @@
                 <div class="page-header">
                     <div class="header-left-buttons">
                         <button class="btn-back" onclick="history.back()">뒤로가기</button>
-                        <!-- ✅ 인쇄 버튼 추가 -->
                         <button class="btn-print" onclick="openPrintPage()">
                             <svg style="display: inline-block; vertical-align: middle; margin-right: 5px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -350,7 +349,9 @@
         }
 
         function renderRejectInfo(lines, docStat) {
-            const rejectedLine = lines.find(line => line.apprStat === 'R');
+            // ✅ [수정]: 자동 반려 처리된 원 결재자가 아닌, 실제로 반려 버튼을 누른(isActualAppr === true) 결재자를 찾습니다.
+            const rejectedLine = lines.find(line => line.apprStat === 'R' && line.isActualAppr === true);
+
             if (rejectedLine || docStat === 'RJ') {
                 document.getElementById('reject-section').style.display = 'block';
                 if (rejectedLine) {

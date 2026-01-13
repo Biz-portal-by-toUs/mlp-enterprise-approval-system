@@ -824,27 +824,19 @@
             docs.forEach((doc, index) => {
                 const no = (currentPage * pageSize) + index + 1;
 
-                // ✅ 수정: 내 결재일 찾기 로직 개선 (대직자로 결재한 경우도 포함)
+                // ✅ [수정된 로직]: 내가 참여한 모든 결재선 중 가장 최신(마지막) 날짜 찾기
                 let myApprovalDate = '-';
                 if (doc.resApprovalLineDtos && Array.isArray(doc.resApprovalLineDtos) && currentUserId) {
-                    const myApproval = doc.resApprovalLineDtos.find(line => {
-                        // 조건 1: 내가 결재자이고 승인/반려 상태이며 결재일이 있는 경우
-                        const isMyDirectApproval = line.approverId === currentUserId &&
+                    const myActions = doc.resApprovalLineDtos.filter(line => {
+                        return line.approverId === currentUserId &&
                             (line.apprStat === 'A' || line.apprStat === 'R') &&
                             line.endedAt;
-
-                        // 조건 2: 내가 대직자로서 실제 결재한 경우 (isDelegate=true, isActualAppr=true)
-                        const isMyDelegateApproval = line.approverId === currentUserId &&
-                            line.isDelegate === true &&
-                            line.isActualAppr === true &&
-                            (line.apprStat === 'A' || line.apprStat === 'R') &&
-                            line.endedAt;
-
-                        return isMyDirectApproval || isMyDelegateApproval;
                     });
 
-                    if (myApproval && myApproval.endedAt) {
-                        myApprovalDate = formatDate(myApproval.endedAt);
+                    if (myActions.length > 0) {
+                        // 최신순 정렬 (endedAt 기준 내림차순)
+                        myActions.sort((a, b) => new Date(b.endedAt) - new Date(a.endedAt));
+                        myApprovalDate = formatDate(myActions[0].endedAt);
                     }
                 }
 
@@ -907,7 +899,9 @@
                 const result = await response.json();
                 if (response.ok && result.data) {
                     const doc = result.data;
-                    const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R');
+                    // ✅ [수정]: 자동 반려된 원 결재자가 아닌, 실제 반려를 누른(isActualAppr) 사람을 찾습니다.
+                    const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R' && line.isActualAppr === true);
+
                     if (rejectedLine) {
                         document.getElementById('modal-rejecter-name').textContent = rejectedLine.approverName || '-';
                         document.getElementById('modal-rejecter-id').textContent = rejectedLine.approverId || '-';
