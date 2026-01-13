@@ -2401,7 +2401,10 @@
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
 
-        // 📌 상신(isTemp === false)일 경우 필수 입력값 검증 강화
+        const includeAiSumm = document.getElementById('include-ai-summ').checked;
+        const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
+
+        // 📌 공통 검증: 상신 시 전체 검증 / 임시저장 시 제목 검증
         if (!isTemp) {
             if (!title) {
                 Swal.fire({ icon: 'warning', title: '제목 미입력', text: '문서 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
@@ -2419,22 +2422,21 @@
                 Swal.fire({ icon: 'warning', title: '내용 미입력', text: '문서 내용을 입력해주세요.', confirmButtonColor: '#339af0' });
                 return;
             }
-            const includeAiSumm = document.getElementById('include-ai-summ').checked;
-            const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
-            if (includeAiSumm) {
-                if (isAiGenerating) {
-                    Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 상신할 수 있습니다.', confirmButtonColor: '#339af0' });
-                    return;
-                }
-                if (!aiSummText || aiSummText.startsWith('⏳')) {
-                    Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' });
-                    return;
-                }
-            }
         } else {
-            // 임시저장의 경우 최소한 제목은 있어야 함
             if (!title) {
                 Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+        }
+
+        // ✅ AI 요약 검증 (상신/임시저장 공통: 체크박스가 켜져 있다면 요약 완료 대기)
+        if (includeAiSumm) {
+            if (isAiGenerating) {
+                Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 임시저장/상신할 수 있습니다.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (!aiSummText || aiSummText.startsWith('⏳')) {
+                Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' });
                 return;
             }
         }
@@ -2466,7 +2468,7 @@
                 content: JSON.stringify(contentJson),
                 cnttHtml: tiptapEditor.getHTML(),
                 temp: isTemp,
-                aiSumm: document.getElementById('include-ai-summ').checked ? document.getElementById('ai-summary-text').innerText : "",
+                aiSumm: includeAiSumm ? aiSummText : "",
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,

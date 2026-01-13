@@ -1539,21 +1539,23 @@
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
         const normalized = currentCategoryName.replace(/\s+/g, '').toLowerCase();
 
+        const includeAi = document.getElementById('include-ai-summ').checked;
+        const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
+
         // 상신 시 벨리데이션 체크 강화
         if (!isTemp) {
             if (!title) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '제목을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
             if (selectedApprovers.length === 0) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '최소 한 명 이상의 결재자를 지정해주세요.', confirmButtonColor: '#339af0' }); return; }
             if (contentText.length === 0) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '내용을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
             if (!checkedRadio) { Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '카테고리를 선택해주세요.', confirmButtonColor: '#339af0' }); return; }
-
-            const includeAi = document.getElementById('include-ai-summ').checked;
-            const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
-            if (includeAi) {
-                if (isAiGenerating) { Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 상신할 수 있습니다.', confirmButtonColor: '#339af0' }); return; }
-                if (!aiSummText || aiSummText.startsWith('⏳')) { Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' }); return; }
-            }
         } else {
             if (!title) { Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' }); return; }
+        }
+
+        // ✅ AI 요약 벨리데이션 (상신/임시저장 공통: 체크되어 있다면 요약 완료 대기)
+        if (includeAi) {
+            if (isAiGenerating) { Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 임시저장/상신할 수 있습니다.', confirmButtonColor: '#339af0' }); return; }
+            if (!aiSummText || aiSummText.startsWith('⏳')) { Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' }); return; }
         }
 
         // ✅ 1. 로딩 시작 (중복 클릭 방지)
@@ -1574,13 +1576,20 @@
             if ((normalized === '휴가신청' || normalized === '휴가수정신청') && selectedDelegate) contentJson.attendanceInfo.delegate = { empId: selectedDelegate.empId, empName: selectedDelegate.empName, posName: selectedDelegate.posName, depName: selectedDelegate.depName };
         }
 
-        const aiSummaryText = document.getElementById('ai-summary-text').innerText;
-        const includeAi = document.getElementById('include-ai-summ').checked;
-        const hasAiSummary = aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
-        const finalAiSumm = (includeAi && hasAiSummary) ? aiSummaryText : null;
-
         try {
-            const payload = { comId: myInfo.comId, writerId: myInfo.empId, docfoNo: currentDocfoNo, docfoCatNo: parseInt(checkedRadio.value, 10), title: title, content: JSON.stringify(contentJson), cnttHtml: tiptapEditor.getHTML(), temp: isTemp, aiSumm: finalAiSumm, approvalLines: selectedApprovers.map((a, i) => ({ approverId: a.approverId, seq: i + 1, apprStat: isTemp ? "W" : (i === 0 ? "I" : "W") })) };
+            const payload = {
+                comId: myInfo.comId,
+                writerId: myInfo.empId,
+                docfoNo: currentDocfoNo,
+                docfoCatNo: parseInt(checkedRadio ? checkedRadio.value : formCategories[0]?.docfoCatNo, 10),
+                title: title,
+                content: JSON.stringify(contentJson),
+                cnttHtml: tiptapEditor.getHTML(),
+                temp: isTemp,
+                aiSumm: includeAi ? aiSummText : "",
+                approvalLines: selectedApprovers.map((a, i) => ({ approverId: a.approverId, seq: i + 1, apprStat: isTemp ? "W" : (i === 0 ? "I" : "W") }))
+            };
+
             const response = await fetch(`/api/v1/documents/${originalDocNo}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
             if (response.ok) {
