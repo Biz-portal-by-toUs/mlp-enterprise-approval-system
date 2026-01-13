@@ -519,6 +519,42 @@
             .cloud-tree .children.open {
                 opacity: 1;
             }
+
+            /* ✅ 그리드 컨테이너가 내용만큼 늘어나지 않게 "높이 고정" */
+            .cloud-page .page-with-subbar{
+                height: calc(100vh - var(--topbar-h) - var(--footer-h));
+                min-height: 0;
+            }
+
+            /* ✅ Grid item들이 overflow를 허용하도록(기본 min-height:auto 때문에 스크롤이 안 생기는 케이스 방지) */
+            .cloud-page .page-with-subbar > .subbar,
+            .cloud-page .page-with-subbar > .cloud-main{
+                min-height: 0;
+            }
+
+            /* ✅ 사이드바 내부에서만 스크롤이 생기도록 부모는 overflow 숨김 */
+            .cloud-page .subbar{
+                height: 100%;
+                min-height: 0;
+                overflow: hidden;
+            }
+
+            /* ✅ 트리 영역: 세로/가로 스크롤 */
+            .cloud-tree-panel{
+                overflow-y: auto;
+                overflow-x: auto;
+                min-height: 0;
+            }
+
+            /* ✅ 깊은 폴더(들여쓰기 누적)에서 가로 스크롤이 뜨게 */
+            .cloud-tree{
+                min-width: max-content; /* 내용이 넓어지면 가로 스크롤 */
+            }
+
+            /* (선택) 스크롤 튐 방지 느낌 */
+            .cloud-tree-panel{
+                overscroll-behavior: contain;
+            }
         </style>
     </th:block>
 </head>
@@ -613,6 +649,8 @@
 
         /** ====== fetch helper ====== */
         async function apiJson(url, opt = {}) {
+            console.log("[API] request", opt?.method || "GET", url, opt?.body || "");
+
             const res = await fetch(url, {
                 credentials: "include",
                 headers: { "Content-Type": "application/json", ...(opt.headers || {}) },
@@ -623,6 +661,8 @@
 
             let json = null;
             try { json = text ? JSON.parse(text) : null; } catch (e) {}
+
+            console.log("[API] response", res.status, url, json);
 
             if (!res.ok) {
                 // JSON이면 message 보여주고, 아니면 원문 text(=html/stack message 일부)라도 보여주기
@@ -697,6 +737,12 @@
                 apiJson(attachmentListUrl(folderNo)),
             ]);
 
+            console.log("[LIST grid] folders", folderNo, folders?.map(x => x.folderNo));
+            // 중복 체크
+            const ids = (folders || []).map(x => x.folderNo);
+            const dup = ids.filter((v, i) => ids.indexOf(v) !== i);
+            if (dup.length) console.warn("[LIST grid] DUP folderNo", dup);
+
             const hasFolders = folders && folders.length > 0;
             const hasFiles = files && files.length > 0;
 
@@ -713,6 +759,8 @@
         }
 
         function renderFolderCards(folders) {
+            console.log("[RENDER grid] count", folders?.length, folders?.map(f => f.folderNo));
+
             folders.forEach(f => {
                 const card = document.createElement("div");
                 card.className = "folder-card";
@@ -986,6 +1034,12 @@
         /** ====== 왼쪽 트리 로딩 ====== */
         async function loadChildren(parentId, containerUl) {
             const folders = await apiJson(folderListUrl(parentId));
+            console.log("[LIST tree] parentId", parentId, folders?.map(x => x.folderNo));
+
+            const ids = (folders || []).map(x => x.folderNo);
+            const dup = ids.filter((v, i) => ids.indexOf(v) !== i);
+            if (dup.length) console.warn("[LIST tree] DUP folderNo", dup);
+
             const files = parentId == null ? [] : await apiJson(attachmentListUrl(parentId));
 
             containerUl.innerHTML = "";
@@ -1235,18 +1289,31 @@
 
         /** ====== 폴더 CRUD ====== */
         async function createFolder() {
+            console.log("[CREATE] start", {
+                scope: state.scope,
+                selectedFolderNo: state.selectedFolderNo,
+                selectedFolderName: state.selectedFolderName,
+                time: new Date().toISOString()
+            });
+
             const name = prompt("폴더 이름");
             if (!name) return;
 
             const parent = state.selectedFolderNo;
+
+            console.log("[CREATE] request", { parent, folderName: name.trim() });
 
             await apiJson(folderBase(), {
                 method: "POST",
                 body: JSON.stringify({parentId: parent, folderName: name.trim()}),
             });
 
+            console.log("[CREATE] response", res);
+
             await refreshTreeChildren(parent);
             if (parent != null) await loadFolderContent(parent);
+
+            console.log("[CREATE] done", { parent });
         }
 
         async function renameFolder() {
@@ -1612,6 +1679,13 @@
         });
 
         el.ctxCreate?.addEventListener("click", () => {
+            console.log("[CTX] create click", {
+                ctxKind: state.ctxKind,
+                ctxFolderNo: state.ctxFolderNo,
+                selectedFolderNo: state.selectedFolderNo,
+                time: new Date().toISOString()
+            });
+
             closeCtxMenu();
             createFolder().catch(e => alert(e.message));
         });
