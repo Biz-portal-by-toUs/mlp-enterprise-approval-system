@@ -824,7 +824,9 @@
                 const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, { credentials: 'include' });
                 const result = await response.json();
                 if (response.ok && result.data) {
-                    const rejectedLine = result.data.resApprovalLineDtos?.find(line => line.apprStat === 'R');
+                    // ✅ [수정]: 반려 데이터 중 실제 반려를 수행한(isActualAppr === true) 사람을 찾습니다.
+                    const rejectedLine = result.data.resApprovalLineDtos?.find(line => line.apprStat === 'R' && line.isActualAppr === true);
+
                     if (rejectedLine) {
                         const elements = {
                             'modal-rejecter-name': rejectedLine.approverName,

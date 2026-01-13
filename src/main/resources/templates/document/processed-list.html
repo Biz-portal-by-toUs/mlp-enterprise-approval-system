@@ -899,7 +899,9 @@
                 const result = await response.json();
                 if (response.ok && result.data) {
                     const doc = result.data;
-                    const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R');
+                    // ✅ [수정]: 자동 반려된 원 결재자가 아닌, 실제 반려를 누른(isActualAppr) 사람을 찾습니다.
+                    const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R' && line.isActualAppr === true);
+
                     if (rejectedLine) {
                         document.getElementById('modal-rejecter-name').textContent = rejectedLine.approverName || '-';
                         document.getElementById('modal-rejecter-id').textContent = rejectedLine.approverId || '-';
