@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 문서 반환 Dto
+ * 문서 응답 Dto
  *
  * @author : 이지헌
  * @filename : ResDocumentDto

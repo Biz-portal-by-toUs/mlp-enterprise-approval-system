@@ -4,7 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Depa
 import lombok.*;
 
 /**
- * Please explain the class!!!
+ * 임시 부서 응답 Dto
  *
  * @author : 이지헌
  * @filename : TempResDepartmentDto

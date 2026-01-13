@@ -7,7 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.WebClient;
 
 /**
- * Please explain the class!!!
+ * WebClient 설정
  *
  * @author : 이지헌
  * @filename : DocumentWebClientConfig

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 임시 문서양식 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : DocumentFormRepository

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Please explain the class!!!
+ * OpenAi 설정
  *
  * @author : 이지헌
  * @filename : DocumentOpenAiConfig

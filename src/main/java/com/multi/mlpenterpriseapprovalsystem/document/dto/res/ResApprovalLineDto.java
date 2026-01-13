@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 결제라인 반환 Dto
+ * 결제라인 응답 Dto
  *
  * @author : 이지헌
  * @filename : ResApprovalLineDto

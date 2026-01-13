@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * 임시 문서양식 내 카테고리 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : DocumentFormCategoryRepository

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 /**
- * Please explain the class!!!
+ * 임시 사원 테이블 관리 레포지토리
  *
  * @author : 이지헌
  * @filename : TempEmployeeRepository

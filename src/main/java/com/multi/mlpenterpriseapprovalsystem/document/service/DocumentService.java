@@ -8,10 +8,10 @@ import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepositor
 import com.multi.mlpenterpriseapprovalsystem.document.config.DocumentOpenAiConfig;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
-import com.multi.mlpenterpriseapprovalsystem.document.dto.req.DocumentOpenAiRequest;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocOpenAiDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqApprovalLineDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
-import com.multi.mlpenterpriseapprovalsystem.document.dto.res.DocumentOpenAiResponse;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocOpenAiDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
@@ -40,7 +40,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 문서 서비스 관리
+ * 문서 관리 서비스
  *
  * @author : 이지헌
  * @filename : DocumentService
@@ -87,8 +87,6 @@ public class DocumentService {
         this.notificationService = notificationService;
         this.searchOutboxAppender= searchOutboxAppender;
     }
-
-
 
     // Http 요청의 status 파라미터에 따라 메서드 호출
     @Transactional(readOnly = true)
@@ -145,7 +143,7 @@ public class DocumentService {
     // 내 회사의 문서 중 내가 상신한 문서 조회
     // 문서상태는 검색창에서 미선택 기준(전체기준) 결재중(AW), 반려(RJ), 최종승인만(RI)조회
     // 내 결재상태는 내가 상신한 문서이기때문에 있을 수 없음. 내가 상신한 문서를 내가 결재하는건 불가능.
-    // ✅ 최근 결재일 기준 최신순(endedAt기준 LATEST인 APPR_LATEST), 오래된순(endedAt기준 OLDEST인 APPR_OLDEST)
+    // 최근 결재일 기준 최신순(endedAt기준 LATEST인 APPR_LATEST), 오래된순(endedAt기준 OLDEST인 APPR_OLDEST)
     // 상신일 기준 최신순(submittedAt기준 LATEST인 SUBMIT_LATEST), 오래된순(submittedAt기준 OLDEST인 SUBMIT_OLDEST)
     @Transactional(readOnly = true)
     public Page<ResDocumentDto> getMySubmittedDocuments(String comId, String myEmpId, ReqDocumentDto req, int page, String sort) {
@@ -456,52 +454,6 @@ public class DocumentService {
         }
     }
 
-    // 결재라인 생성 (대직자 포함)
-//    private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
-//        // seq 기준 정렬
-//        List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
-//                .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
-//                .toList();
-//
-//        Employee writer = document.getWriter(); // ✅ 문서 작성자 정보
-//
-//        for (int i = 0; i < sortedLines.size(); i++) {
-//            ReqApprovalLineDto lineDto = sortedLines.get(i);
-//            Employee approver = employeeRepository.findByEmpId(lineDto.getApproverId())
-//                    .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
-//
-//            // 첫 결재자는 결재중(I), 나머지는 대기(W)
-//            ApprStat apprStat = isTemp ? ApprStat.W : (i == 0 ? ApprStat.I : ApprStat.W);
-//
-//            // 1. 원 결재자 추가
-//            ApprovalLine approverLine = ApprovalLine.toEntity(
-//                    document, approver, company, lineDto.getSeq(), apprStat, false, null
-//            );
-//            approvalLineRepository.save(approverLine);
-//
-//            // 2. 대직자 체인 추적 및 추가
-//            Employee currentTarget = approver;
-//
-//            // 현재 대상이 휴가 중(V)이고 대직자가 있다면 추적 시작
-//            while ("V".equals(currentTarget.getAtte()) && currentTarget.getDelegate() != null) {
-//                Employee delegate = currentTarget.getDelegate();
-//
-//                // 대직자 라인 생성
-//                ApprovalLine delegateLine = ApprovalLine.toEntity(
-//                        document, delegate, company, lineDto.getSeq(), apprStat, true, currentTarget
-//                );
-//                approvalLineRepository.save(delegateLine);
-//
-//                log.info("문서 생성 시 대직자 투입: {}의 대직자 {} (seq: {})",
-//                        currentTarget.getEmpId(), delegate.getEmpId(), lineDto.getSeq());
-//
-//                // 다음 체인 확인
-//                currentTarget = delegate;
-//            }
-//        }
-//    }
-
-
     private void createApprovalLines(Document document, Company company, List<ReqApprovalLineDto> lineDtos, boolean isTemp) {
         List<ReqApprovalLineDto> sortedLines = lineDtos.stream()
                 .sorted(Comparator.comparingInt(ReqApprovalLineDto::getSeq))
@@ -596,11 +548,6 @@ public class DocumentService {
         // 4. 결재라인에서 내 결재라인 조회 (본인이 결재자이거나 대직자인 경우)
         List<ApprovalLine> allLines = approvalLineRepository.findByDocument_docNo(document.getDocNo());
 
-//        ApprovalLine myLine = allLines.stream()
-//                .filter(line -> line.getApprover().getEmpId().equals(myEmpId))
-//                .findFirst()
-//                .orElseThrow(() -> new CustomException(ErrorCode.APPROVAL_LINE_NOT_FOUND));
-
         List<ApprovalLine> myLines = allLines.stream()
                 .filter(line -> line.getApprover().getEmpId().equals(myEmpId)
                         && line.getApprStat() == ApprStat.I)
@@ -609,11 +556,6 @@ public class DocumentService {
         if (myLines.isEmpty()) {
             throw new CustomException(ErrorCode.NOT_MY_TURN_TO_APPROVE);
         }
-
-//        // 5. 내 차례인지 확인 (apprStat이 I인 경우만 결재 가능)
-//        if (myLine.getApprStat() != ApprStat.I) {
-//            throw new CustomException(ErrorCode.NOT_MY_TURN_TO_APPROVE);
-//        }
 
         // 6. 승인/반려 처리
         // 내 라인들 중 첫 번째의 seq를 기준으로 잡음 (모두 같은 seq임)
@@ -703,7 +645,7 @@ public class DocumentService {
                     .filter(line -> line.getSeq() == nextSeq && line.getApprStat() == ApprStat.W)
                     .forEach(ApprovalLine::setInProgress);
 
-            // ✅ 다음 순번 결재자들에게 알림 발송
+            // 다음 순번 결재자들에게 알림 발송
             Document doc = allLines.get(0).getDocument();
             notifyApprovers(doc, nextSeq);
         }
@@ -760,41 +702,6 @@ public class DocumentService {
         String newSerial = Integer.toString(value, 36).toUpperCase();
         return String.format("%4s", newSerial).replace(' ', '0');
     }
-
-
-    /**
-     * 반려된 문서 재작성 (새 문서 생성)
-     * - 기존 반려 문서는 그대로 유지
-     * - 새 문서를 생성하여 상신 또는 임시저장
-     */
-//    public Long resubmitRejectedDocument(String comId, String myEmpId, Long originalDocNo, ReqDocumentDto reqDto) {
-//
-//        // 1. 원본 문서 조회
-//        Document originalDoc = documentRepository.findById(originalDocNo)
-//                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
-//
-//        // 2. 본인 문서인지 확인
-//        if (!originalDoc.getWriter().getEmpId().equals(myEmpId)) {
-//            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
-//        }
-//
-//        // 3. 회사 일치 확인
-//        if (!originalDoc.getCompany().getComId().equals(comId)) {
-//            throw new CustomException(ErrorCode.DOCUMENT_ACCESS_DENIED);
-//        }
-//
-//        // 4. 반려 상태인지 확인
-//        if (originalDoc.getDocStat() != DocStat.RJ) {
-//            throw new CustomException(ErrorCode.DOCUMENT_NOT_REJECTED);
-//        }
-//
-//        // 5. 새 문서 생성 (기존 createDocument 로직 재사용)
-//        Long newDocNo = createDocument(comId, myEmpId, reqDto);
-//
-//        log.info("반려 문서 재작성 완료: originalDocNo={}, newDoc created", originalDocNo);
-//
-//        return newDocNo;
-//    }
 
     /**
      * 반려된 문서 재작성 (새 문서 생성)
@@ -933,10 +840,10 @@ public class DocumentService {
         log.info("AI 요약 생성 시작 - contentLength: {}", content.length());
 
         try {
-            DocumentOpenAiRequest request = DocumentOpenAiRequest.builder()
+            ReqDocOpenAiDto request = ReqDocOpenAiDto.builder()
                     .model(documentOpenAiConfig.getModel())
                     .messages(List.of(
-                            DocumentOpenAiRequest.Message.builder()
+                            ReqDocOpenAiDto.Message.builder()
                                     .role("system")
                                     .content("당신은 기업 결재 문서를 요약하는 전문 AI입니다.\n" +
                                             "\n" +
@@ -959,7 +866,7 @@ public class DocumentService {
                                             "- \"어제한거 데이터 이쁘게 넣기 임시저장에서...\" (맥락 없음)\n" +
                                             "- \"표에 항목1, 항목2가 있고...\" (구조 설명)")
                                     .build(),
-                            DocumentOpenAiRequest.Message.builder()
+                            ReqDocOpenAiDto.Message.builder()
                                     .role("user")
                                     .content("다음 문서를 요약해주세요:\n\n" + content)
                                     .build()
@@ -968,10 +875,10 @@ public class DocumentService {
                     .temperature(0.3)  // 낮은 temperature = 더 일관된 요약
                     .build();
 
-            DocumentOpenAiResponse response = documentOpenAiWebClient.post()
+            ResDocOpenAiDto response = documentOpenAiWebClient.post()
                     .bodyValue(request)
                     .retrieve()
-                    .bodyToMono(DocumentOpenAiResponse.class)
+                    .bodyToMono(ResDocOpenAiDto.class)
                     .block();
 
             if (response == null || response.getChoices().isEmpty()) {

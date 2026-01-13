@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Please explain the class!!!
+ * OpenAi에 문서내용 요약 요청 Dto
  *
  * @author : 이지헌
  * @filename : DocumentOpenAiRequest
@@ -19,7 +19,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentOpenAiRequest {
+public class ReqDocOpenAiDto {
 
     private String model;
 

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
- * 문서 처리 컨트롤러
+ * 문서 컨트롤러
  *
  * @author : 이지헌
  * @filename : DocumentController
