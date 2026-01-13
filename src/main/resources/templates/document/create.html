@@ -833,7 +833,7 @@
         </div>
 
         <div id="ai-summary-box" style="display:none; margin-top:15px; padding:15px; background:#f1f3f5; border-left:4px solid var(--primary-color); font-size:13px;">
-            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
+            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text" contenteditable="true" style="outline:none; cursor:text; display:inline-block; min-width:10px;"></span>
         </div>
 
         <div class="bottom-actions">
@@ -863,6 +863,7 @@
     let formCategories = [];
     let currentCategoryName = '';
     let myDelegatePeriods = []; // 내가 대직자인 기간 정보
+    let isAiGenerating = false;
 
     document.addEventListener('DOMContentLoaded', async () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -2374,7 +2375,8 @@
         const summaryBox = document.getElementById('ai-summary-box');
         const summaryText = document.getElementById('ai-summary-text');
         summaryBox.style.display = 'block';
-        summaryText.innerText = '⏳ 생성 중...';
+        summaryText.innerText = '⏳ AI가 내용을 분석하여 요약 중입니다...';
+        isAiGenerating = true;
         try {
             const response = await fetch('/api/v1/documents/ai-summary', {
                 method: 'POST',
@@ -2386,6 +2388,8 @@
             if (result.data) summaryText.innerText = result.data;
         } catch (error) {
             summaryBox.style.display = 'none';
+        } finally {
+            isAiGenerating = false;
         }
     }
 
@@ -2414,6 +2418,18 @@
             if (contentText.length === 0) {
                 Swal.fire({ icon: 'warning', title: '내용 미입력', text: '문서 내용을 입력해주세요.', confirmButtonColor: '#339af0' });
                 return;
+            }
+            const includeAiSumm = document.getElementById('include-ai-summ').checked;
+            const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
+            if (includeAiSumm) {
+                if (isAiGenerating) {
+                    Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 상신할 수 있습니다.', confirmButtonColor: '#339af0' });
+                    return;
+                }
+                if (!aiSummText || aiSummText.startsWith('⏳')) {
+                    Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' });
+                    return;
+                }
             }
         } else {
             // 임시저장의 경우 최소한 제목은 있어야 함
@@ -2450,7 +2466,7 @@
                 content: JSON.stringify(contentJson),
                 cnttHtml: tiptapEditor.getHTML(),
                 temp: isTemp,
-                aiSumm: document.getElementById('ai-summary-text').innerText,
+                aiSumm: document.getElementById('include-ai-summ').checked ? document.getElementById('ai-summary-text').innerText : "",
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,

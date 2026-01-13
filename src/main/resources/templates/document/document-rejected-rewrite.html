@@ -828,7 +828,7 @@
         </div>
 
         <div id="ai-summary-box" style="display:none; margin-top:15px; padding:15px; background:#f1f3f5; border-left:4px solid var(--primary-color); font-size:13px;">
-            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
+            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text" contenteditable="true" style="outline:none; cursor:text; display:inline-block; min-width:10px;"></span>
         </div>
 
         <div class="bottom-actions">
@@ -858,6 +858,7 @@
     let filesToDelete = [];
     let formCategories = [];
     let currentCategoryName = '';
+    let isAiGenerating = false;
 
     document.addEventListener('DOMContentLoaded', async () => {
         const pathParts = window.location.pathname.split('/');
@@ -1928,6 +1929,7 @@
         const summaryText = document.getElementById('ai-summary-text');
         summaryBox.style.display = 'block';
         summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
+        isAiGenerating = true;
 
         try {
             const response = await fetch('/api/v1/documents/ai-summary', {
@@ -1953,6 +1955,8 @@
                 text: 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
                 confirmButtonColor: '#339af0'
             });
+        } finally {
+            isAiGenerating = false;
         }
     }
 
@@ -1980,6 +1984,19 @@
             if (!contentText) {
                 Swal.fire({ icon: 'warning', title: '벨리데이션 오류', text: '내용을 입력해주세요.', confirmButtonColor: '#339af0' });
                 return;
+            }
+
+            const includeAiSummary = document.getElementById('include-ai-summ').checked;
+            const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
+            if (includeAiSummary) {
+                if (isAiGenerating) {
+                    Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 재상신할 수 있습니다.', confirmButtonColor: '#339af0' });
+                    return;
+                }
+                if (!aiSummText || aiSummText.startsWith('⏳')) {
+                    Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' });
+                    return;
+                }
             }
         } else {
             if (!title) {
@@ -2083,12 +2100,7 @@
             });
         }
 
-        let finalAiSummary = null;
-        if (isTemp) {
-            finalAiSummary = hasAiSummary ? aiSummaryText : null;
-        } else {
-            finalAiSummary = (includeAiSummary && hasAiSummary) ? aiSummaryText : null;
-        }
+        const finalAiSummary = (includeAiSummary && hasAiSummary) ? aiSummaryText : null;
 
         try {
             const payload = {
