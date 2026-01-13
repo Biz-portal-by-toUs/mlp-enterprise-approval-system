@@ -53,7 +53,7 @@ public class Attachment extends BaseEntity {
     private Long entityId;
 
     // 화면 표시 순서(1~5)
-    @Column(name = "display_order", nullable = false)
+    @Column(name = "display_order", nullable = true)
     private Integer displayOrder; // TINYINT UNSIGNED 대응 (Integer로 충분)
 
     // 파일 메타
