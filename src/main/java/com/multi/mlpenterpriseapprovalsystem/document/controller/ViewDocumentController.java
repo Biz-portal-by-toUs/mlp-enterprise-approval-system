@@ -1,9 +1,12 @@
 package com.multi.mlpenterpriseapprovalsystem.document.controller;
 
+import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.document.service.DocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Slf4j
 @RequiredArgsConstructor
 public class ViewDocumentController {
+
+    private final DocumentService documentService;
 
     // 최종승인된 문서 조회 화면
     @GetMapping("/documents")
@@ -78,28 +83,65 @@ public class ViewDocumentController {
     }
 
     // 문서 상세 조회 화면
+//    @GetMapping("/documents/{docNo}")
+//    public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status,
+//                                            @RequestParam(name = "atteNo", required = false) Long atteNo)
+//    {
+//        if("UNSUBMITTED".equals(status)) { // 임시저장 문서 상세
+//            return "document/document-temp-rewrite";
+//        }
+//        else if("SUBMITTED".equals(status)){ // 상신한 문서 상세
+//            return "document/submitted-detail";
+//        }
+//        else if("AWAITING".equals(status)){ // 결재할 문서 상세
+//            return "document/awaiting-detail";
+//        }
+//        else if("PROCESSED".equals(status)){ // 결재한 문서 상세
+//            return "document/processed-detail";
+//        }
+//        else if("FINALIZED".equals(status)){ // 최종승인 문서 상세
+//            return "document/finalized-detail";
+//        }
+//        else{
+//            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+//        }
+//    }
+
     @GetMapping("/documents/{docNo}")
-    public String viewDocumentDetailByDocNo(@RequestParam(name = "status", defaultValue = "FINALIZED") String status,
-                                            @RequestParam(name = "atteNo", required = false) Long atteNo)
-    {
-        if("UNSUBMITTED".equals(status)) { // 임시저장 문서 상세
-            return "document/document-temp-rewrite";
+    public String viewDocumentDetailByDocNo(
+            @PathVariable(name = "docNo") Long docNo,
+            @RequestParam(name = "status", defaultValue = "FINALIZED") String status,
+            @RequestParam(name = "atteNo", required = false) Long atteNo,
+            @AuthenticationPrincipal CustomUser customUser) {
+
+        // 1. 서비스의 단일 쿼리 로직을 통해 "현재 이 사용자에게 가장 적합한 상태"를 가져옴
+        String actualStatus = documentService.determineActualStatus(
+                customUser.getComId(),
+                customUser.getUsername(),
+                docNo,
+                status
+        );
+
+        // 2. 요청한 상태와 실제 판별된 상태가 다르면 리다이렉트 (주소창 변경)
+        if (!status.equals(actualStatus)) {
+            log.info("Status mismatch [docNo: {}]: requested={}, actual={}. Redirecting...", docNo, status, actualStatus);
+
+            String redirectUrl = "redirect:/documents/" + docNo + "?status=" + actualStatus;
+            if (atteNo != null) {
+                redirectUrl += "&atteNo=" + atteNo;
+            }
+            return redirectUrl;
         }
-        else if("SUBMITTED".equals(status)){ // 상신한 문서 상세
-            return "document/submitted-detail";
-        }
-        else if("AWAITING".equals(status)){ // 결재할 문서 상세
-            return "document/awaiting-detail";
-        }
-        else if("PROCESSED".equals(status)){ // 결재한 문서 상세
-            return "document/processed-detail";
-        }
-        else if("FINALIZED".equals(status)){ // 최종승인 문서 상세
-            return "document/finalized-detail";
-        }
-        else{
-            throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
-        }
+
+        // 3. 상태에 맞는 템플릿 반환 (actualStatus와 status가 일치하는 경우)
+        return switch (status) {
+            case "UNSUBMITTED" -> "document/document-temp-rewrite"; // 임시저장 수정
+            case "SUBMITTED"   -> "document/submitted-detail";      // 상신 문서 상세 (반려 시 재작성 가능)
+            case "AWAITING"    -> "document/awaiting-detail";       // 결재 대기 상세
+            case "PROCESSED"   -> "document/processed-detail";      // 내가 결재한 문서 상세
+            case "FINALIZED"   -> "document/finalized-detail";      // 최종 승인 상세
+            default -> throw new CustomException(ErrorCode.INVALID_DOCUMENT_STATUS_REQUEST);
+        };
     }
 
     // 문서 인쇄 전용 페이지

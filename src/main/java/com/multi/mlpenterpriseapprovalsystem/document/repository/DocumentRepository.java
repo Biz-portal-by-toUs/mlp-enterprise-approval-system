@@ -298,4 +298,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 //======================================================================================================================
 
 
+    @EntityGraph(attributePaths = {"writer", "approvalLines", "approvalLines.approver"})
+    @Query("SELECT d FROM Document d WHERE d.docNo = :docNo AND d.company.comId = :comId")
+    Optional<Document> findByIdWithApprovalLines(@Param("comId") String comId, @Param("docNo") Long docNo);
+
 }
