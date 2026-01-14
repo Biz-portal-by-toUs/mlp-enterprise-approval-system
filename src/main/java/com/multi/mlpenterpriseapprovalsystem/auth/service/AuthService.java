@@ -8,7 +8,6 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
-import com.multi.mlpenterpriseapprovalsystem.common.storage.service.StorageService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanySignupDto;
@@ -65,7 +64,6 @@ public class AuthService {
     private final TokenService tokenService;
     private final EmployeeUserDetailService employeeUserDetailService;
     private final CompanyRepository companyRepository;
-    private final StorageService storageService;
     private final SubscriptionRepository subscriptionRepository;
     private final BusinessVerificationService businessVerificationService;
     private final EmployeeRepository employeeRepository;
