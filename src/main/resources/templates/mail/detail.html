@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>메일 상세</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
@@ -348,6 +350,63 @@
                     }
                 }
 
+                // ===== SweetAlert2 helpers (detail) =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined });
+                }
+
+                async function swalSuccess(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'success', title, text: text || undefined });
+                }
+
+                async function swalConfirm({ title, text, confirmText = '확인', icon = 'warning' } = {}) {
+                    const swal = getSwal();
+                    if (!swal) return { isConfirmed: confirm(`${title}\n${text || ''}`.trim()) };
+
+                    return swal.fire({
+                        icon,
+                        title,
+                        text: text || undefined,
+                        showCancelButton: true,
+                        confirmButtonText: confirmText,
+                        cancelButtonText: '취소',
+                        reverseButtons: true,
+                        focusCancel: true,
+                        heightAuto: false,
+                    });
+                }
+
+                function swalLoading(title = '처리 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+                function swalClose() {
+                    if (hasSwal()) window.Swal.close();
+                }
+
                 function setSidebarActive(key) {
                     const nav = document.getElementById('mailNav');
                     if (!nav) return;
@@ -638,7 +697,7 @@
                                     location.href = '/mail/write';
                                 } catch (e) {
                                     console.error(e);
-                                    alert('답신 payload 조회 중 오류가 발생했습니다.');
+                                    await swalError('답신 실패', '답신 정보를 불러오지 못했습니다.');
                                 }
                             };
                         }
@@ -738,21 +797,71 @@
                     document.getElementById('btnBack').onclick = () => location.href = backUrl;
 
                     document.getElementById('btnTrash').onclick = async () => {
-                        if (!confirm('이 메일을 휴지통으로 이동할까요?')) return;
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`);
-                        location.href = '/mail/trash';
+                        const ok = await swalConfirm({
+                            title: '휴지통으로 이동할까요?',
+                            text: '휴지통에서 복원할 수 있습니다.',
+                            confirmText: '이동',
+                            icon: 'warning',
+                        });
+                        if (!ok.isConfirmed) return;
+
+                        try {
+                            swalLoading('휴지통으로 이동 중...');
+                            await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/trash`);
+                            swalClose();
+                            await swalSuccess('이동 완료', '메일이 휴지통으로 이동되었습니다.');
+                            location.href = '/mail/trash';
+                        } catch (e) {
+                            console.error(e);
+                            swalClose();
+                            await swalError('이동 실패', e.message || '휴지통 이동에 실패했습니다.');
+                        }
                     };
 
                     document.getElementById('btnRestore').onclick = async () => {
-                        await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`, { timeoutMs: 8000 });
-                        const restoreTarget = (['received','sent','self','drafts'].includes(boxParam) ? boxParam : sidebarKey);
-                        location.href = backUrlMap[restoreTarget] || '/mail/received';
+                        const ok = await swalConfirm({
+                            title: '메일을 복원할까요?',
+                            text: '복원 후 원래 보관함으로 돌아갑니다.',
+                            confirmText: '복원',
+                            icon: 'question',
+                        });
+                        if (!ok.isConfirmed) return;
+
+                        try {
+                            swalLoading('복원 중...');
+                            await api('PATCH', `/api/v1/mails/${encodeURIComponent(mailNo)}/restore`, { timeoutMs: 8000 });
+                            swalClose();
+
+                            await swalSuccess('복원 완료', '메일이 복원되었습니다.');
+                            const restoreTarget = (['received','sent','self','drafts'].includes(boxParam) ? boxParam : sidebarKey);
+                            location.href = backUrlMap[restoreTarget] || '/mail/received';
+                        } catch (e) {
+                            console.error(e);
+                            swalClose();
+                            await swalError('복원 실패', e.message || '복원에 실패했습니다.');
+                        }
                     };
 
                     document.getElementById('btnPurge').onclick = async () => {
-                        if (!confirm('완전 삭제하면 복구할 수 없습니다. 진행할까요?')) return;
-                        await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`);
-                        location.href = '/mail/trash';
+                        const ok = await swalConfirm({
+                            title: '완전 삭제할까요?',
+                            text: '완전 삭제하면 복구할 수 없습니다.',
+                            confirmText: '삭제',
+                            icon: 'warning',
+                        });
+                        if (!ok.isConfirmed) return;
+
+                        try {
+                            swalLoading('삭제 중...');
+                            await api('DELETE', `/api/v1/mails/${encodeURIComponent(mailNo)}/purge`);
+                            swalClose();
+                            await swalSuccess('삭제 완료', '메일이 완전히 삭제되었습니다.');
+                            location.href = '/mail/trash';
+                        } catch (e) {
+                            console.error(e);
+                            swalClose();
+                            await swalError('삭제 실패', e.message || '완전삭제에 실패했습니다.');
+                        }
                     };
                 }
 
