@@ -181,6 +181,8 @@ pipeline {
                     string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
+                      kubectl -n ${K8S_NAMESPACE} get pods -o wide
+                      kubectl -n ${K8S_NAMESPACE} get svc
                       set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
