@@ -49,6 +49,7 @@ public enum ErrorCode {
     APPROVAL_LINE_NOT_FOUND(HttpStatus.NOT_FOUND, "APPROVAL_LINE_NOT_FOUND", "해당 문서의 결재라인에 포함되어 있지 않습니다"),
     NOT_MY_TURN_TO_APPROVE(HttpStatus.BAD_REQUEST, "NOT_MY_TURN_TO_APPROVE", "아직 결재 차례가 아닙니다"),
     REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED", "반려 사유를 입력해주세요"),
+    CYCLIC_DELEGATE_REFERENCE(HttpStatus.CONFLICT, "CYCLIC_DELEGATE_REFERENCE", "대직자 설정 오류. 대직자를 재설정 해주세요"),
 
     // 근태 관련
     ATTENDANCE_CANCEL_FAIL(HttpStatus.BAD_REQUEST, "ATTENDANCE_CANCEL_FAIL", "근태 취소를 실패했습니다"),

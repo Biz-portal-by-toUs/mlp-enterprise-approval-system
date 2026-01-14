@@ -143,7 +143,7 @@ public class AttendanceService {
 //            }
 
             // 내가 휴가인 기간에 대직자도 휴가 일정이 있는지 체크
-            if (attendanceRepository.existsByEmployeeAndDateOverlapAndIsDeletedFalse(delegate, info.getStartAt(), info.getEndAt())) {
+            if (attendanceRepository.existsByEmployeeAndDateOverlapAndTypeIsVAndIsDeletedFalse(delegate, info.getStartAt(), info.getEndAt(), AtteType.V)) {
                 throw new CustomException(ErrorCode.DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD);
             }
 
@@ -250,7 +250,7 @@ public class AttendanceService {
 //            if ("V".equals(newDelegate.getAtte())) {
 //                throw new CustomException(ErrorCode.DELEGATE_IS_ON_VACATION);
 //            }
-            if (newDelegate != null && attendanceRepository.existsByEmployeeAndDateOverlapAndIsDeletedFalse(newDelegate, info.getStartAt(), info.getEndAt())) {
+            if (newDelegate != null && attendanceRepository.existsByEmployeeAndDateOverlapAndTypeIsVAndIsDeletedFalse(newDelegate, info.getStartAt(), info.getEndAt(), AtteType.V)) {
                 throw new CustomException(ErrorCode.DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD);
             }
 
@@ -590,12 +590,12 @@ public class AttendanceService {
 
 
     // 상호 대직 및 데드락 방지 통합 검증
-    private void validateAttendanceIntegrity(Employee writer, LocalDateTime start, LocalDateTime end) {
-        // 내가 누군가의 대직자로 활동해야 하는 기간과 겹치는지 체크 (역방향 체크)
-        if (attendanceRepository.existsByDelegateAndDateOverlap(writer, start, end)) {
-            throw new CustomException(ErrorCode.CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE);
-        }
-    }
+//    private void validateAttendanceIntegrity(Employee writer, LocalDateTime start, LocalDateTime end) {
+//        // 내가 누군가의 대직자로 활동해야 하는 기간과 겹치는지 체크 (역방향 체크)
+//        if (attendanceRepository.existsByDelegateAndDateOverlap(writer, start, end)) {
+//            throw new CustomException(ErrorCode.CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE);
+//        }
+//    }
 
     // 나를 대직자로 설정한 사람들의 근태 목록 조회
     @Transactional(readOnly = true)
