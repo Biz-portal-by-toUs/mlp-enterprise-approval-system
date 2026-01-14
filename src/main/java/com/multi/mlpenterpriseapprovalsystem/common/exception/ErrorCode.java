@@ -49,6 +49,7 @@ public enum ErrorCode {
     APPROVAL_LINE_NOT_FOUND(HttpStatus.NOT_FOUND, "APPROVAL_LINE_NOT_FOUND", "해당 문서의 결재라인에 포함되어 있지 않습니다"),
     NOT_MY_TURN_TO_APPROVE(HttpStatus.BAD_REQUEST, "NOT_MY_TURN_TO_APPROVE", "아직 결재 차례가 아닙니다"),
     REJECT_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "REJECT_REASON_REQUIRED", "반려 사유를 입력해주세요"),
+    CYCLIC_DELEGATE_REFERENCE(HttpStatus.CONFLICT, "CYCLIC_DELEGATE_REFERENCE", "대직자 설정 오류. 대직자를 재설정 해주세요"),
 
     // 근태 관련
     ATTENDANCE_CANCEL_FAIL(HttpStatus.BAD_REQUEST, "ATTENDANCE_CANCEL_FAIL", "근태 취소를 실패했습니다"),
@@ -64,7 +65,7 @@ public enum ErrorCode {
     INVALID_END_DATE_FOR_PAST_START(HttpStatus.BAD_REQUEST, "INVALID_END_DATE_FOR_PAST_START", "종료일은 어제 이후여야 합니다."),
     START_DATE_MUST_BE_TODAY_OR_LATER(HttpStatus.BAD_REQUEST, "START_DATE_MUST_BE_TODAY_OR_LATER", "시작일은 오늘 이후여야 합니다."),
     END_DATE_BEFORE_START_DATE(HttpStatus.BAD_REQUEST, "END_DATE_BEFORE_START_DATE", "종료일이 시작일보다 빠를 수 없습니다."),
-    DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD(HttpStatus.CONFLICT, "DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD", "대직자가 해당 기간에 이미 근태 일정이 있습니다"),
+    DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD(HttpStatus.CONFLICT, "DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD", "대직자가 해당 기간에 이미 휴가 일정이 있습니다"),
     BAD_ATTENDANCE_REQUEST(HttpStatus.BAD_REQUEST, "BAD_ATTENDANCE_REQUEST", "잘못된 근태 파라미터 요청입니다"),
     CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE(HttpStatus.CONFLICT, "CANNOT_LEAVE_WHILE_ACTING_AS_DELEGATE", "나를 대직자로 선택한 기간엔 휴가를 갈 수 없습니다"),
 

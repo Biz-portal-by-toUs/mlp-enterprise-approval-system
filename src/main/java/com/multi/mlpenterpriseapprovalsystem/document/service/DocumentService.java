@@ -481,7 +481,9 @@ public class DocumentService {
                 // 순환 참조 확인
                 if (visitedEmpIds.contains(delegateId)) {
                     log.error("대직자 순환 참조 감지: {} <-> {}", currentTarget.getEmpId(), delegateId);
-                    break; // 또는 비즈니스 로직에 따라 CustomException 발생
+                    //break;
+                    // 상신 시 순환참조가 발생하면 상신불가능
+                    throw new CustomException(ErrorCode.CYCLIC_DELEGATE_REFERENCE);
                 }
 
                 ApprovalLine delegateLine = ApprovalLine.toEntity(document, delegate, company, lineDto.getSeq(), apprStat, true, currentTarget);
@@ -529,7 +531,7 @@ public class DocumentService {
     public void processApproval(String comId, String myEmpId, Long docNo, ReqApprovalLineDto reqDto) {
 
         // 1. 문서 조회
-        Document document = documentRepository.findById(docNo)
+        Document document = documentRepository.findByIdWithLock(docNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
 
         Employee currentApprover = employeeRepository.findByEmpId(myEmpId)
