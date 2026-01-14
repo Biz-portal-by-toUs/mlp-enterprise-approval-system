@@ -1,21 +1,66 @@
+// Jenkinsfile
+
+def slackNotify(String status, String extraMsg = "") {
+    // ✅ Jenkins Credentials에 "SLACK_WEBHOOK_URL" (Secret text) 로 등록해두면 됨
+    withCredentials([string(credentialsId: 'SLACK_TOKEN', variable: 'SLACK_TOKEN')]) {
+        sh """
+          set +x
+          payload=\$(cat <<'JSON'
+{
+  "text": "[Bizportal CI/CD] ${status}\\n- Job: ${JOB_NAME} #${BUILD_NUMBER}\\n- Bizportal Image: ${ECR_REPO_URI}:${IMAGE_TAG}\\n- FastAPI Image: ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}\\n- Build: ${BUILD_URL}\\n${extraMsg}"
+}
+JSON
+)
+          curl -sS -X POST -H 'Content-type: application/json' --data "\$payload" "\$SLACK_WEBHOOK_URL" >/dev/null
+        """
+    }
+}
+
 pipeline {
     agent any
 
     options { disableConcurrentBuilds() }
 
     environment {
-        AWS_REGION       = "us-west-1"
-        AWS_DEFAULT_REGION = "us-west-1"
+        AWS_REGION          = "us-west-1"
+        AWS_DEFAULT_REGION  = "us-west-1"
 
-        ECR_REPO_URI     = "118320467932.dkr.ecr.us-west-1.amazonaws.com/terraform-ecr"
-        IMAGE_TAG        = "${BUILD_NUMBER}"
+        // ===== Bizportal(Spring) =====
+        ECR_REPO_URI        = "118320467932.dkr.ecr.us-west-1.amazonaws.com/terraform-ecr"
+        IMAGE_TAG           = "${BUILD_NUMBER}"
 
-        EKS_CLUSTER_NAME = "terraform-eks-cluster"
-        K8S_NAMESPACE    = "bizportal"
+        // ===== FastAPI(별도 레포) =====
+        FASTAPI_REPO_URL    = "https://github.com/Biz-portal-by-toUs/mlp-enterprise-approval-system-ai.git"   // ✅ 여길 너 레포로
+        FASTAPI_BRANCH      = "main"                                                                    // ✅ 브랜치 확인
+        FASTAPI_DIR         = "fastapi-repo"                                                             // workspace 안에 체크아웃될 폴더명
+
+        // FastAPI는 ECR repo를 분리한다고 가정 (원하면 terraform-ecr 같이 써도 됨)
+        FASTAPI_ECR_REPO_NAME = "terraform-ecr-fastapi"
+        FASTAPI_ECR_REPO_URI  = "118320467932.dkr.ecr.us-west-1.amazonaws.com/terraform-ecr-fastapi"
+
+        // FastAPI k8s 매니페스트 위치(기본: Bizportal 레포의 k8s/fastapi.yaml)
+        FASTAPI_K8S_MANIFEST  = "k8s/fastapi.yaml"  // ✅ 너가 만든 fastapi.yaml 경로로 맞추기
+        FASTAPI_DEPLOY_NAME   = "bizportal-fastapi" // ✅ fastapi.yaml의 Deployment name과 동일하게
+
+        // ===== Cluster =====
+        EKS_CLUSTER_NAME    = "terraform-eks-cluster"
+        K8S_NAMESPACE       = "bizportal"
     }
 
     stages {
-        stage('Build') {
+
+        stage('Checkout FastAPI Repo (2nd repo)') {
+            steps {
+                dir("${FASTAPI_DIR}") {
+                    deleteDir()
+                    // 공개레포면 credentials 없이도 OK
+                    git branch: "${FASTAPI_BRANCH}", url: "${FASTAPI_REPO_URL}"
+                    sh 'ls -la'
+                }
+            }
+        }
+
+        stage('Build (Bizportal)') {
             steps {
                 sh '''
                   chmod +x gradlew
@@ -24,13 +69,14 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push (ECR)') {
+        stage('Docker Build & Push (Bizportal -> ECR)') {
             steps {
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
+                      set -e
                       aws sts get-caller-identity
 
                       aws ecr get-login-password --region ${AWS_REGION} \
@@ -43,6 +89,34 @@ pipeline {
             }
         }
 
+        stage('Docker Build & Push (FastAPI -> ECR)') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir("${FASTAPI_DIR}") {
+                        sh '''
+                          set -e
+                          aws sts get-caller-identity
+
+                          aws ecr get-login-password --region ${AWS_REGION} \
+                            | docker login --username AWS --password-stdin ${FASTAPI_ECR_REPO_URI}
+
+                          # ✅ ECR repo 없으면 생성 (있으면 무시)
+                          aws ecr describe-repositories --region ${AWS_REGION} \
+                            --repository-names ${FASTAPI_ECR_REPO_NAME} >/dev/null 2>&1 \
+                            || aws ecr create-repository --region ${AWS_REGION} --repository-name ${FASTAPI_ECR_REPO_NAME} >/dev/null
+
+                          # ✅ FastAPI Dockerfile이 repo 루트에 있다고 가정
+                          docker build -t ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} .
+                          docker push ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Deploy Infra (Redis / MongoDB / Elasticsearch / Weaviate)') {
             steps {
                 withCredentials([
@@ -50,6 +124,7 @@ pipeline {
                     string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
+                      set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
                       kubectl apply -f k8s/00-namespace.yaml
@@ -81,12 +156,11 @@ pipeline {
                     string(credentialsId: 'JWT_ISSUER', variable: 'JWT_ISSUER')
                 ]) {
                     sh '''
+                      set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
-                      # ConfigMap(민감정보 없음)
                       kubectl apply -f k8s/app-configmap.yaml
 
-                      # ✅ Secret 업서트(민감정보)
                       kubectl -n ${K8S_NAMESPACE} create secret generic bizportal-secrets \
                         --from-literal=DB_PROD_URL="${DB_PROD_URL}" \
                         --from-literal=DB_PROD_USER="${DB_PROD_USER}" \
@@ -99,17 +173,39 @@ pipeline {
             }
         }
 
-        stage('Deploy App') {
+        stage('Deploy FastAPI (K8S)') {
             steps {
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
+                      set -e
+                      aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+
+                      # ✅ fastapi.yaml 안에 이미지가 ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} 형태로 들어있다고 가정
+                      envsubst < ${FASTAPI_K8S_MANIFEST} | kubectl apply -f -
+
+                      kubectl -n ${K8S_NAMESPACE} rollout status deploy/${FASTAPI_DEPLOY_NAME}
+                      kubectl -n ${K8S_NAMESPACE} get pods -l app=${FASTAPI_DEPLOY_NAME} -o wide || true
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Bizportal App (K8S)') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                      set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
                       envsubst < k8s/app-deploy.yaml | kubectl apply -f -
 
+                      kubectl -n ${K8S_NAMESPACE} rollout status deploy/bizportal-api
                       kubectl -n ${K8S_NAMESPACE} get pods -o wide
                     '''
                 }
@@ -123,6 +219,7 @@ pipeline {
                     string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
+                      set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
                       kubectl apply -f k8s/ingress.yaml
@@ -134,7 +231,16 @@ pipeline {
     }
 
     post {
-        success { echo "✅ Bizportal deploy success!" }
-        failure { echo "❌ Bizportal deploy failed" }
+        success {
+            script { slackNotify("✅ SUCCESS") }
+            echo "✅ Bizportal + FastAPI deploy success!"
+        }
+        failure {
+            script { slackNotify("❌ FAILURE", "- Check logs for the failing stage.") }
+            echo "❌ Bizportal + FastAPI deploy failed"
+        }
+        aborted {
+            script { slackNotify("⚠️ ABORTED") }
+        }
     }
 }
