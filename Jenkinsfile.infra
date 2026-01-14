@@ -1,0 +1,31 @@
+pipeline {
+  agent any
+  environment {
+    AWS_REGION        = 'us-west-1'
+    EKS_CLUSTER_NAME  = 'terraform-eks-cluster'
+    K8S_NAMESPACE     = 'bizportal'
+  }
+  stages {
+    stage('Apply Infra (ES/Weaviate)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            set -e
+            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+
+            kubectl apply -f k8s/namespace.yml
+            kubectl apply -f k8s/elasticsearch.yml
+            kubectl apply -f k8s/weaviate.yml
+
+            kubectl -n ${K8S_NAMESPACE} get pods
+            kubectl -n ${K8S_NAMESPACE} get svc
+            kubectl -n ${K8S_NAMESPACE} get pvc || true
+          '''
+        }
+      }
+    }
+  }
+}
