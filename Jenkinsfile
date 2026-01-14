@@ -182,6 +182,7 @@ pipeline {
                 ]) {
                     sh '''
                       kubectl -n ${K8S_NAMESPACE} get pods -o wide
+                      kubectl -n ${K8S_NAMESPACE} get svc
                       set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
