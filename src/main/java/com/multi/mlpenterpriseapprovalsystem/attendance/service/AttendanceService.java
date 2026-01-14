@@ -137,11 +137,6 @@ public class AttendanceService {
 
         // 휴가이면서 대직자가 있는 경우
         if(delegate != null && document.getDocumentForm().getDocfoName().equals("휴가 신청서")) {
-            // 휴가중인 사람은 대직자로 선택 불가능 todo: 주석풀어야하는지 체크
-//            if(delegate.getAtte().equals("V")){
-//                throw new CustomException(ErrorCode.DELEGATE_IS_ON_VACATION);
-//            }
-
             // 내가 휴가인 기간에 대직자도 휴가 일정이 있는지 체크
             if (attendanceRepository.existsByEmployeeAndDateOverlapAndTypeIsVAndIsDeletedFalse(delegate, info.getStartAt(), info.getEndAt(), AtteType.V)) {
                 throw new CustomException(ErrorCode.DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD);
@@ -246,10 +241,6 @@ public class AttendanceService {
         }
 
         if (newDelegate != null) {
-            // 휴가 중인 사람은 대직자로 선택 불가능 todo: 주석풀어야할지 체크
-//            if ("V".equals(newDelegate.getAtte())) {
-//                throw new CustomException(ErrorCode.DELEGATE_IS_ON_VACATION);
-//            }
             if (newDelegate != null && attendanceRepository.existsByEmployeeAndDateOverlapAndTypeIsVAndIsDeletedFalse(newDelegate, info.getStartAt(), info.getEndAt(), AtteType.V)) {
                 throw new CustomException(ErrorCode.DELEGATE_ALREADY_HAS_LEAVE_IN_PERIOD);
             }
