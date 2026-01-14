@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>메일 쓰기</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style layout:fragment="pageStyles">
         :root {
             --fg: #0f172a;
@@ -613,6 +615,48 @@
 
                     return temp.innerHTML.trim();
                 };
+
+                // ===== SweetAlert2 helpers =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined });
+                }
+
+                async function swalSuccess(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'success', title, text: text || undefined });
+                }
+
+                function swalLoading(title = '처리 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+
+                function swalClose() {
+                    if (hasSwal()) window.Swal.close();
+                }
             </script>
 
             <!-- TipTap (module) -->
@@ -1318,11 +1362,16 @@
 
                 document.getElementById('btnDraft')?.addEventListener('click', async () => {
                     try {
+                        swalLoading('임시저장 중...');
                         await saveDraft();
+                        swalClose();
+
+                        await swalSuccess('임시저장 완료', '임시저장함으로 이동합니다.');
                         location.href = '/mail/drafts';
                     } catch (e) {
                         console.error(e);
-                        showErr(e.message || '임시저장에 실패했습니다.');
+                        swalClose();
+                        await swalError('임시저장 실패', e.message || '임시저장에 실패했습니다.');
                     }
                 });
 
@@ -1365,6 +1414,7 @@
                     if (count > 5000) return showErr('내용은 최대 5000자까지 입력 가능합니다.');
 
                     try {
+                        swalLoading('메일 전송 중...');
                         if (draftMailId) {
                             await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(draftMailId)}/send`, {
                                 method: 'POST',
@@ -1380,16 +1430,17 @@
                                     receiverEmpIds: plan.uiReceivers
                                 })
                             });
-
-                            location.href = getAfterSendRedirectUrl();
-                            return;
+                        } else {
+                            await sendMailOnce({ title, cnttJson, receiverEmpIds: plan.uiReceivers });
                         }
 
-                        await sendMailOnce({ title, cnttJson, receiverEmpIds: plan.uiReceivers });
+                        swalClose();
+                        await swalSuccess('전송 완료', '메일이 정상적으로 전송되었습니다.');
                         location.href = getAfterSendRedirectUrl();
                     } catch (e) {
                         console.error(e);
-                        showErr(e.message || '메일 전송에 실패했습니다.');
+                        swalClose();
+                        await swalError('전송 실패', e.message || '메일 전송에 실패했습니다.');
                     }
                 });
             </script>
@@ -1451,7 +1502,7 @@
                         }
                     } catch (e) {
                         console.error(e);
-                        showErr(e.message || '임시저장 불러오기에 실패했습니다.');
+                        await swalError('임시저장 불러오기 실패', e.message || '임시저장 불러오기에 실패했습니다.');
                     }
                 }
 
@@ -1547,7 +1598,7 @@
                         await refreshAttachList();
                     } catch (e) {
                         console.error(e);
-                        showErr(e.message || '삭제에 실패했습니다.');
+                        await swalError('첨부 삭제 실패', e.message || '삭제에 실패했습니다.');
                     }
                 }
 

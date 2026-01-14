@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>보낸 메일함</title>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
@@ -203,6 +205,8 @@
                 // ===== constants =====
                 const PAGE_SIZE = 10;
                 const KEYWORD_MAX = 50;
+
+
 
                 // ===== common utils =====
                 function getCsrfHeaders(){
@@ -630,14 +634,19 @@
                     const mailNos = getSelectedMailNos();
                     if (mailNos.length === 0) return;
 
-                    if (!confirm(`선택한 ${mailNos.length}건을 삭제(휴지통 이동)할까요?`)) return;
+                    const ok = await swalConfirmDelete(mailNos.length);
+                    if (!ok.isConfirmed) return;
 
-                    try{
+                    try {
+                        swalLoading('삭제(휴지통 이동) 중...');
                         await bulkMoveToTrash(mailNos);
                         await load();
-                    }catch(err){
+                        swalClose();
+                        await swalSuccess('삭제 완료', '선택한 메일이 휴지통으로 이동되었습니다.');
+                    } catch (err) {
                         console.error(err);
-                        alert('삭제 처리에 실패했습니다.');
+                        swalClose();
+                        await swalError('삭제 실패', err.message || '삭제 처리에 실패했습니다.');
                     }
                 });
 

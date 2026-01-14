@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>내게쓴메일함</title>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
@@ -200,6 +202,60 @@
                 // ===== constants =====
                 const PAGE_SIZE = 10;
                 const KEYWORD_MAX = 50;
+
+                // ===== SweetAlert2 helpers (self bulk) =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalConfirmDelete(count) {
+                    const swal = getSwal();
+                    if (!swal) return { isConfirmed: confirm(`선택하신 ${count}개 메일을 삭제(휴지통 이동)하시겠습니까?`) };
+
+                    return swal.fire({
+                        icon: 'warning',
+                        title: '삭제하시겠습니까?',
+                        text: `선택하신 ${count}개 메일을 삭제(휴지통 이동)하시겠습니까?`,
+                        showCancelButton: true,
+                        confirmButtonText: '삭제',
+                        cancelButtonText: '취소',
+                        reverseButtons: true,
+                        focusCancel: true,
+                        heightAuto: false,
+                    });
+                }
+
+                function swalLoading(title = '처리 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+                function swalClose() { if (hasSwal()) window.Swal.close(); }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined, heightAuto: false });
+                }
+                async function swalSuccess(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'success', title, text: text || undefined, heightAuto: false });
+                }
 
                 // ===== headers =====
                 function getCsrfHeaders(){
@@ -568,14 +624,19 @@
                     const mailNos = getSelectedMailNos();
                     if (mailNos.length === 0) return;
 
-                    if (!confirm(`선택한 ${mailNos.length}건을 삭제(휴지통 이동)할까요?`)) return;
+                    const ok = await swalConfirmDelete(mailNos.length);
+                    if (!ok.isConfirmed) return;
 
-                    try{
+                    try {
+                        swalLoading('삭제(휴지통 이동) 중...');
                         await bulkMoveToTrash(mailNos);
                         await load();
-                    }catch(err){
+                        swalClose();
+                        await swalSuccess('삭제 완료', '선택한 메일이 휴지통으로 이동되었습니다.');
+                    } catch (err) {
                         console.error(err);
-                        alert('삭제 처리에 실패했습니다.');
+                        swalClose();
+                        await swalError('삭제 실패', err.message || '삭제 처리에 실패했습니다.');
                     }
                 });
 

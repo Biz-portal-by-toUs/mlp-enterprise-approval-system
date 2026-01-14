@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>휴지통</title>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
@@ -239,6 +241,77 @@
                         .replaceAll("'","&#039;");
                 }
 
+                // ===== SweetAlert2 helpers (trash bulk) =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalConfirmRestore(count) {
+                    const swal = getSwal();
+                    if (!swal) return { isConfirmed: confirm(`선택하신 ${count}개 메일을 복구하시겠습니까?`) };
+
+                    return swal.fire({
+                        icon: 'question',
+                        title: '복구하시겠습니까?',
+                        text: `선택하신 ${count}개 메일을 복구하시겠습니까?`,
+                        showCancelButton: true,
+                        confirmButtonText: '복구',
+                        cancelButtonText: '취소',
+                        reverseButtons: true,
+                        focusCancel: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalConfirmPurge(count) {
+                    const swal = getSwal();
+                    if (!swal) return { isConfirmed: confirm(`선택하신 ${count}개 메일을 완전 삭제하면 복구할 수 없습니다. 진행하시겠습니까?`) };
+
+                    return swal.fire({
+                        icon: 'warning',
+                        title: '완전 삭제하시겠습니까?',
+                        text: `선택하신 ${count}개 메일을 완전 삭제하면 복구할 수 없습니다.`,
+                        showCancelButton: true,
+                        confirmButtonText: '삭제',
+                        cancelButtonText: '취소',
+                        reverseButtons: true,
+                        focusCancel: true,
+                        heightAuto: false,
+                    });
+                }
+
+                function swalLoading(title = '처리 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+                function swalClose() { if (hasSwal()) window.Swal.close(); }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined, heightAuto: false });
+                }
+                async function swalSuccess(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return; }
+                    return swal.fire({ icon: 'success', title, text: text || undefined, heightAuto: false });
+                }
+
                 // ===== selection / bulk =====
                 function getSelectedMailNos(){
                     return Array.from(document.querySelectorAll('.rowCheck:checked'))
@@ -430,14 +503,21 @@
                     const mailNos = getSelectedMailNos();
                     if (mailNos.length === 0) return;
 
-                    try{
+                    const ok = await swalConfirmRestore(mailNos.length);
+                    if (!ok.isConfirmed) return;
+
+                    try {
+                        swalLoading('복구 중...');
                         await Promise.all(mailNos.map(no =>
                             api('PATCH', `/api/v1/mails/${encodeURIComponent(no)}/restore`)
                         ));
                         await load();
-                    }catch(err){
+                        swalClose();
+                        await swalSuccess('복구 완료', '선택한 메일이 복구되었습니다.');
+                    } catch (err) {
                         console.error(err);
-                        alert('복구에 실패했습니다.');
+                        swalClose();
+                        await swalError('복구 실패', err.message || '복구에 실패했습니다.');
                     }
                 });
 
@@ -445,16 +525,21 @@
                     const mailNos = getSelectedMailNos();
                     if (mailNos.length === 0) return;
 
-                    if (!confirm(`선택한 ${mailNos.length}건을 완전 삭제하면 복구할 수 없습니다. 진행할까요?`)) return;
+                    const ok = await swalConfirmPurge(mailNos.length);
+                    if (!ok.isConfirmed) return;
 
-                    try{
+                    try {
+                        swalLoading('완전 삭제 중...');
                         await Promise.all(mailNos.map(no =>
                             api('DELETE', `/api/v1/mails/${encodeURIComponent(no)}/purge`)
                         ));
                         await load();
-                    }catch(err){
+                        swalClose();
+                        await swalSuccess('삭제 완료', '선택한 메일이 완전 삭제되었습니다.');
+                    } catch (err) {
                         console.error(err);
-                        alert('삭제에 실패했습니다.');
+                        swalClose();
+                        await swalError('삭제 실패', err.message || '삭제에 실패했습니다.');
                     }
                 });
 
