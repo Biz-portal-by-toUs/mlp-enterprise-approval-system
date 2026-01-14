@@ -1,19 +1,54 @@
+server:
+  port: 8090
+
 spring:
-  config:
-    activate:
-      on-profile: prod
   datasource:
     url: ${DB_PROD_URL}
     username: ${DB_PROD_USER}
     password: ${DB_PROD_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 
 logging:
   level:
     root: INFO
-    com.multi.mlpenterpriseapprovalsystem: INFO
+
+app:
+  elasticsearch:
+    host: ${ELASTIC_HOST}
+    index-search-alias: bizportal_search
+    index-menu-alias: bizportal_search_menu
+
+# 네 ConfigMap에 있으니 그대로 매핑됨
+ai:
+  fastapi:
+    base-url: ${AI_FASTAPI_BASE_URL}
+
+internal:
+  ai:
+    callback-header: ${INTERNAL_AI_CALLBACK_HEADER}
+    meetings:
+      callback-url: ${INTERNAL_AI_MEETINGS_CALLBACK_URL}
+    chatbot:
+      callback-url: ${INTERNAL_AI_CHATBOT_CALLBACK_URL}
