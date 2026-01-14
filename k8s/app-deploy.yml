@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bizportal-api
+  namespace: bizportal
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bizportal-api
+  template:
+    metadata:
+      labels:
+        app: bizportal-api
+    spec:
+      containers:
+        - name: api
+          # ✅ Jenkins envsubst 로 실제 값이 치환됨
+          image: ${ECR_REPO_URI}:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8090
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: SPRING_PROFILES_ACTIVE
+
+            # ✅ RDS
+            # bizportal-secrets
+            - name: DB_PROD_URL
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: DB_PROD_URL
+
+            - name: DB_PROD_USER
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: DB_PROD_USER
+
+            - name: DB_PROD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: DB_PROD_PASSWORD
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: AWS_ACCESS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+
+            - name: JWT_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: JWT_ISSUER
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: JWT_SECRET
+
+            # bizportal-app-secrets
+            # ✅ 외부 API 키들 (너가 만든 bizportal-app-secrets)
+            - name: HOLIDAY_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: HOLIDAY_SERVICE_KEY
+
+            - name: NTS_API_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: NTS_API_SERVICE_KEY
+
+            - name: JUSO_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: JUSO_API_KEY
+
+            - name: PORTONE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: PORTONE_API_KEY
+            - name: PORTONE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: PORTONE_API_SECRET
+
+            # ✅ 너가 말한 콜백 secret/key도 (bizportal-app-secrets)
+            - name: AI_FASTAPI_CALLBACK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: AI_FASTAPI_CALLBACK_SECRET
+
+            - name: INTERNAL_AI_CALLBACK_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-app-secrets
+                  key: INTERNAL_AI_CALLBACK_KEY
+
+            # ✅ Mongo Atlas URI (ConfigMap)
+            - name: MONGODB_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: MONGODB_URI
+
+            # ✅ ElastiCache Redis (ConfigMap)
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: REDIS_HOST
+
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: REDIS_PORT
+
+            # ✅ Elasticsearch / Weaviate (ConfigMap)
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: ELASTIC_HOST
+
+            - name: WEAVIATE_HTTP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: WEAVIATE_HTTP_URL
+
+            # ✅ FastAPI 연결 (ConfigMap)
+            - name: AI_FASTAPI_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: AI_FASTAPI_BASE_URL
+
+            # ✅ 내부 콜백 URL/헤더 (ConfigMap)
+            - name: INTERNAL_AI_CALLBACK_HEADER
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: INTERNAL_AI_CALLBACK_HEADER
+
+            - name: INTERNAL_AI_MEETINGS_CALLBACK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: INTERNAL_AI_MEETINGS_CALLBACK_URL
+
+            - name: INTERNAL_AI_CHATBOT_CALLBACK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: bizportal-config
+                  key: INTERNAL_AI_CHATBOT_CALLBACK_URL
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8090
+            initialDelaySeconds: 25
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8090
+            initialDelaySeconds: 45
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bizportal-api-svc
+  namespace: bizportal
+spec:
+  selector:
+    app: bizportal-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8090
+  type: ClusterIP
