@@ -230,32 +230,32 @@
         function onEdit(posNo){ location.href = `/admin/positions/${posNo}/edit`; }
 
         async function onDelete(posNo, posName) {
-            const ok = confirm(`정말로 '${posName}' 직급을 삭제할까요?\n(삭제 후 복구 불가)`);
-            if (!ok) return;
+            // ✅ confirm을 Alert.confirm으로 변경
+            Alert.confirm(`정말로 '${posName}' 직급을 삭제할까요?\n(삭제 후 복구 불가)`, "직급 삭제", async () => {
+                try {
+                    const res = await fetch(`/api/v1/admin/positions/${posNo}`, {
+                        method: "DELETE",
+                        credentials: "include",
+                        headers: { "Accept": "application/json" }
+                    });
 
-            try {
-                const res = await fetch(`/api/v1/admin/positions/${posNo}`, {
-                    method: "DELETE",
-                    credentials: "include",
-                    headers: { "Accept": "application/json" }
-                });
+                    // 기존의 showToast 호출은 그대로 유지
+                    if (res.status === 401) return showToast("로그인이 필요합니다.", true);
+                    if (res.status === 403) return showToast("권한이 없습니다.", true);
 
-                if (res.status === 401) return showToast("로그인이 필요합니다. 다시 로그인 해주세요.", true);
-                if (res.status === 403) return showToast("권한이 없습니다. (COM_ADMIN만 가능)", true);
+                    if (!res.ok) {
+                        let msg = "삭제 실패";
+                        const json = await safeJson(res);
+                        if (json && (json.message || json.error || json.msg)) msg = json.message || json.error || json.msg;
+                        return showToast(msg, true);
+                    }
 
-                if (!res.ok) {
-                    let msg = `삭제 실패 (${res.status})`;
-                    const json = await safeJson(res);
-                    if (json && (json.message || json.error || json.msg)) msg = json.message || json.error || json.msg;
-                    return showToast(msg, true);
+                    showToast("삭제되었습니다.");
+                    await loadPositions();
+                } catch (e) {
+                    showToast("삭제 중 오류가 발생했습니다.", true);
                 }
-
-                showToast("삭제되었습니다.");
-                await loadPositions();
-            } catch (e) {
-                console.error(e);
-                showToast("삭제 중 예외가 발생했습니다.", true);
-            }
+            });
         }
 
         function renderEmptyRow(tbody, message){

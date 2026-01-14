@@ -207,17 +207,16 @@
                     if (res.status === 403) return showMsg("권한이 없습니다. (COM_ADMIN만 가능)", false);
 
                     if (res.ok) {
-                        showMsg("부서 정보가 수정되었습니다.", true);
-                        setTimeout(() => window.location.href = "/admin/departments/list", 700);
+                        Alert.success("부서 정보가 수정되었습니다.").then(() => {
+                            window.location.href = "/admin/departments/list";
+                        });
                         return;
                     }
 
                     const data = await safeJson(res);
-                    showMsg(data?.message || `수정 실패 (HTTP ${res.status})`, false);
-
+                    Alert.error(data?.message || "수정 실패");
                 } catch (e) {
-                    console.error(e);
-                    showMsg("서버 통신 오류가 발생했습니다.", false);
+                    Alert.error("서버 통신 오류가 발생했습니다.");
                 }
             });
         });

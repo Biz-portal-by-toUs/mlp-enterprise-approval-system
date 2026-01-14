@@ -213,6 +213,7 @@
         let currentRecordUrl = "";
         let currentTitle = "";
 
+        // 공통 유틸리티 함수들
         function unwrapMaybeResponseDto(resJson) {
             return (resJson && resJson.data) ? resJson.data : resJson;
         }
@@ -287,6 +288,7 @@
             }
         }
 
+        // 데이터 로드 함수
         async function load() {
             const meetNo = getMeetNoFromPath();
             if (!meetNo) return;
@@ -313,36 +315,49 @@
                 $("aiText").textContent = d.aiText ?? "(AI 요약 없음)";
             } catch (e) {
                 $("error").style.display = "block";
+                Alert.error("데이터를 불러오는 중 오류가 발생했습니다.");
             }
         }
 
+        // 이벤트 리스너 설정
         $("backBtn").onclick = () => location.href = "/meeting";
         $("editBtn").onclick = () => location.href = `/meeting/${getMeetNoFromPath()}/update`;
 
-        // 삭제하기 로직 추가
-        $("deleteBtn").onclick = async () => {
+        // ✅ [Alert 적용] 삭제하기 로직 수정
+        $("deleteBtn").onclick = () => {
             const meetNo = getMeetNoFromPath();
-            if (!confirm("회의를 삭제하시겠습니까? (삭제된 회의는 휴지통으로 이동합니다.)")) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
-                    method: "DELETE",
-                    headers: authHeaders(),
-                    credentials: 'include'
-                });
-                if (res.ok) {
-                    alert("삭제되었습니다.");
-                    location.href = "/meeting";
-                } else {
-                    alert("삭제 실패");
+
+            // Alert.confirm(메시지, 제목, 확인콜백, 취소콜백)
+            Alert.confirm(
+                "회의를 삭제하시겠습니까?\n삭제된 회의는 휴지통으로 이동합니다.",
+                "회의 삭제",
+                async () => {
+                    // [확인 클릭 시] 삭제 API 호출
+                    try {
+                        const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                            method: "DELETE",
+                            headers: authHeaders(),
+                            credentials: 'include'
+                        });
+
+                        if (res.ok) {
+                            Alert.success("회의가 휴지통으로 이동되었습니다.");
+                            location.href = "/meeting";
+                        } else {
+                            Alert.error("삭제에 실패했습니다.");
+                        }
+                    } catch (e) {
+                        Alert.error("삭제 중 오류가 발생했습니다.");
+                    }
                 }
-            } catch (e) {
-                alert("삭제 중 오류가 발생했습니다.");
-            }
+                // 취소 시에는 특별한 동작이 필요 없으므로 생략 가능합니다.
+            );
         };
 
         $("downloadBtn").onclick = () => {
             if (currentRecordUrl) triggerDownload(currentRecordUrl, `${currentTitle}.webm`);
         };
+
         window.onload = load;
     </script>
 </th:block>

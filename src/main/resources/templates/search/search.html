@@ -124,10 +124,10 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
-    <script>
+    <script th:inline="javascript">
         const PAGE_SIZE = 10;
 
-        // ✅ 변경된 메뉴 구성 반영 (A~E)
+        // ✅ 메뉴 구성 (A~E)
         const MENU_TYPES = {
             A: ['NOTICE'],
             B: ['BOARD'],
@@ -136,7 +136,6 @@
             E: ['MEETING']
         };
 
-        // ✅ 일정(C)에만 서브 탭 존재
         const MENU_TABS = {
             C: [
                 { key: 'COMPANY',    label: '회사 일정' },
@@ -148,16 +147,21 @@
         let lastSearchData = null;
         let currentMenuKey = 'TOTAL';
         const state = {
-            subKey: { C: 'COMPANY' }, // 일정용 서브키
+            subKey: { C: 'COMPANY' },
             page: { A: 0, B: 0, C: 0, D: 0, E: 0 }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const query = (urlParams.get('q') || '').trim(); // 앞뒤 공백 제거
+            const query = (urlParams.get('q') || '').trim();
 
+            // ✅ [Alert 적용] 검색어가 없는 경우
             if (!query) {
-                alert("검색어를 입력해주세요.");
+                Alert.warning("검색어를 입력해주세요.").then(() => {
+                    // 확인 버튼을 누르면 이전 페이지로 돌아가거나 메인으로 이동
+                    if (history.length > 1) history.back();
+                    else location.href = "/";
+                });
                 return;
             }
 
@@ -166,9 +170,7 @@
         });
 
         async function executeSearch(q) {
-            if (!q || q.trim() === '') {
-                return;
-            }
+            if (!q || q.trim() === '') return;
 
             try {
                 const response = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
@@ -177,25 +179,25 @@
                     lastSearchData = result.data;
                     renderGlobalTabs(result.data.sections);
                     showSection('TOTAL');
+                } else {
+                    // ✅ [Alert 적용] 서버 응답은 왔으나 데이터 처리에 실패한 경우
+                    Alert.error("검색 결과를 가져오는데 실패했습니다.");
                 }
             } catch (error) {
                 console.error('Search failed:', error);
+                // ✅ [Alert 적용] 네트워크 오류 등 발생 시
+                Alert.error("검색 중 서버와의 통신에 오류가 발생했습니다.");
             }
         }
+
         function renderEmptyState(message) {
             const resultArea = document.getElementById('searchResultArea');
             const tabArea = document.getElementById('globalTabs');
-
-            // 탭 영역 비우기
             if (tabArea) tabArea.innerHTML = '';
-
-            // 결과 영역에 메시지 표시
             resultArea.innerHTML = `
                 <div style="padding:100px 0; text-align:center; color:#94a3b8; font-size:16px;">
                     ${message}
                 </div>`;
-
-            // 상단 카운트 초기화
             document.getElementById('currentCountDisplay').innerText = '0';
         }
 
@@ -228,7 +230,6 @@
             document.getElementById('currentSectionTitle').innerText = section?.title;
             document.getElementById('currentCountDisplay').innerText = section?.count ?? 0;
 
-            // ✅ 일정(C)만 서브 탭 처리, 나머지는 단순 페이징
             if (menuKey === 'C') {
                 if (opt.autoPickSubTab) { state.subKey.C = 'COMPANY'; state.page.C = 0; }
                 await loadAndRenderPageWithSubTabs('C');
@@ -270,12 +271,17 @@
             types.forEach(t => url.searchParams.append('types', t));
             if (scope) url.searchParams.set('scope', scope);
 
-            const resp = await fetch(url.toString());
-            const json = await resp.json();
-            return json.data;
+            try {
+                const resp = await fetch(url.toString());
+                const json = await resp.json();
+                return json.data;
+            } catch (e) {
+                // ✅ [Alert 적용] 페이징 처리 중 오류 시
+                Alert.error("데이터를 불러오는 중 오류가 발생했습니다.");
+                return { items: [], total: 0, page: 0, size: PAGE_SIZE };
+            }
         }
 
-        // ✅ 서브 탭이 있는 페이지 렌더링 (현재 C: 일정 전용)
         async function loadAndRenderPageWithSubTabs(menuKey) {
             const data = await fetchPageForCurrent();
             const resultArea = document.getElementById('searchResultArea');
@@ -284,7 +290,6 @@
             resultArea.innerHTML = tabsHtml + listHtml + renderPagerHtml(data.total, data.page, data.size, (p) => `goPageWithSubTabs('${menuKey}', ${p})`);
         }
 
-        // ✅ 서브 탭 없는 단순 카테고리 렌더링 (A, B, D, E)
         async function loadAndRenderSimple(menuKey) {
             const data = await fetchPageForCurrent();
             const resultArea = document.getElementById('searchResultArea');
@@ -300,8 +305,6 @@
 
         function renderResultItem(it) {
             const dateStr = formatDate(it.createdAt);
-
-            // 기본 카테고리 맵
             const categoryMap = {
                 'NOTICE': '공지사항',
                 'BOARD': '게시판',
@@ -309,7 +312,6 @@
                 'MEETING': '회의'
             };
 
-            // 라벨 결정 로직
             let label = categoryMap[it.type] || it.type;
 
             if (it.type === 'SCHEDULE') {
@@ -320,20 +322,19 @@
             }
 
             return `
-        <div class="result-item">
-            <div class="result-top">
-                <div class="result-category">${escapeHtml(label)}</div>
-                <div class="result-title"><a href="${escapeAttr(it.url)}">${pickBestTitle(it)}</a></div>
-            </div>
-            <div class="result-snippet">${pickBestSnippet(it)}</div>
-            <div class="result-bottom">
-                <span>작성일 : ${dateStr}</span>
-            </div>
-        </div>
-    `;
+                <div class="result-item">
+                    <div class="result-top">
+                        <div class="result-category">${escapeHtml(label)}</div>
+                        <div class="result-title"><a href="${escapeAttr(it.url)}">${pickBestTitle(it)}</a></div>
+                    </div>
+                    <div class="result-snippet">${pickBestSnippet(it)}</div>
+                    <div class="result-bottom">
+                        <span>작성일 : ${dateStr}</span>
+                    </div>
+                </div>
+            `;
         }
 
-        /* 핸들러 */
         async function switchSubTab(menuKey, subKey) {
             state.subKey[menuKey] = subKey;
             state.page[menuKey] = 0;
@@ -361,26 +362,17 @@
         function pickBestTitle(item) { return item.highlight?.title?.[0] || escapeHtml(item.title || '제목 없음'); }
         function pickBestSnippet(item) {
             const hl = item.highlight;
-            const title = item.title || ''; // 원본 제목 (비교용)
-
-            // 1. 하이라이트된 내용 중 우선순위대로 선택
+            const title = item.title || '';
             let snippet = hl?.contentText?.[0] || hl?.content?.[0] || hl?.summary?.[0];
 
-            // 2. 하이라이트가 없으면 원본 필드에서 선택
             if (!snippet) {
                 snippet = item.summary || item.contentText || '';
             }
 
-            // [핵심 로직] 내용이 제목으로 시작하는 경우, 제목 부분을 제거
-            // <em> 태그 등이 섞여 있을 수 있으므로 정규식으로 태그를 제거한 텍스트로 비교하거나,
-            // 단순하게 원본 제목 문자열을 앞에서 지워줍니다.
             if (snippet && title && snippet.startsWith(title)) {
                 snippet = snippet.substring(title.length).trim();
             }
 
-            // 3. 결과 반환 (글자 수 제한 및 HTML 이스케이프)
-            // 하이라이트 태그(<em>)를 살려야 하므로, 전체를 escapeHtml 하기보다
-            // 이미 하이라이트된 문자열인지 확인 후 처리하는 것이 좋습니다.
             return trimText(snippet || '', 160);
         }
         function trimText(s, l) { return s.length > l ? s.substring(0, l) + '...' : s; }

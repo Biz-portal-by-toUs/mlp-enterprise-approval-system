@@ -919,7 +919,7 @@
                 <div class="todo-list" id="todoList">
                     <div class="todo-empty">할 일이 없어요 🙂</div>
                 </div>
-
+                <div id="todoStatusMsg" class="msg" style="margin-bottom:8px; display:none; padding:8px; border-radius:10px; font-size:11px; font-weight:800;"></div>
                 <div class="todo-add">
                     <input class="todo-input" id="todoNewInput" type="text" placeholder="할 일 추가..." maxlength="200" />
                     <button class="todo-create" type="button" id="todoCreateBtn">추가</button>
@@ -1070,6 +1070,7 @@
                 </div>
             </div>
         </div>
+        <div id="createStatusMsg" class="msg" style="margin: 0 14px 10px; display:none; padding:10px; border-radius:10px; font-size:12px; font-weight:800;"></div>
 
         <div class="pop-foot">
             <button class="btn" type="button" id="createCancel">Cancel</button>
@@ -1142,35 +1143,21 @@
     <script>
         const toastWrap = document.getElementById('toastWrap');
 
-        function toast(message, type='warn', ms=2200){
-            if (!toastWrap) return;
+        function showMsg(elId, text, isOk = false) {
+            const el = document.getElementById(elId);
+            if (!el) return;
 
-            const el = document.createElement('div');
-            el.className = `cal-toast ${type}`;
+            el.textContent = text;
+            el.style.display = 'block';
+            el.style.background = isOk ? '#f3fff6' : '#fff5f4';
+            el.style.color = isOk ? '#1b7f3a' : '#b42318';
+            el.style.border = `1px solid ${isOk ? '#bfe7c9' : '#ffd0cc'}`;
 
-            const ico = document.createElement('div');
-            ico.className = 'ico';
-            ico.textContent = type === 'error' ? '!' : type === 'info' ? 'i' : '⚠';
-
-            const msg = document.createElement('div');
-            msg.className = 'msg';
-            msg.textContent = String(message || '');
-
-            el.appendChild(ico);
-            el.appendChild(msg);
-
-            toastWrap.appendChild(el);
-
-            // next tick show
-            requestAnimationFrame(() => el.classList.add('show'));
-
-            const remove = () => {
-                el.classList.remove('show');
-                setTimeout(() => el.remove(), 180);
-            };
-
-            const t = setTimeout(remove, ms);
-            el.addEventListener('click', () => { clearTimeout(t); remove(); });
+            clearTimeout(el.timer);
+            el.timer = setTimeout(() => {
+                el.style.display = 'none';
+                el.textContent = '';
+            }, 3000);
         }
         // ✅ 스티키(1개만 유지) 토스트 (lazy toastWrap)
         const STICKY = new Map();
@@ -1517,13 +1504,14 @@
                 del.textContent = '🗑';
                 del.title = '삭제';
                 del.addEventListener('click', async () => {
-                    if (!confirm('이 투두를 삭제할까?')) return;
-                    try{
-                        await todoDelete(todoNo);
-                        await todoReload();
-                    }catch(e){
-                        alert(e.message);
-                    }
+                    Alert.confirm('이 할 일을 삭제하시겠습니까?', '할 일 삭제', async () => {
+                        try {
+                            await todoDelete(todoNo);
+                            await todoReload();
+                        } catch(e) {
+                            Alert.error('삭제 실패: ' + e.message);
+                        }
+                    });
                 });
 
                 actions.appendChild(del);
@@ -1577,14 +1565,15 @@
             return true;
         }
 
-        async function todoReload(){
-            try{
+        async function todoReload() {
+            try {
                 const items = await todoFetchAll();
                 items.sort((a,b) => (b.todoNo||0) - (a.todoNo||0));
                 TODO_ITEMS = items;
                 renderTodo();
-            }catch(e){
-                console.warn('todoReload failed:', e);
+            } catch(e) {
+                // alert 대신 showMsg 사용
+                showMsg('todoStatusMsg', '목록 로드 실패: ' + e.message);
                 TODO_ITEMS = [];
                 renderTodo();
             }
@@ -1871,44 +1860,20 @@
         contentInput?.setAttribute('maxlength', String(CONTENT_MAX));
 
         // ✅ 붙여넣기 등으로 넘어가는 케이스 방지(초과 시 잘라내기)
-        function clampLen(el, max, key, label){
+        function clampLen(el, max, msgElId, label) {
             if (!el) return;
-            el.dataset.overMax = '0';
-
-            const willInsert = (e) => String(e.inputType || '').startsWith('insert');
-
-            // ✅ maxlength가 있어도 "넘기려는 시도"를 잡아냄
-            el.addEventListener('beforeinput', (e) => {
-                if (!willInsert(e)) return;
-
-                const cur = el.value ?? '';
-                const s = (el.selectionStart ?? cur.length);
-                const t = (el.selectionEnd ?? cur.length);
-                const replacing = Math.max(0, t - s);
-
-                // 선택 영역을 대체하는 경우는 그만큼 길이가 줄어드는 효과
-                const effectiveLen = cur.length - replacing;
-
-                if (effectiveLen >= max){
-                    // ✅ 토스트 1개만 유지
-                    showStickyToast(key, `${label}은(는) 최대 ${max}자까지 입력 가능해요.`, 'warn');
-                    el.dataset.overMax = '1';
-                }
-            });
-
-            // ✅ 정상 길이로 돌아오면 토스트 숨김
             el.addEventListener('input', () => {
-                const v = el.value ?? '';
-                if (v.length < max){
-                    hideStickyToast(key);
-                    el.dataset.overMax = '0';
+                if (el.value.length >= max) {
+                    // ✅ toast 대신 인라인 showMsg 사용
+                    showMsg(msgElId, `${label}은 최대 ${max}자까지입니다.`);
                 }
             });
         }
 
         // ✅ 바인딩
-        clampLen(titleInput, TITLE_MAX, 'max-title', '제목');
-        clampLen(contentInput, CONTENT_MAX, 'max-content', '내용');
+        clampLen(titleInput, TITLE_MAX, 'createStatusMsg', '제목');
+        clampLen(contentInput, CONTENT_MAX, 'createStatusMsg', '내용');
+        clampLen(todoEls.input, 200, 'todoStatusMsg', '할 일');
 
         function toggleAllDayUI(isAllDay){
             if (isAllDay){
@@ -2419,15 +2384,17 @@
                 delBtn.className = 'btn danger';
                 delBtn.textContent = '삭제';
                 delBtn.onclick = safeClick(async () => {
-                    if (!confirm('삭제할까?말까?')) return;
-                    try{
-                        await apiDelete(data.schNo, data.scope);
-                        closePop(detailPop);
-                        setTimeout(() => { mainCalendar.refetchEvents(); refreshMiniDots(); }, 120);
-                    }catch(e){
-                        console.error(e);
-                        alert(e.message);
-                    }
+                    Alert.confirm('정말 이 일정을 삭제할까요?', '일정 삭제', async () => {
+                        try {
+                            await apiDelete(data.schNo, data.scope);
+                            closePop(detailPop);
+                            Alert.success('삭제되었습니다.');
+                            mainCalendar.refetchEvents();
+                            refreshMiniDots();
+                        } catch(e) {
+                            Alert.error('삭제 중 오류 발생: ' + e.message);
+                        }
+                    });
                 });
 
                 detailFoot.prepend(delBtn);
@@ -2915,78 +2882,51 @@
                 : (editing ? '수정' : 'Save');
         }
 
-        async function onSave(){
+        async function onSave() {
             if (SAVE_IN_PROGRESS) return;
+
+            const title = titleInput.value.trim();
+            // ✅ alert 대신 Alert.warning 사용
+            if (!title) return showMsg('createStatusMsg', "제목을 입력해주세요");
+
+            const scope = String(scopeSelect.value).toUpperCase();
+            if (scope === 'COMPANY' && !isCompanyAdmin()){
+                return Alert.error('회사 일정은 관리자만 권한이 있습니다.');
+            }
 
             SAVE_IN_PROGRESS = true;
             setSaveLoading(true);
+
             try {
-                const title = titleInput.value.trim();
-
-                if (!title) return alert('제목은 필수입니다.');
-                if (title.length > TITLE_MAX){
-                    toast(`제목은 최대 ${TITLE_MAX}자까지예요.`, 'warn');
-                    return;
-                }
-
-                const contentTrim = (contentInput.value || '').trim();
-                if (contentTrim.length > CONTENT_MAX){
-                    toast(`내용 최대 ${CONTENT_MAX}자까지예요.`, 'warn');
-                    return;
-                }
-
-                const scope = String(scopeSelect.value).toUpperCase();
                 const allDay = allDaySelect.value === 'true';
-
-                if (scope === 'COMPANY' && !isCompanyAdmin()){
-                    return alert('회사 일정은 관리자만 등록/수정할 수 있어요.');
-                }
-
                 const payload = {
-                    scope,
-                    title,
+                    scope, title,
                     content: (contentInput.value || '').trim() || null,
                     allDay
                 };
 
-                if (allDay){
-                    const sd = startDateInput.value;
-                    const ed = endDateInput.value || sd;
-                    if (!sd) return alert('시작 일시는 필수입니다');
-                    if (ed < sd) return alert('종료 일시는 시작 일시 이후여야 합니다');
-                    payload.startDate = sd;
-                    payload.endDate = ed;
-                }else{
-                    const sa = getDTValue(startDayInput, startHourSelect, startMinSelect);
-                    const ea = getDTValue(endDayInput, endHourSelect, endMinSelect);
-
-                    if (!sa || !ea) return alert('start/end 시간은 필수입니다');
-
-                    // 최종 안전장치
-                    const s = new Date(sa);
-                    const e = new Date(ea);
-                    if (e.getTime() <= s.getTime()) return alert('end는 start 이후만 가능합니다');
-
-                    payload.startAt = sa;
-                    payload.endedAt = ea;
+                if (allDay) {
+                    payload.startDate = startDateInput.value;
+                    payload.endDate = endDateInput.value || payload.startDate;
+                } else {
+                    payload.startAt = getDTValue(startDayInput, startHourSelect, startMinSelect);
+                    payload.endedAt = getDTValue(endDayInput, endHourSelect, endMinSelect);
                 }
 
-                try{
-                    if (editing) await apiUpdate(editing.schNo, payload);
-                    else await apiCreate(payload);
+                if (editing) await apiUpdate(editing.schNo, payload);
+                else await apiCreate(payload);
 
+                // ✅ 성공 시 묻지 않고 알림 후 닫기
+                Alert.success(editing ? "수정되었습니다." : "등록되었습니다.").then(() => {
                     closeCreate();
                     mainCalendar.refetchEvents();
                     refreshMiniDots();
-                }catch(e){
-                    console.error(e);
-                    alert(e.message);
-                }
-            }catch(e){
-                console.error(e);
-                alert(e.message);
-            }finally{
-                // ✅ 어떤 경우든 버튼/상태 복구
+                });
+
+            } catch(e) {
+                // 에러 발생 시 모달 내부에 메시지 표시 (요청하신 showMsg 스타일)
+                showMsg('createStatusMsg', e.message);
+            } finally {
                 SAVE_IN_PROGRESS = false;
                 setSaveLoading(false);
             }
