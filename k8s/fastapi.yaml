@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bizportal-fastapi
+  namespace: bizportal
+  labels:
+    app: bizportal-fastapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bizportal-fastapi
+  template:
+    metadata:
+      labels:
+        app: bizportal-fastapi
+    spec:
+      containers:
+        - name: fastapi
+          # ✅ Jenkins에서 envsubst 로 IMAGE_TAG 넣어서 배포할 수 있게 변수 형태로 둠
+          image: 118320467932.dkr.ecr.us-west-1.amazonaws.com/terraform-ecr-fastapi:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # 필요하면 FastAPI에서 읽는 값들만 여기에 추가
+            - name: PORT
+              value: "8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bizportal-fastapi
+  namespace: bizportal
+  labels:
+    app: bizportal-fastapi
+spec:
+  type: ClusterIP
+  selector:
+    app: bizportal-fastapi
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
