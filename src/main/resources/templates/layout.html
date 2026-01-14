@@ -113,35 +113,66 @@
             justify-content:flex-start;
         }
 
-        .search{
-            width:min(520px, 100%);
-            margin-left:10px;
-            display:flex;
-            align-items:center;
-            background:#fff;
-            border-radius: var(--radius-sq);
-            padding:6px 10px;
-            gap:8px;
-            box-shadow:0 6px 16px rgba(0,0,0,.14);
+        /* ====== 개선된 검색창 스타일 (왼쪽 아이콘 제거 버전) ====== */
+        .search {
+            width: min(520px, 100%);
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 28px;                  /* 둥근 라운드 유지 */
+            padding: 4px 4px 4px 22px;            /* 왼쪽 텍스트 여백 확보 */
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s ease-in-out;
         }
-        .search .scope{
-            border:0;
-            background:#f3f4f6;
-            border-radius: 8px;
-            padding:7px 10px;
-            font-size:12px;
-            color:#374151;
-            outline:none;
-        }
-        .search input{
-            border:0;
-            outline:none;
-            flex:1;
-            font-size:13px;
-            padding:7px 6px;
-        }
-        .search .icon{ width:18px;height:18px; opacity:.7; }
 
+        .search:focus-within {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .search input {
+            border: 0;
+            outline: none;
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            background: transparent;
+            padding: 8px 0;
+            color: #334155;
+        }
+
+        .search input::placeholder {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* 오른쪽 검색 버튼 */
+        .search-submit-btn {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: var(--primary); /* 기존 테마의 파란색 사용 */
+            color: #fff;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .search-submit-btn:hover {
+            background: var(--primary2);
+            transform: scale(1.05);
+        }
+
+        .search-submit-btn svg {
+            width: 18px;
+            height: 18px;
+        }
         .topbar-right{
             display:flex;
             align-items:center;
@@ -792,11 +823,14 @@
 
         <div class="topbar-center">
             <form class="search" action="/search" method="get" onsubmit="return handleSearchSubmit(this)">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="11" cy="11" r="7" stroke-width="2"/>
-                    <path d="M20 20L17 17" stroke-width="2" stroke-linecap="round"/>
-                </svg>
                 <input type="text" name="q" placeholder="검색어를 입력해주세요." autocomplete="off"/>
+
+                <button type="submit" class="search-submit-btn" title="검색">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg>
+                </button>
             </form>
         </div>
 
