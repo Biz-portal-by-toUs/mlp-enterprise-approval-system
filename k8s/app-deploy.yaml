@@ -15,6 +15,7 @@ spec:
     spec:
       containers:
         - name: api
+          # ✅ Jenkins envsubst 로 실제 값이 치환됨
           image: ${ECR_REPO_URI}:${IMAGE_TAG}
           imagePullPolicy: Always
           ports:
@@ -27,7 +28,7 @@ spec:
                   name: bizportal-config
                   key: SPRING_PROFILES_ACTIVE
 
-            # ✅ RDS (기존 local 변수명 그대로)
+            # ✅ RDS
             - name: DB_PROD_URL
               valueFrom:
                 secretKeyRef:
@@ -44,13 +45,14 @@ spec:
                   name: bizportal-secrets
                   key: DB_PROD_PASSWORD
 
-            # ✅ Mongo/Redis/ES/Weaviate: localhost → 클러스터 DNS
+            # ✅ Mongo Atlas URI (ConfigMap)
             - name: SPRING_DATA_MONGODB_URI
               valueFrom:
                 configMapKeyRef:
                   name: bizportal-config
                   key: MONGODB_URI
 
+            # ✅ ElastiCache Redis (ConfigMap)
             - name: SPRING_DATA_REDIS_HOST
               valueFrom:
                 configMapKeyRef:
@@ -62,19 +64,48 @@ spec:
                   name: bizportal-config
                   key: REDIS_PORT
 
-            # 너희 yml이 app.elasticsearch.host 라서 env로 덮을 수 있게 별도 키를 하나 더 주입
+            # ✅ Elasticsearch / Weaviate (ConfigMap)
             - name: APP_ELASTICSEARCH_HOST
               valueFrom:
                 configMapKeyRef:
                   name: bizportal-config
                   key: ELASTIC_HOST
-
-            # Weaviate도 동일하게 앱에서 읽는 키에 맞춰야 함(아래는 예시)
             - name: WEAVIATE_URL
               valueFrom:
                 configMapKeyRef:
                   name: bizportal-config
                   key: WEAVIATE_URL
+
+            - name: JUSO_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: JUSO_API_KEY
+
+            - name: HOLIDAY_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: HOLIDAY_SERVICE_KEY
+
+            - name: NTS_API_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: NTS_API_SERVICE_KEY
+
+            - name: JWT_SECRET
+              valueFrom:
+                  secretKeyRef:
+                    name: bizportal-secrets
+                    key: JWT_SECRET
+
+            - name: JWT_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: JWT_ISSUER
+
 
           readinessProbe:
             httpGet:
@@ -82,12 +113,14 @@ spec:
               port: 8090
             initialDelaySeconds: 25
             periodSeconds: 10
+
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8090
             initialDelaySeconds: 45
             periodSeconds: 20
+
 ---
 apiVersion: v1
 kind: Service

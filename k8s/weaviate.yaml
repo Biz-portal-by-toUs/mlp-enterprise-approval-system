@@ -1,13 +1,95 @@
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: weaviate-pvc
+#  namespace: bizportal
+#spec:
+#  accessModes: ["ReadWriteOnce"]
+#  resources:
+#    requests:
+#      storage: 10Gi
+#---
+#apiVersion: apps/v1
+#kind: StatefulSet
+#metadata:
+#  name: weaviate
+#  namespace: bizportal
+#spec:
+#  serviceName: weaviate
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: weaviate
+#  template:
+#    metadata:
+#      labels:
+#        app: weaviate
+#    spec:
+#      containers:
+#        - name: weaviate
+#          image: semitechnologies/weaviate:1.24.10
+#          ports:
+#            - containerPort: 8080
+#          env:
+#            - name: QUERY_DEFAULTS_LIMIT
+#              value: "25"
+#            - name: PERSISTENCE_DATA_PATH
+#              value: "/var/lib/weaviate"
+#            - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
+#              value: "true"
+#            - name: DEFAULT_VECTORIZER_MODULE
+#              value: "none"
+#            - name: CLUSTER_HOSTNAME
+#              value: "node1"
+#          volumeMounts:
+#            - name: data
+#              mountPath: /var/lib/weaviate
+#          readinessProbe:
+#            httpGet:
+#              path: /v1/.well-known/ready
+#              port: 8080
+#            initialDelaySeconds: 15
+#            periodSeconds: 5
+#          livenessProbe:
+#            httpGet:
+#              path: /v1/.well-known/live
+#              port: 8080
+#            initialDelaySeconds: 30
+#            periodSeconds: 10
+#      volumes:
+#        - name: data
+#          persistentVolumeClaim:
+#            claimName: weaviate-pvc
+#---
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: weaviate
+#  namespace: bizportal
+#spec:
+#  selector:
+#    app: weaviate
+#  ports:
+#    - name: http
+#      port: 8080
+#      targetPort: 8080
+#  type: ClusterIP
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: weaviate-pvc
+  name: weaviate
   namespace: bizportal
 spec:
-  accessModes: ["ReadWriteOnce"]
-  resources:
-    requests:
-      storage: 10Gi
+  clusterIP: None
+  selector:
+    app: weaviate
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: grpc
+      port: 50051
+      targetPort: 50051
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -27,20 +109,25 @@ spec:
     spec:
       containers:
         - name: weaviate
-          image: semitechnologies/weaviate:1.24.10
+          image: cr.weaviate.io/semitechnologies/weaviate:1.27.5
           ports:
             - containerPort: 8080
+              name: http
+            - containerPort: 50051
+              name: grpc
           env:
             - name: QUERY_DEFAULTS_LIMIT
               value: "25"
             - name: PERSISTENCE_DATA_PATH
               value: "/var/lib/weaviate"
-            - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
-              value: "true"
-            - name: DEFAULT_VECTORIZER_MODULE
-              value: "none"
             - name: CLUSTER_HOSTNAME
               value: "node1"
+            - name: DEFAULT_VECTORIZER_MODULE
+              value: "none"
+            - name: ENABLE_MODULES
+              value: ""
+            - name: AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
+              value: "true"
           volumeMounts:
             - name: data
               mountPath: /var/lib/weaviate
@@ -48,29 +135,27 @@ spec:
             httpGet:
               path: /v1/.well-known/ready
               port: 8080
-            initialDelaySeconds: 15
-            periodSeconds: 5
+            initialDelaySeconds: 20
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /v1/.well-known/live
               port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: weaviate-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: weaviate
-  namespace: bizportal
-spec:
-  selector:
-    app: weaviate
-  ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
-  type: ClusterIP
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp2
+        resources:
+          requests:
+            storage: 20Gi

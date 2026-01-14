@@ -229,7 +229,7 @@ public class DocumentService {
         );
 
         // 해당 문서에 대한 나의 결재상태(결재중, 결재대기중)를 DTO에 매핑하여 반환
-        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId));
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId, "AWAITING"));
     }
 
     // 내 회사의 문서 중 내가 결재한 문서 조회. 결재자, 대직자 둘 다에게 보여야함
@@ -284,7 +284,7 @@ public class DocumentService {
         );
 
         // 해당 문서에 대한 나의 결재상태(승인, 반려)를 DTO에 매핑하여 반환
-        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId));
+        return documentPage.map(doc -> ResDocumentDto.toDto(doc, myEmpId, "PROCESSED"));
     }
 
     // 내 회사의 최종승인문서 조회
@@ -960,6 +960,43 @@ public class DocumentService {
                     "/documents/" + document.getDocNo() + "?status=AWAITING"
             );
         }
+    }
+
+    @Transactional(readOnly = true)
+    public String determineActualStatus(String comId, String myEmpId, Long docNo, String requestedStatus) {
+        Document doc = documentRepository.findByIdWithApprovalLines(comId, docNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
+
+        // 1. 해당 사용자가 연관된 모든 결재 라인 추출 (원 결재자 또는 대직자)
+        List<ApprovalLine> myLines = doc.getApprovalLines().stream()
+                .filter(al -> al.getApprover().getEmpId().equals(myEmpId) ||
+                        (al.getApprover().getDelegate() != null && al.getApprover().getDelegate().getEmpId().equals(myEmpId)))
+                .toList();
+
+        // 2. 권한 집합 판별
+        boolean isWriter = doc.getWriter().getEmpId().equals(myEmpId);
+        boolean hasAwaitingRole = myLines.stream().anyMatch(al -> al.getApprStat() == ApprStat.I || al.getApprStat() == ApprStat.W);
+        boolean hasProcessedRole = myLines.stream().anyMatch(al -> al.getApprStat() == ApprStat.A || al.getApprStat() == ApprStat.R);
+        DocStat docStat = doc.getDocStat();
+
+        // 3. [최우선] 사용자 의도 존중 (다중 역할이라도 요청한 상태가 유효하면 통과)
+        if ("SUBMITTED".equals(requestedStatus) && isWriter && docStat != DocStat.US) return "SUBMITTED";
+        if ("UNSUBMITTED".equals(requestedStatus) && isWriter && docStat == DocStat.US) return "UNSUBMITTED";
+
+        // 사용자가 1번은 결재했고 3번은 대기 중일 때,
+        // '결재할 문서'에서 클릭했다면 AWAITING을, '결재한 문서'에서 클릭했다면 PROCESSED를 보여줌
+        if ("AWAITING".equals(requestedStatus) && hasAwaitingRole && docStat == DocStat.AW) return "AWAITING";
+        if ("PROCESSED".equals(requestedStatus) && hasProcessedRole) return "PROCESSED";
+
+        if ("FINALIZED".equals(requestedStatus) && docStat == DocStat.FI) return "FINALIZED";
+
+        // 4. [자동 리다이렉트] 의도가 불분명할 때 우선순위 가이드
+        // 현재 당장 결재해야 할 건(I, W)이 있다면 결재 페이지로 먼저 안내
+        if (docStat == DocStat.AW && hasAwaitingRole) return "AWAITING";
+        if (hasProcessedRole) return "PROCESSED";
+        if (isWriter) return (docStat == DocStat.US) ? "UNSUBMITTED" : "SUBMITTED";
+
+        return requestedStatus;
     }
 
     /**

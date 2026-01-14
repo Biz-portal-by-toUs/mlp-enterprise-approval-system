@@ -828,7 +828,7 @@
         </div>
 
         <div id="ai-summary-box" style="display:none; margin-top:15px; padding:15px; background:#f1f3f5; border-left:4px solid var(--primary-color); font-size:13px;">
-            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text"></span>
+            <strong style="color:var(--primary-color);">[AI 요약]</strong> <span id="ai-summary-text" contenteditable="true" style="outline:none; cursor:text; display:inline-block; min-width:10px;"></span>
         </div>
 
         <div class="bottom-actions">
@@ -858,6 +858,7 @@
     let filesToDelete = [];
     let formCategories = [];
     let currentCategoryName = '';
+    let isAiGenerating = false;
 
     document.addEventListener('DOMContentLoaded', async () => {
         const pathParts = window.location.pathname.split('/');
@@ -1928,6 +1929,7 @@
         const summaryText = document.getElementById('ai-summary-text');
         summaryBox.style.display = 'block';
         summaryText.innerHTML = '<span style="color:#868e96;">⏳ AI 요약 생성 중...</span>';
+        isAiGenerating = true;
 
         try {
             const response = await fetch('/api/v1/documents/ai-summary', {
@@ -1953,6 +1955,8 @@
                 text: 'AI 요약 생성에 실패했습니다.\n잠시 후 다시 시도해주세요.',
                 confirmButtonColor: '#339af0'
             });
+        } finally {
+            isAiGenerating = false;
         }
     }
 
@@ -1962,6 +1966,9 @@
         const contentHtml = tiptapEditor.getHTML();
         const contentText = tiptapEditor.getText().trim();
         const checkedRadio = document.querySelector('input[name="docfoCatNo"]:checked');
+
+        const includeAiSummary = document.getElementById('include-ai-summ').checked;
+        const aiSummText = document.getElementById('ai-summary-text').innerText.trim();
 
         // 상신 시 필수 벨리데이션
         if (!isTemp) {
@@ -1984,6 +1991,18 @@
         } else {
             if (!title) {
                 Swal.fire({ icon: 'warning', title: '제목 미입력', text: '임시저장을 위해 제목을 입력해주세요.', confirmButtonColor: '#339af0' });
+                return;
+            }
+        }
+
+        // ✅ AI 요약 벨리데이션 (상신/임시저장 공통: 체크되어 있다면 요약 완료 대기)
+        if (includeAiSummary) {
+            if (isAiGenerating) {
+                Swal.fire({ icon: 'warning', title: 'AI 요약 중', text: 'AI 요약이 완료된 후 임시저장/상신할 수 있습니다.', confirmButtonColor: '#339af0' });
+                return;
+            }
+            if (!aiSummText || aiSummText.startsWith('⏳')) {
+                Swal.fire({ icon: 'warning', title: 'AI 요약 없음', text: 'AI 요약 생성 후 내용을 확인해주세요.', confirmButtonColor: '#339af0' });
                 return;
             }
         }
@@ -2048,48 +2067,6 @@
             }
         }
 
-        const aiSummaryBox = document.getElementById('ai-summary-box');
-        const aiSummaryText = document.getElementById('ai-summary-text').innerText;
-        const includeAiSummary = document.getElementById('include-ai-summ').checked;
-        const hasAiSummary = aiSummaryBox.style.display === 'block' && aiSummaryText.trim() !== '' && !aiSummaryText.includes('⏳');
-
-        if (title.length > 100) {
-            Swal.close();
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '제목은 100자 이내로 입력하세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        if (contentText.length > 1000) {
-            Swal.close();
-            return Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '내용은 1000자 이내로 입력하세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        if (!isTemp && includeAiSummary && !hasAiSummary) {
-            Swal.close();
-            return Swal.fire({
-                icon: 'warning',
-                title: 'AI 요약 오류',
-                text: 'AI 요약을 포함하려면 먼저 "AI 요약 생성" 버튼을 눌러주세요.',
-                confirmButtonColor: '#339af0'
-            });
-        }
-
-        let finalAiSummary = null;
-        if (isTemp) {
-            finalAiSummary = hasAiSummary ? aiSummaryText : null;
-        } else {
-            finalAiSummary = (includeAiSummary && hasAiSummary) ? aiSummaryText : null;
-        }
-
         try {
             const payload = {
                 comId: myInfo.comId,
@@ -2100,7 +2077,7 @@
                 content: JSON.stringify(contentJson),
                 cnttHtml: contentHtml,
                 temp: isTemp,
-                aiSumm: finalAiSummary,
+                aiSumm: includeAiSummary ? aiSummText : "",
                 approvalLines: selectedApprovers.map((a, i) => ({
                     approverId: a.approverId,
                     seq: i + 1,
