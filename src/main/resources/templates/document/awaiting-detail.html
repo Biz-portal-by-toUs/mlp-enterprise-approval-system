@@ -568,6 +568,8 @@
                     body: JSON.stringify({ apprStat: 'A' })
                 });
 
+                const result = await response.json();
+
                 if (response.ok) {
                     Swal.fire({
                         title: '승인 완료',
@@ -578,7 +580,9 @@
                         location.href = '/documents/me?status=AWAITING';
                     });
                 } else {
-                    Swal.fire('승인 실패', '승인 처리 중 오류가 발생했습니다.', 'error');
+                    // 2. 백엔드 ErrorCode에 정의된 실제 message를 보여줌
+                    // result.message가 있으면 그것을, 없으면 기본 문구를 사용
+                    Swal.fire('승인 실패', result.message || '승인 처리 중 오류가 발생했습니다.', 'error');
                 }
             } catch (error) {
                 Swal.fire('통신 오류', '서버와의 통신 중 오류가 발생했습니다.', 'error');
@@ -598,6 +602,8 @@
                     })
                 });
 
+                const result = await response.json();
+
                 if (response.ok) {
                     Swal.fire({
                         title: '반려 완료',
@@ -608,7 +614,8 @@
                         location.href = '/documents/me?status=AWAITING';
                     });
                 } else {
-                    Swal.fire('반려 실패', '반려 처리 중 오류가 발생했습니다.', 'error');
+                    // 서버에서 보낸 에러 메시지(예: 반려 사유 필수 등)를 그대로 표시
+                    Swal.fire('반려 실패', result.message || '반려 처리 중 오류가 발생했습니다.', 'error');
                 }
             } catch (error) {
                 Swal.fire('통신 오류', '서버와의 통신 중 오류가 발생했습니다.', 'error');
