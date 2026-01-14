@@ -77,6 +77,12 @@ public class ProvDocumentController {
 
         Long updatedProvNo = provDocumentService.applyEmbeddingResult(provNo, request);
 
+        if (Boolean.FALSE.equals(request.getSuccess())) {
+            return ResponseEntity
+                    .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(new ResponseDto<>(HttpStatus.UNPROCESSABLE_ENTITY,
+                            "임베딩 실패: " + request.getErrorMsg(), updatedProvNo));
+        }
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "임베딩 성공", updatedProvNo));
