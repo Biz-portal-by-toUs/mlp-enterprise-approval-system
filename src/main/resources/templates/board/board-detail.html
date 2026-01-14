@@ -7,6 +7,7 @@
 <th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* (원본 CSS 그대로) */
         * { box-sizing: border-box; }
@@ -893,7 +894,21 @@
 
         async function downAttachment(attachmentId) {
             if (!attachmentId) return;
-            if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+           // if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+            const result = await Swal.fire({
+                title: '첨부 파일',
+                text: '파일을 다운로드 하시겠습니까?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '확인',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            });
+
+            // 🔴 취소 / ESC / 바깥 클릭 → 즉시 종료
+            if (!result.isConfirmed) return;
 
             try {
                 const {url, meta} = await fetchDownloadUrl(attachmentId);
@@ -922,8 +937,25 @@
         }
 
         async function deleteBoard() {
-            if (!confirm("정말 삭제하시겠습니까?")) return;
+           // if (!confirm("정말 삭제하시겠습니까?")) return;
 
+            const result = await Swal.fire({
+                title: '게시판 삭제 ',
+                text: '정말 삭제하시겠습니까?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '삭제',
+                cancelButtonText: '취소',
+                reverseButtons: true
+
+            });
+
+            // 🔴 취소 / ESC / 바깥 클릭 → 즉시 종료
+            console.log("result1", result);
+            if (!result.isConfirmed) return;
+            console.log("result2", result);
             try {
                 const res = await fetch(`/api/v1/board/${boardNo}`, {
                     method: "DELETE",
@@ -931,7 +963,15 @@
                 });
 
                 if (res.ok) {
-                    alert("게시글이 삭제되었습니다.");
+                    //alert("게시글이 삭제되었습니다.");
+                     await Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        text: '게시글이 삭제되었습니다.',
+                        confirmButtonColor: '#339af0',
+                       // timer: 1000,
+                        showConfirmButton: true
+                    });
                     window.location.href = "/board/list";
                 } else {
                     alert("삭제 실패했습니다.");
@@ -1019,7 +1059,21 @@
 
         async function deleteComment(commentNo) {
             if (!commentNo) return;
-            if (!confirm("정말 삭제하시겠습니까?")) return;
+            //if (!confirm("정말 삭제하시겠습니까?")) return;
+            const result = await Swal.fire({
+                title: '댓글 삭제 ',
+                text: '정말 삭제하시겠습니까?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '삭제',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            });
+
+            // 🔴 취소 / ESC / 바깥 클릭 → 즉시 종료
+            if (!result.isConfirmed) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/v1/comment/${commentNo}`, {
@@ -1028,7 +1082,16 @@
                 });
 
                 if (res.ok) {
-                    alert("댓글이 삭제되었습니다.");
+                    //alert("댓글이 삭제되었습니다.");
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        text: '댓글이 삭제되었습니다.',
+                        confirmButtonColor: '#339af0',
+                        //timer: 1000,
+                        showConfirmButton: true
+                    });
                     await initComment();
                 } else {
                     const msg = await res.text().catch(() => "");
@@ -1040,6 +1103,8 @@
                 console.error(e);
                 alert("삭제 중 오류 발생");
             }
+
+
         }
 
         function bindCommentEvents() {
@@ -1081,7 +1146,8 @@
             const contents = (contentsEl.value ?? "").trim();
 
             if (!contents) {
-                alert("댓글 내용을 입력해주세요.");
+                //alert("댓글 내용을 입력해주세요.");
+                await Swal.fire({ icon: 'warning', title: '댓글 내용', text: '댓글 내용을 입력해주세요.', confirmButtonColor: '#339af0' });
                 contentsEl.focus();
                 return;
             }
@@ -1101,17 +1167,34 @@
 
                 if (!res.ok) {
                     console.error("댓글 등록 실패:", res.status, json);
-                    alert("댓글 등록 실패: " + (json?.message ?? res.statusText));
+                    //alert("댓글 등록 실패: " + (json?.message ?? res.statusText));
+                    await Swal.fire({
+                        icon: 'error',
+                        title: '실패',
+                        text: "댓글 등록 실패: " + (json?.message ?? res.statusText),
+                        confirmButtonColor: '#339af0'
+                    });
                     return;
                 }
 
-                alert(json?.message ?? "댓글 등록 성공");
+                //alert(json?.message ?? "댓글 등록 성공");
+
+                // ✅ 성공 알림을 먼저 확실히 보여줌
+                await Swal.fire({
+                    icon: 'success',
+                    title: '완료',
+                    text: '댓글이 등록되었습니다.',
+                    confirmButtonColor: '#339af0',
+                    showConfirmButton: true
+                });
+
                 contentsEl.value = "";
                 updateCommentByteCounter();
                 await initComment();
             } catch (e) {
                 console.error(e);
-                alert("댓글 등록 중 오류: " + (e?.message ?? e));
+                await Swal.fire({ icon: 'error', title: '오류 발생', text: e.message || '댓글 등록 중 문제가 발생했습니다.', confirmButtonColor: '#339af0' });
+                //alert("댓글 등록 중 오류: " + (e?.message ?? e));
             }
         }
 

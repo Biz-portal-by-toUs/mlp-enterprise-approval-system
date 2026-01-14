@@ -7,7 +7,7 @@
 <th:block layout:fragment="pageStyles">
     <link rel="stylesheet" th:href="@{/css/styles1.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         *{ box-sizing:border-box; }
 
@@ -929,7 +929,22 @@
 
         async function downAttachment(attachmentId){
             if (!attachmentId) return;
-            if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+           // if (!confirm(`attachmentId=${attachmentId} 파일을 다운로드 할까요?`)) return;
+
+            const result = await Swal.fire({
+                title: '첨부 파일',
+                text: '파일을 다운로드 하시겠습니까?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '확인',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            });
+
+            // 🔴 취소 / ESC / 바깥 클릭 → 즉시 종료
+            if (!result.isConfirmed) return;
 
             try{
                 const { url, meta } = await fetchDownloadUrl(attachmentId);
@@ -958,7 +973,25 @@
         }
 
         async function deleteNotice(){
-            if (!confirm("정말 삭제하시겠습니까?")) return;
+           // if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            const result = await Swal.fire({
+                title: '공지사항 삭제 ',
+                text: '정말 삭제하시겠습니까?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#339af0',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '삭제',
+                cancelButtonText: '취소',
+                reverseButtons: true
+
+            });
+
+            // 🔴 취소 / ESC / 바깥 클릭 → 즉시 종료
+            console.log("result1", result);
+            if (!result.isConfirmed) return;
+            console.log("result2", result);
 
             try{
                 const res = await fetch(`/api/v1/notice/${noticeNo}`, {
@@ -967,7 +1000,15 @@
                 });
 
                 if (res.ok) {
-                    alert("공지사항이 삭제되었습니다.");
+                    //alert("공지사항이 삭제되었습니다.");
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        text: '공지사항이 삭제되었습니다.',
+                        confirmButtonColor: '#339af0',
+                        //timer: 1000,
+                        showConfirmButton: true
+                    });
                     window.location.href = "/notice/list";
                 } else {
                     alert("삭제 실패했습니다.");
