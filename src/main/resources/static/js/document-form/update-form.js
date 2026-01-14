@@ -46,8 +46,13 @@ const presetLeftTemplate = document.getElementById('presetLeftTemplate')
 const presetRightTemplate = document.getElementById('presetRightTemplate')
 
 if (!elTitle || !elTypeRadios || !btnAddRadio || !btnClose || !btnSave || !btnTempSave || !toolbar || !fontSizeSelect || !editorMount) {
-    alert('update-form.html의 요소 ID가 JS와 맞지 않습니다. (docTitle/typeRadios/addRadioBtn/closeBtn/saveBtn/tempSaveBtn/toolbar/fontSizeSelect/editor)')
-    throw new Error('DOM mapping mismatch')
+    (async () => {
+        await swalError(
+            '화면 구성 오류',
+            'update-form.html의 요소 ID가 JS와 맞지 않습니다. (docTitle/typeRadios/addRadioBtn/closeBtn/saveBtn/tempSaveBtn/toolbar/fontSizeSelect/editor)'
+        );
+    })();
+    throw new Error('DOM mapping mismatch');
 }
 
 // ===== constants =====
@@ -125,6 +130,116 @@ async function apiFetchOrThrow(url, options = {}) {
     return res
 }
 
+// ===== SweetAlert2 helpers =====
+function hasSwal() {
+    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+}
+
+function getSwal() {
+    if (!hasSwal()) return null;
+    return window.Swal.mixin({
+        confirmButtonText: '확인',
+        cancelButtonText: '취소',
+        buttonsStyling: true,
+        heightAuto: false,
+    });
+}
+
+async function swalError(title, text) {
+    const swal = getSwal();
+    if (!swal) {
+        alert(`${title}\n${text || ''}`.trim());
+        return { isConfirmed: true };
+    }
+    return swal.fire({ icon: 'error', title, text: text || undefined });
+}
+
+async function swalSuccess(title, text) {
+    const swal = getSwal();
+    if (!swal) {
+        alert(`${title}\n${text || ''}`.trim());
+        return { isConfirmed: true };
+    }
+    return swal.fire({ icon: 'success', title, text: text || undefined });
+}
+
+function swalLoading(title = '처리 중...') {
+    const swal = getSwal();
+    if (!swal) return;
+    swal.fire({
+        title,
+        allowOutsideClick: false,
+        didOpen: () => window.Swal.showLoading(),
+        heightAuto: false,
+    });
+}
+
+function swalClose() {
+    if (hasSwal()) window.Swal.close();
+}
+
+async function swalPromptNumber({ title, inputLabel, value = 3, min = 1, max = 20 }) {
+    const swal = getSwal();
+    if (!swal) {
+        const raw = window.prompt(title, String(value));
+        if (raw === null) return null;
+        let n = parseInt(raw, 10);
+        if (!Number.isFinite(n)) n = value;
+        n = Math.max(min, Math.min(max, n));
+        return n;
+    }
+
+    const r = await swal.fire({
+        title,
+        input: 'number',
+        inputLabel,
+        inputValue: value,
+        inputAttributes: { min: String(min), max: String(max), step: '1' },
+        showCancelButton: true,
+        preConfirm: (v) => {
+            let n = parseInt(v, 10);
+            if (!Number.isFinite(n)) n = value;
+            n = Math.max(min, Math.min(max, n));
+            return n;
+        },
+    });
+
+    if (!r.isConfirmed) return null;
+    return r.value;
+}
+
+// ===== success after flow =====
+function safeNavigateOpener(url) {
+    try {
+        if (window.opener && !window.opener.closed) {
+            // same-origin일 때만 안전
+            window.opener.location.href = url;
+            window.opener.focus?.();
+            return true;
+        }
+    } catch (_) {}
+    return false;
+}
+
+async function successAndReturn({ title, text, openerUrl, fallbackUrl }) {
+    // 성공 팝업(확인 버튼 누를 때까지 대기)
+    await swalSuccess(title, text);
+
+    // opener 이동 시도
+    const moved = openerUrl ? safeNavigateOpener(openerUrl) : false;
+
+    // 팝업(현재 창) 닫기
+    // (Swal confirm 이후라 브라우저 차단 확률 낮음)
+    try { window.close(); } catch (_) {}
+
+    // 닫기 실패/팝업이 아닌 경우 fallback
+    setTimeout(() => {
+        if (!document.hidden) {
+            if (!moved && fallbackUrl) location.href = fallbackUrl;
+        }
+    }, 80);
+}
+
 // ===== util =====
 function deepClone(obj) {
     if (typeof structuredClone === 'function') return structuredClone(obj)
@@ -184,8 +299,10 @@ function getDocfoNo() {
 
 const docfoNo = getDocfoNo()
 if (!docfoNo) {
-    alert('docfoNo를 찾을 수 없습니다. 경로가 /form/{docfoNo}/edit 인지 확인하세요.')
-    throw new Error('docfoNo missing')
+    (async () => {
+        await swalError('잘못된 접근', 'docfoNo를 찾을 수 없습니다. 경로가 /form/{docfoNo}/edit 인지 확인하세요.');
+    })();
+    throw new Error('docfoNo missing');
 }
 
 // ===== categories (radio + add + delete + rename) =====
@@ -524,7 +641,7 @@ function bootEditor(initialJson) {
 let _fontSizeBusy = false
 
 function bindToolbar(editor) {
-    toolbar.addEventListener('click', (e) => {
+    toolbar.addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-act]')
         if (!btn) return
         const act = btn.dataset.act
@@ -550,21 +667,26 @@ function bindToolbar(editor) {
             case 'ordered': c.toggleOrderedList().run(); break
 
             case 'table': {
-                const rowsInput = window.prompt('행(rows) 개수를 입력하세요', '3')
-                if (rowsInput === null) break
-                const colsInput = window.prompt('열(cols) 개수를 입력하세요', '3')
-                if (colsInput === null) break
+                const rows = await swalPromptNumber({
+                    title: '행(rows) 개수를 입력하세요',
+                    inputLabel: '1~20',
+                    value: 3,
+                    min: 1,
+                    max: 20,
+                });
+                if (rows == null) break;
 
-                let rows = parseInt(rowsInput, 10)
-                let cols = parseInt(colsInput, 10)
+                const cols = await swalPromptNumber({
+                    title: '열(cols) 개수를 입력하세요',
+                    inputLabel: '1~20',
+                    value: 3,
+                    min: 1,
+                    max: 20,
+                });
+                if (cols == null) break;
 
-                if (!Number.isFinite(rows) || rows < 1) rows = 3
-                if (!Number.isFinite(cols) || cols < 1) cols = 3
-                rows = Math.min(rows, 20)
-                cols = Math.min(cols, 20)
-
-                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).createParagraphNear().run()
-                break
+                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).createParagraphNear().run();
+                break;
             }
 
             case 'addRowAfter':    c.addRowAfter().run(); break
@@ -616,12 +738,12 @@ async function fetchDetail() {
     return await unwrapJson(res)
 }
 
-function buildPayload({ editor, baseDetail }) {
+async function buildPayload({ editor, baseDetail }) {
     const docfoName = elTitle.value.trim()
     if (!docfoName) {
-        alert('양식 제목을 입력하세요.')
-        elTitle.focus()
-        return null
+        await swalError('제목을 입력하세요', '양식 제목(docfo_name)은 필수입니다.');
+        elTitle.focus();
+        return null;
     }
 
     const categories = getAllCategoryNames()
@@ -645,7 +767,7 @@ function buildPayload({ editor, baseDetail }) {
 }
 
 async function saveUpdate({ editor, baseDetail }) {
-    const payload = buildPayload({ editor, baseDetail })
+    const payload = await buildPayload({ editor, baseDetail })
     if (!payload) return null
 
     const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
@@ -659,7 +781,7 @@ async function saveUpdate({ editor, baseDetail }) {
 }
 
 async function saveTempUpdate({ editor, baseDetail }) {
-    const payload = buildPayload({ editor, baseDetail })
+    const payload = await buildPayload({ editor, baseDetail })
     if (!payload) return null
 
     await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/temp`, {
@@ -690,34 +812,57 @@ async function saveTempUpdate({ editor, baseDetail }) {
 
         btnSave.addEventListener('click', async () => {
             try {
-                btnSave.disabled = true
-                await saveUpdate({ editor, baseDetail: detail })
-                markFormListDirty()
-                // 상세로 이동: /form/{docfoNo}
-                location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}`
+                btnSave.disabled = true;
+                swalLoading("저장 중...");
+
+                await saveUpdate({ editor, baseDetail: detail });
+
+                swalClose();
+                markFormListDirty();
+
+                await successAndReturn({
+                    title: '저장되었습니다',
+                    text: '문서양식이 정상적으로 저장되었습니다.',
+                    openerUrl: '/form/pending',     // 원래 창을 pending으로
+                    fallbackUrl: '/form/pending',   // opener 없을 때 본인 이동
+                });
+
             } catch (e) {
-                console.error(e)
-                alert('저장 실패: ' + (e?.message || e))
+                console.error(e);
+                swalClose();
+                await swalError('저장 실패', e?.message || String(e));
             } finally {
-                btnSave.disabled = false
+                btnSave.disabled = false;
             }
-        })
+        });
 
         btnTempSave.addEventListener('click', async () => {
             try {
-                btnTempSave.disabled = true
-                await saveTempUpdate({ editor, baseDetail: detail })
-                markFormListDirty()
-                location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}`
+                btnTempSave.disabled = true;
+                swalLoading('임시저장 중...');
+
+                await saveTempUpdate({ editor, baseDetail: detail });
+
+                swalClose();
+                markFormListDirty();
+
+                await successAndReturn({
+                    title: '임시저장되었습니다',
+                    text: '임시저장이 완료되었습니다.',
+                    openerUrl: '/form/temp',     // 원래 창을 temp로
+                    fallbackUrl: '/form/temp',   // opener 없을 때 본인 이동
+                });
+
             } catch (e) {
-                console.error(e)
-                alert('임시저장 실패: ' + (e?.message || e))
+                console.error(e);
+                swalClose();
+                await swalError('임시저장 실패', e?.message || String(e));
             } finally {
-                btnTempSave.disabled = false
+                btnTempSave.disabled = false;
             }
-        })
+        });
     } catch (e) {
         console.error(e)
-        alert('로드 실패: ' + (e?.message || e))
+        await swalError('로드 실패', e?.message || String(e))
     }
 })()

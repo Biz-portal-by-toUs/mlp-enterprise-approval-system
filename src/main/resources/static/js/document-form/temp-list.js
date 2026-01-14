@@ -45,9 +45,35 @@
 
     // 정책: 임시저장은 직원 접근 불가
     if (isEmployee()) {
-        alert('권한이 없습니다. (임시저장 문서양식은 관리자만 접근 가능합니다.)');
-        location.replace('/form/forms');
+        (async () => {
+            await swalError('권한이 없습니다.', '임시저장 문서양식은 관리자만 접근 가능합니다.');
+            location.replace('/form/forms');
+        })();
         return;
+    }
+
+    // ===== SweetAlert2 helpers =====
+    function hasSwal() {
+        return typeof window.Swal !== "undefined" && window.Swal && typeof window.Swal.fire === "function";
+    }
+
+    function getSwal() {
+        if (!hasSwal()) return null;
+        return window.Swal.mixin({
+            confirmButtonText: "확인",
+            cancelButtonText: "취소",
+            buttonsStyling: true,
+            heightAuto: false,
+        });
+    }
+
+    async function swalError(title, text) {
+        const swal = getSwal();
+        if (!swal) {
+            alert(`${title}\n${text || ""}`.trim());
+            return;
+        }
+        return swal.fire({ icon: "error", title, text: text || undefined });
     }
 
     // ===== util =====
@@ -277,6 +303,7 @@
             render(pg.items);
         } catch (err) {
             console.error(err);
+            await swalError("불러오기 실패", err?.message || String(err));
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
             totalPages = 1;
             renderPager();

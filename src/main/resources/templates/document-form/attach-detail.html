@@ -298,6 +298,64 @@
                     return Number.isFinite(n) ? n : null;
                 }
 
+                // ===== SweetAlert2 helpers =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true }; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined });
+                }
+
+                async function swalSuccess(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true }; }
+                    return swal.fire({ icon: 'success', title, text: text || undefined });
+                }
+
+                async function swalConfirm(title, text) {
+                    const swal = getSwal();
+                    if (!swal) {
+                        const ok = confirm(`${title}\n${text || ''}`.trim());
+                        return { isConfirmed: ok };
+                    }
+                    return swal.fire({
+                        icon: 'question',
+                        title,
+                        text: text || undefined,
+                        showCancelButton: true,
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                    });
+                }
+
+                function swalLoading(title = '처리 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+
+                function swalClose() {
+                    if (hasSwal()) window.Swal.close();
+                }
+
                 // ===== attachments: list + click download =====
                 async function loadFiles(attachNo){
                     const list = document.getElementById('attachList');
@@ -344,7 +402,7 @@
                                 a.remove();
                             }catch(err){
                                 console.error(err);
-                                alert('다운로드에 실패했습니다.');
+                                await swalError('다운로드 실패', err?.message || '다운로드에 실패했습니다.');
                             }
                         });
                     }
@@ -382,21 +440,32 @@
                     const btnDelete = document.getElementById('btnDelete');
                     if (btnDelete){
                         btnDelete.onclick = async () => {
-                            if (!confirm('이 첨부문서를 삭제할까요?')) return;
+                            const r = await swalConfirm('삭제', '이 첨부문서를 삭제할까요?');
+                            if (!r.isConfirmed) return;
+
                             try{
+                                swalLoading('삭제 중...');
                                 await api('DELETE', API.DELETE(attachNo));
+                                swalClose();
+
+                                await swalSuccess('삭제되었습니다', '첨부문서가 삭제되었습니다.');
                                 location.href = ROUTES.LIST_VIEW;
+
                             }catch(err){
                                 console.error(err);
-                                alert('삭제에 실패했습니다.');
+                                swalClose();
+                                await swalError('삭제 실패', err?.message || '삭제에 실패했습니다.');
                             }
                         };
                     }
                 }
 
                 window.addEventListener('DOMContentLoaded', () => {
-                    loadDetail().catch(err => {
+                    loadDetail().catch(async (err) => {
                         console.error(err);
+
+                        await swalError('조회 실패', err?.message || '상세 조회에 실패했습니다.');
+
                         setText('titleTxt', '');
                         setText('uploaderTxt', '');
                         setText('dscpTxt', '');

@@ -10,6 +10,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>첨부문서 등록</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style layout:fragment="pageStyles">
         :root{
             --fg:#0f172a;
@@ -438,9 +440,11 @@
 
                 function showErr(msg) {
                     const el = document.getElementById('err');
-                    if (!el) return;
-                    el.style.display = msg ? 'block' : 'none';
-                    el.textContent = msg || '';
+                    if (el) {
+                        el.style.display = msg ? 'block' : 'none';
+                        el.textContent = msg || '';
+                    }
+                    if (msg) swalError('오류', msg);
                 }
 
                 function setAttStatus(msg) {
@@ -473,6 +477,64 @@
                 }
 
                 function $(id) { return document.getElementById(id); }
+
+                // ===== SweetAlert2 helpers =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true }; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined });
+                }
+
+                async function swalSuccess(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true }; }
+                    return swal.fire({ icon: 'success', title, text: text || undefined });
+                }
+
+                async function swalConfirm(title, text) {
+                    const swal = getSwal();
+                    if (!swal) {
+                        const ok = confirm(`${title}\n${text || ''}`.trim());
+                        return { isConfirmed: ok };
+                    }
+                    return swal.fire({
+                        icon: 'question',
+                        title,
+                        text: text || undefined,
+                        showCancelButton: true,
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                    });
+                }
+
+                function swalLoading(title = '처리 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+
+                function swalClose() {
+                    if (hasSwal()) window.Swal.close();
+                }
 
                 // ===== 메타(attachNo) 먼저 생성 =====
                 async function ensureAttachMeta() {
@@ -577,6 +639,7 @@
                     } catch (e) {
                         console.error(e);
                         setAttStatus('');
+                        await swalError('업로드 실패', e?.message || '첨부 업로드에 실패했습니다.');
                         showErr(e?.message || '첨부 업로드에 실패했습니다.');
                     }
                 }
@@ -635,6 +698,7 @@
                         a.remove();
                     } catch (e) {
                         console.error(e);
+                        await swalError('다운로드 실패', e?.message || '다운로드에 실패했습니다.');
                         showErr(e?.message || '다운로드에 실패했습니다.');
                     }
                 }
@@ -706,24 +770,33 @@
 
                 function bindActions() {
                     $('btnCancel')?.addEventListener('click', async () => {
-                        // 취소 = 생성된 메타(attachNo)가 있으면 삭제하고 나가기
+                        const r = await swalConfirm('취소', '작성 중인 내용이 삭제될 수 있습니다. 취소하시겠습니까?');
+                        if (!r.isConfirmed) return;
+
                         try {
                             showErr('');
+                            swalLoading('취소 처리 중...');
+
                             if (state.attachNo) {
                                 await fetchDto(API.DELETE_META(state.attachNo), { method: 'DELETE' });
                                 state.attachNo = null;
                             }
+
+                            swalClose();
+                            location.href = ROUTES.LIST_VIEW;
                         } catch (e) {
                             console.error(e);
-                            // 실패해도 나감(UX 우선)
-                        } finally {
-                            location.href = ROUTES.LIST_VIEW;
+                            swalClose();
+                            await swalError('취소 실패', e?.message || '취소 처리 중 오류가 발생했습니다.');
+                            // UX 우선: 실패해도 나가려면 아래 주석 해제
+                            // location.href = ROUTES.LIST_VIEW;
                         }
                     });
 
                     $('btnSave')?.addEventListener('click', async () => {
                         try {
                             showErr('');
+                            swalLoading('저장 중...');
 
                             const attachNo = await ensureAttachMeta();
                             await refreshAttachList();
@@ -736,9 +809,15 @@
                             });
 
                             state.isCommitted = true;
+
+                            swalClose();
+                            await swalSuccess('저장되었습니다', '첨부문서가 정상적으로 등록되었습니다.');
                             location.href = ROUTES.LIST_VIEW;
+
                         } catch (e) {
                             console.error(e);
+                            swalClose();
+                            await swalError('저장 실패', e?.message || '저장에 실패했습니다.');
                             showErr(e?.message || '저장에 실패했습니다.');
                         }
                     });

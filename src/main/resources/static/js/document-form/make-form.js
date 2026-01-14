@@ -199,6 +199,42 @@ function applyDefaultFontSizeInTables(json, fontSize = DEFAULT_TABLE_FONT_SIZE) 
     return cloned
 }
 
+function hasSwal() {
+    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function'
+}
+
+async function swalSuccess(title, text) {
+    if (!hasSwal()) {
+        alert(`${title}\n${text || ''}`.trim())
+        return { isConfirmed: true }
+    }
+
+    return window.Swal.fire({
+        icon: 'success',
+        title,
+        text: text || undefined,
+        confirmButtonText: '확인',
+        buttonsStyling: true,
+        heightAuto: false,
+    })
+}
+
+async function swalError(title, text) {
+    if (!hasSwal()) {
+        alert(`${title}\n${text || ''}`.trim())
+        return
+    }
+
+    return window.Swal.fire({
+        icon: 'error',
+        title,
+        text: text || undefined,
+        confirmButtonText: '확인',
+        buttonsStyling: true,
+        heightAuto: false,
+    })
+}
+
 function escapeHtml(s) {
     return String(s)
         .replaceAll('&', '&amp;')
@@ -1074,6 +1110,10 @@ function markEditablePolicyForTemplate(json) {
 function wireSave(editor) {
     async function submit(mode) {
         const docTitle = (elDocTitle?.value || '').trim();
+        if (!docTitle) {
+            await swalError('제목을 입력하세요', '양식 제목(docfo_name)은 필수입니다.')
+            return null
+        }
 
         const rawJson = editor.getJSON();
         const withTableFont = applyDefaultFontSizeInTables(rawJson, DEFAULT_TABLE_FONT_SIZE);
@@ -1101,12 +1141,23 @@ function wireSave(editor) {
             else { url = `/api/v1/forms`; method = 'POST'; }
         }
 
+        if (hasSwal()) {
+            window.Swal.fire({
+                title: '처리 중...',
+                allowOutsideClick: false,
+                didOpen: () => window.Swal.showLoading(),
+                heightAuto: false,
+            })
+        }
+
         try {
             const res = await apiFetchOrThrow(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             })
+
+            if (hasSwal()) window.Swal.close()
 
             // POST는 id가 올 수 있음
             if (method === 'POST') {
@@ -1115,8 +1166,9 @@ function wireSave(editor) {
             }
             return true
         } catch (e) {
-            const prefix = (mode === 'TEMP') ? '임시저장 실패: ' : '저장 실패: '
-            alert(prefix + (e?.message || String(e)))
+            if (hasSwal()) window.Swal.close()
+            const prefix = (mode === 'TEMP') ? '임시저장 실패' : '저장 실패'
+            await swalError(prefix, (e?.message || String(e)))
             return null
         }
     }
@@ -1127,6 +1179,8 @@ function wireSave(editor) {
         if (!ok) return
 
         markFormListDirty()
+
+        await swalSuccess('등록되었습니다.', '결재 대기 목록으로 이동합니다.')
 
         const targetUrl = '/form/pending'
 
@@ -1143,12 +1197,13 @@ function wireSave(editor) {
     })
 
     // 임시저장 버튼: 성공 시 temp 페이지로 이동
-    const elTempBtn = document.getElementById('tempSaveBtn')
-    elTempBtn?.addEventListener('click', async () => {
+    elTempSaveBtn?.addEventListener('click', async () => {
         const ok = await submit('TEMP')
         if (!ok) return
 
         markFormListDirty()
+
+        await swalSuccess('임시저장되었습니다.', '임시저장함으로 이동합니다.')
 
         const targetUrl = '/form/temp'
 
@@ -1433,11 +1488,11 @@ async function restoreIfDocfoNoExists(editor) {
             }
         }
     } catch (e) {
-        alert('불러오기 실패: ' + (e?.message || String(e)))
+        await swalError('불러오기 실패', (e?.message || String(e)))
     }
 }
 
-bootEditor().catch((e) => {
+bootEditor().catch(async (e) => {
     console.error(e)
-    alert('에디터 로딩 실패: ' + (e?.message || e))
+    await swalError('에디터 로딩 실패', (e?.message || String(e)))
 })
