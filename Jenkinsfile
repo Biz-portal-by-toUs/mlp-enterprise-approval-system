@@ -12,17 +12,18 @@ pipeline {
         IMAGE_TAG           = "${BUILD_NUMBER}"
 
         // ===== FastAPI(별도 레포) =====
-        FASTAPI_REPO_URL    = "https://github.com/Biz-portal-by-toUs/mlp-enterprise-approval-system-ai.git"   // ✅ 여길 너 레포로
-        FASTAPI_BRANCH      = "main"                                                                    // ✅ 브랜치 확인
-        FASTAPI_DIR         = "fastapi-repo"                                                             // workspace 안에 체크아웃될 폴더명
+        FASTAPI_REPO_URL    = "https://github.com/Biz-portal-by-toUs/mlp-enterprise-approval-system-ai.git"
+        FASTAPI_BRANCH      = "main"
+        FASTAPI_DIR         = "fastapi-repo"
 
-        // FastAPI는 ECR repo를 분리한다고 가정 (원하면 terraform-ecr 같이 써도 됨)
         FASTAPI_ECR_REPO_NAME = "terraform-ecr-fastapi"
         FASTAPI_ECR_REPO_URI  = "118320467932.dkr.ecr.us-west-1.amazonaws.com/terraform-ecr-fastapi"
 
-        // FastAPI k8s 매니페스트 위치(기본: Bizportal 레포의 k8s/fastapi.yaml)
-        FASTAPI_K8S_MANIFEST  = "k8s/fastapi.yaml"  // ✅ 너가 만든 fastapi.yaml 경로로 맞추기
-        FASTAPI_DEPLOY_NAME   = "bizportal-fastapi" // ✅ fastapi.yaml의 Deployment name과 동일하게
+        FASTAPI_K8S_MANIFEST  = "k8s/fastapi.yaml"
+        FASTAPI_DEPLOY_NAME   = "bizportal-fastapi"
+
+        // FastAPI commit tracking (workspace에 저장)
+        FASTAPI_COMMIT_FILE = ".last_fastapi_commit"
 
         // ===== Cluster =====
         EKS_CLUSTER_NAME    = "terraform-eks-cluster"
@@ -35,9 +36,17 @@ pipeline {
             steps {
                 dir("${FASTAPI_DIR}") {
                     deleteDir()
-                    // 공개레포면 credentials 없이도 OK
                     git branch: "${FASTAPI_BRANCH}", url: "${FASTAPI_REPO_URL}"
+                    sh 'git rev-parse HEAD > ../.fastapi_head'
                     sh 'ls -la'
+                }
+
+                script {
+                    def head = readFile('.fastapi_head').trim()
+                    def last = fileExists(env.FASTAPI_COMMIT_FILE) ? readFile(env.FASTAPI_COMMIT_FILE).trim() : ""
+
+                    env.FASTAPI_CHANGED = (head != last) ? "true" : "false"
+                    echo "FASTAPI_CHANGED=${env.FASTAPI_CHANGED} (head=${head}, last=${last})"
                 }
             }
         }
@@ -72,30 +81,29 @@ pipeline {
         }
 
         stage('Docker Build & Push (FastAPI -> ECR)') {
-          steps {
-            withCredentials([
-              string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
-              string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-            ]) {
-              dir('fastapi-repo') {
-                sh '''
-                  set -e
-                  ls -la   # Dockerfile 존재 확인용
+            when { expression { return env.FASTAPI_CHANGED == "true" } }
+            steps {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir("${FASTAPI_DIR}") {
+                        sh '''
+                          set -e
+                          ls -la   # Dockerfile 존재 확인용
 
-                  aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} || true
+                          aws ecr get-login-password --region ${AWS_REGION} \
+                            | docker login --username AWS --password-stdin ${FASTAPI_ECR_REPO_URI}
 
-                  aws ecr get-login-password --region ${AWS_REGION} \
-                    | docker login --username AWS --password-stdin ${FASTAPI_ECR_REPO_URI}
+                          aws ecr describe-repositories --region ${AWS_REGION} --repository-names ${FASTAPI_ECR_REPO_NAME} \
+                            || aws ecr create-repository --region ${AWS_REGION} --repository-name ${FASTAPI_ECR_REPO_NAME}
 
-                  aws ecr describe-repositories --region ${AWS_REGION} --repository-names ${FASTAPI_ECR_REPO_NAME} \
-                    || aws ecr create-repository --region ${AWS_REGION} --repository-name ${FASTAPI_ECR_REPO_NAME}
-
-                  docker build -t ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} .
-                  docker push ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}
-                '''
-              }
+                          docker build -t ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} .
+                          docker push ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}
+                        '''
+                    }
+                }
             }
-          }
         }
 
         stage('Deploy Infra (Redis / MongoDB / Elasticsearch / Weaviate)') {
@@ -155,6 +163,7 @@ pipeline {
         }
 
         stage('Deploy FastAPI (K8S)') {
+            when { expression { return env.FASTAPI_CHANGED == "true" } }
             steps {
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
@@ -164,7 +173,7 @@ pipeline {
                       set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
-                      # ✅ fastapi.yaml 안에 이미지가 ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} 형태로 들어있다고 가정
+                      # fastapi.yaml 안에 이미지가 ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} 형태로 들어있다고 가정
                       envsubst < ${FASTAPI_K8S_MANIFEST} | kubectl apply -f -
 
                       kubectl -n ${K8S_NAMESPACE} rollout status deploy/${FASTAPI_DEPLOY_NAME}
@@ -181,8 +190,6 @@ pipeline {
                     string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
-                      kubectl -n ${K8S_NAMESPACE} get pods -o wide
-                      kubectl -n ${K8S_NAMESPACE} get svc
                       set -e
                       aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
@@ -211,7 +218,19 @@ pipeline {
                 }
             }
         }
+
+        stage('Mark FastAPI commit') {
+            when { expression { return env.FASTAPI_CHANGED == "true" } }
+            steps {
+                script {
+                    def head = readFile('.fastapi_head').trim()
+                    writeFile(file: env.FASTAPI_COMMIT_FILE, text: head)
+                    echo "Saved FastAPI commit: ${head}"
+                }
+            }
+        }
     }
+
     post {
       success {
         slackSend(
