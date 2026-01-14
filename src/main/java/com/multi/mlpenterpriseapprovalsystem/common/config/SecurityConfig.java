@@ -106,6 +106,7 @@ public class SecurityConfig {
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/**").permitAll()
                         .requestMatchers("/api/v1/admin/departments/**", "/api/v1/admin/positions/**").hasAnyRole("COM_ADMIN")
+                        .requestMatchers("/actuator/health/**").permitAll()
                         .anyRequest().authenticated()
                 )
 

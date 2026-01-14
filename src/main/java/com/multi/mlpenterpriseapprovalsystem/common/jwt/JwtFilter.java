@@ -60,7 +60,8 @@ public class JwtFilter extends OncePerRequestFilter {
             "/auth/password",
             "/auth/verify/**",
             "/public/**",
-            "/swagger-ui/**"
+            "/swagger-ui/**",
+            "/actuator/health/**"
     };
 
 
