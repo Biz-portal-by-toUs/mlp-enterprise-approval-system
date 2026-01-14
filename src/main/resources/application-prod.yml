@@ -34,21 +34,67 @@ logging:
   level:
     root: INFO
 
+# ===== AWS / S3 (운영: 로컬 저장 안 함, S3 presigned만 사용) =====
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+    region:
+      static: ${AWS_REGION:us-west-1}
+    stack:
+      auto: false
+
 app:
+  s3:
+    bucket: ${AWS_BUCKET}
+    env: ${S3_ENV:prod}
+
   elasticsearch:
     host: ${ELASTIC_HOST}
     index-search-alias: bizportal_search
     index-menu-alias: bizportal_search_menu
 
+  search:
+    outbox:
+      fixed-delay-ms: 1000
+
 # 네 ConfigMap에 있으니 그대로 매핑됨
 ai:
   fastapi:
     base-url: ${AI_FASTAPI_BASE_URL}
+    callback-secret: ${AI_FASTAPI_CALLBACK_SECRET}
 
 internal:
   ai:
     callback-header: ${INTERNAL_AI_CALLBACK_HEADER}
+    callback-key: ${INTERNAL_AI_CALLBACK_KEY}
+
     meetings:
       callback-url: ${INTERNAL_AI_MEETINGS_CALLBACK_URL}
     chatbot:
       callback-url: ${INTERNAL_AI_CHATBOT_CALLBACK_URL}
+
+holiday:
+  service-key: ${HOLIDAY_SERVICE_KEY}
+
+nts:
+  api:
+    service-key: ${NTS_API_SERVICE_KEY}
+
+juso:
+  api:
+    key: ${JUSO_API_KEY}
+
+portone:
+  api-key: ${PORTONE_API_KEY}
+  api-secret: ${PORTONE_API_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized

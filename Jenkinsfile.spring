@@ -1,0 +1,140 @@
+pipeline {
+  agent any
+
+  options { disableConcurrentBuilds() }
+
+  environment {
+    AWS_REGION      = 'us-west-1'
+    AWS_ACCOUNT_ID  = '118320467932'
+
+    // ===== Bizportal(Spring) =====
+    ECR_REPO_URI    = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/terraform-ecr"
+    IMAGE_TAG       = "${BUILD_NUMBER}"
+
+    // ===== Cluster =====
+    EKS_CLUSTER_NAME = 'terraform-eks-cluster'
+    K8S_NAMESPACE    = 'bizportal'
+  }
+
+  stages {
+
+    stage('Build (Bizportal)') {
+      steps {
+        sh '''
+          set -e
+          chmod +x gradlew
+          ./gradlew clean build -x test
+        '''
+      }
+    }
+
+    stage('Docker Build & Push (Bizportal -> ECR)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            set -e
+            aws sts get-caller-identity
+
+            aws ecr get-login-password --region ${AWS_REGION} \
+              | docker login --username AWS --password-stdin ${ECR_REPO_URI}
+
+            docker build -t ${ECR_REPO_URI}:${IMAGE_TAG} .
+            docker push ${ECR_REPO_URI}:${IMAGE_TAG}
+          '''
+        }
+      }
+    }
+
+    stage('Apply App Config (ConfigMap + Secrets)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY'),
+
+          string(credentialsId: 'DB_PROD_URL', variable: 'DB_PROD_URL'),
+          string(credentialsId: 'DB_PROD_USER', variable: 'DB_PROD_USER'),
+          string(credentialsId: 'DB_PROD_PASSWORD', variable: 'DB_PROD_PASSWORD'),
+
+          string(credentialsId: 'JWT_SECRET', variable: 'JWT_SECRET'),
+          string(credentialsId: 'JWT_ISSUER', variable: 'JWT_ISSUER')
+        ]) {
+          sh '''
+            set -e
+            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+
+            kubectl apply -f k8s/bizportal-configmap.yaml
+
+            # ⚠️ 이 apply는 "명시한 key만 가진 secret"으로 덮어씁니다(기존 key 유지 안 됨)
+            kubectl -n ${K8S_NAMESPACE} create secret generic bizportal-secrets \
+              --from-literal=DB_PROD_URL="${DB_PROD_URL}" \
+              --from-literal=DB_PROD_USER="${DB_PROD_USER}" \
+              --from-literal=DB_PROD_PASSWORD="${DB_PROD_PASSWORD}" \
+              --from-literal=JWT_SECRET="${JWT_SECRET}" \
+              --from-literal=JWT_ISSUER="${JWT_ISSUER}" \
+              --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+              --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          '''
+        }
+      }
+    }
+
+    stage('Deploy Bizportal App (K8S)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            set -e
+            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+
+            envsubst < k8s/app-deploy.yml | kubectl apply -f -
+
+            kubectl -n ${K8S_NAMESPACE} rollout status deploy/bizportal-api
+            kubectl -n ${K8S_NAMESPACE} get pods -o wide
+          '''
+        }
+      }
+    }
+
+    stage('Deploy Ingress (ALB)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            set -e
+            aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
+
+            kubectl apply -f k8s/ingress.yml
+            kubectl -n ${K8S_NAMESPACE} get ingress
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      slackSend(
+        channel: "#bizportal",
+        message: "✅ SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n${env.BUILD_URL}",
+        tokenCredentialId: "SLACK_TOKEN"
+      )
+      echo "✅ Bizportal(Sprint) deploy success!"
+    }
+    failure {
+      slackSend(
+        channel: "#bizportal",
+        message: "❌ FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n${env.BUILD_URL}",
+        tokenCredentialId: "SLACK_TOKEN"
+      )
+      echo "❌ Bizportal(Spring) deploy failed"
+    }
+  }
+}
