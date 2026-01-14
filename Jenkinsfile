@@ -1,21 +1,3 @@
-// Jenkinsfile
-
-def slackNotify(String status, String extraMsg = "") {
-    // ✅ Jenkins Credentials에 "SLACK_WEBHOOK_URL" (Secret text) 로 등록해두면 됨
-    withCredentials([string(credentialsId: 'SLACK_TOKEN', variable: 'SLACK_TOKEN')]) {
-        sh """
-          set +x
-          payload=\$(cat <<'JSON'
-{
-  "text": "[Bizportal CI/CD] ${status}\\n- Job: ${JOB_NAME} #${BUILD_NUMBER}\\n- Bizportal Image: ${ECR_REPO_URI}:${IMAGE_TAG}\\n- FastAPI Image: ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}\\n- Build: ${BUILD_URL}\\n${extraMsg}"
-}
-JSON
-)
-          curl -sS -X POST -H 'Content-type: application/json' --data "\$payload" "\$SLACK_TOKEN" >/dev/null
-        """
-    }
-}
-
 pipeline {
     agent any
 
@@ -90,31 +72,30 @@ pipeline {
         }
 
         stage('Docker Build & Push (FastAPI -> ECR)') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    dir("${FASTAPI_DIR}") {
-                        sh '''
-                          set -e
-                          aws sts get-caller-identity
+          steps {
+            withCredentials([
+              string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+              string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+              dir('fastapi-repo') {
+                sh '''
+                  set -e
+                  ls -la   # Dockerfile 존재 확인용
 
-                          aws ecr get-login-password --region ${AWS_REGION} \
-                            | docker login --username AWS --password-stdin ${FASTAPI_ECR_REPO_URI}
+                  aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME} || true
 
-                          # ✅ ECR repo 없으면 생성 (있으면 무시)
-                          aws ecr describe-repositories --region ${AWS_REGION} \
-                            --repository-names ${FASTAPI_ECR_REPO_NAME} >/dev/null 2>&1 \
-                            || aws ecr create-repository --region ${AWS_REGION} --repository-name ${FASTAPI_ECR_REPO_NAME} >/dev/null
+                  aws ecr get-login-password --region ${AWS_REGION} \
+                    | docker login --username AWS --password-stdin ${FASTAPI_ECR_REPO_URI}
 
-                          # ✅ FastAPI Dockerfile이 repo 루트에 있다고 가정
-                          docker build -t ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} .
-                          docker push ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}
-                        '''
-                    }
-                }
+                  aws ecr describe-repositories --region ${AWS_REGION} --repository-names ${FASTAPI_ECR_REPO_NAME} \
+                    || aws ecr create-repository --region ${AWS_REGION} --repository-name ${FASTAPI_ECR_REPO_NAME}
+
+                  docker build -t ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG} .
+                  docker push ${FASTAPI_ECR_REPO_URI}:${IMAGE_TAG}
+                '''
+              }
             }
+          }
         }
 
         stage('Deploy Infra (Redis / MongoDB / Elasticsearch / Weaviate)') {
@@ -229,18 +210,22 @@ pipeline {
             }
         }
     }
-
     post {
-        success {
-            script { slackNotify("✅ SUCCESS") }
-            echo "✅ Bizportal + FastAPI deploy success!"
-        }
-        failure {
-            script { slackNotify("❌ FAILURE", "- Check logs for the failing stage.") }
-            echo "❌ Bizportal + FastAPI deploy failed"
-        }
-        aborted {
-            script { slackNotify("⚠️ ABORTED") }
-        }
+      success {
+        slackSend(
+          channel: "#bizportal",
+          message: "✅ SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n${env.BUILD_URL}",
+          tokenCredentialId: "SLACK_TOKEN"
+        )
+        echo "✅ Bizportal + FastAPI deploy success!"
+      }
+      failure {
+        slackSend(
+          channel: "#bizportal",
+          message: "❌ FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n${env.BUILD_URL}",
+          tokenCredentialId: "SLACK_TOKEN"
+        )
+        echo "❌ Bizportal + FastAPI deploy failed"
+      }
     }
 }
