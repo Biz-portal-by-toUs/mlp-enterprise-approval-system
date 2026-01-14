@@ -45,9 +45,35 @@
 
     // 정책: 임시저장은 직원 접근 불가
     if (isEmployee()) {
-        alert('권한이 없습니다. (임시저장 문서양식은 관리자만 접근 가능합니다.)');
-        location.replace('/form/forms');
+        (async () => {
+            await swalError('권한이 없습니다.', '임시저장 문서양식은 관리자만 접근 가능합니다.');
+            location.replace('/form/forms');
+        })();
         return;
+    }
+
+    // ===== SweetAlert2 helpers =====
+    function hasSwal() {
+        return typeof window.Swal !== "undefined" && window.Swal && typeof window.Swal.fire === "function";
+    }
+
+    function getSwal() {
+        if (!hasSwal()) return null;
+        return window.Swal.mixin({
+            confirmButtonText: "확인",
+            cancelButtonText: "취소",
+            buttonsStyling: true,
+            heightAuto: false,
+        });
+    }
+
+    async function swalError(title, text) {
+        const swal = getSwal();
+        if (!swal) {
+            alert(`${title}\n${text || ""}`.trim());
+            return;
+        }
+        return swal.fire({ icon: "error", title, text: text || undefined });
     }
 
     // ===== util =====
@@ -90,6 +116,33 @@
         const body = await res.json().catch(() => null);
         if (!body) return null;
         return isResponseDto(body) ? body.data : body;
+    }
+
+    async function extractErrorMessage(res) {
+        const text = await res.text().catch(() => '');
+
+        // JSON이면 message만
+        try {
+            const json = text ? JSON.parse(text) : null;
+            if (json && typeof json === 'object') {
+                if (typeof json.message === 'string' && json.message.trim()) return json.message;
+
+                // 혹시 다른 구조가 섞여있을 때 대비
+                if (json.error && typeof json.error.message === 'string') return json.error.message;
+                if (json.data && typeof json.data.message === 'string') return json.data.message;
+            }
+        } catch (_) {
+            // JSON 파싱 실패면 text fallback
+        }
+
+        // JSON 아니면 텍스트 그대로(너무 길면 컷)
+        const trimmed = (text || '').trim();
+        if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed;
+
+        // 최후 fallback
+        if (res.status === 401) return '로그인이 필요합니다.';
+        if (res.status === 403) return '권한이 없습니다.';
+        return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
     }
 
     async function apiFetch(url, options = {}, _retried = false) {
@@ -233,8 +286,8 @@
             }
 
             if (!res.ok) {
-                const t = await res.text().catch(() => '');
-                throw new Error(`HTTP ${res.status} ${t}`);
+                const msg = await extractErrorMessage(res);
+                throw new Error(msg);
             }
 
             const pg = normalizePage(await res.json());
@@ -250,6 +303,7 @@
             render(pg.items);
         } catch (err) {
             console.error(err);
+            await swalError("불러오기 실패", err?.message || String(err));
             elTbody.innerHTML = `<tr><td colspan="2" class="muted">불러오기 실패: ${esc(err?.message || err)}</td></tr>`;
             totalPages = 1;
             renderPager();

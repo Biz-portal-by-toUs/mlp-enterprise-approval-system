@@ -34,14 +34,104 @@
     const PERM = readPerms();
 
     // EMPLOYEE가 잘못 들어오면 프론트에서도 방어
-    function isEmployeeByClass() {
-        const cls = document.documentElement.classList;
-        return cls.contains("role-employee") || cls.contains("role-EMPLOYEE");
+    if (isEmployeeByClass()) {
+        (async () => {
+            await swalError("권한이 없습니다.", "승인 대기 목록은 관리자만 접근 가능합니다.");
+            location.replace("/form/forms");
+        })();
+        return;
     }
     if (isEmployeeByClass()) {
         alert("권한이 없습니다. (승인 대기 목록은 관리자만 접근 가능합니다.)");
         location.replace("/form/forms");
         return;
+    }
+
+    // ===== SweetAlert2 helpers =====
+    function hasSwal() {
+        return typeof window.Swal !== "undefined" && window.Swal && typeof window.Swal.fire === "function";
+    }
+
+    function getSwal() {
+        if (!hasSwal()) return null;
+        return window.Swal.mixin({
+            confirmButtonText: "확인",
+            cancelButtonText: "취소",
+            buttonsStyling: true,
+            heightAuto: false,
+        });
+    }
+
+    async function swalError(title, text) {
+        const swal = getSwal();
+        if (!swal) {
+            alert(`${title}\n${text || ""}`.trim());
+            return;
+        }
+        return swal.fire({ icon: "error", title, text: text || undefined });
+    }
+
+    async function swalInfo(title, text) {
+        const swal = getSwal();
+        if (!swal) {
+            alert(`${title}\n${text || ""}`.trim());
+            return { isConfirmed: true };
+        }
+        return swal.fire({ icon: "info", title, text: text || undefined });
+    }
+
+    async function swalConfirm(title, text, confirmText = "확인", cancelText = "취소") {
+        const swal = getSwal();
+        if (!swal) return { isConfirmed: confirm(`${title}\n${text || ""}`.trim()) };
+
+        return swal.fire({
+            icon: "warning",
+            title,
+            text: text || undefined,
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            cancelButtonText: cancelText,
+            reverseButtons: true,
+        });
+    }
+
+    async function swalPrompt(title, placeholder = "", confirmText = "확인", cancelText = "취소") {
+        const swal = getSwal();
+        if (!swal) {
+            const v = window.prompt(title, "");
+            if (v == null) return { isConfirmed: false, value: null };
+            return { isConfirmed: true, value: String(v) };
+        }
+
+        return swal.fire({
+            title,
+            input: "textarea",
+            inputPlaceholder: placeholder || "",
+            inputValue: "",
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            cancelButtonText: cancelText,
+            reverseButtons: true,
+            inputValidator: (value) => {
+                // 빈 값은 허용하지 않게(필요할 때만 사용)
+                return null;
+            },
+        });
+    }
+
+    async function swalLoading(title = "처리 중...") {
+        const swal = getSwal();
+        if (!swal) return;
+        return swal.fire({
+            title,
+            allowOutsideClick: false,
+            didOpen: () => window.Swal.showLoading(),
+            heightAuto: false,
+        });
+    }
+
+    function swalClose() {
+        if (hasSwal()) window.Swal.close();
     }
 
     // ui helpers
@@ -112,6 +202,40 @@
         return isResponseDto(body) ? body.data : body;
     }
 
+    async function extractErrorMessage(res) {
+        const text = await res.text().catch(() => "");
+
+        // JSON이면 message만
+        try {
+            const json = text ? JSON.parse(text) : null;
+            if (json && typeof json === "object") {
+                if (typeof json.message === "string" && json.message.trim()) return json.message;
+
+                // 혹시 다른 구조가 섞여있을 때 대비
+                if (json.error && typeof json.error.message === "string") return json.error.message;
+                if (json.data && typeof json.data.message === "string") return json.data.message;
+            }
+        } catch (_) {
+            // JSON 파싱 실패면 text fallback
+        }
+
+        const trimmed = (text || "").trim();
+        if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + "…" : trimmed;
+
+        if (res.status === 401) return "로그인이 필요합니다.";
+        if (res.status === 403) return "권한이 없습니다.";
+        return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
+    }
+
+    async function apiFetchOrThrow(url, options = {}) {
+        const res = await apiFetch(url, options);
+        if (!res.ok) {
+            const msg = await extractErrorMessage(res);
+            throw new Error(msg);
+        }
+        return res;
+    }
+
     function markFormListDirty() {
         try { localStorage.setItem("list:dirty", "true"); } catch (_) {}
     }
@@ -151,53 +275,42 @@
             payload.rejectReason = String(rejectReason).trim();
         }
 
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
+        await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
             method: "PATCH",
             body: JSON.stringify(payload),
         });
 
-        if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            throw new Error(`상태 변경 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
-        }
         return true;
     }
 
     async function approveDelete(docfoNo) {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, { method: "PATCH" });
-        if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            throw new Error(`삭제 승인 실패 HTTP ${res.status} ${t}`);
-        }
+        await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, {
+            method: "PATCH",
+        });
         return true;
     }
 
     async function rejectDelete(docfoNo, rejectReason) {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
+        await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
             method: "PATCH",
             body: JSON.stringify({ rejectReason: String(rejectReason).trim() }),
         });
-        if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            throw new Error(`삭제 반려 실패 HTTP ${res.status} ${t}`);
-        }
         return true;
     }
 
     async function showRejectReason(docfoNo) {
         if (!PERM.canViewReason) {
-            alert("사유 조회 권한이 없습니다.");
+            await swalError("권한이 없습니다.", "사유 조회 권한이 없습니다.");
             return;
         }
 
         try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
             const detail = await unwrapJson(res);
             const reason = getRejectReason(detail) ?? "사유가 저장되어 있지 않아요.";
-            alert(`사유:\n${reason}`);
+            await swalInfo("반려/삭제반려 사유", reason);
         } catch (e) {
-            alert("사유 조회 실패: " + (e?.message || e));
+            await swalError("사유 조회 실패", e?.message || String(e));
         }
     }
 
@@ -210,10 +323,11 @@
         );
     }
 
-    function askReason(title) {
-        const reason = window.prompt(title, "");
-        if (reason == null) return null; // 취소
-        const trimmed = String(reason).trim();
+    async function askReason(title) {
+        const { isConfirmed, value } = await swalPrompt(title, "사유를 입력하세요", "확인", "취소");
+        if (!isConfirmed) return null;
+
+        const trimmed = String(value ?? "").trim();
         if (!trimmed) return ""; // 빈 입력
         return trimmed;
     }
@@ -360,8 +474,8 @@
             }
 
             if (!res.ok) {
-                const t = await res.text().catch(() => "");
-                throw new Error(`HTTP ${res.status} ${t}`);
+                const msg = await extractErrorMessage(res);
+                throw new Error(msg);
             }
 
             const json = await res.json();
@@ -433,7 +547,11 @@
 
             if (action === "approve") {
                 if (!PERM.canApproveForm) return;
+
+                await swalLoading("승인 처리 중...");
                 await updateStatus(id, "A");
+                swalClose();
+
                 toast("승인 처리 완료");
                 markFormListDirty();
                 await load();
@@ -442,13 +560,18 @@
 
             if (action === "reject") {
                 if (!PERM.canRejectForm) return;
-                const reason = askReason("반려 사유를 입력하세요");
+
+                const reason = await askReason("반려 사유를 입력하세요");
                 if (reason == null) return;
                 if (!reason) {
-                    alert("반려 사유를 입력해주세요.");
+                    await swalError("입력 필요", "반려 사유를 입력해주세요.");
                     return;
                 }
+
+                await swalLoading("반려 처리 중...");
                 await updateStatus(id, "R", reason);
+                swalClose();
+
                 toast("반려 처리 완료");
                 markFormListDirty();
                 await load();
@@ -457,8 +580,14 @@
 
             if (action === "delApprove") {
                 if (!PERM.canApproveForm) return;
-                if (!confirm("삭제 요청을 승인하시겠습니까?")) return;
+
+                const { isConfirmed } = await swalConfirm("삭제 요청 승인", "삭제 요청을 승인하시겠습니까?", "승인", "취소");
+                if (!isConfirmed) return;
+
+                await swalLoading("삭제 승인 처리 중...");
                 await approveDelete(id);
+                swalClose();
+
                 toast("삭제 승인 완료");
                 markFormListDirty();
                 await load();
@@ -467,21 +596,27 @@
 
             if (action === "delReject") {
                 if (!PERM.canRejectForm) return;
-                const reason = askReason("삭제 반려 사유를 입력하세요");
+
+                const reason = await askReason("삭제 반려 사유를 입력하세요");
                 if (reason == null) return;
                 if (!reason) {
-                    alert("삭제 반려 사유를 입력해주세요.");
+                    await swalError("입력 필요", "삭제 반려 사유를 입력해주세요.");
                     return;
                 }
+
+                await swalLoading("삭제 반려 처리 중...");
                 await rejectDelete(id, reason);
+                swalClose();
+
                 toast("삭제 반려 완료");
                 markFormListDirty();
                 await load();
                 return;
             }
         } catch (err) {
+            swalClose();
             console.error(err);
-            alert("처리 실패: " + (err?.message || err));
+            await swalError("처리 실패", err?.message || String(err));
         }
     });
 

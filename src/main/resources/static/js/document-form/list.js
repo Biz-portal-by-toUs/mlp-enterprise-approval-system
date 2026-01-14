@@ -68,6 +68,99 @@
             .replaceAll("'", '&#39;');
     }
 
+    function buildRejectedStyleDeletePopup(ids) {
+        const items = ids.map((id, i) => {
+            const title = formTitleMap.get(id) || `양식 #${id}`;
+
+            return `
+              <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:12px 14px;
+                border:1px solid #dee2e6;
+                border-radius:6px;
+                background:#f8f9fa;
+                font-size:13px;
+                margin-top:10px;
+              ">
+                <div>
+                  <b>${esc(title)}</b>
+                </div>
+                <div style="color:#868e96;">DELETE 요청</div>
+              </div>
+            `;
+                }).join('');
+
+        return `
+            <div style="
+              font-family:'Pretendard',-apple-system,sans-serif;
+              text-align:left;
+              color:#333;
+            ">
+              <div style="
+                font-size:20px;
+                font-weight:700;
+                color:#fa5252;
+                border-bottom:2px solid #fa5252;
+                padding-bottom:12px;
+                margin-bottom:16px;
+              ">
+                선택 삭제
+              </div>
+        
+              <div style="
+                font-size:13px;
+                color:#868e96;
+                margin-bottom:14px;
+              ">
+                선택한 문서양식을 삭제 요청 처리합니다.<br/>
+              </div>
+        
+              <div style="
+                border:1px solid #dee2e6;
+                border-radius:8px;
+                padding:16px;
+                background:#fff;
+              ">
+                <div style="font-weight:700;font-size:14px;margin-bottom:6px;">
+                  삭제 대상 (${ids.length}건)
+                </div>
+                ${items}
+              </div>
+            </div>
+          `;
+    }
+
+    async function runBulkDeleteRejectedStyle(ids) {
+        const result = await Swal.fire({
+            html: buildRejectedStyleDeletePopup(ids),
+            showCancelButton: true,
+            confirmButtonText: `삭제 실행 (${ids.length})`,
+            cancelButtonText: '취소',
+            confirmButtonColor: '#fa5252',
+            cancelButtonColor: '#adb5bd',
+            reverseButtons: true,
+            width: 760,
+            focusConfirm: false,
+            preConfirm: async () => {
+                Swal.showLoading();
+
+                const reason =
+                    document.getElementById('swal-delete-reason')?.value?.trim() || '';
+
+                // 🔹 서버가 사유 안 받으면 그냥 무시
+                for (const docfoNo of ids) {
+                    await softDelete(docfoNo); // 기존 DELETE 로직 재사용
+                }
+
+                return { reason };
+            }
+        });
+
+        return result.isConfirmed;
+    }
+
     // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
     async function refreshAccessTokenIfPossible() {
         const res = await fetch('/auth/refresh', {
@@ -128,6 +221,7 @@
 
     // ===== state =====
     const selected = new Set();
+    const formTitleMap = new Map();
     let page = 0;
     let totalPages = 1;
     let totalElements = 0;
@@ -198,6 +292,9 @@
         elTbody.innerHTML = rows.map((r, idx) => {
             const docfoNo = r.docfoNo ?? r.id ?? r.docfo_no;
             const docfoName = r.docfoName ?? r.name ?? r.docfo_name ?? '-';
+            if (docfoNo != null) {
+                formTitleMap.set(String(docfoNo), docfoName);
+            }
             const idStr = String(docfoNo ?? '').trim();
 
             const rowNo = (page * size) + idx + 1;
@@ -272,6 +369,35 @@
         return isResponseDto(body) ? body.data : body;
     }
 
+    async function extractErrorMessage(res) {
+        const text = await res.text().catch(() => '');
+
+        // JSON이면 message만 뽑기
+        try {
+            const json = text ? JSON.parse(text) : null;
+
+            // ResponseDto 형태: { status, code, message, data }
+            if (json && typeof json === 'object') {
+                if (typeof json.message === 'string' && json.message.trim()) return json.message;
+
+                // 혹시 다른 형태가 섞여있을 때 대비
+                if (json.error && typeof json.error.message === 'string') return json.error.message;
+                if (json.data && typeof json.data.message === 'string') return json.data.message;
+            }
+        } catch (_) {
+            // JSON 아니면 무시하고 텍스트 사용
+        }
+
+        // JSON 아니면 텍스트 그대로(너무 길면 잘라내기)
+        const trimmed = (text || '').trim();
+        if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed;
+
+        // 진짜 아무것도 없으면 상태코드 기반 기본 메시지
+        if (res.status === 401) return '로그인이 필요합니다.';
+        if (res.status === 403) return '권한이 없습니다.';
+        return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
+    }
+
     // ===== data load =====
     async function load() {
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
@@ -291,8 +417,8 @@
             }
 
             if (!res.ok) {
-                const t = await res.text().catch(() => '');
-                throw new Error(`HTTP ${res.status} ${t}`);
+                const msg = await extractErrorMessage(res);
+                throw new Error(msg);
             }
 
             const json = await unwrapJson(res);
@@ -345,30 +471,44 @@
         // 지금 백 정책이 "삭제요청"이면 DELETE만 쓰는게 제일 깔끔해
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
-            const t = await delRes.text().catch(() => '');
-            throw new Error(`삭제 실패(docfoNo=${docfoNo}) HTTP ${delRes.status} ${t}`);
+            const msg = await extractErrorMessage(delRes);
+            throw new Error(msg); // ✅ message만
         }
         return true;
     }
 
     btnDeleteSelected?.addEventListener('click', async () => {
-        if (!PERM.canBulkDelete || isEmployee()) { alert('권한이 없습니다.'); return; }
+        if (!PERM.canBulkDelete || isEmployee()) {
+            alert('권한이 없습니다.');
+            return;
+        }
         if (selected.size === 0) return;
 
         const ids = Array.from(selected);
-        if (!confirm(`선택한 ${ids.length}개를 삭제 처리할까요?`)) return;
 
         try {
             btnDeleteSelected.disabled = true;
-            for (const docfoNo of ids) {
-                await softDelete(docfoNo);
-            }
+
+            const ok = await runBulkDeleteRejectedStyle(ids);
+            if (!ok) return;
+
             selected.clear();
             await load();
-            alert('선택 삭제 완료');
+
+            Swal.fire({
+                icon: 'success',
+                title: '완료',
+                text: '선택 삭제가 완료되었습니다.',
+                confirmButtonColor: '#339af0'
+            });
         } catch (err) {
             console.error(err);
-            alert('선택 삭제 실패: ' + (err?.message || err));
+            Swal.fire({
+                icon: 'error',
+                title: '삭제 실패',
+                text: err?.message || String(err),
+                confirmButtonColor: '#339af0'
+            });
         } finally {
             updateBulkDeleteUI();
         }

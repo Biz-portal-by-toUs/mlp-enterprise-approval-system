@@ -137,12 +137,65 @@
                         headers: { 'Accept': 'application/json', ...getCsrfHeaders(), ...(options?.headers || {}) },
                         ...options
                     });
-                    const json = await res.json().catch(() => null);
+
+                    // 204 방어
+                    if (res.status === 204) return null;
+
+                    const text = await res.text().catch(() => '');
+                    let json = null;
+                    try { json = text ? JSON.parse(text) : null; } catch (_) {}
+
                     if (!res.ok) {
-                        const msg = json?.message || `HTTP ${res.status}`;
+                        const msg =
+                            (json && (json.message || json.error?.message || json.data?.message)) ||
+                            (text && text.trim().slice(0, 200)) ||
+                            `HTTP ${res.status}`;
                         throw new Error(msg);
                     }
-                    return json?.data;
+
+                    return (json && typeof json === 'object' && 'data' in json) ? json.data : json;
+                }
+
+                // ===== SweetAlert2 helpers =====
+                function hasSwal() {
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+
+                function getSwal() {
+                    if (!hasSwal()) return null;
+                    return window.Swal.mixin({
+                        confirmButtonText: '확인',
+                        cancelButtonText: '취소',
+                        buttonsStyling: true,
+                        heightAuto: false,
+                    });
+                }
+
+                async function swalError(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true }; }
+                    return swal.fire({ icon: 'error', title, text: text || undefined });
+                }
+
+                async function swalInfo(title, text) {
+                    const swal = getSwal();
+                    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true }; }
+                    return swal.fire({ icon: 'info', title, text: text || undefined });
+                }
+
+                function swalLoading(title = '불러오는 중...') {
+                    const swal = getSwal();
+                    if (!swal) return;
+                    swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+
+                function swalClose() {
+                    if (hasSwal()) window.Swal.close();
                 }
 
                 // ===== state =====
@@ -256,20 +309,46 @@
                     const input = document.getElementById('keyword');
                     if (input) input.value = state.keyword;
 
-                    const qs = new URLSearchParams();
-                    qs.set('page', String(state.page));
-                    qs.set('size', String(PAGE_SIZE));
-                    if (state.keyword) qs.set('keyword', state.keyword);
+                    // 로딩 표시(선택: 테이블에도 로딩 문구)
+                    const tbody = document.getElementById('tbody');
+                    if (tbody) {
+                        tbody.innerHTML = `<tr class="emptyRow"><td colspan="4">로딩 중...</td></tr>`;
+                    }
+                    swalLoading('불러오는 중...');
 
-                    const data = await fetchDto(`/api/v1/attach-box?${qs.toString()}`, { method: 'GET' });
+                    try {
+                        const qs = new URLSearchParams();
+                        qs.set('page', String(state.page));
+                        qs.set('size', String(PAGE_SIZE));
+                        if (state.keyword) qs.set('keyword', state.keyword);
 
-                    const content = data?.content || [];
-                    state.totalPages = data?.totalPages ?? 1;
-                    state.totalElements = data?.totalElements ?? 0;
-                    state.page = data?.number ?? state.page;
+                        const data = await fetchDto(`/api/v1/attach-box?${qs.toString()}`, { method: 'GET' });
 
-                    renderRows(content);
-                    renderPager();
+                        const content = data?.content || [];
+                        state.totalPages = data?.totalPages ?? 1;
+                        state.totalElements = data?.totalElements ?? 0;
+                        state.page = data?.number ?? state.page;
+
+                        renderRows(content);
+                        renderPager();
+                    } catch (err) {
+                        console.error(err);
+
+                        // 팝업
+                        await swalError('조회 실패', err?.message || '첨부문서 목록 조회에 실패했습니다.');
+
+                        // 화면에도 실패 표시 유지
+                        if (tbody) {
+                            tbody.innerHTML =
+                                `<tr class="emptyRow"><td colspan="4" style="color:#ef4444;">조회 실패</td></tr>`;
+                        }
+                        const countPill = document.getElementById('countPill');
+                        if (countPill) countPill.textContent = `0건`;
+                        const pageInfo = document.getElementById('pageInfo');
+                        if (pageInfo) pageInfo.textContent = `page 1 / 1`;
+                    } finally {
+                        swalClose();
+                    }
                 }
 
                 // ===== bind =====
@@ -292,9 +371,14 @@
                         location.href = '/attach/create';
                     });
 
-                    document.getElementById('btnSearch')?.addEventListener('click', () => {
-                        const v = clampKeyword(keywordEl?.value || '');
+                    document.getElementById('btnSearch')?.addEventListener('click', async () => {
+                        const raw = keywordEl?.value || '';
+                        const v = clampKeyword(raw);
                         if (keywordEl) keywordEl.value = v;
+
+                        if (raw.trim().length > KEYWORD_MAX) {
+                            await swalInfo('검색어가 너무 깁니다', `검색어는 최대 ${KEYWORD_MAX}자까지 입력할 수 있어요. 자동으로 잘랐습니다.`);
+                        }
 
                         state.keyword = v;
                         state.page = 0;
@@ -314,14 +398,7 @@
                 window.addEventListener('DOMContentLoaded', () => {
                     syncFromUrl();
                     bind();
-                    load().catch(err => {
-                        console.error(err);
-                        const tbody = document.getElementById('tbody');
-                        if (tbody) tbody.innerHTML =
-                            `<tr class="emptyRow"><td colspan="4" style="color:#ef4444;">조회 실패</td></tr>`;
-                        const countPill = document.getElementById('countPill');
-                        if (countPill) countPill.textContent = `0건`;
-                    });
+                    load().catch(console.error); // 혹시 모를 예외만 콘솔
                 });
             </script>
         </main>

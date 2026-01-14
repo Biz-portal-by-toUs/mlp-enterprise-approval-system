@@ -107,7 +107,71 @@ function markFormListDirty() {
     } catch (_) {}
 }
 
-// ✅ 쿠키 기반 fetch (Authorization/localStorage 사용 X)
+function hasSwal() {
+    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function'
+}
+
+function getSwal() {
+    if (!hasSwal()) return null
+    return window.Swal.mixin({
+        confirmButtonText: '확인',
+        cancelButtonText: '취소',
+        buttonsStyling: true,
+        heightAuto: false,
+        // 필요하면 커스텀 class도 여기서 통일 가능
+        // customClass: { popup: 'swal-popup', confirmButton: 'swal-confirm', cancelButton: 'swal-cancel' },
+    })
+}
+
+async function swalInfo(title, text) {
+    const swal = getSwal()
+    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true } }
+    return swal.fire({ icon: 'info', title, text: text || undefined })
+}
+
+async function swalSuccess(title, text) {
+    const swal = getSwal()
+    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return { isConfirmed: true } }
+    return swal.fire({ icon: 'success', title, text: text || undefined })
+}
+
+async function swalError(title, text) {
+    const swal = getSwal()
+    if (!swal) { alert(`${title}\n${text || ''}`.trim()); return }
+    return swal.fire({ icon: 'error', title, text: text || undefined })
+}
+
+async function swalConfirm(title, text, confirmText = '확인', cancelText = '취소') {
+    const swal = getSwal()
+    if (!swal) return { isConfirmed: confirm(`${title}\n${text || ''}`.trim()) }
+
+    return swal.fire({
+        icon: 'warning',
+        title,
+        text: text || undefined,
+        showCancelButton: true,
+        confirmButtonText: confirmText,
+        cancelButtonText: cancelText,
+        reverseButtons: true,
+    })
+}
+
+async function swalLoading(title = '처리 중...') {
+    const swal = getSwal()
+    if (!swal) return
+    return swal.fire({
+        title,
+        allowOutsideClick: false,
+        didOpen: () => window.Swal.showLoading(),
+        heightAuto: false,
+    })
+}
+
+function swalClose() {
+    if (hasSwal()) window.Swal.close()
+}
+
+// 쿠키 기반 fetch (Authorization/localStorage 사용 X)
 async function refreshAccessTokenIfPossible() {
     const res = await fetch('/auth/refresh', {
         method: 'POST',
@@ -131,6 +195,15 @@ async function apiFetch(url, options = {}, _retried = false) {
         if (ok) return apiFetch(url, options, true)
     }
     return res
+}
+
+async function apiFetchOrThrow(url, options = {}) {
+    const res = await apiFetch(url, options);
+    if (!res.ok) {
+        const msg = await extractErrorMessage(res);
+        throw new Error(msg);
+    }
+    return res;
 }
 
 function mustEl(id) {
@@ -292,35 +365,53 @@ async function unwrapResponseDto(res) {
     return isResponseDto(body) ? body.data : body
 }
 
-async function fetchDetail(docfoNo) {
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`상세 조회 실패: HTTP ${res.status} ${t}`)
+async function extractErrorMessage(res) {
+    const text = await res.text().catch(() => '')
+
+    // JSON이면 message만
+    try {
+        const json = text ? JSON.parse(text) : null
+        if (json && typeof json === 'object') {
+            if (typeof json.message === 'string' && json.message.trim()) return json.message
+
+            // 혹시 다른 구조가 섞여있을 때 대비
+            if (json.error && typeof json.error.message === 'string') return json.error.message
+            if (json.data && typeof json.data.message === 'string') return json.data.message
+        }
+    } catch (_) {
+        // JSON 파싱 실패면 text fallback
     }
+
+    // JSON 아니면 텍스트 그대로(너무 길면 컷)
+    const trimmed = (text || '').trim()
+    if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
+
+    // 최후 fallback
+    if (res.status === 401) return '로그인이 필요합니다.'
+    if (res.status === 403) return '권한이 없습니다.'
+    return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`
+}
+
+async function fetchDetail(docfoNo) {
+    const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
 
     const detail = await unwrapResponseDto(res)
     if (!detail) throw new Error('상세 조회 응답이 비어있습니다.')
     return detail
 }
 
-/**
- * ✅ 삭제 동작 분기
- * - 임시(T): DELETE /api/v1/forms/temp/{docfoNo}  (행 삭제 = 물리삭제)
- * - 그 외 : DELETE /api/v1/forms/{docfoNo}       (삭제요청 플로우)
- */
+// 삭제 동작 분기
+// - 임시(T): DELETE /api/v1/forms/temp/{docfoNo}
+// - 그 외 : DELETE /api/v1/forms/{docfoNo}
+
 async function deleteForm(docfoNo, stat) {
     const s = String(stat ?? '').trim().toUpperCase()
     const url = (s === 'T')
         ? `${API_BASE}/temp/${encodeURIComponent(docfoNo)}`
         : `${API_BASE}/${encodeURIComponent(docfoNo)}`
 
-    const res = await apiFetch(url, { method: 'DELETE' })
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`삭제 실패: HTTP ${res.status} ${t}`)
-    }
-
+    // 에러 응답 전체(text) 대신 message만 throw
+    await apiFetchOrThrow(url, { method: 'DELETE' })
     return true
 }
 
@@ -359,7 +450,7 @@ function applyPermsUI({ stat }) {
 ;(async function main() {
     const docfoNo = getDocfoNo()
     if (!docfoNo) {
-        alert('docfoNo가 없습니다.')
+        await swalError('잘못된 접근', 'docfoNo가 없습니다.')
         return
     }
 
@@ -402,33 +493,43 @@ function applyPermsUI({ stat }) {
         bootViewer(bodyBox, json)
 
         // ===== 수정/삭제 =====
-        btnEdit.addEventListener('click', () => {
-            if (!PERM.canEdit) { alert('권한이 없습니다.'); return }
+        btnEdit.addEventListener('click', async () => {
+            if (!PERM.canEdit) { await swalError('권한이 없습니다.', '수정 권한이 없습니다.'); return }
             location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}/edit`
         })
 
         btnDelete.addEventListener('click', async () => {
-            if (!PERM.canDelete) { alert('권한이 없습니다.'); return }
+            if (!PERM.canDelete) {
+                await swalError('권한이 없습니다.', '삭제 권한이 없습니다.')
+                return
+            }
 
             const s = String(stat).toUpperCase()
 
-            // confirm 문구도 상태에 따라 다르게
-            const msg = (s === 'T')
-                ? '임시 문서를 완전히 삭제할까요? (복구 불가)'
-                : '정말 삭제할까요? (삭제요청 상태로 변경됩니다)'
+            const isTemp = (s === 'T')
+            const title = isTemp ? '임시 문서를 삭제할까요?' : '정말 삭제할까요?'
+            const text = isTemp
+                ? '임시 문서는 완전히 삭제되며 복구할 수 없습니다.'
+                : '삭제요청 상태로 변경됩니다.'
 
-            const ok = confirm(msg)
-            if (!ok) return
+            const { isConfirmed } = await swalConfirm(title, text, '삭제', '취소')
+            if (!isConfirmed) return
 
             try {
                 btnDelete.disabled = true
+                await swalLoading('삭제 중...')
+
                 await deleteForm(docfoNo, s)
+
+                swalClose()
                 markFormListDirty()
-                alert('삭제되었습니다.')
+                await swalSuccess('삭제되었습니다.', isTemp ? '임시 문서를 삭제했습니다.' : '삭제요청이 등록되었습니다.')
+
                 closeOrBack()
             } catch (e) {
+                swalClose()
                 console.error(e)
-                alert(e?.message || String(e))
+                await swalError('삭제 실패', e?.message || String(e))
             } finally {
                 btnDelete.disabled = false
             }
@@ -439,6 +540,6 @@ function applyPermsUI({ stat }) {
         console.error(e)
         elTplTitle.textContent = '로드 실패'
         elTemplateMount.textContent = '로드 실패'
-        alert(e?.message || String(e))
+        await swalError('로드 실패', e?.message || String(e))
     }
 })()

@@ -64,7 +64,7 @@ public class MailServiceImpl implements MailService {
         Mail mail = Mail.create(mailId, req.title(), req.cnttJson(), sender);
         Mail saved = mailRepository.save(mail);
 
-        // 3상태 저장
+        // 상태 저장
         if (hasSelf) {
             // self-only: RECIPIENT 1개만
             mailUserStateRepository.save(MailUserState.create(saved, sender, MailRole.RECIPIENT));
@@ -84,7 +84,7 @@ public class MailServiceImpl implements MailService {
                     recv.getEmpId(),
                     NotificationType.MAIL,
                     "[메일]",
-                    saved.getTitle(),
+                    " from " + saved.getSender().getEmpName(),
                     "/mail/" + saved.getMailNo()
             );
         }
@@ -453,7 +453,7 @@ public class MailServiceImpl implements MailService {
                     recv.getEmpId(),
                     NotificationType.MAIL,
                     "[메일]",
-                    saved.getTitle(),
+                    " from " + saved.getSender().getEmpName(),
                     "/mail/" + saved.getMailNo()
             );
         }
