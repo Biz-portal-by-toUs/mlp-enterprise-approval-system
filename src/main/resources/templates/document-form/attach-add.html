@@ -300,7 +300,6 @@
             border-radius:10px;
             font-size:12px;
         }
-        .aa-att-item .aa-att-actions{ display:none; }
         .aa-att-item{ cursor:pointer; }
 
         @media (max-width:760px){
@@ -422,15 +421,19 @@
                         ...options
                     });
 
-                    const json = await res.json().catch(() => null);
+                    const text = await res.text().catch(() => '');
+                    let json = null;
+                    try { json = text ? JSON.parse(text) : null; } catch (_) {}
 
                     if (!res.ok) {
-                        const msg = json?.message || `HTTP ${res.status}`;
+                        const msg =
+                            (json && (json.message || json.error?.message || json.data?.message)) ||
+                            (text && text.trim().slice(0, 200)) ||
+                            `HTTP ${res.status}`;
                         throw new Error(msg);
                     }
 
-                    // 공통 응답 { data: ... } 형태 가정
-                    return json?.data;
+                    return (json && typeof json === 'object' && 'data' in json) ? json.data : json;
                 }
 
                 function showErr(msg) {
@@ -469,21 +472,24 @@
                     return `${(kb / 1024).toFixed(1)}MB`;
                 }
 
+                function $(id) { return document.getElementById(id); }
+
                 // ===== 메타(attachNo) 먼저 생성 =====
                 async function ensureAttachMeta() {
                     if (state.attachNo) return state.attachNo;
 
-                    const title = (document.getElementById('title')?.value || '').trim();
-                    const dscp = (document.getElementById('dscp')?.value || '').trim();
+                    const titleEl = $('title');
+                    const dscpEl = $('dscp');
 
-                    if (!title) throw new Error('제목을 입력하세요.');
+                    const title = (titleEl?.value || '').trim();
+                    const dscp = (dscpEl?.value || '').trim();
 
-                    // ✅ Dto 해결했다고 했으니, 여기 body는 "attach-box 생성 API"에 맞게 유지
-                    // (필드가 더 필요하면 여기에 추가하면 됨)
-                    const body = {
-                        title,
-                        dscp: dscp || null
-                    };
+                    if (!title) {
+                        titleEl?.focus?.();
+                        throw new Error('제목을 입력하세요.');
+                    }
+
+                    const body = { title, dscp: dscp || null };
 
                     const attachNo = await fetchDto(API.CREATE_META(), {
                         method: 'POST',
@@ -491,7 +497,6 @@
                         body: JSON.stringify(body)
                     });
 
-                    // attachNo가 숫자든 문자열(UUID 등)이든 그대로 들고감
                     state.attachNo = attachNo;
                     return attachNo;
                 }
@@ -512,18 +517,16 @@
                         })
                     });
 
-                    // 2) PUT to S3
-                    // ✅ presign 시 SignedHeaders에 content-type이 들어가면 PUT에서도 동일하게 맞춰야 하고,
-                    //    반대로 presign이 UNSIGNED-PAYLOAD/헤더 최소로 만들어졌으면 헤더를 빼야 함.
-                    //    지금 너는 "헤더 제거" 방향으로 서버 presign을 만든 것 같아서 헤더를 넣지 않는다.
+                    // 2) PUT to S3 (서명 정책에 따라 Content-Type 넣기/빼기)
+                    const putHeaders = {};
+                    if (presign?.signedContentType === true) {
+                        putHeaders['Content-Type'] = file.type || 'application/octet-stream';
+                    }
+
                     const putRes = await fetch(presign.uploadUrl, {
                         method: 'PUT',
-                        // ✅ S3로는 쿠키/인증정보 절대 보내지 않기
                         credentials: 'omit',
-                        // presign에서 content-type을 서명에 넣었으면 PUT도 동일하게 넣어야 함
-                        headers: {
-                            'Content-Type': file.type || 'application/octet-stream'
-                        },
+                        headers: putHeaders,
                         body: file
                     });
 
@@ -558,7 +561,6 @@
                         const list = Array.from(files || []).filter(Boolean);
                         if (!list.length) return;
 
-                        // 업로드 전에 메타 생성(attachNo 필요)
                         const attachNo = await ensureAttachMeta();
 
                         setAttStatus(`업로드 중... (0/${list.length})`);
@@ -575,13 +577,13 @@
                     } catch (e) {
                         console.error(e);
                         setAttStatus('');
-                        showErr(e.message || '첨부 업로드에 실패했습니다.');
+                        showErr(e?.message || '첨부 업로드에 실패했습니다.');
                     }
                 }
 
-                // ===== 목록 렌더 =====
+                // ===== 목록 렌더 (다운로드 버튼 제거 / 행 클릭=다운로드) =====
                 async function refreshAttachList() {
-                    const wrap = document.getElementById('attachList');
+                    const wrap = $('attachList');
                     if (!wrap) return;
 
                     state.totalSize = 0;
@@ -591,32 +593,30 @@
                         return;
                     }
 
-                    const items = await fetchDto(API.LIST_FILES(state.attachNo), { method: 'GET' }).catch(() => []);
+                    const items = await fetchDto(API.LIST_FILES(state.attachNo), { method: 'GET' })
+                        .catch((e) => {
+                            console.error(e);
+                            return [];
+                        });
 
                     if (!items || items.length === 0) {
                         wrap.innerHTML = `<div style="color:var(--mut); font-weight:800;">첨부파일이 없습니다.</div>`;
                         return;
                     }
+
                     state.totalSize = items.reduce((sum, it) => sum + (Number(it.size) || 0), 0);
-                    wrap.innerHTML = items.map(it => `
-      <div class="aa-att-item" data-id="${it.attachmentId}" onclick="downloadAttach(${it.attachmentId})">
-        <div style="min-width:0;">
-          <div class="aa-att-name">${escapeHtml(it.originalName)}</div>
-          <div class="aa-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
-        </div>
 
-        <div class="aa-att-actions" onclick="event.stopPropagation();">
-          <button type="button" class="aa-att-mini" onclick="downloadAttach(${it.attachmentId})">다운로드</button>
-          <button type="button" class="aa-att-mini danger" onclick="deleteAttach(${it.attachmentId})">삭제</button>
-        </div>
-      </div>
-    `).join('');
-                }
-
-                async function deleteAttach(attachmentId) {
-                    showErr('');
-                    await fetchDto(API.DELETE_FILE(attachmentId), { method: 'DELETE' });
-                    await refreshAttachList();
+                    wrap.innerHTML = items.map(it => {
+                        const id = String(it.attachmentId ?? '');
+                        return `
+                            <div class="aa-att-item" data-id="${escapeHtml(id)}" role="button" tabindex="0" title="클릭하면 다운로드됩니다.">
+                              <div style="min-width:0;">
+                                <div class="aa-att-name">${escapeHtml(it.originalName)}</div>
+                                <div class="aa-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
+                              </div>
+                            </div>
+                          `.trim();
+                    }).join('');
                 }
 
                 async function downloadAttach(attachmentId) {
@@ -635,18 +635,14 @@
                         a.remove();
                     } catch (e) {
                         console.error(e);
-                        showErr(e.message || '다운로드에 실패했습니다.');
+                        showErr(e?.message || '다운로드에 실패했습니다.');
                     }
                 }
 
-                // 인라인 onclick에서 접근 가능하도록 노출
-                window.deleteAttach = deleteAttach;
-                window.downloadAttach = downloadAttach;
-
                 // ===== UI 바인딩 =====
                 function bindAttachDropzone() {
-                    const input = document.getElementById('attachInput');
-                    const dz = document.getElementById('attachDropzone');
+                    const input = $('attachInput');
+                    const dz = $('attachDropzone');
                     if (!input || !dz) return;
                     if (dz.__bound) return;
                     dz.__bound = true;
@@ -662,7 +658,6 @@
                     input.addEventListener('change', async () => {
                         const files = input.files;
                         if (!files || files.length === 0) return;
-
                         await uploadFilesNow(files);
                         input.value = '';
                     });
@@ -681,45 +676,75 @@
                     });
                 }
 
+                // 리스트 클릭 = 다운로드 (버튼 없음)
+                function bindAttachListClicks() {
+                    const wrap = $('attachList');
+                    if (!wrap) return;
+                    if (wrap.__bound) return;
+                    wrap.__bound = true;
+
+                    const onActivate = async (el) => {
+                        const id = el?.dataset?.id;
+                        if (!id) return;
+                        await downloadAttach(id);
+                    };
+
+                    wrap.addEventListener('click', async (e) => {
+                        const item = e.target.closest('.aa-att-item[data-id]');
+                        if (!item) return;
+                        await onActivate(item);
+                    });
+
+                    wrap.addEventListener('keydown', async (e) => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return;
+                        const item = e.target.closest('.aa-att-item[data-id]');
+                        if (!item) return;
+                        e.preventDefault();
+                        await onActivate(item);
+                    });
+                }
+
                 function bindActions() {
-                    document.getElementById('btnCancel')?.addEventListener('click', async () => {
-                        // ✅ 취소 = 이미 생성된 메타(attachNo)가 있으면 삭제하고 나가기
+                    $('btnCancel')?.addEventListener('click', async () => {
+                        // 취소 = 생성된 메타(attachNo)가 있으면 삭제하고 나가기
                         try {
                             showErr('');
-
                             if (state.attachNo) {
-                                // 서버에서 attach-box 삭제 시, 관련 attachments도 함께 정리되게 구현되어 있어야 가장 깔끔함
                                 await fetchDto(API.DELETE_META(state.attachNo), { method: 'DELETE' });
                                 state.attachNo = null;
                             }
                         } catch (e) {
                             console.error(e);
-                            // 실패해도 일단 나가게(사용자 경험 우선)
-                            // 원하면 여기서 showErr로 안내해도 됨.
+                            // 실패해도 나감(UX 우선)
                         } finally {
                             location.href = ROUTES.LIST_VIEW;
                         }
                     });
 
-                    document.getElementById('btnSave')?.addEventListener('click', async () => {
+                    $('btnSave')?.addEventListener('click', async () => {
                         try {
                             showErr('');
+
                             const attachNo = await ensureAttachMeta();
                             await refreshAttachList();
+
+                            // commit: size는 참고값(서버 재계산 권장)
                             await fetchDto(`/api/v1/attach-box/${encodeURIComponent(attachNo)}/commit`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ size: state.totalSize })
                             });
+
                             state.isCommitted = true;
                             location.href = ROUTES.LIST_VIEW;
                         } catch (e) {
                             console.error(e);
-                            showErr(e.message || '저장에 실패했습니다.');
+                            showErr(e?.message || '저장에 실패했습니다.');
                         }
                     });
                 }
 
+                // ===== leave cleanup =====
                 function tryCleanupOnLeave() {
                     if (state.cleanupSent) return;
                     if (state.isCommitted) return;
@@ -727,21 +752,16 @@
 
                     state.cleanupSent = true;
 
-                    // 이미 "취소"에서 성공하는 DELETE를 그대로 사용
                     fetch(API.DELETE_META(state.attachNo), {
                         method: 'DELETE',
                         credentials: 'include',
-                        keepalive: true, // 페이지 이탈에서도 보내려고 시도
-                        headers: {
-                            'Accept': 'application/json',
-                            ...getCsrfHeaders()
-                        }
+                        keepalive: true,
+                        headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
                     }).catch(() => {});
                 }
 
                 function bindLeaveCleanup() {
                     window.addEventListener('pagehide', tryCleanupOnLeave);
-                    // window.addEventListener('beforeunload', tryCleanupOnLeave);
 
                     document.addEventListener('click', (e) => {
                         const a = e.target.closest('a[href]');
@@ -752,8 +772,10 @@
                     window.addEventListener('popstate', tryCleanupOnLeave);
                 }
 
+                // ===== init =====
                 window.addEventListener('DOMContentLoaded', () => {
                     bindAttachDropzone();
+                    bindAttachListClicks();
                     bindActions();
                     bindLeaveCleanup();
                     refreshAttachList().catch(console.error);

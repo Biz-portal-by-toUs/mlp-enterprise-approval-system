@@ -112,6 +112,40 @@
         return isResponseDto(body) ? body.data : body;
     }
 
+    async function extractErrorMessage(res) {
+        const text = await res.text().catch(() => "");
+
+        // JSON이면 message만
+        try {
+            const json = text ? JSON.parse(text) : null;
+            if (json && typeof json === "object") {
+                if (typeof json.message === "string" && json.message.trim()) return json.message;
+
+                // 혹시 다른 구조가 섞여있을 때 대비
+                if (json.error && typeof json.error.message === "string") return json.error.message;
+                if (json.data && typeof json.data.message === "string") return json.data.message;
+            }
+        } catch (_) {
+            // JSON 파싱 실패면 text fallback
+        }
+
+        const trimmed = (text || "").trim();
+        if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + "…" : trimmed;
+
+        if (res.status === 401) return "로그인이 필요합니다.";
+        if (res.status === 403) return "권한이 없습니다.";
+        return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
+    }
+
+    async function apiFetchOrThrow(url, options = {}) {
+        const res = await apiFetch(url, options);
+        if (!res.ok) {
+            const msg = await extractErrorMessage(res);
+            throw new Error(msg);
+        }
+        return res;
+    }
+
     function markFormListDirty() {
         try { localStorage.setItem("list:dirty", "true"); } catch (_) {}
     }
@@ -151,36 +185,26 @@
             payload.rejectReason = String(rejectReason).trim();
         }
 
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
+        await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/status`, {
             method: "PATCH",
             body: JSON.stringify(payload),
         });
 
-        if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            throw new Error(`상태 변경 실패(docfoNo=${docfoNo}) HTTP ${res.status} ${t}`);
-        }
         return true;
     }
 
     async function approveDelete(docfoNo) {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, { method: "PATCH" });
-        if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            throw new Error(`삭제 승인 실패 HTTP ${res.status} ${t}`);
-        }
+        await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-approve`, {
+            method: "PATCH",
+        });
         return true;
     }
 
     async function rejectDelete(docfoNo, rejectReason) {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
+        await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/delete-reject`, {
             method: "PATCH",
             body: JSON.stringify({ rejectReason: String(rejectReason).trim() }),
         });
-        if (!res.ok) {
-            const t = await res.text().catch(() => "");
-            throw new Error(`삭제 반려 실패 HTTP ${res.status} ${t}`);
-        }
         return true;
     }
 
@@ -191,13 +215,12 @@
         }
 
         try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: "GET" });
             const detail = await unwrapJson(res);
             const reason = getRejectReason(detail) ?? "사유가 저장되어 있지 않아요.";
             alert(`사유:\n${reason}`);
         } catch (e) {
-            alert("사유 조회 실패: " + (e?.message || e));
+            alert("사유 조회 실패: " + (e?.message || String(e)));
         }
     }
 
@@ -360,8 +383,8 @@
             }
 
             if (!res.ok) {
-                const t = await res.text().catch(() => "");
-                throw new Error(`HTTP ${res.status} ${t}`);
+                const msg = await extractErrorMessage(res);
+                throw new Error(msg);
             }
 
             const json = await res.json();

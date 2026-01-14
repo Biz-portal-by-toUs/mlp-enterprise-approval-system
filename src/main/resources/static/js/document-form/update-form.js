@@ -92,6 +92,39 @@ async function apiFetch(url, options = {}) {
     return fetch(url, { ...options, headers, credentials: 'same-origin' })
 }
 
+async function extractErrorMessage(res) {
+    const text = await res.text().catch(() => '')
+
+    // JSON이면 message만
+    try {
+        const json = text ? JSON.parse(text) : null
+        if (json && typeof json === 'object') {
+            if (typeof json.message === 'string' && json.message.trim()) return json.message
+
+            if (json.error && typeof json.error.message === 'string') return json.error.message
+            if (json.data && typeof json.data.message === 'string') return json.data.message
+        }
+    } catch (_) {
+        // JSON parse 실패면 text fallback
+    }
+
+    const trimmed = (text || '').trim()
+    if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
+
+    if (res.status === 401) return '로그인이 필요합니다.'
+    if (res.status === 403) return '권한이 없습니다.'
+    return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`
+}
+
+async function apiFetchOrThrow(url, options = {}) {
+    const res = await apiFetch(url, options)
+    if (!res.ok) {
+        const msg = await extractErrorMessage(res)
+        throw new Error(msg)
+    }
+    return res
+}
+
 // ===== util =====
 function deepClone(obj) {
     if (typeof structuredClone === 'function') return structuredClone(obj)
@@ -579,11 +612,7 @@ function closeOrBack() {
 
 // ===== API calls =====
 async function fetchDetail() {
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`상세 조회 실패 HTTP ${res.status} ${t}`)
-    }
+    const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
     return await unwrapJson(res)
 }
 
@@ -619,35 +648,25 @@ async function saveUpdate({ editor, baseDetail }) {
     const payload = buildPayload({ editor, baseDetail })
     if (!payload) return null
 
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
+    const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     })
 
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`저장 실패 HTTP ${res.status} ${t}`)
-    }
-
-    const out = await unwrapJson(res);
-    return out ?? {};
+    const out = await unwrapJson(res)
+    return out ?? {}
 }
 
 async function saveTempUpdate({ editor, baseDetail }) {
     const payload = buildPayload({ editor, baseDetail })
     if (!payload) return null
 
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}/temp`, {
+    await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}/temp`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     })
-
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`임시저장 실패 HTTP ${res.status} ${t}`)
-    }
 
     return true
 }

@@ -107,7 +107,7 @@ function markFormListDirty() {
     } catch (_) {}
 }
 
-// ✅ 쿠키 기반 fetch (Authorization/localStorage 사용 X)
+// 쿠키 기반 fetch (Authorization/localStorage 사용 X)
 async function refreshAccessTokenIfPossible() {
     const res = await fetch('/auth/refresh', {
         method: 'POST',
@@ -131,6 +131,15 @@ async function apiFetch(url, options = {}, _retried = false) {
         if (ok) return apiFetch(url, options, true)
     }
     return res
+}
+
+async function apiFetchOrThrow(url, options = {}) {
+    const res = await apiFetch(url, options);
+    if (!res.ok) {
+        const msg = await extractErrorMessage(res);
+        throw new Error(msg);
+    }
+    return res;
 }
 
 function mustEl(id) {
@@ -292,35 +301,53 @@ async function unwrapResponseDto(res) {
     return isResponseDto(body) ? body.data : body
 }
 
-async function fetchDetail(docfoNo) {
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`상세 조회 실패: HTTP ${res.status} ${t}`)
+async function extractErrorMessage(res) {
+    const text = await res.text().catch(() => '')
+
+    // JSON이면 message만
+    try {
+        const json = text ? JSON.parse(text) : null
+        if (json && typeof json === 'object') {
+            if (typeof json.message === 'string' && json.message.trim()) return json.message
+
+            // 혹시 다른 구조가 섞여있을 때 대비
+            if (json.error && typeof json.error.message === 'string') return json.error.message
+            if (json.data && typeof json.data.message === 'string') return json.data.message
+        }
+    } catch (_) {
+        // JSON 파싱 실패면 text fallback
     }
+
+    // JSON 아니면 텍스트 그대로(너무 길면 컷)
+    const trimmed = (text || '').trim()
+    if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
+
+    // 최후 fallback
+    if (res.status === 401) return '로그인이 필요합니다.'
+    if (res.status === 403) return '권한이 없습니다.'
+    return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`
+}
+
+async function fetchDetail(docfoNo) {
+    const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
 
     const detail = await unwrapResponseDto(res)
     if (!detail) throw new Error('상세 조회 응답이 비어있습니다.')
     return detail
 }
 
-/**
- * ✅ 삭제 동작 분기
- * - 임시(T): DELETE /api/v1/forms/temp/{docfoNo}  (행 삭제 = 물리삭제)
- * - 그 외 : DELETE /api/v1/forms/{docfoNo}       (삭제요청 플로우)
- */
+// 삭제 동작 분기
+// - 임시(T): DELETE /api/v1/forms/temp/{docfoNo}
+// - 그 외 : DELETE /api/v1/forms/{docfoNo}
+
 async function deleteForm(docfoNo, stat) {
     const s = String(stat ?? '').trim().toUpperCase()
     const url = (s === 'T')
         ? `${API_BASE}/temp/${encodeURIComponent(docfoNo)}`
         : `${API_BASE}/${encodeURIComponent(docfoNo)}`
 
-    const res = await apiFetch(url, { method: 'DELETE' })
-    if (!res.ok) {
-        const t = await res.text().catch(() => '')
-        throw new Error(`삭제 실패: HTTP ${res.status} ${t}`)
-    }
-
+    // 에러 응답 전체(text) 대신 message만 throw
+    await apiFetchOrThrow(url, { method: 'DELETE' })
     return true
 }
 

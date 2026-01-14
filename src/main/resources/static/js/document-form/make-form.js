@@ -85,6 +85,40 @@ async function unwrapJson(res) {
     return isResponseDto(body) ? body.data : body;
 }
 
+async function extractErrorMessage(res) {
+    const text = await res.text().catch(() => '')
+
+    // 1JSON이면 message만
+    try {
+        const json = text ? JSON.parse(text) : null
+        if (json && typeof json === 'object') {
+            if (typeof json.message === 'string' && json.message.trim()) return json.message
+            if (json.error && typeof json.error.message === 'string') return json.error.message
+            if (json.data && typeof json.data.message === 'string') return json.data.message
+        }
+    } catch (_) {
+        // JSON 파싱 실패 -> text fallback
+    }
+
+    // JSON 아니면 텍스트(너무 길면 컷)
+    const trimmed = (text || '').trim()
+    if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
+
+    // fallback
+    if (res.status === 401) return '로그인이 필요합니다.'
+    if (res.status === 403) return '권한이 없습니다.'
+    return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`
+}
+
+async function apiFetchOrThrow(url, options = {}) {
+    const res = await apiFetch(url, options)
+    if (!res.ok) {
+        const msg = await extractErrorMessage(res)
+        throw new Error(msg)
+    }
+    return res
+}
+
 // 새 표 기본 열 폭(px)
 const DEFAULT_COL_WIDTH = 160
 
@@ -1067,68 +1101,68 @@ function wireSave(editor) {
             else { url = `/api/v1/forms`; method = 'POST'; }
         }
 
-        const res = await apiFetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+        try {
+            const res = await apiFetchOrThrow(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })
 
-        if (!res.ok) {
-            const t = await res.text().catch(() => '');
-            alert((mode === 'TEMP' ? '임시저장 실패: ' : '저장 실패: ') + res.status + '\n' + t);
-            return null;
+            // POST는 id가 올 수 있음
+            if (method === 'POST') {
+                const id = await unwrapJson(res)
+                return id
+            }
+            return true
+        } catch (e) {
+            const prefix = (mode === 'TEMP') ? '임시저장 실패: ' : '저장 실패: '
+            alert(prefix + (e?.message || String(e)))
+            return null
         }
-
-        // POST는 id가 올 수 있음
-        if (method === 'POST') {
-            const id = await unwrapJson(res);
-            return id;
-        }
-        return true;
     }
 
     // 등록 버튼: 성공 시 pending 페이지로 이동
     elSaveBtn?.addEventListener('click', async () => {
-        const ok = await submit('SAVE');
-        if (!ok) return;
+        const ok = await submit('SAVE')
+        if (!ok) return
 
-        markFormListDirty();
+        markFormListDirty()
 
-        const targetUrl = '/form/pending';
+        const targetUrl = '/form/pending'
 
         try {
             if (window.opener && !window.opener.closed) {
-                window.opener.location.href = targetUrl;
-                window.opener.focus?.();
-                window.close();
-                return;
+                window.opener.location.href = targetUrl
+                window.opener.focus?.()
+                window.close()
+                return
             }
         } catch (_) {}
 
-        location.href = targetUrl;
-    });
+        location.href = targetUrl
+    })
 
     // 임시저장 버튼: 성공 시 temp 페이지로 이동
-    const elTempBtn = document.getElementById('tempSaveBtn');
+    const elTempBtn = document.getElementById('tempSaveBtn')
     elTempBtn?.addEventListener('click', async () => {
-        const ok = await submit('TEMP');
-        if (!ok) return;
+        const ok = await submit('TEMP')
+        if (!ok) return
 
-        markFormListDirty();
+        markFormListDirty()
 
-        const targetUrl = '/form/temp';
+        const targetUrl = '/form/temp'
 
         try {
             if (window.opener && !window.opener.closed) {
-                window.opener.location.href = targetUrl;
-                window.opener.focus?.();
-                window.close();
-                return;
+                window.opener.location.href = targetUrl
+                window.opener.focus?.()
+                window.close()
+                return
             }
         } catch (_) {}
 
-        location.href = targetUrl;
-    });
+        location.href = targetUrl
+    })
 }
 
 // ---------- table helpers ----------
@@ -1373,33 +1407,33 @@ async function restoreIfDocfoNoExists(editor) {
     const docfoNo = getDocfoNoFromServerInjected()
     if (!docfoNo) return
 
-    const res = await apiFetch(`/api/v1/forms/${encodeURIComponent(docfoNo)}`, {
-        headers: { Accept: 'application/json' },
-    })
-    if (!res.ok) {
-        alert('불러오기 실패: ' + res.status)
-        return
-    }
+    try {
+        const res = await apiFetchOrThrow(`/api/v1/forms/${encodeURIComponent(docfoNo)}`, {
+            headers: { Accept: 'application/json' },
+        })
 
-    const dto = await unwrapJson(res)
+        const dto = await unwrapJson(res)
 
-    // 백엔드 Detail DTO 기준: docfoName, cnttJson, categories
-    const docfoName = dto?.docfoName || dto?.docfo_name || ''
-    const cnttJsonStr = dto?.cnttJson || dto?.cntt_json || ''
-    const categories = dto?.categories || []
+        // 백엔드 Detail DTO 기준: docfoName, cnttJson, categories
+        const docfoName = dto?.docfoName || dto?.docfo_name || ''
+        const cnttJsonStr = dto?.cnttJson || dto?.cntt_json || ''
+        const categories = dto?.categories || []
 
-    if (docfoName) elDocTitle.value = docfoName
-    if (Array.isArray(categories) && categories.length) {
-        setRadioState({ templateTypes: categories, selectedType: categories[0] })
-    }
-
-    if (cnttJsonStr) {
-        try {
-            const templateJson = JSON.parse(cnttJsonStr)
-            editor.commands.setContent(templateJson)
-        } catch (e) {
-            console.warn('cnttJson parse failed', e)
+        if (docfoName) elDocTitle.value = docfoName
+        if (Array.isArray(categories) && categories.length) {
+            setRadioState({ templateTypes: categories, selectedType: categories[0] })
         }
+
+        if (cnttJsonStr) {
+            try {
+                const templateJson = JSON.parse(cnttJsonStr)
+                editor.commands.setContent(templateJson)
+            } catch (e) {
+                console.warn('cnttJson parse failed', e)
+            }
+        }
+    } catch (e) {
+        alert('불러오기 실패: ' + (e?.message || String(e)))
     }
 }
 

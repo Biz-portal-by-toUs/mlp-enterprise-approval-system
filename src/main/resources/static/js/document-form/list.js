@@ -272,6 +272,35 @@
         return isResponseDto(body) ? body.data : body;
     }
 
+    async function extractErrorMessage(res) {
+        const text = await res.text().catch(() => '');
+
+        // JSON이면 message만 뽑기
+        try {
+            const json = text ? JSON.parse(text) : null;
+
+            // ResponseDto 형태: { status, code, message, data }
+            if (json && typeof json === 'object') {
+                if (typeof json.message === 'string' && json.message.trim()) return json.message;
+
+                // 혹시 다른 형태가 섞여있을 때 대비
+                if (json.error && typeof json.error.message === 'string') return json.error.message;
+                if (json.data && typeof json.data.message === 'string') return json.data.message;
+            }
+        } catch (_) {
+            // JSON 아니면 무시하고 텍스트 사용
+        }
+
+        // JSON 아니면 텍스트 그대로(너무 길면 잘라내기)
+        const trimmed = (text || '').trim();
+        if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed;
+
+        // 진짜 아무것도 없으면 상태코드 기반 기본 메시지
+        if (res.status === 401) return '로그인이 필요합니다.';
+        if (res.status === 403) return '권한이 없습니다.';
+        return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
+    }
+
     // ===== data load =====
     async function load() {
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
@@ -291,8 +320,8 @@
             }
 
             if (!res.ok) {
-                const t = await res.text().catch(() => '');
-                throw new Error(`HTTP ${res.status} ${t}`);
+                const msg = await extractErrorMessage(res);
+                throw new Error(msg);
             }
 
             const json = await unwrapJson(res);
@@ -345,8 +374,8 @@
         // 지금 백 정책이 "삭제요청"이면 DELETE만 쓰는게 제일 깔끔해
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
-            const t = await delRes.text().catch(() => '');
-            throw new Error(`삭제 실패(docfoNo=${docfoNo}) HTTP ${delRes.status} ${t}`);
+            const msg = await extractErrorMessage(delRes);
+            throw new Error(msg); // ✅ message만
         }
         return true;
     }
