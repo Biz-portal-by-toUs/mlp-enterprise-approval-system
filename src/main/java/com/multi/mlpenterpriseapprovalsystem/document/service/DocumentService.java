@@ -531,7 +531,7 @@ public class DocumentService {
     public void processApproval(String comId, String myEmpId, Long docNo, ReqApprovalLineDto reqDto) {
 
         // 1. 문서 조회
-        Document document = documentRepository.findById(docNo)
+        Document document = documentRepository.findByIdWithLock(docNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_NOT_FOUND));
 
         Employee currentApprover = employeeRepository.findByEmpId(myEmpId)

@@ -302,4 +302,9 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     @Query("SELECT d FROM Document d WHERE d.docNo = :docNo AND d.company.comId = :comId")
     Optional<Document> findByIdWithApprovalLines(@Param("comId") String comId, @Param("docNo") Long docNo);
 
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT d FROM Document d WHERE d.docNo = :docNo")
+    Optional<Document> findByIdWithLock(@Param("docNo") Long docNo);
+
 }
