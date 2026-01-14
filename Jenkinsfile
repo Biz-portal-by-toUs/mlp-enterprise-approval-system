@@ -11,7 +11,7 @@ def slackNotify(String status, String extraMsg = "") {
 }
 JSON
 )
-          curl -sS -X POST -H 'Content-type: application/json' --data "\$payload" "\$SLACK_WEBHOOK_URL" >/dev/null
+          curl -sS -X POST -H 'Content-type: application/json' --data "\$payload" "\$SLACK_TOKEN" >/dev/null
         """
     }
 }
