@@ -8,7 +8,6 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.dto.ResTokenDto;
 import com.multi.mlpenterpriseapprovalsystem.common.jwt.service.TokenService;
-import com.multi.mlpenterpriseapprovalsystem.common.storage.dto.StoredFile;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.service.StorageService;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.dto.ReqCompanyLoginDto;
@@ -110,11 +109,11 @@ public class AuthService {
         // 4) 로고 저장(있으면 저장하고 imgUrl/path 세팅)
         String imgUrl = null;
         String path = null;
-        if (logo != null && !logo.isEmpty()) {
-            StoredFile stored = storageService.store(logo, "company-logo");
-            imgUrl = stored.getUrl();  // /uploads/company-logo/xxx.png
-            path = stored.getPath();   // /Users/.../bizportal/uploads/company-logo/xxx.png
-        }
+//        if (logo != null && !logo.isEmpty()) {
+//            StoredFile stored = storageService.store(logo, "company-logo");
+//            imgUrl = stored.getUrl();  // /uploads/company-logo/xxx.png
+//            path = stored.getPath();   // /Users/.../bizportal/uploads/company-logo/xxx.png
+//        }
 
         // 5) sub_no=1 연결 (회원가입 시 기본 요금제)
         Subscription basic30 = subscriptionRepository.findById((long) 1)
