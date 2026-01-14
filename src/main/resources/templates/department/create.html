@@ -212,41 +212,34 @@
             const btn = $("submitBtn");
             if (!btn) return;
 
+            // ✅ [Alert 적용] 등록 로직 수정
             btn.addEventListener("click", async () => {
                 const depId = $("depId")?.value?.trim() || "";
                 const depName = $("depName")?.value?.trim() || "";
 
-                if (!depId) return showMsg("부서 코드를 입력해주세요.", false);
-                if (!depName) return showMsg("부서 이름을 입력해주세요.", false);
-                if (depId.length > 3) return showMsg("부서 코드는 최대 3자입니다.", false);
-                if (depName.length > 10) return showMsg("부서 이름은 최대 10자입니다.", false);
+                if (!depId) return Alert.warning("부서 코드를 입력해주세요.");
+                if (!depName) return Alert.warning("부서 이름을 입력해주세요.");
 
                 try {
                     const res = await fetch("/api/v1/admin/departments", {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Accept": "application/json"
-                        },
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
                         credentials: "include",
                         body: JSON.stringify({ depId, depName })
                     });
 
-                    if (res.status === 401) return showMsg("로그인이 필요합니다. 다시 로그인 해주세요.", false);
-                    if (res.status === 403) return showMsg("권한이 없습니다. (COM_ADMIN만 가능)", false);
-
                     if (res.ok) {
-                        alert("부서 등록에 성공했습니다.");
-                        window.location.href = "/admin/departments/list";
+                        // 성공 시 알림 후 바로 목록 이동
+                        Alert.success("부서가 등록되었습니다.").then(() => {
+                            window.location.href = "/admin/departments/list";
+                        });
                         return;
                     }
 
                     const data = await safeJson(res);
-                    showMsg(data?.message || `요청 처리에 실패했습니다. (HTTP ${res.status})`, false);
-
+                    Alert.error(data?.message || "등록 실패");
                 } catch (e) {
-                    console.error(e);
-                    showMsg("서버 통신 오류가 발생했습니다.", false);
+                    Alert.error("서버 통신 오류가 발생했습니다.");
                 }
             });
         });

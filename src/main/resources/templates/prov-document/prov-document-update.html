@@ -112,7 +112,7 @@
                 });
             } catch(e) {
                 console.error("데이터 로드 실패:", e);
-                alert("기존 규정 정보를 불러오지 못했습니다.");
+                Alert.error("기존 규정 정보를 불러오지 못했습니다.");
             }
         }
 
@@ -124,7 +124,7 @@
             const isPublic = checkedRadio ? checkedRadio.value === "true" : true;
 
             if (!docTitle) {
-                alert("제목을 입력해주세요.");
+                Alert.warning("제목을 입력해주세요.");
                 return;
             }
 
@@ -145,28 +145,26 @@
                 });
 
                 if (res.ok) {
-                    alert("성공적으로 수정되었습니다.");
-                    // 수정 완료 후 상세 페이지 또는 목록으로 이동
-                    location.href = `/admin/prov-document/${provNoFromPath}`;
+                    // 수정 성공 시 알림 후 상세 페이지로 자동 이동
+                    Alert.success("성공적으로 수정되었습니다.").then(() => {
+                        location.href = `/admin/prov-document/${provNoFromPath}`;
+                    });
                 } else {
                     const errorJson = await res.json();
-                    alert(`저장 실패: ${errorJson.message || "서버 오류"}`);
+                    Alert.error(`저장 실패: ${errorJson.message || "서버 오류"}`);
                 }
             } catch (e) {
-                alert("네트워크 오류가 발생했습니다.");
+                Alert.error("네트워크 오류가 발생했습니다.");
                 console.error(e);
             }
         };
 
-        // 3. 취소 버튼
         $("backBtn").onclick = () => {
-            if (confirm("수정 중인 내용이 사라집니다. 취소할까요?")) {
-                // 이전 페이지로 돌아가거나 목록으로 이동
+            Alert.confirm("수정 중인 내용이 사라집니다. 취소할까요?", "수정 취소", () => {
                 history.back();
-            }
+            });
         };
 
-        // 초기 데이터 로드 실행
         loadDetail();
     </script>
 </th:block>

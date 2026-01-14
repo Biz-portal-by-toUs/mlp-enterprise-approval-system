@@ -181,7 +181,10 @@
                     d.participants.forEach(p => selectedEmployees.set(p.empId, { empId: p.empId, empName: p.empName }));
                     renderSelected();
                 }
-            } catch (e) { setError("로드 실패: " + e.message); }
+            } catch (e) {
+                setError("로드 실패: " + e.message);
+                Alert.error("회의 데이터를 불러오는 중 오류가 발생했습니다.");
+            }
         }
 
         function renderSelected() {
@@ -222,11 +225,13 @@
             } catch (err) { console.error(err); } finally { loading = false; }
         }
 
+        // ✅ [Alert 적용] 수정 완료 버튼 로직
         $("updateBtn").onclick = async () => {
             const meetNo = getMeetNo();
             const titleValue = $("title").value.trim();
-            if (!titleValue) return alert("회의 제목을 입력하세요.");
-            if (titleValue.length > 30) return alert("회의 제목은 30글자 이내로 입력해주세요.");
+
+            if (!titleValue) return Alert.warning("회의 제목을 입력하세요.");
+            if (titleValue.length > 30) return Alert.warning("회의 제목은 30글자 이내로 입력해주세요.");
 
             const body = {
                 title: titleValue,
@@ -245,11 +250,20 @@
                     credentials: 'include',
                     body: JSON.stringify(body)
                 });
+
                 if (res.ok) {
-                    alert("수정되었습니다.");
-                    location.href = `/meeting/${meetNo}`;
-                } else setError("수정 실패");
-            } catch (e) { setError("연결 실패"); }
+                    // Alert.success는 Swal Promise를 반환하므로 .then() 사용 가능
+                    Alert.success("회의 정보가 수정되었습니다.").then(() => {
+                        location.href = `/meeting/${meetNo}`;
+                    });
+                } else {
+                    setError("수정 실패");
+                    Alert.error("정보 수정에 실패했습니다.");
+                }
+            } catch (e) {
+                setError("연결 실패");
+                Alert.error("서버와의 연결이 원활하지 않습니다.");
+            }
         };
 
         $("empSearchKeyword").oninput = () => {

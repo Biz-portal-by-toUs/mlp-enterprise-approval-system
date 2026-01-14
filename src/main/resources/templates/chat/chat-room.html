@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8"/>
     <title>Chat Room</title>
+    <link rel="stylesheet" href="/css/chat-toast.css">
+
+    <script src="/js/chat/chat-toast.js"></script>
     <style>
         /* CSS 디자인은 수정하지 않았습니다. */
         :root { --primary-color: #007bff; --me-bubble: #ffeb33; --bg-color: #f8f9fa; --border-color: #eee; }
@@ -271,14 +274,14 @@
     function removeSelected(empId) { selected.delete(empId); renderSelected(); }
 
     async function submitInvite() {
-        if (selected.size === 0) return alert("초대할 인원을 선택하세요.");
+        if (selected.size === 0) return showChatToast("초대할 인원을 선택하세요.");
         const memberIds = [...selected.keys()];
         const res = await fetch(`/api/v1/chat/${roomNo}/invite`, {
             method: 'POST',
             headers: authHeaders(),
             body: JSON.stringify({ memberIds })
         });
-        if (res.ok) { closeInviteModal(); if (isMemberPanelOpen) toggleMembers(); } else { alert("초대 실패"); }
+        if (res.ok) { closeInviteModal(); if (isMemberPanelOpen) toggleMembers(); } else { showChatToast("초대 실패"); }
     }
 
     function closeInviteModal() { document.getElementById("inviteModal").style.display = "none"; }
@@ -376,7 +379,7 @@
         const input = document.getElementById("messageInput");
         const content = input.value;
         if (!content.trim() || !stompClient?.connected) return;
-        if (utf8Bytes(content) > MAX_BYTES) { alert("메시지 용량이 너무 큽니다."); return; }
+        if (utf8Bytes(content) > MAX_BYTES) { showChatToast("메시지 용량이 너무 큽니다."); return; }
         // ✅ 전송 시 헤더에 토큰 제거
         stompClient.send("/pub/chat/message", {}, JSON.stringify({ roomNo: roomNo, content: content }));
         input.value = "";

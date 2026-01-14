@@ -278,33 +278,32 @@
 
         function onEdit(depNo) { location.href = `/admin/departments/${depNo}/edit`; }
 
+        // ✅ [Alert 적용] 삭제 로직 수정
         async function onDelete(depNo, depName) {
-            const ok = confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`);
-            if (!ok) return;
+            Alert.confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`, "부서 삭제", async () => {
+                try {
+                    const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
+                        method: "DELETE",
+                        credentials: "include",
+                        headers: { "Accept": "application/json" }
+                    });
 
-            try {
-                const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
-                    method: "DELETE",
-                    credentials: "include",
-                    headers: { "Accept": "application/json" }
-                });
+                    if (res.status === 401) return Alert.error("로그인이 필요합니다.");
+                    if (res.status === 403) return Alert.error("권한이 없습니다.");
 
-                if (res.status === 401) return showToast("로그인이 필요합니다. 다시 로그인 해주세요.", true);
-                if (res.status === 403) return showToast("권한이 없습니다. (COM_ADMIN만 가능)", true);
+                    if (!res.ok) {
+                        let msg = "삭제 실패";
+                        const json = await safeJson(res);
+                        if (json && (json.message || json.error)) msg = json.message || json.error;
+                        return Alert.error(msg);
+                    }
 
-                if (!res.ok) {
-                    let msg = `삭제 실패 (${res.status})`;
-                    const json = await safeJson(res);
-                    if (json && (json.message || json.error)) msg = json.message || json.error;
-                    return showToast(msg, true);
+                    Alert.success("삭제되었습니다.");
+                    await loadDepartments();
+                } catch (e) {
+                    Alert.error("삭제 중 오류가 발생했습니다.");
                 }
-
-                showToast("삭제되었습니다.");
-                await loadDepartments();
-            } catch (e) {
-                console.error(e);
-                showToast("삭제 중 예외가 발생했습니다.", true);
-            }
+            });
         }
 
         window.addEventListener("DOMContentLoaded", () => {

@@ -122,7 +122,7 @@
       return isoLike.replace("T", " ").substring(0, 16).replaceAll("-", ".");
     }
 
-    // ✅ 1. 목록 로드 (URL: /api/v1/meetings/trash)
+    // ✅ 1. 목록 로드
     async function loadPage(page){
       try{
         const qs = new URLSearchParams();
@@ -176,39 +176,54 @@
         $("pageInfo").textContent = `page ${curPage + 1} / ${Math.max(totalPages,1)}`;
       } catch(e){
         console.error(e);
+        Alert.error("목록을 불러오는 중 오류가 발생했습니다.");
       }
     }
 
-    // ✅ 2. 복구 로직
+    // ✅ 2. [Alert 적용] 복구 로직
     async function restoreMeeting(meetNo) {
-      if(!confirm("이 회의를 복구하시겠습니까?")) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/restore`, {
-          method: 'PATCH',
-          headers: authHeadersJson(),
-          credentials: "include"
-        });
-        if(res.ok) {
-          alert("회의가 복구되었습니다.");
-          loadPage(0);
+      Alert.confirm("이 회의를 복구하시겠습니까?", "회의 복구", async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/restore`, {
+            method: 'PATCH',
+            headers: authHeadersJson(),
+            credentials: "include"
+          });
+          if(res.ok) {
+            Alert.success("회의가 복구되었습니다.");
+            loadPage(0);
+          } else {
+            Alert.error("복구에 실패했습니다.");
+          }
+        } catch(e) {
+          Alert.error("복구 중 오류가 발생했습니다.");
         }
-      } catch(e) { alert("복구 중 오류가 발생했습니다."); }
+      });
     }
 
-    // ✅ 3. 영구 삭제 로직
+    // ✅ 3. [Alert 적용] 영구 삭제 로직
     async function hardDeleteMeeting(meetNo) {
-      if(!confirm("영구 삭제 시 복구가 불가능합니다. 정말 삭제하시겠습니까?")) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/hard`, {
-          method: 'DELETE',
-          headers: authHeadersJson(),
-          credentials: "include"
-        });
-        if(res.ok) {
-          alert("영구 삭제되었습니다.");
-          loadPage(0);
-        }
-      } catch(e) { alert("삭제 중 오류가 발생했습니다."); }
+      Alert.confirm(
+              "영구 삭제 시 복구가 불가능합니다.\n정말 삭제하시겠습니까?",
+              "영구 삭제 주의",
+              async () => {
+                try {
+                  const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/hard`, {
+                    method: 'DELETE',
+                    headers: authHeadersJson(),
+                    credentials: "include"
+                  });
+                  if(res.ok) {
+                    Alert.success("영구 삭제되었습니다.");
+                    loadPage(0);
+                  } else {
+                    Alert.error("삭제에 실패했습니다.");
+                  }
+                } catch(e) {
+                  Alert.error("삭제 중 오류가 발생했습니다.");
+                }
+              }
+      );
     }
 
     function renderPager(page, totalPages) {
@@ -227,7 +242,7 @@
 
       wrap.appendChild(createBtn("<", page - 1, false, page <= 0));
       for (let i = 0; i < totalPages; i++) {
-        if(i >= page - 2 && i <= page + 2) // 간략 페이징
+        if(i >= page - 2 && i <= page + 2)
           wrap.appendChild(createBtn(i + 1, i, i === page));
       }
       wrap.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
