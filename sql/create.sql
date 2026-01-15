@@ -1219,3 +1219,5 @@ ALTER TABLE document_form
     ADD INDEX idx_document_form_origin (origin_docfo_no),
     ADD CONSTRAINT fk_document_form_origin
         FOREIGN KEY (origin_docfo_no) REFERENCES document_form(docfo_no);
+
+ALTER TABLE attach_box ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
