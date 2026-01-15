@@ -154,6 +154,16 @@
                 font-weight:600;
             }
 
+            /* SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
+
+            .meeting-room-register-page .submit{
+                background: var(--primary);
+                color:#fff;
+            }
+
             .input-invalid{
                 border-color:#ef4444 !important;
                 box-shadow: 0 0 0 3px rgba(239,68,68,.12);
@@ -237,7 +247,73 @@
 
 <!-- 이 페이지 전용 JS -->
 <th:block layout:fragment="pageScripts">
+    <!-- SweetAlert2 추가 (첫 파일과 동일) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
+        /* =========================
+           SweetAlert2 (첫 파일 스타일 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+
+        function swalSuccess(text, title="완료") {
+            return swalAlert({ icon: "success", title, text });
+        }
+
+        function swalError(text, title="오류") {
+            return swalAlert({ icon: "error", title, text });
+        }
+
+        function swalWarn(text, title="확인") {
+            return swalAlert({ icon: "warning", title, text });
+        }
+
+        function swalInfo(text, title="알림") {
+            return swalAlert({ icon: "info", title, text });
+        }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+
         /* ---------- image preview ---------- */
         function previewImage(input) {
             const preview = document.getElementById("imagePreview");
@@ -251,8 +327,11 @@
             const file = input.files[0];
 
             if (!file.type.startsWith("image/")) {
-                alert("이미지 파일만 업로드 가능합니다.");
+                // alert -> SweetAlert (동일 톤)
+                swalWarn("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
+                preview.style.display = "none";
+                preview.src = "";
                 return;
             }
 
@@ -264,6 +343,7 @@
 
             reader.readAsDataURL(file);
         }
+
 
         /* ===== inline validation UI ===== */
         const roomNameInput = document.getElementById("roomName");
@@ -355,6 +435,7 @@
         updateNameUI();
         updateCapUI();
 
+
         /* ---------- submit ---------- */
         async function submitMeetingRoomForm(e) {
             e.preventDefault();
@@ -386,37 +467,53 @@
             }
 
             try {
+                // 로딩 표시 (첫 파일 느낌)
+                swalLoading("등록 중...", "회의실을 등록하고 있어요.");
+
                 const res = await fetch("/api/v1/meeting-rooms", {
                     method: "POST",
                     credentials: "include",
                     body: formData
                 });
 
-                if (res.status === 401) {
-                    alert("로그인이 필요합니다.");
+                // 로그인 만료/권한
+                if (res.status === 401 || res.status === 403) {
+                    Swal.close();
+                    await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
                     location.href = "/login";
                     return;
                 }
 
-                const result = await res.json();
+                let result = null;
+                try { result = await res.json(); } catch { result = { message: await res.text() }; }
 
                 if (!res.ok) {
+                    Swal.close();
                     console.error(result);
-                    alert(result.message || "등록 실패");
+                    await swalError(result?.message || "등록에 실패했습니다.", "등록 실패");
                     return;
                 }
 
-                alert("회의실 등록 성공!");
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "등록 완료",
+                    text: "회의실 등록이 완료되었습니다.",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
+
                 location.href = "/meeting-rooms";
             } catch (err) {
+                Swal.close();
                 console.error(err);
-                alert("서버 오류가 발생했습니다.");
+                await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
             }
         }
 
         document.getElementById("roomForm")?.addEventListener("submit", submitMeetingRoomForm);
     </script>
-
 </th:block>
 
 </body>

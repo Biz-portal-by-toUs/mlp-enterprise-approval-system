@@ -133,6 +133,17 @@
                 border-color:#ef4444 !important;
                 box-shadow: 0 0 0 3px rgba(239,68,68,.12);
             }
+
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
+
+            /* (선택) 버튼 톤 통일: var(--primary) 사용 */
+            .corpcar-register-page .btns .submit{
+                background: var(--primary);
+                color:#fff;
+            }
         </style>
     </th:block>
 </head>
@@ -224,7 +235,75 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 (회의실 등록과 동일) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
+        /* =========================
+           SweetAlert2 helpers (회의실 등록과 동일 톤)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+
+        function swalSuccess(text, title="완료") {
+            return swalAlert({ icon: "success", title, text });
+        }
+
+        function swalError(text, title="오류") {
+            return swalAlert({ icon: "error", title, text });
+        }
+
+        function swalWarn(text, title="확인") {
+            return swalAlert({ icon: "warning", title, text });
+        }
+
+        function swalInfo(text, title="알림") {
+            return swalAlert({ icon: "info", title, text });
+        }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        /* =========================
+           apiFetch (alert -> SweetAlert)
+           ========================= */
         async function apiFetch(path, options = {}) {
             const res = await fetch(path, {
                 ...options,
@@ -233,14 +312,14 @@
             });
 
             if (res.status === 401 || res.status === 403) {
-                alert("로그인이 필요합니다.");
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해주세요.", "로그인 필요");
                 location.href = "/login";
                 throw new Error("UNAUTHORIZED");
             }
             return res;
         }
 
-        /* ---------- image preview ---------- */
+        /* ---------- image preview (alert -> SweetAlert) ---------- */
         function previewImage(input) {
             const preview = document.getElementById("imagePreview");
 
@@ -253,8 +332,10 @@
             const file = input.files[0];
 
             if (!file.type.startsWith("image/")) {
-                alert("이미지 파일만 업로드 가능합니다.");
+                swalWarn("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
+                preview.style.display = "none";
+                preview.src = "";
                 return;
             }
 
@@ -462,7 +543,7 @@
         updatePlateUI();
         updateCapUI();
 
-        /* ---------- submit ---------- */
+        /* ---------- submit (alert -> SweetAlert + 로딩/성공/실패) ---------- */
         async function submitCorporateCarForm(e) {
             e.preventDefault();
 
@@ -508,28 +589,41 @@
             const formData = new FormData(form);
 
             try {
+                // ✅ 로딩 표시
+                swalLoading("등록 중...", "법인 차량을 등록하고 있어요.");
+
                 const res = await apiFetch("/api/v1/corporate-cars", {
                     method: "POST",
                     body: formData
                 });
 
                 let result = null;
-                const ct = res.headers.get("content-type") || "";
-                if (ct.includes("application/json")) result = await res.json();
+                try { result = await res.json(); } catch { result = { message: await res.text() }; }
 
                 if (!res.ok) {
+                    Swal.close();
                     console.error(result);
-                    alert(result?.message || "등록 실패");
+                    await swalError(result?.message || "등록에 실패했습니다.", "등록 실패");
                     return;
                 }
 
-                alert("법인 차량 등록 성공!");
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "등록 완료",
+                    text: "법인 차량 등록이 완료되었습니다.",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
+
                 location.href = "/corporate-cars";
 
             } catch (err) {
+                Swal.close();
                 if (err.message !== "UNAUTHORIZED") {
                     console.error(err);
-                    alert("서버 오류가 발생했습니다.");
+                    await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
                 }
             }
         }

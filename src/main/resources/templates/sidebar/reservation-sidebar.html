@@ -1,6 +1,12 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
+<body>
+
+<aside class="subbar"
+       th:fragment="reservationSidebar(active)"
+       th:with="facilityActive=${active=='meeting' or active=='car' or active=='equipment'}">
+
+  <!-- ✅ fragment 안에 style을 넣어야 th:replace로 가져올 때도 적용됨 -->
   <style>
     /* details 기본 마커(삼각형) 제거 - 크롬/사파리 */
     .subbar-details > summary::-webkit-details-marker { display: none; }
@@ -8,27 +14,47 @@
     /* 파이어폭스 포함 표준 marker 제거 */
     .subbar-details > summary::marker { content: ""; }
 
-    /* summary를 a처럼 보이게 */
-    .subbar-summary {
+    /* summary를 a처럼 보이게 + 오른쪽 화살표 자리 확보 */
+    summary.subbar-summary {
       cursor: pointer;
       user-select: none;
       width: 100%;
       box-sizing: border-box;
+
+      /* ✅ 토글 표시를 위한 레이아웃 */
+      display: flex !important;   /* subbar-item 쪽 display 규칙을 이김 */
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    /* ✅ 커스텀 화살표(chevron) */
+    summary.subbar-summary::after{
+      content: "";
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      margin-left: auto;
+
+      /* 테두리로 꺾쇠 만들기 */
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+
+      /* 기본: 아래(▾) 느낌 */
+      transform: rotate(45deg);
+      transition: transform 0.15s ease;
+      opacity: 0.9;
+    }
+
+    /* ✅ 열렸을 때: 위(▴)로 회전 */
+    .subbar-details[open] > summary.subbar-summary::after{
+      transform: rotate(-135deg);
     }
 
     /* 하위 메뉴 레이아웃 */
     .subbar-submenu { display: grid; gap: 4px; margin-top: 4px; }
     .subbar-subitem { padding-left: 24px; }
-
-    /* (화살표 쓸 때만 의미 있음) */
-    .subbar-details[open] .subbar-arrow { transform: rotate(180deg); }
   </style>
-</head>
-
-<body>
-<aside class="subbar"
-       th:fragment="reservationSidebar(active)"
-       th:with="facilityActive=${active=='meeting' or active=='car' or active=='equipment'}">
 
   <div class="subbar-title">예약</div>
 
@@ -61,10 +87,11 @@
       내 예약 조회
     </a>
 
-      <details class="subbar-details" id="facilityDetails">
-          <summary class="subbar-item subbar-summary">
-              공유 시설 조회
-          </summary>
+    <!-- ✅ 공유 시설 조회 (토글) -->
+    <details class="subbar-details" id="facilityDetails">
+      <summary class="subbar-item subbar-summary">
+        공유 시설 조회
+      </summary>
 
       <div class="subbar-submenu">
         <a class="subbar-item subbar-subitem"
@@ -87,26 +114,29 @@
       </div>
     </details>
   </nav>
-<script>
+
+  <script>
     document.addEventListener("DOMContentLoaded", () => {
-        const details = document.getElementById("facilityDetails");
-        if (!details) return;
+      const details = document.getElementById("facilityDetails");
+      if (!details) return;
 
-        const KEY = "subbar:facilityDetailsOpen";
+      const KEY = "subbar:facilityDetailsOpen";
 
-        // 1) 저장된 값이 있으면 그걸로 복원
-        const saved = localStorage.getItem(KEY);
-        if (saved !== null) {
-            if (saved === "true") details.setAttribute("open", "");
-            else details.removeAttribute("open");
-        }
+      // 1) 저장된 값이 있으면 그걸로 복원
+      const saved = localStorage.getItem(KEY);
+      if (saved !== null) {
+        if (saved === "true") details.setAttribute("open", "");
+        else details.removeAttribute("open");
+      }
 
-        // 2) 사용자가 열고/닫을 때마다 저장
-        details.addEventListener("toggle", () => {
-            localStorage.setItem(KEY, String(details.open));
-        });
+      // 2) 사용자가 열고/닫을 때마다 저장
+      details.addEventListener("toggle", () => {
+        localStorage.setItem(KEY, String(details.open));
+      });
     });
-</script>
+  </script>
+
 </aside>
+
 </body>
 </html>

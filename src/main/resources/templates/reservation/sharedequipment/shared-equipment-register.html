@@ -139,6 +139,17 @@
                 border-color:#ef4444 !important;
                 box-shadow: 0 0 0 3px rgba(239,68,68,.12);
             }
+
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
+
+            /* 버튼 톤 통일(회의실 등록과 동일하게 primary 사용) */
+            .shared-eq-create-page .submit{
+                background: var(--primary);
+                color:#fff;
+            }
         </style>
     </th:block>
 </head>
@@ -216,10 +227,75 @@
 
 <!-- 이 페이지 전용 JS -->
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 (회의실 등록과 동일) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         const API_BASE = window.location.origin;
 
-        // ✅ httpOnly cookie 기반 공통 fetch
+        /* =========================
+           SweetAlert2 helpers (회의실 등록과 동일 톤)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+
+        function swalSuccess(text, title="완료") {
+            return swalAlert({ icon: "success", title, text });
+        }
+
+        function swalError(text, title="오류") {
+            return swalAlert({ icon: "error", title, text });
+        }
+
+        function swalWarn(text, title="확인") {
+            return swalAlert({ icon: "warning", title, text });
+        }
+
+        function swalInfo(text, title="알림") {
+            return swalAlert({ icon: "info", title, text });
+        }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        // ✅ httpOnly cookie 기반 공통 fetch (alert -> SweetAlert)
         async function apiFetch(path, options = {}) {
             const url = API_BASE + path;
 
@@ -230,7 +306,7 @@
             });
 
             if ((res.redirected && res.url.includes("/login")) || res.status === 401 || res.status === 403) {
-                alert("로그인이 필요합니다. 다시 로그인 해 주세요.");
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인 해 주세요.", "로그인 만료");
                 location.href = "/login";
                 throw new Error("UNAUTHORIZED");
             }
@@ -238,7 +314,7 @@
             return res;
         }
 
-        /* ---------- image preview ---------- */
+        /* ---------- image preview (alert -> SweetAlert) ---------- */
         function previewImage(input) {
             const preview = document.getElementById("imagePreview");
             if (!input.files || !input.files[0]) {
@@ -249,8 +325,10 @@
 
             const file = input.files[0];
             if (!file.type.startsWith("image/")) {
-                alert("이미지 파일만 업로드 가능합니다.");
+                swalWarn("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
+                preview.style.display = "none";
+                preview.src = "";
                 return;
             }
 
@@ -292,7 +370,6 @@
             if (eqNameCounter) eqNameCounter.textContent = `${len} / 20`;
 
             if (!eqNameInput.value.trim()) {
-                // required라 submit 때 잡고, 입력 중에는 에러 안띄움
                 setError(eqNameInput, eqNameError, "");
                 return;
             }
@@ -308,7 +385,6 @@
             if (eqIdCounter) eqIdCounter.textContent = `${len} / 20`;
 
             if (!eqIdInput.value.trim()) {
-                // 선택 항목이므로 빈 값이면 에러 없음
                 setError(eqIdInput, eqIdError, "");
                 return;
             }
@@ -353,29 +429,41 @@
             const formData = new FormData(form);
 
             try {
+                // ✅ 로딩 표시
+                swalLoading("등록 중...", "공유 설비를 등록하고 있어요.");
+
                 const res = await apiFetch("/api/v1/shared-equipment", {
                     method: "POST",
                     body: formData
                 });
 
-                const ct = res.headers.get("content-type") || "";
-                const payload = ct.includes("application/json") ? await res.json() : await res.text();
+                // 응답 파싱
+                let payload = null;
+                try { payload = await res.json(); } catch { payload = { message: await res.text() }; }
 
                 if (!res.ok) {
-                    const msg =
-                        (payload && payload.message) ||
-                        (typeof payload === "string" && payload) ||
-                        `등록 실패 (${res.status})`;
-                    alert(msg);
+                    Swal.close();
+                    const msg = payload?.message || "등록에 실패했습니다.";
+                    await swalError(msg, "등록 실패");
                     return;
                 }
 
-                alert("공유 설비 등록 성공!");
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "등록 완료",
+                    text: "공유 설비 등록이 완료되었습니다.",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
+
                 location.href = "/shared-equipment";
             } catch (err) {
+                Swal.close();
                 if (err.message === "UNAUTHORIZED") return;
                 console.error(err);
-                alert("서버 오류가 발생했습니다.");
+                await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
             }
         }
 

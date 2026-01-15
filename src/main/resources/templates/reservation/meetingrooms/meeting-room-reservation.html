@@ -121,8 +121,17 @@
                 border-bottom: 1px solid #e0e0e0;
                 border-right: 1px solid #e0e0e0;
                 text-align: center;
-                padding: 8px 0;
+
+                /* ✅ 높이 살짝 업(너무 뚱뚱 X) */
+                min-height: 44px;     /* 기존엔 padding으로만 높이 결정 */
+                padding: 10px 0;      /* 기존 8px 0 -> 10px 0 */
+
                 font-size: 13px;
+
+                /* ✅ 텍스트 세로 가운데 정렬 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             .time-header { background: #f0f2f5; font-weight: bold; }
             .room-name { background: #fafafa; font-weight: bold; }
@@ -247,6 +256,12 @@
                 background: #ff4d4f;
                 color: #fff;
             }
+
+            /* SweetAlert가 reserveModal(999999)보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
+
             #reserveModal #deleteBtn:hover{ filter: brightness(0.95); }
         </style>
     </th:block>
@@ -337,6 +352,7 @@
 
 <th:block layout:fragment="pageScripts">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         const START_HOUR = 9;
@@ -380,7 +396,7 @@
             });
 
             if (res.status === 401 || res.status === 403) {
-                alert("로그인이 만료되었어요. 다시 로그인 해 주세요.");
+                await swalWarn("로그인이 만료되었어요. 다시 로그인해 주세요.", "로그인 만료");
                 throw new Error("UNAUTHORIZED");
             }
             return res;
@@ -552,7 +568,7 @@
         }
 
         function bindSelectable(cell) {
-            cell.onclick = () => {
+            cell.onclick = async () => {
                 if (cell.classList.contains("disabled")) return;
 
                 const row = cell.closest(".room-row");
@@ -566,7 +582,7 @@
                 }
 
                 if (row !== firstClickCell.closest(".room-row")) {
-                    alert("같은 회의실에서만 선택할 수 있어요.");
+                    await swalWarn("같은 회의실에서만 선택할 수 있어요.");
                     clearSelection();
                     firstClickCell = null;
                     return;
@@ -578,9 +594,11 @@
                 let e = Math.max(startIdx, endIdx);
 
                 for (let i = s; i <= e; i++) {
-                    if (cells[i].classList.contains("reserved-other") ||
-                        cells[i].classList.contains("reserved-mine")) {
-                        alert("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
+                    if (
+                        cells[i].classList.contains("reserved-other") ||
+                        cells[i].classList.contains("reserved-mine")
+                    ) {
+                        await swalWarn("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
                         clearSelection();
                         firstClickCell = null;
                         return;
@@ -672,7 +690,13 @@
                         cell.onclick = () => openCancelModal(resv, empName, depName);
                         cell.style.cursor = "pointer";
                     } else {
-                        cell.onclick = () => {};
+                        cell.onclick = async () => {
+                            clearSelection(); // 선택 남아있으면 지워주기
+                            await swalInfo(
+                                "다른 사용자가 예약한 시간입니다.\n다른 시간을 선택해주세요.",
+                                "예약 불가"
+                            );
+                        };
                         cell.style.cursor = "not-allowed";
                     }
                 }
@@ -762,7 +786,7 @@
 
         reserveBtn.onclick = async () => {
             if (selectedAttendees.length === 0) {
-                alert("참가자를 1명 이상 선택하세요.");
+                await swalWarn("참가자를 1명 이상 선택하세요.");
                 return;
             }
 
@@ -771,15 +795,18 @@
             const startTime = modal.dataset.start; // "HH:mm"
             const endTime   = modal.dataset.end;   // "HH:mm"
 
-            // ✅ 1) 예약 직전 최신 데이터로 갱신
+            // 로딩 표시
+            swalLoading("예약 확인 중...", "예약 가능 여부를 확인하고 있어요.");
+
+            // 1) 예약 직전 최신 데이터로 갱신
             await loadReservations();
 
-            // ✅ 2) 최신 데이터 기준으로 충돌 체크
+            // 2) 최신 데이터 기준으로 충돌 체크
             if (hasConflict({ roomNo, dateStr, startTime, endTime })) {
-                alert("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.");
+                Swal.close();
+                await swalError("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.", "예약 불가");
                 clearSelection();
                 modal.style.display = "none";
-                // 최신 예약이 이미 로드되어 paintReservations()까지 됨
                 return;
             }
 
@@ -799,18 +826,31 @@
             });
 
             if (!res.ok) {
-                // ✅ 서버가 409 같은 걸로 내려주면 여기서 메시지 분기 가능
+                Swal.close();
                 let err = null;
                 try { err = await res.json(); } catch { err = { message: await res.text() }; }
 
-                // 서버가 아직 500으로 뭉개도 UX는 이렇게 처리 가능
                 const msg = err?.message || "예약 실패";
-                alert(msg.includes("예약") ? msg : "예약에 실패했습니다. (이미 예약되었을 수 있어요)\n새로고침 후 다시 시도해주세요.");
+                await swalError(
+                    msg.includes("예약")
+                        ? msg
+                        : "예약에 실패했습니다. (이미 예약되었을 수 있어요)\n새로고침 후 다시 시도해주세요.",
+                    "예약 실패"
+                );
 
-                // ✅ 실패 시 최신화
+                // 실패 시 최신화
                 await loadReservations();
                 return;
             }
+
+            Swal.close();
+            await Swal.fire({
+                icon: "success",
+                title: "예약 완료",
+                text: "회의실 예약이 완료되었습니다.",
+                timer: 1200,
+                showConfirmButton: false
+            });
 
             modal.style.display = "none";
             clearSelection();
@@ -829,13 +869,34 @@
 
         deleteBtn.onclick = async () => {
             const resvNo = modal.dataset.resvNo;
-            if (!confirm("정말 예약을 취소할까요?")) return;
+
+            const ok = await swalConfirm({
+                title: "예약 취소",
+                text: "정말 예약을 취소할까요?",
+                icon: "warning",
+                confirmText: "취소할게요",
+                cancelText: "닫기",
+                confirmColor: SWAL_RED
+            });
+            if (!ok) return;
+
+            swalLoading("취소 처리 중...", "잠시만 기다려 주세요.");
 
             const res = await apiFetch(`/api/v1/meeting-room-reservations/${resvNo}`, { method: "DELETE" });
             if (!res.ok) {
-                alert("취소 실패");
+                Swal.close();
+                await swalError("취소에 실패했습니다. 잠시 후 다시 시도해주세요.", "취소 실패");
                 return;
             }
+
+            Swal.close();
+            await Swal.fire({
+                icon: "success",
+                title: "취소 완료",
+                text: "예약이 취소되었습니다.",
+                timer: 1000,
+                showConfirmButton: false
+            });
 
             modal.style.display = "none";
             await loadReservations();
@@ -900,6 +961,8 @@
             renderChips();
         }
 
+        window.removeChip = removeChip;
+
         /* ===== 예약 버튼(상단) ===== */
         document.getElementById("openReserve").onclick = async () => {
             showReserveMode();
@@ -909,7 +972,7 @@
             document.getElementById("purpose").value = "";
 
             if (dragCells.length === 0) {
-                alert("예약할 시간을 선택하세요.");
+                await swalWarn("예약할 시간을 선택하세요.");
                 return;
             }
 
@@ -959,6 +1022,65 @@
             await loadRooms();
             await loadEmployees();
             await loadReservations();
+        }
+
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+
+        function swalSuccess(text, title="완료") {
+            return swalAlert({ icon: "success", title, text });
+        }
+
+        function swalError(text, title="오류") {
+            return swalAlert({ icon: "error", title, text });
+        }
+
+        function swalWarn(text, title="확인") {
+            return swalAlert({ icon: "warning", title, text });
+        }
+
+        function swalInfo(text, title="알림") {
+            return swalAlert({ icon: "info", title, text });
+        }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
         }
 
         window.addEventListener("DOMContentLoaded", init);

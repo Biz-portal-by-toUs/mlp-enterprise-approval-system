@@ -124,11 +124,20 @@
 
             .time-header div,
             .eq-row div{
-                border-bottom:1px solid #e0e0e0;
-                border-right:1px solid #e0e0e0;
-                text-align:center;
-                padding:8px 0;
-                font-size:13px;
+                border-bottom: 1px solid #e0e0e0;
+                border-right: 1px solid #e0e0e0;
+                text-align: center;
+
+                /* ✅ 높이 살짝 업(너무 뚱뚱 X) */
+                min-height: 44px;     /* 기존엔 padding으로만 높이 결정 */
+                padding: 10px 0;      /* 기존 8px 0 -> 10px 0 */
+
+                font-size: 13px;
+
+                /* ✅ 텍스트 세로 가운데 정렬 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .time-header{ background:#f0f2f5; font-weight:bold; }
@@ -236,6 +245,11 @@
                 color:#fff;
             }
             #reserveModal #deleteBtn:hover{ filter: brightness(0.95); }
+
+            /* ✅ SweetAlert가 reserveModal(999999)보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
         </style>
     </th:block>
 </head>
@@ -295,7 +309,6 @@
 
                         <!-- 정보 -->
                         <div class="info-table">
-                            <!-- ✅ 라벨도 설비번호(eqId) 포함 -->
                             <div><b>설비명(설비번호):</b> <span id="eqName"></span></div>
                             <div><b>예약일자:</b> <span id="resvDate"></span></div>
                             <div><b>예약시간:</b> <span id="resvTime"></span></div>
@@ -306,15 +319,9 @@
                                 <input id="purpose" />
                             </div>
 
-                            <!-- ✅ 버튼 3개는 항상 존재 / 모드에 따라 2개만 보이게 -->
                             <div class="modal-actions">
-                                <!-- 취소 모드에서만 보임 -->
                                 <button id="deleteBtn" style="display:none;">예약 취소</button>
-
-                                <!-- 예약 모드에서만 보임 -->
                                 <button class="reserve-only" id="reserveBtn">예약</button>
-
-                                <!-- 예약 모드: '취소' / 취소 모드: '닫기' -->
                                 <button id="cancelBtn">취소</button>
                             </div>
                         </div>
@@ -328,6 +335,8 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         const START_HOUR = 9;
         const END_HOUR = 18;
@@ -358,6 +367,56 @@
 
         const API_BASE = window.location.origin;
 
+        /* =========================
+           SweetAlert2 (회의실 예약 페이지 스타일 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+        function swalInfo(text, title="알림") { return swalAlert({ icon:"info", title, text }); }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
         async function apiFetch(path, options = {}) {
             const url = API_BASE + path;
             const res = await fetch(url, {
@@ -367,7 +426,7 @@
             });
 
             if (res.status === 401 || res.status === 403) {
-                alert("로그인이 만료되었어요. 다시 로그인 해 주세요.");
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
                 throw new Error("UNAUTHORIZED");
             }
             return res;
@@ -390,6 +449,25 @@
         function getResvEndHM(r){
             return r.endTime ? String(r.endTime).substring(0, 5)
                 : (r.endedAt ? String(r.endedAt).substring(11, 16) : null);
+        }
+
+        function get(obj, path) {
+            return path.split(".").reduce((o, k) => o?.[k], obj);
+        }
+
+        function pick(obj, paths, fallback = "-") {
+            for (const p of paths) {
+                const v = get(obj, p);
+                if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+            }
+            return fallback;
+        }
+
+        function setReserverToMe() {
+            if (!reserverEl) return;
+            const emp = ME?.empName ?? ME?.employeeName ?? "-";
+            const dep = ME?.depName ?? ME?.departmentName ?? "-";
+            reserverEl.innerText = `${emp} (${dep})`;
         }
 
         function getEqNoFrom(obj){
@@ -416,25 +494,6 @@
                 // 겹침 조건: !(내끝 <= 상대시작 || 내시작 >= 상대끝)
                 return !(e <= rS || s >= rE);
             });
-        }
-
-        function get(obj, path) {
-            return path.split(".").reduce((o, k) => o?.[k], obj);
-        }
-
-        function pick(obj, paths, fallback = "-") {
-            for (const p of paths) {
-                const v = get(obj, p);
-                if (v !== undefined && v !== null && String(v).trim() !== "") return v;
-            }
-            return fallback;
-        }
-
-        function setReserverToMe() {
-            if (!reserverEl) return;
-            const emp = ME?.empName ?? ME?.employeeName ?? "-";
-            const dep = ME?.depName ?? ME?.departmentName ?? "-";
-            reserverEl.innerText = `${emp} (${dep})`;
         }
 
         function isPastCell(cellIdx) {
@@ -529,20 +588,16 @@
                 const row = document.createElement("div");
                 row.className = "eq-row";
 
-                // 1) eqNo 먼저 (예약 매칭에도 쓰니까)
                 const eqNo = pick(eq, ["eqNo", "sharedEquipmentNo", "equipmentNo"], null);
                 row.dataset.eqNo = eqNo ?? "";
 
-                // 2) eqId는 eqNo를 fallback으로 (절대 eqId 자기 자신 쓰지 말기)
                 const eqId = pick(eq, ["eqId", "equipmentId", "id"], eqNo ?? "-");
                 row.dataset.eqId = eqId;
 
-                // 3) 이름도 안전하게
                 const eqName = pick(eq, ["eqName", "name"], "-");
                 row.dataset.eqName = eqName;
 
-                // ✅ 왼쪽 라벨: 설비명 + 설비번호(eqId)
-                row.innerHTML = `<div class="eq-name">${eq.eqName} (${eqId})</div>`;
+                row.innerHTML = `<div class="eq-name">${eqName} (${eqId})</div>`;
 
                 for (let i = 0; i < 18; i++) {
                     const cell = document.createElement("div");
@@ -561,7 +616,7 @@
         }
 
         function bindSelectable(cell) {
-            cell.onclick = () => {
+            cell.onclick = async () => {
                 if (cell.classList.contains("disabled")) return;
 
                 const row = cell.closest(".eq-row");
@@ -575,7 +630,7 @@
                 }
 
                 if (row !== firstClickCell.closest(".eq-row")) {
-                    alert("같은 설비에서만 선택할 수 있어요.");
+                    await swalWarn("같은 설비에서만 선택할 수 있어요.");
                     clearSelection();
                     firstClickCell = null;
                     return;
@@ -590,7 +645,7 @@
                 for (let i = s; i <= e; i++) {
                     if (cells[i].classList.contains("reserved-other") ||
                         cells[i].classList.contains("reserved-mine")) {
-                        alert("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
+                        await swalWarn("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
                         clearSelection();
                         firstClickCell = null;
                         return;
@@ -603,7 +658,7 @@
             };
         }
 
-        /* ================= 예약 표시(툴팁: 이름/부서/시간 + 설비정보) ================= */
+        /* ================= 예약 표시 ================= */
         function paintReservations() {
             const fmtHM = (t) => {
                 if (!t) return "-";
@@ -640,9 +695,11 @@
             RESERVATIONS.forEach(resv => {
                 const resvDate = resv.resvDate ?? (resv.startedAt ? String(resv.startedAt).substring(0, 10) : null);
                 if (resvDate !== dateStr) return;
-                if (!resv.eqNo) return;
 
-                const row = document.querySelector(`.eq-row[data-eq-no="${resv.eqNo}"]`);
+                const resvEqNo = getEqNoFrom(resv);
+                if (!resvEqNo) return;
+
+                const row = document.querySelector(`.eq-row[data-eq-no="${resvEqNo}"]`);
                 if (!row) return;
 
                 const st = parseHM(resv.startTime || (resv.startedAt ? String(resv.startedAt).substring(11, 16) : null));
@@ -665,10 +722,6 @@
                     resv.reservedByDepName ??
                     resv.depName ?? resv.resvDepName ?? resv.departmentName ?? resv.deptName ?? resv.resvEmp?.depName ?? "-";
 
-                // ✅ 예약 데이터에 설비명/설비번호(eqId)가 있을 수도 없을 수도 있어서 안전하게 구성
-                const eqNameFromResv = pick(resv, ["eqName", "sharedEquipmentName", "eq.eqName"], null);
-                const eqIdFromResv   = pick(resv, ["eqId", "equipmentId", "eq.eqId", "eqNo", "sharedEquipmentNo", "eq.eqNo"], resv.eqNo);
-
                 for (let i = startIdx; i < endIdx; i++) {
                     const cell = cells[i];
                     if (!cell) continue;
@@ -676,11 +729,6 @@
                     cell.classList.add(isMine ? "reserved-mine" : "reserved-other");
 
                     const who = (depName === "-" ? `${empName}` : `${empName} / ${depName}`);
-                    const eqLabel = eqNameFromResv
-                        ? `${eqNameFromResv} (${eqIdFromResv})`
-                        : `설비번호: ${eqIdFromResv}`;
-
-                    // ✅ 툴팁에 설비정보까지 같이
                     cell.title = `${who} / ${timeLabel}`;
 
                     cell.dataset.resvNo  = resv.resvNo;
@@ -691,7 +739,10 @@
                         cell.onclick = () => openCancelModal(resv, empName, depName);
                         cell.style.cursor = "pointer";
                     } else {
-                        cell.onclick = () => {};
+                        cell.onclick = async () => {
+                            clearSelection();
+                            await swalInfo("다른 사용자가 예약한 시간입니다.\n다른 시간을 선택해주세요.", "예약 불가");
+                        };
                         cell.style.cursor = "not-allowed";
                     }
                 }
@@ -711,7 +762,6 @@
             firstClickCell = null;
         }
 
-        /* ===== 모달 모드 전환 ===== */
         function showReserveMode() {
             document.querySelectorAll(".reserve-only").forEach(el => el.style.display = "block");
             reserveBtn.style.display = "inline-flex";
@@ -743,7 +793,7 @@
 
             cancelBtn.innerText = "닫기";
 
-            const eqNo = pick(resv, ["eqNo", "sharedEquipmentNo", "eq.eqNo"], null);
+            const eqNo = getEqNoFrom(resv);
 
             const row = eqNo ? document.querySelector(`.eq-row[data-eq-no="${eqNo}"]`) : null;
             const fallbackEqId = row?.dataset?.eqId
@@ -770,47 +820,44 @@
                 "resvEmp.depName", "employee.depName", "user.depName"
             ], "-");
 
-            // ✅ 모달 설비명에 설비번호(eqId) 같이
             mEqName.innerText = `${eqName} (${eqId})`;
             mDate.innerText = resvDate;
             mTime.innerText = `${toHM(startRaw)} ~ ${toHM(endRaw)}`;
             reserverEl.innerText = `${empName} (${depName})`;
 
-            setEqImageByEqNo(pick(resv, ["eqNo", "sharedEquipmentNo", "eq.eqNo"], null));
+            setEqImageByEqNo(eqNo);
             modal.dataset.resvNo = pick(resv, ["resvNo", "reservationNo", "id"], "");
         }
 
-        /* ===== 모달 버튼 ===== */
         cancelBtn.onclick = () => { modal.style.display = "none"; };
 
         reserveBtn.onclick = async () => {
-            const eqNoRaw = modal.dataset.eqNo;     // 문자열
+            const eqNoRaw = modal.dataset.eqNo;
             const dateStr = currentDate.format("YYYY-MM-DD");
-            const startTime = modal.dataset.start;  // "HH:mm"
-            const endTime   = modal.dataset.end;    // "HH:mm"
+            const startTime = modal.dataset.start;
+            const endTime   = modal.dataset.end;
 
-            // ✅ "null"/"undefined"/"" 방지
             if (!eqNoRaw || eqNoRaw === "null" || eqNoRaw === "undefined") {
-                alert("설비 식별자(eqNo)가 없습니다. 설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.");
+                await swalError("설비 식별자(eqNo)가 없습니다.\n설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.", "예약 불가");
                 return;
             }
             if (!startTime || !endTime) {
-                alert("예약 시간이 설정되지 않았습니다. 시간을 다시 선택해주세요.");
+                await swalWarn("예약 시간이 설정되지 않았습니다.\n시간을 다시 선택해주세요.");
                 return;
             }
 
-            // ✅ 1) 예약 직전 최신 데이터로 갱신
+            swalLoading("예약 확인 중...", "예약 가능 여부를 확인하고 있어요.");
+
             await loadReservations();
 
-            // ✅ 2) 최신 데이터 기준으로 충돌 체크
             if (hasConflict({ eqNo: eqNoRaw, dateStr, startTime, endTime })) {
-                alert("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.");
+                Swal.close();
+                await swalError("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.", "예약 불가");
                 clearSelection();
                 modal.style.display = "none";
                 return;
             }
 
-            // ✅ 서버로 보낼 eqNo는 숫자면 Number로(백엔드가 숫자 기대하는 경우 대비)
             const eqNoVal = /^\d+$/.test(eqNoRaw) ? Number(eqNoRaw) : eqNoRaw;
 
             const body = {
@@ -828,7 +875,8 @@
             });
 
             if (!res.ok) {
-                // ✅ text/json 둘 다 안전처리
+                Swal.close();
+
                 let msg = "";
                 try {
                     const errJson = await res.json();
@@ -837,12 +885,23 @@
                     msg = await res.text();
                 }
 
-                alert("예약 실패: " + (msg || "알 수 없는 오류"));
+                await swalError(
+                    msg ? `예약 실패: ${msg}` : "예약에 실패했습니다.\n새로고침 후 다시 시도해주세요.",
+                    "예약 실패"
+                );
 
-                // ✅ 실패 시에도 최신화
                 await loadReservations();
                 return;
             }
+
+            Swal.close();
+            await Swal.fire({
+                icon: "success",
+                title: "예약 완료",
+                text: "공유 설비 예약이 완료되었습니다.",
+                timer: 1200,
+                showConfirmButton: false
+            });
 
             modal.style.display = "none";
             clearSelection();
@@ -851,39 +910,56 @@
 
         deleteBtn.onclick = async () => {
             const resvNo = modal.dataset.resvNo;
-            if (!confirm("정말 예약을 취소할까요?")) return;
+
+            const ok = await swalConfirm({
+                title: "예약 취소",
+                text: "정말 예약을 취소할까요?",
+                icon: "warning",
+                confirmText: "취소",
+                cancelText: "닫기",
+                confirmColor: SWAL_RED
+            });
+            if (!ok) return;
+
+            swalLoading("취소 처리 중...", "잠시만 기다려 주세요.");
 
             const res = await apiFetch(`/api/v1/shared-equipment-reservations/${resvNo}`, { method: "DELETE" });
             if (!res.ok) {
-                alert("취소 실패");
+                Swal.close();
+                await swalError("취소에 실패했습니다. 잠시 후 다시 시도해주세요.", "취소 실패");
                 return;
             }
+
+            Swal.close();
+            await Swal.fire({
+                icon: "success",
+                title: "취소 완료",
+                text: "예약이 취소되었습니다.",
+                timer: 1000,
+                showConfirmButton: false
+            });
 
             modal.style.display = "none";
             await loadReservations();
         };
 
-        /* ===== 상단 예약 버튼 ===== */
         document.getElementById("openReserve").onclick = async () => {
             showReserveMode();
-
             document.getElementById("purpose").value = "";
 
             if (dragCells.length === 0) {
-                alert("예약할 시간을 선택하세요.");
+                await swalWarn("예약할 시간을 선택하세요.");
                 return;
             }
 
             const row = dragCells[0].closest(".eq-row");
             const eqNo = row.dataset.eqNo;
 
-            // ✅ "null"/"undefined"/"" 방지
             if (!eqNo || eqNo === "null" || eqNo === "undefined") {
-                alert("설비 식별자(eqNo)가 없습니다. 설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.");
+                await swalError("설비 식별자(eqNo)가 없습니다.\n설비 목록 응답에 eqNo/id가 내려오는지 확인해주세요.", "예약 불가");
                 return;
             }
 
-            // ✅ 왼쪽 라벨이 "설비명 (설비번호)"라서 그대로 쓰면 모달에도 같이 들어감
             const eqLabel = row.querySelector(".eq-name").innerText;
 
             const allCells = [...row.querySelectorAll(".time-cell")];
@@ -896,7 +972,6 @@
                 return `${String(h).padStart(2, "0")}:${m}`;
             };
 
-            // ✅ 모달 설비명도 "설비명(번호)"로 표시
             mEqName.innerText = eqLabel;
             mDate.innerText = currentDate.format("YYYY-MM-DD");
             mTime.innerText = `${idxToTime(startIdx)} ~ ${idxToTime(endIdx)}`;
@@ -909,17 +984,14 @@
             modal.dataset.end = idxToTime(endIdx);
         };
 
-        // 30초마다 예약만 갱신
         setInterval(() => {
             loadReservations().catch(()=>{});
         }, 30000);
 
-        // 탭 다시 활성화되면 갱신
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden) loadReservations().catch(()=>{});
         });
 
-        /* ===== ME ===== */
         async function loadMe() {
             const res = await apiFetch("/api/v1/employees/me");
             const json = await res.json();

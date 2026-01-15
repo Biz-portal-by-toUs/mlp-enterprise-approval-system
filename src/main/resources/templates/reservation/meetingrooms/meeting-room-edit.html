@@ -2,6 +2,7 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout}">
 
 <head>
@@ -162,6 +163,11 @@
                 border-color:#ef4444 !important;
                 box-shadow: 0 0 0 3px rgba(239,68,68,.12);
             }
+
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
         </style>
     </th:block>
 </head>
@@ -238,14 +244,86 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 (예약/등록과 동일) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script th:inline="javascript">
+        /* =========================
+           SweetAlert2 (예약 페이지 스타일 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
         /* ================== 공통 ================== */
         const roomNo = /*[[${roomNo}]]*/ null;
         let originalData = null;
 
+        const API_BASE = window.location.origin;
+
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
+            const res = await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: { ...(options.headers || {}) }
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
+                location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
+            return res;
+        }
+
         if (!roomNo) {
-            alert("잘못된 접근입니다.");
-            location.href = "/meeting-rooms";
+            // alert -> SweetAlert
+            swalWarn("잘못된 접근입니다. 목록으로 이동합니다.").then(() => {
+                location.href = "/meeting-rooms";
+            });
         }
 
         /* ===== inline validation UI ===== */
@@ -279,7 +357,6 @@
             if (nameCounter) nameCounter.textContent = `${len} / 20`;
 
             if (!roomNameInput.value.trim()) {
-                // 비어있을 땐 경고 안 띄우고, submit 시에만 띄움(등록 화면과 동일한 느낌)
                 setError(roomNameInput, nameError, "");
                 return;
             }
@@ -344,48 +421,52 @@
 
         /* ================== 회의실 상세 조회 ================== */
         async function loadRoom() {
-            const res = await fetch(`/api/v1/meeting-rooms/${roomNo}`, {
-                credentials: "include"
-            });
+            try {
+                swalLoading("불러오는 중...", "회의실 정보를 불러오고 있어요.");
 
-            if (res.status === 401) {
-                alert("로그인이 필요합니다.");
-                location.href = "/login";
-                return;
+                const res = await apiFetch(`/api/v1/meeting-rooms/${roomNo}`, { method: "GET" });
+
+                if (!res.ok) {
+                    Swal.close();
+                    await swalError("회의실 정보를 불러오지 못했습니다.", "조회 실패");
+                    return;
+                }
+
+                const json = await res.json();
+                const room = json?.data ?? json;
+
+                roomNameInput.value = room.roomName ?? "";
+                capInput.value = room.capacity ?? "";
+                document.querySelector("[name=location]").value  = room.location ?? "";
+                document.querySelector("[name=equipList]").value = room.equipList ?? "";
+                document.querySelector("[name=note]").value      = room.note ?? "";
+
+                originalData = {
+                    roomName: (room.roomName ?? "").trim(),
+                    capacity: Number(room.capacity ?? ""),
+                    location: (room.location ?? "").trim(),
+                    equipList: (room.equipList ?? "").trim(),
+                    note: (room.note ?? "").trim()
+                };
+
+                if (room.imageUrl) {
+                    const preview = document.getElementById("imagePreview");
+                    preview.src = room.imageUrl;
+                    preview.style.display = "block";
+                }
+
+                Swal.close();
+
+                // 초기 UI 동기화
+                updateNameUI();
+                updateCapUI();
+                updateSubmitButton();
+
+            } catch (e) {
+                Swal.close();
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
+                await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
             }
-
-            if (!res.ok) {
-                alert("회의실 정보를 불러오지 못했습니다.");
-                return;
-            }
-
-            const room = (await res.json()).data;
-
-            roomNameInput.value = room.roomName ?? "";
-            capInput.value = room.capacity ?? "";
-            document.querySelector("[name=location]").value  = room.location ?? "";
-            document.querySelector("[name=equipList]").value = room.equipList ?? "";
-            document.querySelector("[name=note]").value      = room.note ?? "";
-
-            originalData = {
-                roomName: (room.roomName ?? "").trim(),
-                capacity: Number(room.capacity ?? ""),
-                location: (room.location ?? "").trim(),
-                equipList: (room.equipList ?? "").trim(),
-                note: (room.note ?? "").trim(),
-                imageChanged: false
-            };
-
-            if (room.imageUrl) {
-                const preview = document.getElementById("imagePreview");
-                preview.src = room.imageUrl;
-                preview.style.display = "block";
-            }
-
-            // 초기 UI 동기화
-            updateNameUI();
-            updateCapUI();
-            updateSubmitButton();
         }
 
         /* ================== 이미지 미리보기 ================== */
@@ -395,7 +476,6 @@
             if (!input.files || !input.files[0]) {
                 preview.style.display = "none";
                 preview.src = "";
-                // 이미지 취소했을 때도 변경감지에 영향 줄 수 있어서 버튼 상태 갱신
                 updateSubmitButton();
                 return;
             }
@@ -403,8 +483,11 @@
             const file = input.files[0];
 
             if (!file.type.startsWith("image/")) {
-                alert("이미지 파일만 업로드 가능합니다.");
+                // alert -> SweetAlert
+                swalWarn("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
+                preview.style.display = "none";
+                preview.src = "";
                 updateSubmitButton();
                 return;
             }
@@ -416,11 +499,11 @@
             };
             reader.readAsDataURL(file);
 
-            if (originalData) originalData.imageChanged = true;
             updateSubmitButton();
         }
+        window.previewImage = previewImage;
 
-        /* ================== 유효성 검사(알럿 대신 small 에러도 같이) ================== */
+        /* ================== 유효성 검사 (inline 에러 유지) ================== */
         function validateEditForm() {
             const name = roomNameInput.value.trim();
             const capacity = Number(capInput.value);
@@ -448,36 +531,6 @@
 
             return true;
         }
-
-        /* ================== 수정 요청 ================== */
-        document.getElementById("editForm").addEventListener("submit", async e => {
-            e.preventDefault();
-
-            if (!validateEditForm()) return;
-
-            const formData = new FormData(e.target);
-
-            const res = await fetch(`/api/v1/meeting-rooms/${roomNo}`, {
-                method: "PUT",
-                credentials: "include",
-                body: formData
-            });
-
-            if (res.status === 401) {
-                alert("로그인이 만료되었습니다. 다시 로그인해주세요.");
-                location.href = "/login";
-                return;
-            }
-
-            if (!res.ok) {
-                const msg = await res.text();
-                alert("수정 실패: " + msg);
-                return;
-            }
-
-            alert("회의실 정보가 수정되었습니다.");
-            location.href = "/meeting-rooms";
-        });
 
         /* ================== 변경 감지 ================== */
         function hasChanged() {
@@ -514,13 +567,71 @@
             }
         }
 
-        // 기존 변경감지 리스너 유지 (여기에 updateSubmitButton만 호출)
         document.querySelectorAll(
             "input[name=roomName], input[name=capacity], input[name=location], input[name=equipList], textarea[name=note]"
         ).forEach(el => el.addEventListener("input", updateSubmitButton));
 
         document.querySelector("[name=imageFile]")
-            .addEventListener("change", updateSubmitButton);
+            ?.addEventListener("change", updateSubmitButton);
+
+        /* ================== 수정 요청 ================== */
+        document.getElementById("editForm").addEventListener("submit", async e => {
+            e.preventDefault();
+
+            if (!validateEditForm()) return;
+
+            // ✅ 변경 없으면 막기 (UX 안전장치)
+            if (!hasChanged()) {
+                await swalWarn("변경된 내용이 없습니다.");
+                return;
+            }
+
+            const ok = await swalConfirm({
+                title: "회의실 수정",
+                text: "회의실 정보를 수정하시겠습니까?",
+                icon: "question",
+                confirmText: "수정",
+                cancelText: "닫기",
+                confirmColor: SWAL_PRIMARY
+            });
+            if (!ok) return;
+
+            try {
+                swalLoading("수정 중...", "회의실 정보를 수정하고 있습니다.");
+
+                const formData = new FormData(e.target);
+
+                const res = await apiFetch(`/api/v1/meeting-rooms/${roomNo}`, {
+                    method: "PUT",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    Swal.close();
+                    let msg = "";
+                    try { msg = (await res.text()) || ""; } catch {}
+                    await swalError(msg ? `수정 실패: ${msg}` : "수정에 실패했습니다.", "수정 실패");
+                    return;
+                }
+
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "수정 완료",
+                    text: "회의실 정보가 수정되었습니다.",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
+
+                location.href = "/meeting-rooms";
+
+            } catch (e2) {
+                Swal.close();
+                if (String(e2?.message || "").includes("UNAUTHORIZED")) return;
+                await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
+            }
+        });
 
         /* ================== 초기 실행 ================== */
         document.addEventListener("DOMContentLoaded", loadRoom);
