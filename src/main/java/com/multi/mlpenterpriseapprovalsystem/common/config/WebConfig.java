@@ -1,7 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.common.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -15,7 +14,7 @@ import java.nio.file.Paths;
  * @filename : WebConfig
  * @since : 2025. 12. 19. 금요일
  */
-@Configuration
+//@Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${app.storage.local.root-dir}") // 이게 뭔지 알아야돼. env 에 저장해야되는지도
