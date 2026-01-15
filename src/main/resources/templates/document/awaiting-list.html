@@ -46,31 +46,58 @@
                 text-decoration: underline;
             }
 
-            /* [검색 영역] */
+            /* [검색 영역] - 반응형 최적화 */
             .search-container {
                 background: #f8fafc;
                 padding: 20px;
                 border-radius: 12px;
                 margin-bottom: 16px;
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 15px 20px;
                 align-items: center;
                 border: 1px solid var(--line);
+                width: 100%;
+                box-sizing: border-box;
             }
+
+            /* 화면 가로가 좁아질 때 (태블릿 등) */
+            @media (max-width: 1400px) {
+                .search-container {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .btn-search {
+                    grid-column: 2 !important; /* 4행 2열(마지막 항목 옆)로 배치 */
+                    width: auto !important;    /* 길어지지 않게 자동 너비 설정 */
+                    padding: 10px 40px !important;
+                }
+            }
+
+            /* 화면 가로가 매우 좁아질 때 (모바일/확대 등) */
+            @media (max-width: 768px) {
+                .search-container {
+                    grid-template-columns: 1fr;
+                }
+                .btn-search {
+                    grid-column: span 1 !important;
+                    width: 100% !important; /* 모바일에서는 가독성을 위해 전체 너비 */
+                }
+            }
+
             .search-group {
                 display: flex;
                 align-items: center;
-                gap: 8px; /* 라벨-입력칸 사이 간격 통일 */
+                gap: 8px;
                 position: relative;
+                min-width: 0;
             }
             .search-group label {
                 font-size: 13px;
                 font-weight: 600;
                 color: #495057;
-                width: 75px; /* 라벨 너비 고정 */
+                width: 75px;
                 flex-shrink: 0;
-                text-align: right; /* 오른쪽 정렬 */
+                text-align: right;
             }
             .search-input, .search-select {
                 flex: 1;
@@ -80,6 +107,7 @@
                 font-size: 13px;
                 outline: none;
                 background: white;
+                min-width: 0;
             }
             .search-input.disabled {
                 background-color: #e9ecef;
@@ -94,6 +122,7 @@
                 position: relative;
                 flex: 1;
                 display: flex;
+                min-width: 0;
             }
             .dropdown-list {
                 position: absolute;
@@ -127,8 +156,9 @@
                 text-align: center;
             }
 
+            /* ✅ 버튼 위치를 마지막 검색 항목 옆(Col 4)으로 고정 및 사이즈 유지 */
             .btn-search {
-                grid-column: 4; /* 4번째 열에 위치시켜 위로 올림 */
+                grid-column: 4;
                 justify-self: end;
                 padding: 10px 40px;
                 background: var(--primary);
@@ -139,8 +169,9 @@
                 font-weight: 700;
                 font-size: 14px;
                 transition: 0.15s;
-                width: 100%; /* 칸에 맞게 꽉 채우거나 너비 조절 가능 */
-                max-width: 120px;
+                width: auto;
+                white-space: nowrap;
+                margin-top: 5px;
             }
             .btn-search:hover {
                 filter: brightness(0.9);
@@ -153,6 +184,7 @@
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                overflow-x: auto;
             }
 
             /* [테이블 디자인] */
@@ -160,6 +192,7 @@
                 width: 100%;
                 border-collapse: collapse;
                 table-layout: auto;
+                min-width: 1000px;
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -185,7 +218,6 @@
                 background: #fcfdfe;
             }
 
-            /* ✅ 제목 셀 중앙정렬 수정 */
             .title-cell {
                 text-align: center !important;
                 padding-left: 10px !important;
@@ -364,7 +396,6 @@
                 font-size: 15px;
             }
 
-            /* 로딩/공백 상태 */
             .empty-msg {
                 padding: 40px 0;
                 color: var(--muted);
@@ -379,7 +410,7 @@
     <section class="page-with-subbar">
         <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('awaiting')}"></aside>
 
-        <main style="padding: 24px; min-width: 0; flex: 1;">
+        <main style="padding: 24px; min-width: 0; flex: 1; width: 100%; box-sizing: border-box; overflow-x: hidden;">
             <div class="page-header">
                 <h1 class="page-title">결재할 문서</h1>
             </div>
@@ -477,7 +508,6 @@
         let currentPage = 0;
         let allCategories = [];
 
-        // ✅ 검색 버튼 클릭 시 확정된 필터값을 저장할 객체
         let appliedSearchFilters = {
             docfoCatName: '',
             writerDepName: '',
@@ -491,7 +521,6 @@
             fetchDepartments();
             fetchCategoryNames();
             initCustomDropdown();
-            // 초기 로드
             loadData(0);
         });
 
@@ -565,20 +594,14 @@
             } catch (e) { console.error(e); }
         }
 
-        /**
-         * ✅ 검색 버튼 클릭 시 실행
-         */
         function handleSearch() {
             const catValue = document.getElementById('search-docfoCatName').value;
-
-            // 현재 입력창의 값들을 스냅샷으로 저장
             appliedSearchFilters.docfoCatName = catValue === '전체' ? '' : catValue;
             appliedSearchFilters.writerDepName = document.getElementById('search-writerDepName').value;
             appliedSearchFilters.myApprStat = document.getElementById('search-myApprStat').value;
             appliedSearchFilters.title = document.getElementById('search-title').value;
             appliedSearchFilters.writerName = document.getElementById('search-writerName').value;
             appliedSearchFilters.writerId = document.getElementById('search-writerId').value;
-
             loadData(0);
         }
 
@@ -592,8 +615,6 @@
 
         async function loadData(page) {
             currentPage = page;
-
-            // ✅ 입력창(DOM)이 아닌 appliedSearchFilters(저장된 값)를 사용
             const params = new URLSearchParams({
                 page: page,
                 sort: currentSort,
@@ -608,7 +629,6 @@
             try {
                 const response = await fetch(`${API_URL}&${params.toString()}`, { credentials: 'include' });
                 const result = await response.json();
-
                 if (result.status === 200) {
                     const totalPages = result.data.totalPages;
                     renderTable(result.data.content, page, result.data.size);
@@ -626,21 +646,16 @@
         function renderTable(docs, currentPage, pageSize) {
             const tbody = document.getElementById('document-list');
             tbody.innerHTML = '';
-
             if (!docs || docs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">결재 대기중인 문서가 없습니다.</td></tr>';
                 return;
             }
-
             docs.forEach((doc, index) => {
                 const no = (currentPage * pageSize) + index + 1;
                 const tr = document.createElement('tr');
-
-                // AI 요약 버튼 처리 (안정적인 데이터 처리 방식)
                 const aiSummBtn = doc.aiSumm
                     ? `<button type="button" class="page-btn-nav ai-summary-btn" style="padding:4px 10px;" data-summary="${escapeHtml(doc.aiSumm)}">보기</button>`
                     : '-';
-
                 tr.innerHTML = `
                     <td>${no}</td>
                     <td>${doc.docFormCatName || '-'}</td>
@@ -654,14 +669,10 @@
                     <td>${formatDate(doc.submittedAt)}</td>
                     <td>${aiSummBtn}</td>
                 `;
-
-                // ✅ 제목 셀에만 클릭 이벤트 할당
                 const titleCell = tr.querySelector('.title-cell');
                 titleCell.addEventListener('click', () => {
                     location.href = `/documents/${doc.docNo}?status=AWAITING`;
                 });
-
-                // AI 요약 버튼 클릭 이벤트 바인딩
                 const summaryBtn = tr.querySelector('.ai-summary-btn');
                 if (summaryBtn) {
                     summaryBtn.addEventListener('click', (e) => {
@@ -670,7 +681,6 @@
                         showAiSummaryModal(summary);
                     });
                 }
-
                 tbody.appendChild(tr);
             });
         }
@@ -682,7 +692,6 @@
                 return;
             }
             nav.innerHTML = '';
-
             const createBtn = (txt, target, active = false, disabled = false) => {
                 const b = document.createElement('button');
                 b.className = `page-btn-nav ${active ? 'active' : ''}`;
@@ -691,7 +700,6 @@
                 if (!disabled) b.onclick = () => loadData(target);
                 return b;
             };
-
             const createNumBtn = (num, target, active = false) => {
                 const b = document.createElement('button');
                 b.className = `page-btn-num ${active ? 'active' : ''}`;
@@ -699,22 +707,15 @@
                 b.onclick = () => loadData(target);
                 return b;
             };
-
-            // 이전 버튼
             nav.appendChild(createBtn('<', currentPage - 1, false, currentPage === 0));
-
-            // 페이지 번호 (블록 단위)
             const blockSize = 5;
             const currentBlock = Math.floor(currentPage / blockSize);
             const startPage = currentBlock * blockSize;
             let endPage = startPage + blockSize - 1;
             if (endPage > totalPages - 1) endPage = totalPages - 1;
-
             for (let i = startPage; i <= endPage; i++) {
                 nav.appendChild(createNumBtn(i + 1, i, i === currentPage));
             }
-
-            // 다음 버튼
             nav.appendChild(createBtn('>', currentPage + 1, false, currentPage === totalPages - 1));
         }
 

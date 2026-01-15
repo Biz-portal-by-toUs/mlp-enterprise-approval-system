@@ -63,23 +63,49 @@
                 text-decoration: underline;
             }
 
-            /* [검색창] - 라벨 오른쪽 정렬 & 일정한 간격 */
+            /* [검색창] - 반응형 최적화 */
             .search-container {
                 background: #f8fafc;
                 padding: 20px;
                 border-radius: 12px;
                 margin-bottom: 16px;
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                /* 1fr 대신 minmax(0, 1fr)을 사용하여 부모 너비를 초과하지 않게 함 */
+                grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 15px 20px;
                 align-items: center;
                 border: 1px solid var(--line);
+                width: 100%;
+                box-sizing: border-box;
             }
+
+            /* 일반적인 데스크탑/노트북 환경에서 4열이 좁을 경우 2열로 전환 */
+            @media (max-width: 1400px) {
+                .search-container {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .btn-search {
+                    grid-column: span 2 !important;
+                }
+            }
+
+            /* 모바일 및 매우 좁은 화면 */
+            @media (max-width: 768px) {
+                .search-container {
+                    grid-template-columns: 1fr;
+                }
+                .btn-search {
+                    grid-column: span 1 !important;
+                    width: 100%;
+                }
+            }
+
             .search-group {
                 display: flex;
                 align-items: center;
                 gap: 8px;
                 position: relative;
+                min-width: 0; /* 내부 요소가 넘치는 것 방지 */
             }
             .search-group label {
                 font-size: 13px;
@@ -97,6 +123,7 @@
                 font-size: 13px;
                 outline: none;
                 background: white;
+                min-width: 0; /* 중요: 그리드 아이템 내에서 축소 가능하게 함 */
             }
             .search-input.disabled {
                 background-color: #e9ecef;
@@ -111,6 +138,7 @@
                 position: relative;
                 flex: 1;
                 display: flex;
+                min-width: 0;
             }
             .dropdown-list {
                 position: absolute;
@@ -157,6 +185,7 @@
                 font-size: 14px;
                 transition: 0.15s;
                 margin-top: 5px;
+                white-space: nowrap;
             }
             .btn-search:hover {
                 filter: brightness(0.9);
@@ -169,6 +198,7 @@
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                overflow-x: auto; /* 테이블이 클 경우 가로 스크롤 제공 */
             }
 
             /* [테이블 디자인] */
@@ -176,6 +206,7 @@
                 width: 100%;
                 border-collapse: collapse;
                 table-layout: auto;
+                min-width: 1000px; /* 테이블 데이터 보호를 위한 최소 너비 */
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -412,7 +443,7 @@
     <section class="page-with-subbar">
         <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('submitted')}"></aside>
 
-        <main style="padding: 24px; min-width: 0; flex: 1;">
+        <main style="padding: 24px; min-width: 0; flex: 1; width: 100%; box-sizing: border-box; overflow-x: hidden;">
             <div class="page-header">
                 <h1 class="page-title">상신한 문서</h1>
             </div>
