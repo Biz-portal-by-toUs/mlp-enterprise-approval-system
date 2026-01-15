@@ -6,87 +6,65 @@
 <head>
     <title>규정 목록 - Bizportal</title>
     <style>
-        .prov-page .page-title { font-size: 34px; font-weight: 900; margin: 10px 0 8px; }
-        .prov-page .page-sub { font-size: 18px; font-weight: 800; margin: 0 0 20px; color: #111; }
+        /* meeting-list 스타일 가이드 적용 */
+        .page-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; color: #111; }
+        .page-sub { font-size: 15px; font-weight: 600; margin: 0 0 20px; color: var(--muted); }
 
-        .prov-page .actions {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px;
+        .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .select {
+            height: 40px; border-radius: 8px; border: 1px solid var(--line);
+            background: #fff; padding: 0 12px; font-size: 14px; font-weight: 600; outline: none;
         }
-        .prov-page .search-group { display: flex; gap: 10px; flex: 1; max-width: 600px; }
 
-        .prov-page .select {
-            height: 42px; border-radius: 12px; border: 1px solid var(--line); background: #fff;
-            padding: 0 12px; font-size: 14px; font-weight: 800; outline: none; cursor: pointer;
+        .searchWrap {
+            flex: 1; display: flex; align-items: center; height: 40px;
+            border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 0 14px;
         }
-        .prov-page .searchWrap {
-            flex: 1; display: flex; align-items: center; height: 42px; border-radius: 12px;
-            border: 1px solid var(--line); background: #fff; padding: 0 14px; gap: 8px;
-        }
-        .prov-page .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; font-weight: 700; }
+        .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; }
 
-        /* 돋보기 버튼 스타일 */
-        .prov-page .searchBtn {
-            background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0;
+        .searchBtn {
+            background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px;
         }
-        .prov-page .searchBtn:hover svg { stroke: var(--primary); }
+        .searchBtn:hover svg { stroke: var(--primary); }
 
-        .prov-page .btn {
-            border: 0; border-radius: 12px; padding: 12px 24px; font-weight: 900; cursor: pointer;
-            background: var(--primary); color: #fff; box-shadow: 0 10px 20px rgba(59,130,246,.22);
-            white-space: nowrap; transition: 0.2s;
+        .btn {
+            height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
+            cursor: pointer; border: none; background: var(--primary); color: #fff;
+            white-space: nowrap; transition: 0.15s;
         }
-        .prov-page .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn:hover { filter: brightness(0.9); }
 
-        .prov-page .card {
-            background: #f1f3f6; border-radius: 18px; padding: 22px; min-height: 520px;
-        }
-        .prov-page .table {
-            width: 100%; border-collapse: separate; border-spacing: 0 14px;
-        }
-        .prov-page .thead { background: #fff; border-radius: 14px; }
-        .prov-page .thead th { text-align: left; padding: 14px 18px; font-size: 14px; color: #111; font-weight: 800; }
+        /* 테이블 스타일 통일 */
+        .tableWrap { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead th { background: #f9fafb; border-bottom: 1px solid var(--line); text-align: center; padding: 14px 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+        tbody td { border-bottom: 1px solid var(--line); text-align: center; padding: 12px 10px; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        tbody tr:hover td { background: #fcfdfe; cursor: pointer; }
 
-        .prov-page .row { background: #fff; border-radius: 14px; transition: 0.2s; cursor: pointer; }
-        .prov-page .row:hover { transform: scale(1.005); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .prov-page .row td { padding: 18px; font-size: 14px; color: #111; font-weight: 700; text-align: left; }
-        .prov-page .row td:first-child { border-top-left-radius: 14px; border-bottom-left-radius: 14px; text-align: center; }
-        .prov-page .row td:last-child { border-top-right-radius: 14px; border-bottom-right-radius: 14px; text-align: center; }
-
+        /* 상태 배지 (동일) */
         .status-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            min-width: 65px;
-            border: 1px solid transparent;
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+            min-width: 65px; border: 1px solid transparent;
         }
+        .status-DONE { background: #ecfdf5; color: #10b981; border-color: #a7f3d0; }
+        .status-FAILED { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+        .status-PROCESSING { background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe; }
+        .status-NONE, .status-CREATED, .status-UPLOADED { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
 
-        /* 완료: 초록색 */
-        .status-DONE {
-            background: #ecfdf5; color: #10b981; border-color: #a7f3d0;
+        /* 페이징 스타일 통일 */
+        .pager-wrapper {
+            display: flex; align-items: center; justify-content: center;
+            position: relative; margin-top: 16px;
         }
-        /* 실패: 빨간색 */
-        .status-FAILED {
-            background: #fef2f2; color: #ef4444; border-color: #fecaca;
+        .pager { display: flex; align-items: center; gap: 4px; }
+        .pageBtn {
+            min-width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line);
+            background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s;
         }
-        /* 처리 중: 파란색 */
-        .status-PROCESSING {
-            background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe;
-        }
-        /* 대기/미요약: 회색 */
-        .status-NONE, .status-CREATED, .status-UPLOADED {
-            background: #f3f4f6; color: #6b7280; border-color: #e5e7eb;
-        }
-
-        .pager .pageBtn {
-            min-width: 38px; height: 38px; border-radius: 10px; border: 0; background: #fff;
-            font-size: 14px; font-weight: 900; cursor: pointer; transition: 0.2s; color: #111;
-        }
-        .pager .pageBtn.active { background: var(--primary); color: #fff; }
-        .pager .pageBtn:disabled { opacity: 0.4; }
+        .pageBtn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
+        .pageBtn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .pager-status { position: absolute; right: 0; display: flex; gap: 12px; align-items: center; }
     </style>
 </head>
 <body>
@@ -94,46 +72,51 @@
     <div class="page-with-subbar">
         <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
 
-        <main style="padding: 0 26px; flex: 1;">
+        <main style="padding: 24px; min-width: 0; flex: 1;">
             <div class="page-title">사내 규정 관리</div>
-            <div class="page-sub">사내 규정 조회</div>
+            <div class="page-sub">등록된 사내 규정을 조회하고 관리합니다.</div>
 
-            <div class="actions">
-                <div class="search-group">
-                    <select id="publicSelect" class="select">
-                        <option value="">공개 전체</option>
-                        <option value="true">공개</option>
-                        <option value="false">비공개</option>
-                    </select>
-                    <div class="searchWrap">
-                        <input id="keyword" class="searchInput" placeholder="규정 제목 검색..." />
-                        <button id="searchBtn" class="searchBtn" type="button">
-                            <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#666" stroke-width="3">
-                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                            </svg>
-                        </button>
-                    </div>
+            <div class="toolbar">
+                <select id="publicSelect" class="select">
+                    <option value="">공개 전체</option>
+                    <option value="true">공개</option>
+                    <option value="false">비공개</option>
+                </select>
+
+                <div class="searchWrap">
+                    <input id="keyword" class="searchInput" placeholder="규정 제목을 입력하세요..." />
+                    <button id="searchBtn" class="searchBtn">
+                        <svg viewBox="0 0 24 24" width="20" fill="none" stroke="#666" stroke-width="3">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                        </svg>
+                    </button>
                 </div>
-                <button id="createBtn" class="btn" type="button">규정 등록</button>
+
+                <button id="createBtn" class="btn">규정 등록</button>
             </div>
 
-            <section class="card">
-                <table class="table">
-                    <thead class="thead">
+            <section class="tableWrap">
+                <table>
+                    <thead>
                     <tr>
-                        <th style="width:10%; text-align:center;">번호</th>
-                        <th style="width:50%;">규정 제목</th>
-                        <th style="width:10%; text-align:center;">공개</th>
-                        <th style="width:15%; text-align:center;">상태</th>
-                        <th style="width:15%; text-align:center;">수정일</th>
+                        <th style="width:80px">번호</th>
+                        <th>규정 제목</th>
+                        <th style="width:120px">공개 여부</th>
+                        <th style="width:120px">상태</th>
+                        <th style="width:150px">최종 수정일</th>
                     </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
                 </table>
-
-                <div id="pager" class="pager" style="display:flex; gap:8px; justify-content:center; margin-top:20px;"></div>
-                <div style="text-align:right; margin-top:10px; font-weight:900; color:var(--primary)" id="countPill">0건</div>
             </section>
+
+            <div class="pager-wrapper">
+                <div id="pager" class="pager"></div>
+                <div class="pager-status">
+                    <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+                    <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+                </div>
+            </div>
         </main>
     </div>
 </div>
@@ -146,7 +129,10 @@
 
         function unwrapMaybeResponseDto(resJson) { return resJson.data || resJson; }
         function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
-        function formatDateTime(isoLike){ if (!isoLike) return "-"; return isoLike.replace("T", " ").slice(0, 10).replace(/-/g, "."); }
+        function formatDateTime(isoLike){
+            if (!isoLike) return "-";
+            return isoLike.replace("T", " ").slice(0, 10).replace(/-/g, ".");
+        }
 
         function getStatusBadge(procStat) {
             const s = procStat || "CREATED";
@@ -172,9 +158,7 @@
             if (kw) qs.set("keyword", kw);
 
             const pubValue = $("publicSelect").value;
-            if (pubValue === "true" || pubValue === "false") {
-                qs.set("isPublic", pubValue);
-            }
+            if (pubValue === "true" || pubValue === "false") qs.set("isPublic", pubValue);
 
             try {
                 const res = await fetch(`${API_BASE}/api/v1/prov-documents?${qs.toString()}`, { credentials: "include" });
@@ -190,26 +174,23 @@
                     tb.innerHTML = '<tr><td colspan="5" style="padding:40px; color:var(--muted)">데이터가 없습니다.</td></tr>';
                 }
 
-                // 기존 docs.forEach((d) => { ... }) 부분을 아래와 같이 수정
-                docs.forEach((d, index) => { // index 파라미터 추가
-                    const rowNum = (page * PAGE_SIZE) + index + 1; // 오름차순 번호 계산
+                docs.forEach((d, index) => {
+                    const rowNum = (data.number * PAGE_SIZE) + index + 1;
                     const tr = document.createElement("tr");
-                    tr.className = "row";
                     tr.innerHTML = `
-                        <td style="text-align:center">${rowNum}</td>
-                        <td style="font-size:15px"><b>${escapeHtml(d.docTitle)}</b></td>
-                        <td style="text-align:center">${d.isPublic ? "공개" : "비공개"}</td>
-                        <td style="text-align:center">${getStatusBadge(d.procStat)}</td>
-                        <td style="text-align:center">${formatDateTime(d.updatedAt)}</td>
+                        <td>${rowNum}</td>
+                        <td style="text-align:left; padding-left:20px; font-weight:700"><b>${escapeHtml(d.docTitle)}</b></td>
+                        <td>${d.isPublic ? "공개" : "비공개"}</td>
+                        <td>${getStatusBadge(d.procStat)}</td>
+                        <td>${formatDateTime(d.updatedAt)}</td>
                     `;
                     tr.onclick = () => location.href = `/admin/prov-document/${d.provNo}`;
                     tb.appendChild(tr);
                 });
 
-
-
                 renderPager(data.number, data.totalPages);
-                $("countPill").textContent = `총 ${data.totalElements}건의 규정`;
+                $("countPill").textContent = `${data.totalElements}건`;
+                $("pageInfo").textContent = `page ${data.number + 1} / ${Math.max(data.totalPages, 1)}`;
             } catch (error) {
                 console.error("데이터 로드 중 오류 발생:", error);
             }
@@ -218,6 +199,12 @@
         function renderPager(page, totalPages) {
             const wrap = $("pager"); wrap.innerHTML = "";
             if(totalPages <= 0) return;
+
+            const blockSize = 5;
+            const currentBlock = Math.floor(page / blockSize);
+            const startPage = currentBlock * blockSize;
+            let endPage = startPage + blockSize - 1;
+            if (endPage > totalPages - 1) endPage = totalPages - 1;
 
             const createBtn = (txt, target, active, disabled) => {
                 const b = document.createElement("button");
@@ -229,7 +216,7 @@
             };
 
             wrap.appendChild(createBtn("<", page - 1, false, page <= 0));
-            for (let i = 0; i < totalPages; i++) {
+            for (let i = startPage; i <= endPage; i++) {
                 wrap.appendChild(createBtn(i + 1, i, i === page));
             }
             wrap.appendChild(createBtn(">", page + 1, false, page >= totalPages - 1));
@@ -237,22 +224,9 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             loadPage(0);
-
-            $("publicSelect").addEventListener("change", () => {
-                loadPage(0);
-            });
-
-            // ✅ 수정된 검색 이벤트: 버튼 클릭 또는 엔터
-            $("searchBtn").addEventListener("click", () => {
-                loadPage(0);
-            });
-
-            $("keyword").addEventListener("keydown", (e) => {
-                if (e.key === 'Enter') {
-                    loadPage(0);
-                }
-            });
-
+            $("publicSelect").onchange = () => loadPage(0);
+            $("searchBtn").onclick = () => loadPage(0);
+            $("keyword").onkeydown = (e) => { if (e.key === 'Enter') loadPage(0); };
             $("createBtn").onclick = () => location.href = "/admin/prov-document/create";
         });
     </script>
