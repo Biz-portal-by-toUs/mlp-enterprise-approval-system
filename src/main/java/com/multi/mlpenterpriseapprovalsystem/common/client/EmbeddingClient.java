@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.ReqFastApiProvDeleteDto;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.ReqFastApiProvEmbeddingDto;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.ReqFastApiProvStatusUpdateDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,5 +67,24 @@ public class EmbeddingClient {
                 )
                 .toBodilessEntity()
                 .block(Duration.ofSeconds(10));
+    }
+
+    public void updateProvStatus(ReqFastApiProvStatusUpdateDto req) {
+        log.info("updateProvStatus payload => comId={}, provNo={}, isPublic={}",
+                req.getComId(), req.getProvNo(), req.getIsPublic());
+
+        fastApiWebClient.patch()
+                .uri("/api/v1/prov-documents/embedding/status") // FastAPI에서 구현할 엔드포인트
+                .header("X-CALLBACK-SECRET", callbackSecret)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(req)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, resp ->
+                        resp.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(body -> new CustomException(ErrorCode.EMBEDDING_UPDATE_FAILED))
+                )
+                .toBodilessEntity()
+                .block(Duration.ofSeconds(10)); // 동기식 처리로 강한 일관성 유지
     }
 }

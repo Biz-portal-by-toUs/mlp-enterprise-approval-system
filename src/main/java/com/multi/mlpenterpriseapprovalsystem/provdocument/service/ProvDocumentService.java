@@ -91,6 +91,7 @@ public class ProvDocumentService {
                 .originalName(req.getOriginalName())
                 .contentType(req.getContentType())
                 .size(req.getSize())
+                .isPublic(doc.getIsPublic())
                 .callbackUrl("/api/v1/prov-documents/" + doc.getProvNo() + "/embedding")
                 .build();
 
@@ -159,11 +160,29 @@ public class ProvDocumentService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
+        Boolean oldPublic = doc.getIsPublic();
+
         String newTitle = (req.getDocTitle() != null) ? req.getDocTitle() : doc.getDocTitle();
         String newDesc = (req.getDescription() != null) ? req.getDescription() : doc.getDescription();
         Boolean newPublic = (req.getIsPublic() != null) ? req.getIsPublic() : doc.getIsPublic();
 
         doc.updateMeta(newTitle, newDesc, newPublic);
+
+        if (!oldPublic.equals(newPublic)) {
+            try {
+                embeddingClient.updateProvStatus(
+                        ReqFastApiProvStatusUpdateDto.builder()
+                                .comId(comId)
+                                .provNo(provNo)
+                                .isPublic(newPublic)
+                                .build()
+                );
+                log.info("[EMBEDDING STATUS SYNC SUCCESS] provNo={}, isPublic={}", provNo, newPublic);
+            } catch (Exception e) {
+                log.error("FastAPI Weaviate isPublic sync FAILED. provNo={}, msg={}", provNo, e.getMessage());
+                throw new CustomException(ErrorCode.EMBEDDING_UPDATE_FAILED);
+            }
+        }
 
         return doc.getProvNo();
     }
