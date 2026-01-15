@@ -7,11 +7,10 @@
 // ✅ make-form.js 저장 포맷과 동일하게 맞춤
 //  - 저장 payload: { docfoName, cnttJson, cnttHtml, categories }
 //  - cnttJson: TipTap JSON (템플릿 본문) + table 기본 fontSize 주입 + editable 정책 마킹
-//  - cnttHtml: header preset + categories + bodyHtml 를 합쳐 전체 HTML 문서로 구성
-//  - 저장 성공 시 목록 갱신 신호(localStorage list:dirty) 기록 후 상세로 이동
+//  - cnttHtml: categories + bodyHtml 를 합쳐 전체 HTML 문서로 구성 (헤더 프리셋 제거)
+//  - 저장 성공 시 목록 갱신 신호(localStorage list:dirty) 기록 후 pending/temp로 이동
 //
 // ✅ TipTap JSON에 inputField 노드가 포함되어도 에러 없이 로드되도록 InputField 노드 추가
-//  - make-form과 같은 span[data-input-field] 렌더 형태로 통일
 
 import { Editor, Extension, Node, mergeAttributes } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
@@ -24,6 +23,8 @@ import TableHeader from '@tiptap/extension-table-header'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import TextStyle from '@tiptap/extension-text-style'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { CellSelection } from '@tiptap/pm/tables'
 
 const API_BASE = '/api/v1/forms'
 const VIEW_BASE = '/form'
@@ -41,18 +42,24 @@ const toolbar = document.getElementById('toolbar')
 const fontSizeSelect = document.getElementById('fontSizeSelect')
 const editorMount = document.getElementById('editor')
 
-// preset templates (make-form과 동일 구조)
-const presetLeftTemplate = document.getElementById('presetLeftTemplate')
-const presetRightTemplate = document.getElementById('presetRightTemplate')
-
-if (!elTitle || !elTypeRadios || !btnAddRadio || !btnClose || !btnSave || !btnTempSave || !toolbar || !fontSizeSelect || !editorMount) {
-    (async () => {
+if (
+    !elTitle ||
+    !elTypeRadios ||
+    !btnAddRadio ||
+    !btnClose ||
+    !btnSave ||
+    !btnTempSave ||
+    !toolbar ||
+    !fontSizeSelect ||
+    !editorMount
+) {
+    ;(async () => {
         await swalError(
             '화면 구성 오류',
             'update-form.html의 요소 ID가 JS와 맞지 않습니다. (docTitle/typeRadios/addRadioBtn/closeBtn/saveBtn/tempSaveBtn/toolbar/fontSizeSelect/editor)'
-        );
-    })();
-    throw new Error('DOM mapping mismatch');
+        )
+    })()
+    throw new Error('DOM mapping mismatch')
 }
 
 // ===== constants =====
@@ -60,21 +67,16 @@ const DEFAULT_TABLE_FONT_SIZE = '16px'
 
 // ===== list refresh signal =====
 function markFormListDirty() {
-    const ts = String(Date.now());
+    const ts = String(Date.now())
 
-    // temp-list.js가 보는 키
     try {
-        localStorage.setItem('list:dirty', 'true');
-        localStorage.setItem('list:dirty:ts', ts); // 같은 탭 storage 이벤트 보완
+        localStorage.setItem('list:dirty', 'true')
+        localStorage.setItem('list:dirty:ts', ts)
     } catch (_) {}
 
-    // opener가 있으면 즉시 갱신 신호
     try {
         if (window.opener && !window.opener.closed) {
-            window.opener.postMessage(
-                { type: 'DOCUMENT_FORM_DIRTY', at: Date.now() },
-                window.location.origin
-            );
+            window.opener.postMessage({ type: 'DOCUMENT_FORM_DIRTY', at: Date.now() }, window.location.origin)
         }
     } catch (_) {}
 }
@@ -100,18 +102,14 @@ async function apiFetch(url, options = {}) {
 async function extractErrorMessage(res) {
     const text = await res.text().catch(() => '')
 
-    // JSON이면 message만
     try {
         const json = text ? JSON.parse(text) : null
         if (json && typeof json === 'object') {
             if (typeof json.message === 'string' && json.message.trim()) return json.message
-
             if (json.error && typeof json.error.message === 'string') return json.error.message
             if (json.data && typeof json.data.message === 'string') return json.data.message
         }
-    } catch (_) {
-        // JSON parse 실패면 text fallback
-    }
+    } catch (_) {}
 
     const trimmed = (text || '').trim()
     if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
@@ -132,61 +130,61 @@ async function apiFetchOrThrow(url, options = {}) {
 
 // ===== SweetAlert2 helpers =====
 function hasSwal() {
-    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function'
 }
 
 function getSwal() {
-    if (!hasSwal()) return null;
+    if (!hasSwal()) return null
     return window.Swal.mixin({
         confirmButtonText: '확인',
         cancelButtonText: '취소',
         buttonsStyling: true,
         heightAuto: false,
-    });
+    })
 }
 
 async function swalError(title, text) {
-    const swal = getSwal();
+    const swal = getSwal()
     if (!swal) {
-        alert(`${title}\n${text || ''}`.trim());
-        return { isConfirmed: true };
+        alert(`${title}\n${text || ''}`.trim())
+        return { isConfirmed: true }
     }
-    return swal.fire({ icon: 'error', title, text: text || undefined });
+    return swal.fire({ icon: 'error', title, text: text || undefined })
 }
 
 async function swalSuccess(title, text) {
-    const swal = getSwal();
+    const swal = getSwal()
     if (!swal) {
-        alert(`${title}\n${text || ''}`.trim());
-        return { isConfirmed: true };
+        alert(`${title}\n${text || ''}`.trim())
+        return { isConfirmed: true }
     }
-    return swal.fire({ icon: 'success', title, text: text || undefined });
+    return swal.fire({ icon: 'success', title, text: text || undefined })
 }
 
 function swalLoading(title = '처리 중...') {
-    const swal = getSwal();
-    if (!swal) return;
+    const swal = getSwal()
+    if (!swal) return
     swal.fire({
         title,
         allowOutsideClick: false,
         didOpen: () => window.Swal.showLoading(),
         heightAuto: false,
-    });
+    })
 }
 
 function swalClose() {
-    if (hasSwal()) window.Swal.close();
+    if (hasSwal()) window.Swal.close()
 }
 
 async function swalPromptNumber({ title, inputLabel, value = 3, min = 1, max = 20 }) {
-    const swal = getSwal();
+    const swal = getSwal()
     if (!swal) {
-        const raw = window.prompt(title, String(value));
-        if (raw === null) return null;
-        let n = parseInt(raw, 10);
-        if (!Number.isFinite(n)) n = value;
-        n = Math.max(min, Math.min(max, n));
-        return n;
+        const raw = window.prompt(title, String(value))
+        if (raw === null) return null
+        let n = parseInt(raw, 10)
+        if (!Number.isFinite(n)) n = value
+        n = Math.max(min, Math.min(max, n))
+        return n
     }
 
     const r = await swal.fire({
@@ -197,47 +195,43 @@ async function swalPromptNumber({ title, inputLabel, value = 3, min = 1, max = 2
         inputAttributes: { min: String(min), max: String(max), step: '1' },
         showCancelButton: true,
         preConfirm: (v) => {
-            let n = parseInt(v, 10);
-            if (!Number.isFinite(n)) n = value;
-            n = Math.max(min, Math.min(max, n));
-            return n;
+            let n = parseInt(v, 10)
+            if (!Number.isFinite(n)) n = value
+            n = Math.max(min, Math.min(max, n))
+            return n
         },
-    });
+    })
 
-    if (!r.isConfirmed) return null;
-    return r.value;
+    if (!r.isConfirmed) return null
+    return r.value
 }
 
 // ===== success after flow =====
 function safeNavigateOpener(url) {
     try {
         if (window.opener && !window.opener.closed) {
-            // same-origin일 때만 안전
-            window.opener.location.href = url;
-            window.opener.focus?.();
-            return true;
+            window.opener.location.href = url
+            window.opener.focus?.()
+            return true
         }
     } catch (_) {}
-    return false;
+    return false
 }
 
 async function successAndReturn({ title, text, openerUrl, fallbackUrl }) {
-    // 성공 팝업(확인 버튼 누를 때까지 대기)
-    await swalSuccess(title, text);
+    await swalSuccess(title, text)
 
-    // opener 이동 시도
-    const moved = openerUrl ? safeNavigateOpener(openerUrl) : false;
+    const moved = openerUrl ? safeNavigateOpener(openerUrl) : false
 
-    // 팝업(현재 창) 닫기
-    // (Swal confirm 이후라 브라우저 차단 확률 낮음)
-    try { window.close(); } catch (_) {}
+    try {
+        window.close()
+    } catch (_) {}
 
-    // 닫기 실패/팝업이 아닌 경우 fallback
     setTimeout(() => {
         if (!document.hidden) {
-            if (!moved && fallbackUrl) location.href = fallbackUrl;
+            if (!moved && fallbackUrl) location.href = fallbackUrl
         }
-    }, 80);
+    }, 80)
 }
 
 // ===== util =====
@@ -265,7 +259,11 @@ function safeParseJsonMaybe(v) {
     const s = String(v).trim()
     if (!s) return null
     if (s.startsWith('<') || s.toLowerCase().startsWith('<!doctype')) return null
-    try { return JSON.parse(s) } catch { return null }
+    try {
+        return JSON.parse(s)
+    } catch {
+        return null
+    }
 }
 
 function escapeHtml(s) {
@@ -279,19 +277,15 @@ function escapeHtml(s) {
 
 // path: /form/{docfoNo}/edit
 function getDocfoNo() {
-    // 1) path variable
     const parts = location.pathname.split('/').filter(Boolean)
-    // ["form", "{docfoNo}", "edit"]
     if (parts.length >= 3 && parts[0] === 'form' && parts[2] === 'edit' && /^\d+$/.test(parts[1])) {
         return parts[1]
     }
 
-    // 2) meta
     const meta = document.querySelector('meta[name="template-id"]')
     const metaId = meta?.content?.trim()
     if (metaId) return metaId
 
-    // 3) query fallback
     const sp = new URLSearchParams(location.search)
     const q = sp.get('docfoNo') || sp.get('id')
     return q ? String(q).trim() : ''
@@ -299,21 +293,21 @@ function getDocfoNo() {
 
 const docfoNo = getDocfoNo()
 if (!docfoNo) {
-    (async () => {
-        await swalError('잘못된 접근', 'docfoNo를 찾을 수 없습니다. 경로가 /form/{docfoNo}/edit 인지 확인하세요.');
-    })();
-    throw new Error('docfoNo missing');
+    ;(async () => {
+        await swalError('잘못된 접근', 'docfoNo를 찾을 수 없습니다. 경로가 /form/{docfoNo}/edit 인지 확인하세요.')
+    })()
+    throw new Error('docfoNo missing')
 }
 
 // ===== categories (radio + add + delete + rename) =====
-const allowEmptyCategories = false // 서버가 허용하면 true
+const allowEmptyCategories = false
 
 function normalizeCategoryNames(arr) {
     if (!Array.isArray(arr)) return []
     return arr
-        .map(v => (typeof v === 'string' ? v : v?.name))
+        .map((v) => (typeof v === 'string' ? v : v?.name))
         .filter(Boolean)
-        .map(s => String(s).trim())
+        .map((s) => String(s).trim())
         .filter(Boolean)
 }
 
@@ -324,7 +318,7 @@ function getSelectedCategory() {
 
 function getAllCategoryNames() {
     const inputs = elTypeRadios.querySelectorAll('input.radio-value-input')
-    const list = uniqStrings(Array.from(inputs).map(i => String(i.value ?? '').trim()).filter(Boolean))
+    const list = uniqStrings(Array.from(inputs).map((i) => String(i.value ?? '').trim()).filter(Boolean))
     if (!allowEmptyCategories && list.length === 0) return ['type1']
     return list
 }
@@ -333,8 +327,8 @@ function renderCategoryRadios(names, selected) {
     const cats = uniqStrings(names)
     elTypeRadios.innerHTML = ''
 
-    const finalCats = (!allowEmptyCategories && cats.length === 0) ? ['type1'] : cats
-    const sel = selected && finalCats.includes(selected) ? selected : (finalCats[0] ?? null)
+    const finalCats = !allowEmptyCategories && cats.length === 0 ? ['type1'] : cats
+    const sel = selected && finalCats.includes(selected) ? selected : finalCats[0] ?? null
 
     finalCats.forEach((name, idx) => {
         const item = document.createElement('div')
@@ -352,16 +346,20 @@ function renderCategoryRadios(names, selected) {
         input.className = 'radio-value-input'
         input.value = name
         input.placeholder = '카테고리 이름'
-        input.addEventListener('input', () => { radio.value = input.value })
+        input.addEventListener('input', () => {
+            radio.value = input.value
+            radio.checked = true
+        })
 
         input.addEventListener('blur', () => {
             const beforeSel = getSelectedCategory()
             const raw = [...elTypeRadios.querySelectorAll('.radio-item')]
-                .map(it => it.querySelector('input.radio-value-input')?.value ?? '')
-                .map(v => String(v).trim())
+                .map((it) => it.querySelector('input.radio-value-input')?.value ?? '')
+                .map((v) => String(v).trim())
                 .filter(Boolean)
+
             const list = uniqStrings(raw)
-            const keepSel = beforeSel && list.includes(beforeSel) ? beforeSel : (list[0] ?? null)
+            const keepSel = beforeSel && list.includes(beforeSel) ? beforeSel : list[0] ?? null
             renderCategoryRadios(list, keepSel)
         })
 
@@ -377,7 +375,7 @@ function renderCategoryRadios(names, selected) {
             const current = getAllCategoryNames()
             if (!allowEmptyCategories && current.length <= 1) return
 
-            const next = current.filter(v => v !== name)
+            const next = current.filter((v) => v !== name)
             const prevSelected = getSelectedCategory()
 
             let nextSelected = next[0] ?? null
@@ -404,34 +402,20 @@ btnAddRadio.addEventListener('click', () => {
     renderCategoryRadios([...current, nextName], nextName)
 })
 
-// ===== preset header html (make-form 동일) =====
-function getPresetTablesState() {
-    return {
-        leftHtml: (presetLeftTemplate?.innerHTML || '').trim(),
-        rightHtml: (presetRightTemplate?.innerHTML || '').trim(),
-    }
-}
-
+// ===== response dto unwrap =====
 function isResponseDto(obj) {
-    return obj && typeof obj === 'object' && ('data' in obj) && (('status' in obj) || ('message' in obj));
+    return obj && typeof obj === 'object' && 'data' in obj && ('status' in obj || 'message' in obj)
 }
 
 async function unwrapJson(res) {
-    const body = await res.json().catch(() => null);
-    if (!body) return null;
-    return isResponseDto(body) ? body.data : body;
+    const body = await res.json().catch(() => null)
+    if (!body) return null
+    return isResponseDto(body) ? body.data : body
 }
 
-function extractHeaderHtmlFromTemplates() {
-    const presetTables = getPresetTablesState()
-    return `
-    <div class="df-header">${presetTables.leftHtml || ''}</div>
-    <div class="df-header">${presetTables.rightHtml || ''}</div>
-  `.trim()
-}
-
-function buildFullHtml({ docfoName, categories, headerHtml, bodyHtml }) {
-    const catHtml = (categories || []).map(c => `<span class="df-cat">${escapeHtml(c)}</span>`).join('')
+// ===== full html build (헤더 프리셋 제거) =====
+function buildFullHtml({ docfoName, categories, bodyHtml }) {
+    const catHtml = (categories || []).map((c) => `<span class="df-cat">${escapeHtml(c)}</span>`).join('')
     return `<!doctype html>
 <html lang="ko">
 <head>
@@ -444,7 +428,6 @@ function buildFullHtml({ docfoName, categories, headerHtml, bodyHtml }) {
   .df-title{font-size:22px;font-weight:800;margin:0 0 14px;}
   .df-cats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;}
   .df-cat{font-size:12px;padding:6px 10px;border-radius:999px;background:#f0f3ff;border:1px solid #d6ddff;}
-  .df-header-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px;}
   .df-body{margin-top:10px;}
   table{border-collapse:collapse;}
 </style>
@@ -453,20 +436,19 @@ function buildFullHtml({ docfoName, categories, headerHtml, bodyHtml }) {
   <div class="df-wrap">
     <h1 class="df-title">${escapeHtml(docfoName || '')}</h1>
     <div class="df-cats">${catHtml}</div>
-    <div class="df-header-wrap" id="dfHeader">${headerHtml || ''}</div>
     <div class="df-body" id="dfBody">${bodyHtml || ''}</div>
   </div>
 </body>
 </html>`
 }
 
-// ===== table default font size injection (make-form 동일) =====
+// ===== table default font size injection =====
 function applyDefaultFontSizeInTables(json, fontSize = DEFAULT_TABLE_FONT_SIZE) {
     const cloned = deepClone(json)
 
     const ensureTextStyleFontSize = (marks = []) => {
         const out = Array.isArray(marks) ? [...marks] : []
-        const idx = out.findIndex(m => m?.type === 'textStyle')
+        const idx = out.findIndex((m) => m?.type === 'textStyle')
         if (idx >= 0) {
             const m = out[idx] || {}
             const attrs = { ...(m.attrs || {}) }
@@ -483,7 +465,7 @@ function applyDefaultFontSizeInTables(json, fontSize = DEFAULT_TABLE_FONT_SIZE) 
         const t = node.type
         const nowInTable = inTable || t === 'table' || t === 'tableRow' || t === 'tableCell' || t === 'tableHeader'
         if (nowInTable && t === 'text') node.marks = ensureTextStyleFontSize(node.marks)
-        if (Array.isArray(node.content)) node.content.forEach(child => walk(child, nowInTable))
+        if (Array.isArray(node.content)) node.content.forEach((child) => walk(child, nowInTable))
     }
 
     walk(cloned, false)
@@ -502,9 +484,7 @@ function isMeaninglessWhitespace(s) {
     return true
 }
 
-// 템플릿 편집(create/update) 저장 시:
-// - inputField => editable true, locked false
-// - cell => "의미 있는 텍스트"가 있으면 editable false, 비어 있으면 editable true
+// 템플릿 편집 저장 시 정책 마킹
 function markEditablePolicyForTemplate(json) {
     const cloned = deepClone(json)
 
@@ -610,16 +590,156 @@ const RichTextStyle = TextStyle.extend({
             ...(this.parent?.() ?? {}),
             fontSize: {
                 default: null,
-                parseHTML: el => el.style.fontSize || null,
-                renderHTML: attrs => (attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {}),
+                parseHTML: (el) => el.style.fontSize || null,
+                renderHTML: (attrs) => (attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {}),
             },
         }
     },
 })
 
+const GoogleDocsCellDragSelection = Extension.create({
+    name: 'googleDocsCellDragSelection',
+
+    addProseMirrorPlugins() {
+        return [
+            new Plugin({
+                key: new PluginKey('googleDocsCellDragSelection'),
+
+                view(view) {
+                    let dragging = false
+                    let anchorCellPos = null
+
+                    const findCellPosFromEvent = (event) => {
+                        const coords = { left: event.clientX, top: event.clientY }
+                        const hit = view.posAtCoords(coords)
+                        if (!hit || typeof hit.pos !== 'number') return null
+
+                        const $pos = view.state.doc.resolve(hit.pos)
+
+                        for (let d = $pos.depth; d > 0; d--) {
+                            const n = $pos.node(d)
+                            if (n.type?.name === 'tableCell' || n.type?.name === 'tableHeader') {
+                                return $pos.before(d)
+                            }
+                        }
+                        return null
+                    }
+
+                    const isResizeCursorActive = () => {
+                        const c = document.body.style.cursor
+                        return c === 'row-resize' || c === 'col-resize'
+                    }
+
+                    const onMouseDown = (e) => {
+                        if (e.button !== 0) return
+                        if (isResizeCursorActive()) return
+
+                        // inputField 내부에서 시작하면 건드리지 않음
+                        const t = e.target
+                        if (t && t.closest?.('.input-field__input')) return
+
+                        const pos = findCellPosFromEvent(e)
+                        if (typeof pos !== 'number') return
+
+                        dragging = true
+                        anchorCellPos = pos
+                    }
+
+                    const onMouseMove = (e) => {
+                        if (!dragging) return
+                        if (isResizeCursorActive()) return
+
+                        const headCellPos = findCellPosFromEvent(e)
+                        if (typeof headCellPos !== 'number') return
+                        if (typeof anchorCellPos !== 'number') return
+
+                        if (headCellPos === anchorCellPos) return
+
+                        const { state } = view
+                        const nextSel = CellSelection.create(state.doc, anchorCellPos, headCellPos)
+
+                        // selection이 실제로 바뀌는 경우에만 dispatch
+                        const s = state.selection
+                        const isSame =
+                            s instanceof CellSelection &&
+                            s.from === nextSel.from &&
+                            s.to === nextSel.to
+
+                        if (!isSame) {
+                            view.dispatch(state.tr.setSelection(nextSel))
+                        }
+
+                        e.preventDefault()
+                    }
+
+                    const endDrag = () => {
+                        dragging = false
+                        anchorCellPos = null
+                    }
+
+                    view.dom.addEventListener('mousedown', onMouseDown, true)
+                    window.addEventListener('mousemove', onMouseMove, true)
+                    window.addEventListener('mouseup', endDrag, true)
+                    window.addEventListener('blur', endDrag, true)
+
+                    return {
+                        destroy() {
+                            view.dom.removeEventListener('mousedown', onMouseDown, true)
+                            window.removeEventListener('mousemove', onMouseMove, true)
+                            window.removeEventListener('mouseup', endDrag, true)
+                            window.removeEventListener('blur', endDrag, true)
+                        },
+                    }
+                },
+            }),
+        ]
+    },
+})
+
+function bindCellSelectionHighlight(editor) {
+    const pm = editor?.view?.dom
+    if (!pm) return
+
+    const clear = () => {
+        pm.querySelectorAll('td.pm-cell-selected, th.pm-cell-selected')
+            .forEach(el => el.classList.remove('pm-cell-selected'))
+    }
+
+    const sync = () => {
+        clear()
+
+        const sel = editor.view.state.selection
+        if (!(sel instanceof CellSelection)) return
+
+        // CellSelection 범위 안에 걸린 cell node들을 찾아서 DOM에 표시
+        const { state } = editor.view
+        const { from, to } = sel
+
+        const cellPosList = []
+        state.doc.nodesBetween(from, to, (node, pos) => {
+            if (node.type?.name === 'tableCell' || node.type?.name === 'tableHeader') {
+                cellPosList.push(pos)
+            }
+        })
+
+        for (const pos of cellPosList) {
+            try {
+                const dom = editor.view.nodeDOM(pos)
+                if (dom && (dom.tagName === 'TD' || dom.tagName === 'TH')) {
+                    dom.classList.add('pm-cell-selected')
+                }
+            } catch (_) {}
+        }
+    }
+
+    editor.on('selectionUpdate', sync)
+    editor.on('transaction', sync)
+    sync()
+}
+
 // ===== TipTap boot =====
 function bootEditor(initialJson) {
-    return new Editor({
+    const editor = new Editor({
         element: editorMount,
         extensions: [
             StarterKit.configure({ history: true }),
@@ -627,18 +747,46 @@ function bootEditor(initialJson) {
             RichTextStyle,
             Underline,
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
+
+            // Table (merge/split 포함)
             Table.configure({ resizable: true, lastColumnResizable: true }),
             TableRow,
             TableHeader,
             TableCell,
+            // inputField 포함
             InputField,
+            // 드래그 셀선택
+            GoogleDocsCellDragSelection,
         ],
         content: initialJson || { type: 'doc', content: [{ type: 'paragraph' }] },
     })
+    // 셀 선택 하이라이트
+    bindCellSelectionHighlight(editor)
+    return editor
 }
 
 // ===== toolbar =====
 let _fontSizeBusy = false
+
+function bindMergeSplitButtonsState(editor) {
+    const btnMerge = toolbar.querySelector('button[data-act="mergeCells"]')
+    const btnSplit = toolbar.querySelector('button[data-act="splitCell"]')
+    if (!btnMerge && !btnSplit) return
+
+    const sync = () => {
+        try {
+            if (btnMerge) btnMerge.disabled = !editor.can().mergeCells()
+            if (btnSplit) btnSplit.disabled = !editor.can().splitCell()
+        } catch (_) {
+            if (btnMerge) btnMerge.disabled = true
+            if (btnSplit) btnSplit.disabled = true
+        }
+    }
+
+    editor.on('selectionUpdate', sync)
+    editor.on('transaction', sync)
+    sync()
+}
 
 function bindToolbar(editor) {
     toolbar.addEventListener('click', async (e) => {
@@ -649,22 +797,48 @@ function bindToolbar(editor) {
         const c = editor.chain().focus()
 
         switch (act) {
-            case 'h1': c.toggleHeading({ level: 1 }).run(); break
-            case 'h2': c.toggleHeading({ level: 2 }).run(); break
-            case 'h3': c.toggleHeading({ level: 3 }).run(); break
-            case 'p':  c.setParagraph().run(); break
+            case 'h1':
+                c.toggleHeading({ level: 1 }).run()
+                break
+            case 'h2':
+                c.toggleHeading({ level: 2 }).run()
+                break
+            case 'h3':
+                c.toggleHeading({ level: 3 }).run()
+                break
+            case 'p':
+                c.setParagraph().run()
+                break
 
-            case 'bold':      c.toggleBold().run(); break
-            case 'italic':    c.toggleItalic().run(); break
-            case 'underline': c.toggleUnderline().run(); break
-            case 'strike':    c.toggleStrike().run(); break
+            case 'bold':
+                c.toggleBold().run()
+                break
+            case 'italic':
+                c.toggleItalic().run()
+                break
+            case 'underline':
+                c.toggleUnderline().run()
+                break
+            case 'strike':
+                c.toggleStrike().run()
+                break
 
-            case 'alignLeft':   c.setTextAlign('left').run(); break
-            case 'alignCenter': c.setTextAlign('center').run(); break
-            case 'alignRight':  c.setTextAlign('right').run(); break
+            case 'alignLeft':
+                c.setTextAlign('left').run()
+                break
+            case 'alignCenter':
+                c.setTextAlign('center').run()
+                break
+            case 'alignRight':
+                c.setTextAlign('right').run()
+                break
 
-            case 'bullet':  c.toggleBulletList().run(); break
-            case 'ordered': c.toggleOrderedList().run(); break
+            case 'bullet':
+                c.toggleBulletList().run()
+                break
+            case 'ordered':
+                c.toggleOrderedList().run()
+                break
 
             case 'table': {
                 const rows = await swalPromptNumber({
@@ -673,8 +847,8 @@ function bindToolbar(editor) {
                     value: 3,
                     min: 1,
                     max: 20,
-                });
-                if (rows == null) break;
+                })
+                if (rows == null) break
 
                 const cols = await swalPromptNumber({
                     title: '열(cols) 개수를 입력하세요',
@@ -682,23 +856,48 @@ function bindToolbar(editor) {
                     value: 3,
                     min: 1,
                     max: 20,
-                });
-                if (cols == null) break;
+                })
+                if (cols == null) break
 
-                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).createParagraphNear().run();
-                break;
+                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).createParagraphNear().run()
+                break
             }
 
-            case 'addRowAfter':    c.addRowAfter().run(); break
-            case 'deleteRow':      c.deleteRow().run(); break
-            case 'addColumnAfter': c.addColumnAfter().run(); break
-            case 'deleteColumn':   c.deleteColumn().run(); break
-            case 'tableDelete':    c.deleteTable().run(); break
+            case 'addRowAfter':
+                c.addRowAfter().run()
+                break
+            case 'deleteRow':
+                c.deleteRow().run()
+                break
+            case 'addColumnAfter':
+                c.addColumnAfter().run()
+                break
+            case 'deleteColumn':
+                c.deleteColumn().run()
+                break
+            case 'tableDelete':
+                c.deleteTable().run()
+                break
 
-            case 'undo': c.undo().run(); break
-            case 'redo': c.redo().run(); break
+            // ✅ 셀 병합/분할
+            case 'mergeCells':
+                c.mergeCells().run()
+                break
+            case 'splitCell':
+                c.splitCell().run()
+                break
+
+            case 'undo':
+                c.undo().run()
+                break
+            case 'redo':
+                c.redo().run()
+                break
         }
     })
+
+    // 버튼 활성/비활성 자동 동기화
+    bindMergeSplitButtonsState(editor)
 
     if (fontSizeSelect) {
         fontSizeSelect.addEventListener('pointerdown', () => (_fontSizeBusy = true))
@@ -729,7 +928,9 @@ function syncFontSizeSelectFromEditor(editor) {
 
 function closeOrBack() {
     window.close()
-    setTimeout(() => { if (!document.hidden) history.back() }, 80)
+    setTimeout(() => {
+        if (!document.hidden) history.back()
+    }, 80)
 }
 
 // ===== API calls =====
@@ -741,9 +942,9 @@ async function fetchDetail() {
 async function buildPayload({ editor, baseDetail }) {
     const docfoName = elTitle.value.trim()
     if (!docfoName) {
-        await swalError('제목을 입력하세요', '양식 제목(docfo_name)은 필수입니다.');
-        elTitle.focus();
-        return null;
+        await swalError('제목을 입력하세요', '양식 제목(docfo_name)은 필수입니다.')
+        elTitle.focus()
+        return null
     }
 
     const categories = getAllCategoryNames()
@@ -755,8 +956,8 @@ async function buildPayload({ editor, baseDetail }) {
     const cnttJson = JSON.stringify(templateJson)
     const bodyHtml = editor.getHTML()
 
-    const headerHtml = extractHeaderHtmlFromTemplates()
-    const cnttHtml = buildFullHtml({ docfoName, categories, headerHtml, bodyHtml })
+    // ✅ 헤더 프리셋 제거: categories + body만 합침
+    const cnttHtml = buildFullHtml({ docfoName, categories, bodyHtml })
 
     const payload = { docfoName, cnttJson, cnttHtml, categories }
 
@@ -812,55 +1013,53 @@ async function saveTempUpdate({ editor, baseDetail }) {
 
         btnSave.addEventListener('click', async () => {
             try {
-                btnSave.disabled = true;
-                swalLoading("저장 중...");
+                btnSave.disabled = true
+                swalLoading('저장 중...')
 
-                await saveUpdate({ editor, baseDetail: detail });
+                await saveUpdate({ editor, baseDetail: detail })
 
-                swalClose();
-                markFormListDirty();
+                swalClose()
+                markFormListDirty()
 
                 await successAndReturn({
                     title: '저장되었습니다',
                     text: '문서양식이 정상적으로 저장되었습니다.',
-                    openerUrl: '/form/pending',     // 원래 창을 pending으로
-                    fallbackUrl: '/form/pending',   // opener 없을 때 본인 이동
-                });
-
+                    openerUrl: '/form/pending',
+                    fallbackUrl: '/form/pending',
+                })
             } catch (e) {
-                console.error(e);
-                swalClose();
-                await swalError('저장 실패', e?.message || String(e));
+                console.error(e)
+                swalClose()
+                await swalError('저장 실패', e?.message || String(e))
             } finally {
-                btnSave.disabled = false;
+                btnSave.disabled = false
             }
-        });
+        })
 
         btnTempSave.addEventListener('click', async () => {
             try {
-                btnTempSave.disabled = true;
-                swalLoading('임시저장 중...');
+                btnTempSave.disabled = true
+                swalLoading('임시저장 중...')
 
-                await saveTempUpdate({ editor, baseDetail: detail });
+                await saveTempUpdate({ editor, baseDetail: detail })
 
-                swalClose();
-                markFormListDirty();
+                swalClose()
+                markFormListDirty()
 
                 await successAndReturn({
                     title: '임시저장되었습니다',
                     text: '임시저장이 완료되었습니다.',
-                    openerUrl: '/form/temp',     // 원래 창을 temp로
-                    fallbackUrl: '/form/temp',   // opener 없을 때 본인 이동
-                });
-
+                    openerUrl: '/form/temp',
+                    fallbackUrl: '/form/temp',
+                })
             } catch (e) {
-                console.error(e);
-                swalClose();
-                await swalError('임시저장 실패', e?.message || String(e));
+                console.error(e)
+                swalClose()
+                await swalError('임시저장 실패', e?.message || String(e))
             } finally {
-                btnTempSave.disabled = false;
+                btnTempSave.disabled = false
             }
-        });
+        })
     } catch (e) {
         console.error(e)
         await swalError('로드 실패', e?.message || String(e))
