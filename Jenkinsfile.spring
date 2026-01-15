@@ -93,9 +93,11 @@ pipeline {
             aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}
 
             # ECR_REPO_URI와 IMAGE_TAG만 바꾸고 나머지는 건드리지 마라!
-              envsubst '${ECR_REPO_URI} ${IMAGE_TAG}' < k8s/app-deploy.yml | kubectl apply -f -
+            envsubst '${ECR_REPO_URI} ${IMAGE_TAG}' < k8s/app-deploy.yml | kubectl apply -f -
 
-            kubectl -n ${K8S_NAMESPACE} rollout status deploy/bizportal-api
+            # rollout status에 'timeout'을 걸어서 Jenkins가 무한 대기하지 않게 합니다.
+            kubectl -n ${K8S_NAMESPACE} rollout status deploy/bizportal-api --timeout=60s
+
             kubectl -n ${K8S_NAMESPACE} get pods -o wide
           '''
         }
