@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/v1/files")
+//@RestController
+//@RequestMapping("/api/v1/files")
 public class FileApiController {
 
     private final LocalFileStorageService storageService;
