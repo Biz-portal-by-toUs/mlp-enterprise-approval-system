@@ -228,6 +228,11 @@
                 thead th{ font-size:15px; }
                 tbody td{ font-size:14px; }
             }
+
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
         </style>
     </th:block>
 </head>
@@ -287,8 +292,38 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 (다른 페이지와 동일) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            /* =========================
+               SweetAlert2 (예약 페이지 스타일 동일)
+               ========================= */
+            const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+                .getPropertyValue("--primary")
+                .trim() || "#4f8fe3";
+            const SWAL_GRAY = "#9ca3af";
+
+            function swalAlert({ icon="info", title="알림", text="" }) {
+                return Swal.fire({ icon, title, text, confirmButtonColor: SWAL_PRIMARY });
+            }
+            function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+            function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+            function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+
+            function swalLoading(title="조회 중...", text="잠시만 기다려 주세요.") {
+                return Swal.fire({
+                    title,
+                    text,
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+            }
+
+            /* =========================
+               기존 로직
+               ========================= */
             const API_BASE = window.location.origin;
             const PAGE_SIZE = 10;
 
@@ -313,11 +348,18 @@
 
             async function apiFetchJson(path) {
                 const res = await fetch(API_BASE + path, { credentials: "include" });
+
                 if (res.status === 401 || res.status === 403) {
+                    await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
                     location.href = "/login";
                     throw new Error("UNAUTHORIZED");
                 }
-                if (!res.ok) throw new Error(await res.text());
+
+                if (!res.ok) {
+                    const msg = await res.text();
+                    throw new Error(msg || `HTTP ${res.status}`);
+                }
+
                 return res.json();
             }
 
@@ -367,10 +409,10 @@
 
                 if (to) {
                     if (to < from) {
-                        alert("종료일은 시작일보다 빠를 수 없습니다.");
+                        swalWarn("종료일은 시작일보다 빠를 수 없습니다.");
                         toEl.value = from;
                     } else if (to > maxToStr) {
-                        alert("조회 기간은 최대 1개월까지만 가능합니다.");
+                        swalWarn("조회 기간은 최대 1개월까지만 가능합니다.");
                         toEl.value = maxToStr;
                     }
                 }
@@ -384,10 +426,10 @@
                 const from = fromEl.value;
                 const to   = toEl.value;
 
-                if (!from || !to) { alert("시작일과 종료일을 모두 선택해주세요."); return false; }
-                if (to < from) { alert("종료일은 시작일보다 빠를 수 없습니다."); return false; }
+                if (!from || !to) { swalWarn("시작일과 종료일을 모두 선택해주세요."); return false; }
+                if (to < from) { swalWarn("종료일은 시작일보다 빠를 수 없습니다."); return false; }
                 const maxToStr = getMaxToDateStr(from);
-                if (to > maxToStr) { alert("조회 기간은 최대 1개월까지만 가능합니다."); return false; }
+                if (to > maxToStr) { swalWarn("조회 기간은 최대 1개월까지만 가능합니다."); return false; }
                 return true;
             }
 
@@ -460,78 +502,78 @@
             function renderColgroup(domain){
                 if (domain === "MEETING_ROOM") {
                     colgroupEl.innerHTML = `
-            <col style="width:140px" />
-            <col style="width:160px" />
-            <col style="width:190px" />
-            <col /> <!-- ✅ 예약 목적(남는 너비 전부) -->
-            <col style="width:220px" />
-            <col style="width:140px" />
-            <col style="width:120px" />
-          `;
+                        <col style="width:140px" />
+                        <col style="width:160px" />
+                        <col style="width:190px" />
+                        <col /> <!-- ✅ 예약 목적(남는 너비 전부) -->
+                        <col style="width:220px" />
+                        <col style="width:140px" />
+                        <col style="width:120px" />
+                    `;
                     return;
                 }
 
                 if (domain === "CORPORATE_CAR") {
                     colgroupEl.innerHTML = `
-            <col style="width:140px" />
-            <col style="width:160px" />
-            <col style="width:200px" />  <!-- 차량명 -->
-            <col style="width:150px" />  <!-- 차량번호(조금 좁게) -->
-            <col />                      <!-- ✅ 예약 목적(남는 너비 전부) -->
-            <col style="width:120px" />
-          `;
+                        <col style="width:140px" />
+                        <col style="width:160px" />
+                        <col style="width:200px" />  <!-- 차량명 -->
+                        <col style="width:150px" />  <!-- 차량번호(조금 좁게) -->
+                        <col />                      <!-- ✅ 예약 목적(남는 너비 전부) -->
+                        <col style="width:120px" />
+                    `;
                     return;
                 }
 
                 // SHARED_EQUIPMENT
                 colgroupEl.innerHTML = `
-          <col style="width:140px" />
-          <col style="width:160px" />
-          <col style="width:200px" />  <!-- 설비명 -->
-          <col style="width:150px" />  <!-- 설비번호(조금 좁게) -->
-          <col />                      <!-- ✅ 예약 목적(남는 너비 전부) -->
-          <col style="width:120px" />
-        `;
+                    <col style="width:140px" />
+                    <col style="width:160px" />
+                    <col style="width:200px" />  <!-- 설비명 -->
+                    <col style="width:150px" />  <!-- 설비번호(조금 좁게) -->
+                    <col />                      <!-- ✅ 예약 목적(남는 너비 전부) -->
+                    <col style="width:120px" />
+                `;
             }
 
             function renderHeader(domain){
                 if (domain === "MEETING_ROOM") {
                     theadEl.innerHTML = `
-            <tr>
-              <th>예약일자</th>
-              <th>예약시간</th>
-              <th class="ta-left">회의실명</th>
-              <th>예약 목적</th>
-              <th>참가자</th>
-              <th>예약자</th>
-              <th>예약상태</th>
-            </tr>
-          `;
+                        <tr>
+                          <th>예약일자</th>
+                          <th>예약시간</th>
+                          <th class="ta-left">회의실명</th>
+                          <th>예약 목적</th>
+                          <th>참가자</th>
+                          <th>예약자</th>
+                          <th>예약상태</th>
+                        </tr>
+                    `;
                     return;
                 }
                 if (domain === "CORPORATE_CAR") {
                     theadEl.innerHTML = `
-            <tr>
-              <th>예약일자</th>
-              <th>예약시간</th>
-              <th class="ta-left">차량명</th>
-              <th>차량번호</th>
-              <th>예약 목적</th>
-              <th>예약상태</th>
-            </tr>
-          `;
+                        <tr>
+                          <th>예약일자</th>
+                          <th>예약시간</th>
+                          <th class="ta-left">차량명</th>
+                          <th>차량번호</th>
+                          <th>예약 목적</th>
+                          <th>예약상태</th>
+                        </tr>
+                    `;
                     return;
                 }
                 theadEl.innerHTML = `
-          <tr>
-            <th>예약일자</th>
-            <th>예약시간</th>
-            <th class="ta-left">설비명</th>
-            <th>설비번호</th>
-            <th>예약 목적</th>
-            <th>예약상태</th>
-          </tr>
-        `;
+                    <tr>
+                      <th>예약일자</th>
+                      <th>예약시간</th>
+                      <th class="ta-left">설비명</th>
+                      <th>설비번호</th>
+                      <th>예약 목적</th>
+                      <th>예약상태</th>
+                    </tr>
+                `;
             }
 
             /* ✅ 목적 필드 fallback을 좀 더 넓게 잡아둠(회의실에서 목적 안 뜨는 케이스 대비) */
@@ -569,24 +611,19 @@
                         const shouldShowMore = attendeesArr.length >= 4 || attendeesFull.length >= 35;
 
                         return `
-              <tr>
-                <td>${escapeHtml(r.date ?? "-")}</td>
-                <td>${escapeHtml(r.time ?? "-")}</td>
-                <td class="ta-left" title="${escapeHtml(roomName)}">${escapeHtml(roomName)}</td>
-
-                <!-- ✅ 목적: 가운데 정렬 + 남는 너비 -->
-                <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
-
-                <!-- ✅ 참가자(예약자 옆에 붙어있게: colgroup에서 오른쪽 3개 폭 고정) -->
-                <td class="ta-left attendees-cell">
-                  <div class="attendees-text" data-row="${idx}" title="${escapeHtml(attendeesFull)}">${escapeHtml(attendeesFull)}</div>
-                  ${shouldShowMore ? `<span class="attendees-more" data-action="toggle-attendees" data-row="${idx}">더보기</span>` : ``}
-                </td>
-
-                <td>${escapeHtml(hostName)}</td>
-                <td>${escapeHtml(statusText)}</td>
-              </tr>
-            `;
+                            <tr>
+                              <td>${escapeHtml(r.date ?? "-")}</td>
+                              <td>${escapeHtml(r.time ?? "-")}</td>
+                              <td class="ta-left" title="${escapeHtml(roomName)}">${escapeHtml(roomName)}</td>
+                              <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+                              <td class="ta-left attendees-cell">
+                                <div class="attendees-text" data-row="${idx}" title="${escapeHtml(attendeesFull)}">${escapeHtml(attendeesFull)}</div>
+                                ${shouldShowMore ? `<span class="attendees-more" data-action="toggle-attendees" data-row="${idx}">더보기</span>` : ``}
+                              </td>
+                              <td>${escapeHtml(hostName)}</td>
+                              <td>${escapeHtml(statusText)}</td>
+                            </tr>
+                        `;
                     }).join("");
                     return;
                 }
@@ -600,20 +637,15 @@
                         const purpose = pickPurpose(r);
 
                         return `
-              <tr>
-                <td>${escapeHtml(r.date ?? "-")}</td>
-                <td>${escapeHtml(r.time ?? "-")}</td>
-                <td class="ta-left" title="${escapeHtml(carName)}">${escapeHtml(carName)}</td>
-
-                <!-- ✅ 차량번호: 왼쪽정렬+패딩줄여서 차량명과 가까워 보이게 -->
-                <td class="code-cell" title="${escapeHtml(plateNo)}">${escapeHtml(plateNo)}</td>
-
-                <!-- ✅ 목적: 가운데 + 남는 너비 -->
-                <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
-
-                <td>${escapeHtml(statusText)}</td>
-              </tr>
-            `;
+                            <tr>
+                              <td>${escapeHtml(r.date ?? "-")}</td>
+                              <td>${escapeHtml(r.time ?? "-")}</td>
+                              <td class="ta-left" title="${escapeHtml(carName)}">${escapeHtml(carName)}</td>
+                              <td class="code-cell" title="${escapeHtml(plateNo)}">${escapeHtml(plateNo)}</td>
+                              <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+                              <td>${escapeHtml(statusText)}</td>
+                            </tr>
+                        `;
                     }).join("");
                     return;
                 }
@@ -627,20 +659,15 @@
                     const purpose = pickPurpose(r);
 
                     return `
-            <tr>
-              <td>${escapeHtml(r.date ?? "-")}</td>
-              <td>${escapeHtml(r.time ?? "-")}</td>
-              <td class="ta-left" title="${escapeHtml(eqName)}">${escapeHtml(eqName)}</td>
-
-              <!-- ✅ 설비번호: 왼쪽정렬+패딩줄여서 설비명과 가까워 보이게 -->
-              <td class="code-cell" title="${escapeHtml(eqId)}">${escapeHtml(eqId)}</td>
-
-              <!-- ✅ 목적: 가운데 + 남는 너비 -->
-              <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
-
-              <td>${escapeHtml(statusText)}</td>
-            </tr>
-          `;
+                        <tr>
+                          <td>${escapeHtml(r.date ?? "-")}</td>
+                          <td>${escapeHtml(r.time ?? "-")}</td>
+                          <td class="ta-left" title="${escapeHtml(eqName)}">${escapeHtml(eqName)}</td>
+                          <td class="code-cell" title="${escapeHtml(eqId)}">${escapeHtml(eqId)}</td>
+                          <td class="purpose-cell" title="${escapeHtml(purpose)}">${escapeHtml(purpose)}</td>
+                          <td>${escapeHtml(statusText)}</td>
+                        </tr>
+                    `;
                 }).join("");
             }
 
@@ -717,13 +744,26 @@
                 const to   = toEl.value;
 
                 try {
+                    swalLoading("조회 중...", "내 예약을 불러오고 있어요.");
                     const rows = await fetchRows(from, to);
+
                     ALL_ROWS = Array.isArray(rows) ? rows : [];
                     VIEW_ROWS = sortUpcomingFirst(ALL_ROWS);
                     currentPage = 0;
+
+                    Swal.close();
                     renderPage();
                 } catch (err) {
+                    Swal.close();
                     console.error(err);
+
+                    if (String(err?.message || "").includes("UNAUTHORIZED")) return;
+
+                    await swalError(
+                        err?.message ? `조회 중 오류가 발생했습니다.\n${err.message}` : "조회 중 오류가 발생했습니다.",
+                        "오류"
+                    );
+
                     tbodyEl.innerHTML = `<tr><td class="empty" colspan="7" style="color:red;">오류: ${escapeHtml(err.message)}</td></tr>`;
                 }
             }
@@ -742,8 +782,8 @@
                 });
             });
 
-            fromEl.addEventListener("change", enforceDateRules);
-            toEl.addEventListener("change", enforceDateRules);
+            fromEl.addEventListener("change", () => enforceDateRules());
+            toEl.addEventListener("change", () => enforceDateRules());
             btnSearch.addEventListener("click", search);
 
             const today = new Date();

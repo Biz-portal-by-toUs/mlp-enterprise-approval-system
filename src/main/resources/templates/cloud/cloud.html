@@ -555,6 +555,11 @@
             .cloud-tree-panel{
                 overscroll-behavior: contain;
             }
+
+            /* ✅ SweetAlert가 컨텍스트 메뉴/레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
         </style>
     </th:block>
 </head>
@@ -600,7 +605,97 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script th:inline="javascript">
+
+        /* =========================
+           SweetAlert2 helpers
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        function swalInfo(text, title="알림") {
+            return Swal.fire({ icon: "info", title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalSuccess(text, title="완료") {
+            return Swal.fire({ icon: "success", title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalWarn(text, title="확인") {
+            return Swal.fire({ icon: "warning", title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalError(text, title="오류") {
+            return Swal.fire({ icon: "error", title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        async function swalConfirm({
+                                       title="진행할까요?",
+                                       text="",
+                                       icon="warning",
+                                       confirmText="확인",
+                                       cancelText="취소"
+                                   } = {}) {
+            const res = await Swal.fire({
+                icon,
+                title,
+                text,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+            return res.isConfirmed;
+        }
+
+        async function swalPrompt({
+                                      title="입력",
+                                      text="",
+                                      inputValue="",
+                                      placeholder="",
+                                      confirmText="확인",
+                                      cancelText="취소",
+                                      required=true
+                                  } = {}) {
+            const res = await Swal.fire({
+                title,
+                text,
+                input: "text",
+                inputValue,
+                inputPlaceholder: placeholder,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: SWAL_PRIMARY,
+                inputValidator: (v) => {
+                    if (!required) return null;
+                    if (!v || !String(v).trim()) return "값을 입력해주세요.";
+                    return null;
+                }
+            });
+            return res.isConfirmed ? String(res.value ?? "").trim() : null;
+        }
+
+        function toastSuccess(title) {
+            return Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title,
+                showConfirmButton: false,
+                timer: 1400,
+                timerProgressBar: true
+            });
+        }
+
         // ✅ 공유함 페이지 단위 fetch 관리
         const PAGE = {
             alive: true,
@@ -658,9 +753,6 @@
                 ev.preventDefault(); // 콘솔에 Uncaught(…)/Failed to fetch 뜨는거 방지
                 return;
             }
-            // ✅ 여기서 alert까지 강제로 띄우면 "진짜 오류"가 중복 알림될 수 있어.
-            // 필요하면 아래 주석을 풀어.
-            // alert(err?.message || '요청 중 오류가 발생했습니다.');
         });
 
         window.addEventListener('error', (ev) => {
@@ -734,8 +826,13 @@
 
             console.log("[API] response", res.status, url, json);
 
+            if (res.status === 401 || res.status === 403) {
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 필요");
+                location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
+
             if (!res.ok) {
-                // JSON이면 message 보여주고, 아니면 원문 text(=html/stack message 일부)라도 보여주기
                 throw new Error(json?.message || json?.error || text || res.statusText);
             }
 
@@ -884,7 +981,7 @@
 
                             await loadFolderContent(f.folderNo);
                             await syncTreeToFolder(f.folderNo);
-                        })().catch(err => alert(err.message));
+                        })().catch(err => swalError(err.message || "오류"));
                         return;
                     }
 
@@ -945,7 +1042,7 @@
                     if (!attachmentId) return;
 
                     if (dragScope && dragScope !== state.scope) {
-                        alert("공유함 파일은 공유함에서만, 개인함 파일은 개인함에서만 이동 가능합니다.");
+                        swalWarn("공유함 파일은 공유함에서만, 개인함 파일은 개인함에서만 이동 가능합니다.");
                         return;
                     }
 
@@ -957,7 +1054,8 @@
                         if (fromFolderNo != null) await refreshTreeChildren(fromFolderNo);
                         await refreshTreeChildren(toFolderNo);
                     } catch (err) {
-                        alert(err.message);
+                        if (String(err.message || "").includes("UNAUTHORIZED")) return;
+                        swalError(err.message || "이동 실패");
                     }
                 });
 
@@ -1039,7 +1137,7 @@
                 nm.textContent = short20(fullName);
                 nm.addEventListener("click", (e) => {
                     e.stopPropagation();
-                    alert(fullName);
+                    swalInfo(fullName, "파일명");
                 });
 
                 const size = document.createElement("div");
@@ -1176,7 +1274,7 @@
                         state.selectedFolderName = f.folderName;
                         setBreadcrumbFromNode(node);
 
-                        loadFolderContent(f.folderNo).catch(err => alert(err.message));
+                        loadFolderContent(f.folderNo).catch(err => swalError(err.message || "조회 실패"));
 
                         const opened = children.classList.contains("open");
                         if (opened) {
@@ -1196,7 +1294,7 @@
                             openChildren(children, caret);
                         })().catch(err => {
                             closeChildren(children, caret);
-                            alert(err.message);
+                            swalError(err.message || "조회 실패");
                         });
                     });
 
@@ -1237,7 +1335,7 @@
                         if (!attachmentId) return;
 
                         if (dragScope && dragScope !== state.scope) {
-                            alert("공유함 파일은 공유함에서만, 개인함 파일은 개인함에서만 이동 가능합니다.");
+                            await swalWarn("공유함 파일은 공유함에서만, 개인함 파일은 개인함에서만 이동 가능합니다.");
                             return;
                         }
 
@@ -1249,7 +1347,8 @@
                             if (fromFolderNo != null) await refreshTreeChildren(fromFolderNo);
                             await refreshTreeChildren(toFolderNo);
                         } catch (err) {
-                            alert(err.message);
+                            if (String(err.message || "").includes("UNAUTHORIZED")) return;
+                            swalError(err.message || "이동 실패");
                         }
                     });
 
@@ -1297,7 +1396,7 @@
 
                         if (parentId != null) state.selectedFolderNo = parentId;
 
-                        alert(fullName);
+                        swalInfo(fullName, "파일명");
                     });
 
                     fileNode.addEventListener("dragstart", (e) => {
@@ -1359,65 +1458,103 @@
 
         /** ====== 폴더 CRUD ====== */
         async function createFolder() {
-            console.log("[CREATE] start", {
-                scope: state.scope,
-                selectedFolderNo: state.selectedFolderNo,
-                selectedFolderName: state.selectedFolderName,
-                time: new Date().toISOString()
+            const name = await swalPrompt({
+                title: "폴더 생성",
+                text: "새 폴더명을 입력해주세요.",
+                placeholder: "폴더 이름"
             });
-
-            const name = prompt("폴더 이름");
             if (!name) return;
 
             const parent = state.selectedFolderNo;
 
-            console.log("[CREATE] request", { parent, folderName: name.trim() });
+            swalLoading("생성 중...");
+            try {
+                await apiJson(folderBase(), {
+                    method: "POST",
+                    body: JSON.stringify({ parentId: parent, folderName: name }),
+                });
 
-            await apiJson(folderBase(), {
-                method: "POST",
-                body: JSON.stringify({parentId: parent, folderName: name.trim()}),
-            });
-
-            console.log("[CREATE] response", res);
-
-            await refreshTreeChildren(parent);
-            if (parent != null) await loadFolderContent(parent);
-
-            console.log("[CREATE] done", { parent });
+                Swal.close();
+                await refreshTreeChildren(parent);
+                if (parent != null) await loadFolderContent(parent);
+                toastSuccess("폴더가 생성되었습니다.");
+            } catch (e) {
+                Swal.close();
+                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                swalError(e.message || "폴더 생성 실패");
+            }
         }
 
         async function renameFolder() {
-            if (!state.selectedFolderNo) return alert("수정할 폴더를 선택해주세요.");
-            const newName = prompt("새 폴더명", state.selectedFolderName || "");
+            if (!state.selectedFolderNo) {
+                swalWarn("수정할 폴더를 선택해주세요.");
+                return;
+            }
+
+            const newName = await swalPrompt({
+                title: "폴더 이름 변경",
+                text: "새 폴더명을 입력해주세요.",
+                inputValue: state.selectedFolderName || ""
+            });
             if (!newName) return;
 
             const folderNo = state.selectedFolderNo;
             const parent = state.treeIndex.parentById.get(folderNo);
 
-            await apiJson(`/api/v1/folders/${state.selectedFolderNo}/rename`, {
-                method: "PATCH",
-                body: JSON.stringify({folderName: newName.trim()}),
-            });
+            swalLoading("변경 중...");
+            try {
+                await apiJson(`/api/v1/folders/${folderNo}/rename`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ folderName: newName }),
+                });
 
-            state.selectedFolderName = newName.trim();
+                Swal.close();
 
-            const node = state.treeIndex.nodeById.get(folderNo);
-            if (node) {
-                node.dataset.folderName = state.selectedFolderName;
-                const label = node.querySelector(".label");
-                if (label) label.textContent = state.selectedFolderName;
-                setBreadcrumbFromNode(node);
+                state.selectedFolderName = newName;
+
+                const node = state.treeIndex.nodeById.get(folderNo);
+                if (node) {
+                    node.dataset.folderName = newName;
+                    const label = node.querySelector(".label");
+                    if (label) label.textContent = newName;
+                    setBreadcrumbFromNode(node);
+                }
+
                 await refreshTreeChildren(parent);
                 if (state.selectedFolderNo === folderNo) await loadFolderContent(folderNo);
+                toastSuccess("이름이 변경되었습니다.");
+            } catch (e) {
+                Swal.close();
+                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                swalError(e.message || "폴더 이름 변경 실패");
             }
         }
 
         async function deleteFolder() {
-            if (!state.selectedFolderNo) return alert("삭제할 폴더를 선택해주세요.");
-            if (!confirm("정말 삭제하시겠습니까?")) return;
+            if (!state.selectedFolderNo) {
+                swalWarn("삭제할 폴더를 선택해주세요.");
+                return;
+            }
 
-            await apiJson(`/api/v1/folders/${state.selectedFolderNo}`, {method: "DELETE"});
-            await initTree();
+            const ok = await swalConfirm({
+                title: "폴더 삭제",
+                text: "정말 삭제하시겠습니까?",
+                confirmText: "삭제",
+                cancelText: "취소"
+            });
+            if (!ok) return;
+
+            swalLoading("삭제 중...");
+            try {
+                await apiJson(`/api/v1/folders/${state.selectedFolderNo}`, { method: "DELETE" });
+                Swal.close();
+                toastSuccess("삭제되었습니다.");
+                await initTree();
+            } catch (e) {
+                Swal.close();
+                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                swalError(e.message || "폴더 삭제 실패");
+            }
         }
 
         /** ====== 파일 삭제/다운로드 ====== */
@@ -1426,41 +1563,60 @@
             const attachmentIds = Array.from(state.selection.attachmentIds);
 
             if (folderNos.length === 0 && attachmentIds.length === 0) {
-                alert("삭제할 항목을 선택해주세요.");
+                swalWarn("삭제할 항목을 선택해주세요.");
                 return;
             }
-            if (!confirm(`선택한 항목을 삭제하시겠습니까?\n폴더: ${folderNos.length}개, 파일: ${attachmentIds.length}개`)) return;
 
-            // ✅ 폴더 먼저 삭제(폴더 삭제가 트리/파일까지 영향을 줄 수 있으니까)
-            for (const folderNo of folderNos) {
-                await apiJson(`/api/v1/folders/${folderNo}`, {method: "DELETE"});
+            const ok = await swalConfirm({
+                title: "선택 삭제",
+                text: `선택한 항목을 삭제하시겠습니까?\n폴더: ${folderNos.length}개, 파일: ${attachmentIds.length}개`,
+                confirmText: "삭제",
+                cancelText: "취소"
+            });
+            if (!ok) return;
+
+            swalLoading("삭제 중...");
+            try {
+                for (const folderNo of folderNos) {
+                    await apiJson(`/api/v1/folders/${folderNo}`, { method: "DELETE" });
+                }
+                for (const id of attachmentIds) {
+                    await apiJson(`/api/v1/attachments/${id}`, { method: "DELETE" });
+                }
+
+                Swal.close();
+                clearGridSelection();
+                if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
+                await refreshTreeChildren(state.selectedFolderNo);
+
+                toastSuccess("삭제되었습니다.");
+            } catch (e) {
+                Swal.close();
+                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                swalError(e.message || "삭제 실패");
             }
-
-            // ✅ 파일 삭제
-            for (const id of attachmentIds) {
-                await apiJson(`/api/v1/attachments/${id}`, {method: "DELETE"});
-            }
-
-            // UI 갱신
-            clearGridSelection();
-            if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
-            await refreshTreeChildren(state.selectedFolderNo); // 좌측 트리 갱신(선택 폴더 기준)
         }
 
         async function downloadSelectedFiles() {
             const ids = Array.from(state.selection.attachmentIds);
-            if (ids.length < 1) return alert("다운로드할 파일을 선택해주세요.");
-
-            // 1개면 기존 presigned url
-            if (ids.length === 1) {
-                const res = await apiJson(`/api/v1/attachments/${ids[0]}/download-url`);
-                window.open(res.url, "_blank");
+            if (ids.length < 1) {
+                swalWarn("다운로드할 파일을 선택해주세요.");
                 return;
             }
 
-            // 여러개면 zip
-            await downloadZip(ids);
+            try {
+                if (ids.length === 1) {
+                    const res = await apiJson(`/api/v1/attachments/${ids[0]}/download-url`);
+                    window.open(res.url, "_blank");
+                    return;
+                }
+                await downloadZip(ids);
+            } catch (e) {
+                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                swalError(e.message || "다운로드 실패");
+            }
         }
+
 
         /** ====== zip 다운로드 헬퍼 ====== */
         function filenameFromDisposition(disposition) {
@@ -1502,7 +1658,10 @@
 
         /** ====== 업로드 ====== */
         function openUploadPicker() {
-            if (!state.selectedFolderNo) return alert("업로드할 폴더를 먼저 선택해주세요.");
+            if (!state.selectedFolderNo) {
+                swalWarn("업로드할 폴더를 먼저 선택해주세요.");
+                return;
+            }
             el.fileInput.click();
         }
 
@@ -1593,7 +1752,7 @@
         });
 
         btnExpandAll?.addEventListener("click", () => {
-            expandAllFrom(null).catch(e => alert(e.message || "전체 펼치기 실패"));
+            expandAllFrom(null).catch(e => swalError(e.message || "전체 펼치기 실패"));
         });
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms)); // 서버 보호
@@ -1757,7 +1916,7 @@
             });
 
             closeCtxMenu();
-            createFolder().catch(e => alert(e.message));
+            createFolder().catch(e => swalError(e.message || "폴더 생성 실패"));
         });
 
         // ✅ 확장자 추출 유틸
@@ -1775,7 +1934,7 @@
 
             // 1) 폴더면 기존 renameFolder 사용
             if (state.ctxKind === "folder" && state.ctxFolderNo) {
-                renameFolder().catch(e => alert(e.message));
+                renameFolder().catch(e => swalError(e.message || "이름 변경 실패"));
                 return;
             }
 
@@ -1785,58 +1944,99 @@
                     const oldName = state.ctxOriginalName || "";
                     const oldExt = getExt(oldName);
 
-                    let next = prompt("새 파일명(확장자 포함)", oldName);
+                    // ✅ Swal 입력창
+                    let next = await swalPrompt({
+                        title: "파일 이름 변경",
+                        text: "새 파일명을 입력해주세요. (확장자 포함)",
+                        inputValue: oldName,
+                        placeholder: "예) 보고서.pdf",
+                        confirmText: "변경",
+                        cancelText: "취소",
+                        required: true
+                    });
                     if (!next) return;
-                    next = next.trim();
 
                     const nextExt = getExt(next);
 
-                    // 확장자를 '바꾼' 경우 경고(confirm)
-                    // - oldExt, nextExt 둘 다 존재하고 서로 다르면 변경으로 판단
+                    // ✅ 확장자 변경 경고(confirm)
                     if (oldExt && nextExt && oldExt !== nextExt) {
-                        const ok = confirm(
-                            `확장자를 "${oldExt}" → "${nextExt}"로 변경하면 파일이 실행되지 않거나 정상 동작하지 않을 수 있습니다.\n계속하시겠습니까?`
-                        );
+                        const ok = await swalConfirm({
+                            title: "확장자 변경 경고",
+                            text: `확장자를 "${oldExt}" → "${nextExt}"로 변경하면 파일이 실행되지 않거나 정상 동작하지 않을 수 있습니다.`,
+                            icon: "warning",
+                            confirmText: "계속",
+                            cancelText: "취소"
+                        });
                         if (!ok) return;
                     }
 
-                    // 확장자 안 쓰면 기존 확장자 유지
+                    // ✅ 확장자를 안 쓰면 기존 확장자 유지
                     if (oldExt && !nextExt) next = `${next}.${oldExt}`;
 
-                    await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}/rename`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ originalName: next }),
-                    });
+                    swalLoading("변경 중...");
+                    try {
+                        await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}/rename`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ originalName: next }),
+                        });
 
-                    // UI 갱신
-                    clearGridSelection();
-                    if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
-                    await refreshTreeChildren(state.selectedFolderNo);
-                })().catch(e => alert(e.message));
+                        Swal.close();
+
+                        // UI 갱신
+                        clearGridSelection();
+                        if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
+                        await refreshTreeChildren(state.selectedFolderNo);
+
+                        toastSuccess("이름이 변경되었습니다.");
+                    } catch (e) {
+                        Swal.close();
+                        if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                        swalError(e.message || "이름 변경 실패");
+                    }
+                })();
 
                 return;
             }
 
-            alert("이름 변경 대상이 없습니다.");
+            swalInfo("이름 변경 대상이 없습니다.");
         });
 
         el.ctxDelete?.addEventListener("click", () => {
             closeCtxMenu();
 
             if (state.ctxKind === "folder" && state.ctxFolderNo) {
-                deleteFolder().catch(e => alert(e.message));
+                deleteFolder().catch(e => swalError(e.message || "폴더 삭제 실패"));
                 return;
             }
 
             if (state.ctxKind === "file" && state.ctxAttachmentId) {
-                // file 단건 삭제
                 (async () => {
-                    if (!confirm("파일을 삭제하시겠습니까?")) return;
-                    await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}`, {method: "DELETE"});
-                    clearGridSelection();
-                    if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
-                    await refreshTreeChildren(state.selectedFolderNo);
-                })().catch(e => alert(e.message));
+                    const ok = await swalConfirm({
+                        title: "파일 삭제",
+                        text: "정말 삭제하시겠습니까?",
+                        icon: "warning",
+                        confirmText: "삭제",
+                        cancelText: "취소"
+                    });
+                    if (!ok) return;
+
+                    swalLoading("삭제 중...");
+                    try {
+                        await apiJson(`/api/v1/attachments/${state.ctxAttachmentId}`, { method: "DELETE" });
+
+                        Swal.close();
+
+                        clearGridSelection();
+                        if (state.selectedFolderNo) await loadFolderContent(state.selectedFolderNo);
+                        await refreshTreeChildren(state.selectedFolderNo);
+
+                        toastSuccess("삭제되었습니다.");
+                    } catch (e) {
+                        Swal.close();
+                        if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                        swalError(e.message || "삭제 실패");
+                    }
+                })();
                 return;
             }
         });
@@ -1853,8 +2053,12 @@
 
         /** ====== 이벤트 ====== */
         el.btnUpload?.addEventListener("click", openUploadPicker);
-        el.btnDeleteSelected?.addEventListener("click", () => deleteSelectedItems().catch(e => alert(e.message)));
-        el.btnDownload?.addEventListener("click", () => downloadSelectedFiles().catch(e => alert(e.message)));
+        el.btnDeleteSelected?.addEventListener("click", () =>
+            deleteSelectedItems().catch(e => swalError(e.message || "오류"))
+        );
+        el.btnDownload?.addEventListener("click", () =>
+            downloadSelectedFiles().catch(e => swalError(e.message || "오류"))
+        );
 
 
         el.fileInput?.addEventListener("change", async (e) => {
@@ -1862,17 +2066,21 @@
             if (!files.length) return;
 
             if (!state.selectedFolderNo) {
-                alert("업로드할 폴더를 먼저 선택해주세요.");
+                swalWarn("업로드할 폴더를 먼저 선택해주세요.");
                 el.fileInput.value = "";
                 return;
             }
 
+            swalLoading("업로드 중...");
             try {
                 for (const file of files) await uploadOneFile(file);
                 await loadFolderContent(state.selectedFolderNo);
-                alert("업로드 완료!");
+                Swal.close();
+                toastSuccess("업로드 완료!");
             } catch (err) {
-                alert(err.message);
+                Swal.close();
+                if (String(err.message || "").includes("UNAUTHORIZED")) return;
+                swalError(err.message || "업로드 실패");
             } finally {
                 el.fileInput.value = "";
             }
@@ -1947,7 +2155,7 @@
 
         /** ====== 초기화 ====== */
         window.addEventListener("DOMContentLoaded", () => {
-            initTree().catch(e => alert(e.message));
+            initTree().catch(e => swalError(e.message || "초기화 실패"));
         });
     </script>
 </th:block>

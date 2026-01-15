@@ -10,40 +10,23 @@
 
     <th:block layout:fragment="pageStyles">
         <style>
-            :root { --blue: #1677ff; }
-
-            /* ✅ 예약 페이지 타이틀 규격 */
+            /* ✅ 예약/등록 페이지 톤과 통일 */
             h2 { margin-bottom: 16px; }
 
-            /* ✅ 예약 페이지 오른쪽 래퍼 느낌 */
             .meeting-room-page{
                 font-family: Pretendard, Arial, sans-serif;
                 background:#f7f8fa;
                 width:100%;
             }
 
-            /* ✅ 예약 페이지 섹션 패딩 규격 */
             .timetable-section{
                 padding: 20px 20px 32px;
             }
 
-            .field label{font-size:12px;color:#6b7280}
-            .field input{border:none;outline:none;font-size:13px;width:110px;}
-
-            .btn{
-                border:1px solid #e5e7eb;
-                background:#fff;
-                border-radius:12px;
-                padding:9px 12px;
-                cursor:pointer;
-                font-size:13px;
+            /* SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
             }
-            .btn.primary{
-                background:var(--blue);
-                border-color:var(--blue);
-                color:#fff;
-            }
-            .btn:disabled{opacity:.5;cursor:not-allowed}
 
             .grid{
                 display:grid;
@@ -67,6 +50,7 @@
                 flex-direction:column;
                 min-height:320px;
             }
+
             .thumb{
                 height:160px;
                 background:#e5e7eb;
@@ -76,6 +60,7 @@
             }
             .thumb img{width:100%;height:100%;object-fit:cover;display:block}
             .thumb .ph{color:#6b7280;font-size:12px}
+
             .card-body{
                 padding:12px 14px;
                 display:flex;
@@ -109,8 +94,8 @@
                 font-size:13px;
             }
             .page-btn.active{
-                background:var(--blue);
-                border-color:var(--blue);
+                background:var(--primary);
+                border-color:var(--primary);
                 color:#fff;
                 font-weight:700;
             }
@@ -125,73 +110,14 @@
                 display:none;
             }
 
+            /* ✅ 관리자 선택 UI */
             .card.selectable { cursor: pointer; }
-            .card.selected { outline: 3px solid var(--blue); }
-            .card.selectable:hover { box-shadow: 0 0 0 2px rgba(22,119,255,.4); }
-
-            .action-bar {
-                display:none;
-                justify-content:flex-end;
-                align-items:center;
-                gap:10px;
-                margin-top:12px;
-                margin-bottom:12px;
-                padding-right:4px;
-            }
-
-            .action-bar .action-btn{
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                padding:8px 14px;
-                border-radius:8px;
-                border:none;
-                font-size:14px;
-                cursor:pointer;
-                background-color:var(--blue);
-                color:#fff;
-                transition:background-color 0.2s ease;
-            }
-            .action-bar .action-btn:hover:not(:disabled){ background-color:#4096ff; }
-            .action-bar .action-btn:disabled{
-                background-color:#e5e7eb;
-                color:#9ca3af;
-                cursor:not-allowed;
-            }
-            .action-bar .action-btn.danger:not(:disabled){ background-color:#ef4444; }
-
-            .modal{
-                position:fixed;
-                top:0; left:0;
-                width:100%;
-                height:100%;
-                background:rgba(0,0,0,0.5);
-                display:flex;
-                justify-content:center;
-                align-items:center;
-                z-index:1000;
-            }
-            .hidden{ display:none; }
-
-            .modal-content{
-                background:#fff;
-                padding:24px;
-                border-radius:10px;
-                width:360px;
-                text-align:center;
-            }
-            .modal-title{ margin-bottom:12px; color:#d32f2f; }
-            .modal-text{ margin-bottom:20px; font-size:14px; line-height:1.5; }
-            .modal-actions{ display:flex; justify-content:space-between; gap:12px; }
-            .btn.cancel{ background:#e0e0e0; color:#333; }
-            .btn.cancel:hover{ background:#cfcfcf; }
-            .btn.delete{ background:#d32f2f; color:#fff; }
-            .btn.delete:hover{ background:#b71c1c; }
-            .btn:hover{ transform: translateY(-1px); }
+            .card.selected { outline: 3px solid var(--primary); }
+            .card.selectable:hover { box-shadow: 0 0 0 2px rgba(79,143,227,.4); }
 
             /* =========================
-            ✅ 버튼 통일 (저장해둔 버튼 규격)
-             ========================= */
+               ✅ 버튼 통일 (저장해둔 버튼 규격)
+               ========================= */
             .action-bar{
                 display:none;
                 justify-content:flex-end;
@@ -202,7 +128,6 @@
                 padding-right:4px;
             }
 
-            /* 공통 버튼 규격 = 저장해둔 .btn */
             .action-bar .action-btn{
                 height: 40px;
                 padding: 0 20px;
@@ -225,19 +150,16 @@
                 filter: none;
             }
 
-            /* ✅ 등록(Primary) */
             .action-bar .action-btn.create{
                 background: var(--primary);
                 color: #fff;
             }
 
-            /* ✅ 선택 수정(수정 버튼 색상: 연파랑 배경 + 파랑 글씨) */
             .action-bar .action-btn.edit{
                 background: #eaf2ff;
                 color: #2b5db8;
             }
 
-            /* ✅ 선택 삭제(삭제 버튼 색상: 연빨강 배경 + 빨강 글씨) */
             .action-bar .action-btn.delete{
                 background: #fdecec;
                 color: #c62828;
@@ -256,7 +178,6 @@
         <!-- 🔹 오른쪽 -->
         <div class="meeting-room-page">
             <div class="timetable-section">
-                <!-- ✅ 예약 페이지랑 똑같이 -->
                 <h2>회의실</h2>
                 <br><br>
 
@@ -274,45 +195,95 @@
             </div>
         </div>
     </section>
-
-    <!-- 삭제 확인 모달 -->
-    <div id="deleteModal" class="modal hidden">
-        <div class="modal-content">
-            <h3 class="modal-title">⚠️ 회의실 삭제</h3>
-            <p class="modal-text">
-                회의실을 삭제하면 <b>되돌릴 수 없습니다.</b><br>
-                정말 삭제하시겠습니까?
-            </p>
-
-            <div class="modal-actions">
-                <button id="confirmDeleteBtn" class="btn delete">삭제</button>
-                <button id="cancelDeleteBtn" class="btn cancel">취소</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
+        /* =========================
+           SweetAlert2 (예약 페이지 스타일 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({ icon, title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        /* =========================
+           페이지 로직
+           ========================= */
         let selectedRoomNo = null;
         let isAdmin = false;
 
         const NO_IMAGE_URL = "/images/no-image.png";
-        const API_BASE = "";
-
-        const grid   = document.getElementById("grid");
-        const paging = document.getElementById("paging");
-        const errBox = document.getElementById("errBox");
+        const API_BASE = window.location.origin;
 
         let state = { page: 0, size: 6, totalPages: 0 };
 
         function showError(msg){
+            const errBox = document.getElementById("errBox");
             errBox.style.display = "block";
             errBox.textContent = msg;
         }
         function clearError(){
+            const errBox = document.getElementById("errBox");
             errBox.style.display = "none";
             errBox.textContent = "";
+        }
+
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
+            const res = await fetch(url, {
+                ...options,
+                credentials: "include",
+                headers: { ...(options.headers || {}) }
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
+                location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
+
+            return res;
         }
 
         function cardTemplate(room){
@@ -340,7 +311,15 @@
         }
 
         function renderGrid(content){
+            const grid = document.getElementById("grid");
             grid.innerHTML = content.map(cardTemplate).join("");
+        }
+
+        function setButtonsDisabled(disabled){
+            const btnEdit = document.getElementById("btnEdit");
+            const btnDelete = document.getElementById("btnDelete");
+            btnEdit.disabled = disabled;
+            btnDelete.disabled = disabled;
         }
 
         function enableSelection(){
@@ -348,18 +327,25 @@
 
             document.querySelectorAll(".card.selectable").forEach(card => {
                 card.addEventListener("click", () => {
+                    // 토글 선택(같은 카드 다시 누르면 해제)
+                    const already = card.classList.contains("selected");
+
                     document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+                    if (already) {
+                        selectedRoomNo = null;
+                        setButtonsDisabled(true);
+                        return;
+                    }
+
                     card.classList.add("selected");
-
                     selectedRoomNo = card.dataset.roomNo;
-
-                    document.getElementById("btnEdit").disabled   = false;
-                    document.getElementById("btnDelete").disabled = false;
+                    setButtonsDisabled(false);
                 });
             });
         }
 
         function renderPaging(current, total){
+            const paging = document.getElementById("paging");
             paging.innerHTML = "";
             if (total <= 1) return;
 
@@ -391,89 +377,92 @@
             state.page = page;
 
             selectedRoomNo = null;
-            document.getElementById("btnEdit").disabled   = true;
-            document.getElementById("btnDelete").disabled = true;
-
-            const url = `${API_BASE}/api/v1/meeting-rooms?page=${page}&size=${state.size}`;
+            setButtonsDisabled(true);
 
             try{
-                const res = await fetch(url, { method: "GET", credentials: "include" });
-
-                if (res.status === 401) { showError("로그인이 필요합니다."); return; }
+                const res = await apiFetch(`/api/v1/meeting-rooms?page=${page}&size=${state.size}`, { method: "GET" });
                 if (!res.ok) { showError(`조회 실패 (${res.status})`); return; }
 
                 const json = await res.json();
 
-                isAdmin = json.data.isAdmin === true;
+                isAdmin = json?.data?.isAdmin === true;
                 document.getElementById("actionBar").style.display = isAdmin ? "flex" : "none";
 
-                const pageData = json.data.data;
-                const content  = pageData.content ?? [];
+                const pageData = json?.data?.data;
+                const content  = pageData?.content ?? [];
 
                 renderGrid(content);
                 enableSelection();
 
-                state.totalPages = pageData.totalPages ?? 0;
-                renderPaging(pageData.number ?? page, state.totalPages);
+                state.totalPages = pageData?.totalPages ?? 0;
+                renderPaging(pageData?.number ?? page, state.totalPages);
 
-            }catch(e){
+            } catch(e){
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
                 showError("서버 연결 실패. (네트워크 / 쿠키 / 포트 확인)");
             }
         }
 
-        document.getElementById("btnCreate").onclick = () => { location.href = "/meeting-rooms/register"; };
-        document.getElementById("btnEdit").onclick = () => {
-            if (!selectedRoomNo) return;
+        document.getElementById("btnCreate").onclick = () => {
+            location.href = "/meeting-rooms/register";
+        };
+
+        document.getElementById("btnEdit").onclick = async () => {
+            if (!selectedRoomNo) {
+                await swalWarn("수정할 회의실을 선택하세요.");
+                return;
+            }
             location.href = `/meeting-rooms/${selectedRoomNo}/edit`;
         };
 
-        const deleteModal       = document.getElementById("deleteModal");
-        const cancelDeleteBtn   = document.getElementById("cancelDeleteBtn");
-        const confirmDeleteBtn  = document.getElementById("confirmDeleteBtn");
+        document.getElementById("btnDelete").onclick = async () => {
+            if (!selectedRoomNo) {
+                await swalWarn("삭제할 회의실을 선택하세요.");
+                return;
+            }
 
-        function openDeleteModal(){ deleteModal.classList.remove("hidden"); }
+            const ok = await swalConfirm({
+                title: "회의실 삭제",
+                text: "회의실을 삭제하면 되돌릴 수 없습니다.\n정말 삭제하시겠습니까?",
+                icon: "warning",
+                confirmText: "삭제",
+                cancelText: "닫기",
+                confirmColor: SWAL_RED
+            });
+            if (!ok) return;
 
-        document.getElementById("btnDelete").onclick = () => {
-            if (!selectedRoomNo) return;
-            openDeleteModal();
-        };
-
-        cancelDeleteBtn.addEventListener("click", () => { deleteModal.classList.add("hidden"); });
-
-        confirmDeleteBtn.addEventListener("click", async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/meeting-rooms/${selectedRoomNo}`, {
-                    method: "DELETE",
-                    credentials: "include"
-                });
+                swalLoading("삭제 처리 중...", "잠시만 기다려 주세요.");
 
-                if (res.status === 401) {
-                    alert("로그인이 필요합니다.");
-                    location.href = "/login";
+                const res = await apiFetch(`/api/v1/meeting-rooms/${selectedRoomNo}`, { method: "DELETE" });
+                if (!res.ok) {
+                    Swal.close();
+                    await swalError("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.", "삭제 실패");
                     return;
                 }
 
-                if (!res.ok) { alert("삭제에 실패했습니다."); return; }
-
-                alert("회의실이 삭제되었습니다.");
-                deleteModal.classList.add("hidden");
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "삭제 완료",
+                    text: "회의실이 삭제되었습니다.",
+                    timer: 1100,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
 
                 selectedRoomNo = null;
-                document.getElementById("btnEdit").disabled   = true;
-                document.getElementById("btnDelete").disabled = true;
-
+                setButtonsDisabled(true);
                 loadRooms(state.page);
 
             } catch (e) {
-                alert("삭제 중 오류가 발생했습니다.");
+                Swal.close();
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
+                await swalError("삭제 중 오류가 발생했습니다.", "오류");
             }
-        });
+        };
 
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") deleteModal.classList.add("hidden");
-        });
-
-        loadRooms(0);
+        window.addEventListener("DOMContentLoaded", () => loadRooms(0));
     </script>
 </th:block>
 

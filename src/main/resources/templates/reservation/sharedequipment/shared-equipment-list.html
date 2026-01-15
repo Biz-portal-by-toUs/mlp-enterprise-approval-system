@@ -27,6 +27,11 @@
                 padding: 20px 20px 32px;
             }
 
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
+
             .grid {
                 display: grid;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -78,9 +83,7 @@
                 gap: 8px;
             }
 
-            .eq-name {
-                font-weight: 800;
-            }
+            .eq-name { font-weight: 800; }
 
             .meta {
                 font-size: 12px;
@@ -118,9 +121,10 @@
                 font-size: 13px;
             }
 
+            /* ✅ primary로 통일 */
             .page-btn.active {
-                background: #3b82f6;
-                border-color: #3b82f6;
+                background: var(--primary);
+                border-color: var(--primary);
                 color: #fff;
                 font-weight: 700;
             }
@@ -138,101 +142,12 @@
 
             /* 카드 선택 */
             .card.selectable { cursor: pointer; }
-            .card.selected { outline: 3px solid #3b82f6; }
-            .card.selectable:hover { box-shadow: 0 0 0 2px rgba(22,119,255,.4); }
-
-            /* 관리자 액션 바 (등록/수정/삭제 버튼) */
-            .action-bar {
-                display: none;               /* JS에서 제어 */
-                justify-content: flex-end;   /* 오른쪽 정렬 */
-                align-items: center;
-                gap: 10px;
-                margin-top: 12px;
-                margin-bottom: 12px;
-                padding-right: 4px;
-            }
-
-            .action-btn {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 8px 14px;
-                border-radius: 8px;
-                border: none;
-                font-size: 14px;
-                cursor: pointer;
-                background-color: #1677ff;
-                color: #fff;
-                transition: background-color 0.2s ease;
-            }
-
-            .action-btn:hover:not(:disabled) { background-color: #4096ff; }
-            .action-btn:disabled {
-                background-color: #e5e7eb;
-                color: #9ca3af;
-                cursor: not-allowed;
-            }
-            .action-btn.danger:not(:disabled) { background-color: #ef4444; }
-
-            /* 삭제 확인 모달 */
-            .modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-            }
-
-            .hidden { display: none; }
-
-            .modal-content {
-                background: #fff;
-                padding: 24px;
-                border-radius: 10px;
-                width: 360px;
-                text-align: center;
-            }
-
-            .modal-title { margin-bottom: 12px; color: #d32f2f; }
-
-            .modal-text {
-                margin-bottom: 20px;
-                font-size: 14px;
-                line-height: 1.5;
-            }
-
-            .modal-actions {
-                display: flex;
-                justify-content: space-between;
-                gap: 12px;
-            }
-
-            .modal .btn {
-                flex: 1;
-                padding: 10px 0;
-                border-radius: 6px;
-                font-size: 14px;
-                cursor: pointer;
-                border: none;
-                transition: background 0.2s, transform 0.1s;
-            }
-
-            .modal .btn.cancel { background: #e0e0e0; color: #333; }
-            .modal .btn.cancel:hover { background: #cfcfcf; }
-
-            .modal .btn.delete { background: #d32f2f; color: #fff; }
-            .modal .btn.delete:hover { background: #b71c1c; }
-
-            .modal .btn:hover { transform: translateY(-1px); }
+            .card.selected { outline: 3px solid var(--primary); }
+            .card.selectable:hover { box-shadow: 0 0 0 2px rgba(79,143,227,.4); }
 
             /* =========================
-            ✅ 버튼 통일 (저장해둔 버튼 규격)
-            ========================= */
+               ✅ 버튼 통일 (저장해둔 버튼 규격)
+               ========================= */
             .action-bar{
                 display:none;
                 justify-content:flex-end;
@@ -243,7 +158,6 @@
                 padding-right:4px;
             }
 
-            /* 공통 버튼 규격 = 저장해둔 .btn */
             .action-bar .action-btn{
                 height: 40px;
                 padding: 0 20px;
@@ -266,19 +180,14 @@
                 filter: none;
             }
 
-            /* ✅ 등록(Primary) */
             .action-bar .action-btn.create{
                 background: var(--primary);
                 color: #fff;
             }
-
-            /* ✅ 선택 수정(수정 버튼 색상: 연파랑 배경 + 파랑 글씨) */
             .action-bar .action-btn.edit{
                 background: #eaf2ff;
                 color: #2b5db8;
             }
-
-            /* ✅ 선택 삭제(삭제 버튼 색상: 연빨강 배경 + 빨강 글씨) */
             .action-bar .action-btn.delete{
                 background: #fdecec;
                 color: #c62828;
@@ -294,7 +203,7 @@
         <!-- 🔹 왼쪽: 예약 서브 사이드바 (공유 설비 예약 active) -->
         <aside th:replace="sidebar/reservation-sidebar :: reservationSidebar('equipment')"></aside>
 
-        <!-- ✅ 오른쪽: 예약 페이지랑 동일한 배경/패딩/타이틀 구조로 통일 -->
+        <!-- ✅ 오른쪽 -->
         <div class="shared-eq-page-wrap">
             <main class="shared-eq-page">
                 <h2>공유 설비</h2>
@@ -304,7 +213,6 @@
 
                 <section class="grid" id="grid"></section>
 
-                <!-- 관리자일 때만 JS에서 보이게 -->
                 <div id="actionBar" class="action-bar">
                     <button id="btnCreate" class="action-btn create" type="button">등록</button>
                     <button id="btnEdit" class="action-btn edit" type="button" disabled>선택 수정</button>
@@ -315,27 +223,63 @@
             </main>
         </div>
     </section>
-
-    <!-- 삭제 확인 모달 -->
-    <div id="deleteModal" class="modal hidden">
-        <div class="modal-content">
-            <h3 class="modal-title">⚠️ 공유 설비 삭제</h3>
-            <p class="modal-text">
-                공유 설비 삭제하면 <b>되돌릴 수 없습니다.</b><br>
-                정말 삭제하시겠습니까?
-            </p>
-
-            <div class="modal-actions">
-                <button id="confirmDeleteBtn" class="btn delete">삭제</button>
-                <button id="cancelDeleteBtn" class="btn cancel">취소</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- 이 페이지 전용 JS -->
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
+        /* =========================
+           SweetAlert2 (회의실 조회와 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({ icon, title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        /* =========================
+           페이지 로직
+           ========================= */
         let selectedEqNo = null;
         let isAdmin = false;
 
@@ -346,11 +290,7 @@
         const paging = document.getElementById("paging");
         const errBox = document.getElementById("errBox");
 
-        let state = {
-            page: 0,
-            size: 6,
-            totalPages: 0
-        };
+        let state = { page: 0, size: 6, totalPages: 0 };
 
         function showError(msg){
             errBox.style.display = "block";
@@ -359,6 +299,11 @@
         function clearError(){
             errBox.style.display = "none";
             errBox.textContent = "";
+        }
+
+        function setButtonsDisabled(disabled){
+            document.getElementById("btnEdit").disabled = disabled;
+            document.getElementById("btnDelete").disabled = disabled;
         }
 
         async function apiFetch(path, options = {}) {
@@ -371,43 +316,34 @@
             });
 
             if (res.status === 401 || res.status === 403) {
-                alert("로그인이 필요합니다. 다시 로그인 해주세요.");
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
                 location.href = "/login";
                 throw new Error("UNAUTHORIZED");
             }
             return res;
         }
 
-        async function apiFetchJson(path, options = {}) {
-            const res = await apiFetch(path, options);
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || `HTTP ${res.status}`);
-            }
-            return res.json();
-        }
-
         function cardTemplate(eq){
             const safe = (v) => (v === null || v === undefined || v === "") ? "-" : v;
 
             return `
-        <article class="card ${isAdmin ? "selectable" : ""}" data-eq-no="${eq.eqNo}">
-          <div class="thumb">
-            <img
-              src="${eq.imageUrl || NO_IMAGE_URL}"
-              onerror="this.src='${NO_IMAGE_URL}'"
-              alt="공유 설비 이미지"
-            />
-          </div>
-          <div class="card-body">
-            <div class="eq-name">설비명: ${safe(eq.eqName)}</div>
-            <div class="divider"></div>
-            <div class="meta"><b>설비번호:</b> ${safe(eq.eqId)}</div>
-            <div class="meta"><b>모델명:</b> ${safe(eq.modelName)}</div>
-            <div class="meta"><b>보관위치:</b> ${safe(eq.location)}</div>
-          </div>
-        </article>
-      `;
+              <article class="card ${isAdmin ? "selectable" : ""}" data-eq-no="${eq.eqNo}">
+                <div class="thumb">
+                  <img
+                    src="${eq.imageUrl || NO_IMAGE_URL}"
+                    onerror="this.src='${NO_IMAGE_URL}'"
+                    alt="공유 설비 이미지"
+                  />
+                </div>
+                <div class="card-body">
+                  <div class="eq-name">설비명: ${safe(eq.eqName)}</div>
+                  <div class="divider"></div>
+                  <div class="meta"><b>설비번호:</b> ${safe(eq.eqId)}</div>
+                  <div class="meta"><b>모델명:</b> ${safe(eq.modelName)}</div>
+                  <div class="meta"><b>보관위치:</b> ${safe(eq.location)}</div>
+                </div>
+              </article>
+            `;
         }
 
         function renderGrid(content){
@@ -419,13 +355,20 @@
 
             document.querySelectorAll(".card.selectable").forEach(card => {
                 card.addEventListener("click", () => {
+                    // ✅ 회의실/법인차량 조회처럼 토글 선택
+                    const already = card.classList.contains("selected");
+
                     document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+
+                    if (already) {
+                        selectedEqNo = null;
+                        setButtonsDisabled(true);
+                        return;
+                    }
+
                     card.classList.add("selected");
-
                     selectedEqNo = card.dataset.eqNo;
-
-                    document.getElementById("btnEdit").disabled = false;
-                    document.getElementById("btnDelete").disabled = false;
+                    setButtonsDisabled(false);
                 });
             });
         }
@@ -462,13 +405,18 @@
 
             state.page = page;
             selectedEqNo = null;
-            document.getElementById("btnEdit").disabled = true;
-            document.getElementById("btnDelete").disabled = true;
+            setButtonsDisabled(true);
 
             try {
-                const json = await apiFetchJson(`/api/v1/shared-equipment?page=${page}&size=${state.size}`, {
-                    method: "GET"
-                });
+                const res = await apiFetch(`/api/v1/shared-equipment?page=${page}&size=${state.size}`, { method: "GET" });
+                if (!res.ok) {
+                    showError(`조회 실패 (${res.status})`);
+                    grid.innerHTML = "";
+                    paging.innerHTML = "";
+                    return;
+                }
+
+                const json = await res.json();
 
                 isAdmin = json?.data?.isAdmin === true;
                 document.getElementById("actionBar").style.display = isAdmin ? "flex" : "none";
@@ -484,7 +432,7 @@
 
             } catch (e) {
                 console.error(e);
-                if (String(e.message || "").includes("UNAUTHORIZED")) return;
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
                 showError("조회에 실패했습니다. (서버/쿠키/권한 확인)");
                 grid.innerHTML = "";
                 paging.innerHTML = "";
@@ -495,61 +443,74 @@
             location.href = "/shared-equipment/register";
         };
 
-        document.getElementById("btnEdit").onclick = () => {
-            if (!selectedEqNo) return;
+        document.getElementById("btnEdit").onclick = async () => {
+            if (!selectedEqNo) {
+                await swalWarn("수정할 설비를 선택하세요.");
+                return;
+            }
             location.href = `/shared-equipment/${selectedEqNo}/edit`;
         };
 
-        const deleteModal      = document.getElementById("deleteModal");
-        const cancelDeleteBtn  = document.getElementById("cancelDeleteBtn");
-        const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+        document.getElementById("btnDelete").onclick = async () => {
+            if (!selectedEqNo) {
+                await swalWarn("삭제할 설비를 선택하세요.");
+                return;
+            }
 
-        function openDeleteModal() {
-            deleteModal.classList.remove("hidden");
-        }
+            const ok = await swalConfirm({
+                title: "공유 설비 삭제",
+                text: "공유 설비를 삭제하면 되돌릴 수 없습니다.\n정말 삭제하시겠습니까?",
+                icon: "warning",
+                confirmText: "삭제",
+                cancelText: "닫기",
+                confirmColor: SWAL_RED
+            });
+            if (!ok) return;
 
-        document.getElementById("btnDelete").onclick = () => {
-            if (!selectedEqNo) return;
-            openDeleteModal();
-        };
-
-        cancelDeleteBtn.addEventListener("click", () => {
-            deleteModal.classList.add("hidden");
-        });
-
-        confirmDeleteBtn.addEventListener("click", async () => {
             try {
-                const res = await apiFetch(`/api/v1/shared-equipment/${selectedEqNo}`, {
-                    method: "DELETE"
-                });
+                swalLoading("삭제 처리 중...", "잠시만 기다려 주세요.");
 
+                const res = await apiFetch(`/api/v1/shared-equipment/${selectedEqNo}`, { method: "DELETE" });
+
+                // 서버가 json/text 에러메시지 주는 경우도 대비
                 if (!res.ok) {
-                    const text = await res.text();
-                    console.error("[delete fail]", res.status, text);
-                    alert("삭제에 실패했습니다.");
+                    Swal.close();
+                    let msg = "삭제에 실패했습니다. 잠시 후 다시 시도해주세요.";
+                    try {
+                        const ct = res.headers.get("content-type") || "";
+                        if (ct.includes("application/json")) {
+                            const payload = await res.json();
+                            msg = payload?.message || msg;
+                        } else {
+                            const t = await res.text();
+                            if (t) msg = t;
+                        }
+                    } catch {}
+                    await swalError(msg, "삭제 실패");
                     return;
                 }
 
-                alert("공유 설비가 삭제되었습니다.");
-                deleteModal.classList.add("hidden");
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "삭제 완료",
+                    text: "공유 설비가 삭제되었습니다.",
+                    timer: 1100,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
 
                 selectedEqNo = null;
-                document.getElementById("btnEdit").disabled = true;
-                document.getElementById("btnDelete").disabled = true;
-
+                setButtonsDisabled(true);
                 loadEq(state.page);
-            } catch (e) {
-                console.error(e);
-                if (String(e.message || "").includes("UNAUTHORIZED")) return;
-                alert("삭제 중 오류가 발생했습니다.");
-            }
-        });
 
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") {
-                deleteModal.classList.add("hidden");
+            } catch (e) {
+                Swal.close();
+                console.error(e);
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
+                await swalError("삭제 중 오류가 발생했습니다.", "오류");
             }
-        });
+        };
 
         document.addEventListener("DOMContentLoaded", () => {
             loadEq(0);

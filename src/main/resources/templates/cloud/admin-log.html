@@ -12,9 +12,7 @@
     <th:block layout:fragment="pageStyles">
         <style>
             /* ===== cloud 공통 레이아웃 ===== */
-            .content-wrap:has(.cloud-page) {
-                padding: 0;
-            }
+            .content-wrap:has(.cloud-page) { padding: 0; }
 
             .cloud-page {
                 height: calc(100vh - var(--topbar-h) - var(--footer-h));
@@ -57,9 +55,7 @@
                 box-sizing: border-box;
             }
 
-            .cloud-scope-tab:hover {
-                background: rgba(59, 130, 246, .18);
-            }
+            .cloud-scope-tab:hover { background: rgba(59, 130, 246, .18); }
 
             .cloud-scope-tab.active {
                 background: var(--primary);
@@ -99,10 +95,7 @@
             }
 
             /* ✅ 화면 꽉 차게 */
-            .log-wrap {
-                width: 100%;
-                max-width: none;
-            }
+            .log-wrap { width: 100%; max-width: none; }
 
             .hint {
                 font-weight: 800;
@@ -157,13 +150,8 @@
                 transition: 0.15s;
             }
 
-            .reserve-action-btn:hover {
-                filter: brightness(0.9);
-            }
-
-            .reserve-action-btn:active {
-                transform: translateY(1px);
-            }
+            .reserve-action-btn:hover { filter: brightness(0.9); }
+            .reserve-action-btn:active { transform: translateY(1px); }
 
             .btn-lite {
                 height: 40px;
@@ -206,9 +194,7 @@
                 color: #111827;
             }
 
-            tbody tr:hover {
-                background: rgba(59, 130, 246, .06);
-            }
+            tbody tr:hover { background: rgba(59, 130, 246, .06); }
 
             .pill {
                 display: inline-block;
@@ -220,60 +206,13 @@
                 background: rgba(17, 24, 39, .03);
             }
 
-            .muted {
-                color: #666;
-                font-weight: 800;
-            }
+            .muted { color: #666; font-weight: 800; }
 
             .empty {
                 padding: 24px 10px;
                 color: #777;
                 text-align: center;
                 font-weight: 800;
-            }
-
-            .pager {
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-                align-items: center;
-                margin-top: 12px;
-            }
-
-            .table-top {
-                display: flex;
-                justify-content: flex-end;
-                margin: 10px 0 14px;
-            }
-
-            .filter-bar {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-
-            .tilde {
-                padding: 0 4px;
-                color: #666;
-                font-weight: 800;
-            }
-
-            .input-date {
-                height: 40px;
-                border: 1px solid #dfe3ea;
-                border-radius: 10px;
-                padding: 0 12px;
-                background: #fff;
-                font-size: 14px;
-                outline: none;
-                box-sizing: border-box;
-                font-weight: 800;
-            }
-
-            .input-date:focus {
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(26, 115, 232, .12);
             }
 
             /* ===== 회의실 페이징 스타일 ===== */
@@ -304,10 +243,7 @@
                 font-weight: 900;
             }
 
-            .page-btn:disabled {
-                opacity: .5;
-                cursor: not-allowed
-            }
+            .page-btn:disabled { opacity: .5; cursor: not-allowed }
 
             /* 폴더명 클릭(링크처럼) */
             .link-folder {
@@ -319,9 +255,7 @@
                 color: #1d4ed8;
             }
 
-            .link-folder:hover {
-                text-decoration: underline;
-            }
+            .link-folder:hover { text-decoration: underline; }
 
             /* 폴더 상세(토글 영역) */
             .child-row td {
@@ -343,13 +277,12 @@
                 align-items: center;
             }
 
-            .child-item .icon {
-                width: 18px;
-                text-align: center;
-            }
+            .child-item .icon { width: 18px; text-align: center; }
+            .child-item .name { color: #111827; }
 
-            .child-item .name {
-                color: #111827;
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
             }
         </style>
     </th:block>
@@ -405,17 +338,43 @@
 </div>
 
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script th:inline="javascript">
-        // scope: URL에서 읽기 (없으면 DEPT)
+        /* =========================
+           SweetAlert2 (예약 페이지 스타일 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+        const SWAL_GRAY = "#9ca3af";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({ icon, title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+
+        function swalLoading(title="불러오는 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
         // scope: URL에서 읽기 (없으면 DEPT)
         const scope = new URLSearchParams(window.location.search).get("scope") || "DEPT";
         console.log("[admin-log] scope(from url):", scope);
 
-        const size = 10;  // 페이지당 10개
+        const size = 10;          // 페이지당 10개
         const MAX_PAGES = 5;      // 서버 정책(최대 5페이지)과 맞춤
         let totalPages = 1;       // 확정된 총 페이지 수(1~5)
         let lastQueryKey = "";    // 검색조건 바뀌었는지 판별
-        let page = 0;     // 0-base page
+        let page = 0;             // 0-base page
 
         const el = {
             tbody: document.getElementById("tbody"),
@@ -434,7 +393,19 @@
             });
 
             const text = await res.text();
-            const json = text ? JSON.parse(text) : null;
+
+            // ✅ JSON 파싱 안전 처리
+            let json = null;
+            try { json = text ? JSON.parse(text) : null; } catch (e) {
+                console.error("[apiJson] JSON parse error:", text);
+                throw new Error("서버 응답 형식이 올바르지 않습니다.");
+            }
+
+            if (res.status === 401 || res.status === 403) {
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
+                location.href = "/login";
+                throw new Error("UNAUTHORIZED");
+            }
 
             if (!res.ok) {
                 console.error("[apiJson] Error response:", json);
@@ -465,7 +436,6 @@
 
         // ✅ 0페이지 기준으로 hasNext를 따라가며 총 페이지(최대 5) 확정
         async function detectTotalPages(firstSlice, params) {
-            // 결과가 없으면 페이징 없음
             if (!firstSlice || !Array.isArray(firstSlice.items) || firstSlice.items.length === 0) return 1;
 
             let total = 1;
@@ -474,8 +444,6 @@
 
             while (cur.hasNext && total < MAX_PAGES) {
                 const next = await fetchSlice(nextPage, params);
-
-                // 안전: 혹시 서버가 빈 배열을 주면 중단
                 if (!next || !Array.isArray(next.items) || next.items.length === 0) break;
 
                 total++;
@@ -495,7 +463,6 @@
 
         function parseYMD(s){
             if (!s) return null;
-            // input[type=date]는 YYYY-MM-DD
             const [y,m,d] = s.split("-").map(Number);
             if (!y || !m || !d) return null;
             return new Date(y, m - 1, d); // 로컬 00:00
@@ -505,8 +472,6 @@
             const d = new Date(date);
             const day = d.getDate();
             d.setMonth(d.getMonth() + months);
-
-            // 말일 보정(예: 3/31 -1개월 => 3/03 같은 꼬임 방지)
             if (d.getDate() !== day) d.setDate(0);
             return d;
         }
@@ -521,37 +486,34 @@
             // 1) 역전 방지: to >= from
             if (to < from) {
                 el.toDate.value = el.fromDate.value;
-                if (!silent) alert("종료 날짜는 시작 날짜보다 빠를 수 없습니다.");
+                if (!silent) swalWarn("종료 날짜는 시작 날짜보다 빠를 수 없습니다.");
             }
 
             // 2) 3개월 제한: from >= (to - 3개월)
             const to2 = parseYMD(el.toDate.value);
-            const minFrom = addMonths(to2, -3); // to 기준 3개월 전
+            const minFrom = addMonths(to2, -3);
             const from2 = parseYMD(el.fromDate.value);
 
             if (from2 < minFrom) {
                 el.fromDate.value = fmtYMD(minFrom);
-                if (!silent) alert("조회 기간은 최대 3개월까지만 가능합니다.");
+                if (!silent) swalWarn("조회 기간은 최대 3개월까지만 가능합니다.");
             }
 
             // date picker 자체 제한도 같이 갱신
             el.toDate.min = el.fromDate.value;
             el.fromDate.max = el.toDate.value;
 
-            // 오늘 이후 선택 금지(원하면)
-            const today = new Date();
-            const todayStr = fmtYMD(today);
+            // 오늘 이후 선택 금지
+            const todayStr = fmtYMD(new Date());
             el.fromDate.max = Math.min(el.fromDate.max || todayStr, todayStr);
             el.toDate.max = todayStr;
         }
 
         function bindDateGuards(){
-            // 오늘 이후 선택 금지(원하면 유지)
             const todayStr = fmtYMD(new Date());
             el.fromDate.max = todayStr;
             el.toDate.max = todayStr;
 
-            // 상호 제약
             el.fromDate.addEventListener("change", () => normalizeDateRange());
             el.toDate.addEventListener("change", () => normalizeDateRange());
         }
@@ -569,23 +531,6 @@
             return String(dt).replace("T", " ").slice(0, 19);
         }
 
-        // ✅ 같은 batchId에 폴더 로그가 있으면, 그 batch의 파일 로그는 메인에서 숨김(폴더 펼침에서만 보여줌)
-        function collapseNested(items) {
-            if (!Array.isArray(items)) return [];
-
-            const hasFolderBatch = new Set(
-                items
-                    .filter(x => String(x.itemType || "").toUpperCase() === "FOLDER" && x.batchId)
-                    .map(x => x.batchId)
-            );
-
-            return items.filter(x => {
-                const type = String(x.itemType || "").toUpperCase();
-                if (type !== "FILE") return true;
-                return !hasFolderBatch.has(x.batchId);
-            });
-        }
-
         function render(rows) {
             el.tbody.innerHTML = "";
 
@@ -599,29 +544,28 @@
                 const isFolder = String(it.itemType || "").toUpperCase() === "FOLDER";
 
                 tr.innerHTML = `
-      <td><span class="pill">${actionLabel(it.action)}</span></td>
-      <td>${fmtDT(it.actionAt)}</td>
-      <td><span class="pill">${isFolder ? "폴더" : "파일"}</span></td>
-      <td>
-        ${
+                    <td><span class="pill">${actionLabel(it.action)}</span></td>
+                    <td>${fmtDT(it.actionAt)}</td>
+                    <td><span class="pill">${isFolder ? "폴더" : "파일"}</span></td>
+                    <td>
+                        ${
                     isFolder
                         ? `<button type="button"
-                  class="link-folder"
-                  data-folder-no="${it.itemId ?? ""}"
-                  data-batch-id="${it.batchId ?? ""}">
-                ${it.itemName || "-"}
-              </button>`
+                                          class="link-folder"
+                                          data-folder-no="${it.itemId ?? ""}"
+                                          data-batch-id="${it.batchId ?? ""}">
+                                        ${it.itemName || "-"}
+                                   </button>`
                         : `${it.itemName || "-"}`
                 }
-      </td>
-      <td>${it.actor || "-"}</td>
-      <td>${it.batchId || "-"}</td>
-    `;
+                    </td>
+                    <td>${it.actor || "-"}</td>
+                    <td>${it.batchId || "-"}</td>
+                `;
 
                 el.tbody.appendChild(tr);
             }
 
-            // 폴더 클릭 토글 바인딩
             el.tbody.querySelectorAll(".link-folder").forEach(btn => {
                 btn.addEventListener("click", () => toggleFolderDetail(btn));
             });
@@ -640,10 +584,8 @@
                 return b;
             };
 
-            // 이전
             el.paging.appendChild(mkBtn("‹", () => loadLogs(current - 1), current === 0));
 
-            // total은 1~5로 확정되어 있으니 그대로 보여주면 됨
             const windowSize = 5;
             const start = Math.max(0, current - Math.floor(windowSize / 2));
             const end = Math.min(total - 1, start + windowSize - 1);
@@ -653,7 +595,6 @@
                 el.paging.appendChild(mkBtn(String(p + 1), () => loadLogs(p), false, p === current));
             }
 
-            // 다음
             el.paging.appendChild(mkBtn("›", () => loadLogs(current + 1), current >= total - 1));
         }
 
@@ -666,30 +607,44 @@
             const from = el.fromDate.value;
             const to = el.toDate.value;
 
+            // ✅ 날짜 미선택 방지(초기값 세팅 못된 경우)
+            if (!from || !to) {
+                await swalWarn("조회 기간(시작/종료 날짜)을 선택해주세요.");
+                return;
+            }
+
             const params = { q, from, to };
             const key = buildQueryKey(params);
 
-            // ✅ 검색조건이 바뀌면 totalPages를 다시 확정해야 함
             const queryChanged = (key !== lastQueryKey);
             if (queryChanged) {
                 lastQueryKey = key;
-                totalPages = 1; // 임시 리셋
+                totalPages = 1;
             }
 
-            // 현재 페이지 데이터 로드
-            const slice = await fetchSlice(page, params);
+            try {
+                swalLoading("조회 중...", "관리자 삭제 로그를 불러오고 있어요.");
 
-            const rows = slice.items;
-            render(rows);
+                const slice = await fetchSlice(page, params);
+                const rows = slice.items;
+                render(rows);
 
-            // ✅ 처음 로드/검색조건 변경 시: 0페이지 기준으로 총 페이지 확정(최대 5)
-            if (queryChanged) {
-                // 0페이지부터 계산하는 게 “1페이지에서도 1,2,3이 안정적으로 보이게” 하는 포인트
-                const first = (page === 0) ? slice : await fetchSlice(0, params);
-                totalPages = await detectTotalPages(first, params);
+                if (queryChanged) {
+                    const first = (page === 0) ? slice : await fetchSlice(0, params);
+                    totalPages = await detectTotalPages(first, params);
+                }
+
+                Swal.close();
+                renderPaging(page, totalPages);
+
+            } catch (e) {
+                Swal.close();
+
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
+
+                console.error(e);
+                await swalError(e.message || "조회 중 오류가 발생했습니다.", "오류");
             }
-
-            renderPaging(page, totalPages);
         }
 
         async function toggleFolderDetail(btn) {
@@ -705,7 +660,6 @@
             const folderNo = btn.dataset.folderNo;
             const batchId = btn.dataset.batchId;
 
-            // 안전장치
             if (!folderNo || !batchId) {
                 const detailTr = document.createElement("tr");
                 detailTr.className = "child-row";
@@ -720,6 +674,7 @@
             tr.insertAdjacentElement("afterend", detailTr);
 
             try {
+                // ✅ 여기만 로딩을 따로 띄우면 과해져서(토글 UX), 행 내부 "불러오는 중..."만 유지
                 const items = await apiJson(
                     `/api/v1/cloud/trash/admin-log/children?batchId=${encodeURIComponent(batchId)}&folderNo=${encodeURIComponent(folderNo)}`
                 );
@@ -732,22 +687,23 @@
                 const html = items.map(x => {
                     const isFolder = String(x.itemType || "").toUpperCase() === "FOLDER";
                     return `
-        <div class="child-item">
-          <div class="icon">${isFolder ? "📁" : "📄"}</div>
-          <div class="name">${x.itemName || "-"}</div>
-        </div>
-      `;
+                        <div class="child-item">
+                          <div class="icon">${isFolder ? "📁" : "📄"}</div>
+                          <div class="name">${x.itemName || "-"}</div>
+                        </div>
+                    `;
                 }).join("");
 
                 detailTr.innerHTML = `<td colspan="6"><div class="child-list">${html}</div></td>`;
             } catch (e) {
                 detailTr.innerHTML = `<td colspan="6"><div class="muted">상세 조회 실패: ${e.message}</div></td>`;
+                // ✅ 토글 상세 실패는 팝업까지 띄우면 과해서, 행에만 표시(원하면 swalError로 바꿔도 됨)
             }
         }
 
         // 조회 버튼
         el.btnSearch?.addEventListener("click", () => {
-            loadLogs(0).catch(e => alert(e.message));
+            loadLogs(0);
         });
 
         // 초기 로딩: 최근 7일
@@ -756,26 +712,16 @@
             const weekAgo = new Date(today);
             weekAgo.setDate(today.getDate() - 7);
 
-            const fmtYMD = (d) => {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, "0");
-                const dd = String(d.getDate()).padStart(2, "0");
-                return `${yyyy}-${mm}-${dd}`;
-            };
-
             el.fromDate.value = fmtYMD(weekAgo);
             el.toDate.value = fmtYMD(today);
 
             bindDateGuards();
             normalizeDateRange({ silent: true });
 
-            loadLogs(0).catch(e => alert(e.message));
+            loadLogs(0);
         });
-
     </script>
 </th:block>
 
 </body>
 </html>
-
-

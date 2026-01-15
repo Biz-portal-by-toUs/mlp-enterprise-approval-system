@@ -121,11 +121,20 @@
 
             .time-header div,
             .car-row div{
-                border-bottom:1px solid #e0e0e0;
-                border-right:1px solid #e0e0e0;
-                text-align:center;
-                padding:8px 0;
-                font-size:13px;
+                border-bottom: 1px solid #e0e0e0;
+                border-right: 1px solid #e0e0e0;
+                text-align: center;
+
+                /* ✅ 높이 살짝 업(너무 뚱뚱 X) */
+                min-height: 44px;     /* 기존엔 padding으로만 높이 결정 */
+                padding: 10px 0;      /* 기존 8px 0 -> 10px 0 */
+
+                font-size: 13px;
+
+                /* ✅ 텍스트 세로 가운데 정렬 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .time-header{ background:#f0f2f5; font-weight:bold; }
@@ -229,6 +238,11 @@
                 color:#fff;
             }
             #reserveModal #deleteBtn:hover{ filter: brightness(0.95); }
+
+            /* ✅ SweetAlert가 reserveModal(999999)보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
         </style>
     </th:block>
 </head>
@@ -274,11 +288,11 @@
 
                 <!-- 예약/취소 모달 -->
                 <div id="reserveModal" style="
-          display:none;
-          position:fixed; inset:0;
-          background: rgba(0,0,0,.35);
-          align-items:center; justify-content:center;
-          z-index: 999999;">
+                  display:none;
+                  position:fixed; inset:0;
+                  background: rgba(0,0,0,.35);
+                  align-items:center; justify-content:center;
+                  z-index: 999999;">
 
                     <div class="modal-card" style="position:relative; z-index:1000000;">
                         <h2>법인 차량 예약</h2>
@@ -315,6 +329,7 @@
 
 <th:block layout:fragment="pageScripts">
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         const START_HOUR = 9;
@@ -346,6 +361,56 @@
 
         const API_BASE = window.location.origin;
 
+        /* =========================
+           SweetAlert2 (회의실 예약 페이지 스타일 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({
+                icon, title, text,
+                confirmButtonColor: SWAL_PRIMARY
+            });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon: "success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon: "error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon: "warning", title, text }); }
+        function swalInfo(text, title="알림") { return swalAlert({ icon: "info", title, text }); }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
         async function apiFetch(path, options = {}) {
             const url = API_BASE + path;
             const res = await fetch(url, {
@@ -355,7 +420,8 @@
             });
 
             if (res.status === 401 || res.status === 403) {
-                alert("로그인이 만료되었어요. 다시 로그인 해 주세요.");
+                await swalWarn("로그인이 만료되었어요. 다시 로그인해 주세요.", "로그인 만료");
+                location.href = "/login";
                 throw new Error("UNAUTHORIZED");
             }
             return res;
@@ -513,13 +579,11 @@
                 const row = document.createElement("div");
                 row.className = "car-row";
 
-                // ✅ FIX 1) carNo(=PK) 반드시 심기 (그래야 예약 POST 때 null 안 됨)
+                // ✅ FIX 1) carNo(=PK) 반드시 심기
                 const carNo = pick(car, ["carNo", "corporateCarNo", "id"], null);
-                row.dataset.carNo = carNo; // => data-car-no="..."
-                // (옵션) plateNo도 저장해두면 디버깅/표시용으로 편함
+                row.dataset.carNo = carNo;
                 row.dataset.plateNo = pick(car, ["plateNo", "carPlateNo", "plate"], "");
 
-                // ✅ 표시 라벨도 안전하게
                 const carName = pick(car, ["carName", "name"], "-");
                 const plateNo = pick(car, ["plateNo", "carPlateNo", "plate"], "-");
                 row.innerHTML = `<div class="car-name">${carName} (${plateNo})</div>`;
@@ -541,7 +605,7 @@
         }
 
         function bindSelectable(cell) {
-            cell.onclick = () => {
+            cell.onclick = async () => {
                 if (cell.classList.contains("disabled")) return;
 
                 const row = cell.closest(".car-row");
@@ -555,7 +619,7 @@
                 }
 
                 if (row !== firstClickCell.closest(".car-row")) {
-                    alert("같은 차량에서만 선택할 수 있어요.");
+                    await swalWarn("같은 차량에서만 선택할 수 있어요.");
                     clearSelection();
                     firstClickCell = null;
                     return;
@@ -570,7 +634,7 @@
                 for (let i = s; i <= e; i++) {
                     if (cells[i].classList.contains("reserved-other") ||
                         cells[i].classList.contains("reserved-mine")) {
-                        alert("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
+                        await swalWarn("중간에 이미 예약된 시간이 있어서 선택할 수 없어요.");
                         clearSelection();
                         firstClickCell = null;
                         return;
@@ -624,7 +688,7 @@
                 const resvCarNo = pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null);
                 if (!resvCarNo) return;
 
-                // ✅ FIX 2) buildTable에서 data-car-no 심었으니 여기서 정상 매칭됨
+                // ✅ FIX 2) data-car-no 매칭
                 const row = document.querySelector(`.car-row[data-car-no="${resvCarNo}"]`);
                 if (!row) return;
 
@@ -648,14 +712,6 @@
                     resv.reservedByDepName ??
                     resv.depName ?? resv.resvDepName ?? resv.departmentName ?? resv.deptName ?? resv.resvEmp?.depName ?? "-";
 
-                // (표시용) 가능하면 "차량명(번호판)" 형태로 툴팁도 맞춤
-                const carNameFromResv = pick(resv, ["carName", "corporateCarName", "car.carName"], null);
-                const plateNoFromResv = pick(resv, ["plateNo", "car.plateNo", "carPlateNo"], null);
-                const fallbackPlate = row.dataset.plateNo || "-";
-                const carLabel = carNameFromResv
-                    ? `${carNameFromResv} (${plateNoFromResv ?? fallbackPlate})`
-                    : `차량번호: ${plateNoFromResv ?? fallbackPlate}`;
-
                 for (let i = startIdx; i < endIdx; i++) {
                     const cell = cells[i];
                     if (!cell) continue;
@@ -673,7 +729,13 @@
                         cell.onclick = () => openCancelModal(resv, empName, depName);
                         cell.style.cursor = "pointer";
                     } else {
-                        cell.onclick = () => {};
+                        cell.onclick = async () => {
+                            clearSelection();
+                            await swalInfo(
+                                "다른 사용자가 예약한 시간입니다.\n다른 시간을 선택해주세요.",
+                                "예약 불가"
+                            );
+                        };
                         cell.style.cursor = "not-allowed";
                     }
                 }
@@ -726,11 +788,9 @@
 
             const carNo = pick(resv, ["carNo", "corporateCarNo", "car.carNo"], null);
 
-            // ✅ fallback 1) 테이블 row에 심어둔 plateNo 사용
             const row = carNo ? document.querySelector(`.car-row[data-car-no="${carNo}"]`) : null;
             const fallbackPlate = row?.dataset?.plateNo || "-";
 
-            // ✅ fallback 2) 차량 목록(CARS)에서도 plateNo 가져올 수 있게(있으면 더 정확)
             const carObj = CARS.find(c => String(pick(c, ["carNo","corporateCarNo","id"], "")) === String(carNo));
             const fallbackPlate2 = carObj ? pick(carObj, ["plateNo","carPlateNo","plate"], fallbackPlate) : fallbackPlate;
 
@@ -765,6 +825,7 @@
             modal.dataset.resvNo = pick(resv, ["resvNo", "reservationNo", "id"], "");
         }
 
+        /* ===== 모달 버튼 ===== */
         cancelBtn.onclick = () => { modal.style.display = "none"; };
 
         reserveBtn.onclick = async () => {
@@ -782,16 +843,18 @@
             };
 
             if (!body.carNo) {
-                alert("차량 식별자(carNo)가 없습니다. 차량 목록 응답에 carNo/id가 내려오는지 확인해주세요.");
+                await swalError("차량 식별자(carNo)가 없습니다.\n차량 목록 응답에 carNo/id가 내려오는지 확인해주세요.", "예약 불가");
                 return;
             }
 
-            // ✅ 1) 예약 직전 최신 데이터로 갱신
+            // 로딩 + 최신화 + 충돌체크 (회의실 예약과 동일 흐름)
+            swalLoading("예약 확인 중...", "예약 가능 여부를 확인하고 있어요.");
+
             await loadReservations();
 
-            // ✅ 2) 최신 데이터 기준으로 충돌 체크
             if (hasConflict({ carNo, dateStr, startTime, endTime })) {
-                alert("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.");
+                Swal.close();
+                await swalError("이미 다른 사용자가 해당 시간에 예약했습니다.\n새로고침 후 다른 시간을 선택해주세요.", "예약 불가");
                 clearSelection();
                 modal.style.display = "none";
                 return;
@@ -804,7 +867,8 @@
             });
 
             if (!res.ok) {
-                // 서버가 text만 주는 경우도 있고 json 주는 경우도 있어서 안전처리
+                Swal.close();
+
                 let msg = "";
                 try {
                     const errJson = await res.json();
@@ -813,12 +877,24 @@
                     msg = await res.text();
                 }
 
-                alert("예약 실패: " + (msg || "알 수 없는 오류"));
+                await swalError(
+                    msg ? `예약 실패: ${msg}` : "예약에 실패했습니다.\n새로고침 후 다시 시도해주세요.",
+                    "예약 실패"
+                );
 
-                // ✅ 실패 시에도 최신화
                 await loadReservations();
                 return;
             }
+
+            Swal.close();
+            await Swal.fire({
+                icon: "success",
+                title: "예약 완료",
+                text: "법인 차량 예약이 완료되었습니다.",
+                timer: 1200,
+                showConfirmButton: false,
+                confirmButtonColor: SWAL_PRIMARY
+            });
 
             modal.style.display = "none";
             clearSelection();
@@ -827,36 +903,58 @@
 
         deleteBtn.onclick = async () => {
             const resvNo = modal.dataset.resvNo;
-            if (!confirm("정말 예약을 취소할까요?")) return;
+
+            const ok = await swalConfirm({
+                title: "예약 취소",
+                text: "정말 예약을 취소할까요?",
+                icon: "warning",
+                confirmText: "취소",
+                cancelText: "닫기",
+                confirmColor: SWAL_RED
+            });
+            if (!ok) return;
+
+            swalLoading("취소 처리 중...", "잠시만 기다려 주세요.");
 
             const res = await apiFetch(`/api/v1/corporate-car-reservations/${resvNo}`, { method: "DELETE" });
             if (!res.ok) {
-                alert("취소 실패");
+                Swal.close();
+                await swalError("취소에 실패했습니다. 잠시 후 다시 시도해주세요.", "취소 실패");
                 return;
             }
+
+            Swal.close();
+            await Swal.fire({
+                icon: "success",
+                title: "취소 완료",
+                text: "예약이 취소되었습니다.",
+                timer: 1000,
+                showConfirmButton: false,
+                confirmButtonColor: SWAL_PRIMARY
+            });
 
             modal.style.display = "none";
             await loadReservations();
         };
 
+        /* ===== 예약 버튼(상단) ===== */
         document.getElementById("openReserve").onclick = async () => {
             showReserveMode();
             document.getElementById("purpose").value = "";
 
             if (dragCells.length === 0) {
-                alert("예약할 시간을 선택하세요.");
+                await swalWarn("예약할 시간을 선택하세요.");
                 return;
             }
 
             const row = dragCells[0].closest(".car-row");
 
-            // ✅ 여기서 이제 row.dataset.carNo가 항상 존재
             const carNo = row.dataset.carNo;
-            // ✅ "null"/"undefined"/"" 방지
             if (!carNo || carNo === "null" || carNo === "undefined") {
-                alert("차량 식별자(carNo)가 없습니다. 차량 목록 응답에 carNo/id가 내려오는지 확인해주세요.");
+                await swalError("차량 식별자(carNo)가 없습니다.\n차량 목록 응답에 carNo/id가 내려오는지 확인해주세요.", "예약 불가");
                 return;
             }
+
             const carLabel = row.querySelector(".car-name").innerText;
 
             const allCells = [...row.querySelectorAll(".time-cell")];
@@ -881,6 +979,7 @@
             modal.dataset.end = idxToTime(endIdx);
         };
 
+        /* ===== 자동 갱신 ===== */
         setInterval(() => {
             loadReservations().catch(()=>{});
         }, 30000);
