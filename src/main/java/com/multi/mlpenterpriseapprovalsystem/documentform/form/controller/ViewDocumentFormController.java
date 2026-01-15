@@ -102,6 +102,10 @@ public class ViewDocumentFormController {
 
         // 이미 쓰고 있지만, 템플릿이 perm_canApprove 로 읽으니 확실하게 보장
         model.addAttribute("perm_canApprove", canApprove);
+
+        model.addAttribute("meEmpId", isLogin ? customUser.getUsername() : "");
+        model.addAttribute("meRoles", auths.stream().sorted().toList());
+        model.addAttribute("meComId", isLogin ? customUser.getComId() : "");
     }
 
     private Set<String> extractAuthorities(CustomUser customUser) {
