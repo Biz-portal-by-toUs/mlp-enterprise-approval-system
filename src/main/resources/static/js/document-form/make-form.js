@@ -20,15 +20,9 @@ const TIPTAP_V = '2.11.2'
 /** fetch 재귀 방지용: 원본 fetch 고정 */
 const _fetch = window.fetch.bind(window)
 
-/** 토큰 키 고정 (accessToken) */
-function getAccessToken() {
-    return (localStorage.getItem('accessToken') || '').trim()
-}
 
 /** Authorization Bearer 자동 처리 */
 async function apiFetch(url, options = {}) {
-    const token = getAccessToken()
-
     const headers = new Headers(options.headers || {})
     if (!headers.has('Accept')) headers.set('Accept', 'application/json')
 
@@ -38,15 +32,23 @@ async function apiFetch(url, options = {}) {
         headers.set('Content-Type', 'application/json')
     }
 
-    if (token) {
-        const hasBearer = /^Bearer\s+/i.test(token)
-        headers.set('Authorization', hasBearer ? token : `Bearer ${token}`)
-    }
-
+    // 쿠키 기반 인증(동일 오리진). 다른 오리진이면 include로 변경
     return _fetch(url, { ...options, headers, credentials: 'same-origin' })
 }
 
-// ✅ ViewController에서 주입된 docfoNo 사용 (수정 화면)
+function getMeEmpId() {
+    return String(window.__ME_EMP_ID || '').trim();
+}
+
+function getMeRoles() {
+    return Array.isArray(window.__ME_ROLES) ? window.__ME_ROLES : [];
+}
+
+function getMeComId() {
+    return String(window.__ME_COM_ID || '').trim();
+}
+
+// ViewController에서 주입된 docfoNo 사용 (수정 화면)
 // - make-form(생성)에서는 null
 function getDocfoNoFromServerInjected() {
     const v = window.__DOCFO_NO__
@@ -283,8 +285,20 @@ function buildFullHtml({ docfoName, categories, bodyHtml }) {
 }
 
 // TODO: 로그인 연동 시 교체
-function getComId() { return window.__COM_ID__ || 'C01' }
-function getWriterId() { return window.__WRITER_ID__ || 'E000001' }
+function getComId() {
+    const cid = getMeComId()
+    return cid || null
+}
+
+function getWriterId() {
+    // 서버 주입된 내 empId를 우선 사용
+    const me = getMeEmpId()
+    if (me) return me
+
+    // (혹시 기존 코드 호환용)
+    const legacy = String(window.__WRITER_ID__ || '').trim()
+    return legacy || null
+}
 
 // ASCII 0~32(공백/개행/탭/제어문자) + NBSP/ZWSP/BOM만 있으면 "의미없는 텍스트"로 간주
 function isMeaninglessWhitespace(s) {
