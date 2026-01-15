@@ -1,146 +1,99 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
 <head>
     <title>사내 규정 등록 - Bizportal</title>
     <style>
-        /* ✅ 페이지 헤더 영역 (타이틀 + 버튼 한 줄 배치) */
-        .header-section {
-            display: flex;
-            justify-content: space-between; /* 좌우 끝으로 배치 */
-            align-items: flex-end; /* 하단 라인 맞춤 */
-            margin-bottom: 30px;
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+        .page-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; }
+        .page-sub { font-size: 15px; font-weight: 600; color: var(--muted); }
+
+        .btn {
+            height: 44px; padding: 0 24px; border-radius: 8px; font-size: 15px; font-weight: 700;
+            cursor: pointer; border: none; background: var(--primary); color: #fff; transition: 0.15s;
         }
+        .btn:hover { filter: brightness(0.9); }
+        .btn:disabled { background: #e2e8f0; cursor: not-allowed; }
 
-        .title-group .page-title { font-size: 34px; font-weight: 900; margin: 0; line-height: 1.2; }
-        .title-group .page-sub { font-size: 18px; font-weight: 800; margin: 8px 0 0; color: #111; }
-
-        .actions {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
+        .form-wrap {
+            background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 35px;
+            max-width: 1000px; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
+        .form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px; }
 
-        .btn-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 6px;
-        }
-        .btn-caption {
-            font-size: 12px;
-            color: var(--muted);
-            font-weight: 700;
-            margin-right: 4px;
-        }
-
-        .prov-page .btn {
-            border: 0; border-radius: 12px; padding: 12px 24px; font-weight: 900; cursor: pointer;
-            background: #fff; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px;
-            transition: 0.2s; font-size: 14px; height: 46px;
-        }
-        .prov-page .btn.primary { background: var(--primary); color: #fff; border: none; box-shadow: 0 10px 20px rgba(59,130,246,.22); }
-        .prov-page .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* ✅ 폼 카드 스타일 (detail.html 스타일 계승) */
-        .prov-page .card { background: #f1f3f6; border-radius: 24px; padding: 30px; }
-        .form-card {
-            background: #fff; border-radius: 20px; padding: 35px;
-            border: 1px solid var(--line); max-width: 1000px; margin: 0 auto;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-        }
-
-        .form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .field { margin-bottom: 24px; }
-        .label { display: block; font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; }
-
+        .label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
         .input, .textarea, .select {
-            width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #f8fafc;
-            padding: 14px 18px; font-size: 15px; font-weight: 700; transition: 0.2s; outline: none; box-sizing: border-box;
+            width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #f9fafb;
+            padding: 12px 16px; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box;
         }
-        .input:focus, .textarea:focus, .select:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
-        .textarea { min-height: 250px; resize: vertical; line-height: 1.6; }
+        .input:focus, .textarea:focus { border-color: var(--primary); background: #fff; }
 
         .file-upload-zone {
-            border: 2px dashed var(--line); border-radius: 16px; padding: 30px; text-align: center;
-            background: #f8fafc; transition: 0.2s; cursor: pointer;
+            border: 2px dashed var(--line); border-radius: 12px; padding: 40px; text-align: center;
+            background: #fcfdfe; transition: 0.2s; cursor: pointer;
         }
-        .file-upload-zone:hover { border-color: var(--primary); background: #f0f7ff; }
-        .file-info { margin-top: 10px; font-size: 15px; font-weight: 800; color: var(--primary); }
+        .file-upload-zone:hover { border-color: var(--primary); background: #eff6ff; }
+        .file-info { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
 
-        .progress-wrap { margin-top: 30px; display: none; }
-        progress { width: 100%; height: 8px; border-radius: 4px; overflow: hidden; appearance: none; border: none; background: #e2e8f0; }
-        progress::-webkit-progress-value { background: var(--primary); }
-
-        #submitBtn {
-            width: 200px;
-            justify-content: center;
-        }
+        .progress-wrap { margin-top: 24px; display: none; }
+        progress { width: 100%; height: 10px; border-radius: 5px; appearance: none; border: none; background: #f1f5f9; }
+        progress::-webkit-progress-value { background: var(--primary); border-radius: 5px; }
     </style>
 </head>
 <body>
-<div layout:fragment="content" class="prov-page">
+<div layout:fragment="content">
     <div class="page-with-subbar">
         <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
 
-        <main style="padding: 0 26px; flex: 1;">
-            <div class="header-section">
-                <div class="title-group">
-                    <div class="page-title">사내 규정 관리</div>
-                    <div class="page-sub">사내 규정 등록</div>
+        <main style="padding: 24px; flex: 1;">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">사내 규정 등록</div>
+                    <div class="page-sub">규정을 등록하면 AI가 자동으로 학습하여 챗봇 응대에 활용합니다.</div>
                 </div>
-
-                <div class="actions">
-                    <div class="btn-wrapper">
-                        <button class="btn primary" id="submitBtn" type="button">
-                            규정 등록
-                        </button>
-                        <span class="btn-caption">등록과 동시에 AI 챗봇 학습이 시작됩니다</span>
-                    </div>
+                <div style="text-align: right">
+                    <button class="btn" id="submitBtn">규정 등록</button>
+                    <div style="font-size:12px; color:var(--muted); margin-top:6px; font-weight:600">등록 시 AI 학습이 시작됩니다.</div>
                 </div>
             </div>
 
-            <section class="card">
-                <div class="form-card">
-                    <div class="form-grid">
-                        <div class="field" style="margin-bottom:0">
-                            <span class="label">규정 제목 (최대 50자)</span>
-                            <input id="docTitle" class="input" placeholder="규정의 제목을 입력하세요" maxlength="50">
-                        </div>
-                        <div class="field" style="margin-bottom:0">
-                            <span class="label">공개 설정</span>
-                            <select id="isPublic" class="select">
-                                <option value="true" selected>전사 공개</option>
-                                <option value="false">비공개 (관리자 전용)</option>
-                            </select>
-                        </div>
-                    </div>
-
+            <section class="form-wrap">
+                <div class="form-grid">
                     <div class="field">
-                        <span class="label">규정 상세 설명</span>
-                        <textarea id="description" class="textarea" placeholder="AI가 참고할 규정의 상세 내용을 입력하세요."></textarea>
+                        <span class="label">규정 제목 (최대 50자)</span>
+                        <input id="docTitle" class="input" placeholder="제목을 입력하세요.">
                     </div>
-
                     <div class="field">
-                        <span class="label">첨부 파일 (문서 전용)</span>
-                        <div class="file-upload-zone" onclick="$('file').click()">
-                            <input id="file" type="file" style="display:none;" />
-                            <div id="fileInfo" class="file-info">📄 클릭하여 파일 선택</div>
-                            <div style="font-size:13px; color:var(--muted); margin-top:6px; font-weight:600;">PDF, DOCX, TXT 파일만 업로드 가능합니다.</div>
-                        </div>
+                        <span class="label">공개 설정</span>
+                        <select id="isPublic" class="select">
+                            <option value="true">전사 공개</option>
+                            <option value="false">비공개 (관리자 전용)</option>
+                        </select>
                     </div>
+                </div>
 
-                    <div class="progress-wrap" id="progressWrap">
-                        <progress id="progress" value="0" max="100"></progress>
-                        <div id="statusMsg" class="status-msg" style="margin-top:15px; font-weight:700; text-align:center; color:var(--primary);"></div>
+                <div class="field" style="margin-bottom: 24px">
+                    <span class="label">규정 상세 설명</span>
+                    <textarea id="description" class="textarea" placeholder="상세 규정 내용을 입력하세요."></textarea>
+                </div>
+
+                <div class="field">
+                    <span class="label">첨부 파일 (문서 전용)</span>
+                    <div class="file-upload-zone" onclick="$('file').click()">
+                        <input id="file" type="file" style="display:none;" />
+                        <div id="fileInfo" class="file-info">📄 클릭하여 파일 선택</div>
+                        <div style="font-size:13px; color:var(--muted); font-weight:500">HWP, DOCX, PDF, TXT, MD 파일만 지원합니다.</div>
                     </div>
+                </div>
+
+                <div class="progress-wrap" id="progressWrap">
+                    <progress id="progress" value="0" max="100"></progress>
+                    <div id="statusMsg" style="margin-top:12px; font-weight:700; text-align:center; color:var(--primary);"></div>
                 </div>
             </section>
         </main>
     </div>
 </div>
+
 
 <th:block layout:fragment="pageScripts">
     <script th:inline="javascript">

@@ -226,6 +226,7 @@ public enum ErrorCode {
     // 챗봇 관련
     PROV_DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND,"PROV_DOCUMENT_NOT_FOUND","없거나 삭제된 사내 규정 문서입니다"),
     EMBEDDING_DELETE_FAILED(HttpStatus.BAD_GATEWAY,"EMBEDDING_DELETE_FAILED","벡터 삭제 실패하였습니다"),
+    EMBEDDING_UPDATE_FAILED(HttpStatus.BAD_REQUEST,"EMBEDDING_UPDATE_FAILED","공개 여부 수정 실패하였습니다"),
 
     // 채팅 관련
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다"),

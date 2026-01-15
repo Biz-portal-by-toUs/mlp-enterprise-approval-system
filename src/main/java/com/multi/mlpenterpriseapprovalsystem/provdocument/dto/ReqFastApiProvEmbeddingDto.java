@@ -21,4 +21,5 @@ public class ReqFastApiProvEmbeddingDto {
     private String contentType;
     private Long size;
     private String callbackUrl;
+    private Boolean isPublic;
 }

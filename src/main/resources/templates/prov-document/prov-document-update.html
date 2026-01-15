@@ -3,71 +3,65 @@
 <head>
     <title>규정 수정 - Bizportal</title>
     <style>
-        .prov-page .page-title { font-size: 34px; font-weight: 900; margin: 10px 0 8px; }
-        .prov-page .page-sub { font-size: 18px; font-weight: 800; margin: 0 0 20px; color: #111; }
+        .page-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; }
+        .page-sub { font-size: 15px; font-weight: 600; margin: 0 0 20px; color: var(--muted); }
 
-        .prov-page .actions { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; }
-        .prov-page .btn {
-            border: 0; border-radius: 12px; padding: 10px 24px; font-weight: 900; cursor: pointer;
-            background: #fff; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px;
-            transition: 0.2s; font-size: 14px;
+        .toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; }
+        .btn {
+            height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
+            cursor: pointer; border: 1px solid var(--line); background: #fff; transition: 0.15s;
         }
-        .prov-page .btn.primary { background: var(--primary); color: #fff; border: none; box-shadow: 0 10px 20px rgba(59,130,246,.22); }
-        .prov-page .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .btn.primary { background: var(--primary); color: #fff; border: none; }
+        .btn:hover { filter: brightness(0.95); }
 
-        .prov-page .card { background: #f1f3f6; border-radius: 18px; padding: 32px; }
-        .form-card { background: #fff; border-radius: 16px; padding: 32px; border: 1px solid var(--line); max-width: 900px; margin: 0 auto; }
-
+        .form-wrap {
+            background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 32px;
+            max-width: 900px; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
         .field { margin-bottom: 24px; }
-        .label { display: block; font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .input, .textarea {
-            width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #f8fafc;
-            padding: 14px 18px; font-size: 14px; font-weight: 700; transition: 0.2s; outline: none;
-        }
-        .input:focus, .textarea:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
-        .textarea { min-height: 300px; resize: vertical; line-height: 1.6; }
+        .label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
 
-        .radio-group { display: flex; gap: 20px; padding: 10px 0; }
-        .radio-item { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; cursor: pointer; color: #334155; }
-        .radio-item input { width: 18px; height: 18px; cursor: pointer; }
+        .input, .textarea {
+            width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #f9fafb;
+            padding: 12px 16px; font-size: 15px; font-weight: 600; outline: none; transition: 0.2s;
+        }
+        .input:focus, .textarea:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .textarea { min-height: 250px; resize: vertical; line-height: 1.6; }
+
+        .radio-group { display: flex; gap: 24px; padding: 8px 0; }
+        .radio-item { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+        .radio-item input { width: 18px; height: 18px; accent-color: var(--primary); }
     </style>
 </head>
 <body>
-<div layout:fragment="content" class="prov-page">
+<div layout:fragment="content">
     <div class="page-with-subbar">
         <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
 
-        <main style="padding: 0 26px; flex: 1;">
+        <main style="padding: 24px; flex: 1;">
             <div class="page-title">규정 정보 수정</div>
-            <div class="page-sub">사내 규정의 제목, 설명 및 공개 여부를 관리합니다.</div>
+            <div class="page-sub">규정의 제목과 노출 설정, 본문 내용을 수정합니다.</div>
 
-            <div class="actions">
-                <button class="btn" id="backBtn" type="button">취소</button>
-                <button class="btn primary" id="saveBtn" type="button">
-                    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
-                    저장하기
-                </button>
+            <div class="toolbar">
+                <button class="btn" id="backBtn">취소</button>
+                <button class="btn primary" id="saveBtn">저장하기</button>
             </div>
 
-            <section class="card">
-                <div class="form-card">
-                    <div class="field">
-                        <span class="label">규정 제목</span>
-                        <input id="docTitleInput" class="input" placeholder="문서 제목을 입력하세요">
+            <section class="form-wrap">
+                <div class="field">
+                    <span class="label">규정 제목</span>
+                    <input id="docTitleInput" class="input" placeholder="문서 제목을 입력하세요">
+                </div>
+                <div class="field">
+                    <span class="label">공개 여부</span>
+                    <div class="radio-group">
+                        <label class="radio-item"><input type="radio" name="isPublic" value="true"> 공개</label>
+                        <label class="radio-item"><input type="radio" name="isPublic" value="false"> 비공개</label>
                     </div>
-
-                    <div class="field">
-                        <span class="label">공개 여부</span>
-                        <div class="radio-group">
-                            <label class="radio-item"><input type="radio" name="isPublic" value="true"> 공개</label>
-                            <label class="radio-item"><input type="radio" name="isPublic" value="false"> 비공개</label>
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <span class="label">상세 설명 및 본문</span>
-                        <textarea id="descInput" class="textarea" placeholder="규정의 구체적인 내용을 작성하세요."></textarea>
-                    </div>
+                </div>
+                <div class="field">
+                    <span class="label">상세 설명 및 본문</span>
+                    <textarea id="descInput" class="textarea"></textarea>
                 </div>
             </section>
         </main>
@@ -79,16 +73,12 @@
         const $ = (id) => document.getElementById(id);
         const API_BASE = "";
 
-        // ✅ URL에서 ID 추출 로직 수정 (경로의 마지막 부분을 ID로 간주)
-        // ✅ 기존 로직 대신 숫자를 찾아내는 방식으로 변경
+
         const pathSegments = location.pathname.split("/").filter(Boolean);
 
-        // 뒤에서부터 확인하며 숫자인 세그먼트를 찾음
         const provNoFromPath = pathSegments.reverse().find(segment => !isNaN(segment) && segment.trim() !== "");
 
-        console.log("추출된 규정 번호:", provNoFromPath); // 디버깅용
 
-        // 1. 상세 데이터 로드
         async function loadDetail() {
             if (!provNoFromPath || isNaN(provNoFromPath)) {
                 console.error("유효한 규정 번호를 찾을 수 없습니다.");
