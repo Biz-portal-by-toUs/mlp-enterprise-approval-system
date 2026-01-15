@@ -1191,6 +1191,7 @@ CREATE INDEX ix_outbox_doc
 ALTER TABLE employee
     MODIFY COLUMN msg_stat CHAR(1) NOT NULL DEFAULT 'H',
     MODIFY COLUMN gen VARCHAR(1) NULL,
+    modify column role_no varchar(1) null,
     MODIFY COLUMN birth DATE NULL;
 
 ALTER TABLE mail
