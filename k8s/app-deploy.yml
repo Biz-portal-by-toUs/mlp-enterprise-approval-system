@@ -12,6 +12,8 @@ spec:
     metadata:
       labels:
         app: bizportal-api
+      annotations:
+        reloader.stakater.com/auto: "true"
     spec:
       containers:
         - name: api
@@ -72,6 +74,12 @@ spec:
                   name: bizportal-secrets
                   key: JWT_SECRET
 
+            - name: OPENAI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bizportal-secrets
+                  key: openai_key
+
             # bizportal-app-secrets
             # ✅ 외부 API 키들 (너가 만든 bizportal-app-secrets)
             - name: HOLIDAY_SERVICE_KEY
@@ -123,11 +131,11 @@ spec:
                   key: AWS_BUCKET
 
             # ✅ Mongo Atlas URI (ConfigMap)
-            - name: MONGODB_URI
+            - name: SPRING_DATA_MONGODB_URI
               valueFrom:
                 configMapKeyRef:
                   name: bizportal-config
-                  key: MONGODB_URI
+                  key: SPRING_DATA_MONGODB_URI
 
             # ✅ ElastiCache Redis (ConfigMap)
             - name: REDIS_HOST
@@ -185,15 +193,19 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8090
-            initialDelaySeconds: 25
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
 
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8090
-            initialDelaySeconds: 45
+            initialDelaySeconds: 90
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
 
 ---
 apiVersion: v1

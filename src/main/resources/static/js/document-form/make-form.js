@@ -122,10 +122,6 @@ async function apiFetchOrThrow(url, options = {}) {
 // 새 표 기본 열 폭(px)
 const DEFAULT_COL_WIDTH = 160
 
-// 왼쪽 프리셋(2열) 고정 폭(px)
-const PRESET_LEFT_COL_W = 120
-const PRESET_LEFT_RIGHT_COL_W = 270
-
 // ---------- DOM ----------
 const elEditor = document.getElementById('editor')
 const elToolbar = document.getElementById('toolbar')
@@ -252,42 +248,38 @@ function getCategoriesFromRadios() {
 }
 
 function extractHeaderHtmlFromTemplates() {
-    // 헤더표는 make-form.html의 <template>에 고정되어 있음(사용자는 편집하지 않음)
-    const presetTables = getPresetTablesState()
-    return `
-      <div class="df-header">${presetTables.leftHtml || ''}</div>
-      <div class="df-header">${presetTables.rightHtml || ''}</div>
-    `.trim()
+    return ''
 }
 
-function buildFullHtml({ docfoName, categories, headerHtml, bodyHtml }) {
-    const catHtml = (categories || []).map(c => `<span class="df-cat">${escapeHtml(c)}</span>`).join('')
+function buildFullHtml({ docfoName, categories, bodyHtml }) {
+    const catHtml = (categories || [])
+        .map(c => `<span class="df-cat">${escapeHtml(c)}</span>`)
+        .join('')
+
     return `<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${escapeHtml(docfoName || '')}</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;margin:0;padding:24px;background:#fff;color:#111;}
-  .df-wrap{max-width:980px;margin:0 auto;}
-  .df-title{font-size:22px;font-weight:800;margin:0 0 14px;}
-  .df-cats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;}
-  .df-cat{font-size:12px;padding:6px 10px;border-radius:999px;background:#f0f3ff;border:1px solid #d6ddff;}
-  .df-header-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px;}
-  .df-body{margin-top:10px;}
-  table{border-collapse:collapse;}
-</style>
-</head>
-<body>
-  <div class="df-wrap">
-    <h1 class="df-title">${escapeHtml(docfoName || '')}</h1>
-    <div class="df-cats">${catHtml}</div>
-    <div class="df-header-wrap" id="dfHeader">${headerHtml || ''}</div>
-    <div class="df-body" id="dfBody">${bodyHtml || ''}</div>
-  </div>
-</body>
-</html>`
+            <html lang="ko">
+            <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width,initial-scale=1"/>
+            <title>${escapeHtml(docfoName || '')}</title>
+            <style>
+              body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;margin:0;padding:24px;background:#fff;color:#111;}
+              .df-wrap{max-width:980px;margin:0 auto;}
+              .df-title{font-size:22px;font-weight:800;margin:0 0 14px;}
+              .df-cats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;}
+              .df-cat{font-size:12px;padding:6px 10px;border-radius:999px;background:#f0f3ff;border:1px solid #d6ddff;}
+              .df-body{margin-top:10px;}
+              table{border-collapse:collapse;}
+            </style>
+            </head>
+            <body>
+              <div class="df-wrap">
+                <h1 class="df-title">${escapeHtml(docfoName || '')}</h1>
+                <div class="df-cats">${catHtml}</div>
+                <div class="df-body" id="dfBody">${bodyHtml || ''}</div>
+              </div>
+            </body>
+            </html>`
 }
 
 // TODO: 로그인 연동 시 교체
@@ -374,132 +366,6 @@ normalizeRadioGroup()
 elAddRadioBtn?.addEventListener('click', () => addRadio(`type${elTypeRadios.children.length + 1}`))
 elCloseBtn?.addEventListener('click', () => window.close())
 
-// ---------- preset tables uiState ----------
-function getPresetTablesState() {
-    const leftTpl = document.getElementById('presetLeftTemplate')
-    const rightTpl = document.getElementById('presetRightTemplate')
-    return {
-        leftHtml: (leftTpl?.innerHTML || '').trim(),
-        rightHtml: (rightTpl?.innerHTML || '').trim(),
-    }
-}
-
-function setPresetTablesState({ leftHtml = '', rightHtml = '' } = {}) {
-    if (leftHtml) {
-        const cur = document.getElementById('presetTableLeft')
-        if (cur) cur.outerHTML = leftHtml
-    }
-    if (rightHtml) {
-        const cur = document.getElementById('presetTableRight')
-        if (cur) cur.outerHTML = rightHtml
-    }
-    applyPresetTableDefaultsInDocument()
-}
-
-// ---------- preset table helpers ----------
-function isLockedPresetTableEl(tableEl) {
-    return !!tableEl?.classList?.contains('preset-no-col-resize')
-}
-
-// 오른쪽 표: 열 수 상관없이 균등분배(colgroup %)
-function applyEqualColsToDomTable(tableEl) {
-    if (!tableEl) return
-    const firstRow = tableEl.querySelector('tr')
-    if (!firstRow) return
-
-    const cells = [...firstRow.querySelectorAll('th,td')]
-    const colCount = cells.length
-    if (colCount <= 0) return
-
-    tableEl.style.width = '100%'
-    tableEl.style.tableLayout = 'fixed'
-
-    let colgroup = tableEl.querySelector('colgroup')
-    if (!colgroup) {
-        colgroup = document.createElement('colgroup')
-        tableEl.insertBefore(colgroup, tableEl.firstChild)
-    }
-    colgroup.innerHTML = ''
-
-    const pct = (100 / colCount).toFixed(4)
-    for (let i = 0; i < colCount; i++) {
-        const col = document.createElement('col')
-        col.style.width = `${pct}%`
-        colgroup.appendChild(col)
-    }
-
-    // 균등 분배 방해할 수 있는 셀 width 제거
-    for (const row of tableEl.querySelectorAll('tr')) {
-        for (const c of row.querySelectorAll('th,td')) c.style.width = ''
-    }
-}
-
-// 왼쪽 표: 2열 고정 폭
-function applyTwoColWidthsToDomTable(tableEl, leftW, rightW) {
-    if (!tableEl) return
-    const firstRow = tableEl.querySelector('tr')
-    if (!firstRow) return
-
-    const cells = [...firstRow.querySelectorAll('th,td')]
-    if (cells.length !== 2) return
-
-    cells[0].style.width = `${leftW}px`
-    cells[1].style.width = `${rightW}px`
-
-    let colgroup = tableEl.querySelector('colgroup')
-    if (!colgroup) {
-        colgroup = document.createElement('colgroup')
-        colgroup.appendChild(document.createElement('col'))
-        colgroup.appendChild(document.createElement('col'))
-        tableEl.insertBefore(colgroup, tableEl.firstChild)
-    }
-    const cols = [...colgroup.querySelectorAll('col')]
-    if (cols.length >= 2) {
-        cols[0].style.width = `${leftW}px`
-        cols[1].style.width = `${rightW}px`
-    }
-
-    const rows = [...tableEl.querySelectorAll('tr')]
-    for (const r of rows) {
-        const tds = [...r.querySelectorAll('th,td')]
-        if (tds.length >= 2) {
-            tds[0].style.width = `${leftW}px`
-            tds[1].style.width = `${rightW}px`
-        }
-    }
-}
-
-function applyPresetTableDefaultsInDocument() {
-    // 1) 숨김 템플릿에 먼저 적용
-    const presetLeftTpl = document.getElementById('presetLeftTemplate')
-    if (presetLeftTpl) {
-        const tmp = document.createElement('div')
-        tmp.innerHTML = presetLeftTpl.innerHTML.trim()
-        const table = tmp.querySelector('table')
-        if (table) {
-            applyTwoColWidthsToDomTable(table, PRESET_LEFT_COL_W, PRESET_LEFT_RIGHT_COL_W)
-            presetLeftTpl.innerHTML = table.outerHTML
-        }
-    }
-
-    const presetRightTpl = document.getElementById('presetRightTemplate')
-    if (presetRightTpl) {
-        const tmp = document.createElement('div')
-        tmp.innerHTML = presetRightTpl.innerHTML.trim()
-        const table = tmp.querySelector('table')
-        if (table) {
-            applyEqualColsToDomTable(table)
-            presetRightTpl.innerHTML = table.outerHTML
-        }
-    }
-
-    // 2) 실제 표시용 표에도 동일 적용
-    const left = document.getElementById('presetTableLeft')
-    if (left) applyTwoColWidthsToDomTable(left, PRESET_LEFT_COL_W, PRESET_LEFT_RIGHT_COL_W)
-
-    const right = document.getElementById('presetTableRight')
-    if (right) applyEqualColsToDomTable(right)
-}
 
 // ---------- boot ----------
 async function bootEditor() {
@@ -517,6 +383,7 @@ async function bootEditor() {
         fontFamily,
         link,
         pmState,
+        pmTables,
     ] = await Promise.all([
         import('@tiptap/core'),
         import('@tiptap/starter-kit'),
@@ -531,6 +398,7 @@ async function bootEditor() {
         import('@tiptap/extension-font-family'),
         import('@tiptap/extension-link'),
         import('@tiptap/pm/state'),
+        import('@tiptap/pm/tables'),
     ])
 
     const { Editor, Extension, Node, mergeAttributes } = core
@@ -545,6 +413,7 @@ async function bootEditor() {
     const { TextAlign } = textAlign
     const { FontFamily } = fontFamily
     const { Link } = link
+    const { CellSelection } = pmTables
 
     // NodeSelection / TextSelection import
     const { Plugin, PluginKey, NodeSelection, TextSelection } = pmState
@@ -827,6 +696,103 @@ async function bootEditor() {
         },
     })
 
+    const GoogleDocsCellDragSelection = Extension.create({
+        name: 'googleDocsCellDragSelection',
+
+        addProseMirrorPlugins() {
+            return [
+                new Plugin({
+                    key: new PluginKey('googleDocsCellDragSelection'),
+
+                    view(view) {
+                        let dragging = false
+                        let anchorCellPos = null
+
+                        const findCellPosFromEvent = (event) => {
+                            const coords = { left: event.clientX, top: event.clientY }
+                            const hit = view.posAtCoords(coords)
+                            if (!hit || typeof hit.pos !== 'number') return null
+
+                            const $pos = view.state.doc.resolve(hit.pos)
+
+                            for (let d = $pos.depth; d > 0; d--) {
+                                const n = $pos.node(d)
+                                if (n.type?.name === 'tableCell' || n.type?.name === 'tableHeader') {
+                                    return $pos.before(d)
+                                }
+                            }
+                            return null
+                        }
+
+                        const isResizeCursorActive = () => {
+                            const c = document.body.style.cursor
+                            return c === 'row-resize' || c === 'col-resize'
+                        }
+
+                        const onMouseDown = (e) => {
+                            if (e.button !== 0) return
+                            if (isResizeCursorActive()) return
+
+                            // inputField 내부에서 시작하면 건드리지 않음
+                            const t = e.target
+                            if (t && t.closest?.('.input-field__input')) return
+
+                            const pos = findCellPosFromEvent(e)
+                            if (typeof pos !== 'number') return
+
+                            dragging = true
+                            anchorCellPos = pos
+                        }
+
+                        const onMouseMove = (e) => {
+                            if (!dragging) return
+                            if (isResizeCursorActive()) return
+
+                            const headCellPos = findCellPosFromEvent(e)
+                            if (typeof headCellPos !== 'number') return
+                            if (typeof anchorCellPos !== 'number') return
+
+                            // 같은 셀이면 굳이 바꾸지 않음
+                            if (headCellPos === anchorCellPos) return
+
+                            const { state } = view
+                            // 이미 CellSelection이면 그대로 두되, 범위 업데이트만
+                            const nextSel = CellSelection.create(state.doc, anchorCellPos, headCellPos)
+
+                            // selection이 바뀌는 경우에만 dispatch
+                            if (state.selection.from !== nextSel.from || state.selection.to !== nextSel.to || state.selection.constructor.name !== 'CellSelection') {
+                                const tr = state.tr.setSelection(nextSel)
+                                view.dispatch(tr)
+                            }
+
+                            // CellSelection 상태에서는 텍스트 선택 드래그가 더 진행되지 않게
+                            e.preventDefault()
+                        }
+
+                        const endDrag = () => {
+                            dragging = false
+                            anchorCellPos = null
+                        }
+
+                        view.dom.addEventListener('mousedown', onMouseDown, true)
+                        window.addEventListener('mousemove', onMouseMove, true)
+                        window.addEventListener('mouseup', endDrag, true)
+                        window.addEventListener('blur', endDrag, true)
+
+                        return {
+                            destroy() {
+                                view.dom.removeEventListener('mousedown', onMouseDown, true)
+                                window.removeEventListener('mousemove', onMouseMove, true)
+                                window.removeEventListener('mouseup', endDrag, true)
+                                window.removeEventListener('blur', endDrag, true)
+                            },
+                        }
+                    },
+                }),
+            ]
+        },
+    })
+
     const editor = new Editor({
         element: elEditor,
         extensions: [
@@ -851,6 +817,7 @@ async function bootEditor() {
 
             InputField,
             SelectionExcludeInputField,
+            GoogleDocsCellDragSelection,
         ],
         content: '',
 
@@ -941,6 +908,7 @@ async function bootEditor() {
 
     wireToolbar(editor)
     wireFontSizeDropdown(editor)
+    wireMergeSplitButtonsEnable(editor)
 
     enableRowResize(editor)
     enableColResizeHoverCursor(editor)
@@ -948,7 +916,6 @@ async function bootEditor() {
     wireSave(editor)
     await restoreIfDocfoNoExists(editor)
 
-    applyPresetTableDefaultsInDocument()
     ensureDocEndsWithParagraph(editor)
 }
 
@@ -1019,6 +986,14 @@ function wireToolbar(editor) {
             case 'deleteRow': ch.deleteRow().run(); break
             case 'addColumnAfter': ch.addColumnAfter().run(); break
             case 'deleteColumn': ch.deleteColumn().run(); break
+
+            case 'mergeCells':
+                ch.mergeCells().run()
+                break
+
+            case 'splitCell':
+                ch.splitCell().run()
+                break
 
             case 'inputField':
                 editor.chain().focus().insertContent({
@@ -1107,6 +1082,24 @@ function markEditablePolicyForTemplate(json) {
     return cloned
 }
 
+function wireMergeSplitButtonsEnable(editor) {
+    if (!elToolbar) return
+
+    const btnMerge = elToolbar.querySelector('button[data-act="mergeCells"]')
+    const btnSplit = elToolbar.querySelector('button[data-act="splitCell"]')
+
+    if (!btnMerge && !btnSplit) return
+
+    const sync = () => {
+        if (btnMerge) btnMerge.disabled = !editor.can().mergeCells()
+        if (btnSplit) btnSplit.disabled = !editor.can().splitCell()
+    }
+
+    editor.on('selectionUpdate', sync)
+    editor.on('transaction', sync)
+    sync()
+}
+
 function wireSave(editor) {
     async function submit(mode) {
         const docTitle = (elDocTitle?.value || '').trim();
@@ -1123,8 +1116,7 @@ function wireSave(editor) {
         const cnttJson = JSON.stringify(templateJson);
         const bodyHtml = editor.getHTML();
 
-        const headerHtml = extractHeaderHtmlFromTemplates();
-        const cnttHtml = buildFullHtml({ docfoName: docTitle, categories, headerHtml, bodyHtml });
+        const cnttHtml = buildFullHtml({ docfoName: docTitle, categories, bodyHtml });
 
         const payload = { docfoName: docTitle, cnttJson, cnttHtml, categories };
 
@@ -1230,8 +1222,6 @@ function setDefaultTableColWidths(editor, defaultWidth) {
     const base = domAt.node.nodeType === 1 ? domAt.node : domAt.node.parentElement
     const tableEl = base?.closest?.('table')
     if (!tableEl) return
-
-    if (tableEl.classList.contains('preset-no-col-resize')) return
 
     const colEls = [...tableEl.querySelectorAll('colgroup col')]
     if (colEls.length === 0) return
@@ -1429,11 +1419,6 @@ function enableColResizeHoverCursor(editor) {
 
         const table = cell.closest('table')
         if (!table || !view.dom.contains(table)) return
-
-        if (isLockedPresetTableEl(table)) {
-            if (document.body.style.cursor === 'col-resize') document.body.style.cursor = ''
-            return
-        }
 
         const tr = cell.closest('tr')
         if (tr && isNearRowBottom(tr, e.clientY)) {

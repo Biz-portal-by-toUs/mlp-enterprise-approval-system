@@ -62,23 +62,51 @@
                 text-decoration: underline;
             }
 
-            /* [상세 검색창] 4열 그리드 - 결재한 문서 목록과 동일하게 수정 */
+            /* [상세 검색창] - 반응형 최적화 */
             .search-container {
                 background: #f8fafc;
                 padding: 20px;
                 border-radius: 12px;
                 margin-bottom: 16px;
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
+                /* 1fr 대신 minmax(0, 1fr)을 사용하여 부모 너비를 초과하지 않게 함 */
+                grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 15px 20px;
                 align-items: center;
                 border: 1px solid var(--line);
+                width: 100%;
+                box-sizing: border-box;
             }
+
+            /* 화면 가로가 좁아질 때 (태블릿 등) */
+            @media (max-width: 1400px) {
+                .search-container {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .btn-search {
+                    grid-column: span 2 !important;
+                    width: auto !important;
+                    padding: 10px 40px !important;
+                }
+            }
+
+            /* 화면 가로가 매우 좁아질 때 (모바일/확대 등) */
+            @media (max-width: 768px) {
+                .search-container {
+                    grid-template-columns: 1fr;
+                }
+                .btn-search {
+                    grid-column: span 1 !important;
+                    width: 100% !important;
+                }
+            }
+
             .search-group {
                 display: flex;
                 align-items: center;
                 gap: 8px;
                 position: relative;
+                min-width: 0; /* 내부 요소 넘침 방지 */
             }
             .search-group label {
                 font-size: 13px;
@@ -96,6 +124,7 @@
                 font-size: 13px;
                 outline: none;
                 background: white;
+                min-width: 0; /* 그리드 내 축소 가능하게 함 */
             }
             .search-input.disabled {
                 background-color: #e9ecef;
@@ -110,6 +139,7 @@
                 position: relative;
                 flex: 1;
                 display: flex;
+                min-width: 0;
             }
             .dropdown-list {
                 position: absolute;
@@ -143,7 +173,7 @@
                 text-align: center;
             }
 
-            /* [검색 버튼] 결재한 문서 목록과 스타일 통일 */
+            /* [검색 버튼] 스타일 및 너비 유지 */
             .btn-search {
                 grid-column: span 4;
                 justify-self: end;
@@ -157,6 +187,8 @@
                 font-size: 14px;
                 transition: 0.15s;
                 margin-top: 5px;
+                width: auto;
+                white-space: nowrap;
             }
             .btn-search:hover {
                 filter: brightness(0.9);
@@ -169,6 +201,7 @@
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                overflow-x: auto; /* 가로 스크롤 허용 */
             }
 
             /* [테이블 디자인] */
@@ -176,6 +209,7 @@
                 width: 100%;
                 border-collapse: collapse;
                 table-layout: auto;
+                min-width: 1000px; /* 테이블 구조 보호 */
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -373,7 +407,7 @@
     <section class="page-with-subbar">
         <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('finalized')}"></aside>
 
-        <main style="padding: 24px; min-width: 0; flex: 1;">
+        <main style="padding: 24px; min-width: 0; flex: 1; width: 100%; box-sizing: border-box; overflow-x: hidden;">
             <div class="page-header">
                 <h1 class="page-title">최종 승인 문서</h1>
             </div>

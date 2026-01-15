@@ -33,17 +33,26 @@
     }
     const PERM = readPerms();
 
+    function isEmployeeByClass() {
+        const byClass = document.documentElement?.classList?.contains('role-employee') === true;
+
+        // 혹시 class가 누락되어도 dataset으로 보조 판단
+        const d = document.documentElement?.dataset || {};
+        const canApprove = String(d.canApproveForm ?? '').toLowerCase() === 'true';
+        const canReject  = String(d.canRejectForm ?? '').toLowerCase() === 'true';
+
+        // 직원이면 보통 승인/반려 권한이 false일 가능성이 큼 → 둘 다 false면 employee로 간주
+        const byPerm = (!canApprove && !canReject);
+
+        return byClass || byPerm;
+    }
+
     // EMPLOYEE가 잘못 들어오면 프론트에서도 방어
     if (isEmployeeByClass()) {
         (async () => {
             await swalError("권한이 없습니다.", "승인 대기 목록은 관리자만 접근 가능합니다.");
             location.replace("/form/forms");
         })();
-        return;
-    }
-    if (isEmployeeByClass()) {
-        alert("권한이 없습니다. (승인 대기 목록은 관리자만 접근 가능합니다.)");
-        location.replace("/form/forms");
         return;
     }
 
@@ -548,13 +557,18 @@
             if (action === "approve") {
                 if (!PERM.canApproveForm) return;
 
-                await swalLoading("승인 처리 중...");
-                await updateStatus(id, "A");
-                swalClose();
-
-                toast("승인 처리 완료");
-                markFormListDirty();
-                await load();
+                swalLoading("승인 처리 중...");
+                try {
+                    await updateStatus(id, "A");
+                    toast("승인 처리 완료");
+                    markFormListDirty();
+                    await load();
+                } catch (err) {
+                    console.error(err);
+                    await swalError("처리 실패", err?.message || String(err));
+                } finally {
+                    swalClose();
+                }
                 return;
             }
 
@@ -568,13 +582,18 @@
                     return;
                 }
 
-                await swalLoading("반려 처리 중...");
-                await updateStatus(id, "R", reason);
-                swalClose();
-
-                toast("반려 처리 완료");
-                markFormListDirty();
-                await load();
+                swalLoading("반려 처리 중...");
+                try {
+                    await updateStatus(id, "R", reason);
+                    toast("반려 처리 완료");
+                    markFormListDirty();
+                    await load();
+                } catch (err) {
+                    console.error(err);
+                    await swalError("처리 실패", err?.message || String(err));
+                } finally {
+                    swalClose();
+                }
                 return;
             }
 
@@ -584,13 +603,18 @@
                 const { isConfirmed } = await swalConfirm("삭제 요청 승인", "삭제 요청을 승인하시겠습니까?", "승인", "취소");
                 if (!isConfirmed) return;
 
-                await swalLoading("삭제 승인 처리 중...");
-                await approveDelete(id);
-                swalClose();
-
-                toast("삭제 승인 완료");
-                markFormListDirty();
-                await load();
+                swalLoading("삭제 승인 처리 중...");
+                try {
+                    await approveDelete(id);
+                    toast("삭제 승인 완료");
+                    markFormListDirty();
+                    await load();
+                } catch (err) {
+                    console.error(err);
+                    await swalError("처리 실패", err?.message || String(err));
+                } finally {
+                    swalClose();
+                }
                 return;
             }
 
@@ -604,13 +628,18 @@
                     return;
                 }
 
-                await swalLoading("삭제 반려 처리 중...");
-                await rejectDelete(id, reason);
-                swalClose();
-
-                toast("삭제 반려 완료");
-                markFormListDirty();
-                await load();
+                swalLoading("삭제 반려 처리 중...");
+                try {
+                    await rejectDelete(id, reason);
+                    toast("삭제 반려 완료");
+                    markFormListDirty();
+                    await load();
+                } catch (err) {
+                    console.error(err);
+                    await swalError("처리 실패", err?.message || String(err));
+                } finally {
+                    swalClose();
+                }
                 return;
             }
         } catch (err) {

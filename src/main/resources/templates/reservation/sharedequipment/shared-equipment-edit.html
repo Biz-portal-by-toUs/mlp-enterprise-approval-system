@@ -162,6 +162,11 @@
                 border-color:#ef4444 !important;
                 box-shadow: 0 0 0 3px rgba(239,68,68,.12);
             }
+
+            /* ✅ SweetAlert가 다른 레이어보다 위에 뜨도록 */
+            .swal2-container{
+                z-index: 3000000 !important;
+            }
         </style>
     </th:block>
 </head>
@@ -179,7 +184,7 @@
                 <h2>공유 설비 수정</h2>
 
                 <form id="editForm" enctype="multipart/form-data">
-                    <!-- ✅ 설비명: 카운터+에러 적용 -->
+
                     <div class="field">
                         <label>설비명</label>
                         <input type="text" name="eqName" id="eqName" maxlength="20" required>
@@ -190,7 +195,6 @@
                         <small class="error" id="eqNameError" style="display:none;"></small>
                     </div>
 
-                    <!-- ✅ 설비번호: 카운터+에러 적용 -->
                     <div class="field">
                         <label>설비번호</label>
                         <input type="text" name="eqId" id="eqId" maxlength="20">
@@ -203,12 +207,12 @@
 
                     <div class="field">
                         <label>모델명</label>
-                        <input type="text" name="modelName" maxlength="20">
+                        <input type="text" name="modelName" id="modelName" maxlength="20">
                     </div>
 
                     <div class="field">
                         <label>보관위치</label>
-                        <input type="text" name="location" maxlength="50">
+                        <input type="text" name="location" id="location" maxlength="50">
                     </div>
 
                     <div class="field">
@@ -236,11 +240,58 @@
 
 <!-- 이 페이지 전용 JS -->
 <th:block layout:fragment="pageScripts">
+    <!-- ✅ SweetAlert2 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script th:inline="javascript">
+        /* =========================
+           SweetAlert2 (회의실 수정과 동일)
+           ========================= */
+        const SWAL_PRIMARY = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary")
+            .trim() || "#4f8fe3";
+
+        const SWAL_GRAY = "#9ca3af";
+        const SWAL_RED  = "#ff4d4f";
+
+        function swalAlert({ icon="info", title="알림", text="" }) {
+            return Swal.fire({ icon, title, text, confirmButtonColor: SWAL_PRIMARY });
+        }
+        function swalSuccess(text, title="완료") { return swalAlert({ icon:"success", title, text }); }
+        function swalError(text, title="오류") { return swalAlert({ icon:"error", title, text }); }
+        function swalWarn(text, title="확인") { return swalAlert({ icon:"warning", title, text }); }
+
+        async function swalConfirm({
+                                       title="확인",
+                                       text="진행할까요?",
+                                       icon="question",
+                                       confirmText="확인",
+                                       cancelText="취소",
+                                       confirmColor=SWAL_PRIMARY
+                                   }){
+            const result = await Swal.fire({
+                title, text, icon,
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: cancelText,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: SWAL_GRAY,
+                reverseButtons: true
+            });
+            return result.isConfirmed;
+        }
+
+        function swalLoading(title="처리 중...", text="잠시만 기다려 주세요.") {
+            return Swal.fire({
+                title,
+                text,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
         /* ================== 공통 변수 ================== */
         const eqNo = /*[[${eqNo}]]*/ null;
-
-        // ✅ httpOnly cookie 기반 공통 fetch
         const API_BASE = window.location.origin;
 
         async function apiFetch(path, options = {}) {
@@ -253,7 +304,7 @@
             });
 
             if (res.status === 401 || res.status === 403) {
-                alert("로그인이 필요합니다. 다시 로그인 해주세요.");
+                await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 만료");
                 location.href = "/login";
                 throw new Error("UNAUTHORIZED");
             }
@@ -261,8 +312,9 @@
         }
 
         if (!eqNo) {
-            alert("잘못된 접근입니다.");
-            location.href = "/shared-equipment";
+            swalWarn("잘못된 접근입니다. 목록으로 이동합니다.").then(() => {
+                location.href = "/shared-equipment";
+            });
         }
 
         /* ================== 이미지 미리보기 ================== */
@@ -272,14 +324,18 @@
             if (!input.files || !input.files[0]) {
                 preview.style.display = "none";
                 preview.src = "";
+                updateSubmitButton();
                 return;
             }
 
             const file = input.files[0];
 
             if (!file.type.startsWith("image/")) {
-                alert("이미지 파일만 업로드 가능합니다.");
+                swalWarn("이미지 파일만 업로드 가능합니다.");
                 input.value = "";
+                preview.style.display = "none";
+                preview.src = "";
+                updateSubmitButton();
                 return;
             }
 
@@ -289,7 +345,10 @@
                 preview.style.display = "block";
             };
             reader.readAsDataURL(file);
+
+            updateSubmitButton();
         }
+        window.previewImage = previewImage;
 
         /* ================== 설비명/설비번호: 카운터/에러 UI ================== */
         const eqNameInput   = document.getElementById("eqName");
@@ -299,6 +358,8 @@
         const eqIdInput   = document.getElementById("eqId");
         const eqIdCounter = document.getElementById("eqIdCounter");
         const eqIdError   = document.getElementById("eqIdError");
+
+        const submitBtn = document.querySelector(".submit");
 
         function setError(inputEl, errorEl, msg) {
             if (!errorEl) return;
@@ -315,8 +376,6 @@
         }
 
         function updateEqNameUI() {
-            if (!eqNameInput) return;
-
             const len = eqNameInput.value.length;
             if (eqNameCounter) eqNameCounter.textContent = `${len} / 20`;
 
@@ -330,8 +389,6 @@
         }
 
         function updateEqIdUI() {
-            if (!eqIdInput) return;
-
             const len = eqIdInput.value.length;
             if (eqIdCounter) eqIdCounter.textContent = `${len} / 20`;
 
@@ -344,10 +401,17 @@
             else setError(eqIdInput, eqIdError, "");
         }
 
-        eqNameInput?.addEventListener("input", updateEqNameUI);
-        eqIdInput?.addEventListener("input", updateEqIdUI);
+        eqNameInput?.addEventListener("input", () => {
+            updateEqNameUI();
+            updateSubmitButton();
+        });
 
-        /* ================== 유효성 검사 (알럿 -> 인라인 에러로) ================== */
+        eqIdInput?.addEventListener("input", () => {
+            updateEqIdUI();
+            updateSubmitButton();
+        });
+
+        /* ================== 유효성 검사 (인라인 에러 유지) ================== */
         function validateEditForm() {
             const name = eqNameInput.value.trim();
             const id   = eqIdInput.value.trim();
@@ -373,83 +437,9 @@
             return true;
         }
 
-        /* ================== 페이지 로드시 데이터 조회 ================== */
+        /* ================== 변경 감지(버튼 enable/disable) ================== */
         let originalData = null;
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, { method: "GET" });
-
-                if (!res.ok) {
-                    const text = await res.text();
-                    console.error("[load fail]", res.status, text);
-                    alert("공유 설비 정보를 불러오지 못했습니다.");
-                    return;
-                }
-
-                const json = await res.json();
-                const eq = json.data ?? json;
-
-                eqNameInput.value = eq.eqName ?? "";
-                eqIdInput.value   = eq.eqId ?? "";
-                document.querySelector("[name=modelName]").value = eq.modelName ?? "";
-                document.querySelector("[name=location]").value  = eq.location ?? "";
-
-                // ✅ 초기 카운터/에러 UI 반영
-                updateEqNameUI();
-                updateEqIdUI();
-
-                originalData = {
-                    eqName: (eq.eqName ?? ""),
-                    eqId: (eq.eqId ?? ""),
-                    modelName: (eq.modelName ?? ""),
-                    location: (eq.location ?? ""),
-                    imageChanged: false
-                };
-
-                if (eq.imageUrl) {
-                    const preview = document.getElementById("imagePreview");
-                    preview.src = eq.imageUrl;
-                    preview.style.display = "block";
-                }
-
-            } catch (e) {
-                console.error(e);
-                alert("서버 오류가 발생했습니다.");
-            }
-        });
-
-        /* ================== 수정 submit ================== */
-        document.getElementById("editForm").addEventListener("submit", async e => {
-            e.preventDefault();
-            if (!validateEditForm()) return;
-
-            const formData = new FormData(e.target);
-
-            try {
-                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
-                    method: "PUT",
-                    body: formData
-                });
-
-                if (!res.ok) {
-                    const text = await res.text();
-                    console.error("[update fail]", res.status, text);
-                    alert("공유 설비 수정 실패했습니다.");
-                    return;
-                }
-
-                alert("공유 설비 수정 성공했습니다!");
-                location.href = "/shared-equipment";
-
-            } catch (e) {
-                console.error(e);
-                if (String(e.message || "").includes("UNAUTHORIZED")) return;
-                alert("서버 오류가 발생했습니다.");
-            }
-        });
-
-        /* ================== 변경 감지(버튼 enable/disable) ================== */
         function hasChanged() {
             if (!originalData) return false;
 
@@ -470,9 +460,9 @@
             );
         }
 
-        const submitBtn = document.querySelector(".submit");
-
         function updateSubmitButton() {
+            if (!submitBtn) return;
+
             if (hasChanged()) {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove("disabled");
@@ -483,14 +473,131 @@
         }
 
         document
-            .querySelectorAll(
-                "input[name=eqName], input[name=eqId], input[name=modelName], input[name=location]"
-            )
+            .querySelectorAll("input[name=modelName], input[name=location]")
             .forEach(el => el.addEventListener("input", updateSubmitButton));
 
         document
             .querySelector("[name=imageFile]")
-            .addEventListener("change", updateSubmitButton);
+            ?.addEventListener("change", updateSubmitButton);
+
+        /* ================== 페이지 로드시 데이터 조회 ================== */
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                swalLoading("불러오는 중...", "공유 설비 정보를 불러오고 있어요.");
+
+                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, { method: "GET" });
+
+                if (!res.ok) {
+                    Swal.close();
+                    await swalError("공유 설비 정보를 불러오지 못했습니다.", "조회 실패");
+                    return;
+                }
+
+                const json = await res.json();
+                const eq = json?.data ?? json;
+
+                eqNameInput.value = eq.eqName ?? "";
+                eqIdInput.value   = eq.eqId ?? "";
+                document.querySelector("[name=modelName]").value = eq.modelName ?? "";
+                document.querySelector("[name=location]").value  = eq.location ?? "";
+
+                originalData = {
+                    eqName: (eq.eqName ?? "").trim(),
+                    eqId: (eq.eqId ?? "").trim(),
+                    modelName: (eq.modelName ?? "").trim(),
+                    location: (eq.location ?? "").trim()
+                };
+
+                if (eq.imageUrl) {
+                    const preview = document.getElementById("imagePreview");
+                    preview.src = eq.imageUrl;
+                    preview.style.display = "block";
+                }
+
+                Swal.close();
+
+                // 초기 UI 동기화
+                updateEqNameUI();
+                updateEqIdUI();
+                updateSubmitButton();
+
+            } catch (e) {
+                Swal.close();
+                if (String(e?.message || "").includes("UNAUTHORIZED")) return;
+                console.error(e);
+                await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
+            }
+        });
+
+        /* ================== 수정 submit ================== */
+        document.getElementById("editForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            if (!validateEditForm()) return;
+
+            if (!hasChanged()) {
+                await swalWarn("변경된 내용이 없습니다.");
+                return;
+            }
+
+            const ok = await swalConfirm({
+                title: "공유 설비 수정",
+                text: "공유 설비 정보를 수정하시겠습니까?",
+                icon: "question",
+                confirmText: "수정",
+                cancelText: "닫기",
+                confirmColor: SWAL_PRIMARY
+            });
+            if (!ok) return;
+
+            try {
+                swalLoading("수정 중...", "공유 설비 정보를 수정하고 있습니다.");
+
+                const formData = new FormData(e.target);
+
+                const res = await apiFetch(`/api/v1/shared-equipment/${eqNo}`, {
+                    method: "PUT",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    Swal.close();
+
+                    let msg = "공유 설비 수정에 실패했습니다.";
+                    try {
+                        const ct = res.headers.get("content-type") || "";
+                        if (ct.includes("application/json")) {
+                            const payload = await res.json();
+                            msg = payload?.message || msg;
+                        } else {
+                            const t = await res.text();
+                            if (t) msg = t;
+                        }
+                    } catch {}
+
+                    await swalError(msg, "수정 실패");
+                    return;
+                }
+
+                Swal.close();
+                await Swal.fire({
+                    icon: "success",
+                    title: "수정 완료",
+                    text: "공유 설비 정보가 수정되었습니다.",
+                    timer: 1200,
+                    showConfirmButton: false,
+                    confirmButtonColor: SWAL_PRIMARY
+                });
+
+                location.href = "/shared-equipment";
+
+            } catch (e2) {
+                Swal.close();
+                if (String(e2?.message || "").includes("UNAUTHORIZED")) return;
+                console.error(e2);
+                await swalError("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "오류");
+            }
+        });
     </script>
 </th:block>
 
