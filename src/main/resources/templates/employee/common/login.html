@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bizportal - Employee Login</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="/css/alert.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/alert/alert.js"></script>
     <style>
         :root{
             --blue:#356fda;          /* 배경 블루 */
@@ -282,12 +286,16 @@
                 const mustChangePassword = getMustChangePassword(result);
 
                 if (mustChangePassword) {
-                    Alert.info('초기 비밀번호입니다. 보안을 위해 비밀번호를 변경해주세요.').then(() => {
-                        window.location.href = '/auth/employee/verify';
-                    });
-                    return;
-                }
+                    const result = await Alert.confirm('초기 비밀번호입니다. 지금 변경하시겠습니까?', '보안 알림');
 
+                    if (result.isConfirmed) {
+                        window.location.href = '/auth/employee/verify';
+                        return;
+                    } else {
+                        window.location.href = '/auth/employee/login';
+                        return;
+                    }
+                }
                 window.location.href = '/employees';
 
             } else {
