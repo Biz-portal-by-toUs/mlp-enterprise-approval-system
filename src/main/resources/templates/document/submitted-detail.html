@@ -9,6 +9,7 @@
 
     <th:block layout:fragment="pageStyles">
         <script th:src="@{/js/jiheon-temp-origin/tiptap.min.js}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <style>
             /* ✅ 여백 최적화 */
@@ -401,10 +402,15 @@
         async function downloadFile(atchNo, originalName) {
             try {
                 const response = await fetch(`/api/v1/attachments/${atchNo}/download-url`, { credentials: 'include' });
-                if (!response.ok) { showToast('다운로드 실패', 'error'); return; }
+                if (!response.ok) {
+                    Swal.fire({ icon: 'error', title: '다운로드 실패', confirmButtonColor: '#339af0' });
+                    return;
+                }
                 const result = await response.json();
                 window.open(result.data?.url || result.data, '_blank');
-            } catch (error) { showToast('다운로드 오류', 'error'); }
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: '다운로드 오류', confirmButtonColor: '#339af0' });
+            }
         }
 
         function renderApprovalLine(lines) {
@@ -472,17 +478,62 @@
             window.open(`/documents/${currentDocNo}/print?status=${status}`, '_blank');
         }
 
-        function showCancelModal() { document.getElementById('cancel-modal').classList.add('show'); }
+        function showCancelModal() {
+            Swal.fire({
+                title: '⚠️ 상신 취소',
+                html: '정말 상신을 취소하시겠습니까?<br>취소 후 임시저장 상태로 변경됩니다.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#fa5252',
+                cancelButtonColor: '#adb5bd',
+                confirmButtonText: '확인',
+                cancelButtonText: '취소',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    confirmCancelSubmit();
+                }
+            });
+        }
+
         function hideCancelModal() { document.getElementById('cancel-modal').classList.remove('show'); }
+
         async function confirmCancelSubmit() {
-            hideCancelModal();
             try {
                 const response = await fetch(`/api/v1/documents/${currentDocNo}/cancel`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
-                if (response.ok) { showToast('상신 취소되었습니다.', 'success'); setTimeout(() => location.href = '/documents/me?status=SUBMITTED', 500); }
-                else { showToast('상신 취소 실패', 'error'); }
-            } catch (error) { showToast('통신 오류', 'error'); }
+                if (response.ok) {
+                    // ✅ 작성 페이지 방식처럼 사용자가 확인을 눌러야 이동하도록 수정
+                    Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        text: '상신 취소되었습니다.',
+                        confirmButtonColor: '#339af0',
+                        confirmButtonText: '확인'
+                    }).then(() => {
+                        location.href = '/documents/me?status=SUBMITTED';
+                    });
+                }
+                else {
+                    Swal.fire({ icon: 'error', title: '상신 취소 실패', text: '처리 중 오류가 발생했습니다.', confirmButtonColor: '#339af0' });
+                }
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: '통신 오류', text: '서버와의 연결이 원활하지 않습니다.', confirmButtonColor: '#339af0' });
+            }
         }
-        function showToast(m, t) { const toast = document.getElementById('toast'); toast.textContent = m; toast.className = `toast ${t} show`; setTimeout(() => toast.classList.remove('show'), 3000); }
+
+        // 기존 토스트 함수는 유지하되, 다른 로직에서 필요할 때만 호출됩니다.
+        function showToast(m, t) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                icon: t === 'success' ? 'success' : 'error',
+                title: m
+            });
+        }
+
         function renderResubmitBanner(doc) {
             const banner = document.getElementById('resubmit-banner');
             const cancelBtn = document.getElementById('btn-cancel-submit');
