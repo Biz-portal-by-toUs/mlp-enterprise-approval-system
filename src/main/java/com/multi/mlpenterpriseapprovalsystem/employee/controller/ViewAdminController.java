@@ -46,7 +46,7 @@ public class ViewAdminController {
             model.addAttribute("positionsList", java.util.Collections.emptyList());
         }
 
-        return "/employee/list";
+        return "employee/list";
     }
 
     @GetMapping("/{empNo}")
@@ -74,7 +74,7 @@ public class ViewAdminController {
         }
         model.addAttribute("roles", RoleType.values());
 
-        return "/employee/create";
+        return "employee/create";
     }
 
     @GetMapping("/{empNo}/edit")
