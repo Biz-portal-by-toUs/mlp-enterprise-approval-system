@@ -48,7 +48,7 @@ public class TokenService {
 
     private final CompanyRepository companyRepository;
     // 운영 https면 true, 로컬 http면 false
-    @Value("${app.cookie.secure:false}")
+    @Value("${app.cookie.secure}")
     private boolean cookieSecure;
 
     private final RefreshTokenRepository refreshTokenRepository;
