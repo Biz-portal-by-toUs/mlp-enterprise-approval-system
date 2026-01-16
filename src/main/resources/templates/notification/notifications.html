@@ -2,6 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="/css/alert.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/alert/alert.js"></script>
     <style>
         body { margin: 0; font-family: system-ui; background: #fff; overflow-x: hidden; }
         body::-webkit-scrollbar { display: none; }
@@ -37,7 +41,6 @@
         .noti-list { height: calc(100vh - 45px); overflow-y: auto; }
         .noti-list::-webkit-scrollbar { display: none; }
 
-        /* ✅ 알림 카드 기본 스타일 (읽은 상태) */
         .noti-card {
             display: flex;
             align-items: flex-start;
@@ -50,12 +53,7 @@
             border-left: 4px solid transparent;
         }
         .noti-card:hover { background: #f9fafb; }
-
-        /* ✅ 읽지 않은 알림 스타일 (강조) */
-        .noti-card.unread {
-            background: #f0f9ff;
-            border-left: 4px solid #3b82f6;
-        }
+        .noti-card.unread { background: #f0f9ff; border-left: 4px solid #3b82f6; }
         .noti-card.unread:hover { background: #e0f2fe; }
 
         .noti-icon {
@@ -65,43 +63,14 @@
         }
 
         .noti-info { flex: 1; min-width: 0; }
+        .noti-title { font-size: 14.5px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s; }
+        .noti-card.unread .noti-title { font-weight: 800; color: #0f172a; }
+        .noti-card:not(.unread) .noti-title { font-weight: 600; color: #334155; }
 
-        /* ✅ 제목 스타일 차별화 */
-        .noti-title {
-            font-size: 14.5px;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: color 0.2s;
-        }
-        /* 안읽음: 굵고 검게 */
-        .noti-card.unread .noti-title {
-            font-weight: 800;
-            color: #0f172a;
-        }
-        /* 읽음: 중간 굵기 및 가독성 좋은 진한 회색 (기존보다 진하게 수정) */
-        .noti-card:not(.unread) .noti-title {
-            font-weight: 600;
-            color: #334155;
-        }
-
-        /* ✅ 상세 내용 */
-        .noti-content {
-            font-size: 13.5px;
-            line-height: 1.5;
-            font-weight: 500;
-            color: #475569;
-        }
-        /* 읽음: 본문 가독성 확보 (기존보다 진하게 수정) */
-        .noti-card:not(.unread) .noti-content {
-            color: #64748b;
-        }
-
-        /* 날짜 (조금 더 선명하게) */
+        .noti-content { font-size: 13.5px; line-height: 1.5; font-weight: 500; color: #475569; }
+        .noti-card:not(.unread) .noti-content { color: #64748b; }
         .noti-date { font-size: 11px; color: #94a3b8; margin-top: 8px; }
 
-        /* 삭제 버튼 */
         .noti-close {
             background: none; border: none; font-size: 20px; color: #cbd5e1;
             cursor: pointer; padding: 4px; position: absolute; right: 12px; top: 14px;
@@ -111,6 +80,46 @@
 
         #sentinel { height: 20px; }
         .empty-msg { text-align: center; padding: 60px; color: #94a3b8; font-size: 13px; }
+
+        /* ✅ 위젯용 초소형 SweetAlert2 커스텀 스타일 */
+        .mini-swal-popup {
+            width: 280px !important;
+            padding: 15px !important;
+            border-radius: 12px !important;
+        }
+        .mini-swal-title {
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            margin-top: 10px !important;
+        }
+        .mini-swal-text {
+            font-size: 13px !important;
+            color: #64748b !important;
+            margin: 5px 0 !important;
+        }
+        .mini-swal-button {
+            padding: 6px 18px !important;
+            font-size: 12px !important;
+            border-radius: 6px !important;
+        }
+
+        /* ✅ 아이콘(원) 크기는 적절하게 유지하고 물음표만 조정 */
+        .mini-swal-icon {
+            width: 42px !important;
+            height: 42px !important;
+            margin: 10px auto 5px auto !important;
+        }
+        /* ✅ 물음표(?) 텍스트 크기만 별도로 축소 */
+        .mini-swal-icon .swal2-icon-content {
+            font-size: 22px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .mini-swal-icon::before, .mini-swal-icon::after {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -124,12 +133,51 @@
 </div>
 
 <div id="notiList" class="noti-list">
-    <div id="sentinel" style="height: 10px;"></div> </div>
-
+    <div id="sentinel" style="height: 10px;"></div>
+</div>
 
 <script>
     let lastAt = null, lastId = null, isLast = false, isLoading = false, type = 'ALL';
     const iconMap = { 'APPROVAL': '📑', 'MAIL': '📧', 'MEETING': '💬', 'CALENDER': '📅', 'OTHER': '🔔' };
+
+    const MiniAlert = {
+        confirm: (msg, title = '확인') => {
+            return Swal.fire({
+                title: title,
+                text: msg,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '확인',
+                cancelButtonText: '취소',
+                confirmButtonColor: '#356fda',
+                cancelButtonColor: '#aaa',
+                reverseButtons: true,
+                customClass: {
+                    popup: 'mini-swal-popup',
+                    title: 'mini-swal-title',
+                    htmlContainer: 'mini-swal-text',
+                    confirmButton: 'mini-swal-button',
+                    cancelButton: 'mini-swal-button',
+                    icon: 'mini-swal-icon'
+                }
+            });
+        },
+        error: (msg) => {
+            return Swal.fire({
+                icon: 'error',
+                title: '오류',
+                text: msg,
+                confirmButtonColor: '#356fda',
+                customClass: {
+                    popup: 'mini-swal-popup',
+                    title: 'mini-swal-title',
+                    htmlContainer: 'mini-swal-text',
+                    confirmButton: 'mini-swal-button',
+                    icon: 'mini-swal-icon'
+                }
+            });
+        }
+    };
 
     async function load() {
         if (isLoading || isLast) return;
@@ -163,8 +211,7 @@
                         </div>
                         <button class="noti-close" onclick="event.stopPropagation(); deleteNoti(${it.notiNo}, this)">×</button>
                     `;
-                // document.getElementById('notiList').appendChild(card); // ❌ 기존 코드
-                document.getElementById('sentinel').before(card); // ✅ sentinel 바로 앞에 추가
+                document.getElementById('sentinel').before(card);
             });
 
             const last = items[items.length - 1];
@@ -193,43 +240,44 @@
     }
 
     window.readAllNotifications = async function() {
-        if(!confirm("모든 알림을 읽음 처리하시겠습니까?")) return;
+        const result = await MiniAlert.confirm("모든 알림을 읽음 처리하시겠습니까?");
+        if(!result.isConfirmed) return;
+
         try {
             const res = await fetch(`/api/v1/notifications/read-all`, { method: 'PATCH' });
             if (res.ok) {
                 location.reload();
-
                 if(window.parent && window.parent.initNotificationSystem) {
                     window.parent.initNotificationSystem();
                 }
             }
-        } catch (e) { console.error("전체 읽음 처리 실패", e); }
+        } catch (e) {
+            console.error("전체 읽음 처리 실패", e);
+            MiniAlert.error("처리 중 오류가 발생했습니다.");
+        }
     };
 
     window.deleteAllNotifications = async function() {
-        if(!confirm("모든 알림을 삭제하시겠습니까?")) return;
+        const result = await MiniAlert.confirm("모든 알림을 삭제하시겠습니까?");
+        if(!result.isConfirmed) return;
 
         try {
             const res = await fetch(`/api/v1/notifications/delete-all`, { method: 'DELETE' });
-
             if (res.ok) {
-
                 location.reload();
-
                 if(window.parent && window.parent.initNotificationSystem) {
                     window.parent.initNotificationSystem();
                 }
             }
         } catch (e) {
             console.error("전체 삭제 처리 실패", e);
+            MiniAlert.error("삭제 중 오류가 발생했습니다.");
         }
     };
 
-    /* notifications.html의 <script> 태그 내부에 추가 */
     window.appendRealtimeNoti = function(it) {
         const notiList = document.getElementById('notiList');
         if (!notiList) return;
-
         if (type !== 'ALL' && type !== it.type) return;
 
         const emptyMsg = notiList.querySelector('.empty-msg');
@@ -238,66 +286,52 @@
         const card = document.createElement('div');
         card.id = `noti-${it.notiNo}`;
         card.className = `noti-card ${it.read ? '' : 'unread'}`;
-        card.style.animation = "slideDown 0.4s ease-out";
-
         card.innerHTML = `
-        <div class="noti-icon">${iconMap[it.type] || '🔔'}</div>
-        <div class="noti-info" onclick="handleRead(${it.notiNo}, '${it.url}')">
-            <div class="noti-title">${it.title}</div>
-            <div class="noti-content">${it.content}</div>
-            <div class="noti-date">${new Date(it.createdAt).toLocaleString()}</div>
-        </div>
-        <button class="noti-close" onclick="event.stopPropagation(); deleteNoti(${it.notiNo}, this)">×</button>
-    `;
-
-        // 목록의 맨 앞에 추가
+            <div class="noti-icon">${iconMap[it.type] || '🔔'}</div>
+            <div class="noti-info" onclick="handleRead(${it.notiNo}, '${it.url}')">
+                <div class="noti-title">${it.title}</div>
+                <div class="noti-content">${it.content}</div>
+                <div class="noti-date">${new Date(it.createdAt).toLocaleString()}</div>
+            </div>
+            <button class="noti-close" onclick="event.stopPropagation(); deleteNoti(${it.notiNo}, this)">×</button>
+        `;
         notiList.prepend(card);
     };
 
-
-
-    // ✅ 백엔드 컨트롤러 ResponseDto에 맞춘 삭제 함수
+    /* ✅ 개별 삭제 시 확인창 없이 바로 삭제되도록 수정 */
     async function deleteNoti(id, btn) {
-        if(!confirm("알림을 삭제하시겠습니까?")) return;
-
         try {
             const res = await fetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
-            const result = await res.json(); // ResponseDto 수신
+            const resData = await res.json();
 
             if (res.ok) {
-                // 삭제 성공 시 애니메이션 후 제거
                 const card = btn.closest('.noti-card');
                 card.style.opacity = '0';
                 card.style.transform = 'translateX(20px)';
 
                 setTimeout(() => {
                     card.remove();
-                    // 목록이 비었는지 확인
-                    if (document.getElementById('notiList').children.length === 0) {
+                    if (document.getElementById('notiList').querySelectorAll('.noti-card').length === 0) {
                         document.getElementById('notiList').innerHTML = '<div class="empty-msg">알림이 없습니다.</div>';
                     }
                 }, 300);
 
-                // 부모창 배지 갱신
                 if(window.parent && window.parent.initNotificationSystem) {
                     window.parent.initNotificationSystem();
                 }
             } else {
-                // 에러 발생 시 (403, 404 등) 서버가 보낸 메시지 출력
-                alert(result.message || "삭제 권한이 없거나 오류가 발생했습니다.");
+                MiniAlert.error(resData.message || "삭제 오류가 발생했습니다.");
             }
         } catch (e) {
             console.error("삭제 통신 오류:", e);
-            alert("서버와 통신 중 오류가 발생했습니다.");
+            MiniAlert.error("서버와 통신 중 오류가 발생했습니다.");
         }
     }
 
-    // 1. 관찰자(Observer) 객체를 변수에 담아 선언합니다.
     const observer = new IntersectionObserver(e => {
         if(e[0].isIntersecting && !isLoading && !isLast) load();
     }, { threshold: 0.1 });
 
-    // 2. 처음 실행 시 sentinel을 감시합니다.
     const initialSentinel = document.getElementById('sentinel');
     if (initialSentinel) observer.observe(initialSentinel);
 
@@ -308,18 +342,11 @@
             tab.classList.add('active');
 
             type = tab.dataset.type;
-
-            // 기존 목록을 비우고 sentinel만 남깁니다.
             document.getElementById('notiList').innerHTML = '<div id="sentinel" style="height: 10px;"></div>';
-
-            // ⚠️ 여기서 아까 선언한 observer 변수를 사용합니다.
             const newSentinel = document.getElementById('sentinel');
             observer.observe(newSentinel);
 
-            // 상태값 초기화 후 로드
-            lastAt = null;
-            lastId = null;
-            isLast = false;
+            lastAt = null; lastId = null; isLast = false;
             load();
         };
     });

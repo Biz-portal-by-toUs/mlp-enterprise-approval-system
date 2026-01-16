@@ -6,43 +6,59 @@
 <head>
     <title>규정 목록 - Bizportal</title>
     <th:block layout:fragment="pageStyles">
+
         <style>
-            /* meeting-list 스타일 가이드 적용 */
+            /* list.html의 구조를 그대로 따름 */
+            .prov-page { display:block; width: 100%; }
+            .prov-content { padding: 0 26px; }
+
+            /* 상단 타이틀 영역 (기존 스타일 유지) */
             .page-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; color: #111; }
             .page-sub { font-size: 15px; font-weight: 600; margin: 0 0 20px; color: var(--muted); }
 
+            /* 툴바 및 검색창 */
             .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
             .select {
                 height: 40px; border-radius: 8px; border: 1px solid var(--line);
                 background: #fff; padding: 0 12px; font-size: 14px; font-weight: 600; outline: none;
             }
-
             .searchWrap {
                 flex: 1; display: flex; align-items: center; height: 40px;
                 border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 0 14px;
             }
             .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; }
-
-            .searchBtn {
-                background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px;
-            }
+            .searchBtn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px; }
             .searchBtn:hover svg { stroke: var(--primary); }
 
-            .btn {
+            /* 버튼 스타일 (list.html의 btn-primary 스타일 참고) */
+            .btn-primary-custom {
                 height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
                 cursor: pointer; border: none; background: var(--primary); color: #fff;
                 white-space: nowrap; transition: 0.15s;
+                box-shadow: 0 8px 16px rgba(47,111,218,.18);
             }
-            .btn:hover { filter: brightness(0.9); }
+            .btn-primary-custom:hover { filter: brightness(0.95); transform: translateY(-1px); }
 
-            /* 테이블 스타일 통일 */
-            .tableWrap { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-            thead th { background: #f9fafb; border-bottom: 1px solid var(--line); text-align: center; padding: 14px 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
-            tbody td { border-bottom: 1px solid var(--line); text-align: center; padding: 12px 10px; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            tbody tr:hover td { background: #fcfdfe; cursor: pointer; }
+            /* 테이블 스타일 (list.html 스타일 느낌으로 조정) */
+            .table-card {
+                background: var(--white);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                box-shadow: var(--shadow2);
+                overflow: hidden;
+            }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+            thead th {
+                text-align: center; font-size: 13px; color: #374151; background: #f8fafc;
+                padding: 16px 12px; border-bottom: 1px solid rgba(17,24,39,.08);
+            }
+            tbody td {
+                text-align: center; padding: 16px 12px; border-bottom: 1px solid rgba(17,24,39,.06);
+                font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            }
+            tbody tr:hover td { background: rgba(59,130,246,.03); cursor: pointer; }
 
-            /* 상태 배지 (동일) */
+            /* 상태 배지 */
             .status-badge {
                 display: inline-flex; align-items: center; justify-content: center;
                 padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
@@ -53,74 +69,70 @@
             .status-PROCESSING { background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe; }
             .status-NONE, .status-CREATED, .status-UPLOADED { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
 
-            /* 페이징 스타일 통일 */
-            .pager-wrapper {
-                display: flex; align-items: center; justify-content: center;
-                position: relative; margin-top: 16px;
-            }
+            /* 페이징 */
+            .pager-wrapper { display: flex; align-items: center; justify-content: center; position: relative; margin-top: 20px; padding-bottom: 20px; }
             .pager { display: flex; align-items: center; gap: 4px; }
             .pageBtn {
                 min-width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line);
                 background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s;
             }
-            .pageBtn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
             .pageBtn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
             .pager-status { position: absolute; right: 0; display: flex; gap: 12px; align-items: center; }
         </style>
     </th:block>
 </head>
 <body>
-<div layout:fragment="content" class="prov-page">
-    <div class="page-with-subbar">
+<div layout:fragment="content">
+    <section class="page-with-subbar">
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></aside>
 
-        <main style="padding: 24px; min-width: 0; flex: 1;">
-            <div class="page-title">사내 규정 관리</div>
-            <div class="page-sub">등록된 사내 규정을 조회하고 관리합니다.</div>
+        <div class="prov-page">
+            <div class="prov-content" style="margin-top: 30px;">
+                <div class="page-title">사내 규정 관리</div>
+                <div class="page-sub">등록된 사내 규정을 조회하고 관리합니다.</div>
 
-            <div class="toolbar">
-                <select id="publicSelect" class="select">
-                    <option value="">공개 전체</option>
-                    <option value="true">공개</option>
-                    <option value="false">비공개</option>
-                </select>
+                <div class="toolbar">
+                    <select id="publicSelect" class="select">
+                        <option value="">공개 전체</option>
+                        <option value="true">공개</option>
+                        <option value="false">비공개</option>
+                    </select>
 
-                <div class="searchWrap">
-                    <input id="keyword" class="searchInput" placeholder="규정 제목을 입력하세요..." />
-                    <button id="searchBtn" class="searchBtn">
-                        <svg viewBox="0 0 24 24" width="20" fill="none" stroke="#666" stroke-width="3">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                        </svg>
-                    </button>
+                    <div class="searchWrap">
+                        <input id="keyword" class="searchInput" placeholder="규정 제목을 입력하세요..." />
+                        <button id="searchBtn" class="searchBtn">
+                            <svg viewBox="0 0 24 24" width="20" fill="none" stroke="#666" stroke-width="3">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <button id="createBtn" class="btn-primary-custom">규정 등록</button>
                 </div>
 
-                <button id="createBtn" class="btn">규정 등록</button>
-            </div>
-
-            <section class="tableWrap">
-                <table>
-                    <thead>
-                    <tr>
-                        <th style="width:80px">번호</th>
-                        <th>규정 제목</th>
-                        <th style="width:120px">공개 여부</th>
-                        <th style="width:120px">상태</th>
-                        <th style="width:150px">최종 수정일</th>
-                    </tr>
-                    </thead>
-                    <tbody id="tbody"></tbody>
-                </table>
-            </section>
-
-            <div class="pager-wrapper">
-                <div id="pager" class="pager"></div>
-                <div class="pager-status">
-                    <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
-                    <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th style="width:80px">번호</th>
+                            <th>규정 제목</th>
+                            <th style="width:120px">공개 여부</th>
+                            <th style="width:120px">상태</th>
+                            <th style="width:150px">최종 수정일</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tbody"></tbody>
+                    </table>
                 </div>
-            </div>
-        </main>
-    </div>
+
+                <div class="pager-wrapper">
+                    <div id="pager" class="pager"></div>
+                    <div class="pager-status">
+                        <span id="countPill" style="font-size:14px; font-weight:600; color:var(--primary)">0건</span>
+                        <span id="pageInfo" style="font-size:13px; color:var(--muted)">page 1 / 1</span>
+                    </div>
+                </div>
+            </div> </div> </section>
 </div>
 
 <th:block layout:fragment="pageScripts">
@@ -173,7 +185,7 @@
                 tb.innerHTML = "";
 
                 if (docs.length === 0) {
-                    tb.innerHTML = '<tr><td colspan="5" style="padding:40px; color:var(--muted)">데이터가 없습니다.</td></tr>';
+                    tb.innerHTML = '<tr><td colspan="5" style="padding:40px; color:var(--muted); text-align:center;">데이터가 없습니다.</td></tr>';
                 }
 
                 docs.forEach((d, index) => {
@@ -181,7 +193,7 @@
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
                         <td>${rowNum}</td>
-                        <td style="text-align:left; padding-left:20px; font-weight:700"><b>${escapeHtml(d.docTitle)}</b></td>
+                        <td style="text-align:left; padding-left:20px; font-weight:700">${escapeHtml(d.docTitle)}</td>
                         <td>${d.isPublic ? "공개" : "비공개"}</td>
                         <td>${getStatusBadge(d.procStat)}</td>
                         <td>${formatDateTime(d.updatedAt)}</td>
