@@ -5,72 +5,74 @@
       layout:decorate="~{layout}">
 <head>
     <title>규정 목록 - Bizportal</title>
-    <style>
-        /* meeting-list 스타일 가이드 적용 */
-        .page-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; color: #111; }
-        .page-sub { font-size: 15px; font-weight: 600; margin: 0 0 20px; color: var(--muted); }
+    <th:block layout:fragment="pageStyles">
+        <style>
+            /* meeting-list 스타일 가이드 적용 */
+            .page-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; color: #111; }
+            .page-sub { font-size: 15px; font-weight: 600; margin: 0 0 20px; color: var(--muted); }
 
-        .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .select {
-            height: 40px; border-radius: 8px; border: 1px solid var(--line);
-            background: #fff; padding: 0 12px; font-size: 14px; font-weight: 600; outline: none;
-        }
+            .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+            .select {
+                height: 40px; border-radius: 8px; border: 1px solid var(--line);
+                background: #fff; padding: 0 12px; font-size: 14px; font-weight: 600; outline: none;
+            }
 
-        .searchWrap {
-            flex: 1; display: flex; align-items: center; height: 40px;
-            border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 0 14px;
-        }
-        .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; }
+            .searchWrap {
+                flex: 1; display: flex; align-items: center; height: 40px;
+                border-radius: 8px; border: 1px solid var(--line); background: #fff; padding: 0 14px;
+            }
+            .searchInput { border: 0; outline: none; width: 100%; font-size: 14px; }
 
-        .searchBtn {
-            background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px;
-        }
-        .searchBtn:hover svg { stroke: var(--primary); }
+            .searchBtn {
+                background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0; margin-left: 8px;
+            }
+            .searchBtn:hover svg { stroke: var(--primary); }
 
-        .btn {
-            height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
-            cursor: pointer; border: none; background: var(--primary); color: #fff;
-            white-space: nowrap; transition: 0.15s;
-        }
-        .btn:hover { filter: brightness(0.9); }
+            .btn {
+                height: 40px; padding: 0 20px; border-radius: 8px; font-size: 14px; font-weight: 700;
+                cursor: pointer; border: none; background: var(--primary); color: #fff;
+                white-space: nowrap; transition: 0.15s;
+            }
+            .btn:hover { filter: brightness(0.9); }
 
-        /* 테이블 스타일 통일 */
-        .tableWrap { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        thead th { background: #f9fafb; border-bottom: 1px solid var(--line); text-align: center; padding: 14px 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
-        tbody td { border-bottom: 1px solid var(--line); text-align: center; padding: 12px 10px; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        tbody tr:hover td { background: #fcfdfe; cursor: pointer; }
+            /* 테이블 스타일 통일 */
+            .tableWrap { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            thead th { background: #f9fafb; border-bottom: 1px solid var(--line); text-align: center; padding: 14px 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+            tbody td { border-bottom: 1px solid var(--line); text-align: center; padding: 12px 10px; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            tbody tr:hover td { background: #fcfdfe; cursor: pointer; }
 
-        /* 상태 배지 (동일) */
-        .status-badge {
-            display: inline-flex; align-items: center; justify-content: center;
-            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
-            min-width: 65px; border: 1px solid transparent;
-        }
-        .status-DONE { background: #ecfdf5; color: #10b981; border-color: #a7f3d0; }
-        .status-FAILED { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
-        .status-PROCESSING { background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe; }
-        .status-NONE, .status-CREATED, .status-UPLOADED { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+            /* 상태 배지 (동일) */
+            .status-badge {
+                display: inline-flex; align-items: center; justify-content: center;
+                padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+                min-width: 65px; border: 1px solid transparent;
+            }
+            .status-DONE { background: #ecfdf5; color: #10b981; border-color: #a7f3d0; }
+            .status-FAILED { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+            .status-PROCESSING { background: #eff6ff; color: #2b6ae6; border-color: #bfdbfe; }
+            .status-NONE, .status-CREATED, .status-UPLOADED { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
 
-        /* 페이징 스타일 통일 */
-        .pager-wrapper {
-            display: flex; align-items: center; justify-content: center;
-            position: relative; margin-top: 16px;
-        }
-        .pager { display: flex; align-items: center; gap: 4px; }
-        .pageBtn {
-            min-width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line);
-            background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s;
-        }
-        .pageBtn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
-        .pageBtn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .pager-status { position: absolute; right: 0; display: flex; gap: 12px; align-items: center; }
-    </style>
+            /* 페이징 스타일 통일 */
+            .pager-wrapper {
+                display: flex; align-items: center; justify-content: center;
+                position: relative; margin-top: 16px;
+            }
+            .pager { display: flex; align-items: center; gap: 4px; }
+            .pageBtn {
+                min-width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line);
+                background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s;
+            }
+            .pageBtn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
+            .pageBtn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+            .pager-status { position: absolute; right: 0; display: flex; gap: 12px; align-items: center; }
+        </style>
+    </th:block>
 </head>
 <body>
 <div layout:fragment="content" class="prov-page">
     <div class="page-with-subbar">
-        <div th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></div>
+        <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('rule')}"></aside>
 
         <main style="padding: 24px; min-width: 0; flex: 1;">
             <div class="page-title">사내 규정 관리</div>
@@ -226,7 +228,9 @@
             loadPage(0);
             $("publicSelect").onchange = () => loadPage(0);
             $("searchBtn").onclick = () => loadPage(0);
-            $("keyword").onkeydown = (e) => { if (e.key === 'Enter') loadPage(0); };
+            $("keyword").onkeydown = (e) => {
+                if (e.key === 'Enter') loadPage(0);
+            };
             $("createBtn").onclick = () => location.href = "/admin/prov-document/create";
         });
     </script>

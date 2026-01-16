@@ -119,29 +119,7 @@
                 margin-left:8px;
             }
 
-            /* toast */
-            .toast{
-                position:fixed;
-                left:50%;
-                bottom:22px;
-                transform:translateX(-50%);
-                background:#111;
-                color:#fff;
-                padding:12px 14px;
-                border-radius:12px;
-                font-weight:900;
-                font-size:14px;
-                box-shadow:0 14px 28px rgba(0,0,0,.18);
-                opacity:0;
-                pointer-events:none;
-                transition:opacity .18s ease, transform .18s ease;
-                z-index:9999;
-            }
-            .toast.show{
-                opacity:1;
-                transform:translateX(-50%) translateY(-2px);
-            }
-            .toast.err{ background:#c62828; }
+
 
             /* 페이지 콘텐츠 padding (기존 main padding 대체) */
             .pos-content{
@@ -155,32 +133,26 @@
 <div layout:fragment="content">
     <section class="page-with-subbar">
 
-        <!-- ✅ 관리자 사이드바(fragment) -->
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('pos')}"></aside>
 
-        <!-- ✅ 페이지 콘텐츠 -->
         <div class="pos-page">
 
-            <!-- 상단 버튼 -->
             <div class="top-row" style="margin-top: 30px">
                 <button class="btn-primary" type="button"
                         onclick="location.href='/admin/positions/create'">직급 등록</button>
             </div>
 
-            <!-- Table card -->
             <div class="pos-content">
                 <div class="card">
                     <div class="table-wrap">
                         <table>
                             <colgroup>
-                                <col style="width:20%;">
-                                <col style="width:45%;">
+                                <col style="width:65%;">
                                 <col style="width:15%;">
                                 <col style="width:20%;">
                             </colgroup>
                             <thead>
                             <tr>
-                                <th>번호</th>
                                 <th>직급명</th>
                                 <th>순서</th>
                                 <th>관리</th>
@@ -195,7 +167,6 @@
         </div>
     </section>
 
-    <div id="toast" class="toast" aria-live="polite"></div>
 </div>
 
 <th:block layout:fragment="pageScripts">
@@ -233,7 +204,7 @@
         async function onDelete(posNo, posName) {
             // 1. Alert.confirm이 닫힐 때까지 기다린 후 결과를 받습니다.
             const result = await Alert.confirm(
-                `정말로 '${posName}' 직급을 삭제할까요?\n(삭제 후 복구 불가)`,
+                `정말로 '${posName}' 직급을 삭제할까요?\n(복구 불가)`,
                 "직급 삭제"
             );
 
@@ -278,7 +249,7 @@
         }
 
         function renderEmptyRow(tbody, message){
-            tbody.innerHTML = `<tr class="empty-row"><td colspan="4">${escapeHtml(message)}</td></tr>`;
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="3">${escapeHtml(message)}</td></tr>`;
         }
 
         async function loadPositions() {
@@ -306,7 +277,6 @@
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${escapeHtml(posNo)}</td>
                     <td>${escapeHtml(posName)}</td>
                     <td>${escapeHtml(posOrder)}</td>
                     <td>
