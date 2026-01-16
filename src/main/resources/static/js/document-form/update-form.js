@@ -81,21 +81,33 @@ function markFormListDirty() {
     } catch (_) {}
 }
 
-// ===== auth =====
-function getAccessToken() {
-    return (localStorage.getItem('accessToken') || '').trim()
+// ===== server-injected me =====
+function getMeEmpId() {
+    return String(window.__ME_EMP_ID || '').trim()
 }
 
+function getMeRoles() {
+    return Array.isArray(window.__ME_ROLES) ? window.__ME_ROLES : []
+}
+
+function getMeComId() {
+    const v = window.__ME_COM_ID
+    if (v === null || v === undefined) return null
+    const s = String(v).trim()
+    return s ? s : null
+}
+
+// ===== auth =====
 async function apiFetch(url, options = {}) {
-    const token = getAccessToken()
     const headers = new Headers(options.headers || {})
     if (!headers.has('Accept')) headers.set('Accept', 'application/json')
 
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
-    if (options.body && !isFormData && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    if (options.body && !isFormData && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
+    }
 
-    if (token) headers.set('Authorization', /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`)
-
+    // Authorization 헤더는 넣지 않음
     return fetch(url, { ...options, headers, credentials: 'same-origin' })
 }
 
@@ -276,27 +288,23 @@ function escapeHtml(s) {
 }
 
 // path: /form/{docfoNo}/edit
-function getDocfoNo() {
-    const parts = location.pathname.split('/').filter(Boolean)
-    if (parts.length >= 3 && parts[0] === 'form' && parts[2] === 'edit' && /^\d+$/.test(parts[1])) {
-        return parts[1]
-    }
-
-    const meta = document.querySelector('meta[name="template-id"]')
-    const metaId = meta?.content?.trim()
-    if (metaId) return metaId
-
-    const sp = new URLSearchParams(location.search)
-    const q = sp.get('docfoNo') || sp.get('id')
-    return q ? String(q).trim() : ''
+function getDocfoNoFromServerInjected() {
+    const v = window.__DOCFO_NO__
+    if (v === null || v === undefined) return ''
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? String(n) : ''
 }
 
-const docfoNo = getDocfoNo()
+const docfoNo = getDocfoNoFromServerInjected()
+
 if (!docfoNo) {
     ;(async () => {
-        await swalError('잘못된 접근', 'docfoNo를 찾을 수 없습니다. 경로가 /form/{docfoNo}/edit 인지 확인하세요.')
+        await swalError(
+            '잘못된 접근',
+            'docfoNo를 찾을 수 없습니다. ViewController에서 window.__DOCFO_NO__ 를 주입했는지 확인하세요.'
+        )
     })()
-    throw new Error('docfoNo missing')
+    throw new Error('docfoNo missing (server injected)')
 }
 
 // ===== categories (radio + add + delete + rename) =====
@@ -961,8 +969,14 @@ async function buildPayload({ editor, baseDetail }) {
 
     const payload = { docfoName, cnttJson, cnttHtml, categories }
 
-    if (baseDetail?.comId || baseDetail?.com_id) payload.comId = baseDetail.comId ?? baseDetail.com_id
-    if (baseDetail?.writerId || baseDetail?.writer_id) payload.writerId = baseDetail.writerId ?? baseDetail.writer_id
+    const meComId = getMeComId()
+    const meWriterId = getMeEmpId()
+
+    if (meComId) payload.comId = meComId
+    else if (baseDetail?.comId || baseDetail?.com_id) payload.comId = baseDetail.comId ?? baseDetail.com_id
+
+    if (meWriterId) payload.writerId = meWriterId
+    else if (baseDetail?.writerId || baseDetail?.writer_id) payload.writerId = baseDetail.writerId ?? baseDetail.writer_id
 
     return payload
 }
