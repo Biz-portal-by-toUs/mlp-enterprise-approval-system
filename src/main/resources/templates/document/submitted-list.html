@@ -70,7 +70,6 @@
                 border-radius: 12px;
                 margin-bottom: 16px;
                 display: grid;
-                /* 1fr 대신 minmax(0, 1fr)을 사용하여 부모 너비를 초과하지 않게 함 */
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 15px 20px;
                 align-items: center;
@@ -79,7 +78,6 @@
                 box-sizing: border-box;
             }
 
-            /* 일반적인 데스크탑/노트북 환경에서 4열이 좁을 경우 2열로 전환 */
             @media (max-width: 1400px) {
                 .search-container {
                     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -89,7 +87,6 @@
                 }
             }
 
-            /* 모바일 및 매우 좁은 화면 */
             @media (max-width: 768px) {
                 .search-container {
                     grid-template-columns: 1fr;
@@ -105,7 +102,7 @@
                 align-items: center;
                 gap: 8px;
                 position: relative;
-                min-width: 0; /* 내부 요소가 넘치는 것 방지 */
+                min-width: 0;
             }
             .search-group label {
                 font-size: 13px;
@@ -123,7 +120,7 @@
                 font-size: 13px;
                 outline: none;
                 background: white;
-                min-width: 0; /* 중요: 그리드 아이템 내에서 축소 가능하게 함 */
+                min-width: 0;
             }
             .search-input.disabled {
                 background-color: #e9ecef;
@@ -198,15 +195,15 @@
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-                overflow-x: auto; /* 테이블이 클 경우 가로 스크롤 제공 */
+                overflow-x: auto;
             }
 
-            /* [테이블 디자인] */
+            /* [테이블 디자인 - 너비 비율 조정] */
             .doc-table {
                 width: 100%;
                 border-collapse: collapse;
-                table-layout: auto;
-                min-width: 1000px; /* 테이블 데이터 보호를 위한 최소 너비 */
+                table-layout: fixed; /* 고정 레이아웃 사용 */
+                min-width: 1100px;
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -227,6 +224,10 @@
                 color: #333;
                 vertical-align: middle;
                 line-height: 1.4;
+                /* 텍스트 넘침 방지 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .doc-table tbody tr:hover td {
                 background: #fcfdfe;
@@ -234,12 +235,15 @@
 
             .title-cell {
                 text-align: center !important;
-                padding-left: 10px !important;
-                padding-right: 10px !important;
+                padding-left: 15px !important;
+                padding-right: 15px !important;
                 cursor: pointer;
                 font-weight: 700;
-                word-break: break-word;
                 transition: color 0.2s;
+                /* 제목 말줄임 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .title-cell:hover {
                 color: var(--primary);
@@ -507,15 +511,15 @@
                 <table class="doc-table">
                     <thead>
                     <tr>
-                        <th style="width: 60px;">NO</th>
-                        <th style="width: 140px;">문서코드</th>
-                        <th style="width: 120px;">카테고리</th>
+                        <th style="width: 50px;">NO</th>
+                        <th style="width: 200px;">문서코드</th>
+                        <th style="width: 100px;">카테고리</th>
                         <th>제목</th>
-                        <th style="width: 100px;">부서</th>
-                        <th style="width: 110px;">작성자</th>
-                        <th style="width: 100px;">문서 상태</th>
-                        <th style="width: 140px;">최근 결재일</th>
-                        <th style="width: 140px;">상신일</th>
+                        <th style="width: 80px;">부서</th>
+                        <th style="width: 100px;">작성자</th>
+                        <th style="width: 90px;">문서 상태</th>
+                        <th style="width: 125px;">최근 결재일</th>
+                        <th style="width: 125px;">상신일</th>
                         <th style="width: 100px;">AI 요약</th>
                     </tr>
                     </thead>
@@ -746,7 +750,6 @@
                     tr.style.opacity = '0.7';
                 }
 
-                // 반려 배지 생성
                 let badgeHtml = '';
                 if (doc.docStat === 'RJ') {
                     badgeHtml = `<span class="doc-badge doc-badge-RJ btn-show-reject" data-docno="${doc.docNo}" data-resubmitted="${doc.isResubmitted || false}">반려</span>`;
@@ -755,17 +758,16 @@
                 }
 
                 const titleHtml = doc.isResubmitted
-                    ? `${doc.title} <span style="color:#868e96;font-size:11px;">(재상신됨)</span>`
+                    ? `${doc.title} <br><span style="color:#868e96;font-size:11px;">(재상신됨)</span>`
                     : doc.title;
 
-                // AI 요약 버튼 (onclick 제거, data-summary 사용)
                 const aiSummBtn = doc.aiSumm
                     ? `<button type="button" class="page-btn-nav ai-summary-btn" style="padding:4px 10px;" data-summary="${escapeHtml(doc.aiSumm)}">보기</button>`
                     : '-';
 
                 tr.innerHTML = `
                     <td>${no}</td>
-                    <td>${doc.docId || '-'}</td>
+                    <td title="${doc.docId || ''}">${doc.docId || '-'}</td>
                     <td>${doc.docFormCatName || '-'}</td>
                     <td class="title-cell" title="${doc.title}">${titleHtml}</td>
                     <td>${doc.writerDepName || '-'}</td>
@@ -776,13 +778,11 @@
                     <td>${aiSummBtn}</td>
                 `;
 
-                // 1. 제목 클릭 시 상세 이동
                 const titleCell = tr.querySelector('.title-cell');
                 titleCell.addEventListener('click', () => {
                     location.href = `/documents/${doc.docNo}?status=SUBMITTED`;
                 });
 
-                // 2. 반려 배지 클릭 이벤트 바인딩
                 const rejectBadge = tr.querySelector('.btn-show-reject');
                 if (rejectBadge) {
                     rejectBadge.addEventListener('click', (e) => {
@@ -793,7 +793,6 @@
                     });
                 }
 
-                // 3. AI 요약 버튼 클릭 이벤트 바인딩 (안정적인 데이터 처리)
                 const summaryBtn = tr.querySelector('.ai-summary-btn');
                 if (summaryBtn) {
                     summaryBtn.addEventListener('click', (e) => {
@@ -855,7 +854,6 @@
                 const response = await fetch(`/api/v1/documents/${docNo}?status=SUBMITTED`, { credentials: 'include' });
                 const result = await response.json();
                 if (response.ok && result.data) {
-                    // ✅ [수정]: 반려 데이터 중 실제 반려를 수행한(isActualAppr === true) 사람을 찾습니다.
                     const rejectedLine = result.data.resApprovalLineDtos?.find(line => line.apprStat === 'R' && line.isActualAppr === true);
 
                     if (rejectedLine) {
@@ -895,7 +893,6 @@
         }
 
         function showAiSummaryModal(summary) {
-            // 요약 텍스트에 포함된 \n 문자열을 실제 줄바꿈으로 변환하여 표시
             const formattedSummary = summary ? summary.replace(/\\n/g, '\n') : '요약 정보가 없습니다.';
             document.getElementById('ai-summary-text').textContent = formattedSummary;
             document.getElementById('ai-summary-modal').classList.add('show');
@@ -905,9 +902,6 @@
             document.getElementById('ai-summary-modal').classList.remove('show');
         }
 
-        /**
-         * AI 요약 데이터 내의 특수문자와 줄바꿈을 안전하게 이스케이프함
-         */
         function escapeHtml(text) {
             if (!text) return '';
             return text
@@ -916,7 +910,7 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;")
-                .replace(/\n/g, "\\n"); // JS에서 다루기 위해 줄바꿈을 문자열 \n으로 변환
+                .replace(/\n/g, "\\n");
         }
 
         function applySort() {
