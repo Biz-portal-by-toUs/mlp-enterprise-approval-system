@@ -11,13 +11,22 @@
 
     <th:block layout:fragment="pageStyles">
         <style>
-            /* [페이지 헤더] */
+            /* [페이지 레이아웃] 전체 화면 스크롤 방지 */
+            section.page-with-subbar > main {
+                padding: 24px;
+                min-width: 0;
+                flex: 1;
+                overflow-x: hidden;
+            }
+
+            /* [페이지 헤더] 선 제거 및 간격 조정 */
             .page-header {
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-end;
-                margin-bottom: 16px;
-                padding-bottom: 12px;
+                align-items: center;
+                margin-bottom: 24px;
+                padding-bottom: 0;
+                border-bottom: none;
             }
             .page-title {
                 font-size: 24px;
@@ -31,20 +40,22 @@
                 color: var(--primary);
             }
 
-            /* [테이블 래퍼] */
+            /* [테이블 래퍼] 내부 가로 스크롤 활성화 */
             .tableWrap {
                 background: #fff;
                 border: 1px solid var(--line);
                 border-radius: 12px;
-                overflow: hidden;
+                overflow-x: auto;
+                width: 100%;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             }
 
-            /* [테이블 디자인] */
+            /* [테이블 디자인] 고정 레이아웃 및 최소 너비 설정 */
             .doc-table {
                 width: 100%;
                 border-collapse: collapse;
-                table-layout: auto;
+                table-layout: fixed;
+                min-width: 800px; /* 열 제거에 맞춰 소폭 조정 */
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -65,6 +76,10 @@
                 color: #333;
                 vertical-align: middle;
                 line-height: 1.4;
+                /* 텍스트 넘침 방지 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .doc-table tbody tr:hover td {
                 background: #fcfdfe;
@@ -76,24 +91,28 @@
                 padding-right: 10px !important;
                 cursor: pointer;
                 font-weight: 700;
-                word-break: break-all;
                 transition: color 0.2s;
+                /* 말줄임표 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .title-cell:hover {
                 color: var(--primary);
             }
 
-            /* ✅ 삭제 버튼 스타일 추가 */
+            /* 삭제 버튼 스타일 */
             .btn-delete {
                 padding: 6px 12px;
-                background-color: #fa5252; /* 빨간색 배경 */
-                color: white;             /* 하얀색 글씨 */
+                background-color: #fa5252;
+                color: white;
                 border: none;
                 border-radius: 6px;
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
                 transition: background 0.2s, transform 0.1s;
+                white-space: nowrap;
             }
             .btn-delete:hover {
                 background-color: #e03131;
@@ -109,7 +128,7 @@
                 align-items: center;
                 justify-content: center;
                 position: relative;
-                margin-top: 16px;
+                margin-top: 24px;
             }
             .pagination {
                 display: flex;
@@ -125,10 +144,11 @@
                 font-size: 14px;
                 font-weight: 600;
                 cursor: pointer;
-                transition: 0.15s;
+                transition: all 0.15s ease-in-out;
             }
             .page-btn-nav:hover:not(:disabled) {
                 background: #f1f5f9;
+                border-color: #cbd5e1;
             }
             .page-btn-nav:disabled {
                 background: #f1f3f5 !important;
@@ -150,10 +170,11 @@
                 font-weight: 600;
                 text-decoration: none;
                 color: inherit;
-                transition: 0.15s;
+                transition: all 0.15s ease-in-out;
             }
             .page-btn-num:hover:not(.active) {
                 background: #f1f5f9;
+                border-color: #cbd5e1;
             }
             .page-btn-num.active {
                 background-color: var(--primary);
@@ -173,9 +194,18 @@
             }
 
             .empty-msg {
-                padding: 40px 0;
+                padding: 80px 0 !important;
                 color: var(--muted);
                 font-size: 15px;
+            }
+
+            /* 모바일 최적화 */
+            @media (max-width: 768px) {
+                section.page-with-subbar > main { padding: 16px; }
+                .page-title { font-size: 20px; }
+                .doc-count { font-size: 12px; }
+                .pager-status { position: static; margin-top: 10px; width: 100%; justify-content: center; }
+                .pager-wrapper { flex-direction: column; }
             }
         </style>
     </th:block>
@@ -186,7 +216,7 @@
     <section class="page-with-subbar">
         <aside th:replace="~{sidebar/document-sidebar :: documentSidebar('unsubmitted')}"></aside>
 
-        <main style="padding: 24px; min-width: 0; flex: 1;">
+        <main>
             <div class="page-header">
                 <h1 class="page-title">임시저장 문서함</h1>
                 <div class="doc-count" id="total-count">조회된 문서: 0건</div>
@@ -196,15 +226,15 @@
                 <table class="doc-table">
                     <thead>
                     <tr>
-                        <th style="width: 80px;">NO</th>
-                        <th style="width: 150px;">카테고리</th>
+                        <th style="width: 50px;">NO</th>
+                        <th style="width: 120px;">카테고리</th>
                         <th>제목</th>
-                        <th style="width: 150px;">작성자</th>
                         <th style="width: 180px;">마지막 저장일</th>
-                        <th style="width: 100px;">관리</th> </tr>
+                        <th style="width: 80px;">관리</th>
+                    </tr>
                     </thead>
                     <tbody id="document-list">
-                    <tr><td colspan="6" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
+                    <tr><td colspan="5" class="empty-msg">데이터를 불러오는 중입니다...</td></tr>
                     </tbody>
                 </table>
             </section>
@@ -251,7 +281,7 @@
             } catch (error) {
                 console.error('조회 실패:', error);
                 document.getElementById('document-list').innerHTML =
-                    '<tr><td colspan="6" class="empty-msg" style="color:var(--danger);">데이터 로드 중 오류가 발생했습니다.</td></tr>';
+                    '<tr><td colspan="5" class="empty-msg" style="color:var(--danger);">데이터 로드 중 오류가 발생했습니다.</td></tr>';
             }
         }
 
@@ -260,7 +290,7 @@
             tbody.innerHTML = '';
 
             if (!docs || docs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">임시저장된 문서가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">임시저장된 문서가 없습니다.</td></tr>';
                 return;
             }
 
@@ -271,9 +301,8 @@
 
                 tr.innerHTML = `
                     <td>${rowNum}</td>
-                    <td>${doc.docFormCatName || '-'}</td>
+                    <td title="${doc.docFormCatName || ''}">${doc.docFormCatName || '-'}</td>
                     <td class="title-cell" title="${doc.title || '(제목 없음)'}">${doc.title || '(제목 없음)'}</td>
-                    <td>${doc.writer}<br><small style="color:#868e96;">${doc.writerId}</small></td>
                     <td>${formatDate(doc.updatedAt)}</td>
                     <td>
                         <button class="btn-delete" onclick="confirmDelete(${doc.docNo})">삭제</button>
@@ -288,18 +317,17 @@
             });
         }
 
-        // ✅ 삭제 확인 및 실행 로직
         async function confirmDelete(docNo) {
             Swal.fire({
                 title: '정말 삭제하시겠습니까?',
                 text: "삭제된 문서는 복구할 수 없으며, 반려 문서의 재작성 링크도 해제됩니다.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#fa5252', // 삭제 버튼 색상 (빨간색)
-                cancelButtonColor: '#adb5bd',  // 취소 버튼 색상 (회색)
+                confirmButtonColor: '#fa5252',
+                cancelButtonColor: '#adb5bd',
                 confirmButtonText: '삭제',
                 cancelButtonText: '취소',
-                reverseButtons: true // 버튼 순서 거꾸로 (취소를 왼쪽으로)
+                reverseButtons: true
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
@@ -317,7 +345,6 @@
                                 icon: 'success',
                                 confirmButtonColor: '#339af0'
                             });
-                            // 현재 페이지 데이터 다시 불러오기
                             loadData(currentPage);
                         } else {
                             throw new Error(resData.message || '삭제 처리에 실패했습니다.');

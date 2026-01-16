@@ -199,12 +199,12 @@
                 overflow-x: auto; /* 테이블이 클 경우 가로 스크롤 제공 */
             }
 
-            /* [테이블 디자인] */
+            /* [테이블 디자인 수정] */
             .doc-table {
                 width: 100%;
                 border-collapse: collapse;
-                table-layout: auto;
-                min-width: 1000px; /* 테이블 구조 보호를 위한 최소 너비 */
+                table-layout: fixed; /* 말줄임표 작동을 위한 고정 레이아웃 */
+                min-width: 1100px; /* 전체 화면에서 스크롤을 억제하기 위한 적정 너비 */
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -224,22 +224,28 @@
                 font-weight: 500;
                 color: #333;
                 vertical-align: middle;
-                word-break: break-all;
                 line-height: 1.4;
+                /* 말줄임표 처리 공통 적용 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .doc-table tbody tr:hover td {
                 background: #fcfdfe;
             }
 
-            /* 제목 셀 중앙정렬 수정 */
+            /* 제목 셀 중앙정렬 유지 및 말줄임 처리 */
             .title-cell {
                 text-align: center !important;
                 padding-left: 10px !important;
                 padding-right: 10px !important;
                 cursor: pointer;
                 font-weight: 700;
-                word-break: break-all;
                 transition: color 0.2s;
+                /* 말줄임 필수 속성 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .title-cell:hover {
                 color: var(--primary);
@@ -258,6 +264,7 @@
                 height: auto !important;
                 border: none !important;
                 background: transparent !important;
+                white-space: nowrap;
             }
             .doc-table .doc-badge-AW {
                 background: #eff6ff !important;
@@ -549,17 +556,17 @@
                 <table class="doc-table">
                     <thead>
                     <tr>
-                        <th style="width: 60px;">NO</th>
-                        <th style="width: 120px;">문서코드</th>
+                        <th style="width: 45px;">NO</th>
+                        <th style="width: 150px;">문서코드</th>
                         <th style="width: 100px;">카테고리</th>
                         <th>제목</th>
-                        <th style="width: 100px;">부서</th>
-                        <th style="width: 110px;">작성자</th>
-                        <th style="width: 100px;">문서 상태</th>
-                        <th style="width: 130px;">상신일</th>
-                        <th style="width: 90px;">내 결재</th>
-                        <th style="width: 130px;">내 결재일</th>
-                        <th style="width: 90px;">AI 요약</th>
+                        <th style="width: 90px;">부서</th>
+                        <th style="width: 100px;">작성자</th>
+                        <th style="width: 90px;">문서 상태</th>
+                        <th style="width: 110px;">상신일</th>
+                        <th style="width: 80px;">내 결재</th>
+                        <th style="width: 110px;">내 결재일</th>
+                        <th style="width: 80px;">AI 요약</th>
                     </tr>
                     </thead>
                     <tbody id="document-list">
@@ -892,7 +899,7 @@
 
                 tr.innerHTML = `
                     <td>${no}</td>
-                    <td>${doc.docId || '-'}</td>
+                    <td title="${doc.docId || ''}">${doc.docId || '-'}</td>
                     <td>${doc.docFormCatName || '-'}</td>
                     <td class="title-cell" title="${doc.title}">${doc.title}</td>
                     <td>${doc.writerDepName || '-'}</td>
@@ -934,7 +941,7 @@
                 const result = await response.json();
                 if (response.ok && result.data) {
                     const doc = result.data;
-                    // ✅ [수정]: 자동 반려된 원 결재자가 아닌, 실제 반려를 누른(isActualAppr) 사람을 찾습니다.
+                    // ✅ [수정]: 실제 반려를 누른(isActualAppr) 사람을 찾습니다.
                     const rejectedLine = doc.resApprovalLineDtos?.find(line => line.apprStat === 'R' && line.isActualAppr === true);
 
                     if (rejectedLine) {
