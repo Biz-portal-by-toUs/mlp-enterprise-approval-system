@@ -204,12 +204,12 @@
                 overflow-x: auto; /* 가로 스크롤 허용 */
             }
 
-            /* [테이블 디자인] */
+            /* [테이블 디자인 수정] */
             .doc-table {
                 width: 100%;
                 border-collapse: collapse;
-                table-layout: auto;
-                min-width: 1000px; /* 테이블 구조 보호 */
+                table-layout: fixed; /* 고정 레이아웃 적용 */
+                min-width: 1100px; /* 테이블 구조 보호를 위한 적정 너비 */
             }
             .doc-table thead th {
                 background: #f9fafb;
@@ -230,20 +230,26 @@
                 color: #333;
                 vertical-align: middle;
                 line-height: 1.4;
+                /* 말줄임표 처리 공통 적용 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .doc-table tbody tr:hover td {
                 background: #fcfdfe;
             }
 
-            /* 제목 셀 중앙정렬 */
+            /* 제목 셀 중앙정렬 유지 및 말줄임 처리 */
             .title-cell {
                 text-align: center !important;
                 padding-left: 10px !important;
                 padding-right: 10px !important;
                 cursor: pointer;
                 font-weight: 700;
-                word-break: break-all;
                 transition: color 0.2s;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .title-cell:hover {
                 color: var(--primary);
@@ -468,15 +474,15 @@
                 <table class="doc-table">
                     <thead>
                     <tr>
-                        <th style="width: 60px;">NO</th>
-                        <th style="width: 140px;">문서코드</th>
+                        <th style="width: 45px;">NO</th>
+                        <th style="width: 150px;">문서코드</th>
                         <th style="width: 120px;">카테고리</th>
                         <th>제목</th>
-                        <th style="width: 100px;">부서</th>
-                        <th style="width: 120px;">작성자</th>
-                        <th style="width: 150px;">상신일</th>
-                        <th style="width: 150px;">최종승인일</th>
-                        <th style="width: 100px;">AI 요약</th>
+                        <th style="width: 90px;">부서</th>
+                        <th style="width: 110px;">작성자</th>
+                        <th style="width: 120px;">상신일</th>
+                        <th style="width: 120px;">최종승인일</th>
+                        <th style="width: 80px;">AI 요약</th>
                     </tr>
                     </thead>
                     <tbody id="document-list">
@@ -687,7 +693,7 @@
 
                 tr.innerHTML = `
                     <td>${no}</td>
-                    <td>${doc.docId || '-'}</td>
+                    <td title="${doc.docId || ''}">${doc.docId || '-'}</td>
                     <td>${doc.docFormCatName || '-'}</td>
                     <td class="title-cell" title="${doc.title}">${doc.title}</td>
                     <td>${doc.writerDepName || '-'}</td>
