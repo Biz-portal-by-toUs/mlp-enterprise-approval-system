@@ -109,8 +109,12 @@
 
         $("backBtn").onclick = () => location.href = "/admin/prov-document/list";
         $("editBtn").onclick = () => location.href = `/admin/prov-document/${encodeURIComponent(provNoFromPath)}/update`;
-        $("deleteBtn").onclick = () => {
-            Alert.confirm("정말 이 규정을 삭제하시겠습니까?", "규정 삭제", async () => {
+        $("deleteBtn").onclick = async () => {
+            // 1. Alert.confirm이 닫힐 때까지 기다린 후 결과를 받습니다.
+            const result = await Alert.confirm("정말 이 규정을 삭제하시겠습니까?", "규정 삭제");
+
+            // 2. 사용자가 '확인'을 눌렀을 때만 실행합니다.
+            if (result.isConfirmed) {
                 try {
                     const res = await fetch(`${API_BASE}/api/v1/prov-documents/${encodeURIComponent(provNoFromPath)}`, {
                         method: "DELETE",
@@ -118,20 +122,19 @@
                     });
 
                     if (!res.ok) {
-                        Alert.error("삭제 중 오류가 발생했습니다.");
+                        await Alert.error("삭제 중 오류가 발생했습니다.");
                         return;
                     }
 
-                    // 삭제 성공 시 알림 후 목록으로 자동 이동
-                    Alert.success("규정이 성공적으로 삭제되었습니다.").then(() => {
-                        location.href = "/admin/prov-document/list";
-                    });
+                    // 3. 삭제 성공 알림 확인 버튼을 누를 때까지 기다린 후 목록으로 이동
+                    await Alert.success("규정이 성공적으로 삭제되었습니다.");
+                    location.href = "/admin/prov-document/list";
 
                 } catch (error) {
                     console.error("삭제 요청 중 네트워크 오류 발생:", error);
-                    Alert.error("서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+                    await Alert.error("서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.");
                 }
-            });
+            }
         };
         window.onload = loadDetail;
     </script>

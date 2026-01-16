@@ -278,9 +278,16 @@
 
         function onEdit(depNo) { location.href = `/admin/departments/${depNo}/edit`; }
 
-        // ✅ [Alert 적용] 삭제 로직 수정
+        // ✅ [수정] async/await 패턴을 적용하여 사용자의 선택을 기다립니다.
         async function onDelete(depNo, depName) {
-            Alert.confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`, "부서 삭제", async () => {
+            // 1. Alert.confirm이 닫힐 때까지 기다린 후 결과를 받습니다.
+            const result = await Alert.confirm(
+                `정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`,
+                "부서 삭제"
+            );
+
+            // 2. 사용자가 '확인'을 눌렀을 때만 삭제 로직을 실행합니다.
+            if (result.isConfirmed) {
                 try {
                     const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
                         method: "DELETE",
@@ -288,22 +295,25 @@
                         headers: { "Accept": "application/json" }
                     });
 
-                    if (res.status === 401) return Alert.error("로그인이 필요합니다.");
-                    if (res.status === 403) return Alert.error("권한이 없습니다.");
+                    if (res.status === 401) return await Alert.error("로그인이 필요합니다.");
+                    if (res.status === 403) return await Alert.error("권한이 없습니다.");
 
                     if (!res.ok) {
                         let msg = "삭제 실패";
                         const json = await safeJson(res);
                         if (json && (json.message || json.error)) msg = json.message || json.error;
-                        return Alert.error(msg);
+                        return await Alert.error(msg);
                     }
 
-                    Alert.success("삭제되었습니다.");
+                    // 3. 삭제 성공 알림 확인 후 목록을 새로고침합니다.
+                    await Alert.success("삭제되었습니다.");
                     await loadDepartments();
+
                 } catch (e) {
-                    Alert.error("삭제 중 오류가 발생했습니다.");
+                    console.error(e);
+                    await Alert.error("삭제 중 오류가 발생했습니다.");
                 }
-            });
+            }
         }
 
         window.addEventListener("DOMContentLoaded", () => {

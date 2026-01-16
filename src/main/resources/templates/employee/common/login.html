@@ -264,6 +264,7 @@
         return Boolean(result?.data?.mustChangePassword ?? result?.mustChangePassword);
     }
 
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         serverError.style.display = 'none';
@@ -286,16 +287,16 @@
                 const mustChangePassword = getMustChangePassword(result);
 
                 if (mustChangePassword) {
-                    const result = await Alert.confirm('초기 비밀번호입니다. 지금 변경하시겠습니까?', '보안 알림');
+                    const confirmRes = await Alert.confirm('초기 비밀번호입니다. 보안을 위해 지금 비밀번호를 변경하시겠습니까?', '보안 알림');
 
-                    if (result.isConfirmed) {
+                    if (confirmRes.isConfirmed) {
                         window.location.href = '/auth/employee/verify';
-                        return;
                     } else {
                         window.location.href = '/auth/employee/login';
-                        return;
                     }
+                    return;
                 }
+
                 window.location.href = '/employees';
 
             } else {
@@ -304,8 +305,7 @@
             }
         } catch (err) {
             console.error(err);
-            serverError.textContent = '로그인 요청 중 오류가 발생했습니다.';
-            serverError.style.display = 'block';
+            await Alert.error('서버와의 통신 중 오류가 발생했습니다.');
         }
     });
 

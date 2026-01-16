@@ -226,13 +226,20 @@
             const btn = $("submitBtn");
             if (!btn) return;
 
+            // ✅ [수정] async/await 패턴을 적용하여 일관성 있게 변경
             btn.addEventListener("click", async () => {
                 const posName = $("posName")?.value?.trim() || "";
                 const posOrder = parseInt($("posOrder")?.value || "0", 10);
 
-                if (!posName) return showMsg("직급명을 입력해주세요.", false);
-                if (!Number.isInteger(posOrder) || posOrder < 1 || posOrder > 50)
-                    return showMsg("직급 순서는 1~50 사이로 선택해주세요.", false);
+                // 1. 유효성 검사 (Alert.warning 사용)
+                if (!posName) {
+                    await Alert.warning("직급명을 입력해주세요.");
+                    return;
+                }
+                if (!Number.isInteger(posOrder) || posOrder < 1 || posOrder > 50) {
+                    await Alert.warning("직급 순서는 1~50 사이로 선택해주세요.");
+                    return;
+                }
 
                 try {
                     const res = await fetch("/api/v1/admin/positions", {
@@ -242,22 +249,30 @@
                         body: JSON.stringify({ posName, posOrder })
                     });
 
-                    if (res.status === 401) return showMsg("로그인이 필요합니다. 다시 로그인 해주세요.", false);
-                    if (res.status === 403) return showMsg("권한이 없습니다. (COM_ADMIN만 가능)", false);
-
-                    if (res.ok) {
-                        Alert.success("직급이 등록되었습니다.").then(() => {
-                            window.location.href = "/admin/positions/list";
-                        });
+                    // 2. 권한 및 인증 오류 처리 (Alert.error 사용)
+                    if (res.status === 401) {
+                        await Alert.error("로그인이 필요합니다. 다시 로그인 해주세요.");
+                        return;
+                    }
+                    if (res.status === 403) {
+                        await Alert.error("권한이 없습니다. (COM_ADMIN만 가능)");
                         return;
                     }
 
+                    if (res.ok) {
+                        // ✅ [핵심] 성공 알림창의 확인 버튼을 누를 때까지 기다린 후 목록 이동
+                        await Alert.success("직급이 등록되었습니다.");
+                        window.location.href = "/admin/positions/list";
+                        return;
+                    }
+
+                    // 3. 기타 비즈니스 로직 에러 처리
                     const data = await safeJson(res);
-                    showMsg(data?.message || `요청 처리에 실패했습니다. (HTTP ${res.status})`, false);
+                    await Alert.error(data?.message || `요청 처리에 실패했습니다. (HTTP ${res.status})`);
 
                 } catch (e) {
                     console.error(e);
-                    showMsg("서버 통신 오류가 발생했습니다.", false);
+                    await Alert.error("서버 통신 오류가 발생했습니다.");
                 }
             });
         });

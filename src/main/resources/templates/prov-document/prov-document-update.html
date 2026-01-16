@@ -95,30 +95,30 @@
                 $("docTitleInput").value = d.docTitle || "";
                 $("descInput").value = d.description || "";
 
-                // 라디오 버튼 상태 설정
                 const isPublicVal = String(d.isPublic);
                 document.querySelectorAll('input[name="isPublic"]').forEach(r => {
                     r.checked = (r.value === isPublicVal);
                 });
             } catch(e) {
                 console.error("데이터 로드 실패:", e);
-                Alert.error("기존 규정 정보를 불러오지 못했습니다.");
+                // ✅ [수정] await 적용
+                await Alert.error("기존 규정 정보를 불러오지 못했습니다.");
             }
         }
 
-        // 2. 저장 기능
         $("saveBtn").onclick = async () => {
             const docTitle = $("docTitleInput").value.trim();
             const description = $("descInput").value;
             const checkedRadio = document.querySelector('input[name="isPublic"]:checked');
             const isPublic = checkedRadio ? checkedRadio.value === "true" : true;
 
+            // 유효성 검사 (Alert.warning 사용)
             if (!docTitle) {
-                Alert.warning("제목을 입력해주세요.");
+                await Alert.warning("제목을 입력해주세요.");
+                $("docTitleInput").focus();
                 return;
             }
 
-            // 페이로드 구성
             const payload = {
                 provNo: Number(provNoFromPath),
                 docTitle,
@@ -135,24 +135,25 @@
                 });
 
                 if (res.ok) {
-                    // 수정 성공 시 알림 후 상세 페이지로 자동 이동
-                    Alert.success("성공적으로 수정되었습니다.").then(() => {
-                        location.href = `/admin/prov-document/${provNoFromPath}`;
-                    });
+                    // ✅ [핵심] 성공 알림 확인 후 상세 페이지로 이동
+                    await Alert.success("성공적으로 수정되었습니다.");
+                    location.href = `/admin/prov-document/${provNoFromPath}`;
                 } else {
                     const errorJson = await res.json();
-                    Alert.error(`저장 실패: ${errorJson.message || "서버 오류"}`);
+                    await Alert.error(`저장 실패: ${errorJson.message || "서버 오류"}`);
                 }
             } catch (e) {
-                Alert.error("네트워크 오류가 발생했습니다.");
+                await Alert.error("네트워크 오류가 발생했습니다.");
                 console.error(e);
             }
         };
 
-        $("backBtn").onclick = () => {
-            Alert.confirm("수정 중인 내용이 사라집니다. 취소할까요?", "수정 취소", () => {
+        $("backBtn").onclick = async () => {
+            const result = await Alert.confirm("수정 중인 내용이 사라집니다. 취소할까요?", "수정 취소");
+
+            if (result.isConfirmed) {
                 history.back();
-            });
+            }
         };
 
         loadDetail();
