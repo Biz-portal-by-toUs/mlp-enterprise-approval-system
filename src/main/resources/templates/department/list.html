@@ -124,30 +124,6 @@
                 margin-left:8px;
             }
 
-            /* toast */
-            .toast{
-                position:fixed;
-                left:50%;
-                bottom:22px;
-                transform:translateX(-50%);
-                background:#111;
-                color:#fff;
-                padding:12px 14px;
-                border-radius:12px;
-                font-weight:900;
-                font-size:14px;
-                box-shadow:0 14px 28px rgba(0,0,0,.18);
-                opacity:0;
-                pointer-events:none;
-                transition:opacity .18s ease, transform .18s ease;
-                z-index:9999;
-            }
-            .toast.show{
-                opacity:1;
-                transform:translateX(-50%) translateY(-2px);
-            }
-            .toast.err{ background:#c62828; }
-
             @media (max-width: 980px){
                 .top-row{ justify-content:flex-end; }
             }
@@ -160,13 +136,10 @@
 
     <section class="page-with-subbar">
 
-        <!-- ✅ 관리자 서브바 -->
         <aside th:replace="~{sidebar/admin-sidebar :: adminSidebar('dept')}"></aside>
 
-        <!-- ✅ 페이지 콘텐츠 -->
         <div class="admin-page">
 
-            <!-- 상단 버튼 -->
             <div class="top-row">
                 <div class="btns">
                     <button class="btn" type="button"
@@ -174,7 +147,6 @@
                 </div>
             </div>
 
-            <!-- Table card -->
             <div class="dept-content">
                 <div class="card">
                     <div class="table-wrap">
@@ -202,22 +174,10 @@
         </div>
     </section>
 
-    <div id="toast" class="toast" aria-live="polite"></div>
 </div>
 
 <th:block layout:fragment="pageScripts">
     <script>
-        // ===== Toast =====
-        let toastTimer = null;
-        function showToast(text, isErr){
-            const el = document.getElementById("toast");
-            el.className = "toast" + (isErr ? " err" : "");
-            el.textContent = text;
-            el.classList.add("show");
-            if(toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(()=> el.classList.remove("show"), 1800);
-        }
-
         async function safeJson(res) {
             const ct = res.headers.get("content-type") || "";
             if (!ct.includes("application/json")) return {};
@@ -278,9 +238,13 @@
 
         function onEdit(depNo) { location.href = `/admin/departments/${depNo}/edit`; }
 
-        // ✅ [Alert 적용] 삭제 로직 수정
         async function onDelete(depNo, depName) {
-            Alert.confirm(`정말로 '${depName}' 부서를 삭제할까요?\n(삭제 후 복구 불가)`, "부서 삭제", async () => {
+            const result = await Alert.confirm(
+                `정말로 '${depName}' 부서를 삭제할까요?\n(복구 불가)`,
+                "부서 삭제"
+            );
+
+            if (result.isConfirmed) {
                 try {
                     const res = await fetch(`/api/v1/admin/departments/${depNo}`, {
                         method: "DELETE",
@@ -288,22 +252,24 @@
                         headers: { "Accept": "application/json" }
                     });
 
-                    if (res.status === 401) return Alert.error("로그인이 필요합니다.");
-                    if (res.status === 403) return Alert.error("권한이 없습니다.");
+                    if (res.status === 401) return await Alert.error("로그인이 필요합니다.");
+                    if (res.status === 403) return await Alert.error("권한이 없습니다.");
 
                     if (!res.ok) {
                         let msg = "삭제 실패";
                         const json = await safeJson(res);
                         if (json && (json.message || json.error)) msg = json.message || json.error;
-                        return Alert.error(msg);
+                        return await Alert.error(msg);
                     }
 
-                    Alert.success("삭제되었습니다.");
+                    await Alert.success("삭제되었습니다.");
                     await loadDepartments();
+
                 } catch (e) {
-                    Alert.error("삭제 중 오류가 발생했습니다.");
+                    console.error(e);
+                    await Alert.error("삭제 중 오류가 발생했습니다.");
                 }
-            });
+            }
         }
 
         window.addEventListener("DOMContentLoaded", () => {

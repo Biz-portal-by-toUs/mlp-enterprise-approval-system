@@ -212,34 +212,46 @@
             const btn = $("submitBtn");
             if (!btn) return;
 
-            // ✅ [Alert 적용] 등록 로직 수정
+            // ✅ [수정] async/await 패턴으로 일관성 있게 변경
             btn.addEventListener("click", async () => {
                 const depId = $("depId")?.value?.trim() || "";
                 const depName = $("depName")?.value?.trim() || "";
 
-                if (!depId) return Alert.warning("부서 코드를 입력해주세요.");
-                if (!depName) return Alert.warning("부서 이름을 입력해주세요.");
+                // 유효성 검사 알림도 확인을 누를 때까지 기다리도록 처리 가능합니다.
+                if (!depId) {
+                    await Alert.warning("부서 코드를 입력해주세요.");
+                    return;
+                }
+                if (!depName) {
+                    await Alert.warning("부서 이름을 입력해주세요.");
+                    return;
+                }
 
                 try {
                     const res = await fetch("/api/v1/admin/departments", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        },
                         credentials: "include",
                         body: JSON.stringify({ depId, depName })
                     });
 
                     if (res.ok) {
-                        // 성공 시 알림 후 바로 목록 이동
-                        Alert.success("부서가 등록되었습니다.").then(() => {
-                            window.location.href = "/admin/departments/list";
-                        });
+                        // ✅ [핵심] 알림창의 확인 버튼을 누를 때까지 기다린 후 목록으로 이동
+                        await Alert.success("부서가 등록되었습니다.");
+                        window.location.href = "/admin/departments/list";
                         return;
                     }
 
                     const data = await safeJson(res);
-                    Alert.error(data?.message || "등록 실패");
+                    // 실패 알림도 await로 대기 처리
+                    await Alert.error(data?.message || "등록 실패");
+
                 } catch (e) {
-                    Alert.error("서버 통신 오류가 발생했습니다.");
+                    console.error(e);
+                    await Alert.error("서버 통신 오류가 발생했습니다.");
                 }
             });
         });

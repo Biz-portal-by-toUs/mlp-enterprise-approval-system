@@ -1322,7 +1322,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({isDone: isChecked})
+                    body: JSON.stringify({ isDone: isChecked })
                 });
 
                 if (!response.ok) throw new Error('상태 변경 업데이트 실패');
@@ -1336,11 +1336,13 @@
 
                 console.log(`${todoNo}번 할 일 상태가 ${isChecked}로 변경되었습니다.`);
             } catch (error) {
-                Alert.error('상태 변경 중 오류가 발생했습니다.');
+                // ✅ [수정] await를 사용하여 알림창이 뜰 때까지 기다림
+                await Alert.error('상태 변경 중 오류가 발생했습니다.');
                 console.error(error);
 
-                // 에러 발생 시 체크박스 원복 (선택 사항)
-                event.target.checked = !isChecked;
+                // 에러 발생 시 체크박스 상태 원복 (UI 싱크 맞춤)
+                const checkbox = document.querySelector(`#todo-row-${todoNo} input[type="checkbox"]`);
+                if (checkbox) checkbox.checked = !isChecked;
             }
         }
 

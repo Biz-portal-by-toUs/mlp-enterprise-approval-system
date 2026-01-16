@@ -323,35 +323,37 @@
         $("backBtn").onclick = () => location.href = "/meeting";
         $("editBtn").onclick = () => location.href = `/meeting/${getMeetNoFromPath()}/update`;
 
-        // ✅ [Alert 적용] 삭제하기 로직 수정
-        $("deleteBtn").onclick = () => {
+        // ✅ 1. 함수 앞에 async를 붙여서 비동기 처리가 가능하게 합니다.
+        $("deleteBtn").onclick = async () => {
             const meetNo = getMeetNoFromPath();
 
-            // Alert.confirm(메시지, 제목, 확인콜백, 취소콜백)
-            Alert.confirm(
+            // ✅ 2. Alert.confirm이 창이 닫힐 때까지 기다린 후 결과를 result에 담습니다.
+            const result = await Alert.confirm(
                 "회의를 삭제하시겠습니까?\n삭제된 회의는 휴지통으로 이동합니다.",
-                "회의 삭제",
-                async () => {
-                    // [확인 클릭 시] 삭제 API 호출
-                    try {
-                        const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
-                            method: "DELETE",
-                            headers: authHeaders(),
-                            credentials: 'include'
-                        });
-
-                        if (res.ok) {
-                            Alert.success("회의가 휴지통으로 이동되었습니다.");
-                            location.href = "/meeting";
-                        } else {
-                            Alert.error("삭제에 실패했습니다.");
-                        }
-                    } catch (e) {
-                        Alert.error("삭제 중 오류가 발생했습니다.");
-                    }
-                }
-                // 취소 시에는 특별한 동작이 필요 없으므로 생략 가능합니다.
+                "회의 삭제"
             );
+
+            // ✅ 3. 사용자가 '확인' 버튼을 눌렀을 때만 실행합니다.
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}`, {
+                        method: "DELETE",
+                        headers: authHeaders(),
+                        credentials: 'include'
+                    });
+
+                    if (res.ok) {
+                        // ✅ 4. 성공 알림창의 확인 버튼을 누를 때까지 기다린 후 목록으로 이동합니다.
+                        await Alert.success("회의가 휴지통으로 이동되었습니다.");
+                        location.href = "/meeting/trash";
+                    } else {
+                        Alert.error("삭제에 실패했습니다.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    Alert.error("삭제 중 오류가 발생했습니다.");
+                }
+            }
         };
 
         $("downloadBtn").onclick = () => {

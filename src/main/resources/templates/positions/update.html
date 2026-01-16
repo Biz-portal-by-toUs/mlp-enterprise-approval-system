@@ -192,43 +192,67 @@
             const btn = document.getElementById("saveBtn");
             if (!btn) return;
 
-            /* saveBtn 클릭 이벤트 내 수정 부분 */
             btn.addEventListener("click", async () => {
                 const posNo = document.getElementById("posNo")?.value;
                 const posName = document.getElementById("posName")?.value?.trim() || "";
                 const posOrder = parseInt(document.getElementById("posOrder")?.value || "0", 10);
 
-                // 기존 showStatus 로직은 그대로 유지 (건드리지 않음)
-                if (!posNo) return showStatus(false, "직급 번호를 찾을 수 없습니다.");
-                if (!posName) return showStatus(false, "직급명을 입력해주세요.");
-                if (!Number.isInteger(posOrder) || posOrder < 1 || posOrder > 50) return showStatus(false, "직급 순서는 1~50 사이로 선택해주세요.");
+                if (!posNo) {
+                    showStatus(false, "직급 번호를 찾을 수 없습니다.");
+                    await Alert.error("직급 번호를 찾을 수 없습니다.");
+                    return;
+                }
+                if (!posName) {
+                    showStatus(false, "직급명을 입력해주세요.");
+                    await Alert.warning("직급명을 입력해주세요.");
+                    return;
+                }
+                if (!Number.isInteger(posOrder) || posOrder < 1 || posOrder > 50) {
+                    showStatus(false, "직급 순서는 1~50 사이로 선택해주세요.");
+                    await Alert.warning("직급 순서는 1~50 사이로 선택해주세요.");
+                    return;
+                }
 
                 try {
                     const response = await fetch(`${API_BASE}/${encodeURIComponent(posNo)}`, {
                         method: "PUT",
-                        headers: { "Content-Type": "application/json", "Accept":"application/json" },
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept":"application/json"
+                        },
                         credentials: "include",
                         body: JSON.stringify({ posName, posOrder })
                     });
 
+                    // 2. 서버 응답 처리
                     if (response.ok) {
-                        // ✅ showStatus는 유지하고 alert 대신 SweetAlert 사용
                         showStatus(true, "성공적으로 반영되었습니다.");
-                        Alert.success("직급 정보가 수정되었습니다.").then(() => {
-                            location.href = "/admin/positions/list";
-                        });
+
+                        await Alert.success("직급 정보가 수정되었습니다.");
+                        location.href = "/admin/positions/list";
                         return;
                     }
 
-                    if (response.status === 401) return showStatus(false, "로그인이 필요합니다. 다시 로그인 해주세요.");
-                    if (response.status === 403) return showStatus(false, "수정 권한이 없습니다 (관리자 전용).");
+                    if (response.status === 401) {
+                        showStatus(false, "로그인이 필요합니다.");
+                        await Alert.error("로그인이 필요합니다. 다시 로그인 해주세요.");
+                        return;
+                    }
+                    if (response.status === 403) {
+                        showStatus(false, "수정 권한이 없습니다.");
+                        await Alert.error("수정 권한이 없습니다 (관리자 전용).");
+                        return;
+                    }
 
                     const data = await safeJson(response);
-                    showStatus(false, data.message || data.msg || `수정 실패 (HTTP ${response.status})`);
+                    const errorMsg = data.message || data.msg || `수정 실패 (HTTP ${response.status})`;
+                    showStatus(false, errorMsg);
+                    await Alert.error(errorMsg);
 
                 } catch (error) {
                     console.error(error);
-                    showStatus(false, "서버 연결 실패. 네트워크를 확인하세요.");
+                    showStatus(false, "서버 연결 실패.");
+                    await Alert.error("서버 연결 실패. 네트워크 상태를 확인하세요.");
                 }
             });
         });

@@ -296,7 +296,7 @@
             $("recEndBtn").disabled = true;
         }
 
-        // ✅ [Alert 적용] 파일 업로드 시 덮어쓰기 확인
+        // [수정] 함수 앞에 async 추가
         $("audioFileInput").onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -314,20 +314,21 @@
             };
 
             if (isRecording) {
-                // Alert.confirm(메시지, 제목, 콜백)
-                Alert.confirm("현재 녹음 중인 데이터가 사라집니다. 파일을 업로드하시겠습니까?", "업로드 주의", async () => {
+                // [수정] await 방식으로 변경
+                const result = await Alert.confirm("현재 녹음 중인 데이터가 사라집니다. 파일을 업로드하시겠습니까?", "업로드 주의");
+
+                if (result.isConfirmed) {
                     if (mediaRecorder) mediaRecorder.stop();
                     await clearDB();
                     updateFileDisplay();
-                });
-                // 취소 시 UI 복구
-                e.target.value = "";
+                } else {
+                    e.target.value = ""; // 취소 시 파일 선택 초기화
+                }
             } else {
                 updateFileDisplay();
             }
         };
 
-        // ✅ [Alert 적용] 마이크 권한 오류
         $("recStartBtn").onclick = async () => {
             try {
                 if (mediaRecorder && mediaRecorder.state === "paused") {
@@ -393,7 +394,6 @@
             resetRecordingUI();
         };
 
-        // ✅ [Alert 적용] 생성 요청 및 유효성 검사
         $("createBtn").onclick = async () => {
             const today = new Date().toISOString().split('T')[0];
             const selectedTime = $("startedAtTime").value;
@@ -424,12 +424,11 @@
                 await clearDB();
                 progEl.value = 100; updateStatus("🎉 완료되었습니다!");
 
-                // Alert.confirm(메시지, 제목, 콜백) - 제목 생략 가능
-                Alert.success("등록되었습니다.").then(() => {
-                    location.href = "/meeting";
-                });
+                await Alert.success("등록되었습니다.");
+                location.href = "/meeting";
             } catch (e) {
-                Alert.error("오류: " + e.message);
+                console.error(e);
+                await Alert.error("오류: " + e.message);
                 $("createBtn").disabled = false;
             }
         };
@@ -437,7 +436,6 @@
         $("empSearchKeyword").oninput = () => { clearTimeout(kwTimer); kwTimer = setTimeout(() => { cursor = null; hasNext = true; $("empList").innerHTML = ""; loadMoreEmp(); }, 300); };
         $("empList").onscroll = (e) => { if (e.target.scrollTop + e.target.clientHeight >= e.target.scrollHeight - 50) loadMoreEmp(); };
 
-        // ✅ [Alert 적용] 데이터 복구 확인
         window.onload = async () => {
             const now = new Date();
             $("todayLabel").textContent = now.toISOString().split('T')[0];
@@ -445,28 +443,32 @@
 
             await initDB();
             const savedChunks = await getAllChunksFromDB();
+
             if (savedChunks.length > 0) {
-                Alert.confirm(
+                // [수정] await 방식으로 결과값을 받음
+                const result = await Alert.confirm(
                     "이전에 완료하지 못한 녹음 데이터가 있습니다. 복구하시겠습니까?",
-                    "데이터 복구",
-                    async () => {
-                        // [확인 클릭 시] 데이터 복구
-                        chunks = savedChunks;
-                        const blob = new Blob(chunks, { type: "audio/webm" });
-                        audioFile = new File([blob], `recovered_${Date.now()}.webm`, { type: "audio/webm" });
-                        audioBlobUrl = URL.createObjectURL(blob);
-                        $("audioPreview").src = audioBlobUrl;
-                        $("audioPreview").style.display = "block";
-                        updateStatus("💡 녹음 데이터가 성공적으로 복구되었습니다.");
-                    },
-                    async () => {
-                        await clearDB();
-                        console.log("임시 데이터가 삭제되었습니다.");
-                    }
+                    "데이터 복구"
                 );
+
+                if (result.isConfirmed) {
+                    // [확인 클릭 시] 데이터 복구
+                    chunks = savedChunks;
+                    const blob = new Blob(chunks, { type: "audio/webm" });
+                    audioFile = new File([blob], `recovered_${Date.now()}.webm`, { type: "audio/webm" });
+                    audioBlobUrl = URL.createObjectURL(blob);
+                    $("audioPreview").src = audioBlobUrl;
+                    $("audioPreview").style.display = "block";
+                    updateStatus("💡 녹음 데이터가 성공적으로 복구되었습니다.");
+                } else {
+                    // [취소 클릭 시] 임시 데이터 삭제
+                    await clearDB();
+                    console.log("임시 데이터가 삭제되었습니다.");
+                }
             }
 
-            loadDepartments(); loadMoreEmp();
+            loadDepartments();
+            loadMoreEmp();
         };
     </script>
 </th:block>

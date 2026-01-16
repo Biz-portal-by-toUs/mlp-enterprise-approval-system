@@ -225,13 +225,19 @@
             } catch (err) { console.error(err); } finally { loading = false; }
         }
 
-        // ✅ [Alert 적용] 수정 완료 버튼 로직
         $("updateBtn").onclick = async () => {
             const meetNo = getMeetNo();
             const titleValue = $("title").value.trim();
 
-            if (!titleValue) return Alert.warning("회의 제목을 입력하세요.");
-            if (titleValue.length > 30) return Alert.warning("회의 제목은 30글자 이내로 입력해주세요.");
+            // ✅ 유효성 검사 알림도 await 적용 가능
+            if (!titleValue) {
+                await Alert.warning("회의 제목을 입력하세요.");
+                return;
+            }
+            if (titleValue.length > 30) {
+                await Alert.warning("회의 제목은 30글자 이내로 입력해주세요.");
+                return;
+            }
 
             const body = {
                 title: titleValue,
@@ -252,17 +258,17 @@
                 });
 
                 if (res.ok) {
-                    // Alert.success는 Swal Promise를 반환하므로 .then() 사용 가능
-                    Alert.success("회의 정보가 수정되었습니다.").then(() => {
-                        location.href = `/meeting/${meetNo}`;
-                    });
+                    // ✅ .then() 대신 await를 사용하여 확인 버튼 클릭 후 이동하도록 변경
+                    await Alert.success("회의 정보가 수정되었습니다.");
+                    location.href = `/meeting/${meetNo}`;
                 } else {
                     setError("수정 실패");
-                    Alert.error("정보 수정에 실패했습니다.");
+                    await Alert.error("정보 수정에 실패했습니다.");
                 }
             } catch (e) {
+                console.error(e);
                 setError("연결 실패");
-                Alert.error("서버와의 연결이 원활하지 않습니다.");
+                await Alert.error("서버와의 연결이 원활하지 않습니다.");
             }
         };
 

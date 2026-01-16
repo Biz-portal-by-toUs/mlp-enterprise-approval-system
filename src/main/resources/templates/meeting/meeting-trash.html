@@ -180,52 +180,61 @@
       }
     }
 
-    // ✅ 2. [Alert 적용] 복구 로직
+    // ✅ 1. 회의 복구 로직 수정
     async function restoreMeeting(meetNo) {
-      Alert.confirm("이 회의를 복구하시겠습니까?", "회의 복구", async () => {
+      // Alert.confirm이 닫힐 때까지 기다린 후 결과를 받음
+      const result = await Alert.confirm("이 회의를 복구하시겠습니까?", "회의 복구");
+
+      // 사용자가 '확인'을 눌렀을 때만 실행
+      if (result.isConfirmed) {
         try {
           const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/restore`, {
             method: 'PATCH',
             headers: authHeadersJson(),
             credentials: "include"
           });
-          if(res.ok) {
-            Alert.success("회의가 복구되었습니다.");
+
+          if (res.ok) {
+            // 복구 성공 메시지 확인 버튼을 누를 때까지 기다린 후 목록 갱신
+            await Alert.success("회의가 복구되었습니다.");
             loadPage(0);
           } else {
             Alert.error("복구에 실패했습니다.");
           }
-        } catch(e) {
+        } catch (e) {
+          console.error(e);
           Alert.error("복구 중 오류가 발생했습니다.");
         }
-      });
+      }
     }
 
-    // ✅ 3. [Alert 적용] 영구 삭제 로직
+    // ✅ 2. 영구 삭제 로직 수정
     async function hardDeleteMeeting(meetNo) {
-      Alert.confirm(
-              "영구 삭제 시 복구가 불가능합니다.\n정말 삭제하시겠습니까?",
-              "영구 삭제 주의",
-              async () => {
-                try {
-                  const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/hard`, {
-                    method: 'DELETE',
-                    headers: authHeadersJson(),
-                    credentials: "include"
-                  });
-                  if(res.ok) {
-                    Alert.success("영구 삭제되었습니다.");
-                    loadPage(0);
-                  } else {
-                    Alert.error("삭제에 실패했습니다.");
-                  }
-                } catch(e) {
-                  Alert.error("삭제 중 오류가 발생했습니다.");
-                }
-              }
+      const result = await Alert.confirm(
+              "삭제 시 복구가 불가능합니다.\n정말 삭제하시겠습니까?",
+              "영구 삭제 "
       );
-    }
 
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/meetings/${meetNo}/hard`, {
+            method: 'DELETE',
+            headers: authHeadersJson(),
+            credentials: "include"
+          });
+
+          if (res.ok) {
+            await Alert.success("영구 삭제되었습니다.");
+            loadPage(0);
+          } else {
+            Alert.error("삭제에 실패했습니다.");
+          }
+        } catch (e) {
+          console.error(e);
+          Alert.error("삭제 중 오류가 발생했습니다.");
+        }
+      }
+    }
     function renderPager(page, totalPages) {
       const wrap = $("pager");
       wrap.innerHTML = "";
