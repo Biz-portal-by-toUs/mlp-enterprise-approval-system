@@ -16,6 +16,7 @@
                 min-height: 850px;
                 border-radius: 12px;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+                box-sizing: border-box;
             }
 
             .page-header {
@@ -45,14 +46,56 @@
                 background: #228be6;
             }
 
-            /* 테이블 공통 스타일 */
-            .doc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-            .doc-table th { background-color: #f8f9fa; color: #495057; font-size: 14px; padding: 15px 12px; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
-            .doc-table td { padding: 18px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; color: #333; vertical-align: middle; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; }
+            /* [테이블 래퍼] - 반응형 가로 스크롤 대응 */
+            .tableWrap {
+                background: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                overflow-x: auto;
+            }
+
+            /* [테이블 디자인 수정] */
+            .doc-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                min-width: 1000px; /* 테이블 구조 보호 */
+            }
+            .doc-table th {
+                background-color: #f8f9fa;
+                color: #495057;
+                font-size: 14px;
+                padding: 15px 12px;
+                border-bottom: 1px solid #dee2e6;
+                white-space: nowrap;
+                font-weight: 600;
+            }
+            .doc-table td {
+                padding: 15px 8px;
+                text-align: center;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                color: #333;
+                vertical-align: middle;
+                line-height: 1.4;
+                /* 말줄임표 처리 */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .doc-table tbody tr:hover td {
+                background: #fcfdfe;
+            }
+
+            /* 제목 열은 왼쪽 정렬이 가독성에 좋으므로 수정 */
+            .title-cell {
+                text-align: center !important;
+                padding-left: 15px !important;
+            }
 
             /* ✅ 버튼 스타일 (휴가 관리와 통일) */
             .btn-view, .btn-modify, .btn-cancel {
-                padding: 8px 12px;
+                padding: 6px 12px;
                 border: none;
                 border-radius: 4px;
                 font-size: 13px;
@@ -95,20 +138,22 @@
 
                 <div id="loading" class="loading">출장 정보를 불러오는 중...</div>
 
-                <table class="doc-table" id="attendance-table" style="display: table;">
-                    <thead>
-                    <tr>
-                        <th style="width: 50px;">NO</th>
-                        <th style="width: 140px;">시작일</th>
-                        <th style="width: 140px;">종료일</th>
-                        <th style="width: 70px;">일수</th>
-                        <th style="width: 140px;">문서번호</th>
-                        <th>문서제목</th>
-                        <th style="width: 80px;">문서보기</th>
-                        <th style="width: 150px;">관리</th> </tr>
-                    </thead>
-                    <tbody id="attendance-list"></tbody>
-                </table>
+                <div class="tableWrap">
+                    <table class="doc-table" id="attendance-table" style="display: table;">
+                        <thead>
+                        <tr>
+                            <th style="width: 50px;">NO</th>
+                            <th style="width: 130px;">시작일</th>
+                            <th style="width: 130px;">종료일</th>
+                            <th style="width: 60px;">일수</th>
+                            <th style="width: 150px;">문서번호</th>
+                            <th>문서제목</th>
+                            <th style="width: 80px;">문서보기</th>
+                            <th style="width: 150px;">관리</th> </tr>
+                        </thead>
+                        <tbody id="attendance-list"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </section>
@@ -193,8 +238,8 @@
                     <td>${formatDate(att.startAt)}</td>
                     <td>${formatDate(att.endAt)}</td>
                     <td>${att.day}일</td>
-                    <td>${att.docId || '-'}</td>
-                    <td>${att.docTitle || '-'}</td>
+                    <td title="${att.docId || ''}">${att.docId || '-'}</td>
+                    <td class="title-cell" title="${att.docTitle || ''}">${att.docTitle || '-'}</td>
                     <td>${att.docNo ? `<button class="btn-view" onclick="viewDocument(${att.docNo})">보기</button>` : '-'}</td>
                     <td>${actionButtons}</td>
                 `;
@@ -227,7 +272,7 @@
         function formatDate(str) {
             if (!str) return '-';
             const d = new Date(str);
-            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br><small>${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</small>`;
+            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}<br><small style="color:#868e96;">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</small>`;
         }
     </script>
 </th:block>
