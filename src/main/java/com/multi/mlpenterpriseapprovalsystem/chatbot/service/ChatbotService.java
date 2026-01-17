@@ -18,6 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -117,19 +118,19 @@ public class ChatbotService {
         }
 
         if (cb.getChunk() != null && !cb.getChunk().isBlank()) {
-            String currentText = (String) redisTemplate.opsForValue().get(bufferKey);
-            String updatedText = (currentText == null ? "" : currentText) + cb.getChunk();
-            redisTemplate.opsForValue().set(bufferKey, updatedText, 5, TimeUnit.MINUTES);
-
+            redisTemplate.opsForZSet().add(bufferKey, cb.getChunk(), cb.getSeq());
             sseManager.sendToUser(connectionKey, "chunk", Map.of("messageId", msgId, "delta", cb.getChunk()));
         }
 
         if (Boolean.TRUE.equals(cb.getDone())) {
-            String finalContent = (String) redisTemplate.opsForValue().get(bufferKey);
+            String finalContent = cb.getFullText();
+            if (finalContent == null || finalContent.isBlank()) {
+                Set<Object> parts = redisTemplate.opsForZSet().range(bufferKey, 0, -1);
+                finalContent = parts == null ? "" : parts.stream().map(Object::toString).collect(Collectors.joining());
+            }
             updateMessageInRedis(sessionId, msgId, finalContent);
-
             sseManager.sendToUser(connectionKey, "done", Map.of("messageId", msgId));
-            redisTemplate.delete(bufferKey); // 사용 완료된 버퍼 삭제
+            redisTemplate.delete(bufferKey);
         }
 
 

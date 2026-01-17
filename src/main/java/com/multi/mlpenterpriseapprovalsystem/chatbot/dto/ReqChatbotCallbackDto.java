@@ -21,6 +21,8 @@ public class ReqChatbotCallbackDto {
     private Boolean success;
     private String errorMessage;
     private String sessionId;
+    private String fullText;
+    private Long seq;
 
     private String actionId;         // null 가능
     private Map<String, Object> params; // null 가능
