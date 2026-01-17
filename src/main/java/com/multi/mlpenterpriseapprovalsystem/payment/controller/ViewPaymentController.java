@@ -17,16 +17,16 @@ public class ViewPaymentController {
 
     @GetMapping("/payment-methods/register")
     public String viewPaymentMethodRegister(Model model) {
-        return "/payment/method/register";
+        return "payment/method/register";
     }
 
     @GetMapping("/company/payment-methods")
     public String viewPaymentMethods(){
-        return "/payment/method/list";
+        return "payment/method/list";
     }
 
     @GetMapping("/company/payment-historys")
     public String viewPaymentHistorys(Model model) {
-        return "/payment/history/list";
+        return "payment/history/list";
     }
 }

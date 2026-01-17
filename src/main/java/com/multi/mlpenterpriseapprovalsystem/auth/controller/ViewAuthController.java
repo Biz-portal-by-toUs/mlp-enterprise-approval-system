@@ -60,4 +60,13 @@ public class ViewAuthController {
         return "employee/common/password";
     }
 
+    @GetMapping("/policy/privacy")
+    public String privacyPolicyPage() {
+        return "company/common/policy-privacy";
+    }
+
+    @GetMapping("/policy/terms")
+    public String termsPolicyPage() {
+        return "company/common/terms";
+    }
 }
