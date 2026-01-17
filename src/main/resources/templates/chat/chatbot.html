@@ -361,22 +361,27 @@
             document.getElementById("connDot").classList.add("on");
         });
 
+        const chunkBuffer = new Map(); // messageId -> Map(seq -> chunk)
+
         es.addEventListener("chunk", (e) => {
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
-            if(ref) {
-                if (ref.isThinking) {
-                    if (ref.avatarEl) ref.avatarEl.classList.remove("thinking");
-                    ref.bubbleEl.innerHTML = ""; // ✅ "..." 싹 지우기
-                    ref.isThinking = false;
-                }
+            if (!ref) return;
 
-                // 텍스트 출력
-                const textNode = document.createTextNode(data.delta);
-                ref.bubbleEl.appendChild(textNode);
-
-                document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+            if (!chunkBuffer.has(data.messageId)) {
+                chunkBuffer.set(data.messageId, new Map());
             }
+            chunkBuffer.get(data.messageId).set(data.seq, data.delta);
+
+            // seq 순서대로 재조립
+            const ordered = Array.from(chunkBuffer.get(data.messageId).entries())
+                .sort((a,b) => a[0]-b[0])
+                .map(([,v]) => v)
+                .join("");
+
+            if (ref.isThinking) { ref.avatarEl?.classList.remove("thinking"); ref.bubbleEl.innerHTML = ""; ref.isThinking = false; }
+            ref.bubbleEl.textContent = ordered;
+            document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
         });
         // 서버에서 보낸 에러 이벤트 처리
         es.addEventListener("error", (e) => {
@@ -435,7 +440,10 @@
         es.addEventListener("done", (e) => {
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
-            if(ref) ref.timeEl.innerText = nowTime();
+            if (ref && data.fullText) {
+                ref.bubbleEl.textContent = data.fullText; // 최종 보정
+            }
+            if (ref) ref.timeEl.innerText = nowTime();
             setIsUpdating(false);
         });
 

@@ -119,7 +119,12 @@ public class ChatbotService {
 
         if (cb.getChunk() != null && !cb.getChunk().isBlank()) {
             redisTemplate.opsForZSet().add(bufferKey, cb.getChunk(), cb.getSeq());
-            sseManager.sendToUser(connectionKey, "chunk", Map.of("messageId", msgId, "delta", cb.getChunk()));
+
+            sseManager.sendToUser(connectionKey, "chunk", Map.of(
+                    "messageId", msgId,
+                    "delta", cb.getChunk(),
+                    "seq", cb.getSeq()
+            ));
         }
 
         if (Boolean.TRUE.equals(cb.getDone())) {
