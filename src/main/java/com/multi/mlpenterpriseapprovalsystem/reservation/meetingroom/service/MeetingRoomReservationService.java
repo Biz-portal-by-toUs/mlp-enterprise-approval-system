@@ -1,6 +1,8 @@
 package com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
+import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
@@ -15,6 +17,7 @@ import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.
 import com.multi.mlpenterpriseapprovalsystem.reservation.meetingroom.repository.MeetingRoomReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +27,7 @@ import java.util.List;
 
 /**
  * 회의실 예약 비즈니스 로직을 처리하는 Service 클래스
- *
+ * <p>
  * 회의실 예약과 관련된 조회, 생성, 취소 등의
  * 핵심 비즈니스 로직을 담당한다.
  *
@@ -164,25 +167,25 @@ public class MeetingRoomReservationService {
         );
 
 
-
     }
 
     public void deleteReservation(Long resvNo, CustomUser user) {
 
         // 예약 조회
-        MeetingRoomReservation reservation =
-                reservationRepository.findById(resvNo)
-                        .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+        MeetingRoomReservation reservation = reservationRepository.findById(resvNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEETING_ROOM_RESERVATION_NOT_FOUND));
 
         // 권한 체크(예약자 본인만 취소 가능/또는 관리자 역할이면 허용)
         boolean isOwner = reservation.getResvEmp().getEmpId().equals(user.getUsername());
         boolean isAdmin = user.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         if (!isOwner && !isAdmin) {
-            throw new SecurityException("해당 예약을 취소할 권한이 없습니다.");
+            throw new CustomException(ErrorCode.MEETING_ROOM_RESERVATION_ACCESS_DENIED);
         }
 
         // 삭제
+
+        meetingRoomAttendeeRepository.deleteAllByMeetingRoomReservation_MeetingResvNo(resvNo);
         reservationRepository.delete(reservation);
 
     }
