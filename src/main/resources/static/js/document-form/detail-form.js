@@ -156,12 +156,14 @@ async function swalConfirm(title, text, confirmText = '확인', cancelText = '�
     })
 }
 
-async function swalLoading(title = '처리 중...') {
+function swalLoading(title = '처리 중...') {
     const swal = getSwal()
     if (!swal) return
-    return swal.fire({
+
+    swal.fire({
         title,
         allowOutsideClick: false,
+        showConfirmButton: false,
         didOpen: () => window.Swal.showLoading(),
         heightAuto: false,
     })

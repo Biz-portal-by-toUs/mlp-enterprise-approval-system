@@ -132,6 +132,22 @@
           `;
     }
 
+    async function batchAllSettled(items, batchSize, taskFn) {
+        const results = [];
+
+        for (let i = 0; i < items.length; i += batchSize) {
+            const batch = items.slice(i, i + batchSize);
+
+            const batchResults = await Promise.allSettled(
+                batch.map(item => taskFn(item))
+            );
+
+            results.push(...batchResults);
+        }
+
+        return results;
+    }
+
     async function runBulkDeleteRejectedStyle(ids) {
         const result = await Swal.fire({
             html: buildRejectedStyleDeletePopup(ids),
@@ -146,15 +162,26 @@
             preConfirm: async () => {
                 Swal.showLoading();
 
-                const reason =
-                    document.getElementById('swal-delete-reason')?.value?.trim() || '';
+                const results = await batchAllSettled(
+                    ids,
+                    5,              // ✅ 여기서 "5개씩"
+                    softDelete
+                );
 
-                // 🔹 서버가 사유 안 받으면 그냥 무시
-                for (const docfoNo of ids) {
-                    await softDelete(docfoNo); // 기존 DELETE 로직 재사용
+                const failed = results
+                    .map((r, i) => ({ r, id: ids[i] }))
+                    .filter(x => x.r.status === 'rejected');
+
+                if (failed.length > 0) {
+                    throw new Error(
+                        `${failed.length}건 삭제 실패\n` +
+                        failed.map(f =>
+                            `#${f.id}: ${f.r.reason?.message || f.r.reason}`
+                        ).join('\n')
+                    );
                 }
 
-                return { reason };
+                return true;
             }
         });
 
@@ -172,26 +199,34 @@
     }
 
     async function apiFetch(url, options = {}, _retried = false) {
-        const headers = new Headers(options.headers || {});
-        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 15000); // 15초
 
-        const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-        if (options.body && !isFormData && !headers.has('Content-Type')) {
-            headers.set('Content-Type', 'application/json');
+        try {
+            const headers = new Headers(options.headers || {});
+            if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
+            const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+            if (options.body && !isFormData && !headers.has('Content-Type')) {
+                headers.set('Content-Type', 'application/json');
+            }
+
+            const res = await fetch(url, {
+                ...options,
+                headers,
+                credentials: 'same-origin',
+                signal: controller.signal,
+            });
+
+            if (res.status === 401 && !_retried) {
+                const ok = await refreshAccessTokenIfPossible().catch(() => false);
+                if (ok) return apiFetch(url, options, true);
+            }
+
+            return res;
+        } finally {
+            clearTimeout(t);
         }
-
-        const res = await fetch(url, {
-            ...options,
-            headers,
-            credentials: 'same-origin',
-        });
-
-        if (res.status === 401 && !_retried) {
-            const ok = await refreshAccessTokenIfPossible().catch(() => false);
-            if (ok) return apiFetch(url, options, true);
-        }
-
-        return res;
     }
 
     function normalizePage(data) {
