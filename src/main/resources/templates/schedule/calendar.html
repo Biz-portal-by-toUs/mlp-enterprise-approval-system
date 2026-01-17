@@ -1141,6 +1141,7 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
     <script>
+        console.log('✅ calendar.html script loaded', new Date().toISOString());
         const toastWrap = document.getElementById('toastWrap');
 
         function showMsg(elId, text, isOk = false) {
@@ -1158,6 +1159,51 @@
                 el.style.display = 'none';
                 el.textContent = '';
             }, 3000);
+        }
+        async function uiConfirm(message, title='확인'){
+            // 1) Alert.confirm이 Promise를 리턴하는 경우
+            if (window.Alert && typeof Alert.confirm === 'function'){
+                try{
+                    const ret = Alert.confirm(message, title);
+                    if (ret && typeof ret.then === 'function'){
+                        return await ret; // true/false 기대
+                    }
+                }catch(e){
+                    // 아래 콜백 방식으로 재시도
+                }
+
+                // 2) Alert.confirm이 콜백 방식인 경우(프로젝트마다 구현이 다름)
+                try{
+                    return await new Promise((resolve) => {
+                        // (msg, title, onOk) 형태
+                        if (Alert.confirm.length >= 3){
+                            Alert.confirm(message, title, () => resolve(true));
+                            return;
+                        }
+                        // (msg, onOk) 형태
+                        if (Alert.confirm.length >= 2){
+                            Alert.confirm(message, () => resolve(true));
+                            return;
+                        }
+                        // 그 외는 네이티브로
+                        resolve(window.confirm(message));
+                    });
+                }catch(e){
+                    return window.confirm(message);
+                }
+            }
+
+            // 3) Alert 자체가 없으면 네이티브 confirm
+            return window.confirm(message);
+        }
+
+        function uiError(msg){
+            if (window.Alert && typeof Alert.error === 'function') return Alert.error(msg);
+            alert(msg);
+        }
+        function uiSuccess(msg){
+            if (window.Alert && typeof Alert.success === 'function') return Alert.success(msg);
+            alert(msg);
         }
         // ✅ 스티키(1개만 유지) 토스트 (lazy toastWrap)
         const STICKY = new Map();
@@ -1504,14 +1550,16 @@
                 del.textContent = '🗑';
                 del.title = '삭제';
                 del.addEventListener('click', async () => {
-                    Alert.confirm('이 할 일을 삭제하시겠습니까?', '할 일 삭제', async () => {
-                        try {
-                            await todoDelete(todoNo);
-                            await todoReload();
-                        } catch(e) {
-                            Alert.error('삭제 실패: ' + e.message);
-                        }
-                    });
+                    const ok = await uiConfirm('이 할 일을 삭제하시겠습니까?', '할 일 삭제');
+                    if (!ok) return;
+
+                    try{
+                        await todoDelete(todoNo);
+                        await todoReload();
+                        uiSuccess('삭제되었습니다.');
+                    }catch(e){
+                        uiError('삭제 실패: ' + e.message);
+                    }
                 });
 
                 actions.appendChild(del);
@@ -2384,17 +2432,18 @@
                 delBtn.className = 'btn danger';
                 delBtn.textContent = '삭제';
                 delBtn.onclick = safeClick(async () => {
-                    Alert.confirm('정말 이 일정을 삭제할까요?', '일정 삭제', async () => {
-                        try {
-                            await apiDelete(data.schNo, data.scope);
-                            closePop(detailPop);
-                            Alert.success('삭제되었습니다.');
-                            mainCalendar.refetchEvents();
-                            refreshMiniDots();
-                        } catch(e) {
-                            Alert.error('삭제 중 오류 발생: ' + e.message);
-                        }
-                    });
+                    const ok = await uiConfirm('정말 이 일정을 삭제할까요?', '일정 삭제');
+                    if (!ok) return;
+
+                    try{
+                        await apiDelete(data.schNo, data.scope);
+                        closePop(detailPop);
+                        uiSuccess('삭제되었습니다.');
+                        mainCalendar.refetchEvents();
+                        refreshMiniDots();
+                    }catch(e){
+                        uiError('삭제 중 오류 발생: ' + e.message);
+                    }
                 });
 
                 detailFoot.prepend(delBtn);
