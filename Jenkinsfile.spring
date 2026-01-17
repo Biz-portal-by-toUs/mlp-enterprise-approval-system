@@ -7,9 +7,15 @@ pipeline {
     AWS_REGION      = 'us-west-1'
     AWS_ACCOUNT_ID  = '118320467932'
 
+    ECR_REGISTRY    = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
     // ===== Bizportal(Spring) =====
-    ECR_REPO_URI    = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/terraform-ecr"
+    ECR_REPO_URI    = "${ECR_REGISTRY}/terraform-ecr"
     IMAGE_TAG       = "${BUILD_NUMBER}"
+
+    // ===== Elasticsearch (nori) =====
+    ES_ECR_REPO_URI = "${ECR_REGISTRY}/terraform-es-nori"
+    ES_IMAGE_TAG    = "8.14.3-nori-${BUILD_NUMBER}"
 
     // ===== Cluster =====
     EKS_CLUSTER_NAME = 'terraform-eks-cluster'
@@ -39,10 +45,30 @@ pipeline {
             aws sts get-caller-identity
 
             aws ecr get-login-password --region ${AWS_REGION} \
-              | docker login --username AWS --password-stdin ${ECR_REPO_URI}
+              | docker login --username AWS --password-stdin ${ECR_REGISTRY}
 
             docker build -t ${ECR_REPO_URI}:${IMAGE_TAG} .
             docker push ${ECR_REPO_URI}:${IMAGE_TAG}
+          '''
+        }
+      }
+    }
+
+    stage('Docker Build & Push (Elasticsearch+nori -> ECR)') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            set -e
+            aws sts get-caller-identity
+
+            aws ecr get-login-password --region ${AWS_REGION} \
+              | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+            docker build -f Dockerfile.elasticsearch -t ${ES_ECR_REPO_URI}:${ES_IMAGE_TAG} .
+            docker push ${ES_ECR_REPO_URI}:${ES_IMAGE_TAG}
           '''
         }
       }
