@@ -185,7 +185,6 @@
         .fc .fc-timegrid-slot{ height:46px; }
         .fc .fc-day-today{ background:rgba(59,130,246,.08) !important; }
 
-
         /* ===== 이벤트 디자인(배경/바 통일) ===== */
         .fc .fc-event,
         .fc .fc-event-main,
@@ -274,7 +273,6 @@
             /* 만약 테두리가 필요 없다면 border-radius를 0으로 주면 더 꽉 차 보입니다 */
             border-radius: 0 !important;
         }
-
 
         #calendar .fc-timegrid-event .bp-event{
             padding: 2px 8px 2px 10px;   /* 기존 6px → 2px로 줄여서 안 잘리게 */
@@ -367,7 +365,6 @@
         /* 주말 색상 포인트 (기존 스타일 유지 및 보정) */
         #miniCalendar .fc-day-sun .fc-col-header-cell-cushion { color: #ef4444; } /* 일요일 빨강 */
         #miniCalendar .fc-day-sat .fc-col-header-cell-cushion { color: #3b82f6; } /* 토요일 파랑 */
-
 
         #miniCalendar .mini-dots{
             position:absolute;
@@ -1136,12 +1133,10 @@
 
 </div>
 
-
 <th:block layout:fragment="pageScripts">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
     <script>
-        console.log('✅ calendar.html script loaded', new Date().toISOString());
         const toastWrap = document.getElementById('toastWrap');
 
         function showMsg(elId, text, isOk = false) {
@@ -1152,58 +1147,13 @@
             el.style.display = 'block';
             el.style.background = isOk ? '#f3fff6' : '#fff5f4';
             el.style.color = isOk ? '#1b7f3a' : '#b42318';
-            el.style.border = `1px solid ${isOk ? '#bfe7c9' : '#ffd0cc'}`;
+            el.style.border = 1px solid ${isOk ? '#bfe7c9' : '#ffd0cc'};
 
             clearTimeout(el.timer);
             el.timer = setTimeout(() => {
                 el.style.display = 'none';
                 el.textContent = '';
             }, 3000);
-        }
-        async function uiConfirm(message, title='확인'){
-            // 1) Alert.confirm이 Promise를 리턴하는 경우
-            if (window.Alert && typeof Alert.confirm === 'function'){
-                try{
-                    const ret = Alert.confirm(message, title);
-                    if (ret && typeof ret.then === 'function'){
-                        return await ret; // true/false 기대
-                    }
-                }catch(e){
-                    // 아래 콜백 방식으로 재시도
-                }
-
-                // 2) Alert.confirm이 콜백 방식인 경우(프로젝트마다 구현이 다름)
-                try{
-                    return await new Promise((resolve) => {
-                        // (msg, title, onOk) 형태
-                        if (Alert.confirm.length >= 3){
-                            Alert.confirm(message, title, () => resolve(true));
-                            return;
-                        }
-                        // (msg, onOk) 형태
-                        if (Alert.confirm.length >= 2){
-                            Alert.confirm(message, () => resolve(true));
-                            return;
-                        }
-                        // 그 외는 네이티브로
-                        resolve(window.confirm(message));
-                    });
-                }catch(e){
-                    return window.confirm(message);
-                }
-            }
-
-            // 3) Alert 자체가 없으면 네이티브 confirm
-            return window.confirm(message);
-        }
-
-        function uiError(msg){
-            if (window.Alert && typeof Alert.error === 'function') return Alert.error(msg);
-            alert(msg);
-        }
-        function uiSuccess(msg){
-            if (window.Alert && typeof Alert.success === 'function') return Alert.success(msg);
-            alert(msg);
         }
         // ✅ 스티키(1개만 유지) 토스트 (lazy toastWrap)
         const STICKY = new Map();
@@ -1219,7 +1169,7 @@
             let el = STICKY.get(key);
             if (!el){
                 el = document.createElement('div');
-                el.className = `cal-toast ${type}`;
+                el.className = cal-toast ${type};
 
                 const ico = document.createElement('div');
                 ico.className = 'ico';
@@ -1237,7 +1187,7 @@
                 STICKY.set(key, el);
             }
 
-            el.className = `cal-toast ${type} show`;
+            el.className = cal-toast ${type} show;
             const ico = el.querySelector('.ico');
             const msg = el.querySelector('.msg');
             if (ico) ico.textContent = type === 'error' ? '!' : type === 'info' ? 'i' : '⚠';
@@ -1260,11 +1210,11 @@
         /* =========================
    ✅ Holiday API (공휴일)
 ========================= */
-        const HOLIDAY_API = (year, month) => `${API_BASE}/holidays?year=${year}&month=${month}`;
+        const HOLIDAY_API = (year, month) => ${API_BASE}/holidays?year=${year}&month=${month};
         const API_DELETE = (schNo, scope) => {
             const params = new URLSearchParams();
             params.set('scope', String(scope || 'PERSONAL').toUpperCase());
-            return `${API_BASE}/${schNo}?${params.toString()}`;
+            return ${API_BASE}/${schNo}?${params.toString()};
         };
         const API_UPDATE = (schNo) => API_BASE + '/' + schNo;
 
@@ -1272,9 +1222,9 @@
            ✅ ToDo API (날짜 없는 버전)
         ========================= */
         const TODO_API_BASE = '/api/v1/todos';
-        const TODO_API_DONE   = (todoNo) => `${TODO_API_BASE}/${todoNo}/done`;
-        const TODO_API_ONE    = (todoNo) => `${TODO_API_BASE}/${todoNo}`;
-        const TODO_API_UPDATE = (todoNo) => `${TODO_API_BASE}/${todoNo}`;
+        const TODO_API_DONE   = (todoNo) => ${TODO_API_BASE}/${todoNo}/done;
+        const TODO_API_ONE    = (todoNo) => ${TODO_API_BASE}/${todoNo};
+        const TODO_API_UPDATE = (todoNo) => ${TODO_API_BASE}/${todoNo};
 
         /* =========================
            ✅ 현재 로그인 사용자(me)
@@ -1337,11 +1287,11 @@
         ========================= */
         function hexToRgba(hex, a){
             const h = String(hex || '').replace('#','');
-            if (!/^[0-9a-fA-F]{6}$/.test(h)) return `rgba(124,58,237,${a})`;
+            if (!/^[0-9a-fA-F]{6}$/.test(h)) return rgba(124,58,237,${a});
             const r = parseInt(h.slice(0,2), 16);
             const g = parseInt(h.slice(2,4), 16);
             const b = parseInt(h.slice(4,6), 16);
-            return `rgba(${r},${g},${b},${a})`;
+            return rgba(${r},${g},${b},${a});
         }
 
         /* =========================
@@ -1441,7 +1391,7 @@
         function renderTodo(){
             const items = TODO_ITEMS;
 
-            todoEls.countLabel.textContent = `${items.length}개`;
+            todoEls.countLabel.textContent = ${items.length}개;
             todoEls.list.innerHTML = '';
 
             if (!items || items.length === 0){
@@ -1550,15 +1500,15 @@
                 del.textContent = '🗑';
                 del.title = '삭제';
                 del.addEventListener('click', async () => {
-                    const ok = await uiConfirm('이 할 일을 삭제하시겠습니까?', '할 일 삭제');
-                    if (!ok) return;
+                    const ret = await Alert.confirm('이 할 일을 삭제하시겠습니까?', '할 일 삭제');
+                    if (!ret.isConfirmed) return;
 
                     try{
                         await todoDelete(todoNo);
                         await todoReload();
-                        uiSuccess('삭제되었습니다.');
+                        Alert.success('삭제되었습니다.');
                     }catch(e){
-                        uiError('삭제 실패: ' + e.message);
+                        Alert.error('삭제 실패: ' + e.message);
                     }
                 });
 
@@ -1913,7 +1863,7 @@
             el.addEventListener('input', () => {
                 if (el.value.length >= max) {
                     // ✅ toast 대신 인라인 showMsg 사용
-                    showMsg(msgElId, `${label}은 최대 ${max}자까지입니다.`);
+                    showMsg(msgElId, ${label}은 최대 ${max}자까지입니다.);
                 }
             });
         }
@@ -1987,7 +1937,7 @@
 
         function toLocalDateFromParts(day, hh, mm){
             if (!day || !hh || !mm) return null;
-            const s = `${day}T${hh}:${mm}`;
+            const s = ${day}T${hh}:${mm};
             const d = new Date(s);
             if (Number.isNaN(d.getTime())) return null;
             return d;
@@ -1998,7 +1948,7 @@
             const h = hourEl.value;
             const m = minEl.value;
             if (!d || !h || !m) return null;
-            return `${d}T${h}:${m}`;
+            return ${d}T${h}:${m};
         }
 
         function setControlsFromDate(dt, dayEl, hourEl, minEl){
@@ -2224,14 +2174,14 @@
 
                 if (lastValidRange){
                     restoreRange(side, lastValidRange);
-                    toast(`종료는 시작보다 최소 ${STEP_MINUTES}분 이후여야 해요.`, 'warn');
+                    toast(종료는 시작보다 최소 ${STEP_MINUTES}분 이후여야 해요., 'warn');
                 } else {
                     // 예외: 정상값이 없으면(거의 없음) end를 최소값으로 보정
                     setControlsFromDate(minEnd, endDayInput, endHourSelect, endMinSelect);
                     syncDayMinMax();
                     updateTimeOptionConstraints();
                     lastValidRange = captureRange();
-                    toast(`종료는 시작보다 최소 ${STEP_MINUTES}분 이후여야 해요.`, 'warn');
+                    toast(종료는 시작보다 최소 ${STEP_MINUTES}분 이후여야 해요., 'warn');
                 }
                 return;
             }
@@ -2432,17 +2382,17 @@
                 delBtn.className = 'btn danger';
                 delBtn.textContent = '삭제';
                 delBtn.onclick = safeClick(async () => {
-                    const ok = await uiConfirm('정말 이 일정을 삭제할까요?', '일정 삭제');
-                    if (!ok) return;
+                    const ret = await Alert.confirm('정말 이 일정을 삭제할까요?', '일정 삭제');
+                    if (!ret.isConfirmed) return;
 
                     try{
                         await apiDelete(data.schNo, data.scope);
                         closePop(detailPop);
-                        uiSuccess('삭제되었습니다.');
+                        Alert.success('삭제되었습니다.');
                         mainCalendar.refetchEvents();
                         refreshMiniDots();
                     }catch(e){
-                        uiError('삭제 중 오류 발생: ' + e.message);
+                        Alert.error('삭제 중 오류 발생: ' + e.message);
                     }
                 });
 
@@ -2639,18 +2589,18 @@
                     const yyyyMmDd = normalizeHolidayDate(date);
 
                     return {
-                        id: `HOLIDAY-${yyyyMmDd}`,
-                        title: title,
+                        id: HOLIDAY-${yyyyMmDd},
+                    title: title,
                         start: yyyyMmDd,
                         allDay: true,
                         // ✅ 월간이면 'background', 주간이면 'auto'(일반 일정 형태)
                         display: isMonthView ? 'background' : 'auto',
                         extendedProps: {
-                            isHoliday: true,
+                        isHoliday: true,
                             scope: 'HOLIDAY',
                             color: SCOPE_COLOR.HOLIDAY // '#ff0000'
-                        }
-                    };
+                    }
+                };
                 });
                 success(events);
             } catch(e) { fail(e); }
@@ -2680,7 +2630,7 @@
                 const view = (currentViewType === 'MONTH') ? 'MONTH' : 'WEEK';
                 const scopes = getSelectedScopes();
 
-                console.log(`[API 요청] baseDate: ${baseDate}, view: ${view}`);
+                console.log([API 요청] baseDate: ${baseDate}, view: ${view});
 
                 // API 호출
                 const calls = scopes.map(s => apiGetItems({
@@ -2890,14 +2840,14 @@
                     const barColor = isHoliday ? 'transparent' : (ext.color || '#f59e0b');
 
                     return {
-                        html: `
-            <div class="bp-event ${isHoliday ? 'holiday-label' : ''}"
-                 style="--bpColor:${barColor}; --bpBg:${bgColor}; border:none;">
-                <div class="bp-evt-title"
-                     style="color:${isHoliday ? '#d32f2f' : 'inherit'}; font-weight:${isHoliday ? '900' : 'normal'}">
-                    ${arg.event.title}
-                </div>
-            </div>`
+                        html:
+                            <div class="bp-event ${isHoliday ? 'holiday-label' : ''}"
+                                 style="--bpColor:${barColor}; --bpBg:${bgColor}; border:none;">
+                                <div class="bp-evt-title"
+                                     style="color:${isHoliday ? '#d32f2f' : 'inherit'}; font-weight:${isHoliday ? '900' : 'normal'}">
+                                    ${arg.event.title}
+                                </div>
+                            </div>
                     };
                 },
 
