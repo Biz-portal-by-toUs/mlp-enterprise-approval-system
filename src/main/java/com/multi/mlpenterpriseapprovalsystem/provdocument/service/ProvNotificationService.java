@@ -6,6 +6,7 @@ import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationTyp
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.event.ProvDocumentApprovedEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -22,6 +23,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProvNotificationService {
     private final NotificationService notificationService;
     private final EmployeeRepository employeeRepository;
@@ -29,7 +31,13 @@ public class ProvNotificationService {
     @Async("taskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleDocApprovedEvent(ProvDocumentApprovedEvent event) {
+        long startTime = System.currentTimeMillis();
+        String threadName = Thread.currentThread().getName();
+        log.info("[Async-Start] Thread: {}, event: {}", threadName, event.docTitle());
+
         List<Employee> emps = employeeRepository.findAllByCompany_ComId(event.comId());
+        log.info("[Async-QueryDone] Thread: {}, Employee Count: {}, Time: {}ms",
+                threadName, emps.size(), (System.currentTimeMillis() - startTime));
 
         for (Employee emp : emps) {
             notificationService.sendNotification(
@@ -39,5 +47,7 @@ public class ProvNotificationService {
                     "/employees"
             );
         }
+        log.info("[Async-End] Thread: {}, Total Time: {}ms",
+                threadName, (System.currentTimeMillis() - startTime));
     }
 }
