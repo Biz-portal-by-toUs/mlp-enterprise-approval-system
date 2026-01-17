@@ -111,7 +111,7 @@ public class NoticeController {
     }
 
     //공지사항 수정  --- 일련번호(key로 수정)  consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    @PreAuthorize("hasRole('COM_ADMIN')")
+    //@PreAuthorize("hasRole('COM_ADMIN')")
     @PutMapping(value = "/notice/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<ResponseDto> update(@PathVariable(name="id") Long id,
                                               @ModelAttribute NoticeReqDto dto,

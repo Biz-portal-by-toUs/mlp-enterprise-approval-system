@@ -802,10 +802,6 @@
 
                     <button onclick="insertTable()">표 삽입</button>
                     <button onclick="deleteTable()">표 삭제</button>
-
-                    <button onclick="toggleBlockquote()" id="btn-blockquote">인용</button>
-                    <button onclick="insertLink()">링크</button>
-                    <button onclick="insertImage()">이미지</button>
                 </div>
                 <div id="editor-container"></div>
             </div>
@@ -871,6 +867,21 @@
         docTitleInput.addEventListener('input', (e) => {
             if (e.target.value.length > 100) {
                 e.target.value = e.target.value.substring(0, 100);
+            }
+        });
+
+        // ✅ AI 요약 글자수 제한 (300자) 추가
+        const aiSummaryText = document.getElementById('ai-summary-text');
+        aiSummaryText.addEventListener('input', (e) => {
+            if (e.target.innerText.length > 300) {
+                e.target.innerText = e.target.innerText.substring(0, 300);
+                // 커서를 텍스트 끝으로 이동
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(e.target);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
             }
         });
 
