@@ -870,6 +870,21 @@
             }
         });
 
+        // ✅ AI 요약 글자수 제한 (250자) 추가
+        const aiSummaryText = document.getElementById('ai-summary-text');
+        aiSummaryText.addEventListener('input', (e) => {
+            if (e.target.innerText.length > 250) {
+                e.target.innerText = e.target.innerText.substring(0, 250);
+                // 커서를 텍스트 끝으로 이동
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(e.target);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        });
+
         await fetchMyEmployeeInfo();
         await loadOriginalDocumentData();
         initApproverSearch();
