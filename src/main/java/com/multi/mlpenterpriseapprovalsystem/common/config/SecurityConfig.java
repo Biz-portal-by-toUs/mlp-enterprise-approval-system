@@ -22,6 +22,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
+
 /**
  * SecurityConfig
  *
@@ -118,14 +120,19 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 허용할 프론트엔드 주소 (현재 localhost 테스트 중이라면 아래와 같이 설정)
-        configuration.addAllowedOriginPattern("*");
-        // 허용할 HTTP 메서드
-        configuration.addAllowedMethod("*");
-        // 허용할 헤더 (Authorization 헤더가 포함되어야 함)
-        configuration.addAllowedHeader("*");
-        // 브라우저가 토큰을 읽을 수 있도록 허용
+        // ✅ 쿠키(credentials) 쓰면 Origin은 반드시 "명시"해야 함
+        configuration.setAllowedOrigins(List.of(
+                "https://www.bizportal.pro",        // 예: https://bizportal.com
+                "http://localhost:3000"       // 로컬 프론트 개발 포트
+        ));
+
+        configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Content-Type","Authorization","X-Requested-With"));
+        configuration.setExposedHeaders(List.of("Set-Cookie")); // (필수는 아님, 디버깅에 도움)
         configuration.setAllowCredentials(true);
+
+        // (선택) preflight 캐시
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
