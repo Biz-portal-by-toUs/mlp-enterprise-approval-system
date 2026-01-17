@@ -13,8 +13,11 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 임베딩 요청 클라이언트
@@ -33,58 +36,86 @@ public class EmbeddingClient {
         this.fastApiWebClient = fastApiWebClient;
     }
 
-    @Value("${ai.fastapi.callback-secret}")
-    private String callbackSecret;
+    @Value("${internal.ai.prov.callback-url}")
+    private String callbackUrlTemplate;
 
+    @Value("${internal.ai.callback-key}")
+    private String callbackKey;
+
+    /**
+     * ✅ 규정 임베딩 요청 (DTO의 모든 필드 및 콜백 정보 포함)
+     */
     public void requestProvEmbedding(ReqFastApiProvEmbeddingDto req) {
+        // 1. 콜백 URL 생성
+        String callbackUrl = String.format(callbackUrlTemplate, req.getProvNo());
+
+        // 2. 바디 구성 (DTO 필드 + 콜백 보안 정보)
+        Map<String, Object> body = new HashMap<>();
+        body.put("provNo", req.getProvNo());
+        body.put("comId", req.getComId());
+        body.put("objectKey", req.getObjectKey());
+        body.put("downloadUrl", req.getDownloadUrl());
+        body.put("originalName", req.getOriginalName());
+        body.put("contentType", req.getContentType());
+        body.put("size", req.getSize());
+        body.put("isPublic", req.getIsPublic());
+
+        // 콜백 관련 추가 정보
+        body.put("callbackUrl", callbackUrl);
+        body.put("callbackKey", callbackKey);
+
+        log.info("[AI-Embedding] Requesting embedding for provNo={}, objectKey={}", req.getProvNo(), req.getObjectKey());
+
         fastApiWebClient.post()
-                .uri("/api/v1/prov-documents/embedding") // FastAPI에서 만들 엔드포인트
-                .header("X-CALLBACK-SECRET", callbackSecret)
-                .bodyValue(req)
+                .uri("/api/v1/prov-documents/embedding")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
                 .retrieve()
-                .toBodilessEntity()
+                .bodyToMono(String.class)
+                .doOnNext(res -> log.info("[AI-Embedding] Response received for provNo={}, res={}", req.getProvNo(), res))
+                .onErrorResume(e -> {
+                    log.error("[AI-Embedding] Failed to request embedding for provNo={}", req.getProvNo(), e);
+                    return Mono.empty();
+                })
                 .block(Duration.ofMinutes(1));
     }
 
     /**
-     * ✅ 규정 삭제 시 FastAPI 벡터(임베딩) 삭제 요청
-     * - A(강한 일관성) 정책: 실패하면 예외를 던져서 Spring 트랜잭션이 롤백되게 사용
+     * ✅ 규정 삭제 요청
      */
     public void deleteProvEmbedding(ReqFastApiProvDeleteDto req) {
-        log.info("deleteProvEmbedding payload => comId={}, provNo={}", req.getComId(), req.getProvNo());
+        log.info("[AI-Embedding] Delete request => comId={}, provNo={}", req.getComId(), req.getProvNo());
+
         fastApiWebClient
                 .method(HttpMethod.DELETE)
                 .uri("/api/v1/prov-documents/embedding")
-                .header("X-CALLBACK-SECRET", callbackSecret)
                 .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .bodyValue(req) // DELETE body
+                .bodyValue(req)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, resp ->
                         resp.bodyToMono(String.class)
-                                .defaultIfEmpty("")
                                 .map(body -> new CustomException(ErrorCode.EMBEDDING_DELETE_FAILED))
                 )
                 .toBodilessEntity()
                 .block(Duration.ofSeconds(10));
     }
 
+    /**
+     * ✅ 공개 상태 업데이트 요청
+     */
     public void updateProvStatus(ReqFastApiProvStatusUpdateDto req) {
-        log.info("updateProvStatus payload => comId={}, provNo={}, isPublic={}",
-                req.getComId(), req.getProvNo(), req.getIsPublic());
+        log.info("[AI-Embedding] Status update => provNo={}, isPublic={}", req.getProvNo(), req.getIsPublic());
 
         fastApiWebClient.patch()
-                .uri("/api/v1/prov-documents/embedding/status") // FastAPI에서 구현할 엔드포인트
-                .header("X-CALLBACK-SECRET", callbackSecret)
+                .uri("/api/v1/prov-documents/embedding/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(req)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, resp ->
                         resp.bodyToMono(String.class)
-                                .defaultIfEmpty("")
                                 .map(body -> new CustomException(ErrorCode.EMBEDDING_UPDATE_FAILED))
                 )
                 .toBodilessEntity()
-                .block(Duration.ofSeconds(10)); // 동기식 처리로 강한 일관성 유지
+                .block(Duration.ofSeconds(10));
     }
 }
