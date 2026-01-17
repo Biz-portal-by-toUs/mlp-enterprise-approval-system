@@ -16,6 +16,7 @@ import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationTyp
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.event.ProvDocumentApprovedEvent;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.event.ProvEmbeddingRequestedEvent;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.repository.ProvDocumentRepository;
 import lombok.RequiredArgsConstructor;
@@ -48,8 +49,8 @@ public class ProvDocumentService {
     private final AttachmentServiceImpl attachmentService;
     private final AttachmentRepository attachmentRepository;
     private final EmployeeRepository employeeRepository;
-    private final NotificationService notificationService;
     private final ApplicationEventPublisher publisher;
+    private final ProvNotificationService provNotificationService;
 
     @Transactional
     public Long create(String comId, ReqProvDocumentCreateDto req) {
@@ -231,14 +232,10 @@ public class ProvDocumentService {
         }
 
         doc.markDone(request.getChunkCnt() == null ? 0 : request.getChunkCnt());
-        String comId=doc.getCompany().getComId();
-
-        List<Employee> emps = employeeRepository.findAllByCompany_ComId(comId);
-        if (doc.getIsPublic()==Boolean.TRUE){
-            for(Employee emp : emps) {
-                notificationService.sendNotification(emp, NotificationType.OTHER, "챗봇 사용 가능 알림", "이제부터\""+doc.getDocTitle()+"\" 에 대한 질의를 챗봇에서 사용할 수 있습니다.","/employees");
-            }
+        if (Boolean.TRUE.equals(doc.getIsPublic())) {
+            publisher.publishEvent(new ProvDocumentApprovedEvent(doc.getProvNo(), doc.getDocTitle(), doc.getCompany().getComId()));
         }
+
         return doc.getProvNo();
     }
 
