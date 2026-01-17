@@ -232,9 +232,9 @@ public class ProvDocumentService {
         }
 
         doc.markDone(request.getChunkCnt() == null ? 0 : request.getChunkCnt());
-        if (Boolean.TRUE.equals(doc.getIsPublic())) {
-            publisher.publishEvent(new ProvDocumentApprovedEvent(doc.getProvNo(), doc.getDocTitle(), doc.getCompany().getComId()));
-        }
+//        if (Boolean.TRUE.equals(doc.getIsPublic())) {
+//            publisher.publishEvent(new ProvDocumentApprovedEvent(doc.getProvNo(), doc.getDocTitle(), doc.getCompany().getComId()));
+//        }
 
         return doc.getProvNo();
     }
