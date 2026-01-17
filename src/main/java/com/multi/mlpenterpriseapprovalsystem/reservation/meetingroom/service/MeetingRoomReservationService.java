@@ -183,6 +183,7 @@ public class MeetingRoomReservationService {
         }
 
         // 삭제
+        meetingRoomAttendeeRepository.deleteAllByMeetingRoomReservation_MeetingResvNo(resvNo);
         reservationRepository.delete(reservation);
 
     }

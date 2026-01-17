@@ -18,4 +18,6 @@ public interface MeetingRoomAttendeeRepository extends JpaRepository<MeetingRoom
     List<MeetingRoomAttendee> findAllByMeetingRoomReservation_MeetingResvNo(Long meetingResvNo);
 
     List<MeetingRoomAttendee> findAllByMeetingRoomReservation_MeetingResvNoIn(List<Long> meetingResvNos);
+
+    void deleteAllByMeetingRoomReservation_MeetingResvNo(Long meetingResvNo);
 }
