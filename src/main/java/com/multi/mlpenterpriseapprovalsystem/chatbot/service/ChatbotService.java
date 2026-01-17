@@ -117,9 +117,8 @@ public class ChatbotService {
             return;
         }
 
-        if (cb.getChunk() != null && !cb.getChunk().isBlank()) {
+        if (cb.getChunk() != null) {
             redisTemplate.opsForZSet().add(bufferKey, cb.getChunk(), cb.getSeq());
-
             sseManager.sendToUser(connectionKey, "chunk", Map.of(
                     "messageId", msgId,
                     "delta", cb.getChunk(),
@@ -134,7 +133,10 @@ public class ChatbotService {
                 finalContent = parts == null ? "" : parts.stream().map(Object::toString).collect(Collectors.joining());
             }
             updateMessageInRedis(sessionId, msgId, finalContent);
-            sseManager.sendToUser(connectionKey, "done", Map.of("messageId", msgId));
+            sseManager.sendToUser(connectionKey, "done", Map.of(
+                    "messageId", msgId,
+                    "fullText", finalContent
+            ));
             redisTemplate.delete(bufferKey);
         }
 
