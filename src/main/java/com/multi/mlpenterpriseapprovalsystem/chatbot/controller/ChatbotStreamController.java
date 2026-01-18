@@ -2,6 +2,7 @@ package com.multi.mlpenterpriseapprovalsystem.chatbot.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.chatbot.service.ChatbotService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,8 +30,11 @@ public class ChatbotStreamController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(
             @AuthenticationPrincipal CustomUser user,
-            @RequestParam String sessionId
+            @RequestParam String sessionId,
+            HttpServletResponse response
     ) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
         return chatbotService.connectUserStream(user.getUsername(), sessionId);
     }
 }
