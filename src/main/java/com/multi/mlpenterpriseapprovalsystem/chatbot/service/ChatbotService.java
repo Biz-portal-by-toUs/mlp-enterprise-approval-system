@@ -118,6 +118,12 @@ public class ChatbotService {
         }
 
         if (cb.getChunk() != null) {
+            String chunk = cb.getChunk();
+
+            // 💡 첫 번째 청크(seq 0)일 때 ALB 버퍼를 강제로 밀어내기 위해 공백 2KB 추가
+            if (cb.getSeq() == 0) {
+                chunk = " ".repeat(2048) + chunk;
+            }
             redisTemplate.opsForZSet().add(bufferKey, cb.getChunk(), cb.getSeq());
             sseManager.sendToUser(connectionKey, "chunk", Map.of(
                     "messageId", msgId,
