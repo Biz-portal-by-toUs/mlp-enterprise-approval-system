@@ -142,7 +142,7 @@ public class NotificationService {
     }
 
     public void publishNewLoginDetected(String empId, String deviceId, String ip) {
-        log.info("[LOGIN-DETECT PUB] empId={}, deviceId={}, ip={}", empId, deviceId, ip);
+        log.warn("[LOGIN-DETECT PUB] empId={}, deviceId={}, ip={}", empId, deviceId, ip);
         redisNotificationPublisher.publishNewLogin(empId, deviceId, ip);
     }
 
