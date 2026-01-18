@@ -768,6 +768,10 @@ public class DocumentService {
             validateApproverNotSelf(myEmpId, reqDto.getApprovalLines());
             validateApprovalLineOrder(reqDto.getApprovalLines());
             createApprovalLines(newDocument, company, reqDto.getApprovalLines(), isTemp);
+
+            if (!isTemp) {
+                notifyApprovers(newDocument, 1); // 1번 순서 결재자들에게 알림
+            }
         }
 
         // 9. 양방향 연결 설정 (핵심!)
@@ -828,6 +832,10 @@ public class DocumentService {
 
             Company company = document.getCompany();
             createApprovalLines(document, company, reqDto.getApprovalLines(), isTemp);
+
+            if (!isTemp) {
+                notifyApprovers(document, 1);
+            }
         }
 
         log.info("임시저장 문서 수정 완료: docNo={}, temp={}", docNo, isTemp);
