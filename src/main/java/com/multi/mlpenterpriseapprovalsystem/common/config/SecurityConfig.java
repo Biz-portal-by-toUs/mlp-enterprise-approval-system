@@ -123,7 +123,9 @@ public class SecurityConfig {
         // ✅ 쿠키(credentials) 쓰면 Origin은 반드시 "명시"해야 함
         configuration.setAllowedOrigins(List.of(
                 "https://www.bizportal.pro",        // 예: https://bizportal.com
-                "http://localhost:3000"       // 로컬 프론트 개발 포트
+                "http://localhost:3000",
+                "https://business.juso.go.kr", // ✅ 추가: 주소 API 비즈니스 도메인
+                "https://www.juso.go.kr"
         ));
 
         configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
