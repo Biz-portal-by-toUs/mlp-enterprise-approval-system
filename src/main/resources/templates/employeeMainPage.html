@@ -1057,8 +1057,9 @@
                                 <div class="summary-icon">📄</div>
                                 <div class="summary-label">결재</div>
                                 <div class="summary-content">
-                                    <a href="/documents/me?status=AWAITING" class="summary-item">결재할 문서<span
-                                            class="count" id="needApprove" style="color:#bbb;">-</span></a>
+                                    <a href="/documents/me?status=AWAITING" class="summary-item">결재할 문서
+                                        <span class="count" id="needApprove">-</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -1199,15 +1200,28 @@
          */
         async function loadAllDashboardData() {
             // 1. 대시보드 요약 (메일/결재 카운트)
+            const COLOR_GRAY = '#bbb';
+            const COLOR_RED = '#d9534f';  // 메일 포인트 컬러
+            const COLOR_BLUE = '#356fda'; // 결재 포인트 컬러 (기존 테마 블루)
+
+            // 1. 대시보드 요약 (메일 카운트)
             const summary = await apiGet('/api/v1/dashboard/summary');
             if (summary) {
-                document.getElementById('mailNew').textContent = summary.newMail || 0;
+                const mailCount = summary.newMail || 0;
+                const mailEl = document.getElementById('mailNew');
+                mailEl.textContent = mailCount;
+                // 1건 이상이면 빨간색, 0건이면 회색
+                mailEl.style.color = mailCount > 0 ? COLOR_RED : COLOR_GRAY;
             }
 
-            // ✅ 수정: 결재할 문서 개수 - Page 객체의 totalElements 활용
+            // 2. 결재할 문서 개수
             const awaitingResult = await apiGet('/api/v1/documents/me?status=AWAITING');
             if (awaitingResult && awaitingResult.totalElements !== undefined) {
-                document.getElementById('needApprove').textContent = awaitingResult.totalElements;
+                const apprCount = awaitingResult.totalElements;
+                const apprEl = document.getElementById('needApprove');
+                apprEl.textContent = apprCount;
+                // 1건 이상이면 파란색, 0건이면 회색
+                apprEl.style.color = apprCount > 0 ? COLOR_BLUE : COLOR_GRAY;
             }
 
             // 2. 메일 목록 (Inbox - Page 객체라면 .content 사용 필요 확인)
