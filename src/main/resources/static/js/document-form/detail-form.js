@@ -65,44 +65,39 @@ const VIEW_BASE = '/form'
 
 // ===== perms from server (html data-*) =====
 function readPerms() {
-    const root = document.documentElement
-
-    const raw = {
-        isEmployee: root.dataset.isEmployee,
-        canEdit: root.dataset.canEdit,
-        canDelete: root.dataset.canDelete,
-        canApprove: root.dataset.canApprove,
-    }
-
+    const d = document.documentElement?.dataset || {}
     const b = (v) => String(v ?? '').trim().toLowerCase() === 'true'
 
-    const out = {
-        isEmployee: b(raw.isEmployee),
-        canEdit: b(raw.canEdit),
-        canDelete: b(raw.canDelete),
-        canApprove: b(raw.canApprove),
-    }
+    return {
+        isEmployee: b(d.isEmployee),
+        canEdit: b(d.canEdit),
+        canDelete: b(d.canDelete),
 
-    console.info('[detail-form perms]', { raw, out })
-    return out
+        // 상태 변경(승인/반려/삭제승인/삭제반려) 권한
+        canManageStatus: b(d.canManageStatus ?? d.canApprove),
+    }
 }
 
 const PERM = readPerms()
 
+// employee 판단은 서버 flag / class 기반만 사용 (권한 조합 추정 제거)
+function isEmployeeByClass() {
+    const byClass = document.documentElement?.classList?.contains('role-employee') === true
+    return PERM.isEmployee || byClass
+}
+
 function markFormListDirty() {
-    // temp-list / forms-list 등 "목록 화면"들이 공통으로 감지할 키
     try {
-        localStorage.setItem('list:dirty', 'true');
-        localStorage.setItem('list:dirty:ts', String(Date.now())); // 같은 탭에서도 변경 보장
+        localStorage.setItem('list:dirty', 'true')
+        localStorage.setItem('list:dirty:ts', String(Date.now()))
     } catch (_) {}
 
-    // opener(목록창) 즉시 갱신 유도(같은 origin일 때만)
     try {
         if (window.opener && !window.opener.closed) {
             window.opener.postMessage(
                 { type: 'LIST_DIRTY', at: Date.now() },
                 window.location.origin
-            );
+            )
         }
     } catch (_) {}
 }
@@ -118,8 +113,6 @@ function getSwal() {
         cancelButtonText: '취소',
         buttonsStyling: true,
         heightAuto: false,
-        // 필요하면 커스텀 class도 여기서 통일 가능
-        // customClass: { popup: 'swal-popup', confirmButton: 'swal-confirm', cancelButton: 'swal-cancel' },
     })
 }
 
@@ -199,13 +192,33 @@ async function apiFetch(url, options = {}, _retried = false) {
     return res
 }
 
+async function extractErrorMessage(res) {
+    const text = await res.text().catch(() => '')
+
+    try {
+        const json = text ? JSON.parse(text) : null
+        if (json && typeof json === 'object') {
+            if (typeof json.message === 'string' && json.message.trim()) return json.message
+            if (json.error && typeof json.error.message === 'string') return json.error.message
+            if (json.data && typeof json.data.message === 'string') return json.data.message
+        }
+    } catch (_) {}
+
+    const trimmed = (text || '').trim()
+    if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
+
+    if (res.status === 401) return '로그인이 필요합니다.'
+    if (res.status === 403) return '권한이 없습니다.'
+    return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`
+}
+
 async function apiFetchOrThrow(url, options = {}) {
-    const res = await apiFetch(url, options);
+    const res = await apiFetch(url, options)
     if (!res.ok) {
-        const msg = await extractErrorMessage(res);
-        throw new Error(msg);
+        const msg = await extractErrorMessage(res)
+        throw new Error(msg)
     }
-    return res;
+    return res
 }
 
 function mustEl(id) {
@@ -367,36 +380,8 @@ async function unwrapResponseDto(res) {
     return isResponseDto(body) ? body.data : body
 }
 
-async function extractErrorMessage(res) {
-    const text = await res.text().catch(() => '')
-
-    // JSON이면 message만
-    try {
-        const json = text ? JSON.parse(text) : null
-        if (json && typeof json === 'object') {
-            if (typeof json.message === 'string' && json.message.trim()) return json.message
-
-            // 혹시 다른 구조가 섞여있을 때 대비
-            if (json.error && typeof json.error.message === 'string') return json.error.message
-            if (json.data && typeof json.data.message === 'string') return json.data.message
-        }
-    } catch (_) {
-        // JSON 파싱 실패면 text fallback
-    }
-
-    // JSON 아니면 텍스트 그대로(너무 길면 컷)
-    const trimmed = (text || '').trim()
-    if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed
-
-    // 최후 fallback
-    if (res.status === 401) return '로그인이 필요합니다.'
-    if (res.status === 403) return '권한이 없습니다.'
-    return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`
-}
-
 async function fetchDetail(docfoNo) {
     const res = await apiFetchOrThrow(`${API_BASE}/${encodeURIComponent(docfoNo)}`)
-
     const detail = await unwrapResponseDto(res)
     if (!detail) throw new Error('상세 조회 응답이 비어있습니다.')
     return detail
@@ -404,15 +389,13 @@ async function fetchDetail(docfoNo) {
 
 // 삭제 동작 분기
 // - 임시(T): DELETE /api/v1/forms/temp/{docfoNo}
-// - 그 외 : DELETE /api/v1/forms/{docfoNo}
-
+// - 그 외 : DELETE /api/v1/forms/{docfoNo}  (삭제요청: W로)
 async function deleteForm(docfoNo, stat) {
     const s = String(stat ?? '').trim().toUpperCase()
     const url = (s === 'T')
         ? `${API_BASE}/temp/${encodeURIComponent(docfoNo)}`
         : `${API_BASE}/${encodeURIComponent(docfoNo)}`
 
-    // 에러 응답 전체(text) 대신 message만 throw
     await apiFetchOrThrow(url, { method: 'DELETE' })
     return true
 }
@@ -422,28 +405,36 @@ function applyPermsUI({ stat }) {
     const s = String(stat ?? '').trim().toUpperCase()
     const isTemp = (s === 'T')
 
-    // 수정
-    if (!PERM.canEdit) {
+    // 직원이면 프론트에서 강제 숨김
+    if (isEmployeeByClass()) {
         btnEdit.style.display = 'none'
         btnEdit.disabled = true
-    } else {
-        btnEdit.style.display = ''
-        btnEdit.disabled = false
-        btnEdit.textContent = isTemp ? '계속 작성' : '수정'
-    }
 
-    // 삭제
-    if (!PERM.canDelete) {
         btnDelete.style.display = 'none'
         btnDelete.disabled = true
     } else {
-        btnDelete.style.display = ''
-        btnDelete.disabled = false
+        // 수정
+        if (!PERM.canEdit) {
+            btnEdit.style.display = 'none'
+            btnEdit.disabled = true
+        } else {
+            btnEdit.style.display = ''
+            btnEdit.disabled = false
+            btnEdit.textContent = isTemp ? '계속 작성' : '수정'
+        }
+
+        // 삭제 (P여도 가능: 권한만 있으면 표시)
+        if (!PERM.canDelete) {
+            btnDelete.style.display = 'none'
+            btnDelete.disabled = true
+        } else {
+            btnDelete.style.display = ''
+            btnDelete.disabled = false
+        }
     }
 
-    // 결재 버튼: 승인된(A) 또는 (X) 상태에서만 + 임시는 숨김
+    // 결재 버튼(= 문서 작성 진입): 임시 제외, A/X에서만
     const canGoWriteDoc = !isTemp && (s === 'A' || s === 'X')
-
     btnApprove.style.display = canGoWriteDoc ? '' : 'none'
     btnApprove.disabled = !canGoWriteDoc
     btnApprove.title = canGoWriteDoc ? '' : '승인된(A) 또는 (X) 상태에서만 문서를 작성할 수 있습니다.'
@@ -459,13 +450,14 @@ function applyPermsUI({ stat }) {
     try {
         elTplTitle.textContent = '로딩 중...'
 
+        // 최초 상세
         const detail = await fetchDetail(docfoNo)
 
-        const stat = String(detail.docfoStat ?? detail.stat ?? '').trim().toUpperCase()
-        applyPermsUI({ stat })
+        let currentStat = String(detail.docfoStat ?? detail.stat ?? '').trim().toUpperCase()
+        applyPermsUI({ stat: currentStat })
 
-        // ===== 결재 버튼 동작(기존 그대로) =====
-        btnApprove.addEventListener('click', () => {
+        // ===== 결재 버튼 동작(중복 바인딩 방지) =====
+        btnApprove.onclick = () => {
             if (btnApprove.disabled) return
 
             const targetUrl = `/documents/create?docfoNo=${encodeURIComponent(docfoNo)}`
@@ -480,7 +472,7 @@ function applyPermsUI({ stat }) {
                 console.error('opener navigation failed:', e)
             }
             location.href = targetUrl
-        })
+        }
 
         elTplTitle.textContent = safeText(detail.docfoName, '-')
         renderCategories(detail)
@@ -495,37 +487,60 @@ function applyPermsUI({ stat }) {
         bootViewer(bodyBox, json)
 
         // ===== 수정/삭제 =====
-        btnEdit.addEventListener('click', async () => {
-            if (!PERM.canEdit) { await swalError('권한이 없습니다.', '수정 권한이 없습니다.'); return }
+        btnEdit.onclick = async () => {
+            if (isEmployeeByClass() || !PERM.canEdit) {
+                await swalError('권한이 없습니다.', '수정 권한이 없습니다.')
+                return
+            }
             location.href = `${VIEW_BASE}/${encodeURIComponent(docfoNo)}/edit`
-        })
+        }
 
-        btnDelete.addEventListener('click', async () => {
-            if (!PERM.canDelete) {
+        btnDelete.onclick = async () => {
+            if (isEmployeeByClass() || !PERM.canDelete) {
                 await swalError('권한이 없습니다.', '삭제 권한이 없습니다.')
                 return
             }
 
-            const s = String(stat).toUpperCase()
+            // 삭제 직전에 최신 상태 재조회 (스테일 방지)
+            let latestStat = currentStat
+            try {
+                const latest = await fetchDetail(docfoNo)
+                latestStat = String(latest.docfoStat ?? latest.stat ?? '').trim().toUpperCase()
+                currentStat = latestStat
+                applyPermsUI({ stat: currentStat }) // 상태 바뀌었으면 UI도 즉시 반영
+            } catch (e) {
+                console.warn('latest stat fetch failed, fallback to currentStat:', e)
+            }
 
+            const s = String(latestStat).toUpperCase()
             const isTemp = (s === 'T')
-            const title = isTemp ? '임시 문서를 삭제할까요?' : '정말 삭제할까요?'
-            const text = isTemp
-                ? '임시 문서는 완전히 삭제되며 복구할 수 없습니다.'
-                : '삭제요청 상태로 변경됩니다.'
+
+            const title =
+                isTemp ? '임시 문서를 삭제할까요?'
+                    : (s === 'P' ? '대기 문서양식을 삭제요청할까요?' : '정말 삭제할까요?')
+
+            const text =
+                isTemp ? '임시 문서는 완전히 삭제되며 복구할 수 없습니다.'
+                    : (s === 'P'
+                        ? '현재 대기(P) 상태인 문서양식을 삭제요청 처리합니다.'
+                        : '삭제요청 상태로 변경됩니다.')
 
             const { isConfirmed } = await swalConfirm(title, text, '삭제', '취소')
             if (!isConfirmed) return
 
             try {
                 btnDelete.disabled = true
-                await swalLoading('삭제 중...')
+                swalLoading('삭제 중...')
 
                 await deleteForm(docfoNo, s)
 
                 swalClose()
                 markFormListDirty()
-                await swalSuccess('삭제되었습니다.', isTemp ? '임시 문서를 삭제했습니다.' : '삭제요청이 등록되었습니다.')
+
+                await swalSuccess(
+                    '삭제되었습니다.',
+                    isTemp ? '임시 문서를 삭제했습니다.' : '삭제요청이 등록되었습니다.'
+                )
 
                 closeOrBack()
             } catch (e) {
@@ -535,9 +550,9 @@ function applyPermsUI({ stat }) {
             } finally {
                 btnDelete.disabled = false
             }
-        })
+        }
 
-        btnClose.addEventListener('click', closeOrBack)
+        btnClose.onclick = closeOrBack
     } catch (e) {
         console.error(e)
         elTplTitle.textContent = '로드 실패'

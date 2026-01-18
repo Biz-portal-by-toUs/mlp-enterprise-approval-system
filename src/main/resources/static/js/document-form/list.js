@@ -5,9 +5,11 @@
 
     const PAGE_SIZE = 10;
 
-    // 승인된 것만 보이게(원하면 false로)
-    const ONLY_APPROVED = true;
-    const APPROVED_STATS = ['A', 'X', 'W'];
+    // ✅ 목록에서 보여줄 상태 필터(동작은 기존과 동일)
+    //   - true면 DEFAULT_STATS만 조회
+    //   - false면 stat 파라미터 없이 조회(백 기본값/전체 정책에 따름)
+    const USE_DEFAULT_STATS_FILTER = true;
+    const DEFAULT_STATS = ['A', 'X', 'W']; // (기존 APPROVED_STATS 그대로)
 
     // ===== DOM =====
     const elTbody = document.getElementById('tbody');
@@ -33,7 +35,6 @@
         const b = (v) => String(v ?? "").trim().toLowerCase() === "true";
 
         return {
-            // html th:classappend 로 role-employee 붙일거라면 여기선 dataset은 보조로만 사용해도 됨
             isEmployee: b(d.isEmployee),
 
             canCreate: b(d.canCreate),
@@ -47,15 +48,10 @@
 
     const PERM = readPerms();
 
+    // ✅ employee 판단은 서버 flag / class 기반만 사용 (권한 조합 추정 제거)
     function isEmployeeByClass() {
         const byClass = document.documentElement?.classList?.contains("role-employee") === true;
-
-        // dataset 기반 보조판단 (혹시 class 누락 대비)
-        // 직원이면 보통 create/bulkDelete가 false일 가능성이 큼 → 둘 다 false면 employee로 간주
-        const byPerm = (!PERM.canCreate && !PERM.canBulkDelete);
-
-        // 서버가 isEmployee를 내려주면 그걸 우선 신뢰
-        return PERM.isEmployee || byClass || byPerm;
+        return PERM.isEmployee || byClass;
     }
 
     function isEmployee() {
@@ -73,7 +69,7 @@
     }
 
     function buildRejectedStyleDeletePopup(ids) {
-        const items = ids.map((id, i) => {
+        const items = ids.map((id) => {
             const title = formTitleMap.get(id) || `양식 #${id}`;
 
             return `
@@ -91,10 +87,10 @@
                 <div>
                   <b>${esc(title)}</b>
                 </div>
-                <div style="color:#868e96;">DELETE 요청</div>
+                <div style="color:#868e96;">삭제 처리</div>
               </div>
             `;
-                }).join('');
+        }).join('');
 
         return `
             <div style="
@@ -112,15 +108,15 @@
               ">
                 선택 삭제
               </div>
-        
+
               <div style="
                 font-size:13px;
                 color:#868e96;
                 margin-bottom:14px;
               ">
-                선택한 문서양식을 삭제 요청 처리합니다.<br/>
+                선택한 문서양식을 삭제 처리합니다.<br/>
               </div>
-        
+
               <div style="
                 border:1px solid #dee2e6;
                 border-radius:8px;
@@ -180,21 +176,9 @@
                     else failed.push({ id, reason: r.reason });
                 });
 
-                // 실패가 있어도 throw 안 함 (부분 성공/재시도 UX 위해)
-                if (failed.length > 0) {
-                    const msg =
-                        `${failed.length}건 삭제 실패\n` +
-                        failed.map(f => `#${f.id}: ${f.reason?.message || f.reason}`).join('\n');
-
-                    Swal.showValidationMessage(
-                        `<div style="text-align:left; white-space:pre-wrap; font-size:13px;">${esc(msg)}</div>`
-                    );
-                } else {
-                    Swal.resetValidationMessage();
-                }
-
+                // validationMessage는 confirm을 막는 케이스가 있어서,
+                // 여기서는 "return 값"으로만 실패를 전달하고 confirm 이후 별도 안내로 처리
                 Swal.hideLoading();
-
                 return { okIds, failed };
             }
         });
@@ -382,7 +366,7 @@
         const tp = Math.max(1, Number(totalPages) || 1);
         const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        const blockSize = 5; // 페이지네이션에서 한 번에 보여줄 버튼 개수
+        const blockSize = 5;
         const currentBlock = Math.floor(cur / blockSize);
         const startPage = currentBlock * blockSize;
         let endPage = startPage + blockSize - 1;
@@ -422,27 +406,18 @@
     async function extractErrorMessage(res) {
         const text = await res.text().catch(() => '');
 
-        // JSON이면 message만 뽑기
         try {
             const json = text ? JSON.parse(text) : null;
-
-            // ResponseDto 형태: { status, code, message, data }
             if (json && typeof json === 'object') {
                 if (typeof json.message === 'string' && json.message.trim()) return json.message;
-
-                // 혹시 다른 형태가 섞여있을 때 대비
                 if (json.error && typeof json.error.message === 'string') return json.error.message;
                 if (json.data && typeof json.data.message === 'string') return json.data.message;
             }
-        } catch (_) {
-            // JSON 아니면 무시하고 텍스트 사용
-        }
+        } catch (_) {}
 
-        // JSON 아니면 텍스트 그대로(너무 길면 잘라내기)
         const trimmed = (text || '').trim();
         if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed;
 
-        // 진짜 아무것도 없으면 상태코드 기반 기본 메시지
         if (res.status === 401) return '로그인이 필요합니다.';
         if (res.status === 403) return '권한이 없습니다.';
         return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
@@ -453,7 +428,7 @@
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
-            const statsCsv = ONLY_APPROVED ? APPROVED_STATS.join(',') : null;
+            const statsCsv = USE_DEFAULT_STATS_FILTER ? DEFAULT_STATS.join(',') : null;
 
             const res = await apiFetch(buildUrl(statsCsv), { method: 'GET' });
 
@@ -493,8 +468,7 @@
 
     // ===== events =====
     elTbody.addEventListener('click', (e) => {
-        // ✅ 체크박스 클릭은 상세 열지 않기
-        if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') return;
+        if (e.target?.closest?.('label.selWrap')) return;
 
         const a = e.target.closest('a[data-open]');
         if (a) {
@@ -518,11 +492,10 @@
     });
 
     async function softDelete(docfoNo) {
-        // 지금 백 정책이 "삭제요청"이면 DELETE만 쓰는게 제일 깔끔해
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
             const msg = await extractErrorMessage(delRes);
-            throw new Error(msg); // ✅ message만
+            throw new Error(msg);
         }
         return true;
     }
@@ -537,30 +510,25 @@
         try {
             btnDeleteSelected.disabled = true;
 
-            // 실패 항목만 남겨놓고 재시도 가능하게 루프
             while (true) {
                 const ids = Array.from(selected);
                 if (ids.length === 0) break;
 
                 const res = await runBulkDeleteRejectedStyle(ids);
-                if (!res) break; // 사용자가 "취소"
+                if (!res) break;
 
                 const { okIds, failed } = res;
                 const failedIds = failed.map(f => String(f.id));
 
-                // 성공은 체크에서 제거, 실패만 체크 유지
                 selected.clear();
                 failedIds.forEach(id => selected.add(id));
 
-                // 성공이 있었다면 목록 갱신(삭제/상태 변경 반영)
                 if (okIds.length > 0) {
-                    await load(); // render가 selected를 보고 실패항목만 체크로 다시 찍어줌
+                    await load();
                 } else {
-                    // 성공이 0이면 체크/UI만 갱신
                     updateBulkDeleteUI();
                 }
 
-                // 실패가 없으면 종료(버튼 disabled 처리됨)
                 if (failedIds.length === 0) {
                     Swal.fire({
                         icon: 'success',
@@ -571,7 +539,6 @@
                     break;
                 }
 
-                // 실패 있으면 재시도 팝업
                 const failedLines = failed
                     .slice(0, 10)
                     .map(f => `#${f.id}: ${f.reason?.message || f.reason}`)
@@ -605,11 +572,8 @@
                 });
 
                 if (retryPopup.isDenied) {
-                    // while 루프 계속: selected = failedIds 상태 그대로 다시 시도
                     continue;
                 }
-
-                // 닫기/중단이면 종료
                 break;
             }
         } catch (err) {
@@ -621,9 +585,8 @@
                 confirmButtonColor: '#339af0'
             });
         } finally {
-            // 버튼은 UI 함수가 selected.size 기준으로 결정하게
             btnDeleteSelected.disabled = false;
-            updateBulkDeleteUI(); // 실패 0개면 여기서 disabled=true로 됨
+            updateBulkDeleteUI();
         }
     });
 
