@@ -826,10 +826,33 @@
 
             console.log("[API] response", res.status, url, json);
 
-            if (res.status === 401 || res.status === 403) {
+            if (res.status === 401) {
                 await swalWarn("로그인이 만료되었습니다. 다시 로그인해 주세요.", "로그인 필요");
                 location.href = "/auth/employee/login";
                 throw new Error("UNAUTHORIZED");
+            }
+
+            if (res.status === 403) {
+                const code = json?.code || json?.errorCode;
+                const msg  = json?.message || json?.error || text || "";
+
+                // ✅ 폴더 삭제 금지 케이스만 메시지 커스텀
+                if (code === "FOLDER_DELETE_FORBIDDEN" || msg.includes("FOLDER_DELETE_FORBIDDEN")) {
+                    throw new Error("폴더를 만든 사람만 삭제가 가능합니다.");
+                }
+
+                // (선택) 폴더 rename도 같이
+                if (code === "FOLDER_RENAME_FORBIDDEN" || msg.includes("FOLDER_RENAME_FORBIDDEN")) {
+                    throw new Error("폴더를 만든 사람만 이름 변경이 가능합니다.");
+                }
+
+                // ✅ CSRF 느낌이면 따로 안내(선택)
+                if (String(msg).toLowerCase().includes("csrf")) {
+                    throw new Error("보안 토큰(CSRF) 검증에 실패했습니다. 새로고침 후 다시 시도해 주세요.");
+                }
+
+                // 나머지 403은 서버 메시지 우선
+                throw new Error(msg || "권한이 없습니다.");
             }
 
             if (!res.ok) {
