@@ -1270,7 +1270,7 @@
                                 attrs: { textAlign: 'center' },
                                 content: [{
                                     type: 'text',
-                                    text: `${selectedDelegate.empName} (${selectedDelegate.posName} / ${selectedDelegate.depName})`
+                                    text: `${selectedDelegate.empName} / ${selectedDelegate.empId}`
                                 }]
                             }];
                         } else {
@@ -1417,33 +1417,49 @@
                         radio.checked = true;
                         currentCategoryName = categoryName;
 
+                        // ✅ 요구사항: 휴가/출장 취소 및 수정 신청인 경우 카테고리 변경 금지
+                        const isLockCategory = (normalized.includes('휴가') || normalized.includes('출장')) && (normalized.includes('취소') || normalized.includes('수정'));
+                        if (isLockCategory) {
+                            document.querySelectorAll('input[name="docfoCatNo"]').forEach(r => {
+                                r.disabled = true;
+                                r.parentElement.style.cursor = 'not-allowed';
+                                r.parentElement.style.opacity = '0.8';
+                            });
+                        }
+
                         const rule = getCategoryRule(categoryName);
                         if (rule) {
                             const attendanceSection = document.getElementById('attendance-section');
-                            attendanceSection.style.display = 'block';
 
-                            applyDateConstraints(rule);
+                            // ✅ 초기 로드 시 취소 신청 카테고리 체크
+                            if (normalized === '휴가취소신청' || normalized === '출장취소신청') {
+                                attendanceSection.style.display = 'none';
+                            } else {
+                                attendanceSection.style.display = 'block';
 
-                            const delegateSection = document.getElementById('delegate-section');
-                            const selectedDelegateSection = document.getElementById('selected-delegate-section');
-                            const attendanceTitle = document.getElementById('attendance-title');
+                                applyDateConstraints(rule);
 
-                            if (normalized.includes('휴가')) {
-                                attendanceTitle.textContent = '휴가 정보';
-                                if (normalized === '휴가신청' || normalized === '휴가수정신청') {
-                                    delegateSection.style.display = 'block';
-                                    toggleDelegateSearchState();
-                                    if (selectedDelegate) {
-                                        renderSelectedDelegate();
+                                const delegateSection = document.getElementById('delegate-section');
+                                const selectedDelegateSection = document.getElementById('selected-delegate-section');
+                                const attendanceTitle = document.getElementById('attendance-title');
+
+                                if (normalized.includes('휴가')) {
+                                    attendanceTitle.textContent = '휴가 정보';
+                                    if (normalized === '휴가신청' || normalized === '휴가수정신청') {
+                                        delegateSection.style.display = 'block';
+                                        toggleDelegateSearchState();
+                                        if (selectedDelegate) {
+                                            renderSelectedDelegate();
+                                        }
+                                    } else {
+                                        delegateSection.style.display = 'none';
+                                        selectedDelegateSection.style.display = 'none';
                                     }
-                                } else {
+                                } else if (normalized.includes('출장')) {
+                                    attendanceTitle.textContent = '출장 정보';
                                     delegateSection.style.display = 'none';
                                     selectedDelegateSection.style.display = 'none';
                                 }
-                            } else if (normalized.includes('출장')) {
-                                attendanceTitle.textContent = '출장 정보';
-                                delegateSection.style.display = 'none';
-                                selectedDelegateSection.style.display = 'none';
                             }
                         }
                     }
