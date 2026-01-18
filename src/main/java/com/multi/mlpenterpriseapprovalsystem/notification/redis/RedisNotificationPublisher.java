@@ -22,18 +22,21 @@ public class RedisNotificationPublisher {
     private final ChannelTopic notificationTopic;
     private final ObjectMapper objectMapper;
     private final ChannelTopic loginDetectTopic;
+    private final ChannelTopic chatUnreadTopic;
 
 
     public RedisNotificationPublisher(
             StringRedisTemplate stringRedisTemplate,
             @Qualifier("notificationTopic") ChannelTopic notificationTopic,
             @Qualifier("redisObjectMapper") ObjectMapper objectMapper, // 주입받을 빈 이름 지정
-            @Qualifier("loginDetectTopic") ChannelTopic loginDetectTopic
+            @Qualifier("loginDetectTopic") ChannelTopic loginDetectTopic,
+            @Qualifier("chatUnreadTopic") ChannelTopic chatUnreadTopic
     ) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.notificationTopic = notificationTopic;
         this.objectMapper = objectMapper;
         this.loginDetectTopic = loginDetectTopic;
+        this.chatUnreadTopic = chatUnreadTopic;
     }
 
     public void publish(String empId, Long notiNo) {
@@ -58,6 +61,16 @@ public class RedisNotificationPublisher {
             stringRedisTemplate.convertAndSend(loginDetectTopic.getTopic(), payload);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to serialize NewLoginRedisMessage", e);
+        }
+    }
+
+    public void publishChatUnreadCount(String empId, long totalCount) {
+        ChatUnreadRedisMessage msg = new ChatUnreadRedisMessage(empId, totalCount);
+        try {
+            String payload = objectMapper.writeValueAsString(msg);
+            stringRedisTemplate.convertAndSend(chatUnreadTopic.getTopic(), payload);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize ChatUnreadRedisMessage", e);
         }
     }
 
