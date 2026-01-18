@@ -29,33 +29,37 @@
 
     // ===== perms from server (html data-*) =====
     function readPerms() {
-        const root = document.documentElement;
+        const d = document.documentElement?.dataset || {};
+        const b = (v) => String(v ?? "").trim().toLowerCase() === "true";
 
-        const raw = {
-            isEmployee: root.dataset.isEmployee,
-            canCreate: root.dataset.canCreate,
-            canBulkDelete: root.dataset.canBulkDelete,
+        return {
+            // html th:classappend 로 role-employee 붙일거라면 여기선 dataset은 보조로만 사용해도 됨
+            isEmployee: b(d.isEmployee),
 
+            canCreate: b(d.canCreate),
+            canBulkDelete: b(d.canBulkDelete),
+
+            // (있으면 읽고, 없어도 무관)
+            canApprove: b(d.canApprove),
+            canUseTemp: b(d.canUseTemp),
         };
-
-        const b = (v) => String(v ?? '').trim().toLowerCase() === 'true';
-
-        const out = {
-            isEmployee: b(raw.isEmployee),
-            canCreate: b(raw.canCreate),
-            canBulkDelete: b(raw.canBulkDelete),
-        };
-
-        // 필요하면 디버깅
-        // console.info('[form-list perms]', { raw, out });
-
-        return out;
     }
 
     const PERM = readPerms();
 
+    function isEmployeeByClass() {
+        const byClass = document.documentElement?.classList?.contains("role-employee") === true;
+
+        // dataset 기반 보조판단 (혹시 class 누락 대비)
+        // 직원이면 보통 create/bulkDelete가 false일 가능성이 큼 → 둘 다 false면 employee로 간주
+        const byPerm = (!PERM.canCreate && !PERM.canBulkDelete);
+
+        // 서버가 isEmployee를 내려주면 그걸 우선 신뢰
+        return PERM.isEmployee || byClass || byPerm;
+    }
+
     function isEmployee() {
-        return PERM.isEmployee;
+        return isEmployeeByClass();
     }
 
     // ===== util =====
@@ -159,33 +163,44 @@
             reverseButtons: true,
             width: 760,
             focusConfirm: false,
+            allowOutsideClick: () => !Swal.isLoading(),
+            allowEscapeKey: () => !Swal.isLoading(),
+
             preConfirm: async () => {
                 Swal.showLoading();
 
-                const results = await batchAllSettled(
-                    ids,
-                    5,              // ✅ 여기서 "5개씩"
-                    softDelete
-                );
+                const results = await batchAllSettled(ids, 5, softDelete);
 
-                const failed = results
-                    .map((r, i) => ({ r, id: ids[i] }))
-                    .filter(x => x.r.status === 'rejected');
+                const okIds = [];
+                const failed = [];
 
+                results.forEach((r, i) => {
+                    const id = ids[i];
+                    if (r.status === 'fulfilled') okIds.push(id);
+                    else failed.push({ id, reason: r.reason });
+                });
+
+                // 실패가 있어도 throw 안 함 (부분 성공/재시도 UX 위해)
                 if (failed.length > 0) {
-                    throw new Error(
+                    const msg =
                         `${failed.length}건 삭제 실패\n` +
-                        failed.map(f =>
-                            `#${f.id}: ${f.r.reason?.message || f.r.reason}`
-                        ).join('\n')
+                        failed.map(f => `#${f.id}: ${f.reason?.message || f.reason}`).join('\n');
+
+                    Swal.showValidationMessage(
+                        `<div style="text-align:left; white-space:pre-wrap; font-size:13px;">${esc(msg)}</div>`
                     );
+                } else {
+                    Swal.resetValidationMessage();
                 }
 
-                return true;
+                Swal.hideLoading();
+
+                return { okIds, failed };
             }
         });
 
-        return result.isConfirmed;
+        if (!result.isConfirmed) return null;
+        return result.value || { okIds: [], failed: [] };
     }
 
     // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
@@ -519,33 +534,96 @@
         }
         if (selected.size === 0) return;
 
-        const ids = Array.from(selected);
-
         try {
             btnDeleteSelected.disabled = true;
 
-            const ok = await runBulkDeleteRejectedStyle(ids);
-            if (!ok) return;
+            // 실패 항목만 남겨놓고 재시도 가능하게 루프
+            while (true) {
+                const ids = Array.from(selected);
+                if (ids.length === 0) break;
 
-            selected.clear();
-            await load();
+                const res = await runBulkDeleteRejectedStyle(ids);
+                if (!res) break; // 사용자가 "취소"
 
-            Swal.fire({
-                icon: 'success',
-                title: '완료',
-                text: '선택 삭제가 완료되었습니다.',
-                confirmButtonColor: '#339af0'
-            });
+                const { okIds, failed } = res;
+                const failedIds = failed.map(f => String(f.id));
+
+                // 성공은 체크에서 제거, 실패만 체크 유지
+                selected.clear();
+                failedIds.forEach(id => selected.add(id));
+
+                // 성공이 있었다면 목록 갱신(삭제/상태 변경 반영)
+                if (okIds.length > 0) {
+                    await load(); // render가 selected를 보고 실패항목만 체크로 다시 찍어줌
+                } else {
+                    // 성공이 0이면 체크/UI만 갱신
+                    updateBulkDeleteUI();
+                }
+
+                // 실패가 없으면 종료(버튼 disabled 처리됨)
+                if (failedIds.length === 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        text: `선택 삭제가 완료되었습니다. (${okIds.length}건)`,
+                        confirmButtonColor: '#339af0'
+                    });
+                    break;
+                }
+
+                // 실패 있으면 재시도 팝업
+                const failedLines = failed
+                    .slice(0, 10)
+                    .map(f => `#${f.id}: ${f.reason?.message || f.reason}`)
+                    .join('\n');
+
+                const more = failed.length > 10 ? `\n…외 ${failed.length - 10}건` : '';
+
+                const retryPopup = await Swal.fire({
+                    icon: 'warning',
+                    title: '삭제 실패',
+                    html: `
+                          <div style="text-align:left; font-size:13px; line-height:1.5; white-space:pre-wrap;">
+                            성공: <b>${okIds.length}</b>건<br/>
+                            실패: <b>${failedIds.length}</b>건<br/>
+                            <hr style="margin:10px 0; border:0; border-top:1px solid #e9ecef;"/>
+                            <b>실패 목록</b>\n${esc(failedLines + more)}
+                            <div style="margin-top:8px; color:#868e96;">
+                              재시도하시겠습니까?
+                            </div>
+                          </div>
+                        `,
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '닫기',
+                    denyButtonText: `재시도 (${failedIds.length})`,
+                    cancelButtonText: '중단',
+                    confirmButtonColor: '#339af0',
+                    denyButtonColor: '#fa5252',
+                    cancelButtonColor: '#adb5bd',
+                    reverseButtons: true
+                });
+
+                if (retryPopup.isDenied) {
+                    // while 루프 계속: selected = failedIds 상태 그대로 다시 시도
+                    continue;
+                }
+
+                // 닫기/중단이면 종료
+                break;
+            }
         } catch (err) {
             console.error(err);
             Swal.fire({
                 icon: 'error',
-                title: '삭제 실패',
+                title: '삭제 처리 중 오류',
                 text: err?.message || String(err),
                 confirmButtonColor: '#339af0'
             });
         } finally {
-            updateBulkDeleteUI();
+            // 버튼은 UI 함수가 selected.size 기준으로 결정하게
+            btnDeleteSelected.disabled = false;
+            updateBulkDeleteUI(); // 실패 0개면 여기서 disabled=true로 됨
         }
     });
 
