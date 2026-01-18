@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -26,18 +27,22 @@ public class RedisLoginDetectSubscriber implements MessageListener {
 
     private final ObjectMapper objectMapper;
     private final SseManager sseManager;
+    private final StringRedisTemplate stringRedisTemplate;
 
     public RedisLoginDetectSubscriber(
             @Qualifier("redisObjectMapper") ObjectMapper objectMapper,
-            SseManager sseManager
+            SseManager sseManager,
+            StringRedisTemplate stringRedisTemplate
     ) {
         this.objectMapper = objectMapper;
         this.sseManager = sseManager;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String raw = new String(message.getBody(), StandardCharsets.UTF_8);
+        stringRedisTemplate.opsForValue().set("debug:login-detect:last", raw);
 
         String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
 
