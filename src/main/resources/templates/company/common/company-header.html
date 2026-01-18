@@ -5,7 +5,8 @@
         :root {
             --header-height: 70px;
             --dropdown-bg: #ffffff;
-            --primary: #2f66d7;
+            --primary: #2f66d7; /* 기존 파란색 */
+            --navy: #0f172a;    /* 새 남색 추가 */
             --border: #d7d7d7;
             --text: #111;
         }
@@ -70,7 +71,6 @@
             user-select: none;
         }
 
-        /* 화살표 기본 아이콘 */
         .nav-link::after {
             content: "";
             width: 8px;
@@ -81,19 +81,16 @@
             transition: transform 0.2s ease, filter 0.2s ease;
         }
 
-        /* ✅ [1. 마우스 올렸을 때(Hover) & 2. 클릭해서 펼쳐졌을 때(Active)] 공통 파란색 처리 */
         .nav-item:hover .nav-link,
         .nav-item.active .nav-link {
             color: var(--primary);
         }
 
-        /* ✅ 화살표 색상 파란색 변경 (Hover & Active 공통) */
         .nav-item:hover .nav-link::after,
         .nav-item.active .nav-link::after {
             filter: invert(34%) sepia(85%) saturate(1455%) hue-rotate(206deg) brightness(91%) contrast(90%);
         }
 
-        /* ✅ 클릭해서 펼쳐졌을 때(Active)만 화살표 180도 회전 */
         .nav-item.active .nav-link::after {
             transform: rotate(180deg);
         }
@@ -113,10 +110,7 @@
             z-index: 1001;
         }
 
-        /* Active 상태일 때 드롭다운 보임 */
-        .nav-item.active .dropdown {
-            display: block;
-        }
+        .nav-item.active .dropdown { display: block; }
 
         .dropdown-item {
             display: block;
@@ -145,6 +139,7 @@
         .logged-in .auth-only { display: flex !important; }
         .logged-in .guest-only { display: none !important; }
 
+        /* 공통 버튼 스타일 */
         .btn {
             appearance: none;
             border: 1px solid var(--border);
@@ -157,11 +152,21 @@
             font-size: 14px;
             transition: all 0.2s;
         }
+
+        /* ✅ 사원 로그인용 (기존 파란색) */
         .btn.primary {
             border-color: var(--primary);
             background: var(--primary);
             color: #fff;
         }
+
+        /* ✅ 무료로 시작하기용 (남색) */
+        .btn.navy {
+            border-color: var(--navy);
+            background: var(--navy);
+            color: #fff;
+        }
+
         .who {
             font-weight: 900;
             color: #333;
@@ -176,15 +181,8 @@
     <header id="mainHeader">
         <div class="header-left">
             <a href="/" class="brand">Bizportal</a>
-
             <nav style="height: 100%;">
                 <ul class="nav-menu">
-                    <li class="nav-item has-dropdown">
-                        <a class="nav-link">제품</a>
-                        <div class="dropdown">
-                            <a href="/products/intro" class="dropdown-item">제품소개</a>
-                        </div>
-                    </li>
                     <li class="nav-item has-dropdown">
                         <a class="nav-link">이용요금</a>
                         <div class="dropdown">
@@ -197,7 +195,6 @@
                             <a href="/company/subscriptions" class="dropdown-item">요금제 관리</a>
                             <a href="/company/payment-methods" class="dropdown-item">결제수단관리</a>
                             <a href="/company/payment-historys" class="dropdown-item">결제 내역</a>
-<!--                            <a href="/company/profile" class="dropdown-item">회사정보 수정</a>-->
                         </div>
                     </li>
                 </ul>
@@ -205,45 +202,36 @@
         </div>
 
         <div class="nav-right">
-            <button class="btn guest-only" type="button" onclick="location.href='/auth/companies/login'">회사 로그인</button>
-            <button class="btn primary guest-only" type="button" onclick="location.href='/auth/companies/signup'">회원가입</button>
+            <button class="btn guest-only" type="button" onclick="location.href='/auth/companies/login'">기업 로그인</button>
+            <button class="btn primary guest-only" type="button" onclick="location.href='/auth/employee/login'">사원 로그인</button>
+            <button class="btn navy guest-only" type="button" onclick="location.href='/auth/companies/signup'">무료로 시작하기</button>
 
             <span class="who auth-only" id="headerUsername"></span>
-            <button class="btn primary auth-only" type="button" onclick="location.href='/company'">대시보드</button>
             <button class="btn auth-only" type="button" id="headerLogoutBtn">로그아웃</button>
         </div>
     </header>
 
     <script>
         (function() {
-            /** 1. 드롭다운 토글 제어 **/
             const dropdownItems = document.querySelectorAll('.nav-item.has-dropdown');
 
             dropdownItems.forEach(item => {
                 const link = item.querySelector('.nav-link');
-
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-
                     const isActive = item.classList.contains('active');
-
-                    // 다른 드롭다운 닫기
                     dropdownItems.forEach(el => el.classList.remove('active'));
-
-                    // 클릭한 메뉴 토글
                     if (!isActive) {
                         item.classList.add('active');
                     }
                 });
             });
 
-            /** 2. 바깥 영역 클릭 시 닫기 **/
             document.addEventListener('click', () => {
                 dropdownItems.forEach(item => item.classList.remove('active'));
             });
 
-            /** 3. 인증 체크 **/
             function parseBoolean(v) {
                 return v === true || v === 'true' || v === 'TRUE' || v === '1' || v === 'Y' || v === 'YES';
             }
