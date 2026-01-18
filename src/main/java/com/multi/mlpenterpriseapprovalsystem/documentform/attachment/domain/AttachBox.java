@@ -69,4 +69,9 @@ public class AttachBox {
     public void updateSize(Long size){
         this.size = (size == null || size < 0) ? 0L : size;
     }
+
+    public void updateMeta(String title, String dscp) {
+        this.title = title;
+        this.dscp = dscp;
+    }
 }

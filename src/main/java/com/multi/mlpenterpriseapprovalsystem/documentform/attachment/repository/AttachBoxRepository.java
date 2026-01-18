@@ -23,8 +23,8 @@ public interface AttachBoxRepository extends JpaRepository<AttachBox, Long> {
     // 단건 조회
     Optional<AttachBox> findByAttachNoAndCompany_ComId(Long attachNo, String comId);
 
-    // 삭제
-    @Modifying
+    // 하드 삭제 (company scope 보장)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         delete from AttachBox a
          where a.attachNo = :attachNo
@@ -35,6 +35,7 @@ public interface AttachBoxRepository extends JpaRepository<AttachBox, Long> {
             @Param("comId") String comId
     );
 
+    // 30분 지난 미확정 데이터 정리
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     int deleteByCommittedFalseAndCreatedAtBefore(LocalDateTime threshold);
 }

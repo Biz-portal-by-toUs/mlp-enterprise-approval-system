@@ -307,4 +307,16 @@ public class MailController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, msg, res));
     }
+
+    @DeleteMapping("/drafts/{mailId}/attachments/{attachmentId}")
+    public ResponseEntity<ResponseDto<Void>> deleteDraftAttachment(
+            @PathVariable String mailId,
+            @PathVariable Long attachmentId,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        String empId = user.getUsername();
+        mailService.deleteDraftAttachment(mailId, attachmentId, empId);
+
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "임시저장 첨부 삭제 성공", null));
+    }
 }
