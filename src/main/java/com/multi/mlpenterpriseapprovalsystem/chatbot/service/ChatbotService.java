@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -141,6 +142,10 @@ public class ChatbotService {
                 finalContent = parts == null ? "" : parts.stream().map(Object::toString).collect(Collectors.joining());
             }
             updateMessageInRedis(sessionId, msgId, finalContent);
+            Map<String, Object> doneData = new HashMap<>();
+            doneData.put("messageId", msgId);
+            doneData.put("fullText", finalContent);
+            doneData.put("padding", " ".repeat(2048));
             sseManager.sendToUser(connectionKey, "done", Map.of(
                     "messageId", msgId,
                     "fullText", finalContent

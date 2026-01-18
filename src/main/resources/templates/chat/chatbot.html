@@ -353,6 +353,17 @@
         }
     }
 
+    let safetyTimer = null;
+
+    function resetSafetyTimer() {
+        if (safetyTimer) clearTimeout(safetyTimer);
+        // 30초 동안 아무 이벤트가 없으면 강제로 입력창을 풉니다.
+        safetyTimer = setTimeout(() => {
+            console.warn("Safety Timer 작동: 응답 지연으로 인해 입력을 허용합니다.");
+            setIsUpdating(false);
+        }, 30000);
+    }
+
     function connectSse() {
         const sId = getSessionId();
         const es = new EventSource(`/api/v1/chatbot/stream?sessionId=${sId}`, { withCredentials: true });
@@ -365,6 +376,7 @@
         const chunkBuffer = new Map(); // messageId -> Map(seq -> chunk)
 
         es.addEventListener("chunk", (e) => {
+            resetSafetyTimer();
             const data = JSON.parse(e.data);
             console.log("chunk payload", JSON.stringify(data));
             const ref = msgDomMap.get(data.messageId);
@@ -441,6 +453,8 @@
         });
 
         es.addEventListener("done", (e) => {
+            if (safetyTimer) clearTimeout(safetyTimer);
+
             console.log("!!! DONE 수신 완료 !!!", e.data);
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
@@ -458,7 +472,9 @@
             setIsUpdating(false);
         });
 
-        es.onerror = () => { setIsUpdating(false);
+        es.onerror = () => {
+            if (safetyTimer) clearTimeout(safetyTimer);
+            setIsUpdating(false);
             document.getElementById("statusText").innerText = "오프라인";
             document.getElementById("connDot").classList.remove("on");};
     }
