@@ -138,7 +138,7 @@ public class RedisConfig {
 
         c.addMessageListener(redisNotificationSubscriber, notificationTopic());
 
-        c.addMessageListener(redisNotificationSubscriber, loginDetectTopic());
+        c.addMessageListener(redisLoginDetectSubscriber, loginDetectTopic());
 
         c.addMessageListener(chatUnreadSubscriber, chatUnreadTopic());
         return c;
