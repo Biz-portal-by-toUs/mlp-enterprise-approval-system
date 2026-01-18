@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.multi.mlpenterpriseapprovalsystem.chat.redis.ChatRedisSubscriber;
+import com.multi.mlpenterpriseapprovalsystem.notification.redis.ChatUnreadSubscriber;
+import com.multi.mlpenterpriseapprovalsystem.notification.redis.RedisLoginDetectSubscriber;
+import com.multi.mlpenterpriseapprovalsystem.notification.redis.RedisNotificationSubscriber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -33,6 +36,29 @@ public class RedisConfig {
 
     private final RedisConnectionFactory redisConnectionFactory;
     private final ChatRedisSubscriber redisSubscriber;
+
+    private final RedisNotificationSubscriber redisNotificationSubscriber;
+    private final ChatUnreadSubscriber chatUnreadSubscriber;
+    private final RedisLoginDetectSubscriber redisLoginDetectSubscriber; // ✅ 추가 주입
+
+    // ==========================================
+    // 1. 모든 토픽(Topic) 정의 통합
+    // ==========================================
+    @Bean(name = "notificationTopic")
+    public ChannelTopic notificationTopic() {
+        return new ChannelTopic("notifications:pubsub"); // 기존 이름 유지
+    }
+
+    @Bean(name = "loginDetectTopic")
+    public ChannelTopic loginDetectTopic() {
+        return new ChannelTopic("login-detect:pubsub"); // 기존 이름 유지
+    }
+
+    @Bean(name = "chatUnreadTopic")
+    public ChannelTopic chatUnreadTopic() {
+        return new ChannelTopic("chat-unread-count");
+    }
+
 
 
     @Bean
@@ -109,6 +135,12 @@ public class RedisConfig {
         c.addMessageListener(redisSubscriber, new PatternTopic("user:*:room-update"));
 
         c.addMessageListener(redisSubscriber, new ChannelTopic("user:status-update"));
+
+        c.addMessageListener(redisNotificationSubscriber, notificationTopic());
+
+        c.addMessageListener(redisNotificationSubscriber, loginDetectTopic());
+
+        c.addMessageListener(chatUnreadSubscriber, chatUnreadTopic());
         return c;
     }
 }

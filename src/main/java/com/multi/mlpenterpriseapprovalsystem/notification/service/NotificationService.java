@@ -146,4 +146,9 @@ public class NotificationService {
         redisNotificationPublisher.publishNewLogin(empId, deviceId, ip);
     }
 
+    public void sendTotalChatUnreadCount(String empId, long totalCount) {
+
+        redisNotificationPublisher.publishChatUnreadCount(empId, totalCount);
+    }
+
 }

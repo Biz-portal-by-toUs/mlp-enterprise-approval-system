@@ -10,6 +10,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +39,7 @@ public class ChatRoomService {
     private final ChatMessageRepository chatMessageRepository;
     private final EmployeeRepository employeeRepository;
     private final ChatRedisPublisher redisPublisher;
+    private final NotificationService notificationService;
 
     /**
      * 채팅방 생성 (1:1 / 그룹)
@@ -203,6 +205,10 @@ public class ChatRoomService {
 
         member.markReadNow();
 
+        long totalUnread = chatRoomMemberRepository.getTotalUnreadCount(empId);
+
+        notificationService.sendTotalChatUnreadCount(empId, totalUnread);
+
         ChatRoom room = member.getChatRoom();
         String roomName;
 
@@ -282,6 +288,9 @@ public class ChatRoomService {
 
         member.markReadNow();
         member.deactivateNow();
+
+        long totalUnread = chatRoomMemberRepository.getTotalUnreadCount(empId);
+        notificationService.sendTotalChatUnreadCount(empId, totalUnread);
 
         if (RoomType.GROUP.equals(member.getChatRoom().getRoomType())) {
             saveAndPublishSystemMessage(roomNo, leaver.getEmpName() + "님이 나갔습니다.");
@@ -369,4 +378,9 @@ public class ChatRoomService {
 
     }
 
+    public long getTotalUnreadCount(String empId) {
+        Employee employee = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
+        return chatRoomMemberRepository.getTotalUnreadCount(empId);
+    }
 }

@@ -30,6 +30,11 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
 
     Optional<ChatRoomMember> findByChatRoom_RoomNoAndEmployee_EmpIdAndIsActiveTrue(Long roomNo, String empId);
 
+    // ChatRoomMemberRepository.java 에 추가 (가정)
+    @Query("SELECT SUM(m.unreadCount) FROM ChatRoomMember m " +
+            "WHERE m.employee.empId = :empId AND m.isActive = true")
+    Integer getTotalUnreadCount(@Param("empId") String empId);
+
     @Query("""
         select m.employee.empId
           from ChatRoomMember m
