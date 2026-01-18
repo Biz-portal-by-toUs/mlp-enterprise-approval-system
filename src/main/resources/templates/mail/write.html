@@ -1590,11 +1590,18 @@
                 async function deleteAttach(attachmentId) {
                     try {
                         showErr('');
-                        await fetchJsonWithDto(`/api/v1/attachments/${attachmentId}`, {
+
+                        const mailId = getDraftMailId();
+                        const mailNo = getDraftMailNo();
+
+                        if (!mailId || !mailNo) throw new Error('임시저장 정보가 없어 첨부 삭제가 불가합니다.');
+
+                        await fetchJsonWithDto(`/api/v1/mails/drafts/${encodeURIComponent(mailId)}/attachments/${encodeURIComponent(attachmentId)}`, {
                             method: 'DELETE',
                             credentials: 'include',
                             headers: { 'Accept': 'application/json', ...getCsrfHeaders() }
                         });
+
                         await refreshAttachList();
                     } catch (e) {
                         console.error(e);

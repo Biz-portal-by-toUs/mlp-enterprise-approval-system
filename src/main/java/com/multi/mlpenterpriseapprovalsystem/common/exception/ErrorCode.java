@@ -25,6 +25,7 @@ public enum ErrorCode {
     ALREADY_USE_PASSWORD(HttpStatus.BAD_REQUEST, "ALREADY_USE_PASSWORD", "이미 사용중인 비밀번호입니다"),
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "입력정보가 일치하지 않습니다"),
     NOT_BLANK(HttpStatus.BAD_REQUEST, "NOT_BLANK", "입력이 필수인 칸 입니다"),
+    ACCESS_DENIED(HttpStatus.BAD_REQUEST, "ACCESS_DENIED", "접근할 수 없는 파일입니다"),
 
     // 문서 관련
     DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT_NOT_FOUND", "문서를 찾을 수 없습니다"),
@@ -252,7 +253,8 @@ public enum ErrorCode {
     MAIL_SELF_ONLY_MODE(HttpStatus.BAD_REQUEST, "MAIL_SELF_ONLY_MODE", "내게쓰기 모드에서는 받는 사람을 추가할 수 없습니다"),
     MAIL_REPLY_ONLY_RECIPIENT(HttpStatus.BAD_REQUEST, "MAIL_REPLY_ONLY_RECIPIENT", "해당 메일에 답신 가능한 사용자가 아닙니다."),
     MAIL_TITLE_REQUIRED(HttpStatus.BAD_REQUEST,"MAIL_TITLE_REQUIRED" ,"제목이 비어있습니다." ),
-    MAIL_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST,"MAIL_CONTENT_REQUIRED" ,"내용이 비어있습니다.");
+    MAIL_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST,"MAIL_CONTENT_REQUIRED" ,"내용이 비어있습니다."),
+    MAIL_ATTACHMENT_DELETE_ONLY_DRAFT(HttpStatus.BAD_REQUEST, "MAIL_ATTACHMENT_DELETE_ONLY_DRAFT", "전송된 메일의 첨부파일은 삭제할 수 없습니다.");
 
 
     private final HttpStatus status;

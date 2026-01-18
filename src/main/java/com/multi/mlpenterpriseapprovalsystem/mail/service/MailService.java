@@ -53,4 +53,6 @@ public interface MailService {
     Page<ResMailListDto> getPriorSent(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
 
     Page<ResMailListDto> getPriorSelfMailbox(String userEmpId, String q, LocalDate from, LocalDate to, Pageable pageable);
+
+    void deleteDraftAttachment(String mailId, Long attachmentId, String requesterEmpId);
 }

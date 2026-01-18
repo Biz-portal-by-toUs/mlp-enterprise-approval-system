@@ -2,6 +2,9 @@ package com.multi.mlpenterpriseapprovalsystem.mail.service;
 
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.domain.*;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.*;
+import com.multi.mlpenterpriseapprovalsystem.common.storage.repository.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.mail.domain.Mail;
@@ -14,10 +17,13 @@ import com.multi.mlpenterpriseapprovalsystem.mail.repository.MailUserStateReposi
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.s3.*;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.time.*;
 import java.util.*;
@@ -31,6 +37,12 @@ public class MailServiceImpl implements MailService {
     private final MailUserStateRepository mailUserStateRepository;
     private final EmployeeRepository employeeRepository;
     private final NotificationService noti;
+
+    private final AttachmentRepository attachmentRepository;
+    private final S3Client s3Client;
+
+    @Value("${app.s3.bucket}")
+    private String bucket;
 
     // send / list
     @Override
@@ -625,5 +637,52 @@ public class MailServiceImpl implements MailService {
                 })
                 .distinct()
                 .collect(Collectors.joining(", "));
+    }
+
+    @Override
+    @Transactional
+    public void deleteDraftAttachment(String mailId, Long attachmentId, String requesterEmpId) {
+
+        // 1) draft 조회(작성자 검증 포함)
+        Mail draft = mailRepository.findDraftDetail(mailId, requesterEmpId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_DRAFT_NOT_FOUND));
+
+        if (!draft.isDraft()) {
+            throw new CustomException(ErrorCode.MAIL_ALREADY_SENT);
+        }
+
+        Long mailNo = draft.getMailNo();
+        if (mailNo == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // 2) attachment 검증: MAIL domain + entityId == mailNo + comId(회사)까지 맞는지
+        Attachment att = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ATTACHMENT_NOT_FOUND));
+
+        // 회사 검증 (Attachment에 comId가 있으니)
+        if (!Objects.equals(att.getComId(), draft.getSender().getCompany().getComId())) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
+
+        if (att.getDomain() != AttachmentDomain.MAIL) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
+        if (!Objects.equals(att.getEntityId(), mailNo)) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
+
+        // 3) S3 하드 삭제
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(att.getObjectKey())
+                    .build());
+        } catch (S3Exception e) {
+            throw new CustomException(ErrorCode.FILE_DELETE_FAILED);
+        }
+
+        // 4) DB 하드 삭제
+        attachmentRepository.delete(att);
     }
 }
