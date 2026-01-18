@@ -440,10 +440,17 @@
         });
 
         es.addEventListener("done", (e) => {
+            console.log("!!! DONE 수신 완료 !!!", e.data);
             const data = JSON.parse(e.data);
             const ref = msgDomMap.get(data.messageId);
             if (ref && data.fullText) {
-                ref.bubbleEl.innerHTML = marked.parse(data.fullText);
+                console.log("fullText 교체 시도...");
+                const finalHtml = (typeof marked !== 'undefined')
+                    ? marked.parse(data.fullText)
+                    : data.fullText.replace(/\n/g, '<br>');
+
+                ref.bubbleEl.innerHTML = finalHtml;
+                console.log("교체 성공!");
             }
             if (ref) ref.timeEl.innerText = nowTime();
             setIsUpdating(false);

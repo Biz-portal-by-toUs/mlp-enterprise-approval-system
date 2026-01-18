@@ -128,6 +128,7 @@ public class ChatbotService {
 
         if (Boolean.TRUE.equals(cb.getDone())) {
             String finalContent = cb.getFullText();
+            System.out.println("$$$$$$$$$$$$$$$$"+finalContent);
             if (finalContent == null || finalContent.isBlank()) {
                 Set<Object> parts = redisTemplate.opsForZSet().range(bufferKey, 0, -1);
                 finalContent = parts == null ? "" : parts.stream().map(Object::toString).collect(Collectors.joining());
