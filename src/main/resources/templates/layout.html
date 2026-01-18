@@ -1271,6 +1271,43 @@
             }
         });
 
+        // ✅ 새 로그인 감지 알림 (SweetAlert2)
+        eventSource.addEventListener('new-login', async (e) => {
+            try {
+                const data = JSON.parse(e.data); // { message, ip, at }
+
+                const ip = data.ip ?? '-';
+                const at = data.at ?? '-';
+                const msg = data.message ?? '같은 계정으로 새 로그인이 감지되었습니다.';
+
+                const result = await Swal.fire({
+                    icon: 'warning',
+                    title: '새 로그인 감지',
+                    html: `
+        <div style="text-align:left; line-height:1.6">
+          <div style="font-weight:800; margin-bottom:6px;">${msg}</div>
+          <div><b>IP</b>: ${ip}</div>
+          <div><b>시간</b>: ${at}</div>
+          <hr style="margin:12px 0; border:none; border-top:1px solid #e5e7eb;" />
+          <div style="font-weight:700;">비밀번호를 변경하시겠습니까?</div>
+        </div>
+      `,
+                    showCancelButton: true,
+                    confirmButtonText: '변경하러 가기',
+                    cancelButtonText: '아니요',
+                    reverseButtons: true,
+                    allowOutsideClick: false
+                });
+
+                if (result.isConfirmed) {
+                    // ✅ 비밀번호 변경 페이지로 이동 (여기 URL만 너 프로젝트에 맞게 바꿔줘)
+                    location.href = '/auth/employee/password';
+                }
+            } catch (err) {
+                console.error("📌 [SSE] new-login 파싱 에러:", err, e.data);
+            }
+        });
+
         eventSource.addEventListener('TOTAL_CHAT_UNREAD', (e) => {
             console.log("📌 [SSE-Chat] 전체 카운트 갱신:", e.data);
             updateChatBadge(e.data);
