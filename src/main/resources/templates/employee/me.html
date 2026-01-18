@@ -338,11 +338,20 @@
                 const me = json?.data ?? json;
                 if (!me) return;
 
+                // ✅ 권한 변환 맵 추가
+                const roleMap = {
+                    'COM_ADMIN': '회사 관리자',
+                    'SEC_ADMIN': '인사 관리자',
+                    'THR_ADMIN': '운영 관리자',
+                    'EMPLOYEE': '사원'
+                };
+                const koRole = roleMap[me.role] || me.role; // 맵에 없으면 원래 코드 출력
+
                 // 기본
                 setText('vEmpName', me.empName);
                 setText('vEmpId', me.empId);
                 setText('vGen', me.gen);
-                setText('vRole', me.role);
+                setText('vRole', koRole);
                 setText('vHireDate', fmtDate(me.hireDate));
 
                 // 조직
@@ -368,7 +377,7 @@
                 setText('sideName', me.empName);
                 setText('sideCompany', me.comName);
                 setText('sideDepPos', `${me.depName ?? '-'} / ${me.posName ?? '-'}`);
-                setText('sideRole', me.role);
+                setText('sideRole', koRole);
 
             }catch(e){
                 console.warn('마이페이지 정보 로드 실패', e);
