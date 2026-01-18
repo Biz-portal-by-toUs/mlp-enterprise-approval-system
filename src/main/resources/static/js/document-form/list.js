@@ -5,9 +5,11 @@
 
     const PAGE_SIZE = 10;
 
-    // 승인된 것만 보이게(원하면 false로)
-    const ONLY_APPROVED = true;
-    const APPROVED_STATS = ['A', 'X', 'W'];
+    // ✅ 목록에서 보여줄 상태 필터(동작은 기존과 동일)
+    //   - true면 DEFAULT_STATS만 조회
+    //   - false면 stat 파라미터 없이 조회(백 기본값/전체 정책에 따름)
+    const USE_DEFAULT_STATS_FILTER = true;
+    const DEFAULT_STATS = ['A', 'X', 'W']; // (기존 APPROVED_STATS 그대로)
 
     // ===== DOM =====
     const elTbody = document.getElementById('tbody');
@@ -29,33 +31,31 @@
 
     // ===== perms from server (html data-*) =====
     function readPerms() {
-        const root = document.documentElement;
+        const d = document.documentElement?.dataset || {};
+        const b = (v) => String(v ?? "").trim().toLowerCase() === "true";
 
-        const raw = {
-            isEmployee: root.dataset.isEmployee,
-            canCreate: root.dataset.canCreate,
-            canBulkDelete: root.dataset.canBulkDelete,
+        return {
+            isEmployee: b(d.isEmployee),
 
+            canCreate: b(d.canCreate),
+            canBulkDelete: b(d.canBulkDelete),
+
+            // (있으면 읽고, 없어도 무관)
+            canApprove: b(d.canApprove),
+            canUseTemp: b(d.canUseTemp),
         };
-
-        const b = (v) => String(v ?? '').trim().toLowerCase() === 'true';
-
-        const out = {
-            isEmployee: b(raw.isEmployee),
-            canCreate: b(raw.canCreate),
-            canBulkDelete: b(raw.canBulkDelete),
-        };
-
-        // 필요하면 디버깅
-        // console.info('[form-list perms]', { raw, out });
-
-        return out;
     }
 
     const PERM = readPerms();
 
+    // ✅ employee 판단은 서버 flag / class 기반만 사용 (권한 조합 추정 제거)
+    function isEmployeeByClass() {
+        const byClass = document.documentElement?.classList?.contains("role-employee") === true;
+        return PERM.isEmployee || byClass;
+    }
+
     function isEmployee() {
-        return PERM.isEmployee;
+        return isEmployeeByClass();
     }
 
     // ===== util =====
@@ -69,7 +69,7 @@
     }
 
     function buildRejectedStyleDeletePopup(ids) {
-        const items = ids.map((id, i) => {
+        const items = ids.map((id) => {
             const title = formTitleMap.get(id) || `양식 #${id}`;
 
             return `
@@ -87,10 +87,10 @@
                 <div>
                   <b>${esc(title)}</b>
                 </div>
-                <div style="color:#868e96;">DELETE 요청</div>
+                <div style="color:#868e96;">삭제 처리</div>
               </div>
             `;
-                }).join('');
+        }).join('');
 
         return `
             <div style="
@@ -108,15 +108,15 @@
               ">
                 선택 삭제
               </div>
-        
+
               <div style="
                 font-size:13px;
                 color:#868e96;
                 margin-bottom:14px;
               ">
-                선택한 문서양식을 삭제 요청 처리합니다.<br/>
+                선택한 문서양식을 삭제 처리합니다.<br/>
               </div>
-        
+
               <div style="
                 border:1px solid #dee2e6;
                 border-radius:8px;
@@ -159,33 +159,32 @@
             reverseButtons: true,
             width: 760,
             focusConfirm: false,
+            allowOutsideClick: () => !Swal.isLoading(),
+            allowEscapeKey: () => !Swal.isLoading(),
+
             preConfirm: async () => {
                 Swal.showLoading();
 
-                const results = await batchAllSettled(
-                    ids,
-                    5,              // ✅ 여기서 "5개씩"
-                    softDelete
-                );
+                const results = await batchAllSettled(ids, 5, softDelete);
 
-                const failed = results
-                    .map((r, i) => ({ r, id: ids[i] }))
-                    .filter(x => x.r.status === 'rejected');
+                const okIds = [];
+                const failed = [];
 
-                if (failed.length > 0) {
-                    throw new Error(
-                        `${failed.length}건 삭제 실패\n` +
-                        failed.map(f =>
-                            `#${f.id}: ${f.r.reason?.message || f.r.reason}`
-                        ).join('\n')
-                    );
-                }
+                results.forEach((r, i) => {
+                    const id = ids[i];
+                    if (r.status === 'fulfilled') okIds.push(id);
+                    else failed.push({ id, reason: r.reason });
+                });
 
-                return true;
+                // validationMessage는 confirm을 막는 케이스가 있어서,
+                // 여기서는 "return 값"으로만 실패를 전달하고 confirm 이후 별도 안내로 처리
+                Swal.hideLoading();
+                return { okIds, failed };
             }
         });
 
-        return result.isConfirmed;
+        if (!result.isConfirmed) return null;
+        return result.value || { okIds: [], failed: [] };
     }
 
     // ===== 쿠키 기반 fetch + 401 refresh 재시도 =====
@@ -367,7 +366,7 @@
         const tp = Math.max(1, Number(totalPages) || 1);
         const cur = Math.min(Math.max(0, Number(page) || 0), tp - 1);
 
-        const blockSize = 5; // 페이지네이션에서 한 번에 보여줄 버튼 개수
+        const blockSize = 5;
         const currentBlock = Math.floor(cur / blockSize);
         const startPage = currentBlock * blockSize;
         let endPage = startPage + blockSize - 1;
@@ -407,27 +406,18 @@
     async function extractErrorMessage(res) {
         const text = await res.text().catch(() => '');
 
-        // JSON이면 message만 뽑기
         try {
             const json = text ? JSON.parse(text) : null;
-
-            // ResponseDto 형태: { status, code, message, data }
             if (json && typeof json === 'object') {
                 if (typeof json.message === 'string' && json.message.trim()) return json.message;
-
-                // 혹시 다른 형태가 섞여있을 때 대비
                 if (json.error && typeof json.error.message === 'string') return json.error.message;
                 if (json.data && typeof json.data.message === 'string') return json.data.message;
             }
-        } catch (_) {
-            // JSON 아니면 무시하고 텍스트 사용
-        }
+        } catch (_) {}
 
-        // JSON 아니면 텍스트 그대로(너무 길면 잘라내기)
         const trimmed = (text || '').trim();
         if (trimmed) return trimmed.length > 200 ? trimmed.slice(0, 200) + '…' : trimmed;
 
-        // 진짜 아무것도 없으면 상태코드 기반 기본 메시지
         if (res.status === 401) return '로그인이 필요합니다.';
         if (res.status === 403) return '권한이 없습니다.';
         return `요청 처리 중 오류가 발생했습니다. (HTTP ${res.status})`;
@@ -438,7 +428,7 @@
         elTbody.innerHTML = `<tr><td colspan="2" class="muted">로딩 중...</td></tr>`;
 
         try {
-            const statsCsv = ONLY_APPROVED ? APPROVED_STATS.join(',') : null;
+            const statsCsv = USE_DEFAULT_STATS_FILTER ? DEFAULT_STATS.join(',') : null;
 
             const res = await apiFetch(buildUrl(statsCsv), { method: 'GET' });
 
@@ -478,8 +468,7 @@
 
     // ===== events =====
     elTbody.addEventListener('click', (e) => {
-        // ✅ 체크박스 클릭은 상세 열지 않기
-        if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') return;
+        if (e.target?.closest?.('label.selWrap')) return;
 
         const a = e.target.closest('a[data-open]');
         if (a) {
@@ -503,11 +492,10 @@
     });
 
     async function softDelete(docfoNo) {
-        // 지금 백 정책이 "삭제요청"이면 DELETE만 쓰는게 제일 깔끔해
         const delRes = await apiFetch(`${API_BASE}/${encodeURIComponent(docfoNo)}`, { method: 'DELETE' });
         if (!delRes.ok) {
             const msg = await extractErrorMessage(delRes);
-            throw new Error(msg); // ✅ message만
+            throw new Error(msg);
         }
         return true;
     }
@@ -519,32 +507,85 @@
         }
         if (selected.size === 0) return;
 
-        const ids = Array.from(selected);
-
         try {
             btnDeleteSelected.disabled = true;
 
-            const ok = await runBulkDeleteRejectedStyle(ids);
-            if (!ok) return;
+            while (true) {
+                const ids = Array.from(selected);
+                if (ids.length === 0) break;
 
-            selected.clear();
-            await load();
+                const res = await runBulkDeleteRejectedStyle(ids);
+                if (!res) break;
 
-            Swal.fire({
-                icon: 'success',
-                title: '완료',
-                text: '선택 삭제가 완료되었습니다.',
-                confirmButtonColor: '#339af0'
-            });
+                const { okIds, failed } = res;
+                const failedIds = failed.map(f => String(f.id));
+
+                selected.clear();
+                failedIds.forEach(id => selected.add(id));
+
+                if (okIds.length > 0) {
+                    await load();
+                } else {
+                    updateBulkDeleteUI();
+                }
+
+                if (failedIds.length === 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        text: `선택 삭제가 완료되었습니다. (${okIds.length}건)`,
+                        confirmButtonColor: '#339af0'
+                    });
+                    break;
+                }
+
+                const failedLines = failed
+                    .slice(0, 10)
+                    .map(f => `#${f.id}: ${f.reason?.message || f.reason}`)
+                    .join('\n');
+
+                const more = failed.length > 10 ? `\n…외 ${failed.length - 10}건` : '';
+
+                const retryPopup = await Swal.fire({
+                    icon: 'warning',
+                    title: '삭제 실패',
+                    html: `
+                          <div style="text-align:left; font-size:13px; line-height:1.5; white-space:pre-wrap;">
+                            성공: <b>${okIds.length}</b>건<br/>
+                            실패: <b>${failedIds.length}</b>건<br/>
+                            <hr style="margin:10px 0; border:0; border-top:1px solid #e9ecef;"/>
+                            <b>실패 목록</b>\n${esc(failedLines + more)}
+                            <div style="margin-top:8px; color:#868e96;">
+                              재시도하시겠습니까?
+                            </div>
+                          </div>
+                        `,
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '닫기',
+                    denyButtonText: `재시도 (${failedIds.length})`,
+                    cancelButtonText: '중단',
+                    confirmButtonColor: '#339af0',
+                    denyButtonColor: '#fa5252',
+                    cancelButtonColor: '#adb5bd',
+                    reverseButtons: true
+                });
+
+                if (retryPopup.isDenied) {
+                    continue;
+                }
+                break;
+            }
         } catch (err) {
             console.error(err);
             Swal.fire({
                 icon: 'error',
-                title: '삭제 실패',
+                title: '삭제 처리 중 오류',
                 text: err?.message || String(err),
                 confirmButtonColor: '#339af0'
             });
         } finally {
+            btnDeleteSelected.disabled = false;
             updateBulkDeleteUI();
         }
     });

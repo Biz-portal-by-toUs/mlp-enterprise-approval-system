@@ -149,7 +149,6 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         // A/X 편집: 복사본 생성 -> P
         if (cur == DocumentFormStats.A || cur == DocumentFormStats.X) {
 
-            // 진행중 수정본(P) 1개만 허용 (원하면 R 포함 등으로 확장)
             boolean existsPendingCopy = documentFormRepository
                     .existsByCompany_ComIdAndOriginDocfoNoAndDocfoStatIn(
                             comId,
@@ -177,7 +176,6 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
             DocumentForm saved = documentFormRepository.save(copied);
 
-            // 카테고리(복사본 기준)
             saveCategoriesIfPresent(req.categories(), target.getCompany(), saved);
 
             return saved.getDocfoNo();
@@ -220,13 +218,10 @@ public class DocumentFormServiceImpl implements DocumentFormService {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_INVALID_NEXT_STATUS);
         }
 
-        // 승인(A)
         if (next == DocumentFormStats.A) {
-            // 수정본이면 원본을 D로 내림
             if (form.getOriginDocfoNo() != null) {
                 Long originDocfoNo = form.getOriginDocfoNo();
 
-                // 원본이 A 또는 X 인 경우에만 D로
                 int updated = documentFormRepository.updateStatusForOrigin(
                         originDocfoNo,
                         comId,
@@ -248,12 +243,10 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 }
             }
 
-            // 현재 문서는 A로
             documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.A, null);
             return;
         }
 
-        // 반려(R): 원본은 건드리지 않고 현재만 R
         String normalized = normalizeRejectReason(DocumentFormStats.R, rejectReason);
         documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.R, normalized);
     }
@@ -271,6 +264,13 @@ public class DocumentFormServiceImpl implements DocumentFormService {
         }
     }
 
+    /**
+     * ✅ 변경 핵심
+     * - 기존: 어떤 상태든(Temp 제외) DELETE 요청이면 W(삭제대기)로 보냄
+     * - 변경: P(승인대기)는 "삭제대기" 탈 필요가 없으니 즉시 D(삭제) 처리
+     *
+     * 이렇게 하면 P 상태 문서도 detail에서 삭제 누르면 바로 리스트에서 빠짐(=row 삭제 UX 만족)
+     */
     @Override
     @Transactional
     public void requestDelete(Long docfoNo, String comId, CustomUser requester) {
@@ -279,10 +279,12 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
         validateCompany(form, comId);
 
-        if (form.getDocfoStat() == DocumentFormStats.D) {
+        DocumentFormStats cur = form.getDocfoStat();
+
+        if (cur == DocumentFormStats.D) {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_DELETE_ALREADY_DELETED);
         }
-        if (form.getDocfoStat() == DocumentFormStats.W) {
+        if (cur == DocumentFormStats.W) {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_DELETE_ALREADY_WAITING);
         }
 
@@ -290,11 +292,19 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 a.getAuthority().equals("ROLE_COM_ADMIN")
                         || a.getAuthority().equals("ROLE_SEC_ADMIN")
                         || a.getAuthority().equals("ROLE_THR_ADMIN")
+                        || a.getAuthority().equals("ROLE_SYS_ADMIN")
         );
         if (!isAdmin) {
             throw new CustomException(ErrorCode.DOCUMENT_FORM_DELETE_REQUEST_FORBIDDEN);
         }
 
+        // ✅ P는 "즉시 삭제(D)" 처리
+        if (cur == DocumentFormStats.P) {
+            documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.D, null);
+            return;
+        }
+
+        // 그 외는 기존대로: 삭제요청(W)
         documentFormRepository.updateStatusAndReason(docfoNo, DocumentFormStats.W, null);
     }
 
@@ -353,7 +363,6 @@ public class DocumentFormServiceImpl implements DocumentFormService {
 
         saveCategoriesIfPresent(req.categories(), company, saved);
 
-        // 임시저장 상태로 전환
         documentFormRepository.updateDraft(
                 saved.getDocfoNo(),
                 saved.getDocfoName(),
@@ -390,10 +399,6 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 req.cnttHtml(),
                 DocumentFormStats.T
         );
-
-        // temp도 카테고리 갱신 정책 동일하게 적용하고 싶으면 아래 주석 해제
-        // documentFormCategoryRepository.deleteByDocfoNo(docfoNo);
-        // saveCategoriesIfPresent(req.categories(), form.getCompany(), form);
     }
 
     @Override

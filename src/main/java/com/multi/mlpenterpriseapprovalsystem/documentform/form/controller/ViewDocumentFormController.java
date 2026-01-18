@@ -1,3 +1,5 @@
+// package com.multi.mlpenterpriseapprovalsystem.documentform.form.controller;
+
 package com.multi.mlpenterpriseapprovalsystem.documentform.form.controller;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
@@ -19,7 +21,6 @@ import java.util.stream.Collectors;
  * @filename : ViewDocumentFormController
  * @since : 2025-12-22
  */
-
 @Controller
 @RequestMapping("/form")
 @RequiredArgsConstructor
@@ -62,18 +63,18 @@ public class ViewDocumentFormController {
         boolean canDeleteRequest = isAnyAdmin; // 삭제 요청(soft)
         boolean canUseTemp       = isAnyAdmin;
 
-        // 승인/반려/삭제승인/삭제반려
-        boolean canApprove = isSysAdmin || isComAdmin || isSecAdmin;
+        // ✅ "상태 변경(승인/반려/삭제승인/삭제반려)" 권한: SEC/COM/SYS
+        boolean canManageStatus = isSysAdmin || isComAdmin || isSecAdmin;
 
-        // list 화면에서 "선택 삭제" 표시 여부
+        // list 화면에서 "선택 삭제" 표시 여부 (삭제요청 권한과 동일 정책)
         boolean canBulkDelete = canDeleteRequest;
 
         // pending 전용 perms
-        boolean perm_canApproveForm = canApprove;
-        boolean perm_canRejectForm  = canApprove;
-        boolean perm_canViewReason  = (canApprove || isThrAdmin);
+        boolean perm_canApproveForm = canManageStatus;
+        boolean perm_canRejectForm  = canManageStatus;
+        boolean perm_canViewReason  = (canManageStatus || isThrAdmin);
 
-        // Boolean 세팅
+        // ===== Model attrs =====
         model.addAttribute("perm_isLogin", isLogin);
         model.addAttribute("perm_isEmployee", isEmployee);
 
@@ -82,7 +83,13 @@ public class ViewDocumentFormController {
         model.addAttribute("perm_canEditForm", canEditForm);
         model.addAttribute("perm_canDeleteRequest", canDeleteRequest);
         model.addAttribute("perm_canUseTemp", canUseTemp);
-        model.addAttribute("perm_canApprove", canApprove);
+
+        // ✅ 신규 권한명(명확)
+        model.addAttribute("perm_canManageStatus", canManageStatus);
+
+        // ✅ 기존 화면 호환(기존에 perm_canApprove 를 읽는 템플릿/JS가 있을 수 있음)
+        model.addAttribute("perm_canApprove", canManageStatus);
+
         model.addAttribute("perm_canBulkDelete", canBulkDelete);
 
         // pending 전용
@@ -96,12 +103,9 @@ public class ViewDocumentFormController {
         model.addAttribute("perm_isComAdmin", isComAdmin);
         model.addAttribute("perm_isSecAdmin", isSecAdmin);
 
-        // 기존 화면들이 perm_canEdit / perm_canDelete 로 읽는 케이스를 대비해서 "항상" 내려준다.
+        // 기존 화면들이 perm_canEdit / perm_canDelete 로 읽는 케이스 대비
         model.addAttribute("perm_canEdit", canEditForm);
         model.addAttribute("perm_canDelete", canDeleteRequest);
-
-        // 이미 쓰고 있지만, 템플릿이 perm_canApprove 로 읽으니 확실하게 보장
-        model.addAttribute("perm_canApprove", canApprove);
 
         model.addAttribute("meEmpId", isLogin ? customUser.getUsername() : "");
         model.addAttribute("meRoles", auths.stream().sorted().toList());
