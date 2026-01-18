@@ -91,6 +91,15 @@ public class AuthController {
 
     @PostMapping("/employee/login")
     public ResponseEntity<ResponseDto<ResTokenDto>> loginEmployee(@RequestBody ReqEmployeeLoginDto reqEmployeeLoginDto, HttpServletResponse response, HttpServletRequest request) {
+
+        String xff = request.getHeader("X-Forwarded-For");
+        String xri = request.getHeader("X-Real-IP");
+        String ra  = request.getRemoteAddr();
+
+        log.warn("[LOGIN-IP] remoteAddr={}, xff={}, xRealIp={}", ra, xff, xri);
+
+        log.warn("[LOGIN-PAYLOAD] empId={}, deviceId={}", reqEmployeeLoginDto.getEmpId(), reqEmployeeLoginDto.getDeviceId());
+
         ResTokenDto token = authService.loginEmployee(reqEmployeeLoginDto, response);
 
         // ✅ (추가) 멀티 서버용: 로그인 감지 publish
