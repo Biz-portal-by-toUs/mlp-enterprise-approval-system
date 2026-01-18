@@ -184,6 +184,10 @@ public class Employee extends BaseEntity {
         // 휴가나 출장 중이면 메시지 상태를 '출근 안 함(H)'으로 강제 변경
         if ("V".equals(newAtte) || "B".equals(newAtte)) {
             this.msgStat = MsgStat.OFF;
+        }else if ("C".equals(newAtte)) {
+            // 다시 출근 상태가 되면 '근무 중(C)'으로 변경
+            // (참고: MsgStat Enum에 근무 중을 의미하는 값이 WORKING이라고 가정)
+            this.msgStat = MsgStat.WORKING;
         }
     }
 
