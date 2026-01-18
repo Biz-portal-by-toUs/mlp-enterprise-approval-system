@@ -86,7 +86,7 @@
 
         th.ms-col-star, td.ms-col-star{ width:60px; }
         th.ms-col-date, td.ms-col-date{ width:180px; }
-        th.ms-col-recv, td.ms-col-recv{ width:180px; }
+        th.ms-col-recv, td.ms-col-recv{ width:260px; }
 
         th.ms-col-title-h{text-align:left;padding-left:20px;}
         td.ms-col-title{text-align:left !important;padding-left:20px !important;font-weight:900 !important;}
@@ -136,7 +136,7 @@
         /* ===== responsive ===== */
         @media (max-width:760px){
             th.ms-col-date, td.ms-col-date{ width:140px; }
-            th.ms-col-recv, td.ms-col-recv{ width:140px; }
+            th.ms-col-recv, td.ms-col-recv{ width:180px; }
         }
     </style>
 </head>
@@ -205,8 +205,6 @@
                 // ===== constants =====
                 const PAGE_SIZE = 10;
                 const KEYWORD_MAX = 50;
-
-
 
                 // ===== common utils =====
                 function getCsrfHeaders(){
@@ -293,6 +291,53 @@
                     b.classList.toggle('is-on', !!priorOnly);
                     b.setAttribute('aria-pressed', priorOnly ? 'true' : 'false');
                     b.textContent = priorOnly ? '★' : '☆';
+                }
+
+                // ===== SweetAlert2 helpers =====
+                function hasSwal(){
+                    return typeof window.Swal !== 'undefined' && window.Swal && typeof window.Swal.fire === 'function';
+                }
+
+                async function swalConfirmDelete(count){
+                    if (!hasSwal()){
+                        return { isConfirmed: confirm(`선택한 ${count}개 메일을 휴지통으로 이동할까요?`) };
+                    }
+
+                    return window.Swal.fire({
+                        icon: 'warning',
+                        title: '삭제하시겠습니까?',
+                        text: `선택한 ${count}개 메일을 휴지통으로 이동합니다.`,
+                        showCancelButton: true,
+                        confirmButtonText: '삭제',
+                        cancelButtonText: '취소',
+                        reverseButtons: true,
+                        focusCancel: true,
+                        heightAuto: false,
+                    });
+                }
+
+                function swalLoading(title = '처리 중...'){
+                    if (!hasSwal()) return;
+                    window.Swal.fire({
+                        title,
+                        allowOutsideClick: false,
+                        didOpen: () => window.Swal.showLoading(),
+                        heightAuto: false,
+                    });
+                }
+
+                function swalClose(){
+                    if (hasSwal()) window.Swal.close();
+                }
+
+                async function swalSuccess(title, text){
+                    if (!hasSwal()){ alert(`${title}\n${text || ''}`.trim()); return; }
+                    return window.Swal.fire({ icon:'success', title, text: text || undefined, heightAuto:false });
+                }
+
+                async function swalError(title, text){
+                    if (!hasSwal()){ alert(`${title}\n${text || ''}`.trim()); return; }
+                    return window.Swal.fire({ icon:'error', title, text: text || undefined, heightAuto:false });
                 }
 
                 // ===== selection (bulk) =====
@@ -410,6 +455,24 @@
                     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
                 }
 
+                function splitReceivers(s){
+                    if (!s) return [];
+                    return String(s)
+                        .split(/[,\n;]+/g)
+                        .map(v => v.trim())
+                        .filter(Boolean);
+                }
+
+                // 최대 3명 + 넘어갈 경우 "(대표자) 외 n명" 형태로 표시
+                function formatReceiversForList(receiversStr, max = 3){
+                    const arr = splitReceivers(receiversStr);
+                    if (arr.length === 0) return '-';
+                    if (arr.length <= max) return arr.join(', ');
+                    const shown = arr[0]
+                    const extra = arr.length - 1;
+                    return `${shown} 외 ${extra}명`;
+                }
+
                 // ===== render =====
                 function renderRows(items){
                     const tb = document.getElementById('tbody');
@@ -429,7 +492,7 @@
 
                     items.forEach((it) => {
                         const title = escapeHtml(it.title);
-                        const receivers = escapeHtml(it.receivers);
+                        const receivers = escapeHtml(formatReceiversForList(it.receivers));
                         const createdAt = fmtDate(it.createdAt);
                         const isPrior = !!it.isPrior;
 
