@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 /**
  * 관리자 관련 프론트엔드 연결 컨트롤러
  *
@@ -72,7 +75,9 @@ public class ViewAdminController {
             model.addAttribute("positions", java.util.Collections.emptyList());
 
         }
-        model.addAttribute("roles", RoleType.values());
+        model.addAttribute("roles", Arrays.stream(RoleType.values())
+                .filter(role -> role != RoleType.SYS_ADMIN)
+                .collect(Collectors.toList()));
 
         return "employee/create";
     }

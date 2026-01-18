@@ -22,16 +22,21 @@ public class JusoController {
     @Value("${juso.api.key}")
     private String apiKey;
 
+    @Value("${juso.api.return-url}")
+    private String returnUrl;
+
     @GetMapping("/popup")
     public String jusoPopup(Model model) {
-        model.addAttribute("apiKey", apiKey);   // ✅ 이거 필수
-        model.addAttribute("inputData", null);  // ✅ 첫 진입은 null로
+        model.addAttribute("apiKey", apiKey);
+        model.addAttribute("returnUrl", returnUrl); // ✅ 모델에 추가
+        model.addAttribute("inputData", null);
         return "juso/jusoPopup";
     }
 
     @PostMapping("/popup")
     public String jusoPopupPost(HttpServletRequest request, Model model) {
-        model.addAttribute("apiKey", apiKey);                 // ✅ POST에서도 유지
+        model.addAttribute("apiKey", apiKey);
+        model.addAttribute("returnUrl", returnUrl); // ✅ POST 시에도 유지
         model.addAttribute("inputData", request.getParameterMap());
         return "juso/jusoPopup";
     }

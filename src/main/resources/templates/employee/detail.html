@@ -553,8 +553,10 @@
         }
 
         async function retireEmployee(){
-            const ok = confirm("해당 사원을 퇴사 처리할까요?");
-            if(!ok) return;
+            const result = await Alert.confirm("해당 사원을 퇴사 처리할까요?", "퇴사 처리");
+
+            // 사용자가 '확인'을 누르지 않은 경우 (취소 또는 바깥 클릭) 리턴
+            if (!result.isConfirmed) return;
 
             try{
                 const res = await fetch(`/api/v1/admin/employees/${EMP_NO}/retire`, {
