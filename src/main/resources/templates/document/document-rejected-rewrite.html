@@ -1417,6 +1417,16 @@
                         radio.checked = true;
                         currentCategoryName = categoryName;
 
+                        // ✅ 요구사항: 휴가/출장 취소 및 수정 신청인 경우 카테고리 변경 금지
+                        const isLockCategory = (normalized.includes('휴가') || normalized.includes('출장')) && (normalized.includes('취소') || normalized.includes('수정'));
+                        if (isLockCategory) {
+                            document.querySelectorAll('input[name="docfoCatNo"]').forEach(r => {
+                                r.disabled = true;
+                                r.parentElement.style.cursor = 'not-allowed';
+                                r.parentElement.style.opacity = '0.8';
+                            });
+                        }
+
                         const rule = getCategoryRule(categoryName);
                         if (rule) {
                             const attendanceSection = document.getElementById('attendance-section');
