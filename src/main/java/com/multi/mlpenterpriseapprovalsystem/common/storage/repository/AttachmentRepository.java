@@ -313,7 +313,33 @@ WHERE com_id = :comId
             @Param("folderNos") List<Long> folderNos
     );
 
+    // [추가] AttachBox(=DOC_FORM, entityId=attachNo)에 달린 S3 키 조회 (status 무관 / 필요하면 ACTIVE만)
+    @Query("""
+        select a.objectKey
+          from Attachment a
+         where a.comId = :comId
+           and a.domain = :domain
+           and a.entityId = :entityId
+    """)
+    List<String> findObjectKeysByRef(
+            @Param("comId") String comId,
+            @Param("domain") AttachmentDomain domain,
+            @Param("entityId") Long entityId
+    );
 
+    // [추가] AttachBox(=DOC_FORM, entityId=attachNo) attachment 하드삭제 (status 무관)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        delete from Attachment a
+         where a.comId = :comId
+           and a.domain = :domain
+           and a.entityId = :entityId
+    """)
+    int hardDeleteByRef(
+            @Param("comId") String comId,
+            @Param("domain") AttachmentDomain domain,
+            @Param("entityId") Long entityId
+    );
 }
 
 

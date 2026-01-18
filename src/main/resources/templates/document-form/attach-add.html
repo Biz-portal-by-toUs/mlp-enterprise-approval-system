@@ -672,13 +672,21 @@
                     wrap.innerHTML = items.map(it => {
                         const id = String(it.attachmentId ?? '');
                         return `
-                            <div class="aa-att-item" data-id="${escapeHtml(id)}" role="button" tabindex="0" title="클릭하면 다운로드됩니다.">
-                              <div style="min-width:0;">
-                                <div class="aa-att-name">${escapeHtml(it.originalName)}</div>
-                                <div class="aa-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
-                              </div>
-                            </div>
-                          `.trim();
+                      <div class="aa-att-item" data-id="${escapeHtml(id)}" role="button" tabindex="0" title="클릭하면 다운로드됩니다.">
+                        <div style="min-width:0;">
+                          <div class="aa-att-name">${escapeHtml(it.originalName)}</div>
+                          <div class="aa-att-meta">${escapeHtml(it.fileType)} · ${escapeHtml(it.contentType)} · ${formatBytes(it.size)}</div>
+                        </div>
+
+                        <!-- 삭제 버튼(하드 딜리트) -->
+                        <div class="aa-att-actions" onclick="event.stopPropagation();">
+                          <button type="button"
+                                  class="aa-att-mini danger"
+                                  onclick="deleteAttachFile('${escapeHtml(id)}')"
+                                  onkeydown="event.stopPropagation();">삭제</button>
+                        </div>
+                      </div>
+                    `.trim();
                     }).join('');
                 }
 
@@ -702,6 +710,30 @@
                         showErr(e?.message || '다운로드에 실패했습니다.');
                     }
                 }
+
+                window.deleteAttachFile = async function deleteAttachFile(attachmentId) {
+                    if (!attachmentId) return;
+
+                    try {
+                        showErr('');
+
+                        swalLoading('삭제 중...');
+
+                        await fetchDto(API.DELETE_FILE(attachmentId), {
+                            method: 'DELETE'
+                        });
+
+                        swalClose();
+                        setAttStatus('');
+                        await refreshAttachList();
+
+                    } catch (e) {
+                        console.error(e);
+                        swalClose();
+                        await swalError('삭제 실패', e?.message || '삭제에 실패했습니다.');
+                        showErr(e?.message || '삭제에 실패했습니다.');
+                    }
+                };
 
                 // ===== UI 바인딩 =====
                 function bindAttachDropzone() {
