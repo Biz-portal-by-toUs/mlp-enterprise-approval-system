@@ -15,6 +15,7 @@ import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeReposit
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
 import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvDocument;
+import com.multi.mlpenterpriseapprovalsystem.provdocument.domain.ProvProcStat;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.event.ProvDocumentApprovedEvent;
 import com.multi.mlpenterpriseapprovalsystem.provdocument.event.ProvEmbeddingRequestedEvent;
@@ -198,17 +199,22 @@ public class ProvDocumentService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        try {
-            embeddingClient.deleteProvEmbedding(
-                    ReqFastApiProvDeleteDto.builder()
-                            .comId(comId)
-                            .provNo(provNo)
-                            .build()
-            );
-        } catch (Exception e) {
-            log.error("Embedding vector delete FAILED. comId={}, provNo={}, msg={}",
-                    comId, provNo, e.getMessage(), e);
-            throw new CustomException(ErrorCode.EMBEDDING_DELETE_FAILED);
+        if (doc.getProcStat() == ProvProcStat.DONE || doc.getProcStat() == ProvProcStat.PROCESSING) {
+            try {
+                embeddingClient.deleteProvEmbedding(
+                        ReqFastApiProvDeleteDto.builder()
+                                .comId(comId)
+                                .provNo(provNo)
+                                .build()
+                );
+                log.info("[EMBEDDING VECTOR DELETE SUCCESS] provNo={}", provNo);
+            } catch (Exception e) {
+                log.error("Embedding vector delete FAILED. comId={}, provNo={}, msg={}",
+                        comId, provNo, e.getMessage());
+                throw new CustomException(ErrorCode.EMBEDDING_DELETE_FAILED);
+            }
+        } else {
+            log.info("[SKIP EMBEDDING DELETE] Status is {}, skipping FastAPI call. provNo={}", doc.getProcStat(), provNo);
         }
         attachmentRepository.findAllByRefForUpdate(comId, AttachmentDomain.PROV_DOCUMENT, provNo)
                 .forEach(attachment -> {
