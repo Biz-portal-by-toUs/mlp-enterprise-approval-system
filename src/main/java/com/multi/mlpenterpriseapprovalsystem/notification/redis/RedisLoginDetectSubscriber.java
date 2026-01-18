@@ -42,7 +42,6 @@ public class RedisLoginDetectSubscriber implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String raw = new String(message.getBody(), StandardCharsets.UTF_8);
-        stringRedisTemplate.opsForValue().set("debug:login-detect:last", raw);
 
         String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
 
@@ -51,6 +50,13 @@ public class RedisLoginDetectSubscriber implements MessageListener {
                 pattern == null ? null : new String(pattern, StandardCharsets.UTF_8),
                 raw);
 
+        log.error("### LOGIN-DETECT HIT ### channel={} raw={}", channel, raw);
+
+        try {
+            stringRedisTemplate.opsForValue().set("debug:login-detect:last", raw);
+        } catch (Exception e) {
+            log.error("### LOGIN-DETECT DEBUG SET FAIL ###", e);
+        }
 
         final NewLoginRedisMessage msg;
         try {
