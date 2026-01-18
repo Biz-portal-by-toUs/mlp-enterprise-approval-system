@@ -388,6 +388,7 @@
                 // attachments: 실제 파일 업/다운 (domain/entityId 사용)
                 const API = {
                     CREATE_META: () => '/api/v1/attach-box',
+                    UPDATE_META: (attachNo) => `/api/v1/attach-box/${encodeURIComponent(attachNo)}`,
                     DELETE_META: (attachNo) => `/api/v1/attach-box/${encodeURIComponent(attachNo)}`,
 
                     LIST_FILES: (attachNo) =>
@@ -831,6 +832,18 @@
                             swalLoading('저장 중...');
 
                             const attachNo = await ensureAttachMeta();
+
+                            const title = ($('title')?.value || '').trim();
+                            const dscp  = ($('dscp')?.value || '').trim();
+
+                            if (!title) throw new Error('제목을 입력하세요.');
+
+                            await fetchDto(API.UPDATE_META(attachNo), {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ title, dscp: dscp || null })
+                            });
+
                             await refreshAttachList();
 
                             // commit: size는 참고값(서버 재계산 권장)

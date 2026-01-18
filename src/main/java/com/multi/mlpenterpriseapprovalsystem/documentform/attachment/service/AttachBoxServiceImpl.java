@@ -8,8 +8,7 @@ import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepositor
 import com.multi.mlpenterpriseapprovalsystem.common.storage.enums.AttachmentDomain;
 import com.multi.mlpenterpriseapprovalsystem.common.storage.repository.AttachmentRepository;
 import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.domain.AttachBox;
-import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.req.ReqAttachCommitDto;
-import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.req.ReqAttachCreateDto;
+import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.res.ResAttachDelDto;
 import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.res.ResAttachDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.documentform.attachment.dto.res.ResAttachListDto;
@@ -217,5 +216,22 @@ public class AttachBoxServiceImpl implements AttachBoxService {
 
         if (req != null) a.updateSize(req.size());
         a.commit();
+    }
+
+    @Override
+    @Transactional
+    public void update(Long attachNo, ReqAttachUpdateDto req, CustomUser user) {
+        String comId = requireComId(user);
+
+        if (attachNo == null || attachNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        if (req == null) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        if (req.title() == null || req.title().isBlank())
+            throw new CustomException(ErrorCode.DOCUMENT_FORM_TITLE_REQUIRED);
+
+        AttachBox a = attachBoxRepository
+                .findByAttachNoAndCompany_ComId(attachNo, comId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ATTACHMENT_NOT_FOUND));
+
+        a.updateMeta(req.title().trim(), (req.dscp() == null ? null : req.dscp().trim()));
     }
 }

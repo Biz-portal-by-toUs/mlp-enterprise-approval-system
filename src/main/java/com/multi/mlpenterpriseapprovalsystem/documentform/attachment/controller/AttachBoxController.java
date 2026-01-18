@@ -107,4 +107,18 @@ public class AttachBoxController {
         attachBoxService.commit(attachNo, req, customUser);
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "첨부 확정 성공", null));
     }
+
+    @PreAuthorize("hasAnyRole('SYS_ADMIN','COM_ADMIN','SEC_ADMIN','THR_ADMIN')")
+    @PatchMapping("/{attachNo}")
+    public ResponseEntity<ResponseDto<Void>> update(
+            @AuthenticationPrincipal CustomUser customUser,
+            @PathVariable(name = "attachNo") Long attachNo,
+            @Valid @RequestBody ReqAttachUpdateDto req
+    ) {
+        if (customUser == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
+        if (attachNo == null || attachNo <= 0) throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        attachBoxService.update(attachNo, req, customUser);
+        return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "첨부 메타 수정 성공", null));
+    }
 }
