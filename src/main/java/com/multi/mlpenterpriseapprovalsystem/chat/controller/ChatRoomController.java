@@ -144,4 +144,17 @@ public class ChatRoomController {
                 .body(new ResponseDto<>(HttpStatus.OK, "초대 성공", null)
         );
     }
+
+    /**
+     * 위젯용: 현재 로그인한 사용자의 전체 채팅 안 읽은 메시지 수 조회
+     */
+    @GetMapping("/unread-count")
+    public ResponseEntity<ResponseDto<Long>> getUnreadCount(@AuthenticationPrincipal CustomUser user) {
+        String empId = user.getUsername();
+        long count = chatRoomService.getTotalUnreadCount(empId);
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(HttpStatus.OK, "전체 안 읽은 채팅 개수 조회 성공", count)
+        );
+    }
 }

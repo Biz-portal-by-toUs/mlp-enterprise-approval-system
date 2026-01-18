@@ -12,6 +12,7 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
+import com.multi.mlpenterpriseapprovalsystem.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -42,6 +43,7 @@ public class ChatMessageService {
     private final EmployeeRepository employeeRepository;
     private final ChatRedisPublisher redisPublisher;
     private final StringRedisTemplate redisTemplate;
+    private final NotificationService notificationService;
 
     /**
      * 메시지 전송
@@ -157,6 +159,11 @@ public class ChatMessageService {
             }
 
             redisPublisher.publishRoomUpdate(targetEmpId, updateDto);
+
+            long totalUnread = chatRoomMemberRepository.getTotalUnreadCount(targetEmpId);
+
+            // SSE 채널로 전송
+            notificationService.sendTotalChatUnreadCount(targetEmpId, totalUnread);
         }
 
         return responseDto;
