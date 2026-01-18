@@ -402,7 +402,13 @@
                         <div class="v" th:text="${me != null ? me.hireDate : ''}">2025-01-01</div>
 
                         <div class="k">권한</div>
-                        <div class="v" th:text="${me != null ? me.role : ''}">EMPLOYEE</div>
+                        <div class="v" th:if="${me != null}" th:switch="${me.role.name()}">
+                            <span th:case="'COM_ADMIN'">회사 관리자</span>
+                            <span th:case="'SEC_ADMIN'">인사 관리자</span>
+                            <span th:case="'THR_ADMIN'">운영 관리자</span>
+                            <span th:case="'EMPLOYEE'">사원</span>
+                            <span th:case="*" th:text="${me.role}">기본값</span>
+                        </div>
                     </div>
                 </div>
             </section>
