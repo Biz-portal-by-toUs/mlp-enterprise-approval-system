@@ -2106,7 +2106,12 @@
             swalLoading("업로드 중...");
             try {
                 for (const file of files) await uploadOneFile(file);
-                await loadFolderContent(state.selectedFolderNo);
+                const folderNo = state.selectedFolderNo;
+                await Promise.all([
+                loadFolderContent(folderNo),      // 오른쪽 그리드 갱신
+                refreshTreeChildren(folderNo),    // ✅ 왼쪽 트리(파일 노드) 갱신
+                ]);
+
                 Swal.close();
                 toastSuccess("업로드 완료!");
             } catch (err) {
