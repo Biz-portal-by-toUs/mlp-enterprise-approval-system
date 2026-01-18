@@ -6,135 +6,130 @@
     <title>Bizportal - Main</title>
     <style>
         :root{
-            --bg:#f3f3f3;
+            --bg:#f8f9fa;
             --text:#111;
             --border:#d7d7d7;
             --primary:#2f66d7;
+            --primary-light: #eef3ff;
+            --white:#ffffff;
+            --gray: #666;
             --success:#16a34a;
             --successBorder: rgba(22,163,74,.35);
         }
         *{box-sizing:border-box}
         body{
             margin:0;
-            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
-            "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
             background:var(--bg);
             color:var(--text);
+            line-height: 1.6;
         }
-        .page{
-            min-height:100vh;
-            border:2px solid #222;
-            margin:12px;
-            background:var(--bg);
-            display:flex;
-            flex-direction:column;
+        .page{ min-height:100vh; border:2px solid #222; margin:12px; background:var(--white); display:flex; flex-direction:column; }
+
+        .hero{
+            padding: 100px 24px;
+            text-align: center;
+            background: #111; /* CTA 배경색과 통일 */
+            color: #fff;      /* 텍스트 흰색 변경 */
+        }
+        .hero-tag {
+            display: inline-block;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .hero-title{ font-size:52px; font-weight:900; margin:0; letter-spacing:-1.5px; line-height: 1.2; }
+        .hero-title span { color: #4b89ff; }
+        .hero-desc{
+            color: rgba(255, 255, 255, 0.75);
+            font-weight: 600;
+            margin-top: 24px;
+            font-size: 18px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        /* 메인 영역 스타일 */
-        main{
-            flex:1;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            padding:24px;
-        }
-        .card{
-            width:min(720px, 92vw);
-            text-align:center;
-            padding:40px 24px;
-        }
-        .title{
-            font-size:54px;
-            font-weight:900;
-            margin:0 0 12px;
-            letter-spacing:-0.5px;
-        }
-        .desc{
-            margin:0 0 28px;
-            color:#555;
-            font-weight:600;
-        }
-        .actions{
-            display:flex;
-            gap:12px;
-            justify-content:center;
-            flex-wrap:wrap;
-        }
-        .actions .btn{
-            min-width:220px;
-            padding:14px 18px;
-            border-radius:12px;
-        }
+        .actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:32px; }
 
-        /* 공통 버튼 스타일 (헤더와 공유) */
+        main{ flex:1; padding: 40px 24px 80px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        .feature-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+            border-color: var(--primary);
+        }
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .feature-card h3 { font-size: 20px; font-weight: 800; margin-bottom: 12px; color: #111; }
+        .feature-card p { color: var(--gray); font-size: 14.5px; margin-bottom: 20px; flex-grow: 1; word-break: keep-all; }
+
+        .feature-point { list-style: none; padding: 0; margin: 0; }
+        .feature-point li {
+            font-size: 13.5px; font-weight: 700; color: var(--text);
+            margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+        }
+        .feature-point li::before { content: '✓'; color: var(--primary); font-weight: 900; }
+
+        .cta-section {
+            background: #111;
+            color: #fff;
+            padding: 60px 24px;
+            text-align: center;
+            margin-top: 40px;
+        }
+        .cta-title { font-size: 28px; font-weight: 800; margin-bottom: 20px; }
+
         .btn{
-            appearance:none;
-            border:1px solid var(--border);
-            background:#fff;
-            padding:10px 18px;
-            border-radius:10px;
-            font-weight:800;
-            cursor:pointer;
-            color:#222;
-            transition: all 0.2s;
+            appearance:none; border:1px solid var(--border); background:#fff;
+            padding:14px 24px; border-radius:12px; font-weight:800;
+            cursor:pointer; color:#222; transition: all 0.2s; font-size: 15px;
+            text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
         }
-        .btn.primary{
-            border-color:var(--primary);
-            background:var(--primary);
-            color:#fff;
-        }
-        .who{
-            font-weight:900;
-            color:#333;
-            padding:10px 14px;
-            border:1px solid var(--border);
-            background:#fff;
-            border-radius:10px;
-        }
+        .btn.primary{ border-color:var(--primary); background:var(--primary); color:#fff; }
 
-        /* 토스트 알림 */
         .toast{
-            position:fixed;
-            left:50%;
-            bottom:22px;
-            transform:translateX(-50%);
-            background:#fff;
-            border:1px solid var(--border);
-            color:#111;
-            padding:12px 14px 12px 12px;
-            border-radius:12px;
-            font-weight:900;
-            box-shadow: 0 10px 22px rgba(0,0,0,.10);
-            z-index:9999;
-            opacity:0;
-            pointer-events:none;
-            transition:opacity .15s ease, transform .15s ease;
-            display:flex;
-            align-items:center;
-            gap:10px;
+            position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+            background:#fff; border:1px solid var(--border); color:#111;
+            padding:12px 14px; border-radius:12px; font-weight:900;
+            box-shadow: 0 10px 22px rgba(0,0,0,.10); z-index:9999;
+            opacity:0; pointer-events:none; transition:0.2s ease;
+            display:flex; align-items:center; gap:10px;
         }
-        .toast::before{
-            content:"";
-            width:4px;
-            height:18px;
-            border-radius:999px;
-            background:#bbb;
-            flex:0 0 auto;
-        }
-        .toast.show{
-            opacity:1;
-            transform:translateX(-50%) translateY(-4px);
-        }
-        .toast.success{
-            border-color: var(--successBorder);
-            color: var(--success);
-        }
-        .toast.success::before{
-            background: var(--success);
-        }
+        .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
+        .toast.success{ border-color: var(--successBorder); color: var(--success); }
 
         @media (max-width:768px){
-            .title{font-size:40px}
+            .hero-title{font-size:36px}
+            .feature-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -142,144 +137,144 @@
 <div class="page">
     <div th:replace="~{company/common/company-header :: companyHeader}"></div>
 
+    <section class="hero">
+        <span class="hero-tag">All-in-One Work Platform</span>
+        <h1 class="hero-title" id="mainTitle">업무에 필요한 모든 것,<br><span>하나의 플랫폼</span>으로 해결하세요</h1>
+        <p class="hero-desc" id="mainDesc">메신저부터 결재, AI 요약까지 Bizportal이 업무 효율을 극대화합니다.</p>
+        <div class="actions" id="mainActions"></div>
+    </section>
+
     <main>
-        <section class="card">
-            <h1 class="title" id="mainTitle">Welcome</h1>
-            <p class="desc" id="mainDesc">Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.</p>
-            <div class="actions" id="mainActions"></div>
-        </section>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="icon-box">💬</div>
+                <h3>실시간 사내 메신저</h3>
+                <p>별도의 교육 없이 즉시 적응 가능한 직관적인 인터페이스를 제공합니다. 동료와 빠르게 소통하고 협업하세요.</p>
+                <ul class="feature-point">
+                    <li>근무 상태 실시간 연동</li>
+                    <li>무제한 대화 기록 검색</li>
+                    <li>읽지 않은 메시지 실시간 트래킹</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="icon-box">📝</div>
+                <h3>전자결재 시스템</h3>
+                <p>결재 대기 항목을 한눈에 파악하고, 부재 시에도 업무가 멈추지 않도록 스마트한 대직자 자동 지정 기능을 지원합니다.</p>
+                <ul class="feature-point">
+                    <li>휴가 시 대직자 자동 결재 위임</li>
+                    <li>결재 라인 간편 설정</li>
+                    <li>결재 진행 현황 실시간 알림</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="icon-box">📅</div>
+                <h3>통합 일정 관리</h3>
+                <p>개인, 부서, 회사 전체 일정을 레이어별로 분리하여 관리하고, 투두리스트로 오늘의 핵심 업무를 놓치지 마세요.</p>
+                <ul class="feature-point">
+                    <li>개인/부서/회사 일정별 보기</li>
+                    <li>오늘의 할 일(To-Do) 관리</li>
+                    <li>일정 리마인드 알림</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="icon-box">🤖</div>
+                <h3>회사 전용 규정 안내 AI 챗봇</h3>
+                <p>사내 규정 PDF나 매뉴얼을 등록하면 Bizportal만의 전용 AI가 학습하여 임직원의 질문에 즉시 답변합니다.</p>
+                <ul class="feature-point">
+                    <li>문서 업로드 기반 즉시 학습</li>
+                    <li>기업별 독립 데이터 관리</li>
+                    <li>24시간 사내 규정 자동 응대</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="icon-box">✒️</div>
+                <h3>스마트 문서 에디터</h3>
+                <p>외부 도구 이동 없이 서비스 내에서 바로 고품질 문서를 작성하세요. Tiptap 기반의 강력한 편집 기능을 제공합니다.</p>
+                <ul class="feature-point">
+                    <li>다양한 서식 및 서재 템플릿</li>
+                    <li>웹에서 즉시 작성 및 저장</li>
+                    <li>결재 문서와 즉시 연동 가능</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="icon-box">🎙️</div>
+                <h3>AI 기반 회의록 요약 서비스</h3>
+                <p>회의 녹음 파일을 업로드하면 Whisper AI가 텍스트로 변환하고, 핵심 내용을 논리적으로 요약해 드립니다.</p>
+                <ul class="feature-point">
+                    <li>고정밀 음성 인식(STT)</li>
+                    <li>안건 및 결정사항 자동 분류</li>
+                    <li>회의 참여자 즉시 공유 기능</li>
+                </ul>
+            </div>
+        </div>
     </main>
+
+    <section class="cta-section">
+        <h2 class="cta-title">지금 바로 비즈포털의 가치를 경험해보세요</h2>
+        <div id="ctaActions">
+            <a href="/auth/companies/signup" class="btn primary">무료로 시작하기</a>
+        </div>
+    </section>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-    // 전역 요소 참조 (헤더 navRight는 프래그먼트 내부에서 제어하므로 제외)
     const mainActions = document.getElementById('mainActions');
+    const ctaActions = document.getElementById('ctaActions');
     const mainTitle = document.getElementById('mainTitle');
     const mainDesc = document.getElementById('mainDesc');
     const toastEl = document.getElementById('toast');
 
-    // 이동 함수들
-    function goCompanyLogin()  { window.location.href = '/auth/companies/login'; }
-    function goEmployeeLogin() { window.location.href = '/auth/employee/login'; }
-    function goCompanySignup() { window.location.href = '/auth/companies/signup'; }
-    function goCompanyDashboard(){ window.location.href = '/company'; }
-
-    // 토스트 표시 함수
     function showToast(message, type = 'success', ms = 1000) {
         toastEl.textContent = message;
-        toastEl.classList.remove('success');
-        if (type) toastEl.classList.add(type);
+        toastEl.className = 'toast ' + (type || '');
         toastEl.classList.add('show');
         window.setTimeout(() => toastEl.classList.remove('show'), ms);
     }
 
-    // 로그아웃 처리
     async function doLogout() {
-        try {
-            await fetch('/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' });
-        } catch (e) {
-            console.warn('logout request failed:', e);
-        } finally {
-            showToast('로그아웃 성공', 'success', 900);
+        try { await fetch('/auth/logout', { method: 'POST', credentials: 'include' }); }
+        catch (e) { console.warn(e); }
+        finally {
+            showToast('로그아웃 성공');
             setTimeout(() => window.location.href = '/', 900);
         }
     }
 
-    // 데이터 파싱 유틸리티
-    function toStr(v){ return (v == null) ? '' : String(v).trim(); }
-    function toUpper(v){ return toStr(v).toUpperCase(); }
-
-    function parseBoolean(v){
-        if (v === true) return true;
-        if (v === false || v == null) return false;
-        const s = toUpper(v);
-        return s === 'TRUE' || s === '1' || s === 'Y' || s === 'YES';
-    }
-
-    function isCompanySubjectType(st){
-        const t = toUpper(st);
-        return t === 'COMPANY' || t.includes('COMPANY') || t.startsWith('COM');
-    }
-
-    // ✅ 로그아웃 상태일 때 메인 카드 렌더링
     function renderLoggedOut() {
-        mainTitle.textContent = 'Welcome';
-        mainDesc.textContent = 'Bizportal에 오신 것을 환영합니다. 로그인 유형을 선택해 주세요.';
-        mainActions.innerHTML = `
-            <button class="btn primary" type="button" id="btnCompanyMain">회사(기업) 로그인</button>
-            <button class="btn" type="button" id="btnEmployeeMain">사원 로그인</button>
-            <button class="btn" type="button" id="btnCompanySignupMain">회사 회원가입</button>
-        `;
-        document.getElementById('btnCompanyMain').addEventListener('click', goCompanyLogin);
-        document.getElementById('btnEmployeeMain').addEventListener('click', goEmployeeLogin);
-        document.getElementById('btnCompanySignupMain').addEventListener('click', goCompanySignup);
+        mainTitle.innerHTML = `업무에 필요한 모든 것,<br><span>하나의 플랫폼</span>으로 해결하세요`;
+        mainDesc.textContent = '메신저부터 결재, AI 요약까지 Bizportal이 업무 효율을 극대화합니다.';
+        mainActions.innerHTML = '';
+        ctaActions.innerHTML = `<a href="/auth/companies/signup" class="btn primary">무료로 시작하기</a>`;
     }
 
-    // ✅ 회사 로그인 상태일 때 메인 카드 렌더링
     function renderCompanyLoggedIn(username) {
-        const whoLine = username ? `${username}이 로그인했습니다.` : '회사 계정이 로그인했습니다.';
-
-        mainTitle.textContent = 'Hello';
-        mainDesc.textContent = whoLine + ' 계속 진행해 주세요.';
+        mainTitle.innerHTML = `환영합니다, <span>${username || '관리자'}</span>님!`;
+        mainDesc.textContent = '비즈포털에서 효율적으로 업무를 관리해 보세요.';
         mainActions.innerHTML = `
-            <button class="btn primary" type="button" id="btnDashboardMain">회사 대시보드로 이동</button>
-            <button class="btn" type="button" id="btnEmployeeMain">사원 로그인 페이지로</button>
-            <button class="btn" type="button" id="btnLogoutMain">로그아웃</button>
+            <button class="btn" id="btnLogoutMain">로그아웃</button>
         `;
-        document.getElementById('btnDashboardMain').addEventListener('click', goCompanyDashboard);
-        document.getElementById('btnEmployeeMain').addEventListener('click', goEmployeeLogin);
+        ctaActions.innerHTML = ''; // 하단 CTA 영역의 대시보드 버튼 제거
+
         document.getElementById('btnLogoutMain').addEventListener('click', doLogout);
     }
 
-    // API 응답 데이터 추출
-    function extractData(json){
-        if (!json || typeof json !== 'object') return null;
-        return json.data ?? json.result ?? json.body ?? json.response ?? null;
-    }
-
-    // 내 정보 조회 API 호출
-    async function fetchMe() {
-        try {
-            const res = await fetch('/auth/me', {
-                method: 'GET',
-                credentials: 'include',
-                cache: 'no-store'
-            });
-            if (!res.ok) return null;
-
-            const ct = res.headers.get('content-type') || '';
-            if (!ct.includes('application/json')) return null;
-
-            const json = await res.json().catch(() => null);
-            return extractData(json);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // 초기 구동 함수
     async function boot() {
         try {
-            const me = await fetchMe();
-            const authenticated = parseBoolean(me?.authenticated);
-            const subjectType = me?.subjectType;
-            const username = me?.username;
+            const res = await fetch('/auth/me', { credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const json = await res.json();
+            const me = json.data || json;
 
-            // 회사 타입의 로그인인 경우에만 로그인 상태 UI 적용
-            if (authenticated && isCompanySubjectType(subjectType)) {
-                renderCompanyLoggedIn(username);
+            if (me?.authenticated && String(me?.subjectType).includes('COMPANY')) {
+                renderCompanyLoggedIn(me.username);
             } else {
                 renderLoggedOut();
             }
-        } catch (e) {
-            console.warn('boot failed:', e);
-            renderLoggedOut();
-        }
+        } catch (e) { renderLoggedOut(); }
     }
 
-    // DOM 로드 완료 후 실행
     document.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>

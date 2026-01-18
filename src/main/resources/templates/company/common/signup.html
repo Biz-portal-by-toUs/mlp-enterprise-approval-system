@@ -5,446 +5,172 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Bizportal - Company Sign Up</title>
     <style>
-        :root{
-            --bg:#f3f3f3;
-            --text:#111;
-            --border:#d7d7d7;
-            --primary:#2f66d7;
-            --input-bg:#fff;
-            --disabled:#9fb2e6;
-            --success:#27ae60;
-            --error:#e74c3c;
+        :root {
+            --bg: #f3f3f3;
+            --text: #111;
+            --border: #d7d7d7;
+            --primary: #2f66d7;
+            --input-bg: #fff;
+            --disabled: #9fb2e6;
+            --success: #16a34a;
+            --error: #e74c3c;
+            --errorBg: #f8d7da;
         }
-        *{box-sizing:border-box}
-        body{
-            margin:0;
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
             font-family: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo",
             "Noto Sans KR", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background:var(--bg);
-            color:var(--text);
-        }
-        .page{
-            min-height:100vh;
-            border:2px solid #222;
-            margin:12px;
-            background:var(--bg);
-        }
-        header{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            padding:26px 28px;
-            gap:12px;
-            flex-wrap:wrap;
-        }
-        .brand{
-            font-family: Georgia, "Times New Roman", Times, serif;
-            font-weight:700;
-            font-size:40px;
-            letter-spacing:-0.5px;
-        }
-        .nav-right{ display:flex; gap:14px; align-items:center; }
-        .btn{
-            appearance:none;
-            border:1px solid #cfcfcf;
-            background:#f7f7f7;
-            padding:10px 18px;
-            border-radius:10px;
-            font-weight:700;
-            cursor:pointer;
-            color:#222;
+            background: var(--bg);
+            color: var(--text);
         }
 
-        main{
-            min-height:calc(100vh - 110px);
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            padding:24px;
-        }
-        .card{
-            width:min(760px, 92vw);
-            text-align:center;
-        }
-        .title{
-            font-size:52px;
-            font-weight:900;
-            margin:0 0 18px;
-            letter-spacing:-0.5px;
-        }
-        .form{
-            width:min(680px, 92vw);
-            margin:0 auto;
-            display:flex;
-            flex-direction:column;
-            gap:16px;
-        }
-        .field{ text-align:left; }
-        .label{
-            font-size:13px;
-            font-weight:800;
-            color:#777;
-            margin:0 0 6px 10px;
-            letter-spacing:0.6px;
-        }
-        .req{
-            color:var(--error);
-            font-weight:900;
-            margin-left:2px;
+        .page {
+            min-height: 100vh;
+            border: 2px solid #222;
+            margin: 12px;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
         }
 
-        /* 통일된 입력 박스 */
-        .input-wrap{
-            background:var(--input-bg);
-            border:1px solid var(--border);
-            border-radius:12px;
-            padding:8px 12px;
-            display:flex;
-            align-items:center;
-            gap:10px;
-            min-height:56px;
-        }
-        input{
-            border:0;
-            outline:none;
-            width:100%;
-            min-width:0;
-            font-size:16px;
-            background:transparent;
-            font-weight:400;
-        }
-        input::placeholder{ color:#aaa; }
-        input[type="file"]{ font-size:14px; }
-        input[readonly]{ font-weight:400; }
-
-        .inline-btn{
-            border:0;
-            background:var(--primary);
-            color:#fff;
-            font-weight:800;
-            padding:0 16px;
-            height:40px;
-            border-radius:12px;
-            cursor:pointer;
-            white-space:nowrap;
-            font-size:15px;
-            flex:0 0 auto;
-        }
-        .inline-btn:disabled{
-            cursor:not-allowed;
-            opacity:0.7;
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
         }
 
-        .primary-btn{
-            margin-top:6px;
-            border:0;
-            background:var(--primary);
-            color:#fff;
-            font-size:18px;
-            font-weight:800;
-            padding:16px 18px;
-            border-radius:12px;
-            cursor:pointer;
-            transition: opacity .15s ease;
+        .card { width: min(720px, 92vw); text-align: center; }
+        .title { font-size: 52px; font-weight: 900; margin: 0 0 24px; letter-spacing: -0.5px; }
+
+        .form { display: flex; flex-direction: column; gap: 20px; margin-top: 24px; }
+        .field { text-align: left; }
+        .label { font-size: 13px; font-weight: 800; color: #777; margin: 0 0 8px 10px; letter-spacing: 0.6px; text-transform: uppercase; }
+        .req { color: var(--error); margin-left: 2px; }
+
+        .input-wrap {
+            position: relative;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: border-color 0.2s;
+            min-height: 54px;
         }
-        .primary-btn:disabled{
-            background:var(--disabled);
-            cursor:not-allowed;
-            opacity:0.85;
+        .input-wrap:focus-within { border-color: var(--primary); }
+        input { border: 0; outline: none; width: 100%; font-size: 16px; background: transparent; font-weight: 500; }
+
+        .btn {
+            appearance: none; border: 1px solid var(--border); background: #fff;
+            padding: 10px 18px; border-radius: 10px; font-weight: 800; cursor: pointer;
+            color: #222; transition: all 0.2s; font-size: 14px;
         }
 
-        .error{
-            display:none;
-            color:var(--error);
-            border:1px solid #f5c6cb;
-            background-color:#f8d7da;
-            padding:10px;
-            margin:0 auto 14px;
-            border-radius:12px;
-            width:min(680px, 92vw);
-            text-align:left;
-            font-weight:700;
+        .inline-btn {
+            border: 0; background: var(--primary); color: #fff; font-weight: 800;
+            padding: 0 16px; height: 44px; border-radius: 10px; cursor: pointer;
+            white-space: nowrap; font-size: 14px; flex: 0 0 auto;
         }
+        .inline-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .note{
-            margin:8px 0 0 10px;
-            font-size:13px;
-            color:#666;
-            min-height:18px;
+        .form .primary-btn {
+            margin-top: 10px; border: 0; background: var(--primary); color: #fff;
+            font-size: 18px; font-weight: 800; padding: 16px 18px; border-radius: 12px;
+            cursor: pointer; width: 100%;
         }
-        .note-success{
-            color: var(--success);
-            font-weight: 800;
-        }
+        .form .primary-btn:disabled { background: var(--disabled); cursor: not-allowed; }
 
-        /* password rules */
-        .pwd-rules{
-            display:flex;
-            flex-wrap:wrap;
-            gap:10px;
-            margin:10px 0 0 6px;
-        }
-        .pwd-rule{
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-            padding:8px 12px;
-            border-radius:12px;
-            font-size:14px;
-            font-weight:800;
-            line-height:1;
-            background:#fdecec;
-            color:var(--error);
-        }
-        .pwd-rule.ok{
-            background:#eaf7ef;
-            color:var(--success);
-        }
-        .pwd-icon{
-            width:18px;height:18px;
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            border-radius:6px;
-            font-weight:900;
-        }
+        .brn-wrap, .addr-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .brn-segs { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .dash { font-weight: 900; color: #bbb; }
+        .seg-wrap { padding: 8px 10px; min-height: 48px; flex: 1; justify-content: center; }
+        .seg-wrap input { text-align: center; }
 
-        /* eye toggle */
-        .icon-btn{
-            border:0;
-            background:transparent;
-            cursor:pointer;
-            padding:6px;
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            border-radius:10px;
+        .pwd-rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 6px; }
+        .pwd-rule {
+            font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px;
+            background: #eee; color: #888; display: flex; align-items: center; gap: 5px;
         }
-        .icon-btn:hover{ background:#f2f2f2; }
-        .icon-btn svg{ width:22px;height:22px;opacity:.55; }
+        .pwd-rule.ok { background: #eaf7ef; color: var(--success); }
 
-        #pwdMatchMsg{
-            font-size:12px;
-            margin:6px 0 0 10px;
-            font-weight:700;
-            min-height:15px;
+        .error {
+            display: none; color: var(--error); border: 1px solid rgba(231, 76, 60, 0.2);
+            background-color: var(--errorBg); padding: 14px; margin-bottom: 20px;
+            border-radius: 10px; text-align: left; font-weight: 700; font-size: 14px;
         }
-        .match-success { color: var(--success); }
-        .match-error { color: var(--error); }
+        .note { font-size: 13px; margin: 6px 0 0 10px; font-weight: 600; color: #888; }
+        .note-success { color: var(--success); }
 
-        /* 사업자등록번호 */
-        .brn-wrap{
-            display:flex;
-            align-items:center;
-            gap:12px;
-            flex-wrap:wrap;
-        }
-        .brn-segs{
-            display:flex;
-            align-items:center;
-            gap:10px;
-            flex:0 0 auto;
-        }
-        .dash{
-            font-weight:900;
-            color:#888;
-            user-select:none;
-        }
-        .seg-wrap{ justify-content:center; }
-        #brn1wrap{ width:130px; }
-        #brn2wrap{ width:110px; }
-        #brn3wrap{ width:150px; }
-        .brn-segs input{
-            text-align:center;
-            font-variant-numeric:tabular-nums;
-        }
+        /* 아이콘 버튼 스타일 */
+        .icon-btn { border: 0; background: transparent; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; }
+        .icon-btn svg { width: 22px; height: 22px; opacity: 0.5; }
 
-        /* 주소 */
-        .addr-top{
-            display:flex;
-            gap:12px;
-            align-items:stretch;
-            flex-wrap:wrap;
-        }
-        .addr-top .input-wrap{
-            flex:1;
-            min-width:260px;
-        }
+        /* 모달 및 복사 버튼 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-overlay.show { display: flex; }
+        .modal { width: min(500px, 92vw); background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .modal-title { font-size: 22px; font-weight: 900; }
+        .modal-x { border: 0; background: transparent; font-size: 20px; cursor: pointer; }
+        .cred-box { background: #f8f9fa; border: 1px solid var(--border); padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        code { font-weight: 800; color: var(--primary); font-size: 16px; }
+        .copy-btn { background: var(--primary); border: 0; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer; }
+        .copy-msg { font-size: 11px; color: var(--success); margin-top: 4px; font-weight: 800; min-height: 14px; }
 
-        @media (max-width: 640px){
-            #brn1wrap{ width:110px; }
-            #brn2wrap{ width:90px; }
-            #brn3wrap{ width:120px; }
-        }
-
-        /* =====================
-         * ✅ Admin Credential Modal
-         * ===================== */
-        .modal-overlay{
-            position:fixed; inset:0;
-            background:rgba(0,0,0,.45);
-            display:none;
-            align-items:center;
-            justify-content:center;
-            padding:20px;
-            z-index:9999;
-        }
-        .modal-overlay.show{ display:flex; }
-
-        .modal{
-            width:min(520px, 92vw);
-            background:#fff;
-            border-radius:16px;
-            border:1px solid #e5e7eb;
-            box-shadow:0 20px 60px rgba(0,0,0,.20);
-            padding:18px;
-            text-align:left;
-        }
-        .modal-head{
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-            align-items:flex-start;
-            margin-bottom:12px;
-        }
-        .modal-title{ font-size:20px; font-weight:900; letter-spacing:-0.2px; }
-        .modal-sub{ font-size:13px; color:#666; margin-top:4px; line-height:1.4; }
-        .modal-x{
-            border:0;
-            background:transparent;
-            cursor:pointer;
-            font-size:18px;
-            padding:6px 10px;
-            border-radius:10px;
-        }
-        .modal-x:hover{ background:#f2f2f2; }
-
-        .modal-body{ display:flex; flex-direction:column; gap:14px; }
-        .cred-row{ display:flex; flex-direction:column; gap:6px; }
-        .cred-label{ font-size:13px; font-weight:900; color:#777; }
-        .cred-box{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:10px;
-            padding:12px 12px;
-            border:1px solid var(--border);
-            border-radius:12px;
-            background:#fafafa;
-        }
-        .cred-box code{
-            font-size:16px;
-            font-weight:900;
-            color:#111;
-        }
-
-        /* ✅ Copy icon button */
-        .copy-btn{
-            border:0;
-            background:var(--primary);
-            color:#fff;
-            font-weight:900;
-            padding:8px 12px;
-            border-radius:10px;
-            cursor:pointer;
-            white-space:nowrap;
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            gap:6px;
-            transition: transform .08s ease, opacity .12s ease;
-        }
-        .copy-btn:active{ transform: translateY(1px); }
-        .copy-btn.icon-only{
-            width:40px;
-            height:36px;
-            padding:0;
-        }
-        .copy-btn.icon-only svg{
-            width:18px;
-            height:18px;
-            color:#fff;
-        }
-        .copy-btn.copied{
-            opacity:.95;
-        }
-
-        .copy-msg{ font-size:12px; min-height:14px; color:var(--success); font-weight:800; }
-
-        .modal-actions{
-            display:flex;
-            justify-content:flex-end;
-            margin-top:6px;
-        }
+        #addrSearchBtn { height: 54px; padding: 0 20px; display: flex; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .title { font-size: 40px; } }
     </style>
 </head>
-
 <body>
 <div class="page">
-    <header>
-        <div class="brand">Bizportal</div>
-        <div class="nav-right">
-            <button class="btn" type="button" th:onclick="|location.href='@{/}'|">메인</button>
-            <button class="btn" type="button" th:onclick="|location.href='@{/auth/companies/login}'|">로그인</button>
-        </div>
-    </header>
-
+    <div th:replace="~{company/common/company-header :: companyHeader}"></div>
     <main>
         <section class="card">
             <h1 class="title">Sign Up</h1>
-
             <div id="serverError" class="error"></div>
-
             <form id="company-signup-form" class="form" enctype="multipart/form-data">
-
                 <div class="field">
                     <div class="label">기업 이름<span class="req">*</span></div>
-                    <div class="input-wrap">
-                        <input name="comName" id="comName" type="text" placeholder="예) Samsung" maxlength="50" required />
-                    </div>
+                    <div class="input-wrap"><input name="comName" id="comName" type="text" placeholder="예) Samsung" maxlength="50" required /></div>
                     <div id="comNameWarn" class="note"></div>
                 </div>
 
                 <div class="field">
                     <div class="label">회사코드 (3글자)<span class="req">*</span></div>
                     <div class="input-wrap">
-                        <input name="comId" id="comId" type="text" placeholder="예) SAM" maxlength="3" required />
+                        <input name="comId" id="comId" type="text" placeholder="SAM" maxlength="3" required />
                         <button class="inline-btn" id="comIdCheckBtn" type="button">중복확인</button>
                     </div>
                     <div id="comIdMsg" class="note"></div>
-                    <div id="comIdWarn" class="note"></div>
                 </div>
 
                 <div class="field">
                     <div class="label">사업자 등록번호<span class="req">*</span></div>
-
                     <div class="brn-wrap">
                         <div class="brn-segs">
-                            <div class="input-wrap seg-wrap" id="brn1wrap">
-                                <input id="brn1" type="text" inputmode="numeric" placeholder="101" maxlength="3" required />
-                            </div>
+                            <div class="input-wrap seg-wrap"><input id="brn1" type="text" inputmode="numeric" placeholder="101" maxlength="3" required /></div>
                             <span class="dash">-</span>
-                            <div class="input-wrap seg-wrap" id="brn2wrap">
-                                <input id="brn2" type="text" inputmode="numeric" placeholder="20" maxlength="2" required />
-                            </div>
+                            <div class="input-wrap seg-wrap"><input id="brn2" type="text" inputmode="numeric" placeholder="20" maxlength="2" required /></div>
                             <span class="dash">-</span>
-                            <div class="input-wrap seg-wrap" id="brn3wrap">
-                                <input id="brn3" type="text" inputmode="numeric" placeholder="03030" maxlength="5" required />
-                            </div>
-
-                            <input name="brn" id="brn" type="hidden" />
+                            <div class="input-wrap seg-wrap"><input id="brn3" type="text" inputmode="numeric" placeholder="03030" maxlength="5" required /></div>
                         </div>
-
                         <button class="inline-btn" id="brnVerifyBtn" type="button">인증하기</button>
                     </div>
-
+                    <input name="brn" id="brn" type="hidden" />
                     <div id="brnMsg" class="note"></div>
                 </div>
 
                 <div class="field">
                     <div class="label">회사 이메일<span class="req">*</span></div>
                     <div class="input-wrap">
-                        <input name="email" id="email" type="email" placeholder="예) admin@company.com" maxlength="50" required />
+                        <input name="email" id="email" type="email" placeholder="admin@company.com" maxlength="50" required />
                         <button class="inline-btn" id="emailCheckBtn" type="button">중복확인</button>
                     </div>
                     <div id="emailMsg" class="note"></div>
@@ -453,146 +179,78 @@
                 <div class="field">
                     <div class="label">비밀번호<span class="req">*</span></div>
                     <div class="input-wrap">
-                        <input name="pwd" id="pwd" type="password" placeholder="••••••••" autocomplete="new-password" required />
-                        <button class="icon-btn" id="togglePwdBtn" type="button" aria-label="비밀번호 보기/숨기기">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
+                        <input name="pwd" id="pwd" type="password" placeholder="••••••••" required />
+                        <button class="icon-btn" id="togglePwdBtn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                     </div>
-
-                    <div class="pwd-rules" id="pwdRules">
-                        <span class="pwd-rule" id="ruleUpper"><span class="pwd-icon">✗</span>영어 대문자</span>
-                        <span class="pwd-rule" id="ruleLower"><span class="pwd-icon">✗</span>영어 소문자</span>
+                    <div class="pwd-rules">
+                        <span class="pwd-rule" id="ruleUpper"><span class="pwd-icon">✗</span>대문자</span>
+                        <span class="pwd-rule" id="ruleLower"><span class="pwd-icon">✗</span>소문자</span>
                         <span class="pwd-rule" id="ruleNumber"><span class="pwd-icon">✗</span>숫자</span>
                         <span class="pwd-rule" id="ruleSpecial"><span class="pwd-icon">✗</span>특수문자</span>
-                        <span class="pwd-rule" id="ruleLen"><span class="pwd-icon">✗</span>8자 이상 20자 이내</span>
+                        <span class="pwd-rule" id="ruleLen"><span class="pwd-icon">✗</span>8~20자</span>
                     </div>
                 </div>
 
                 <div class="field">
                     <div class="label">비밀번호 확인<span class="req">*</span></div>
                     <div class="input-wrap">
-                        <input id="pwdConfirm" type="password" placeholder="••••••••" autocomplete="new-password" required />
-                        <button class="icon-btn" id="togglePwdConfirmBtn" type="button" aria-label="비밀번호 확인 보기/숨기기">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
+                        <input id="pwdConfirm" type="password" placeholder="••••••••" required />
+                        <button class="icon-btn" id="togglePwdConfirmBtn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                     </div>
-                    <div id="pwdMatchMsg"></div>
+                    <div id="pwdMatchMsg" class="note"></div>
                 </div>
 
                 <div class="field">
                     <div class="label">주소<span class="req">*</span></div>
-
                     <div class="addr-top">
-                        <div class="input-wrap">
-                            <input id="zipNo" name="zipNo" type="text" placeholder="우편번호" readonly />
-                        </div>
-                        <button class="inline-btn" id="addrSearchBtn" type="button">주소 검색</button>
+                        <div class="input-wrap" style="flex:1;"><input id="zipNo" name="zipNo" type="text" placeholder="우편번호" readonly /></div>
+                        <button class="btn" id="addrSearchBtn" type="button">주소 검색</button>
                     </div>
-
-                    <div style="height:12px;"></div>
-
-                    <div class="input-wrap">
-                        <input name="addr" id="addr" type="text" placeholder="도로명 주소" readonly required />
-                    </div>
-
-                    <div style="height:12px;"></div>
-
-                    <div class="input-wrap">
-                        <input name="addrDetail" id="addrDetail" type="text" placeholder="상세 주소를 입력하세요" />
-                    </div>
-
-                    <div id="addrMsg" class="note"></div>
+                    <div style="height:10px;"></div>
+                    <div class="input-wrap"><input name="addr" id="addr" type="text" placeholder="도로명 주소" readonly required /></div>
+                    <div style="height:10px;"></div>
+                    <div class="input-wrap"><input name="addrDetail" id="addrDetail" type="text" placeholder="상세 주소" /></div>
                 </div>
 
                 <div class="field">
-                    <div class="label">로고 파일 첨부</div>
-                    <div class="input-wrap">
-                        <input name="logo" id="logo" type="file" accept="image/*" />
-                    </div>
-
-                    <div id="logoPreview" style="display:none; margin-top:10px; border:1px dashed #bbb; border-radius:12px; padding:10px; background:#fff; align-items:center; gap:12px;">
-                        <img id="logoImg" alt="logo preview" style="width:54px;height:54px;object-fit:cover;border-radius:12px;border:1px solid #ddd;"/>
-                        <div id="logoMeta" style="font-size:13px;color:#555;font-weight:700;"></div>
-                    </div>
+                    <div class="label">로고 파일</div>
+                    <div class="input-wrap"><input name="logo" id="logo" type="file" accept="image/*" /></div>
                 </div>
 
                 <button class="primary-btn" id="signupBtn" type="submit" disabled>Create Account</button>
-
-                <div class="note" id="brnNote" style="margin-left:0;">
-                    * 기업 이름, 비밀번호 조건/일치, 주소 입력 + 사업자등록번호 인증 + 회사코드 중복확인 + 이메일 중복확인이 모두 완료되어야 회원가입 버튼이 활성화됩니다.
-                </div>
-
+                <div class="note" id="brnNote" style="text-align:center; margin-top:10px;"></div>
             </form>
         </section>
     </main>
 </div>
 
-<!-- ✅ 관리자 계정 팝업(모달) -->
-<div id="adminModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+<div id="adminModal" class="modal-overlay">
+    <div class="modal">
         <div class="modal-head">
-            <div>
-                <div id="adminModalTitle" class="modal-title">관리자 계정 발급 완료</div>
-                <div class="modal-sub">아래 정보를 복사해 보관하세요. (최초 로그인 후 비밀번호 변경 권장)</div>
-            </div>
-            <button type="button" class="modal-x" id="adminModalClose" aria-label="닫기">✕</button>
+            <div class="modal-title">관리자 계정 발급 완료</div>
+            <button type="button" class="modal-x" id="adminModalClose">✕</button>
         </div>
+        <p style="font-size:13px; color:#666; margin-bottom:20px;">최초 로그인 후 비밀번호를 변경해주세요.</p>
 
-        <div class="modal-body">
-            <div class="cred-row">
-                <div class="cred-label">관리자 사번</div>
-                <div class="cred-box">
-                    <code id="adminEmpIdText">-</code>
-                    <button type="button" class="copy-btn icon-only" id="copyEmpIdBtn" aria-label="사번 복사" data-mode="copy">
-                        <!-- clipboard icon -->
-                        <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        <!-- check icon (hidden by default) -->
-                        <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
-                            <path d="M20 6 9 17l-5-5"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="copy-msg" id="copyEmpIdMsg"></div>
-            </div>
-
-            <div class="cred-row">
-                <div class="cred-label">임시 비밀번호</div>
-                <div class="cred-box">
-                    <code id="adminPwdText">-</code>
-                    <button type="button" class="copy-btn icon-only" id="copyPwdBtn" aria-label="비밀번호 복사" data-mode="copy">
-                        <!-- clipboard icon -->
-                        <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        <!-- check icon -->
-                        <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
-                            <path d="M20 6 9 17l-5-5"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="copy-msg" id="copyPwdMsg"></div>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="primary-btn" id="goLoginBtn" style="margin:0;">로그인하러 가기</button>
-            </div>
+        <div class="label" style="margin-left:0;">관리자 사번</div>
+        <div class="cred-box">
+            <code id="adminEmpIdText">-</code>
+            <button type="button" class="copy-btn" id="copyEmpIdBtn">복사</button>
         </div>
+        <div class="copy-msg" id="copyEmpIdMsg"></div>
+
+        <div class="label" style="margin-left:0; margin-top:10px;">임시 비밀번호</div>
+        <div class="cred-box">
+            <code id="adminPwdText">-</code>
+            <button type="button" class="copy-btn" id="copyPwdBtn">복사</button>
+        </div>
+        <div class="copy-msg" id="copyPwdMsg"></div>
+
+        <button class="primary-btn" id="goLoginBtn" style="margin-top:20px; border:0; background:var(--primary); color:#fff; padding:14px; border-radius:12px; font-weight:800; cursor:pointer; width:100%;">로그인하러 가기</button>
     </div>
 </div>
 
