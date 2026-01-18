@@ -916,11 +916,17 @@
             el.breadcrumb.textContent = [rootLabel, ...folders].join(" > ");
         }
 
+        state.gridLoadSeq = 0;
+
         /** ====== 오른쪽: 폴더/파일 렌더 ====== */
         async function loadFolderContent(folderNo) {
-            el.fileGrid.innerHTML = "";
-            clearFileSelection();
             if (!folderNo) return;
+
+            const seq = ++state.gridLoadSeq;   // 이번 요청 번호(최신)
+
+            el.fileGrid.innerHTML = "";
+            clearGridSelection();
+
 
             const [folders, files] = await Promise.all([
                 apiJson(folderListUrl(folderNo)),
@@ -932,6 +938,9 @@
             const ids = (folders || []).map(x => x.folderNo);
             const dup = ids.filter((v, i) => ids.indexOf(v) !== i);
             if (dup.length) console.warn("[LIST grid] DUP folderNo", dup);
+
+            // ✅ 내가 최신 요청이 아니면 렌더하지 않고 종료
+            if (seq !== state.gridLoadSeq) return;
 
             const hasFolders = folders && folders.length > 0;
             const hasFiles = files && files.length > 0;
