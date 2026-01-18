@@ -127,7 +127,7 @@ public class ChatbotService {
             redisTemplate.opsForZSet().add(bufferKey, cb.getChunk(), cb.getSeq());
             sseManager.sendToUser(connectionKey, "chunk", Map.of(
                     "messageId", msgId,
-                    "delta", cb.getChunk(),
+                    "delta", chunk,
                     "seq", cb.getSeq()
             ));
         }
