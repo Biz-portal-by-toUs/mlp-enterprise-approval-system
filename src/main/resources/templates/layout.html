@@ -1078,6 +1078,13 @@
     </svg>
 </button>
 
+<button class="chat-fab" type="button" onclick="toggleChat()">
+    <span id="chatBadge" class="badge" style="top: -4px; right: -4px;">0</span>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor">
+        <path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+</button>
+
 <script>
     /* ====== ✅ 공통: CSRF 헤더 얻기 ====== */
     function getCsrfHeader(){
@@ -1121,6 +1128,34 @@
     /* ==========================================
    🚀 알림 시스템 통합 로직 (배지 + 토스트 + 읽음)
    ========================================== */
+
+    function updateChatBadge(count) {
+        const badge = document.getElementById('chatBadge');
+        if (!badge) return;
+
+        const num = parseInt(count);
+        if (num > 0) {
+            badge.innerText = num > 999 ? '99+' : num;
+            badge.style.display = 'flex'; // 숫자가 있으면 표시
+        } else {
+            badge.style.display = 'none'; // 0이면 숨김
+        }
+    }
+
+    async function refreshChatUnreadCount() {
+        try {
+            const res = await fetch('/api/v1/chat/unread-count', {
+                credentials: 'include'
+            });
+            if (res.ok) {
+                const result = await res.json();
+                // 백엔드 ChatRoomController의 응답 구조(ResponseDto.data)에 맞춰 반영
+                updateChatBadge(result.data);
+            }
+        } catch (e) {
+            console.error("📌 [ChatBadge] 초기 로드 실패:", e);
+        }
+    }
 
     /* 1. 알림 배지 UI 업데이트 */
     function updateNotiBadge(count) {
@@ -1208,6 +1243,7 @@
 
         // 초기 로딩 시 배지 숫자 세팅
         await refreshUnreadCount();
+        await refreshChatUnreadCount();
 
         // SSE 연결
         const eventSource = new EventSource('/api/v1/notifications/stream', { withCredentials: true });
@@ -1233,6 +1269,11 @@
             } catch (err) {
                 console.error("📌 [SSE] 파싱 에러:", err);
             }
+        });
+
+        eventSource.addEventListener('TOTAL_CHAT_UNREAD', (e) => {
+            console.log("📌 [SSE-Chat] 전체 카운트 갱신:", e.data);
+            updateChatBadge(e.data);
         });
 
         eventSource.onerror = () => { console.warn("📌 [SSE] 연결 끊김, 재연결 시도 중..."); };
