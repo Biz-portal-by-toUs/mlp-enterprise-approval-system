@@ -219,6 +219,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
           join e.department d
           join e.positions p
         where e.company.comId = :comId
+          and e.isDeleted = false
           and (:depId is null or d.depId = :depId)
         order by d.depName asc, p.posOrder asc, e.empName asc, e.empNo asc
     """)
