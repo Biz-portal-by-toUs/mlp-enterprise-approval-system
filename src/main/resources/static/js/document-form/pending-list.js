@@ -44,7 +44,7 @@
         // 직원이면 보통 승인/반려 권한이 false일 가능성이 큼 → 둘 다 false면 employee로 간주
         const byPerm = (!canApprove && !canReject);
 
-        return byClass || byPerm;
+        return byClass;
     }
 
     // EMPLOYEE가 잘못 들어오면 프론트에서도 방어
