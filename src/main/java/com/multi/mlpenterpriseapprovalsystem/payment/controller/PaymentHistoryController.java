@@ -33,7 +33,7 @@ public class PaymentHistoryController {
 
     private final PaymentHistoryService paymentHistoryService;
 
-    @GetMapping("/company/payment-history")
+    @GetMapping("/payment-historys")
     public ResponseEntity<ResponseDto<Page<ResPaymentHistoryDto>>> getMyPaymentHistory(
             @AuthenticationPrincipal CustomUser customUser,
             @RequestParam(name = "page", defaultValue = "0") int page) {

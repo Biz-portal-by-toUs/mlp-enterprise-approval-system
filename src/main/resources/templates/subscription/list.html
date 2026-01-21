@@ -213,7 +213,7 @@
 
     async function init() {
         try {
-            const resMe = await fetch('/api/v1/company/subscription/me');
+            const resMe = await fetch('/api/v1/subscriptions/me');
             const meJson = await resMe.json();
             const currentSub = meJson.data;
 
@@ -331,12 +331,12 @@
         let text = '보유하신 예치금이 있다면 결제 금액에서 최우선으로 차감됩니다.\n현재보다 낮은 요금제는 만료 후 전환되며, 높은 요금제(인원 확장 포함)는 즉시 차액 결제됩니다.';
 
         if (subNo === 1) {
-            url = '/api/v1/company/subscription/cancel';
+            url = '/api/v1/subscriptions/cancel';
             method = 'PATCH';
             title = '구독 해지 예약';
             text = "무료 요금제로 변경하시겠습니까? 보유한 예치금은 다음 결제 시까지 보존되나, 만료일 이후 혜택이 제한됩니다.";
         } else {
-            url = `/api/v1/company/subscription/upgrade?subNo=${subNo}`;
+            url = `/api/v1/subscriptions/upgrade?subNo=${subNo}`;
             method = 'POST';
         }
 
@@ -420,7 +420,7 @@
         if (result.isConfirmed) {
             Swal.showLoading();
             try {
-                const res = await fetch('/api/v1/company/subscription/resume', { method: 'PATCH' });
+                const res = await fetch('/api/v1/subscriptions/resume', { method: 'PATCH' });
                 const json = await res.json();
                 Swal.close();
 

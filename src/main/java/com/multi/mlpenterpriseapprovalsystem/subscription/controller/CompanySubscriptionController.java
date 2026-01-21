@@ -25,7 +25,7 @@ import java.math.BigDecimal;
 @RestController
 @Slf4j
 @RequiredArgsConstructor
-@RequestMapping("api/v1")
+@RequestMapping("/api/v1")
 public class CompanySubscriptionController {
 
     private final PortoneService portoneService;
@@ -33,20 +33,17 @@ public class CompanySubscriptionController {
 
     /**
      * 내 회사의 현재 구독 정보 조회
-     * GET /api/v1/company/subscription/me
      */
-    @GetMapping("/company/subscription/me")
+    @GetMapping("/subscriptions/me")
     public ResponseEntity<ResponseDto<ResCompanySubscriptionDto>> getMySubscription(@AuthenticationPrincipal CustomUser customUser) {
         ResCompanySubscriptionDto data = companySubscriptionService.getCurrentSubscription(customUser.getComId());
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "내 구독 정보 조회 성공", data));
     }
 
-
     /**
      * 요금제 구독 및 즉시 결제 요청
-     * POST /api/v1/company/subscription/upgrade?subNo=2
      */
-    @PostMapping("/company/subscription/upgrade")
+    @PostMapping("/subscriptions/upgrade")
     public ResponseEntity<ResponseDto<ResSubscriptionResultDto>> upgradeSubscription(
             @AuthenticationPrincipal CustomUser customUser,
             @RequestParam(name = "subNo") Long subNo) {
@@ -70,9 +67,8 @@ public class CompanySubscriptionController {
 
     /**
      * 구독 해지 요청 (해지 예약)
-     * PATCH /api/v1/company/subscription/cancel
      */
-    @PatchMapping("/company/subscription/cancel")
+    @PatchMapping("/subscriptions/cancel")
     public ResponseEntity<ResponseDto<Void>> cancelSubscription(@AuthenticationPrincipal CustomUser customUser) {
 
         String comId = customUser.getComId();
@@ -85,9 +81,8 @@ public class CompanySubscriptionController {
 
     /**
      * 요금제 변경 예약 취소 (기존 구독 유지)
-     * PATCH /api/v1/company/subscription/resume
      */
-    @PatchMapping("/company/subscription/resume")
+    @PatchMapping("/subscriptions/resume")
     public ResponseEntity<ResponseDto<Void>> resumeSubscription(@AuthenticationPrincipal CustomUser customUser) {
         String comId = customUser.getComId();
         portoneService.resumeSubscription(comId);
@@ -97,7 +92,7 @@ public class CompanySubscriptionController {
                 .body(new ResponseDto<>(HttpStatus.OK, "요금제 변경 예약이 취소되었습니다. 기존 요금제가 유지됩니다.", null));
     }
 
-    @GetMapping("/company/credit")
+    @GetMapping("/credits")
     public ResponseEntity<ResponseDto<BigDecimal>> getCredit(@AuthenticationPrincipal CustomUser customUser) {
         BigDecimal balance = companySubscriptionService.getCreditBalance(customUser.getComId());
         return ResponseEntity.ok(new ResponseDto<>(HttpStatus.OK, "예치금 조회 성공", balance));

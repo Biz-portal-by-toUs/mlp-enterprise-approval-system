@@ -115,7 +115,7 @@
 
   async function loadCards() {
     try {
-      const res = await fetch('/api/v1/company/payment-method');
+      const res = await fetch('/api/v1/payment-methods');
       const json = await res.json();
       renderCards(json.data);
     } catch (e) {
@@ -164,7 +164,7 @@
 
     if (result.isConfirmed) {
       try {
-        const res = await fetch(`/api/v1/company/payment-method/${paymNo}/representative`, { method: 'PATCH' });
+        const res = await fetch(`/api/v1/payment-methods/${paymNo}/representative`, { method: 'PATCH' });
         if (res.ok) {
           Swal.fire('변경 완료', '대표 결제수단이 변경되었습니다.', 'success');
           loadCards();
@@ -189,7 +189,7 @@
 
     if (result.isConfirmed) {
       try {
-        const res = await fetch(`/api/v1/company/payment-method/${paymNo}`, { method: 'DELETE' });
+        const res = await fetch(`/api/v1/payment-methods/${paymNo}`, { method: 'DELETE' });
         const json = await res.json();
         if (res.ok) {
           Toast.fire({ icon: 'success', title: '삭제되었습니다.' });
@@ -213,7 +213,7 @@
       if (rsp.success) {
         Swal.showLoading();
         try {
-          const res = await fetch('/api/v1/company/payment-method', {
+          const res = await fetch('/api/v1/payment-methods', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ impUid: rsp.imp_uid, customerUid: rsp.customer_uid })

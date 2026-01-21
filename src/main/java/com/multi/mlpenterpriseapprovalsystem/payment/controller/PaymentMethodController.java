@@ -33,9 +33,8 @@ public class PaymentMethodController {
 
     /**
      * 등록된 모든 결제 수단 조회 API
-     * GET /api/v1/company/payment-method
      */
-    @GetMapping("/company/payment-method")
+    @GetMapping("/payment-methods")
     public ResponseEntity<ResponseDto<List<ResPaymentMethodDto>>> getPaymentMethods(
             @AuthenticationPrincipal CustomUser customUser) {
 
@@ -47,10 +46,10 @@ public class PaymentMethodController {
     }
 
     // 카드 등록 (빌링키 발급 결과 저장)
-    @PostMapping("/company/payment-method")
+    @PostMapping("/payment-methods")
     public ResponseEntity<ResponseDto<Void>> registerPaymentMethod(@RequestBody ReqVerifyDto reqVerifyDto,
                                                                    @AuthenticationPrincipal CustomUser customUser) {
-        log.info("[/api/v1/company/payment-method] VerifyRequestDto = " + reqVerifyDto.toString());
+        log.info("[/api/v1/payment-methods] VerifyRequestDto = " + reqVerifyDto.toString());
 
         String comId = customUser.getComId();
 
@@ -64,7 +63,7 @@ public class PaymentMethodController {
     }
 
     // 대표 결제 수단 변경
-    @PatchMapping("/company/payment-method/{paymNo}/representative")
+    @PatchMapping("/payment-methods/{paymNo}/representative")
     public ResponseEntity<ResponseDto<Void>> updateRepresentativeCard(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "paymNo") Long paymNo) {
@@ -74,7 +73,7 @@ public class PaymentMethodController {
     }
 
     // 결제 수단 삭제
-    @DeleteMapping("/company/payment-method/{paymNo}")
+    @DeleteMapping("/payment-methods/{paymNo}")
     public ResponseEntity<ResponseDto<Void>> deleteCard(
             @AuthenticationPrincipal CustomUser customUser,
             @PathVariable(name = "paymNo") Long paymNo) {

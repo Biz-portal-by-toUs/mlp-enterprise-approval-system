@@ -20,12 +20,12 @@ public class ViewPaymentController {
         return "payment/method/register";
     }
 
-    @GetMapping("/company/payment-methods")
+    @GetMapping("/payment-methods")
     public String viewPaymentMethods(){
         return "payment/method/list";
     }
 
-    @GetMapping("/company/payment-historys")
+    @GetMapping("/payment-historys")
     public String viewPaymentHistorys(Model model) {
         return "payment/history/list";
     }
