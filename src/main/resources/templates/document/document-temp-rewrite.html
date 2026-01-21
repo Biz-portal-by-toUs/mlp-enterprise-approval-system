@@ -1395,14 +1395,14 @@
     async function fetchFormDetailsForDocument(docfoNo) {
         const container = document.getElementById('category-radio-group');
         try {
-            const response = await fetch(`/api/v1/temp/documentForms/${docfoNo}`, { credentials: 'include' });
+            const response = await fetch(`/api/v1/forms/${docfoNo}/with-categorys`, { credentials: 'include' });
             const result = await response.json();
             if (result.data && result.data.docfoName) {
                 currentFormName = result.data.docfoName;
                 document.getElementById('form-name-subtitle').textContent = `📄 ${currentFormName}`;
             }
-            if (response.ok && result.data && result.data.tempResDocumentFormCategoryDtos) {
-                const categories = result.data.tempResDocumentFormCategoryDtos;
+            if (response.ok && result.data && result.data.resDocumentFormCategoryDtoV2s) {
+                const categories = result.data.resDocumentFormCategoryDtoV2s;
                 formCategories = categories;
                 if (categories.length > 0) {
                     container.innerHTML = categories.map(cat => `
@@ -1652,7 +1652,7 @@
 
     async function fetchMyEmployeeInfo() {
         try {
-            const response = await fetch('/api/v1/temp/employees/me', { credentials: 'include' });
+            const response = await fetch('/api/v1/employees/me', { credentials: 'include' });
             const result = await response.json();
             if (response.ok && result.data) {
                 myInfo = { empId: result.data.empId, comId: result.data.comId || "C01", posOrder: result.data.position?.posOrder || 999 };
