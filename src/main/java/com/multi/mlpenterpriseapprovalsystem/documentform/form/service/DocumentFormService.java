@@ -1,12 +1,15 @@
 package com.multi.mlpenterpriseapprovalsystem.documentform.form.service;
 
 import com.multi.mlpenterpriseapprovalsystem.auth.dto.*;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentFormDtoV2;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormListDto;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.enums.DocumentFormStats;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 /**
  * 문서양식 서비스(함수 선언부)
@@ -58,4 +61,10 @@ public interface DocumentFormService {
     void deleteTemp(Long docfoNo, String comId, String writerId);
 
     void assertNotTemp(Long docfoNo, String comId);
+
+    List<String> getDocumentFormCategoryNames(String comId);
+
+    ResDocumentFormDtoV2 getDocumentFormWithCategory(String comId, Long docfoNo);
+
+    List<ResDocumentFormDtoV2> getAllDocumentForms(String comId);
 }
