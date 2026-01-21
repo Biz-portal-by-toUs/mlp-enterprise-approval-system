@@ -4,6 +4,7 @@ import com.multi.mlpenterpriseapprovalsystem.auth.dto.CustomUser;
 import com.multi.mlpenterpriseapprovalsystem.common.ResponseDto;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentFormDtoV2;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.*;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormDetailDto;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.res.ResDocumentFormListDto;
@@ -280,4 +281,41 @@ public class DocumentFormController {
                 .status(HttpStatus.OK)
                 .body(new ResponseDto<>(HttpStatus.OK, "문서양식 임시저장 삭제 성공", null));
     }
+
+
+    // 문서 양식 내 카테고리 전체 조회(카테고리 이름만 조회. 중복 불가)
+    @GetMapping("/category-names")
+    public ResponseEntity<ResponseDto<List<String>>> getDocumentFormCategoryNames(@AuthenticationPrincipal CustomUser customUser) {
+
+        List<String> documentFormCategoryNames =
+                documentFormService.getDocumentFormCategoryNames(customUser.getComId());
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 내 카테고리 이름 조회 성공", documentFormCategoryNames));
+    }
+
+    // 승인된 전체 문서양식 조회
+    @GetMapping("/approved")
+    public ResponseEntity<ResponseDto<List<ResDocumentFormDtoV2>>> getAllDocumentForms(@AuthenticationPrincipal CustomUser customUser) {
+        List<ResDocumentFormDtoV2> resDocumentFormDtoV2 = documentFormService.getAllDocumentForms(customUser.getComId());
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "전체 문서양식 조회 성공", resDocumentFormDtoV2));
+    }
+
+
+    // 문서양식 식별자로 문서양식 및 문서양식 내 카테고리 조회(문서양식 상세 조회)
+    @GetMapping("/{docfoNo}/with-categorys")
+    public ResponseEntity<ResponseDto<ResDocumentFormDtoV2>> getDocumentFormWithCategory(@PathVariable(name = "docfoNo") Long docfoNo,
+                                                                                         @AuthenticationPrincipal CustomUser customUser) {
+
+        ResDocumentFormDtoV2 resDocumentFormDtoV2 = documentFormService.getDocumentFormWithCategory(customUser.getComId(), docfoNo);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDto<>(HttpStatus.OK, "문서양식 식별자로 문서양식 및 문서양식 내 카테고리 조회 성공", resDocumentFormDtoV2));
+    }
+
 }

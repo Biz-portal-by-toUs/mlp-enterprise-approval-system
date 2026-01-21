@@ -5,6 +5,8 @@ import com.multi.mlpenterpriseapprovalsystem.common.exception.CustomException;
 import com.multi.mlpenterpriseapprovalsystem.common.exception.ErrorCode;
 import com.multi.mlpenterpriseapprovalsystem.company.domain.Company;
 import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepository;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentFormCategoryDtoV2;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentFormDtoV2;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentFormCategory;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.dto.req.ReqDocumentFormCreateDto;
@@ -523,5 +525,42 @@ public class DocumentFormServiceImpl implements DocumentFormService {
                 throw new CustomException(ErrorCode.DOCUMENT_FORM_TITLE_FORBIDDEN);
             }
         }
+    }
+
+
+    // 문서 양식 내 카테고리 이름만 중복없이 조회
+    @Transactional(readOnly = true)
+    public List<String> getDocumentFormCategoryNames(String comId) {
+        return documentFormCategoryRepository.findDistinctNamesByComId(comId);
+    }
+
+    // 문서양식 식별자로 문서양식 및 문서양식 내 카테고리 조회
+    @Transactional(readOnly = true)
+    public ResDocumentFormDtoV2 getDocumentFormWithCategory(String comId, Long docfoNo) {
+        DocumentForm documentForm = documentFormRepository.findById(docfoNo)
+                .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
+
+        List<DocumentFormCategory> documentFormCategories = documentFormCategoryRepository.findAllByDocumentForm_DocfoNo(docfoNo);
+
+        ResDocumentFormDtoV2 resDocumentFormDtoV2 = ResDocumentFormDtoV2.toDto(documentForm);
+        List<ResDocumentFormCategoryDtoV2> resDocumentFormCategoryDtoV2s = documentFormCategories.stream()
+                .map(ResDocumentFormCategoryDtoV2::toDto)
+                .toList();
+
+        resDocumentFormDtoV2.setResDocumentFormCategoryDtoV2s(resDocumentFormCategoryDtoV2s);
+
+        return resDocumentFormDtoV2;
+    }
+
+    // 승인된 전체 문서 양식 조회
+    @Transactional(readOnly = true)
+    public List<ResDocumentFormDtoV2> getAllDocumentForms(String comId) {
+        List<DocumentForm> documentForms = documentFormRepository.findAllByCompany_ComIdAndDocfoStat(comId, DocumentFormStats.A);
+
+        List<ResDocumentFormDtoV2> resDocumentFormDtoV2s = documentForms.stream()
+                .map(ResDocumentFormDtoV2::toDto)
+                .toList();
+
+        return resDocumentFormDtoV2s;
     }
 }

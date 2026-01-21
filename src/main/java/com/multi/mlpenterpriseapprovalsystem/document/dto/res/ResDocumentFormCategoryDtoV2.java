@@ -8,17 +8,17 @@ import lombok.Data;
  * 임시 문서양식 내 카테고리 응답 Dto
  *
  * @author : 이지헌
- * @filename : TempResDocumentFormCategoryDto
+ * @filename : ResDocumentFormCategoryDtoV2
  * @since : 25. 12. 22. 월요일
  */
 @Data
 @Builder
-public class TempResDocumentFormCategoryDto {
+public class ResDocumentFormCategoryDtoV2 {
     private Long docfoCatNo;
     private String docfoCatName;
 
-    public static TempResDocumentFormCategoryDto toDto(DocumentFormCategory documentFormCategory) {
-        return TempResDocumentFormCategoryDto.builder()
+    public static ResDocumentFormCategoryDtoV2 toDto(DocumentFormCategory documentFormCategory) {
+        return ResDocumentFormCategoryDtoV2.builder()
                 .docfoCatName(documentFormCategory.getName())
                 .docfoCatNo(documentFormCategory.getDocfoCatNo())
                 .build();

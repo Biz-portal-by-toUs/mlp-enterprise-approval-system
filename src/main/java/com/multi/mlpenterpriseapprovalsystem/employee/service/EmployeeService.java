@@ -13,8 +13,10 @@ import com.multi.mlpenterpriseapprovalsystem.employee.dto.*;
 import com.multi.mlpenterpriseapprovalsystem.employee.enums.MsgStat;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ResDepartmentDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.department.repository.DepartmentRepository;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.dto.ResPositionsDto;
 import com.multi.mlpenterpriseapprovalsystem.organization.positions.repository.PositionsRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -101,7 +103,18 @@ public class EmployeeService {
         Employee employee = employeeRepository.findByEmpId(myEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        return ResEmployeeDetailDto.from(employee);
+        ResEmployeeDetailDto resEmployeeDetailDto = ResEmployeeDetailDto.from(employee);
+
+        // 부서 세팅
+        resEmployeeDetailDto.setDepartment(ResDepartmentDto.toDto(employee.getDepartment()));
+        // 포지션 세팅
+        resEmployeeDetailDto.setPosition(ResPositionsDto.toDto(employee.getPositions()));
+        // 대직자 세팅
+        if(employee.getDelegate() != null) {
+            resEmployeeDetailDto.setDelegate(ResEmployeeDetailDto.toDto(employee.getDelegate()));
+        }
+
+        return resEmployeeDetailDto;
     }
 
     @Transactional(readOnly = true)

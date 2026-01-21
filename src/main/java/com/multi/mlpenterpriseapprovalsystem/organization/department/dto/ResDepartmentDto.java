@@ -1,5 +1,6 @@
 package com.multi.mlpenterpriseapprovalsystem.organization.department.dto;
 
+import com.multi.mlpenterpriseapprovalsystem.organization.department.domain.Department;
 import lombok.*;
 
 /**
@@ -11,18 +12,22 @@ import lombok.*;
  */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class ResDepartmentDto {
 
     private Long depNo;
     private String depId;
     private String depName;
     private Long empCount;
+    private String comId;
 
-    @Builder
-    public ResDepartmentDto(Long depNo, String depId, String depName, long empCount) {
-        this.depNo = depNo;
-        this.depId = depId;
-        this.depName = depName;
-        this.empCount = empCount;
+    public static ResDepartmentDto toDto(Department department) {
+        return ResDepartmentDto.builder()
+                .depNo(department.getDepNo())
+                .depId(department.getDepId())
+                .depName(department.getDepName())
+                .comId(department.getCompany().getComId())
+                .build();
     }
 }

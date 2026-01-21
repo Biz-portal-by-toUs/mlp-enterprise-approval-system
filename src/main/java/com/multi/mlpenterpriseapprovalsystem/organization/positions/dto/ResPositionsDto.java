@@ -1,9 +1,7 @@
 package com.multi.mlpenterpriseapprovalsystem.organization.positions.dto;
 
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.domain.Positions;
+import lombok.*;
 
 /**
  * 직급 조회 반환 dto
@@ -14,6 +12,8 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class ResPositionsDto {
 
     private Long posNo;
@@ -21,11 +21,11 @@ public class ResPositionsDto {
     private Integer posOrder;
     private Long empCount;
 
-    @Builder
-    public ResPositionsDto(Long posNo, String posName, Long empCount, Integer posOrder) {
-        this.posNo = posNo;
-        this.posName = posName;
-        this.posOrder = posOrder;
-        this.empCount = empCount;
+    public static ResPositionsDto toDto(Positions positions) {
+        return ResPositionsDto.builder()
+                .posNo(positions.getPosNo())
+                .posName(positions.getPosName())
+                .posOrder(positions.getPosOrder())
+                .build();
     }
 }

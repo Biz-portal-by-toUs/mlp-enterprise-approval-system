@@ -8,8 +8,8 @@ import com.multi.mlpenterpriseapprovalsystem.company.repository.CompanyRepositor
 import com.multi.mlpenterpriseapprovalsystem.document.config.DocumentOpenAiConfig;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.ApprovalLine;
 import com.multi.mlpenterpriseapprovalsystem.document.domain.Document;
-import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocOpenAiDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqApprovalLineDto;
+import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocOpenAiDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.req.ReqDocumentDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocOpenAiDto;
 import com.multi.mlpenterpriseapprovalsystem.document.dto.res.ResDocumentDto;
@@ -17,10 +17,10 @@ import com.multi.mlpenterpriseapprovalsystem.document.enums.ApprStat;
 import com.multi.mlpenterpriseapprovalsystem.document.enums.DocStat;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.ApprovalLineRepository;
 import com.multi.mlpenterpriseapprovalsystem.document.repository.DocumentRepository;
-import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormCategoryRepository;
-import com.multi.mlpenterpriseapprovalsystem.document.repository.TempDocumentFormRepository;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentForm;
 import com.multi.mlpenterpriseapprovalsystem.documentform.form.domain.DocumentFormCategory;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.repository.DocumentFormCategoryRepository;
+import com.multi.mlpenterpriseapprovalsystem.documentform.form.repository.DocumentFormRepository;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
 import com.multi.mlpenterpriseapprovalsystem.employee.repository.EmployeeRepository;
 import com.multi.mlpenterpriseapprovalsystem.notification.domain.NotificationType;
@@ -55,8 +55,8 @@ public class DocumentService {
     private final ApprovalLineRepository approvalLineRepository;
     private final CompanyRepository companyRepository;
     private final EmployeeRepository employeeRepository;
-    private final TempDocumentFormRepository tempDocumentFormRepository;
-    private final TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository;
+    private final DocumentFormRepository documentFormRepository;
+    private final DocumentFormCategoryRepository documentFormCategoryRepository;
     private final DocumentOpenAiConfig documentOpenAiConfig;
     private final WebClient documentOpenAiWebClient;
     private final AttendanceService attendanceService;
@@ -68,8 +68,8 @@ public class DocumentService {
             ApprovalLineRepository approvalLineRepository,
             CompanyRepository companyRepository,
             EmployeeRepository employeeRepository,
-            TempDocumentFormRepository tempDocumentFormRepository,
-            TempDocumentFormCategoryRepository tempDocumentFormCategoryRepository,
+            DocumentFormRepository documentFormRepository,
+            DocumentFormCategoryRepository documentFormCategoryRepository,
             DocumentOpenAiConfig documentOpenAiConfig,
             @Qualifier("documentOpenAiWebClient") WebClient documentOpenAiWebClient,
             AttendanceService attendanceService, NotificationService notificationService,
@@ -79,8 +79,8 @@ public class DocumentService {
         this.approvalLineRepository = approvalLineRepository;
         this.companyRepository = companyRepository;
         this.employeeRepository = employeeRepository;
-        this.tempDocumentFormRepository = tempDocumentFormRepository;
-        this.tempDocumentFormCategoryRepository = tempDocumentFormCategoryRepository;
+        this.documentFormRepository = documentFormRepository;
+        this.documentFormCategoryRepository = documentFormCategoryRepository;
         this.documentOpenAiConfig = documentOpenAiConfig;
         this.documentOpenAiWebClient = documentOpenAiWebClient;
         this.attendanceService = attendanceService;
@@ -373,10 +373,10 @@ public class DocumentService {
         Employee writer = employeeRepository.findByEmpId(myEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDocumentDto.getDocfoCatNo())
+        DocumentFormCategory category = documentFormCategoryRepository.findById(reqDocumentDto.getDocfoCatNo())
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
 
-        DocumentForm form = tempDocumentFormRepository.findById(reqDocumentDto.getDocfoNo())
+        DocumentForm form = documentFormRepository.findById(reqDocumentDto.getDocfoNo())
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
 
         // 2. Document 생성 (docId는 null - 최종승인 시 발행)
@@ -744,10 +744,10 @@ public class DocumentService {
         Employee writer = employeeRepository.findByEmpId(myEmpId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
+        DocumentFormCategory category = documentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
 
-        DocumentForm form = tempDocumentFormRepository.findById(reqDto.getDocfoNo())
+        DocumentForm form = documentFormRepository.findById(reqDto.getDocfoNo())
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_NOT_FOUND));
 
         // 7. 새 문서 생성
@@ -809,7 +809,7 @@ public class DocumentService {
         }
 
         // 5. 카테고리 조회
-        DocumentFormCategory category = tempDocumentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
+        DocumentFormCategory category = documentFormCategoryRepository.findById(reqDto.getDocfoCatNo())
                 .orElseThrow(() -> new CustomException(ErrorCode.DOCUMENT_FORM_CATEGORY_NOT_FOUND));
 
         // 6. 문서 내용 수정
