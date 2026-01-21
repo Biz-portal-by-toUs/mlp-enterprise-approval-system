@@ -158,4 +158,7 @@ public interface DocumentFormRepository extends JpaRepository<DocumentForm, Long
             @Param("toStat") DocumentFormStats toStat
     );
     */
+
+    // 회사의 승인된 문서 양식만 조회
+    List<DocumentForm> findAllByCompany_ComIdAndDocfoStat(String comId, DocumentFormStats docfoStat);
 }
