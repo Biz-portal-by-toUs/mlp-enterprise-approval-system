@@ -2,6 +2,8 @@ package com.multi.mlpenterpriseapprovalsystem.employee.dto;
 
 import com.multi.mlpenterpriseapprovalsystem.common.enums.RoleType;
 import com.multi.mlpenterpriseapprovalsystem.employee.domain.Employee;
+import com.multi.mlpenterpriseapprovalsystem.organization.department.dto.ResDepartmentDto;
+import com.multi.mlpenterpriseapprovalsystem.organization.positions.dto.ResPositionsDto;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -29,10 +31,11 @@ public class ResEmployeeDetailDto {
     // 부서 정보
     private Long depNo;
     private String depName;
-
+    private ResDepartmentDto department;
     // 직급 정보
     private Long posNo;
     private String posName;
+    private ResPositionsDto position;
 
     private String empName;
     private String email;
@@ -46,11 +49,13 @@ public class ResEmployeeDetailDto {
     private String msgStat;
 
     // 대직자 정보 (성함 표시용)
+    private ResEmployeeDetailDto delegate;
     private String delegateEmpId;
     private String delegateName;
 
     private boolean isAvailable;    // 프론트에서 버튼 활성화/비활성화 결정 플래그
     private String statusMessage;   // "휴가", "출장" 등 화면에 표시할 텍스트
+    private String atte;
 
     /**
      * Entity -> DTO 변환 정적 메서드
@@ -80,4 +85,16 @@ public class ResEmployeeDetailDto {
                 .build();
     }
 
+    public static ResEmployeeDetailDto toDto(Employee emp) {
+        return ResEmployeeDetailDto.builder()
+                .empNo(emp.getEmpNo())
+                .empId(emp.getEmpId())
+                .empName(emp.getEmpName())
+                .email(emp.getEmail())
+                .phone(emp.getPhone())
+                .workPhone(emp.getWorkPhone())
+                .addr(emp.getAddr())
+                .atte(emp.getAtte())
+                .build();
+    }
 }

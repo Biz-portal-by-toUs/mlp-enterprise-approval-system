@@ -10,20 +10,20 @@ import java.util.List;
  * 임시 문서양식 응답 Dto
  *
  * @author : 이지헌
- * @filename : TempResDocumentFormDto
+ * @filename : ResDocumentFormDtoV2
  * @since : 25. 12. 22. 월요일
  */
 @Data
 @Builder
-public class TempResDocumentFormDto {
+public class ResDocumentFormDtoV2 {
     private Long docfoNo;
     private String docfoName;
     private String cnttJson;
     private String cnttHtml;
-    private List<TempResDocumentFormCategoryDto> tempResDocumentFormCategoryDtos;
+    private List<ResDocumentFormCategoryDtoV2> resDocumentFormCategoryDtoV2s;
 
-    public static TempResDocumentFormDto toDto(DocumentForm documentForm) {
-        return TempResDocumentFormDto.builder()
+    public static ResDocumentFormDtoV2 toDto(DocumentForm documentForm) {
+        return ResDocumentFormDtoV2.builder()
                 .docfoNo(documentForm.getDocfoNo())
                 .docfoName(documentForm.getDocfoName())
                 .cnttJson(documentForm.getCnttJson())
